@@ -57,6 +57,7 @@ Ask the compiler what is actually covered before sending native imports into a m
 ```js
 import {
   createNativeImportCoverageMatrix,
+  createProjectionTargetLossMatrix,
   importNativeSource
 } from '@shapeshift-labs/frontier-lang-compiler';
 
@@ -71,7 +72,21 @@ const python = matrix.languages.find((entry) => entry.language === 'python');
 
 console.log(python.imports.readiness); // scanner imports are intentionally review-required
 console.log(python.parserAdapters); // host-owned exact parsers such as LibCST can be injected
+
+const projectionMatrix = createProjectionTargetLossMatrix({ imports: [imported] });
+const pythonProjection = projectionMatrix.languages.find((entry) => entry.language === 'python');
+
+console.log(pythonProjection.sourceProjection.exactSource.lossClass); // "exactSourceProjection"
+console.log(pythonProjection.sourceProjection.stubs.lossClass); // "nativeSourceStubs"
+console.log(pythonProjection.targets.find((entry) => entry.target === 'rust').lossClass); // "missingAdapter"
 ```
+
+The projection target matrix separates four runtime/API classes:
+
+- `exactSourceProjection`: exact source can be emitted when the import carries matching source text or source-preservation evidence.
+- `nativeSourceStubs`: declaration stubs can be emitted, but bodies, resolved types, and executable semantics are review-required.
+- `unsupportedTargetFeatures`: a target slot exists, but the source profile or import evidence declares features such as macros, preprocessors, dynamic runtime behavior, generated code, unsupported syntax, or unresolved inference that this facade cannot prove lossless.
+- `missingAdapter`: no native-to-target projection adapter is declared; preserve or stub the original source language instead, or inject host-owned parser/semantic adapter evidence.
 
 Preserve exact native source text, token/trivia hashes, comments, whitespace, and source directives as evidence. This does not claim full semantic understanding; it keeps round-trip material available while exact parser adapters catch up:
 

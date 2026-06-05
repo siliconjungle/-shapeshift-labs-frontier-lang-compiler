@@ -168,7 +168,7 @@ export interface NativeImportLanguageProfile {
   readonly extensions: readonly string[];
   readonly supportsLightweightScan: boolean;
   readonly parserAdapters: readonly string[];
-  readonly projectionTargets: readonly FrontierCompileTarget[];
+  readonly projectionTargets: readonly (FrontierCompileTarget | string)[];
   readonly knownLossKinds: readonly NativeImportKnownLossKind[];
   readonly defaultReadiness: SemanticMergeReadiness;
   readonly notes: readonly string[];
@@ -202,7 +202,7 @@ export interface NativeImportCoverageLanguage {
   readonly extensions: readonly string[];
   readonly supportsLightweightScan: boolean;
   readonly parserAdapters: readonly string[];
-  readonly projectionTargets: readonly FrontierCompileTarget[];
+  readonly projectionTargets: readonly (FrontierCompileTarget | string)[];
   readonly knownLossKinds: readonly NativeImportKnownLossKind[];
   readonly defaultReadiness: SemanticMergeReadiness;
   readonly notes: readonly string[];
@@ -241,6 +241,7 @@ export interface NativeImportCoverageMatrix {
   };
   readonly metadata: {
     readonly compileTargets: readonly FrontierCompileTarget[];
+    readonly projectionTargetLossClasses: readonly ProjectionTargetLossClass[];
     readonly note: string;
   };
 }
@@ -249,6 +250,96 @@ export interface NativeImportCoverageMatrixOptions {
   readonly languages?: readonly NativeImportLanguageProfile[];
   readonly imports?: readonly NativeSourceImportResult[];
   readonly adapters?: readonly NativeImporterAdapter[];
+  readonly generatedAt?: number;
+}
+
+export type ProjectionTargetLossClass =
+  | 'exactSourceProjection'
+  | 'nativeSourceStubs'
+  | 'unsupportedTargetFeatures'
+  | 'missingAdapter'
+  | string;
+
+export interface ProjectionSourceProjectionCoverage {
+  readonly lossClass: ProjectionTargetLossClass;
+  readonly mode: NativeSourceProjectionMode;
+  readonly supported: boolean;
+  readonly readiness: SemanticMergeReadiness;
+  readonly lossKinds: readonly NativeImportKnownLossKind[];
+  readonly categories: readonly NativeImportTaxonomyKind[];
+  readonly reason: string;
+  readonly evidence: {
+    readonly imports: number;
+    readonly importsWithExactSource?: number;
+    readonly importsWithDeclarations?: number;
+  };
+  readonly notes: readonly string[];
+}
+
+export interface ProjectionTargetCoverageEntry {
+  readonly target: FrontierCompileTarget | string;
+  readonly lossClass: ProjectionTargetLossClass;
+  readonly supported: boolean;
+  readonly readiness: SemanticMergeReadiness;
+  readonly lossKinds: readonly NativeImportKnownLossKind[];
+  readonly categories: readonly NativeImportTaxonomyKind[];
+  readonly reason: string;
+  readonly adapter?: string;
+  readonly notes: readonly string[];
+}
+
+export interface ProjectionTargetLanguageCoverage {
+  readonly language: FrontierSourceLanguage | string;
+  readonly aliases: readonly string[];
+  readonly extensions: readonly string[];
+  readonly supportsLightweightScan: boolean;
+  readonly parserAdapters: readonly string[];
+  readonly projectionTargets: readonly (FrontierCompileTarget | string)[];
+  readonly knownLossKinds: readonly NativeImportKnownLossKind[];
+  readonly defaultReadiness: SemanticMergeReadiness;
+  readonly notes: readonly string[];
+  readonly sourceProjection: {
+    readonly exactSource: ProjectionSourceProjectionCoverage;
+    readonly stubs: ProjectionSourceProjectionCoverage;
+  };
+  readonly targets: readonly ProjectionTargetCoverageEntry[];
+  readonly summary: {
+    readonly imports: number;
+    readonly parserAdapters: number;
+    readonly targetEntries: number;
+    readonly byLossClass: Readonly<Record<ProjectionTargetLossClass, number>>;
+    readonly exactSourceImports: number;
+    readonly stubDeclarationImports: number;
+  };
+}
+
+export interface ProjectionTargetLossMatrix {
+  readonly kind: 'frontier.lang.projectionTargetLossMatrix';
+  readonly version: 1;
+  readonly generatedAt: number;
+  readonly languages: readonly ProjectionTargetLanguageCoverage[];
+  readonly summary: {
+    readonly languages: number;
+    readonly targetEntries: number;
+    readonly byLossClass: Readonly<Record<ProjectionTargetLossClass, number>>;
+    readonly sourceProjectionByLossClass: Readonly<Record<ProjectionTargetLossClass, number>>;
+    readonly exactSourceProjection: number;
+    readonly nativeSourceStubs: number;
+    readonly unsupportedTargetFeatures: number;
+    readonly missingAdapters: number;
+  };
+  readonly metadata: {
+    readonly compileTargets: readonly (FrontierCompileTarget | string)[];
+    readonly lossClasses: readonly ProjectionTargetLossClass[];
+    readonly note: string;
+  };
+}
+
+export interface ProjectionTargetLossMatrixOptions {
+  readonly languages?: readonly NativeImportLanguageProfile[];
+  readonly imports?: readonly NativeSourceImportResult[];
+  readonly adapters?: readonly NativeImporterAdapter[];
+  readonly targets?: readonly (FrontierCompileTarget | string)[];
   readonly generatedAt?: number;
 }
 
@@ -1081,6 +1172,7 @@ export declare const NativeImportRoundtripReadinessStatuses: readonly NativeImpo
 export declare const NativeImportTaxonomyKinds: readonly NativeImportTaxonomyKind[];
 export declare const NativeImportLossKinds: readonly NativeImportKnownLossKind[];
 export declare const NativeImportRegionTaxonomyKinds: readonly NativeImportRegionTaxonomyKind[];
+export declare const ProjectionTargetLossClasses: readonly ProjectionTargetLossClass[];
 export declare const NativeImportReadinessBySeverity: Readonly<Record<NativeImportLossSummary['highestSeverity'], SemanticMergeReadiness>>;
 export declare const NativeImportLanguageProfiles: readonly NativeImportLanguageProfile[];
 export declare function normalizeCompileTarget(target?: string): FrontierCompileTarget;
@@ -1093,6 +1185,7 @@ export declare function summarizeNativeImportLosses(losses?: readonly NativeAstL
 export declare function classifyNativeImportReadiness(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportReadinessClassification;
 export declare function classifyNativeImportRoundtripReadiness(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: NativeImportRoundtripReadinessOptions): NativeImportRoundtripReadinessClassification;
 export declare function createNativeImportCoverageMatrix(options?: NativeImportCoverageMatrixOptions): NativeImportCoverageMatrix;
+export declare function createProjectionTargetLossMatrix(options?: ProjectionTargetLossMatrixOptions): ProjectionTargetLossMatrix;
 export declare function createNativeSourcePreservation(options: CreateNativeSourcePreservationOptions): NativeSourcePreservation;
 export declare function createSemanticImportSidecar(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: SemanticImportSidecarOptions): SemanticImportSidecar;
 export declare function createNativeImportResultContract(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: NativeImportResultContractOptions): NativeImportResultContract;

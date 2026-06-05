@@ -3,6 +3,7 @@ import {
   compileFrontierSource,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
+  createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createSemanticImportSidecar,
   importNativeSource,
@@ -68,6 +69,10 @@ const matrixStart = performance.now();
 const coverageMatrix = createNativeImportCoverageMatrix({ imports: nativeImportResults });
 const matrixDurationMs = performance.now() - matrixStart;
 
+const projectionMatrixStart = performance.now();
+const projectionLossMatrix = createProjectionTargetLossMatrix({ imports: nativeImportResults });
+const projectionMatrixDurationMs = performance.now() - projectionMatrixStart;
+
 const preservationStart = performance.now();
 const preservationRecords = nativeImportResults.map((imported) => imported.metadata.sourcePreservation ?? createNativeSourcePreservation({
   language: imported.language,
@@ -101,6 +106,10 @@ console.log(JSON.stringify({
   adapterCoverageTokenGaps: coverageMatrix.summary.adapterCoverage.gaps.tokens ?? 0,
   adapterCoverageReferenceGaps: coverageMatrix.summary.adapterCoverage.gaps.references ?? 0,
   coverageMatrixDurationMs: Number(matrixDurationMs.toFixed(2)),
+  projectionMatrixLanguages: projectionLossMatrix.summary.languages,
+  projectionMatrixMissingAdapters: projectionLossMatrix.summary.missingAdapters,
+  projectionMatrixUnsupportedTargetFeatures: projectionLossMatrix.summary.unsupportedTargetFeatures,
+  projectionMatrixDurationMs: Number(projectionMatrixDurationMs.toFixed(2)),
   sourcePreservationRecords: preservationRecords.length,
   sourcePreservationTokens: preservationTokens,
   sourcePreservationDurationMs: Number(preservationDurationMs.toFixed(2)),

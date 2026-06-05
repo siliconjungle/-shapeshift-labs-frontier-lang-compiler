@@ -3,6 +3,7 @@ import {
   compileFrontierSource,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
+  createProjectionTargetLossMatrix,
   createSemanticImportSidecar,
   importNativeProject,
   importNativeSource,
@@ -98,6 +99,10 @@ const matrix = createNativeImportCoverageMatrix({ imports: project.imports });
 assert.equal(matrix.summary.imports, 2);
 assert.ok(matrix.languages.find((entry) => entry.language === 'javascript').imports.symbols >= 1);
 assert.ok(matrix.languages.find((entry) => entry.language === 'python').imports.symbols >= 1);
+const projectionMatrix = createProjectionTargetLossMatrix({ imports: project.imports });
+assert.equal(projectionMatrix.summary.languages, matrix.summary.languages);
+assert.ok(projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 2);
+assert.ok(projectionMatrix.summary.byLossClass.missingAdapter > 0);
 const projectSidecar = createSemanticImportSidecar(project);
 assert.equal(projectSidecar.summary.imports, 2);
 assert.equal(projectSidecar.summary.emptySemanticIndex, false);

@@ -7,6 +7,7 @@ import {
   NativeImportRegionTaxonomyKinds,
   NativeImportRoundtripReadinessStatuses,
   NativeImportTaxonomyKinds,
+  ProjectionTargetLossClasses,
   classifyNativeImportReadiness,
   classifyNativeImportRoundtripReadiness,
   compileFrontierDocument,
@@ -15,6 +16,7 @@ import {
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeImportResultContract,
+  createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createSemanticImportSidecar,
   createTreeSitterNativeImporterAdapter,
@@ -64,6 +66,9 @@ import type {
   NativeSourcePreservation,
   NativeSourceProjectionResult,
   ProjectNativeImportToSourceOptions,
+  ProjectionTargetLossClass,
+  ProjectionTargetLossMatrix,
+  ProjectionTargetLossMatrixOptions,
   SemanticImportSidecar,
   SemanticImportRegionTaxonomySummary
 } from '../src/index.js';
@@ -84,6 +89,7 @@ type ExpectedPublicRuntimeExport =
   | 'NativeImportRegionTaxonomyKinds'
   | 'NativeImportRoundtripReadinessStatuses'
   | 'NativeImportTaxonomyKinds'
+  | 'ProjectionTargetLossClasses'
   | 'classifyNativeImportReadiness'
   | 'classifyNativeImportRoundtripReadiness'
   | 'compileFrontierDocument'
@@ -92,6 +98,7 @@ type ExpectedPublicRuntimeExport =
   | 'createEstreeNativeImporterAdapter'
   | 'createNativeImportCoverageMatrix'
   | 'createNativeImportResultContract'
+  | 'createProjectionTargetLossMatrix'
   | 'createNativeSourcePreservation'
   | 'createSemanticImportSidecar'
   | 'createTreeSitterNativeImporterAdapter'
@@ -118,6 +125,7 @@ const taxonomyKind: NativeImportTaxonomyKind = NativeImportTaxonomyKinds[0] ?? '
 const lossKind: NativeImportKnownLossKind = NativeImportLossKinds[0] ?? 'sourcePreservation';
 const regionKind: NativeImportRegionTaxonomyKind = NativeImportRegionTaxonomyKinds[0] ?? 'symbol';
 const roundtripStatus: NativeImportRoundtripReadinessStatus = NativeImportRoundtripReadinessStatuses[0] ?? 'source-preserved';
+const projectionLossClass: ProjectionTargetLossClass = ProjectionTargetLossClasses[0] ?? 'exactSourceProjection';
 const languageProfiles: readonly NativeImportLanguageProfile[] = NativeImportLanguageProfiles;
 
 const source = `
@@ -221,6 +229,13 @@ const coverage: NativeImportCoverageMatrix = createNativeImportCoverageMatrix(co
 const adapterCoverageAggregate: NativeImporterAdapterCoverageAggregate = coverage.summary.adapterCoverage;
 const adapterCapabilityEvidence: Promise<NativeImporterAdapterCoverageCapabilityEvidence | undefined> = adapterImport
   .then((result) => result.adapter.coverage.capabilityEvidence);
+const projectionLossOptions: ProjectionTargetLossMatrixOptions = {
+  generatedAt: 2,
+  imports: [imported],
+  adapters: [estreeAdapter],
+  targets: ['javascript', 'rust']
+};
+const projectionLossMatrix: ProjectionTargetLossMatrix = createProjectionTargetLossMatrix(projectionLossOptions);
 
 const projectImport: Promise<NativeProjectImportResult> = importNativeProject({
   projectRoot: 'src',
@@ -243,6 +258,7 @@ void taxonomyKind;
 void lossKind;
 void regionKind;
 void roundtripStatus;
+void projectionLossClass;
 void languageProfiles;
 void compiledAgain;
 void emitted;
@@ -259,6 +275,7 @@ void adapterImport;
 void coverage;
 void adapterCoverageAggregate;
 void adapterCapabilityEvidence;
+void projectionLossMatrix;
 void projectImport;
 void parsedUniversalAst;
 void (null as unknown as PublicRuntimeExportsMatchDeclarations);

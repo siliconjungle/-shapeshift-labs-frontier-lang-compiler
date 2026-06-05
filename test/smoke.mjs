@@ -7,6 +7,7 @@ import {
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeImportResultContract,
+  createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createSemanticImportSidecar,
   createTreeSitterNativeImporterAdapter,
@@ -20,6 +21,7 @@ import {
   NativeImportRegionTaxonomyKinds,
   NativeImportRoundtripReadinessStatuses,
   NativeImportTaxonomyKinds,
+  ProjectionTargetLossClasses,
   normalizeCompileTarget,
   projectNativeImportToSource,
   projectFrontierAst,
@@ -38,7 +40,9 @@ const publicDeclarationExports = publicValueExportsFromDeclaration(new URL('../d
 assert.deepEqual(publicRuntimeExports, publicDeclarationExports);
 for (const requiredExport of [
   'NativeImportRegionTaxonomyKinds',
+  'ProjectionTargetLossClasses',
   'createNativeImportResultContract',
+  'createProjectionTargetLossMatrix',
   'classifyNativeImportRoundtripReadiness',
   'createSemanticImportSidecar',
   'importNativeSource',
@@ -923,6 +927,36 @@ assert.equal(pythonCoverage.parserAdapters.includes('libcst'), true);
 const haskellCoverage = coverageMatrix.languages.find((entry) => entry.language === 'haskell');
 assert.equal(haskellCoverage.imports.total, 0);
 assert.equal(haskellCoverage.imports.readiness, 'needs-review');
+assert.deepEqual(coverageMatrix.metadata.projectionTargetLossClasses, [...ProjectionTargetLossClasses]);
+const projectionLossMatrix = createProjectionTargetLossMatrix({
+  generatedAt: 321,
+  imports: [
+    scannedJsImport,
+    scannedPythonImport,
+    scannedRustImport,
+    scannedCImport,
+    scannedRImport
+  ],
+  adapters: [createEstreeNativeImporterAdapter()]
+});
+assert.equal(projectionLossMatrix.kind, 'frontier.lang.projectionTargetLossMatrix');
+assert.equal(projectionLossMatrix.generatedAt, 321);
+assert.deepEqual(projectionLossMatrix.metadata.lossClasses, [...ProjectionTargetLossClasses]);
+assert.ok(projectionLossMatrix.summary.missingAdapters > 0);
+assert.ok(projectionLossMatrix.summary.unsupportedTargetFeatures > 0);
+assert.ok(projectionLossMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= projectionLossMatrix.summary.languages);
+assert.ok(projectionLossMatrix.summary.sourceProjectionByLossClass.nativeSourceStubs >= projectionLossMatrix.summary.languages);
+const jsProjectionCoverage = projectionLossMatrix.languages.find((entry) => entry.language === 'javascript');
+assert.ok(jsProjectionCoverage);
+assert.equal(jsProjectionCoverage.sourceProjection.exactSource.lossClass, 'exactSourceProjection');
+assert.equal(jsProjectionCoverage.sourceProjection.exactSource.evidence.importsWithExactSource, 1);
+assert.equal(jsProjectionCoverage.sourceProjection.stubs.lossClass, 'nativeSourceStubs');
+assert.equal(jsProjectionCoverage.targets.find((entry) => entry.target === 'typescript').lossClass, 'missingAdapter');
+const cProjectionCoverage = projectionLossMatrix.languages.find((entry) => entry.language === 'c');
+assert.equal(cProjectionCoverage.targets.find((entry) => entry.target === 'c').lossClass, 'unsupportedTargetFeatures');
+assert.equal(cProjectionCoverage.targets.find((entry) => entry.target === 'c').lossKinds.includes('preprocessor'), true);
+const rProjectionCoverage = projectionLossMatrix.languages.find((entry) => entry.language === 'r');
+assert.equal(rProjectionCoverage.targets.every((entry) => entry.lossClass === 'missingAdapter'), true);
 const projectSidecar = createSemanticImportSidecar(projectImport, { generatedAt: 456 });
 assert.equal(projectSidecar.summary.imports, 2);
 assert.equal(projectSidecar.summary.emptySemanticIndex, false);
