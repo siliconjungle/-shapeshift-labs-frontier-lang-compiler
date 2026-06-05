@@ -29,6 +29,7 @@ import {
   createJavaAstNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
+  createSwiftSyntaxNativeImporterAdapter,
   createSemanticImportSidecar,
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
@@ -119,6 +120,7 @@ import type {
   GoAstNativeImporterAdapterOptions,
   JavaAstNativeImporterAdapterOptions,
   RustSynNativeImporterAdapterOptions,
+  SwiftSyntaxNativeImporterAdapterOptions,
   SemanticImportSidecar,
   SemanticImportRegionTaxonomySummary
 } from '../src/index.js';
@@ -162,6 +164,7 @@ type ExpectedPublicRuntimeExport =
   | 'createJavaAstNativeImporterAdapter'
   | 'createPythonAstNativeImporterAdapter'
   | 'createRustSynNativeImporterAdapter'
+  | 'createSwiftSyntaxNativeImporterAdapter'
   | 'createSemanticImportSidecar'
   | 'createTreeSitterNativeImporterAdapter'
   | 'createTypeScriptCompilerNativeImporterAdapter'
@@ -356,6 +359,7 @@ const clangAstAdapter: NativeImporterAdapter = createClangAstNativeImporterAdapt
 const goAstAdapter: NativeImporterAdapter = createGoAstNativeImporterAdapter();
 const javaAstAdapter: NativeImporterAdapter = createJavaAstNativeImporterAdapter();
 const csharpRoslynAdapter: NativeImporterAdapter = createCSharpRoslynNativeImporterAdapter();
+const swiftSyntaxAdapter: NativeImporterAdapter = createSwiftSyntaxNativeImporterAdapter();
 const treeAdapter: NativeImporterAdapter = createTreeSitterNativeImporterAdapter({ language: 'javascript' });
 
 const adapterDiagnostic: NativeImporterAdapterDiagnostic = {
@@ -399,7 +403,7 @@ const adapterCapabilityEvidence: Promise<NativeImporterAdapterCoverageCapability
 const parserFormatOptions: NativeParserAstFormatMatrixOptions = {
   generatedAt: 4,
   imports: [imported],
-  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, csharpRoslynAdapter, treeAdapter]
+  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, csharpRoslynAdapter, swiftSyntaxAdapter, treeAdapter]
 };
 const parserFormatMatrix: NativeParserAstFormatMatrix = createNativeParserAstFormatMatrix(parserFormatOptions);
 const rustSynAdapterOptions: RustSynNativeImporterAdapterOptions = {
@@ -435,6 +439,14 @@ const csharpRoslynAdapterOptions: CSharpRoslynNativeImporterAdapterOptions = {
   projectReferences: { hash: 'fixture-csharp-projects', projects: ['Todo.csproj'] },
   semanticModelEvidence: { solver: 'roslyn', hash: 'fixture-csharp-semantic-model' },
   ast: { kind: 'CompilationUnit', members: [] }
+};
+const swiftSyntaxAdapterOptions: SwiftSyntaxNativeImporterAdapterOptions = {
+  swiftVersion: '6',
+  languageMode: 'swift-6',
+  sourceKitEvidence: { solver: 'sourcekit-lsp', hash: 'fixture-swift-sourcekit' },
+  macroExpansionEvidence: { hash: 'fixture-swift-macros', macros: ['Observable'] },
+  packageResolutionEvidence: { hash: 'fixture-swift-package', packages: ['DemoPackage'] },
+  ast: { kind: 'SourceFileSyntax', statements: [] }
 };
 const projectionLossOptions: ProjectionTargetLossMatrixOptions = {
   generatedAt: 2,
@@ -506,6 +518,7 @@ void clangAstAdapterOptions;
 void goAstAdapterOptions;
 void javaAstAdapterOptions;
 void csharpRoslynAdapterOptions;
+void swiftSyntaxAdapterOptions;
 void projectionLossMatrix;
 void projectImport;
 void parsedUniversalAst;

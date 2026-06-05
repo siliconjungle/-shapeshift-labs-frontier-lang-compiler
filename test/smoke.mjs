@@ -16,6 +16,7 @@ import {
   createJavaAstNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
+  createSwiftSyntaxNativeImporterAdapter,
   createSemanticImportSidecar,
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
@@ -71,6 +72,7 @@ for (const requiredExport of [
   'createClangAstNativeImporterAdapter',
   'createGoAstNativeImporterAdapter',
   'createJavaAstNativeImporterAdapter',
+  'createSwiftSyntaxNativeImporterAdapter',
   'createPythonAstNativeImporterAdapter',
   'createRustSynNativeImporterAdapter',
   'createProjectionTargetLossMatrix',
@@ -1551,6 +1553,104 @@ const missingCSharpImport = await runNativeImporterAdapter(createCSharpRoslynNat
 });
 assert.equal(missingCSharpImport.nativeAst.nodes[missingCSharpImport.nativeAst.rootId].kind, 'MissingInjectedParser');
 assert.equal(missingCSharpImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parser.missing'), true);
+const swiftFixtureSource = 'import Foundation\nstruct Todo { var title: String\n func addTodo(_ title: String) {}\n #if DEBUG\n #endif\n #Observable\n}\n';
+const swiftFixture = {
+  kind: 'SourceFileSyntax',
+  statements: [{
+    kind: 'ImportDeclSyntax',
+    importPath: [{ name: { text: 'Foundation' } }],
+    startLine: 1,
+    startColumn: 1
+  }, {
+    kind: 'StructDeclSyntax',
+    identifier: { text: 'Todo' },
+    startLine: 2,
+    startColumn: 1,
+    members: [{
+      kind: 'VariableDeclSyntax',
+      bindings: [{
+        kind: 'PatternBindingSyntax',
+        pattern: { identifier: { text: 'title' } },
+        typeAnnotation: { type: { name: 'String' } },
+        startLine: 2,
+        startColumn: 15
+      }]
+    }, {
+      kind: 'FunctionDeclSyntax',
+      identifier: { text: 'addTodo' },
+      signature: { parameterClause: { parameters: [{ kind: 'FunctionParameterSyntax', firstName: { text: 'title' }, type: { name: 'String' } }] } },
+      body: { kind: 'CodeBlockSyntax', statements: [] },
+      startLine: 3,
+      startColumn: 2
+    }, {
+      kind: 'IfConfigDeclSyntax',
+      startLine: 4,
+      startColumn: 2
+    }, {
+      kind: 'FreestandingMacroExpansionSyntax',
+      name: { text: 'Observable' },
+      startLine: 6,
+      startColumn: 2
+    }]
+  }, {
+    kind: 'EnumDeclSyntax',
+    identifier: { text: 'Status' },
+    startLine: 8,
+    startColumn: 1,
+    members: [{
+      kind: 'EnumCaseDeclSyntax',
+      elements: [{ kind: 'EnumCaseElementSyntax', identifier: { text: 'open' } }]
+    }]
+  }]
+};
+const swiftSyntaxImport = await runNativeImporterAdapter(createSwiftSyntaxNativeImporterAdapter({
+  swiftVersion: '6',
+  languageMode: 'swift-6'
+}), {
+  sourcePath: 'src/Todo.swift',
+  sourceText: swiftFixtureSource,
+  adapterOptions: {
+    ast: swiftFixture,
+    sourceKitEvidence: { solver: 'sourcekit-lsp', hash: 'swift-sourcekit-fixture', symbols: ['Todo'] },
+    macroExpansionEvidence: { hash: 'swift-macro-fixture', macros: ['Observable'] },
+    packageResolutionEvidence: { hash: 'swift-package-fixture', packages: ['DemoPackage'] }
+  }
+});
+assert.equal(swiftSyntaxImport.adapter.parser, 'swift-syntax');
+assert.equal(swiftSyntaxImport.adapter.coverage.exactness, 'parser-tree');
+assert.equal(swiftSyntaxImport.adapter.coverage.tokens, true);
+assert.equal(swiftSyntaxImport.adapter.coverage.trivia, true);
+assert.equal(swiftSyntaxImport.nativeAst.parser, 'swift-syntax');
+assert.equal(swiftSyntaxImport.metadata.astFormat, 'swift-syntax');
+assert.equal(swiftSyntaxImport.metadata.swiftVersion, '6');
+assert.equal(swiftSyntaxImport.metadata.sourceKitEvidence.hash, 'swift-sourcekit-fixture');
+assert.equal(swiftSyntaxImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Foundation' && symbol.kind === 'module'), true);
+assert.equal(swiftSyntaxImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo' && symbol.kind === 'struct'), true);
+assert.equal(swiftSyntaxImport.semanticIndex.symbols.some((symbol) => symbol.name === 'title' && symbol.kind === 'property'), true);
+assert.equal(swiftSyntaxImport.semanticIndex.symbols.some((symbol) => symbol.name === 'addTodo' && symbol.kind === 'function'), true);
+assert.equal(swiftSyntaxImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Status' && symbol.kind === 'enum'), true);
+assert.equal(swiftSyntaxImport.semanticIndex.symbols.some((symbol) => symbol.name === 'open' && symbol.kind === 'enumMember'), true);
+assert.equal(swiftSyntaxImport.losses.some((loss) => loss.kind === 'conditionalCompilation'), true);
+assert.equal(swiftSyntaxImport.losses.some((loss) => loss.kind === 'macroExpansion'), true);
+assert.equal(swiftSyntaxImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
+const generatedSwiftImport = await runNativeImporterAdapter(createSwiftSyntaxNativeImporterAdapter(), {
+  sourcePath: 'src/GeneratedTodo.generated.swift',
+  sourceText: 'struct GeneratedTodo {}\n',
+  adapterOptions: {
+    ast: {
+      kind: 'SourceFileSyntax',
+      statements: [{ kind: 'StructDeclSyntax', identifier: { text: 'GeneratedTodo' } }]
+    }
+  }
+});
+assert.equal(generatedSwiftImport.losses.some((loss) => loss.kind === 'generatedCode'), true);
+const missingSwiftImport = await runNativeImporterAdapter(createSwiftSyntaxNativeImporterAdapter(), {
+  sourcePath: 'src/missing_swift.swift',
+  sourceText: 'struct Missing {}\n',
+  adapterOptions: { ast: { body: [] } }
+});
+assert.equal(missingSwiftImport.nativeAst.nodes[missingSwiftImport.nativeAst.rootId].kind, 'MissingInjectedParser');
+assert.equal(missingSwiftImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parser.missing'), true);
 const treeName = {
   type: 'identifier',
   text: 'from_tree',
@@ -2274,7 +2374,7 @@ assert.equal(haskellCoverage.imports.readiness, 'needs-review');
 assert.deepEqual(coverageMatrix.metadata.projectionTargetLossClasses, [...ProjectionTargetLossClasses]);
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   generatedAt: 234,
-  imports: [estreeAdapterImport, babelAdapterImport, tsAdapterImport, pythonAstImport, rustSynImport, clangImport, goAstImport, javaAstImport, csharpRoslynImport, treeImport],
+  imports: [estreeAdapterImport, babelAdapterImport, tsAdapterImport, pythonAstImport, rustSynImport, clangImport, goAstImport, javaAstImport, csharpRoslynImport, swiftSyntaxImport, treeImport],
   adapters: [
     createEstreeNativeImporterAdapter(),
     createBabelNativeImporterAdapter(),
@@ -2285,6 +2385,7 @@ const parserFormatMatrix = createNativeParserAstFormatMatrix({
     createGoAstNativeImporterAdapter(),
     createJavaAstNativeImporterAdapter(),
     createCSharpRoslynNativeImporterAdapter(),
+    createSwiftSyntaxNativeImporterAdapter(),
     createTreeSitterNativeImporterAdapter({ language: 'javascript' })
   ]
 });
@@ -2296,6 +2397,7 @@ assert.equal(NativeParserAstFormats.includes('clang-ast-json'), true);
 assert.equal(NativeParserAstFormats.includes('go-ast'), true);
 assert.equal(NativeParserAstFormats.includes('java-ast'), true);
 assert.equal(NativeParserAstFormats.includes('roslyn-csharp'), true);
+assert.equal(NativeParserAstFormats.includes('swift-syntax'), true);
 assert.equal(NativeParserAstFormatProfiles.some((profile) => profile.id === 'tree-sitter'), true);
 assert.equal(getNativeParserAstFormatProfile('python_ast').id, 'python-ast');
 assert.equal(getNativeParserAstFormatProfile('syn').id, 'rust-syn');
@@ -2303,10 +2405,11 @@ assert.equal(getNativeParserAstFormatProfile('libclang').id, 'clang-ast-json');
 assert.equal(getNativeParserAstFormatProfile('go/parser').id, 'go-ast');
 assert.equal(getNativeParserAstFormatProfile('javac').id, 'java-ast');
 assert.equal(getNativeParserAstFormatProfile('roslyn').id, 'roslyn-csharp');
+assert.equal(getNativeParserAstFormatProfile('SwiftSyntax').id, 'swift-syntax');
 assert.ok(parserFormatMatrix.summary.formats >= 10);
-assert.equal(parserFormatMatrix.summary.imports, 10);
+assert.equal(parserFormatMatrix.summary.imports, 11);
 assert.ok(parserFormatMatrix.summary.nativeAstNodes >= 5);
-assert.ok(parserFormatMatrix.summary.effectiveCapabilities.exactAst >= 8);
+assert.ok(parserFormatMatrix.summary.effectiveCapabilities.exactAst >= 9);
 const pythonAstFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast');
 assert.equal(pythonAstFormatCoverage.imports.total, 1);
 assert.equal(pythonAstFormatCoverage.imports.readiness, 'ready');
@@ -2337,6 +2440,11 @@ assert.equal(csharpRoslynFormatCoverage.imports.total, 1);
 assert.equal(csharpRoslynFormatCoverage.imports.readiness, 'ready');
 assert.equal(csharpRoslynFormatCoverage.imports.symbols >= 10, true);
 assert.equal(csharpRoslynFormatCoverage.adapters.total, 1);
+const swiftSyntaxFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'swift-syntax');
+assert.equal(swiftSyntaxFormatCoverage.imports.total, 1);
+assert.equal(swiftSyntaxFormatCoverage.imports.readiness, 'needs-review');
+assert.equal(swiftSyntaxFormatCoverage.imports.symbols >= 5, true);
+assert.equal(swiftSyntaxFormatCoverage.adapters.total, 1);
 const treeSitterFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'tree-sitter');
 assert.equal(treeSitterFormatCoverage.imports.total, 1);
 assert.equal(treeSitterFormatCoverage.supportsIncremental, true);

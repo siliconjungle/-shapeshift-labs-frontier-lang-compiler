@@ -12,6 +12,7 @@ import {
   createProjectionTargetLossMatrix,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
+  createSwiftSyntaxNativeImporterAdapter,
   createSemanticImportSidecar,
   diffNativeSources,
   importExternalSemanticIndex,
@@ -127,6 +128,7 @@ const clangAstAdapter = createClangAstNativeImporterAdapter();
 const goAstAdapter = createGoAstNativeImporterAdapter();
 const javaAstAdapter = createJavaAstNativeImporterAdapter();
 const csharpRoslynAdapter = createCSharpRoslynNativeImporterAdapter();
+const swiftSyntaxAdapter = createSwiftSyntaxNativeImporterAdapter();
 for (let index = 0; index < 50; index += 1) {
   const name = `fuzzImport${index}`;
   const sourcePath = `src/fuzz-${index}.js`;
@@ -327,6 +329,30 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(csharpRoslynImport.adapter.parser, 'roslyn');
   assert.equal(csharpRoslynImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
   assert.equal(csharpRoslynImport.semanticIndex.symbols.some((symbol) => symbol.name === `FuzzCSharp${index}`), true);
+  const swiftSyntaxImport = await runNativeImporterAdapter(swiftSyntaxAdapter, {
+    sourcePath: `src/Fuzz${index}.swift`,
+    sourceText: `struct FuzzSwift${index} { var value: String\n func fuzzSwift${index}() {} }\n`,
+    adapterOptions: {
+      ast: {
+        kind: 'SourceFileSyntax',
+        statements: [{
+          kind: 'StructDeclSyntax',
+          identifier: { text: `FuzzSwift${index}` },
+          members: [{
+            kind: 'VariableDeclSyntax',
+            bindings: [{ kind: 'PatternBindingSyntax', pattern: { identifier: { text: 'value' } } }]
+          }, {
+            kind: 'FunctionDeclSyntax',
+            identifier: { text: `fuzzSwift${index}` },
+            body: { kind: 'CodeBlockSyntax', statements: [] }
+          }]
+        }]
+      }
+    }
+  });
+  assert.equal(swiftSyntaxImport.adapter.parser, 'swift-syntax');
+  assert.equal(swiftSyntaxImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
+  assert.equal(swiftSyntaxImport.semanticIndex.symbols.some((symbol) => symbol.name === `FuzzSwift${index}`), true);
 
   const lightweight = importNativeSource({
     language: index % 2 === 0 ? 'javascript' : 'python',
@@ -430,7 +456,7 @@ assert.ok(matrix.languages.find((entry) => entry.language === 'javascript').impo
 assert.ok(matrix.languages.find((entry) => entry.language === 'python').imports.symbols >= 1);
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   imports: project.imports,
-  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, csharpRoslynAdapter]
+  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, csharpRoslynAdapter, swiftSyntaxAdapter]
 });
 assert.ok(parserFormatMatrix.summary.formats >= 2);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast').adapters.total >= 1);
@@ -439,6 +465,7 @@ assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'clang-ast-jso
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'go-ast').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'java-ast').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'roslyn-csharp').adapters.total >= 1);
+assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'swift-syntax').adapters.total >= 1);
 const projectionMatrix = createProjectionTargetLossMatrix({ imports: project.imports });
 assert.equal(projectionMatrix.summary.languages, matrix.summary.languages);
 assert.ok(projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 2);

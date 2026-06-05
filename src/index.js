@@ -452,6 +452,19 @@ export const NativeParserAstFormatProfiles = Object.freeze([
     supportsErrorRecovery: true,
     notes: ['Roslyn C# syntax trees expose immutable nodes, tokens, trivia, spans, diagnostics, directives, and skipped text; SemanticModel symbols, nullable analysis, generated sources, partial type stitching, analyzer results, and project references remain host-owned evidence.']
   }),
+  nativeParserAstFormatProfile('swift-syntax', {
+    aliases: ['swiftsyntax', 'swiftparser', 'swift-parser', 'swift-syntax-json'],
+    kind: 'concrete-syntax-tree',
+    languages: ['swift'],
+    parserAdapters: ['swift-syntax', 'swiftparser'],
+    exactness: 'parser-tree',
+    sourceRangeModel: 'absolute-position-source-location',
+    preservesTokens: true,
+    preservesTrivia: true,
+    supportsIncremental: false,
+    supportsErrorRecovery: true,
+    notes: ['SwiftSyntax exposes a source-accurate syntax tree with missing/unexpected nodes and token/trivia structure; SourceKit symbols, macro expansion, conditional compilation branch resolution, type checking, generated sources, and package/module dependency resolution remain host-owned evidence.']
+  }),
   nativeParserAstFormatProfile('tree-sitter', {
     kind: 'concrete-syntax-tree',
     languages: ['mixed'],
@@ -3007,6 +3020,67 @@ export function createCSharpRoslynNativeImporterAdapter(options = {}) {
         sourceGeneratorEvidence: input.options?.sourceGeneratorEvidence ?? options.sourceGeneratorEvidence ?? parsed?.sourceGeneratorEvidence,
         positionResolver: input.options?.positionResolver ?? options.positionResolver,
         lineMap: input.options?.lineMap ?? options.lineMap ?? parsed?.lineMap
+      });
+    }
+  };
+}
+
+export function createSwiftSyntaxNativeImporterAdapter(options = {}) {
+  return {
+    id: options.id ?? 'frontier.swift-syntax-native-importer',
+    language: options.language ?? 'swift',
+    parser: options.parser ?? 'swift-syntax',
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'parser-tree',
+      exactAst: true,
+      tokens: true,
+      trivia: true,
+      diagnostics: true,
+      sourceRanges: true,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes caller-owned SwiftSyntax/SwiftParser-shaped SourceFileSyntax trees into native AST nodes and declaration-level semantic index records.',
+        'SwiftSyntax imports do not resolve SourceKit symbols, type checking, macro expansions, conditional compilation branches, Objective-C bridging, generated sources, package/module dependencies, or control flow by themselves; attach host evidence for those claims.'
+      ]
+    }, options.coverage),
+    supportedExtensions: options.supportedExtensions ?? ['.swift'],
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const parsed = input.options?.ast
+        ?? input.options?.nativeAst
+        ?? input.options?.sourceFile
+        ?? input.options?.sourceFileSyntax
+        ?? input.options?.root
+        ?? options.ast
+        ?? options.sourceFile
+        ?? options.sourceFileSyntax
+        ?? options.root
+        ?? parseSwiftSyntaxSource(input, options);
+      const root = swiftSyntaxRoot(parsed);
+      if (!root) {
+        return missingInjectedParserResult(input, {
+          parser: options.parser ?? 'swift-syntax',
+          adapterId: options.id ?? 'frontier.swift-syntax-native-importer',
+          message: 'createSwiftSyntaxNativeImporterAdapter requires an injected SwiftSyntax SourceFileSyntax-shaped object, parserModule.parse function, parse function, or adapterOptions.ast.'
+        });
+      }
+      const parseDiagnostics = normalizeParserErrors(parsed?.errors ?? parsed?.diagnostics ?? parsed?.parseDiagnostics, input, {
+        parser: options.parser ?? 'swift-syntax'
+      });
+      return createNativeImportFromSwiftSyntax(root, input, {
+        parser: options.parser ?? 'swift-syntax',
+        astFormat: 'swift-syntax',
+        maxNodes: options.maxNodes,
+        diagnostics: parseDiagnostics,
+        swiftVersion: options.swiftVersion ?? input.options?.swiftVersion ?? parsed?.swiftVersion,
+        languageMode: options.languageMode ?? input.options?.languageMode ?? parsed?.languageMode,
+        generated: input.options?.generated ?? options.generated ?? parsed?.generated ?? swiftGeneratedSourcePath(input.sourcePath),
+        sourceKitEvidence: input.options?.sourceKitEvidence ?? options.sourceKitEvidence ?? parsed?.sourceKitEvidence,
+        macroExpansionEvidence: input.options?.macroExpansionEvidence ?? options.macroExpansionEvidence ?? parsed?.macroExpansionEvidence,
+        packageResolutionEvidence: input.options?.packageResolutionEvidence ?? options.packageResolutionEvidence ?? parsed?.packageResolutionEvidence
       });
     }
   };
@@ -7456,6 +7530,7 @@ function parserAstFormatIdForParser(parser) {
   if (text === 'go' || text.includes('go-parser') || text.includes('go-ast') || text.includes('go/parser') || text.includes('go/ast')) return 'go-ast';
   if (text === 'java' || text.includes('javac') || text.includes('jdt') || text.includes('javaparser') || text.includes('java-parser') || text.includes('java-ast')) return 'java-ast';
   if (text === 'csharp' || text === 'c#' || text === 'cs' || text.includes('roslyn') || text.includes('microsoft-codeanalysis-csharp') || text.includes('csharp-syntax')) return 'roslyn-csharp';
+  if (text.includes('swift-syntax') || text.includes('swiftsyntax') || text.includes('swiftparser') || text.includes('swift-parser')) return 'swift-syntax';
   if (text.includes('tree-sitter') || text.includes('treesitter')) return 'tree-sitter';
   if (text.includes('babel')) return 'babel';
   if (text.includes('estree')) return 'estree';
@@ -8570,6 +8645,22 @@ function parseCSharpRoslynSource(input, options) {
   return parse(input.sourceText, parserOptions);
 }
 
+function parseSwiftSyntaxSource(input, options) {
+  const parse = options.parse ?? options.parserModule?.parse ?? options.swiftSyntax?.parse ?? options.swiftParser?.parse;
+  if (typeof parse !== 'function') return undefined;
+  const parserOptions = {
+    sourcePath: input.sourcePath,
+    filename: input.sourcePath,
+    swiftVersion: options.swiftVersion ?? input.options?.swiftVersion,
+    languageMode: options.languageMode ?? input.options?.languageMode,
+    enableBareSlashRegex: options.enableBareSlashRegex ?? input.options?.enableBareSlashRegex,
+    parseTransition: options.parseTransition ?? input.options?.parseTransition,
+    ...(options.parserOptions ?? {}),
+    ...(input.options?.parserOptions ?? {})
+  };
+  return parse(input.sourceText, parserOptions);
+}
+
 function createNativeImportFromSyntaxAst(ast, input, options) {
   const root = normalizeSyntaxAstRoot(ast, options.astFormat);
   if (!root) {
@@ -8832,6 +8923,43 @@ function createNativeImportFromCSharpRoslyn(root, input, options) {
       analyzerDiagnostics: csharpEvidenceSummary(options.analyzerDiagnostics),
       semanticModelEvidence: csharpEvidenceSummary(options.semanticModelEvidence),
       sourceGeneratorEvidence: csharpEvidenceSummary(options.sourceGeneratorEvidence),
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createNativeImportFromSwiftSyntax(root, input, options) {
+  const context = createAstNormalizationContext(input, options);
+  visitSwiftSyntaxNode(root, context, 'root');
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  if (options.generated && !context.losses.some((loss) => loss.kind === 'generatedCode')) {
+    context.losses.push(swiftGeneratedCodeLoss(input, context.rootId, undefined, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: mergeNativeLosses(context.losses, options.diagnostics?.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, {
+      id: input.adapterId,
+      version: input.adapterVersion
+    }, input)) ?? []),
+    evidence: semantic.evidence,
+    diagnostics: options.diagnostics,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      swiftVersion: options.swiftVersion,
+      languageMode: options.languageMode,
+      generated: options.generated,
+      sourceKitEvidence: swiftEvidenceSummary(options.sourceKitEvidence),
+      macroExpansionEvidence: swiftEvidenceSummary(options.macroExpansionEvidence),
+      packageResolutionEvidence: swiftEvidenceSummary(options.packageResolutionEvidence),
       normalizedNodeCount: Object.keys(context.nodes).length,
       declarationCount: context.declarations.length,
       truncated: context.truncated
@@ -9396,6 +9524,108 @@ function visitCSharpRoslynNode(node, context, propertyPath) {
   }
   if (csharpGeneratedCodeMarker(node, kind)) {
     context.losses.push(csharpGeneratedCodeLoss(context.input, id, span, context.options, { nodeKind: kind }));
+  }
+  return id;
+}
+
+function visitSwiftSyntaxNode(node, context, propertyPath) {
+  if (!isSwiftSyntaxNode(node) || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const kind = swiftSyntaxKind(node);
+  const span = spanFromSwiftSyntaxNode(node, context.input, context.options);
+  const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  for (const [field, value] of swiftSyntaxChildEntries(node, kind)) {
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        const childId = visitSwiftSyntaxNode(entry, context, `${propertyPath}.${field}[${index}]`);
+        if (childId) children.push(childId);
+      });
+    } else {
+      const childId = visitSwiftSyntaxNode(value, context, `${propertyPath}.${field}`);
+      if (childId) children.push(childId);
+    }
+  }
+  const declarations = swiftSyntaxDeclarations(node, kind, id, context.input);
+  const declaration = declarations[0];
+  const nativeNode = {
+    id,
+    kind,
+    languageKind: `${context.input.language}.${kind}`,
+    span,
+    value: declaration?.name ?? swiftSyntaxNodeValue(node),
+    fields: primitiveSwiftSyntaxFields(node, kind),
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      positionKind: swiftSyntaxPositionKind(node),
+      parser: context.options.parser
+    }
+  };
+  context.nodes[id] = nativeNode;
+  for (const entry of declarations) {
+    context.declarations.push({ ...entry, nativeNode });
+  }
+  if (swiftSyntaxRecoveredKind(kind) || swiftSyntaxProblemNode(node, kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_swift_syntax_recovered_node`,
+      severity: 'error',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'unsupportedSyntax',
+      message: 'SwiftSyntax reported missing, unexpected, skipped, or error syntax; semantic import is partial until syntax errors are resolved.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat,
+        nodeKind: kind
+      }
+    });
+  }
+  if (swiftSyntaxConditionalCompilationKind(kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_swift_conditional_compilation`,
+      severity: 'warning',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'conditionalCompilation',
+      message: 'Swift conditional compilation syntax was imported; active branch selection and inactive branch source ownership require host build-setting evidence.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat,
+        nodeKind: kind
+      }
+    });
+  }
+  if (swiftSyntaxMacroKind(kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_swift_macro_expansion`,
+      severity: 'warning',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'macroExpansion',
+      message: 'Swift macro syntax was imported, but expansion, generated declarations, and binding effects require host macro-expansion evidence.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat,
+        nodeKind: kind
+      }
+    });
+  }
+  if (swiftGeneratedCodeMarker(node, kind)) {
+    context.losses.push(swiftGeneratedCodeLoss(context.input, id, span, context.options, { nodeKind: kind }));
   }
   return id;
 }
@@ -12604,6 +12834,522 @@ function csharpEvidenceSummary(value) {
     if (Array.isArray(value.diagnostics)) summary.diagnosticCount = value.diagnostics.length;
     if (Array.isArray(value.generators)) summary.generatorCount = value.generators.length;
     if (Array.isArray(value.projects)) summary.projectCount = value.projects.length;
+    return Object.keys(summary).length ? summary : { present: true };
+  }
+  return { present: true };
+}
+
+function swiftSyntaxRoot(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  if (isSwiftSyntaxNode(value)) return value;
+  if (isSwiftSyntaxNode(value.ast)) return value.ast;
+  if (isSwiftSyntaxNode(value.root)) return value.root;
+  if (isSwiftSyntaxNode(value.rootNode)) return value.rootNode;
+  if (isSwiftSyntaxNode(value.sourceFile)) return value.sourceFile;
+  if (isSwiftSyntaxNode(value.sourceFileSyntax)) return value.sourceFileSyntax;
+  if (isSwiftSyntaxNode(value.tree)) return swiftSyntaxRoot(value.tree);
+  if (Array.isArray(value.statements) || Array.isArray(value.members) || Array.isArray(value.declarations)) {
+    return { kind: 'SourceFile', ...value };
+  }
+  return undefined;
+}
+
+function isSwiftSyntaxNode(value) {
+  return Boolean(value && typeof value === 'object' && typeof swiftSyntaxKind(value) === 'string');
+}
+
+function swiftSyntaxKind(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const declared = node.kind ?? node.syntaxKind ?? node.SyntaxKind ?? node._syntaxKind ?? node._type ?? node.type ?? node.nodeType;
+  if (typeof declared === 'string') return normalizeSwiftSyntaxKind(declared);
+  if (Array.isArray(node.statements) || Array.isArray(node.members) || Array.isArray(node.declarations)) return 'SourceFile';
+  if (node.identifier && (node.memberBlock || node.members || node.genericParameterClause || node.inheritanceClause)) return 'ClassDecl';
+  if (node.signature && node.body) return 'FunctionDecl';
+  if (node.importPath || node.path) return 'ImportDecl';
+  return undefined;
+}
+
+function normalizeSwiftSyntaxKind(kind) {
+  const text = String(kind)
+    .replace(/^SwiftSyntax\./, '')
+    .replace(/Syntax$/, '');
+  const compact = text.replace(/[_\s.-]+/g, '').toLowerCase();
+  const known = {
+    sourcefile: 'SourceFile',
+    importdecl: 'ImportDecl',
+    classdecl: 'ClassDecl',
+    structdecl: 'StructDecl',
+    enumdecl: 'EnumDecl',
+    protocoldecl: 'ProtocolDecl',
+    actordecl: 'ActorDecl',
+    extensiondecl: 'ExtensionDecl',
+    typealiasdecl: 'TypeAliasDecl',
+    associatedtypedecl: 'AssociatedTypeDecl',
+    functiondecl: 'FunctionDecl',
+    initializerdecl: 'InitializerDecl',
+    initdecl: 'InitializerDecl',
+    deinitializerdecl: 'DeinitializerDecl',
+    deinitdecl: 'DeinitializerDecl',
+    subscriptdecl: 'SubscriptDecl',
+    operatordecl: 'OperatorDecl',
+    precedencegroupdecl: 'PrecedenceGroupDecl',
+    variabledecl: 'VariableDecl',
+    patternbinding: 'PatternBinding',
+    enumcasedecl: 'EnumCaseDecl',
+    enumcaseelement: 'EnumCaseElement',
+    macrodecl: 'MacroDecl',
+    macroexpansiondecl: 'MacroExpansionDecl',
+    freestandingmacroexpansion: 'FreestandingMacroExpansion',
+    freestandingmacroexpansionsyntax: 'FreestandingMacroExpansion',
+    attributemacroexpansion: 'AttributeMacroExpansion',
+    ifconfigdecl: 'IfConfigDecl',
+    ifconfigexpr: 'IfConfigExpr',
+    unexpectednodes: 'UnexpectedNodes',
+    missingtoken: 'MissingToken',
+    skippedtoken: 'SkippedToken',
+    error: 'Error'
+  };
+  if (known[compact]) return known[compact];
+  if (/^[A-Z0-9_]+$/.test(text)) return text.toLowerCase().split('_').map(upperFirst).join('');
+  return text;
+}
+
+function ignoredSwiftSyntaxField(key) {
+  return key === '_type'
+    || key === 'type'
+    || key === 'kind'
+    || key === 'syntaxKind'
+    || key === 'SyntaxKind'
+    || key === '_syntaxKind'
+    || key === 'nodeType'
+    || key === 'parent'
+    || key === 'parentKind'
+    || key === 'parentField'
+    || key === 'position'
+    || key === 'absolutePosition'
+    || key === 'endPosition'
+    || key === 'location'
+    || key === 'sourceRange'
+    || key === 'range'
+    || key === 'span'
+    || key === 'identifier'
+    || key === 'name'
+    || key === 'simpleName'
+    || key === 'typeName'
+    || key === 'sourceKitSymbol'
+    || key === 'semanticModel'
+    || key === 'resolvedSymbol'
+    || key === 'typeInfo';
+}
+
+function primitiveSwiftSyntaxFields(node, kind) {
+  const fields = { kind };
+  const name = swiftSyntaxDeclarationName(node, kind);
+  if (name) fields.name = name;
+  const importPath = swiftSyntaxImportPath(node);
+  if (importPath) fields.importPath = importPath;
+  const type = swiftSyntaxTypeName(node.type ?? node.typeAnnotation?.type ?? node.returnClause?.type ?? node.extendedType);
+  if (type) fields.type = type;
+  const modifiers = swiftSyntaxModifierNames(node);
+  if (modifiers.length) fields.modifiers = modifiers.join(',');
+  const attributes = swiftSyntaxAttributeNames(node);
+  if (attributes.length) fields.attributes = attributes.join(',');
+  if (node.generated === true || node.isGenerated === true) fields.generated = true;
+  if (node.isMissing === true || node.presence === 'missing') fields.isMissing = true;
+  if (node.hasError === true || node.containsDiagnostics === true) fields.hasError = true;
+  if (Array.isArray(node.genericParameterClause?.parameters ?? node.genericParameters)) fields.genericParameterCount = (node.genericParameterClause?.parameters ?? node.genericParameters).length;
+  if (Array.isArray(node.inheritanceClause?.inheritedTypes ?? node.inheritedTypes)) fields.inheritedTypeCount = (node.inheritanceClause?.inheritedTypes ?? node.inheritedTypes).length;
+  if (Array.isArray(node.signature?.parameterClause?.parameters ?? node.parameters)) fields.parameterCount = (node.signature?.parameterClause?.parameters ?? node.parameters).length;
+  return fields;
+}
+
+function spanFromSwiftSyntaxNode(node, input, options = {}) {
+  const direct = spanFromSwiftLineFields(node, input);
+  if (direct) return direct;
+  const range = node.sourceRange ?? node.range ?? node.span;
+  const fromRange = spanFromSwiftRange(range, input);
+  if (fromRange) return fromRange;
+  const start = swiftSyntaxPosition(node.position ?? node.absolutePosition ?? node.start ?? range?.start, options);
+  const end = swiftSyntaxPosition(node.endPosition ?? node.end ?? range?.end, options);
+  if (!start) return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: start.path ?? end?.path ?? input.sourcePath,
+    startLine: start.line,
+    startColumn: start.column,
+    endLine: end?.line,
+    endColumn: end?.column
+  };
+}
+
+function spanFromSwiftLineFields(node, input) {
+  const startLine = node.startLine ?? node.line ?? node.beginLine;
+  if (typeof startLine !== 'number') return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: node.path ?? node.filePath ?? node.file ?? input.sourcePath,
+    startLine,
+    startColumn: node.startColumn ?? node.column ?? node.beginColumn,
+    endLine: node.endLine,
+    endColumn: node.endColumn
+  };
+}
+
+function spanFromSwiftRange(range, input) {
+  if (!range || typeof range !== 'object') return undefined;
+  const start = range.start ?? range.lowerBound ?? range.begin;
+  const end = range.end ?? range.upperBound;
+  const line = start?.line ?? start?.Line;
+  if (typeof line !== 'number') return undefined;
+  const column = start.column ?? start.character ?? start.utf8Column ?? start.Column;
+  const endLine = end?.line ?? end?.Line;
+  const endColumn = end?.column ?? end?.character ?? end?.utf8Column ?? end?.Column;
+  return {
+    sourceId: input.sourceHash,
+    path: range.path ?? range.filePath ?? range.file ?? input.sourcePath,
+    startLine: line,
+    startColumn: typeof column === 'number' ? column : undefined,
+    endLine: typeof endLine === 'number' ? endLine : undefined,
+    endColumn: typeof endColumn === 'number' ? endColumn : undefined
+  };
+}
+
+function swiftSyntaxPosition(value, options = {}) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'object') {
+    const position = value.position ?? value.location ?? value;
+    const line = position.line ?? position.Line;
+    const column = position.column ?? position.character ?? position.utf8Column ?? position.Column;
+    if (typeof line === 'number') {
+      return {
+        path: position.path ?? position.filePath ?? position.file,
+        line,
+        column: typeof column === 'number' ? column : undefined
+      };
+    }
+  }
+  const resolver = typeof options.positionResolver === 'function'
+    ? options.positionResolver
+    : typeof options.lineMap?.position === 'function'
+      ? options.lineMap.position.bind(options.lineMap)
+      : typeof options.sourceLocationConverter?.location === 'function'
+        ? options.sourceLocationConverter.location.bind(options.sourceLocationConverter)
+        : undefined;
+  if (resolver) {
+    const resolved = resolver(value);
+    if (resolved !== value) return swiftSyntaxPosition(resolved, options);
+  }
+  return undefined;
+}
+
+function swiftSyntaxPositionKind(node) {
+  if (node.sourceRange || node.range) return 'source-range';
+  if (node.position || node.absolutePosition) return 'absolute-position';
+  if (typeof node.startLine === 'number' || typeof node.line === 'number') return 'line-column-fields';
+  return undefined;
+}
+
+function swiftSyntaxDeclarations(node, kind, nativeNodeId, input) {
+  if (kind === 'ImportDecl') {
+    const name = swiftSyntaxImportPath(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'module', 'import')] : [];
+  }
+  if (swiftSyntaxTypeDeclarationKind(kind)) {
+    const name = swiftSyntaxDeclarationName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, swiftSyntaxTypeDeclarationSymbolKind(kind), 'definition')] : [];
+  }
+  if (kind === 'ExtensionDecl') {
+    const name = swiftSyntaxDeclarationName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'type', 'definition')] : [];
+  }
+  if (kind === 'TypeAliasDecl' || kind === 'AssociatedTypeDecl') {
+    const name = swiftSyntaxDeclarationName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'type', 'definition')] : [];
+  }
+  if (swiftSyntaxFunctionLikeKind(kind)) {
+    const name = swiftSyntaxDeclarationName(node, kind) ?? swiftSyntaxOperatorName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, kind === 'FunctionDecl' ? 'function' : 'method', swiftSyntaxHasBody(node) ? 'definition' : 'declaration')] : [];
+  }
+  if (kind === 'VariableDecl') {
+    return swiftSyntaxVariableNames(node).map((name) => declarationRecord(input, nativeNodeId, name, 'property', 'definition'));
+  }
+  if (kind === 'PatternBinding' && node.parentKind === 'VariableDecl') {
+    const name = swiftSyntaxDeclarationName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'property', 'definition')] : [];
+  }
+  if (kind === 'EnumCaseDecl') {
+    return swiftSyntaxEnumCaseNames(node).map((name) => declarationRecord(input, nativeNodeId, name, 'enumMember', 'definition'));
+  }
+  if (kind === 'EnumCaseElement') {
+    const name = swiftSyntaxDeclarationName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'enumMember', 'definition')] : [];
+  }
+  return [];
+}
+
+function swiftSyntaxChildEntries(node, kind = swiftSyntaxKind(node)) {
+  const fieldNames = Object.keys(node).filter((key) => !ignoredSwiftSyntaxField(key));
+  const entries = [];
+  for (const field of fieldNames) {
+    const value = node[field];
+    if (Array.isArray(value)) {
+      entries.push([field, value.map((entry) => swiftSyntaxChildWithParent(entry, kind, field))]);
+      continue;
+    }
+    if (value && typeof value === 'object') {
+      entries.push([field, swiftSyntaxChildWithParent(value, kind, field)]);
+    }
+  }
+  return entries.filter(([, value]) => Array.isArray(value)
+    ? value.some(isSwiftSyntaxNode)
+    : isSwiftSyntaxNode(value));
+}
+
+function swiftSyntaxChildWithParent(entry, parentKind, parentField) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
+  if (!isSwiftSyntaxNode(entry)) return entry;
+  return { parentKind, parentField, ...entry };
+}
+
+function swiftSyntaxNodeValue(node) {
+  return swiftSyntaxDeclarationName(node, swiftSyntaxKind(node))
+    ?? swiftSyntaxImportPath(node)
+    ?? swiftSyntaxTypeName(node.type ?? node.returnClause?.type ?? node.extendedType)
+    ?? swiftSyntaxLiteralValue(node);
+}
+
+function swiftSyntaxDeclarationName(node, kind = swiftSyntaxKind(node)) {
+  if (!node || typeof node !== 'object') return undefined;
+  if (kind === 'InitializerDecl') return 'init';
+  if (kind === 'DeinitializerDecl') return 'deinit';
+  if (kind === 'SubscriptDecl') return 'subscript';
+  if (kind === 'ExtensionDecl') {
+    const extended = swiftSyntaxTypeName(node.extendedType ?? node.type ?? node.name);
+    return extended ? `extension ${extended}` : undefined;
+  }
+  if (kind === 'OperatorDecl') return swiftSyntaxOperatorName(node, kind);
+  for (const key of ['identifier', 'name', 'simpleName', 'typeName', 'id']) {
+    const name = swiftSyntaxName(node[key]);
+    if (name) return name;
+  }
+  const patternName = swiftSyntaxPatternName(node.pattern);
+  if (patternName) return patternName;
+  return undefined;
+}
+
+function swiftSyntaxName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.text === 'string') return value.text;
+  if (typeof value.trimmedDescription === 'string') return value.trimmedDescription;
+  if (typeof value.description === 'string' && !value.description.includes('[object Object]')) return value.description.trim();
+  if (typeof value.identifier === 'string') return value.identifier;
+  if (typeof value.name === 'string') return value.name;
+  if (typeof value.value === 'string') return value.value;
+  if (value.tokenKind && typeof value.tokenKind === 'object') return swiftSyntaxName(value.tokenKind);
+  if (value.identifier && value.identifier !== value) return swiftSyntaxName(value.identifier);
+  if (value.name && value.name !== value) return swiftSyntaxName(value.name);
+  return undefined;
+}
+
+function swiftSyntaxImportPath(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const path = node.importPath ?? node.path ?? node.modulePath ?? node.name;
+  if (typeof path === 'string') return path;
+  if (Array.isArray(path)) {
+    return path.map((entry) => swiftSyntaxName(entry.name ?? entry.identifier ?? entry)).filter(Boolean).join('.');
+  }
+  if (path && typeof path === 'object') {
+    if (Array.isArray(path.components)) return path.components.map((entry) => swiftSyntaxName(entry.name ?? entry.identifier ?? entry)).filter(Boolean).join('.');
+    return swiftSyntaxName(path);
+  }
+  return undefined;
+}
+
+function swiftSyntaxTypeName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.trimmedDescription === 'string') return value.trimmedDescription;
+  if (typeof value.description === 'string' && !value.description.includes('[object Object]')) return value.description.trim();
+  if (typeof value.name === 'string') return value.name;
+  if (typeof value.text === 'string') return value.text;
+  if (value.baseType) {
+    const base = swiftSyntaxTypeName(value.baseType);
+    return base && value.name ? `${base}.${swiftSyntaxName(value.name)}` : base;
+  }
+  if (value.argumentList && Array.isArray(value.argumentList)) {
+    const base = swiftSyntaxName(value.name) ?? swiftSyntaxTypeName(value.baseName);
+    const args = value.argumentList.map((entry) => swiftSyntaxTypeName(entry.type ?? entry)).filter(Boolean);
+    return base ? `${base}<${args.join(', ')}>` : undefined;
+  }
+  return swiftSyntaxName(value);
+}
+
+function swiftSyntaxModifierNames(node) {
+  const modifiers = node.modifiers ?? node.Modifiers;
+  if (!modifiers) return [];
+  if (Array.isArray(modifiers)) {
+    return uniqueStrings(modifiers.map((entry) => typeof entry === 'string' ? entry : swiftSyntaxName(entry.name ?? entry.modifier ?? entry)).filter(Boolean));
+  }
+  if (typeof modifiers === 'string') return uniqueStrings(modifiers.split(/\s+/).filter(Boolean));
+  if (typeof modifiers === 'object') {
+    return uniqueStrings(Object.entries(modifiers)
+      .filter(([, enabled]) => enabled === true)
+      .map(([key]) => key));
+  }
+  return [];
+}
+
+function swiftSyntaxAttributeNames(node) {
+  const attributes = node.attributes ?? node.attributeList;
+  if (!attributes) return [];
+  if (Array.isArray(attributes)) {
+    return uniqueStrings(attributes.map((entry) => typeof entry === 'string' ? entry : swiftSyntaxName(entry.attributeName ?? entry.name ?? entry)).filter(Boolean));
+  }
+  return [];
+}
+
+function swiftSyntaxVariableNames(node) {
+  const bindings = node.bindings ?? node.bindingSpecifier?.bindings ?? node.patternBindings;
+  if (Array.isArray(bindings)) return bindings.map((binding) => swiftSyntaxPatternName(binding.pattern ?? binding)).filter(Boolean);
+  const name = swiftSyntaxPatternName(node.pattern) ?? swiftSyntaxDeclarationName(node);
+  return name ? [name] : [];
+}
+
+function swiftSyntaxEnumCaseNames(node) {
+  const elements = node.elements ?? node.caseElements ?? node.cases;
+  if (Array.isArray(elements)) return elements.map((entry) => swiftSyntaxDeclarationName(entry, 'EnumCaseElement')).filter(Boolean);
+  const name = swiftSyntaxDeclarationName(node);
+  return name ? [name] : [];
+}
+
+function swiftSyntaxPatternName(pattern) {
+  if (!pattern) return undefined;
+  if (typeof pattern === 'string') return pattern;
+  return swiftSyntaxName(pattern.identifier ?? pattern.name ?? pattern.boundName ?? pattern.pattern ?? pattern);
+}
+
+function swiftSyntaxTypeDeclarationKind(kind) {
+  return kind === 'ClassDecl'
+    || kind === 'StructDecl'
+    || kind === 'EnumDecl'
+    || kind === 'ProtocolDecl'
+    || kind === 'ActorDecl';
+}
+
+function swiftSyntaxTypeDeclarationSymbolKind(kind) {
+  if (kind === 'ClassDecl') return 'class';
+  if (kind === 'StructDecl') return 'struct';
+  if (kind === 'EnumDecl') return 'enum';
+  if (kind === 'ProtocolDecl') return 'protocol';
+  if (kind === 'ActorDecl') return 'class';
+  return 'type';
+}
+
+function swiftSyntaxFunctionLikeKind(kind) {
+  return kind === 'FunctionDecl'
+    || kind === 'InitializerDecl'
+    || kind === 'DeinitializerDecl'
+    || kind === 'SubscriptDecl'
+    || kind === 'OperatorDecl'
+    || kind === 'PrecedenceGroupDecl';
+}
+
+function swiftSyntaxHasBody(node) {
+  return Boolean(node.body || node.accessorBlock || node.memberBlock || Array.isArray(node.statements));
+}
+
+function swiftSyntaxOperatorName(node, kind) {
+  if (kind === 'PrecedenceGroupDecl') return swiftSyntaxDeclarationName(node) ?? 'precedencegroup';
+  const operatorToken = swiftSyntaxName(node.operatorIdentifier ?? node.operatorToken ?? node.name);
+  return operatorToken ? `operator ${operatorToken}` : undefined;
+}
+
+function swiftSyntaxLiteralValue(node) {
+  const value = node.value ?? node.literal;
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  return undefined;
+}
+
+function swiftSyntaxRecoveredKind(kind) {
+  return kind === 'UnexpectedNodes'
+    || kind === 'MissingToken'
+    || kind === 'SkippedToken'
+    || kind === 'Error'
+    || /Unexpected|Missing|Skipped|Error/.test(String(kind));
+}
+
+function swiftSyntaxProblemNode(node, kind) {
+  return Boolean(
+    node.isMissing
+    || node.hasError
+    || node.containsDiagnostics
+    || node.containsSkippedText
+    || node.presence === 'missing'
+    || kind === 'UnexpectedNodes'
+    || kind === 'MissingToken'
+    || kind === 'SkippedToken'
+    || kind === 'Error'
+  );
+}
+
+function swiftSyntaxConditionalCompilationKind(kind) {
+  return /IfConfig|ConditionalCompilation|PoundIf|PoundElse|PoundElseif|PoundEndif/i.test(String(kind));
+}
+
+function swiftSyntaxMacroKind(kind) {
+  return /Macro/i.test(String(kind));
+}
+
+function swiftGeneratedCodeMarker(node, kind) {
+  if (node.generated || node.isGenerated) return true;
+  const path = String(node.filePath ?? node.path ?? node.sourcePath ?? '');
+  if (swiftGeneratedSourcePath(path)) return true;
+  if (kind === 'Attribute') {
+    const name = swiftSyntaxDeclarationName(node);
+    if (name && /(^|\.)(Generated|CompilerGenerated|_spi)Attribute?$/.test(name)) return true;
+  }
+  return false;
+}
+
+function swiftGeneratedSourcePath(path) {
+  return typeof path === 'string' && /\.(g|generated)\.swift$/i.test(path);
+}
+
+function swiftGeneratedCodeLoss(input, nodeId, span, options = {}, metadata = {}) {
+  return {
+    id: `loss_${idFragment(nodeId ?? input.sourcePath ?? 'swift')}_swift_generated_code`,
+    severity: 'warning',
+    phase: 'parse',
+    sourceFormat: input.language,
+    kind: 'generatedCode',
+    message: 'Swift generated-source marker was imported; generated member provenance and source ownership require host evidence.',
+    span,
+    nodeId,
+    metadata: {
+      parser: options.parser,
+      astFormat: options.astFormat,
+      macroExpansionEvidence: swiftEvidenceSummary(options.macroExpansionEvidence),
+      ...metadata
+    }
+  };
+}
+
+function swiftEvidenceSummary(value) {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return { entryCount: value.length };
+  if (typeof value === 'string') return { value };
+  if (typeof value === 'object') {
+    const summary = {};
+    if (typeof value.hash === 'string') summary.hash = value.hash;
+    if (typeof value.solver === 'string') summary.solver = value.solver;
+    if (Array.isArray(value.entries)) summary.entryCount = value.entries.length;
+    if (Array.isArray(value.symbols)) summary.symbolCount = value.symbols.length;
+    if (Array.isArray(value.references)) summary.referenceCount = value.references.length;
+    if (Array.isArray(value.types)) summary.typeCount = value.types.length;
+    if (Array.isArray(value.diagnostics)) summary.diagnosticCount = value.diagnostics.length;
+    if (Array.isArray(value.macros)) summary.macroCount = value.macros.length;
+    if (Array.isArray(value.packages)) summary.packageCount = value.packages.length;
     return Object.keys(summary).length ? summary : { present: true };
   }
   return { present: true };
