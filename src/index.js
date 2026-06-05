@@ -415,6 +415,18 @@ export const NativeParserAstFormatProfiles = Object.freeze([
     supportsErrorRecovery: false,
     notes: ['Clang JSON AST dumps expose compiler AST declarations and source ranges after preprocessing; compile commands, macros, inactive branches, type checking, and lossless formatting remain host-owned evidence.']
   }),
+  nativeParserAstFormatProfile('go-ast', {
+    aliases: ['go/parser', 'goast', 'golang-ast'],
+    kind: 'compiler-ast',
+    languages: ['go'],
+    parserAdapters: ['go/ast', 'go/parser', 'go-ast'],
+    exactness: 'exact-parser-ast',
+    sourceRangeModel: 'token-position',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsErrorRecovery: true,
+    notes: ['Go go/ast trees expose parser syntax nodes and token positions; FileSet, build tags, generated-code classification, package loading, go/types, comments/trivia, and control-flow evidence remain host-owned.']
+  }),
   nativeParserAstFormatProfile('tree-sitter', {
     kind: 'concrete-syntax-tree',
     languages: ['mixed'],
@@ -2776,6 +2788,68 @@ export function createClangAstNativeImporterAdapter(options = {}) {
         includeSystemHeaders: options.includeSystemHeaders ?? input.options?.includeSystemHeaders,
         preprocessorRecords: input.options?.preprocessorRecords ?? options.preprocessorRecords ?? parsed?.preprocessorRecords,
         includeGraph: input.options?.includeGraph ?? options.includeGraph ?? parsed?.includeGraph
+      });
+    }
+  };
+}
+
+export function createGoAstNativeImporterAdapter(options = {}) {
+  return {
+    id: options.id ?? 'frontier.go-ast-native-importer',
+    language: options.language ?? 'go',
+    parser: options.parser ?? 'go/parser',
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'exact-parser-ast',
+      exactAst: true,
+      tokens: false,
+      trivia: false,
+      diagnostics: true,
+      sourceRanges: true,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes caller-owned Go go/ast-shaped File or Package trees into native AST nodes and declaration-level semantic index records.',
+        'Go AST imports do not resolve types, imports, build tags, generated code, or control flow by themselves; attach FileSet, go/types, go/packages, and build context evidence for those claims.'
+      ]
+    }, options.coverage),
+    supportedExtensions: options.supportedExtensions ?? ['.go'],
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const parsed = input.options?.ast
+        ?? input.options?.nativeAst
+        ?? input.options?.file
+        ?? input.options?.sourceFile
+        ?? input.options?.package
+        ?? options.ast
+        ?? options.file
+        ?? options.sourceFile
+        ?? options.package
+        ?? parseGoAstSource(input, options);
+      const root = goAstRoot(parsed);
+      if (!root) {
+        return missingInjectedParserResult(input, {
+          parser: options.parser ?? 'go/parser',
+          adapterId: options.id ?? 'frontier.go-ast-native-importer',
+          message: 'createGoAstNativeImporterAdapter requires an injected Go ast.File/Package-shaped object, parserModule.parse function, parse function, or adapterOptions.ast.'
+        });
+      }
+      const parseDiagnostics = normalizeParserErrors(parsed?.errors ?? parsed?.diagnostics, input, {
+        parser: options.parser ?? 'go/parser'
+      });
+      return createNativeImportFromGoAst(root, input, {
+        parser: options.parser ?? 'go/parser',
+        astFormat: 'go-ast',
+        maxNodes: options.maxNodes,
+        diagnostics: parseDiagnostics,
+        goVersion: options.goVersion ?? input.options?.goVersion ?? parsed?.goVersion,
+        packageName: options.packageName ?? input.options?.packageName ?? parsed?.packageName ?? root?.Name?.Name ?? root?.Name,
+        fileSet: input.options?.fileSet ?? input.options?.fset ?? options.fileSet ?? options.fset ?? parsed?.fileSet ?? parsed?.fset,
+        includeComments: options.includeComments ?? input.options?.includeComments,
+        buildTags: input.options?.buildTags ?? options.buildTags ?? parsed?.buildTags,
+        generated: input.options?.generated ?? options.generated ?? parsed?.generated,
+        typeEvidence: input.options?.typeEvidence ?? options.typeEvidence ?? parsed?.typeEvidence
       });
     }
   };
@@ -7222,6 +7296,7 @@ function parserAstFormatIdForParser(parser) {
   if (text === 'syn' || text.includes('rust-syn')) return 'rust-syn';
   if (text.includes('rust-analyzer') || text.includes('rowan')) return 'rust-analyzer-rowan';
   if (text.includes('clang') || text.includes('libclang')) return 'clang-ast-json';
+  if (text === 'go' || text.includes('go-parser') || text.includes('go-ast') || text.includes('go/parser') || text.includes('go/ast')) return 'go-ast';
   if (text.includes('tree-sitter') || text.includes('treesitter')) return 'tree-sitter';
   if (text.includes('babel')) return 'babel';
   if (text.includes('estree')) return 'estree';
@@ -8287,6 +8362,22 @@ function parseClangAstSource(input, options) {
   return parse(input.sourceText, parserOptions);
 }
 
+function parseGoAstSource(input, options) {
+  const parse = options.parse ?? options.parserModule?.parse ?? options.goAst?.parse ?? options.goParser?.parse;
+  if (typeof parse !== 'function') return undefined;
+  const parserOptions = {
+    sourcePath: input.sourcePath,
+    filename: input.sourcePath,
+    mode: options.mode ?? input.options?.mode ?? 'ParseComments',
+    goVersion: options.goVersion ?? input.options?.goVersion,
+    packageName: options.packageName ?? input.options?.packageName,
+    includeComments: options.includeComments ?? input.options?.includeComments,
+    ...(options.parserOptions ?? {}),
+    ...(input.options?.parserOptions ?? {})
+  };
+  return parse(input.sourceText, parserOptions);
+}
+
 function createNativeImportFromSyntaxAst(ast, input, options) {
   const root = normalizeSyntaxAstRoot(ast, options.astFormat);
   if (!root) {
@@ -8436,6 +8527,41 @@ function createNativeImportFromClangAst(root, input, options) {
       includeSystemHeaders: Boolean(options.includeSystemHeaders),
       preprocessorRecordCount: clangPreprocessorRecords(options.preprocessorRecords).length,
       includeGraph: serializableIncludeGraphSummary(options.includeGraph),
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createNativeImportFromGoAst(root, input, options) {
+  const context = createAstNormalizationContext(input, options);
+  visitGoAstNode(root, context, 'root');
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: mergeNativeLosses(context.losses, options.diagnostics?.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, {
+      id: input.adapterId,
+      version: input.adapterVersion
+    }, input)) ?? []),
+    evidence: semantic.evidence,
+    diagnostics: options.diagnostics,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      goVersion: options.goVersion,
+      packageName: options.packageName,
+      includeComments: Boolean(options.includeComments),
+      buildTags: Array.isArray(options.buildTags) ? options.buildTags.slice() : options.buildTags,
+      generated: options.generated,
+      fileSetEvidence: Boolean(options.fileSet),
+      typeEvidence: goTypeEvidenceSummary(options.typeEvidence),
       normalizedNodeCount: Object.keys(context.nodes).length,
       declarationCount: context.declarations.length,
       truncated: context.truncated
@@ -8737,6 +8863,104 @@ function visitClangAstNode(node, context, propertyPath) {
       sourceFormat: context.input.language,
       kind: 'preprocessor',
       message: 'Clang AST preprocessor records were imported, but macro expansion, inactive branches, and compile-command provenance require host evidence.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat
+      }
+    });
+  }
+  return id;
+}
+
+function visitGoAstNode(node, context, propertyPath) {
+  if (!isGoAstNode(node) || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const kind = goAstKind(node);
+  const span = spanFromGoAstNode(node, context.input, context.options);
+  const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  for (const [field, value] of goAstChildEntries(node)) {
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        const childId = visitGoAstNode(entry, context, `${propertyPath}.${field}[${index}]`);
+        if (childId) children.push(childId);
+      });
+    } else {
+      const childId = visitGoAstNode(value, context, `${propertyPath}.${field}`);
+      if (childId) children.push(childId);
+    }
+  }
+  const declarations = goAstDeclarations(node, kind, id, context.input);
+  const declaration = declarations[0];
+  const nativeNode = {
+    id,
+    kind,
+    languageKind: `${context.input.language}.${kind}`,
+    span,
+    value: declaration?.name ?? goAstNodeValue(node),
+    fields: primitiveGoAstFields(node, kind),
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      positionKind: goAstPositionKind(node),
+      packageName: context.options.packageName
+    }
+  };
+  context.nodes[id] = nativeNode;
+  for (const entry of declarations) {
+    context.declarations.push({ ...entry, nativeNode });
+  }
+  if (goBadAstKind(kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_go_bad_node`,
+      severity: 'error',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'unsupportedSyntax',
+      message: 'Go parser recovered a BadDecl/BadExpr/BadStmt node; semantic import is partial until syntax errors are resolved.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat,
+        nodeKind: kind
+      }
+    });
+  }
+  if (kind === 'FuncDecl' && goReceiverFieldCount(node) > 1) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_go_multiple_receivers`,
+      severity: 'warning',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'unsupportedSyntax',
+      message: 'Go parser accepted multiple receiver fields; valid method ownership requires a single receiver.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat,
+        receiverFieldCount: goReceiverFieldCount(node)
+      }
+    });
+  }
+  if (goGeneratedCodeMarker(node, kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_go_generated_code`,
+      severity: 'warning',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'generatedCode',
+      message: 'Go generated-code marker was imported; regeneration provenance and source ownership require host evidence.',
       span,
       nodeId: id,
       metadata: {
@@ -10654,6 +10878,332 @@ function serializableIncludeGraphSummary(value) {
   if (typeof value.root === 'string') summary.root = value.root;
   if (Array.isArray(value.edges)) summary.edgeCount = value.edges.length;
   if (Array.isArray(value.includes)) summary.includeCount = value.includes.length;
+  return Object.keys(summary).length ? summary : { present: true };
+}
+
+function goAstRoot(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  if (isGoAstNode(value)) return value;
+  if (isGoAstNode(value.ast)) return value.ast;
+  if (isGoAstNode(value.file)) return value.file;
+  if (isGoAstNode(value.sourceFile)) return value.sourceFile;
+  if (isGoAstNode(value.root)) return value.root;
+  if (isGoAstNode(value.package)) return value.package;
+  if (value.files && typeof value.files === 'object') return { kind: 'Package', Name: value.name ?? value.packageName, Files: value.files };
+  return undefined;
+}
+
+function isGoAstNode(value) {
+  return Boolean(value && typeof value === 'object' && typeof goAstKind(value) === 'string');
+}
+
+function goAstKind(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const declared = node.kind ?? node._type ?? node.type ?? node.nodeType ?? node.astKind;
+  if (typeof declared === 'string') return normalizeGoAstKind(declared);
+  if (Array.isArray(node.Decls) || Array.isArray(node.decls)) return 'File';
+  if (node.Files || node.files) return 'Package';
+  if (node.Name && node.Type && (node.Body || node.Recv !== undefined || node.recv !== undefined)) return 'FuncDecl';
+  if (node.Tok && (node.Specs || node.specs)) return 'GenDecl';
+  if (node.Path && (node.Name !== undefined || node.EndPos !== undefined)) return 'ImportSpec';
+  if (node.Names && node.Type !== undefined) return 'ValueSpec';
+  if (node.Name && node.Type !== undefined) return 'TypeSpec';
+  if (node.List && (node.Opening !== undefined || node.Closing !== undefined)) return 'FieldList';
+  return undefined;
+}
+
+function normalizeGoAstKind(kind) {
+  const text = String(kind).replace(/^(?:ast\.)?\*/, '').replace(/^(?:go\/ast\.)/, '');
+  if (/^file$/i.test(text)) return 'File';
+  if (/^package$/i.test(text)) return 'Package';
+  if (/^funcdecl$/i.test(text) || /^func_decl$/i.test(text)) return 'FuncDecl';
+  if (/^gendecl$/i.test(text) || /^gen_decl$/i.test(text)) return 'GenDecl';
+  if (/^importspec$/i.test(text) || /^import_spec$/i.test(text)) return 'ImportSpec';
+  if (/^typespec$/i.test(text) || /^type_spec$/i.test(text)) return 'TypeSpec';
+  if (/^valuespec$/i.test(text) || /^value_spec$/i.test(text)) return 'ValueSpec';
+  if (/^structtype$/i.test(text) || /^struct_type$/i.test(text)) return 'StructType';
+  if (/^interfacetype$/i.test(text) || /^interface_type$/i.test(text)) return 'InterfaceType';
+  if (/^fieldlist$/i.test(text) || /^field_list$/i.test(text)) return 'FieldList';
+  return text;
+}
+
+function ignoredGoAstField(key) {
+  return key === '_type'
+    || key === 'type'
+    || key === 'kind'
+    || key === 'nodeType'
+    || key === 'astKind'
+    || key === 'parent'
+    || key === 'Obj'
+    || key === 'object'
+    || key === 'Scope'
+    || key === 'scope'
+    || key === 'Unresolved'
+    || key === 'unresolved'
+    || key === 'FileStart'
+    || key === 'FileEnd'
+    || key === 'Package'
+    || key === 'Name'
+    || key === 'Path'
+    || key === 'Pos'
+    || key === 'End'
+    || key === 'pos'
+    || key === 'end';
+}
+
+function primitiveGoAstFields(node, kind) {
+  const fields = { kind };
+  const name = goAstDeclarationName(node);
+  if (name) fields.name = name;
+  const type = goAstTypeName(node.Type ?? node.type);
+  if (type) fields.type = type;
+  const tok = goAstTokenName(node.Tok ?? node.tok);
+  if (tok) fields.token = tok;
+  const importPath = goAstImportPath(node);
+  if (importPath) fields.importPath = importPath;
+  const receiver = goAstReceiverName(node);
+  if (receiver) fields.receiver = receiver;
+  for (const key of ['Incomplete', 'Doc', 'Comment']) {
+    const value = node[key] ?? node[key[0].toLowerCase() + key.slice(1)];
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) fields[key[0].toLowerCase() + key.slice(1)] = value;
+  }
+  if (Array.isArray(node.Names ?? node.names)) {
+    fields.names = (node.Names ?? node.names).map(goAstIdentName).filter(Boolean).join(',');
+  }
+  return fields;
+}
+
+function spanFromGoAstNode(node, input, options = {}) {
+  const start = goAstPosition(node.Pos ?? node.pos ?? node.Name?.NamePos ?? node.name?.namePos ?? node.Package, options);
+  const end = goAstPosition(node.End ?? node.end ?? node.EndPos ?? node.endPos, options);
+  if (!start) return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: start.path ?? end?.path ?? input.sourcePath,
+    startLine: start.line,
+    startColumn: start.column,
+    endLine: end?.line,
+    endColumn: end?.column
+  };
+}
+
+function goAstPosition(value, options = {}) {
+  if (!value) return undefined;
+  if (typeof value === 'object') {
+    const position = value.position ?? value.Position ?? value.pos ?? value.Pos ?? value;
+    const line = position.Line ?? position.line;
+    const column = position.Column ?? position.column ?? position.Col ?? position.col;
+    if (typeof line === 'number') {
+      return {
+        path: position.Filename ?? position.filename ?? position.file ?? position.path,
+        line,
+        column: typeof column === 'number' ? column : undefined
+      };
+    }
+  }
+  const fileSet = options.fileSet ?? options.fset;
+  const positionFor = typeof fileSet?.PositionFor === 'function'
+    ? fileSet.PositionFor.bind(fileSet)
+    : typeof fileSet?.positionFor === 'function'
+      ? fileSet.positionFor.bind(fileSet)
+      : typeof fileSet?.Position === 'function'
+        ? fileSet.Position.bind(fileSet)
+        : typeof fileSet?.position === 'function'
+          ? fileSet.position.bind(fileSet)
+          : undefined;
+  if (positionFor) {
+    const resolved = positionFor(value, true);
+    return goAstPosition(resolved, options);
+  }
+  return undefined;
+}
+
+function goAstPositionKind(node) {
+  const pos = node.Pos ?? node.pos ?? node.Name?.NamePos ?? node.name?.namePos;
+  if (!pos) return undefined;
+  if (typeof pos === 'object') return 'token.Position';
+  return 'token.Pos';
+}
+
+function goAstDeclarations(node, kind, nativeNodeId, input) {
+  if (kind === 'ImportSpec') {
+    const name = goAstImportPath(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'module', 'import')] : [];
+  }
+  if (kind === 'FuncDecl') {
+    const name = goAstDeclarationName(node);
+    if (!name) return [];
+    const receiver = goAstReceiverName(node);
+    return [declarationRecord(input, nativeNodeId, receiver ? `${receiver}.${name}` : name, receiver ? 'method' : 'function', node.Body || node.body ? 'definition' : 'declaration')];
+  }
+  if (kind === 'TypeSpec') {
+    const name = goAstDeclarationName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, goAstTypeSpecSymbolKind(node), 'definition')] : [];
+  }
+  if (kind === 'ValueSpec') {
+    const names = goAstValueSpecNames(node);
+    const token = goAstTokenName(node.parentTok ?? node.Tok ?? node.tok);
+    return names.map((name) => declarationRecord(input, nativeNodeId, name, token === 'CONST' || token === 'const' ? 'constant' : 'variable', 'definition'));
+  }
+  if (kind === 'Field') {
+    return goAstValueSpecNames(node).map((name) => declarationRecord(input, nativeNodeId, name, 'property', 'definition'));
+  }
+  if (kind === 'Package' || kind === 'File') {
+    const name = goAstPackageName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'module', 'definition')] : [];
+  }
+  return [];
+}
+
+function goAstChildEntries(node) {
+  const fieldNames = Object.keys(node).filter((key) => !ignoredGoAstField(key));
+  const entries = [];
+  for (const field of fieldNames) {
+    const value = node[field];
+    if (field === 'Files' || field === 'files') {
+      if (value && typeof value === 'object') entries.push([field, Array.isArray(value) ? value : Object.values(value)]);
+      continue;
+    }
+    if (field === 'Specs' || field === 'specs') {
+      const token = goAstTokenName(node.Tok ?? node.tok);
+      entries.push([field, Array.isArray(value)
+        ? value.map((entry) => entry && typeof entry === 'object' ? { parentTok: token, ...entry } : entry)
+        : value]);
+      continue;
+    }
+    entries.push([field, value]);
+  }
+  return entries.filter(([, value]) => Array.isArray(value)
+    ? value.some(isGoAstNode)
+    : isGoAstNode(value));
+}
+
+function goAstNodeValue(node) {
+  return goAstDeclarationName(node)
+    ?? goAstImportPath(node)
+    ?? goAstTypeName(node.Type ?? node.type)
+    ?? goAstLiteralValue(node);
+}
+
+function goAstDeclarationName(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  return goAstIdentName(node.Name ?? node.name)
+    ?? goAstIdentName(node.Ident ?? node.ident)
+    ?? goAstIdentName(node.Sel ?? node.sel)
+    ?? (typeof node.Name === 'string' ? node.Name : undefined)
+    ?? (typeof node.name === 'string' ? node.name : undefined);
+}
+
+function goAstPackageName(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  return goAstIdentName(node.Name ?? node.name) ?? node.PackageName ?? node.packageName;
+}
+
+function goAstIdentName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  return value.Name ?? value.name ?? value.Value ?? value.value;
+}
+
+function goAstImportPath(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const path = node.Path ?? node.path;
+  const raw = typeof path === 'string' ? path : path?.Value ?? path?.value ?? path?.Kind;
+  if (typeof raw !== 'string') return undefined;
+  return raw.replace(/^"|"$/g, '').replace(/^`|`$/g, '');
+}
+
+function goAstReceiverName(node) {
+  const recv = node?.Recv ?? node?.recv;
+  const list = recv?.List ?? recv?.list;
+  if (!Array.isArray(list) || !list.length) return undefined;
+  const first = list[0];
+  return goAstTypeName(first?.Type ?? first?.type);
+}
+
+function goAstValueSpecName(node) {
+  return goAstValueSpecNames(node)[0];
+}
+
+function goAstValueSpecNames(node) {
+  const names = node.Names ?? node.names;
+  if (Array.isArray(names)) return names.map(goAstIdentName).filter(Boolean);
+  const name = goAstDeclarationName(node);
+  return name ? [name] : [];
+}
+
+function goAstTypeSpecSymbolKind(node) {
+  const type = node.Type ?? node.type;
+  const kind = goAstKind(type);
+  if (kind === 'InterfaceType') return 'interface';
+  if (kind === 'StructType') return 'class';
+  return 'type';
+}
+
+function goAstTypeName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  const kind = goAstKind(value);
+  if (kind === 'Ident') return goAstIdentName(value);
+  if (kind === 'StarExpr') {
+    const inner = goAstTypeName(value.X ?? value.x);
+    return inner ? `*${inner}` : '*';
+  }
+  if (kind === 'SelectorExpr') {
+    const left = goAstTypeName(value.X ?? value.x);
+    const right = goAstIdentName(value.Sel ?? value.sel);
+    return [left, right].filter(Boolean).join('.');
+  }
+  if (kind === 'ArrayType') {
+    const inner = goAstTypeName(value.Elt ?? value.elt);
+    return `[]${inner ?? 'unknown'}`;
+  }
+  if (kind === 'MapType') {
+    return `map[${goAstTypeName(value.Key ?? value.key) ?? 'unknown'}]${goAstTypeName(value.Value ?? value.value) ?? 'unknown'}`;
+  }
+  if (kind === 'StructType') return 'struct';
+  if (kind === 'InterfaceType') return 'interface';
+  if (kind === 'FuncType') return 'func';
+  return goAstDeclarationName(value);
+}
+
+function goAstTokenName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return value.String ?? value.string ?? value.Name ?? value.name;
+}
+
+function goAstLiteralValue(node) {
+  const value = node.Value ?? node.value;
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  return undefined;
+}
+
+function goGeneratedCodeMarker(node, kind) {
+  if (kind !== 'File') return false;
+  if (node.Generated || node.generated) return true;
+  const comments = node.Comments ?? node.comments;
+  if (!Array.isArray(comments)) return false;
+  return comments.some((group) => JSON.stringify(group).includes('Code generated') && JSON.stringify(group).includes('DO NOT EDIT'));
+}
+
+function goBadAstKind(kind) {
+  return kind === 'BadDecl' || kind === 'BadExpr' || kind === 'BadStmt';
+}
+
+function goReceiverFieldCount(node) {
+  const list = (node?.Recv ?? node?.recv)?.List ?? (node?.Recv ?? node?.recv)?.list;
+  return Array.isArray(list) ? list.length : 0;
+}
+
+function goTypeEvidenceSummary(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const summary = {};
+  if (typeof value.packagePath === 'string') summary.packagePath = value.packagePath;
+  if (typeof value.hash === 'string') summary.hash = value.hash;
+  if (Array.isArray(value.types)) summary.typeCount = value.types.length;
+  if (Array.isArray(value.references)) summary.referenceCount = value.references.length;
   return Object.keys(summary).length ? summary : { present: true };
 }
 

@@ -333,6 +333,7 @@ Use injected parser adapters when a real language parser is available but should
 import {
   createBabelNativeImporterAdapter,
   createClangAstNativeImporterAdapter,
+  createGoAstNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
   importNativeProject,
@@ -354,6 +355,10 @@ const clangAstAdapter = createClangAstNativeImporterAdapter({
   cStandard: 'c11',
   compileFlags: ['-std=c11']
 });
+const goAstAdapter = createGoAstNativeImporterAdapter({
+  parserModule: hostGoAstParser,
+  goVersion: '1.22'
+});
 
 const imported = await runNativeImporterAdapter(babelAdapter, {
   sourcePath: 'src/todo.ts',
@@ -362,12 +367,13 @@ const imported = await runNativeImporterAdapter(babelAdapter, {
 
 const project = await importNativeProject({
   projectRoot: 'src',
-  adapters: [babelAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter],
+  adapters: [babelAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter],
   sources: [
     { language: 'typescript', adapter: babelAdapter.id, sourcePath: 'src/todo.ts', sourceText },
     { language: 'python', adapter: pythonAstAdapter.id, sourcePath: 'tools/todo.py', sourceText: pythonSource },
     { language: 'rust', adapter: rustSynAdapter.id, sourcePath: 'src/todo.rs', sourceText: rustSource },
-    { language: 'c', adapter: clangAstAdapter.id, sourcePath: 'native/todo.c', sourceText: cSource }
+    { language: 'c', adapter: clangAstAdapter.id, sourcePath: 'native/todo.c', sourceText: cSource },
+    { language: 'go', adapter: goAstAdapter.id, sourcePath: 'cmd/todo/main.go', sourceText: goSource }
   ]
 });
 
@@ -389,6 +395,7 @@ The built-in adapter factories are dependency-light wrappers for caller-owned pa
 - `createPythonAstNativeImporterAdapter`
 - `createRustSynNativeImporterAdapter`
 - `createClangAstNativeImporterAdapter`
+- `createGoAstNativeImporterAdapter`
 - `createTreeSitterNativeImporterAdapter`
 
 Adapter summaries include a structured `coverage` record so merge queues can distinguish exact parser AST imports from declaration scans. The record declares exactness, parser token/trivia support, diagnostics support, source-range and generated-range support, and semantic coverage. Built-in wrappers normalize native AST/CST nodes and declaration-level semantic indexes; they do not claim resolved references, types, control flow, generated ranges, or token/trivia fidelity unless the host adapter supplies that evidence.

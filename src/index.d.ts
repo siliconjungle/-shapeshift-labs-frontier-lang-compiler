@@ -1435,6 +1435,36 @@ export interface ClangAstNativeImporterAdapterOptions {
   readonly maxNodes?: number;
 }
 
+export interface GoAstNativeImporterAdapterOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage;
+  readonly parser?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly coverage?: NativeImporterAdapterCoverageInput;
+  readonly supportedExtensions?: readonly string[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly ast?: unknown;
+  readonly file?: unknown;
+  readonly sourceFile?: unknown;
+  readonly package?: unknown;
+  readonly parse?: (sourceText: string, options: Record<string, unknown>) => unknown;
+  readonly parserModule?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly goAst?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly goParser?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly parserOptions?: Record<string, unknown>;
+  readonly mode?: string | number;
+  readonly goVersion?: string;
+  readonly packageName?: string;
+  readonly fileSet?: unknown;
+  readonly fset?: unknown;
+  readonly includeComments?: boolean;
+  readonly buildTags?: readonly string[];
+  readonly generated?: boolean;
+  readonly typeEvidence?: unknown;
+  readonly maxNodes?: number;
+}
+
 export interface TreeSitterNativeImporterAdapterOptions {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage;
@@ -1807,6 +1837,7 @@ export declare function createTypeScriptCompilerNativeImporterAdapter(options?: 
 export declare function createPythonAstNativeImporterAdapter(options?: PythonAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createRustSynNativeImporterAdapter(options?: RustSynNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createClangAstNativeImporterAdapter(options?: ClangAstNativeImporterAdapterOptions): NativeImporterAdapter;
+export declare function createGoAstNativeImporterAdapter(options?: GoAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createTreeSitterNativeImporterAdapter(options?: TreeSitterNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function runNativeImporterAdapter(adapter: NativeImporterAdapter, input: RunNativeImporterAdapterOptions): Promise<NativeImporterAdapterImportResult>;
 export declare function runNativeTargetProjectionAdapter(adapter: NativeTargetProjectionAdapter, input: NativeTargetProjectionAdapterInput): NativeTargetProjectionResult;

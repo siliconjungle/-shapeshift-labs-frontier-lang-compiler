@@ -11,6 +11,7 @@ import {
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createClangAstNativeImporterAdapter,
+  createGoAstNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
   createSemanticImportSidecar,
@@ -65,6 +66,7 @@ for (const requiredExport of [
   'createNativeImportResultContract',
   'createNativeParserAstFormatMatrix',
   'createClangAstNativeImporterAdapter',
+  'createGoAstNativeImporterAdapter',
   'createPythonAstNativeImporterAdapter',
   'createRustSynNativeImporterAdapter',
   'createProjectionTargetLossMatrix',
@@ -994,6 +996,170 @@ const missingClangImport = await runNativeImporterAdapter(createClangAstNativeIm
 });
 assert.equal(missingClangImport.nativeAst.nodes[missingClangImport.nativeAst.rootId].kind, 'MissingInjectedParser');
 assert.equal(missingClangImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parser.missing'), true);
+const goFixtureSource = 'package todo\n\nimport "fmt"\n\ntype Todo struct { Title string }\nconst DefaultTitle = "todo"\nvar Count, Total int\nfunc NewTodo(title string) Todo { return Todo{Title: title} }\nfunc (t *Todo) Save() error { return nil }\n';
+const goPos = (line, column) => ({ Line: line, Column: column, Filename: 'src/go_ast.go' });
+const goFixture = {
+  kind: 'File',
+  Name: { kind: 'Ident', Name: 'todo', NamePos: goPos(1, 9) },
+  Pos: goPos(1, 1),
+  End: goPos(9, 1),
+  Decls: [{
+    kind: 'GenDecl',
+    Tok: 'IMPORT',
+    Pos: goPos(3, 1),
+    Specs: [{
+      kind: 'ImportSpec',
+      Path: { kind: 'BasicLit', Value: '"fmt"', Pos: goPos(3, 8), End: goPos(3, 13) }
+    }]
+  }, {
+    kind: 'GenDecl',
+    Tok: 'TYPE',
+    Pos: goPos(5, 1),
+    Specs: [{
+      kind: 'TypeSpec',
+      Name: { kind: 'Ident', Name: 'Todo', NamePos: goPos(5, 6) },
+      Type: {
+        kind: 'StructType',
+        Pos: goPos(5, 11),
+        Fields: {
+          kind: 'FieldList',
+          List: [{
+            kind: 'Field',
+            Names: [{ kind: 'Ident', Name: 'Title', NamePos: goPos(5, 20) }],
+            Type: { kind: 'Ident', Name: 'string', NamePos: goPos(5, 26) },
+            Pos: goPos(5, 20),
+            End: goPos(5, 32)
+          }]
+        }
+      }
+    }]
+  }, {
+    kind: 'GenDecl',
+    Tok: 'CONST',
+    Pos: goPos(6, 1),
+    Specs: [{
+      kind: 'ValueSpec',
+      Names: [{ kind: 'Ident', Name: 'DefaultTitle', NamePos: goPos(6, 7) }],
+      Type: { kind: 'Ident', Name: 'string', NamePos: goPos(6, 20) },
+      Values: [{ kind: 'BasicLit', Value: '"todo"', Pos: goPos(6, 29) }]
+    }]
+  }, {
+    kind: 'GenDecl',
+    Tok: 'VAR',
+    Pos: goPos(7, 1),
+    Specs: [{
+      kind: 'ValueSpec',
+      Names: [{ kind: 'Ident', Name: 'Count', NamePos: goPos(7, 5) }, { kind: 'Ident', Name: 'Total', NamePos: goPos(7, 12) }],
+      Type: { kind: 'Ident', Name: 'int', NamePos: goPos(7, 11) }
+    }]
+  }, {
+    kind: 'FuncDecl',
+    Name: { kind: 'Ident', Name: 'NewTodo', NamePos: goPos(8, 6) },
+    Type: { kind: 'FuncType', Pos: goPos(8, 1) },
+    Body: { kind: 'BlockStmt', Pos: goPos(8, 34), End: goPos(8, 63) },
+    Pos: goPos(8, 1),
+    End: goPos(8, 63)
+  }, {
+    kind: 'FuncDecl',
+    Recv: {
+      kind: 'FieldList',
+      List: [{
+        kind: 'Field',
+        Names: [{ kind: 'Ident', Name: 't', NamePos: goPos(9, 7) }],
+        Type: { kind: 'StarExpr', X: { kind: 'Ident', Name: 'Todo', NamePos: goPos(9, 10) } }
+      }]
+    },
+    Name: { kind: 'Ident', Name: 'Save', NamePos: goPos(9, 16) },
+    Type: { kind: 'FuncType', Pos: goPos(9, 1) },
+    Body: { kind: 'BlockStmt', Pos: goPos(9, 29), End: goPos(9, 43) },
+    Pos: goPos(9, 1),
+    End: goPos(9, 43)
+  }]
+};
+const goAstImport = await runNativeImporterAdapter(createGoAstNativeImporterAdapter({ goVersion: '1.22' }), {
+  sourcePath: 'src/go_ast.go',
+  sourceText: goFixtureSource,
+  adapterOptions: {
+    ast: goFixture,
+    buildTags: ['frontier'],
+    typeEvidence: { packagePath: 'example.com/frontier/todo', hash: 'go-types-fixture', types: ['Todo'], references: ['NewTodo'] }
+  }
+});
+assert.equal(goAstImport.adapter.parser, 'go/parser');
+assert.equal(goAstImport.adapter.coverage.exactness, 'exact-parser-ast');
+assert.equal(goAstImport.nativeAst.parser, 'go/parser');
+assert.equal(goAstImport.metadata.astFormat, 'go-ast');
+assert.equal(goAstImport.metadata.goVersion, '1.22');
+assert.equal(goAstImport.metadata.packageName, 'todo');
+assert.equal(goAstImport.metadata.typeEvidence.hash, 'go-types-fixture');
+assert.equal(goAstImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fmt' && symbol.kind === 'module'), true);
+assert.equal(goAstImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
+assert.equal(goAstImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Title' && symbol.kind === 'property'), true);
+assert.equal(goAstImport.semanticIndex.symbols.some((symbol) => symbol.name === 'DefaultTitle' && symbol.kind === 'constant'), true);
+assert.equal(goAstImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Count' && symbol.kind === 'variable'), true);
+assert.equal(goAstImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Total' && symbol.kind === 'variable'), true);
+assert.equal(goAstImport.semanticIndex.symbols.some((symbol) => symbol.name === 'NewTodo' && symbol.kind === 'function'), true);
+assert.equal(goAstImport.semanticIndex.symbols.some((symbol) => symbol.name === '*Todo.Save' && symbol.kind === 'method'), true);
+assert.equal(goAstImport.semanticIndex.occurrences.some((occurrence) => occurrence.role === 'import'), true);
+assert.equal(goAstImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('newtodo')), true);
+const scannedGoFixtureImport = importNativeSource({
+  language: 'go',
+  sourcePath: 'src/go_ast.go',
+  sourceText: goFixtureSource
+});
+assert.equal(goAstImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
+assert.equal(goAstImport.losses.length, 0);
+assert.equal(scannedGoFixtureImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
+assert.equal(scannedGoFixtureImport.metadata.nativeImportLossSummary.exactAst, false);
+assert.ok(goAstImport.semanticIndex.symbols.length > scannedGoFixtureImport.semanticIndex.symbols.length);
+const goGeneratedImport = await runNativeImporterAdapter(createGoAstNativeImporterAdapter(), {
+  sourcePath: 'src/generated_go_ast.go',
+  sourceText: 'package todo\n// Code generated by fixture; DO NOT EDIT.\n',
+  adapterOptions: {
+    ast: {
+      kind: 'File',
+      Generated: true,
+      Name: { kind: 'Ident', Name: 'todo', NamePos: goPos(1, 9) }
+    }
+  }
+});
+assert.equal(goGeneratedImport.losses.some((loss) => loss.kind === 'generatedCode'), true);
+assert.equal(goGeneratedImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
+const goBadNodeImport = await runNativeImporterAdapter(createGoAstNativeImporterAdapter(), {
+  sourcePath: 'src/bad_go_ast.go',
+  sourceText: 'package todo\nfunc broken(\n',
+  adapterOptions: {
+    ast: {
+      kind: 'File',
+      Name: { kind: 'Ident', Name: 'todo', NamePos: goPos(1, 9) },
+      Decls: [{ kind: 'BadDecl', Pos: goPos(2, 1), End: goPos(2, 13) }]
+    }
+  }
+});
+assert.equal(goBadNodeImport.losses.some((loss) => loss.kind === 'unsupportedSyntax' && loss.severity === 'error'), true);
+assert.equal(goBadNodeImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'blocked');
+const malformedGoImport = await runNativeImporterAdapter(createGoAstNativeImporterAdapter({
+  parserModule: {
+    parse() {
+      return {
+        file: { kind: 'File', Name: { kind: 'Ident', Name: 'todo' }, Decls: [] },
+        diagnostics: [{ code: 'GoSyntaxError', message: 'expected declaration', loc: { line: 2, column: 1 } }]
+      };
+    }
+  }
+}), {
+  sourcePath: 'src/malformed_go.go',
+  sourceText: 'package todo\nfunc {\n'
+});
+assert.equal(malformedGoImport.diagnostics.some((diagnostic) => diagnostic.code === 'GoSyntaxError'), true);
+assert.equal(malformedGoImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'blocked');
+const missingGoImport = await runNativeImporterAdapter(createGoAstNativeImporterAdapter(), {
+  sourcePath: 'src/missing_go.go',
+  sourceText: 'package todo\n',
+  adapterOptions: { ast: { body: [] } }
+});
+assert.equal(missingGoImport.nativeAst.nodes[missingGoImport.nativeAst.rootId].kind, 'MissingInjectedParser');
+assert.equal(missingGoImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parser.missing'), true);
 const treeName = {
   type: 'identifier',
   text: 'from_tree',
@@ -1717,7 +1883,7 @@ assert.equal(haskellCoverage.imports.readiness, 'needs-review');
 assert.deepEqual(coverageMatrix.metadata.projectionTargetLossClasses, [...ProjectionTargetLossClasses]);
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   generatedAt: 234,
-  imports: [estreeAdapterImport, babelAdapterImport, tsAdapterImport, pythonAstImport, rustSynImport, clangImport, treeImport],
+  imports: [estreeAdapterImport, babelAdapterImport, tsAdapterImport, pythonAstImport, rustSynImport, clangImport, goAstImport, treeImport],
   adapters: [
     createEstreeNativeImporterAdapter(),
     createBabelNativeImporterAdapter(),
@@ -1725,6 +1891,7 @@ const parserFormatMatrix = createNativeParserAstFormatMatrix({
     createPythonAstNativeImporterAdapter(),
     createRustSynNativeImporterAdapter(),
     createClangAstNativeImporterAdapter(),
+    createGoAstNativeImporterAdapter(),
     createTreeSitterNativeImporterAdapter({ language: 'javascript' })
   ]
 });
@@ -1733,14 +1900,16 @@ assert.equal(parserFormatMatrix.generatedAt, 234);
 assert.equal(NativeParserAstFormats.includes('python-ast'), true);
 assert.equal(NativeParserAstFormats.includes('rust-syn'), true);
 assert.equal(NativeParserAstFormats.includes('clang-ast-json'), true);
+assert.equal(NativeParserAstFormats.includes('go-ast'), true);
 assert.equal(NativeParserAstFormatProfiles.some((profile) => profile.id === 'tree-sitter'), true);
 assert.equal(getNativeParserAstFormatProfile('python_ast').id, 'python-ast');
 assert.equal(getNativeParserAstFormatProfile('syn').id, 'rust-syn');
 assert.equal(getNativeParserAstFormatProfile('libclang').id, 'clang-ast-json');
+assert.equal(getNativeParserAstFormatProfile('go/parser').id, 'go-ast');
 assert.ok(parserFormatMatrix.summary.formats >= 10);
-assert.equal(parserFormatMatrix.summary.imports, 7);
+assert.equal(parserFormatMatrix.summary.imports, 8);
 assert.ok(parserFormatMatrix.summary.nativeAstNodes >= 5);
-assert.ok(parserFormatMatrix.summary.effectiveCapabilities.exactAst >= 5);
+assert.ok(parserFormatMatrix.summary.effectiveCapabilities.exactAst >= 6);
 const pythonAstFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast');
 assert.equal(pythonAstFormatCoverage.imports.total, 1);
 assert.equal(pythonAstFormatCoverage.imports.readiness, 'ready');
@@ -1756,6 +1925,11 @@ assert.equal(clangAstFormatCoverage.imports.total, 1);
 assert.equal(clangAstFormatCoverage.imports.readiness, 'ready');
 assert.equal(clangAstFormatCoverage.imports.symbols >= 3, true);
 assert.equal(clangAstFormatCoverage.adapters.total, 1);
+const goAstFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'go-ast');
+assert.equal(goAstFormatCoverage.imports.total, 1);
+assert.equal(goAstFormatCoverage.imports.readiness, 'ready');
+assert.equal(goAstFormatCoverage.imports.symbols >= 6, true);
+assert.equal(goAstFormatCoverage.adapters.total, 1);
 const treeSitterFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'tree-sitter');
 assert.equal(treeSitterFormatCoverage.imports.total, 1);
 assert.equal(treeSitterFormatCoverage.supportsIncremental, true);
