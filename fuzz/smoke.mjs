@@ -63,6 +63,8 @@ for (let index = 0; index < 50; index += 1) {
   });
   assert.ok(lightweight.semanticIndex.symbols.length >= 1);
   assert.ok(lightweight.mergeCandidates.length >= 1);
+  assert.equal(lightweight.metadata.sourcePreservation.sourceHash, lightweight.nativeSource.sourceHash);
+  assert.equal(lightweight.metadata.sourcePreservation.summary.exactSourceAvailable, true);
   const sidecar = createSemanticImportSidecar(lightweight);
   assert.equal(sidecar.summary.emptySemanticIndex, false);
   assert.ok(sidecar.ownershipRegions.length >= 1);
@@ -71,6 +73,7 @@ for (let index = 0; index < 50; index += 1) {
     ...(index % 4 === 0 ? { sourceText: lightweight.nativeSource.ast.metadata.sourceBytes ? (index % 2 === 0 ? `export function light${index}() { return true; }\n` : `def light_${index}():\n    return True\n`) : undefined } : {})
   });
   assert.equal(projection.kind, 'frontier.lang.nativeSourceProjection');
+  assert.equal(projection.mode, 'preserved-source');
   assert.ok(projection.sourceText.length > 0);
 }
 

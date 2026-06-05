@@ -4,6 +4,7 @@ import {
   createBabelNativeImporterAdapter,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
+  createNativeSourcePreservation,
   createSemanticImportSidecar,
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
@@ -12,6 +13,7 @@ import {
   importNativeProject,
   importNativeSource,
   NativeImportLanguageProfiles,
+  NativeImportTaxonomyKinds,
   normalizeCompileTarget,
   projectNativeImportToSource,
   projectFrontierAst,
@@ -119,6 +121,9 @@ assert.equal(nativeImport.mergeCandidates.length, 1);
 assert.equal(nativeImport.mergeCandidates[0].kind, 'frontier.lang.semanticMergeCandidate');
 assert.equal(nativeImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
 assert.equal(nativeImport.mergeCandidates[0].metadata.nativeImportLossSummary.categories.includes('opaqueBodies'), true);
+for (const taxonomyKind of ['conditionalCompilation', 'reflection', 'overloadTypeInference', 'commentsTrivia', 'targetProjectionLoss']) {
+  assert.equal(NativeImportTaxonomyKinds.includes(taxonomyKind), true);
+}
 const nativeLossSummary = summarizeNativeImportLosses(nativeImport.losses, { evidence: nativeImport.evidence });
 assert.equal(nativeLossSummary.highestSeverity, 'warning');
 assert.equal(classifyNativeImportReadiness(nativeImport.losses).readiness, 'needs-review');
@@ -156,16 +161,27 @@ assert.equal(adapterImport.kind, 'frontier.lang.importResult');
 assert.equal(adapterImport.adapter.id, 'fixture-estree-importer');
 assert.deepEqual(adapterImport.adapter.capabilities, ['nativeAst', 'diagnostics']);
 assert.deepEqual(adapterImport.adapter.supportedExtensions, ['.js', '.mjs']);
+assert.equal(adapterImport.adapter.coverage.exactness, 'adapter-reported-native-ast');
+assert.equal(adapterImport.adapter.coverage.tokens, false);
+assert.equal(adapterImport.adapter.coverage.trivia, false);
+assert.equal(adapterImport.adapter.coverage.diagnostics, true);
+assert.equal(adapterImport.adapter.coverage.sourceRanges, true);
+assert.equal(adapterImport.adapter.coverage.generatedRanges, false);
+assert.equal(adapterImport.adapter.coverage.semanticCoverage.level, 'native-ast');
+assert.equal(adapterImport.adapter.coverage.observed.diagnostics, 2);
 assert.equal(adapterImport.nativeAst.parser, 'estree');
 assert.equal(adapterImport.nativeAst.parserVersion, '1.0.0');
 assert.equal(adapterImport.nativeAst.metadata.adapterId, 'fixture-estree-importer');
+assert.equal(adapterImport.nativeAst.metadata.adapterCoverage.sourceRanges, true);
 assert.equal(adapterImport.sourceMaps[0].mappings.some((mapping) => mapping.nativeAstNodeId === 'adapter_fn'), true);
 assert.equal(adapterImport.metadata.adapterId, 'fixture-estree-importer');
+assert.equal(adapterImport.metadata.adapterCoverage.exactness, 'adapter-reported-native-ast');
 assert.equal(adapterImport.metadata.requestId, 'adapter-smoke');
 assert.equal(adapterImport.diagnostics.length, 2);
 assert.equal(adapterImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.opaqueBody'), true);
 assert.equal(adapterImport.losses.some((loss) => loss.metadata?.diagnosticCode === 'adapter.opaqueBody'), true);
 assert.equal(adapterImport.evidence.some((record) => record.id === 'evidence_fixture_estree_importer_native_importer_adapter' && record.status === 'passed'), true);
+assert.equal(adapterImport.evidence.find((record) => record.id === 'evidence_fixture_estree_importer_native_importer_adapter').metadata.coverage.sourceRanges, true);
 const failedAdapterImport = await runNativeImporterAdapter({
   id: 'throwing-typescript-importer',
   language: 'typescript',
@@ -245,6 +261,15 @@ const estreeAdapterImport = await runNativeImporterAdapter(createEstreeNativeImp
   }
 });
 assert.equal(estreeAdapterImport.adapter.parser, 'estree');
+assert.equal(estreeAdapterImport.adapter.coverage.exactness, 'exact-parser-ast');
+assert.equal(estreeAdapterImport.adapter.coverage.exactAst, true);
+assert.equal(estreeAdapterImport.adapter.coverage.tokens, false);
+assert.equal(estreeAdapterImport.adapter.coverage.trivia, false);
+assert.equal(estreeAdapterImport.adapter.coverage.diagnostics, true);
+assert.equal(estreeAdapterImport.adapter.coverage.sourceRanges, true);
+assert.equal(estreeAdapterImport.adapter.coverage.generatedRanges, false);
+assert.equal(estreeAdapterImport.adapter.coverage.semanticCoverage.level, 'declaration-index');
+assert.equal(estreeAdapterImport.adapter.coverage.semanticCoverage.symbols, true);
 assert.equal(estreeAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromEstree'), true);
 assert.equal(estreeAdapterImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('fromestree')), true);
 const scannedEstreeFixtureImport = importNativeSource({
@@ -426,10 +451,14 @@ assert.equal(projectImport.imports.length, 2);
 assert.equal(projectImport.nativeSources.length, 2);
 assert.equal(projectImport.semanticIndex.symbols.some((symbol) => symbol.name === 'projectJs'), true);
 assert.equal(projectImport.semanticIndex.symbols.some((symbol) => symbol.name === 'project_py'), true);
+assert.equal(projectImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
+assert.equal(projectImport.metadata.sourcePreservationSummary.total, 2);
+assert.equal(projectImport.metadata.sourcePreservationSummary.exactSourceAvailable, 2);
+assert.equal(projectImport.universalAst.metadata.sourcePreservationSummary.total, 2);
 const scannedJsImport = importNativeSource({
   language: 'javascript',
   sourcePath: 'src/scanned.js',
-  sourceText: 'import { nanoid } from "nanoid";\nexport function addTodo(title) { return { id: nanoid(), title }; }\nexport const TODO_LIMIT = 128;\nexport class TodoStore {\n  save(title) { return addTodo(title); }\n}\n'
+  sourceText: '// kept comment\nimport { nanoid } from "nanoid";\nexport function addTodo(title) { return { id: nanoid(), title }; }\nexport const TODO_LIMIT = 128;\nexport class TodoStore {\n  save(title) { return addTodo(title); }\n}\n'
 });
 assert.equal(scannedJsImport.nativeAst.rootId, 'native_root');
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'addTodo'), true);
@@ -447,6 +476,40 @@ assert.equal(scannedLossKinds.includes('sourceMapApproximation'), true);
 assert.equal(scannedLossKinds.includes('sourcePreservation'), true);
 assert.equal(scannedJsImport.mergeCandidates[0].readiness, 'needs-review');
 assert.equal(scannedJsImport.metadata.nativeImportLossSummary.categories.includes('sourcePreservation'), true);
+assert.equal(scannedJsImport.metadata.sourcePreservation.kind, 'frontier.lang.nativeSourcePreservation');
+assert.equal(scannedJsImport.metadata.sourcePreservation.sourceText, scannedJsImport.nativeSource.metadata.sourcePreservation.sourceText);
+assert.equal(scannedJsImport.metadata.sourcePreservation.summary.comments >= 1, true);
+assert.equal(scannedJsImport.metadata.sourcePreservation.summary.directives >= 1, true);
+assert.equal(scannedJsImport.nativeAst.metadata.sourcePreservationSummary.exactSourceAvailable, true);
+const standalonePreservation = createNativeSourcePreservation({
+  language: 'python',
+  sourcePath: 'tools/preserve.py',
+  sourceText: '# kept\nfrom sys import path\nvalue = 1\n'
+});
+assert.equal(standalonePreservation.summary.comments, 1);
+assert.equal(standalonePreservation.summary.directives, 1);
+assert.equal(standalonePreservation.sourceHash.startsWith('fnv1a32:'), true);
+const staleDeclaredPreservation = createNativeSourcePreservation({
+  language: 'javascript',
+  sourcePath: 'src/stale-declared.js',
+  sourceText: 'export const staleDeclared = true;\n',
+  sourceHash: 'fnv1a32:not_the_real_hash'
+});
+assert.notEqual(staleDeclaredPreservation.sourceHash, 'fnv1a32:not_the_real_hash');
+assert.equal(staleDeclaredPreservation.metadata.declaredSourceHash, 'fnv1a32:not_the_real_hash');
+assert.equal(staleDeclaredPreservation.metadata.sourceHashVerified, false);
+const compactPreservation = createNativeSourcePreservation({
+  language: 'javascript',
+  sourcePath: 'src/compact.js',
+  sourceText: '// compact\nimport x from "x";\nexport const y = x;\n',
+  includeTokens: false,
+  includeTrivia: false,
+  maxDirectives: 1
+});
+assert.equal(compactPreservation.tokens.length, 0);
+assert.equal(compactPreservation.trivia.length, 0);
+assert.equal(compactPreservation.directives.length, 1);
+assert.equal(compactPreservation.summary.truncated, true);
 const scannedJsSidecar = createSemanticImportSidecar(scannedJsImport, { generatedAt: 123, targetPath: 'dist/scanned.js' });
 assert.equal(scannedJsSidecar.kind, 'frontier.lang.semanticImportSidecar');
 assert.equal(scannedJsSidecar.generatedAt, 123);
@@ -461,6 +524,15 @@ const preservedNativeImport = importNativeSource({
   sourcePath: 'src/preserved-native.js',
   sourceText: preservedNativeSource
 });
+const staleHashImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/stale-hash.js',
+  sourceText: preservedNativeSource,
+  sourceHash: 'fnv1a32:stale_declared_import_hash'
+});
+assert.equal(staleHashImport.nativeSource.sourceHash, preservedNativeImport.nativeSource.sourceHash);
+assert.equal(staleHashImport.metadata.declaredSourceHash, 'fnv1a32:stale_declared_import_hash');
+assert.equal(staleHashImport.metadata.sourceHashVerified, false);
 const preservedNativeProjection = projectNativeImportToSource(preservedNativeImport, {
   sourceText: preservedNativeSource
 });
@@ -471,12 +543,17 @@ assert.equal(preservedNativeProjection.lossSummary.highestSeverity, 'none');
 assert.equal(preservedNativeProjection.readiness.readiness, 'ready');
 assert.equal(preservedNativeProjection.metadata.sourceHashVerified, true);
 assert.equal(preservedNativeProjection.metadata.nativeImportLossSummary.highestSeverity, 'warning');
-const stubNativeProjection = projectNativeImportToSource(scannedJsImport);
+const autoPreservedScannedProjection = projectNativeImportToSource(scannedJsImport);
+assert.equal(autoPreservedScannedProjection.mode, 'preserved-source');
+assert.equal(autoPreservedScannedProjection.sourceText, scannedJsImport.metadata.sourcePreservation.sourceText);
+assert.equal(autoPreservedScannedProjection.metadata.sourcePreservationId, scannedJsImport.metadata.sourcePreservation.id);
+const stubNativeProjection = projectNativeImportToSource(scannedJsImport, { preferPreservedSource: false });
 assert.equal(stubNativeProjection.mode, 'native-source-stubs');
 assert.match(stubNativeProjection.sourceText, /export function addTodo/);
 assert.match(stubNativeProjection.sourceText, /export class TodoStore/);
 assert.equal(stubNativeProjection.lossSummary.highestSeverity, 'warning');
-assert.equal(stubNativeProjection.lossSummary.categories.includes('sourcePreservation'), true);
+assert.equal(stubNativeProjection.losses.some((loss) => loss.kind === 'targetProjectionLoss'), true);
+assert.equal(stubNativeProjection.lossSummary.categories.includes('targetProjectionLoss'), true);
 assert.equal(stubNativeProjection.readiness.readiness, 'needs-review');
 const staleNativeProjection = projectNativeImportToSource(preservedNativeImport, {
   sourceText: 'export function preservedNative() { return false; }\n'
@@ -484,6 +561,12 @@ const staleNativeProjection = projectNativeImportToSource(preservedNativeImport,
 assert.equal(staleNativeProjection.mode, 'native-source-stubs');
 assert.equal(staleNativeProjection.losses.some((loss) => loss.metadata?.reason === 'source-hash-mismatch'), true);
 assert.equal(staleNativeProjection.lossSummary.categories.includes('sourcePreservation'), true);
+const staleHashOverrideProjection = projectNativeImportToSource(preservedNativeImport, {
+  sourceText: 'export function preservedNative() { return false; }\n',
+  sourceHash: preservedNativeImport.nativeSource.sourceHash
+});
+assert.equal(staleHashOverrideProjection.mode, 'native-source-stubs');
+assert.equal(staleHashOverrideProjection.losses.some((loss) => loss.metadata?.declaredSourceHash === preservedNativeImport.nativeSource.sourceHash), true);
 const incompleteLightweightJsImport = importNativeSource({
   language: 'javascript',
   sourcePath: 'src/incomplete.js',

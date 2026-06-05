@@ -50,6 +50,8 @@ console.log(summary.categories);
 console.log(readiness.readiness);
 ```
 
+The loss taxonomy separates broad scanner limits from specific round-trip risks such as conditional compilation, reflection, overload/type-inference gaps, comments/trivia preservation, source-map approximation, parser diagnostics, and target projection loss. These records are evidence labels for merge admission; they are not claims that the lightweight scanner expanded macros, evaluated inactive branches, resolved overloads, or ran a type checker.
+
 Ask the compiler what is actually covered before sending native imports into a merge queue:
 
 ```js
@@ -70,6 +72,28 @@ const python = matrix.languages.find((entry) => entry.language === 'python');
 console.log(python.imports.readiness); // scanner imports are intentionally review-required
 console.log(python.parserAdapters); // host-owned exact parsers such as LibCST can be injected
 ```
+
+Preserve exact native source text, token/trivia hashes, comments, whitespace, and source directives as evidence. This does not claim full semantic understanding; it keeps round-trip material available while exact parser adapters catch up:
+
+```js
+import {
+  createNativeSourcePreservation,
+  importNativeSource
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const sourceText = '// kept\nexport function step(frame) { return frame + 1; }\n';
+const preservation = createNativeSourcePreservation({
+  language: 'javascript',
+  sourcePath: 'src/runtime.js',
+  sourceText
+});
+const imported = importNativeSource({ language: 'javascript', sourcePath: 'src/runtime.js', sourceText });
+
+console.log(preservation.summary.comments); // comments and whitespace are tracked
+console.log(imported.metadata.sourcePreservation.sourceHash);
+```
+
+When `sourceText` is present, hashes are computed from the actual text. Caller-provided hashes are recorded as declared metadata and cannot make stale text project as exact source. Use `includeTokens`, `includeTrivia`, `includeDirectives`, and `max*` options to keep preservation records compact for large files.
 
 Create a compact semantic sidecar for swarm merge admission. This is the artifact a coordinator can index instead of reading a worker directory by hand:
 
@@ -96,7 +120,7 @@ console.log(sidecar.ownershipRegions[0].key); // source#src/runtime.ts#class#Run
 console.log(sidecar.patchHints[0].supportedOperations); // source-region patch operations
 ```
 
-Project a native import back to source. Exact source is preserved only when the supplied text matches the import hash; otherwise the compiler emits declaration stubs with review-required loss evidence:
+Project a native import back to source. Exact source is preserved when the import carries matching source-preservation evidence or when supplied text matches the import hash; otherwise the compiler emits declaration stubs with review-required loss evidence:
 
 ```js
 import {
@@ -111,7 +135,7 @@ const imported = importNativeSource({
   sourceText
 });
 
-const projection = projectNativeImportToSource(imported, { sourceText });
+const projection = projectNativeImportToSource(imported);
 
 console.log(projection.mode); // "preserved-source"
 console.log(projection.readiness.readiness); // "ready"
@@ -146,6 +170,9 @@ const project = await importNativeProject({
 
 console.log(imported.universalAst.sourceMaps.length);
 console.log(project.semanticIndex.symbols.length);
+console.log(imported.adapter.coverage.exactness);
+console.log(imported.adapter.coverage.semanticCoverage.level);
+console.log(project.metadata.sourcePreservationSummary.total);
 ```
 
 The built-in adapter factories are dependency-light wrappers for caller-owned parsers or ASTs:
@@ -154,6 +181,8 @@ The built-in adapter factories are dependency-light wrappers for caller-owned pa
 - `createBabelNativeImporterAdapter`
 - `createTypeScriptCompilerNativeImporterAdapter`
 - `createTreeSitterNativeImporterAdapter`
+
+Adapter summaries include a structured `coverage` record so merge queues can distinguish exact parser AST imports from declaration scans. The record declares exactness, parser token/trivia support, diagnostics support, source-range and generated-range support, and semantic coverage. Built-in wrappers normalize native AST/CST nodes and declaration-level semantic indexes; they do not claim resolved references, types, control flow, generated ranges, or token/trivia fidelity unless the host adapter supplies that evidence.
 
 ## Related Packages
 

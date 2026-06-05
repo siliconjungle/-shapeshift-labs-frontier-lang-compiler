@@ -79,27 +79,42 @@ export type NativeImportTaxonomyKind =
   | 'opaqueBodies'
   | 'macroExpansion'
   | 'preprocessor'
+  | 'conditionalCompilation'
   | 'metaprogramming'
+  | 'reflection'
   | 'generatedCode'
+  | 'overloadTypeInference'
   | 'sourcePreservation'
+  | 'commentsTrivia'
   | 'parserDiagnostics'
   | 'unsupportedSyntax'
   | 'partialSemanticIndex'
   | 'sourceMapApproximation'
+  | 'targetProjectionLoss'
   | string;
 
 export type NativeImportKnownLossKind =
   | 'declarationOnlyCoverage'
   | 'opaqueNative'
   | 'macroExpansion'
+  | 'macroHygiene'
   | 'preprocessor'
+  | 'conditionalCompilation'
   | 'metaprogramming'
+  | 'reflection'
+  | 'dynamicRuntime'
+  | 'dynamicDispatch'
   | 'generatedCode'
+  | 'overloadResolution'
+  | 'typeInference'
   | 'sourcePreservation'
+  | 'commentsTrivia'
   | 'parserDiagnostic'
   | 'unsupportedSyntax'
+  | 'unsupportedSemantic'
   | 'partialSemanticIndex'
   | 'sourceMapApproximation'
+  | 'targetProjectionLoss'
   | string;
 
 export interface NativeImportLossSummaryOptions {
@@ -199,6 +214,82 @@ export interface NativeImportCoverageMatrixOptions {
   readonly imports?: readonly NativeSourceImportResult[];
   readonly adapters?: readonly NativeImporterAdapter[];
   readonly generatedAt?: number;
+}
+
+export type NativeSourceTokenKind =
+  | 'identifier'
+  | 'keyword'
+  | 'number'
+  | 'string'
+  | 'operator'
+  | 'punctuation'
+  | 'comment'
+  | 'whitespace'
+  | 'newline'
+  | 'directive'
+  | 'unknown'
+  | string;
+
+export interface NativeSourcePreservedToken {
+  readonly id: string;
+  readonly kind: NativeSourceTokenKind;
+  readonly text?: string;
+  readonly textHash: string;
+  readonly span: SourceSpan;
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface NativeSourcePreservedDirective {
+  readonly id: string;
+  readonly kind: string;
+  readonly text?: string;
+  readonly textHash: string;
+  readonly span: SourceSpan;
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface NativeSourcePreservation {
+  readonly kind: 'frontier.lang.nativeSourcePreservation';
+  readonly version: 1;
+  readonly id: string;
+  readonly language: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly sourceHash: string;
+  readonly sourceBytes: number;
+  readonly lineCount: number;
+  readonly newline: 'lf' | 'crlf' | 'mixed' | 'none';
+  readonly encoding: string;
+  readonly sourceText?: string;
+  readonly tokens: readonly NativeSourcePreservedToken[];
+  readonly trivia: readonly NativeSourcePreservedToken[];
+  readonly directives: readonly NativeSourcePreservedDirective[];
+  readonly summary: {
+    readonly tokens: number;
+    readonly trivia: number;
+    readonly directives: number;
+    readonly comments: number;
+    readonly whitespace: number;
+    readonly exactSourceAvailable: boolean;
+    readonly truncated: boolean;
+  };
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface CreateNativeSourcePreservationOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly sourceText: string;
+  readonly encoding?: string;
+  readonly includeSourceText?: boolean;
+  readonly includeTokens?: boolean;
+  readonly includeTrivia?: boolean;
+  readonly includeDirectives?: boolean;
+  readonly maxTokens?: number;
+  readonly maxTrivia?: number;
+  readonly maxDirectives?: number;
+  readonly metadata?: Record<string, unknown>;
 }
 
 export interface SemanticImportOwnershipRegion {
@@ -322,6 +413,52 @@ export interface SemanticImportSidecarOptions {
   readonly metadata?: Record<string, unknown>;
 }
 
+export type NativeImporterAdapterExactness =
+  | 'exact-parser-ast'
+  | 'parser-tree'
+  | 'adapter-reported-native-ast'
+  | 'loss-aware-native-ast'
+  | 'unknown'
+  | string;
+
+export interface NativeImporterAdapterSemanticCoverage {
+  readonly level: 'native-ast' | 'declaration-index' | 'semantic-index' | string;
+  readonly declarations: boolean;
+  readonly symbols: boolean;
+  readonly references: boolean;
+  readonly types: boolean;
+  readonly controlFlow: boolean;
+}
+
+export interface NativeImporterAdapterCoverageObserved {
+  readonly diagnostics: number;
+  readonly losses: number;
+  readonly nativeAstNodes: number;
+  readonly semanticSymbols: number;
+  readonly sourceMapMappings: number;
+  readonly sourceRanges: boolean;
+  readonly generatedRanges: boolean;
+}
+
+export interface NativeImporterAdapterCoverageSummary {
+  readonly exactness: NativeImporterAdapterExactness;
+  readonly exactAst: boolean;
+  readonly tokens: boolean;
+  readonly trivia: boolean;
+  readonly diagnostics: boolean;
+  readonly sourceRanges: boolean;
+  readonly generatedRanges: boolean;
+  readonly semanticCoverage: NativeImporterAdapterSemanticCoverage;
+  readonly notes: readonly string[];
+  readonly observed?: NativeImporterAdapterCoverageObserved;
+}
+
+export type NativeImporterAdapterCoverageInput =
+  Omit<Partial<NativeImporterAdapterCoverageSummary>, 'semanticCoverage' | 'observed'> & {
+    readonly semanticCoverage?: Partial<NativeImporterAdapterSemanticCoverage>;
+    readonly observed?: Partial<NativeImporterAdapterCoverageObserved>;
+  };
+
 export interface NativeImporterAdapterDiagnostic {
   readonly id?: string;
   readonly severity?: 'info' | 'warning' | 'error';
@@ -362,6 +499,7 @@ export interface ImportNativeSourceOptions {
   readonly losses?: readonly NativeAstLossRecord[];
   readonly evidence?: readonly EvidenceRecord[];
   readonly evidenceId?: string;
+  readonly sourcePreservation?: NativeSourcePreservation;
   readonly patch?: SemanticPatchBundle;
   readonly patchId?: string;
   readonly author?: string;
@@ -405,6 +543,7 @@ export interface NativeImporterAdapter {
   readonly parser: string;
   readonly version?: string;
   readonly capabilities?: readonly string[];
+  readonly coverage?: NativeImporterAdapterCoverageInput;
   readonly supportedExtensions?: readonly string[];
   readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
   readonly parse: (input: NativeImporterAdapterParseInput) => NativeImporterAdapterParseResult | Promise<NativeImporterAdapterParseResult>;
@@ -416,6 +555,7 @@ export interface JavaScriptNativeImporterAdapterOptions {
   readonly parser?: string;
   readonly version?: string;
   readonly capabilities?: readonly string[];
+  readonly coverage?: NativeImporterAdapterCoverageInput;
   readonly supportedExtensions?: readonly string[];
   readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
   readonly ast?: unknown;
@@ -432,6 +572,7 @@ export interface TypeScriptCompilerNativeImporterAdapterOptions {
   readonly parser?: string;
   readonly version?: string;
   readonly capabilities?: readonly string[];
+  readonly coverage?: NativeImporterAdapterCoverageInput;
   readonly supportedExtensions?: readonly string[];
   readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
   readonly typescript?: unknown;
@@ -451,6 +592,7 @@ export interface TreeSitterNativeImporterAdapterOptions {
   readonly parserName?: string;
   readonly version?: string;
   readonly capabilities?: readonly string[];
+  readonly coverage?: NativeImporterAdapterCoverageInput;
   readonly supportedExtensions?: readonly string[];
   readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
   readonly parserInstance?: { readonly parse: (sourceText: string) => unknown };
@@ -466,6 +608,7 @@ export interface NativeImporterAdapterSummary {
   readonly parser: string;
   readonly version?: string;
   readonly capabilities: readonly string[];
+  readonly coverage: NativeImporterAdapterCoverageSummary;
   readonly supportedExtensions: readonly string[];
   readonly diagnostics: readonly NativeImporterAdapterDiagnostic[];
 }
@@ -595,6 +738,7 @@ export declare function resolveCapabilityAdapters(document: FrontierLangDocument
 export declare function summarizeNativeImportLosses(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportLossSummary;
 export declare function classifyNativeImportReadiness(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportReadinessClassification;
 export declare function createNativeImportCoverageMatrix(options?: NativeImportCoverageMatrixOptions): NativeImportCoverageMatrix;
+export declare function createNativeSourcePreservation(options: CreateNativeSourcePreservationOptions): NativeSourcePreservation;
 export declare function createSemanticImportSidecar(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: SemanticImportSidecarOptions): SemanticImportSidecar;
 export declare function createEstreeNativeImporterAdapter(options?: JavaScriptNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createBabelNativeImporterAdapter(options?: JavaScriptNativeImporterAdapterOptions): NativeImporterAdapter;

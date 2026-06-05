@@ -3,6 +3,7 @@ import {
   compileFrontierSource,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
+  createNativeSourcePreservation,
   createSemanticImportSidecar,
   importNativeSource,
   projectNativeImportToSource,
@@ -67,6 +68,15 @@ const matrixStart = performance.now();
 const coverageMatrix = createNativeImportCoverageMatrix({ imports: nativeImportResults });
 const matrixDurationMs = performance.now() - matrixStart;
 
+const preservationStart = performance.now();
+const preservationRecords = nativeImportResults.map((imported) => imported.metadata.sourcePreservation ?? createNativeSourcePreservation({
+  language: imported.language,
+  sourcePath: imported.sourcePath,
+  sourceText: imported.metadata.sourcePreservation?.sourceText ?? ''
+}));
+const preservationDurationMs = performance.now() - preservationStart;
+const preservationTokens = preservationRecords.reduce((sum, record) => sum + record.tokens.length + record.trivia.length, 0);
+
 const sidecarStart = performance.now();
 const semanticSidecars = nativeImportResults.map((imported) => createSemanticImportSidecar(imported));
 const sidecarDurationMs = performance.now() - sidecarStart;
@@ -87,6 +97,9 @@ console.log(JSON.stringify({
   coverageMatrixLanguages: coverageMatrix.summary.languages,
   coverageMatrixImports: coverageMatrix.summary.imports,
   coverageMatrixDurationMs: Number(matrixDurationMs.toFixed(2)),
+  sourcePreservationRecords: preservationRecords.length,
+  sourcePreservationTokens: preservationTokens,
+  sourcePreservationDurationMs: Number(preservationDurationMs.toFixed(2)),
   semanticSidecars: semanticSidecars.length,
   sidecarOwnershipRegions,
   sidecarDurationMs: Number(sidecarDurationMs.toFixed(2)),

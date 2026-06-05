@@ -73,27 +73,42 @@ export const NativeImportTaxonomyKinds = Object.freeze([
   'opaqueBodies',
   'macroExpansion',
   'preprocessor',
+  'conditionalCompilation',
   'metaprogramming',
+  'reflection',
   'generatedCode',
+  'overloadTypeInference',
   'sourcePreservation',
+  'commentsTrivia',
   'parserDiagnostics',
   'unsupportedSyntax',
   'partialSemanticIndex',
-  'sourceMapApproximation'
+  'sourceMapApproximation',
+  'targetProjectionLoss'
 ]);
 
 export const NativeImportLossKinds = Object.freeze([
   'declarationOnlyCoverage',
   'opaqueNative',
   'macroExpansion',
+  'macroHygiene',
   'preprocessor',
+  'conditionalCompilation',
   'metaprogramming',
+  'reflection',
+  'dynamicRuntime',
+  'dynamicDispatch',
   'generatedCode',
+  'overloadResolution',
+  'typeInference',
   'sourcePreservation',
+  'commentsTrivia',
   'parserDiagnostic',
   'unsupportedSyntax',
+  'unsupportedSemantic',
   'partialSemanticIndex',
-  'sourceMapApproximation'
+  'sourceMapApproximation',
+  'targetProjectionLoss'
 ]);
 
 export const NativeImportReadinessBySeverity = Object.freeze({
@@ -356,6 +371,70 @@ export function createNativeImportCoverageMatrix(input = {}) {
   };
 }
 
+export function createNativeSourcePreservation(options) {
+  if (!options || typeof options.sourceText !== 'string') {
+    throw new Error('createNativeSourcePreservation requires sourceText');
+  }
+  const language = options.language ?? 'source';
+  const sourceText = options.sourceText;
+  const computedSourceHash = hashSemanticValue(sourceText);
+  const declaredSourceHash = options.sourceHash;
+  const sourceHash = computedSourceHash;
+  const tokensAndTrivia = scanPreservedSourceTokens(sourceText, {
+    language,
+    sourcePath: options.sourcePath,
+    sourceHash,
+    includeTokens: options.includeTokens !== false,
+    includeTrivia: options.includeTrivia !== false,
+    maxTokens: options.maxTokens,
+    maxTrivia: options.maxTrivia
+  });
+  const directiveScan = options.includeDirectives === false
+    ? { directives: [], truncated: false }
+    : scanPreservedSourceDirectives(sourceText, {
+      language,
+      sourcePath: options.sourcePath,
+      sourceHash,
+      maxDirectives: options.maxDirectives
+    });
+  const directives = directiveScan.directives;
+  const newline = detectNewlineStyle(sourceText);
+  return {
+    kind: 'frontier.lang.nativeSourcePreservation',
+    version: 1,
+    id: options.id ?? `native_source_preservation_${idFragment(options.sourcePath ?? language)}_${idFragment(sourceHash)}`,
+    language,
+    sourcePath: options.sourcePath,
+    sourceHash,
+    sourceBytes: Buffer.byteLength(sourceText, options.encoding ?? 'utf8'),
+    lineCount: sourceText.length ? sourceText.split(/\r\n|\r|\n/).length : 0,
+    newline,
+    encoding: options.encoding ?? 'utf8',
+    ...(options.includeSourceText === false ? {} : { sourceText }),
+    tokens: tokensAndTrivia.tokens,
+    trivia: tokensAndTrivia.trivia,
+    directives,
+    summary: {
+      tokens: tokensAndTrivia.tokens.length,
+      trivia: tokensAndTrivia.trivia.length,
+      directives: directives.length,
+      comments: tokensAndTrivia.trivia.filter((entry) => entry.kind === 'comment').length,
+      whitespace: tokensAndTrivia.trivia.filter((entry) => entry.kind === 'whitespace' || entry.kind === 'newline').length,
+      exactSourceAvailable: options.includeSourceText !== false,
+      truncated: tokensAndTrivia.truncated || directiveScan.truncated
+    },
+    metadata: {
+      preservation: 'source-text-token-trivia-directive-evidence',
+      tokenization: 'frontier-lightweight-lexical-scan',
+      ...(declaredSourceHash ? {
+        declaredSourceHash,
+        sourceHashVerified: declaredSourceHash === computedSourceHash
+      } : {}),
+      ...options.metadata
+    }
+  };
+}
+
 export function createSemanticImportSidecar(importResult, options = {}) {
   const imports = Array.isArray(importResult?.imports) ? importResult.imports : [importResult].filter(Boolean);
   const importEntries = imports.map((imported, index) => semanticImportSidecarEntry(imported, index, options));
@@ -458,6 +537,20 @@ export function createTypeScriptCompilerNativeImporterAdapter(options = {}) {
     parser: options.parser ?? 'typescript-compiler-api',
     version: options.version,
     capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'exact-parser-ast',
+      exactAst: true,
+      tokens: false,
+      trivia: false,
+      diagnostics: true,
+      sourceRanges: true,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes a caller-owned TypeScript SourceFile into native AST nodes and declaration-level semantic index records.',
+        'Type resolution, reference resolution, control flow, generated ranges, and parser token/trivia streams require host-supplied adapter evidence.'
+      ]
+    }, options.coverage),
     supportedExtensions: options.supportedExtensions ?? ['.ts', '.tsx', '.js', '.jsx'],
     diagnostics: options.diagnostics,
     parse(input) {
@@ -488,6 +581,20 @@ export function createTreeSitterNativeImporterAdapter(options = {}) {
     parser: options.parserName ?? options.parser ?? 'tree-sitter',
     version: options.version,
     capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'parser-tree',
+      exactAst: true,
+      tokens: false,
+      trivia: false,
+      diagnostics: true,
+      sourceRanges: true,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes a caller-owned tree-sitter tree into native AST nodes and declaration-level semantic index records.',
+        'The built-in wrapper walks named syntax nodes; exact token/trivia streams and generated ranges require adapter-specific evidence.'
+      ]
+    }, options.coverage),
     supportedExtensions: options.supportedExtensions ?? [],
     diagnostics: options.diagnostics,
     parse(input) {
@@ -592,7 +699,14 @@ export async function runNativeImporterAdapter(adapter, input = {}) {
     parseResult.losses,
     diagnostics.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, summary, parseInput))
   );
-  const sourceEvidence = adapterDiagnosticsEvidence(summary, diagnostics, {
+  const adapterSummary = {
+    ...summary,
+    coverage: observeNativeImporterAdapterCoverage(summary.coverage, parseResult, {
+      diagnostics,
+      losses
+    })
+  };
+  const sourceEvidence = adapterDiagnosticsEvidence(adapterSummary, diagnostics, {
     language,
     parser,
     parserVersion,
@@ -614,8 +728,9 @@ export async function runNativeImporterAdapter(adapter, input = {}) {
     metadata: {
       adapterId: summary.id,
       adapterVersion: summary.version,
-      adapterCapabilities: summary.capabilities,
-      supportedExtensions: summary.supportedExtensions,
+      adapterCapabilities: adapterSummary.capabilities,
+      adapterCoverage: adapterSummary.coverage,
+      supportedExtensions: adapterSummary.supportedExtensions,
       diagnostics: diagnostics.map(serializableDiagnostic),
       ...input.metadata,
       ...parseResult.metadata
@@ -624,6 +739,7 @@ export async function runNativeImporterAdapter(adapter, input = {}) {
       adapterId: summary.id,
       adapterVersion: summary.version,
       parser,
+      adapterCoverage: adapterSummary.coverage,
       ...input.nativeAstMetadata,
       ...parseResult.nativeAstMetadata
     },
@@ -631,6 +747,7 @@ export async function runNativeImporterAdapter(adapter, input = {}) {
       adapterId: summary.id,
       adapterVersion: summary.version,
       parser,
+      adapterCoverage: adapterSummary.coverage,
       ...input.nativeSourceMetadata,
       ...parseResult.nativeSourceMetadata
     },
@@ -649,7 +766,7 @@ export async function runNativeImporterAdapter(adapter, input = {}) {
   };
   return {
     ...importNativeSource(importInput),
-    adapter: summary,
+    adapter: adapterSummary,
     diagnostics
   };
 }
@@ -681,6 +798,7 @@ export function projectNativeImportToSource(importResult, options = {}) {
       sourcePath: context.sourcePath,
       expectedSourceHash: context.sourceHash,
       providedSourceHash: candidateSource?.sourceHash,
+      sourcePreservationId: candidateSource?.sourcePreservationId,
       sourceHashVerified: candidateSource?.hashVerified ?? false,
       declarationCount: declarations.length
     }
@@ -725,6 +843,7 @@ export function projectNativeImportToSource(importResult, options = {}) {
       universalAstId: importResult.universalAst?.id,
       exactSourceAvailable: candidateSource?.exact === true,
       sourceTextAvailable: typeof candidateSource?.sourceText === 'string',
+      sourcePreservationId: candidateSource?.sourcePreservationId,
       sourceHashVerified: candidateSource?.hashVerified ?? false,
       nativeImportLossSummary,
       ...options.metadata
@@ -736,17 +855,30 @@ export function importNativeSource(input) {
   const language = input.language ?? input.nativeAst?.language;
   if (!language) throw new Error('importNativeSource requires a language or nativeAst.language');
   const sourcePath = input.sourcePath ?? input.nativeAst?.sourcePath;
-  const sourceHash = input.sourceHash ?? input.nativeAst?.sourceHash ?? (input.sourceText ? hashSemanticValue(input.sourceText) : hashSemanticValue(input.nativeAst?.nodes ?? input.nativeAst ?? {}));
+  const declaredSourceHash = input.sourceHash ?? input.nativeAst?.sourceHash;
+  const sourceHash = typeof input.sourceText === 'string'
+    ? hashSemanticValue(input.sourceText)
+    : declaredSourceHash ?? hashSemanticValue(input.nativeAst?.nodes ?? input.nativeAst ?? {});
   const targetPath = input.targetPath ?? input.target?.emitPath;
   const targetHash = input.targetHash;
   const importIdPart = idFragment(input.id ?? input.nativeSourceId ?? sourcePath ?? language);
+  const sourcePreservation = input.sourcePreservation ?? (typeof input.sourceText === 'string'
+    ? createNativeSourcePreservation({
+      language,
+      sourcePath,
+      sourceHash: declaredSourceHash,
+      sourceText: input.sourceText,
+      metadata: { importIdPart }
+    })
+    : undefined);
   const lightweight = !input.nativeAst && !input.nodes && input.sourceText
     ? createLightweightNativeImport({
       language,
       sourceText: input.sourceText,
       sourcePath,
       sourceHash,
-      parser: input.parser
+      parser: input.parser,
+      sourcePreservation
     })
     : undefined;
   const nativeAst = input.nativeAst ?? createNativeAstRecord({
@@ -769,6 +901,15 @@ export function importNativeSource(input) {
     losses: input.losses ?? lightweight?.losses,
     metadata: {
       ...(input.sourceText ? { sourceBytes: input.sourceText.length } : {}),
+      ...(sourcePreservation ? {
+        sourcePreservationId: sourcePreservation.id,
+        sourcePreservationSummary: sourcePreservation.summary,
+        sourcePreservation
+      } : {}),
+      ...(declaredSourceHash && declaredSourceHash !== sourceHash ? {
+        declaredSourceHash,
+        sourceHashVerified: false
+      } : {}),
       ...lightweight?.metadata,
       ...input.nativeAstMetadata
     }
@@ -793,6 +934,14 @@ export function importNativeSource(input) {
     metadata: {
       semanticStatus,
       mappings: input.mappings ?? [],
+      ...(sourcePreservation ? {
+        sourcePreservationId: sourcePreservation.id,
+        sourcePreservation
+      } : {}),
+      ...(declaredSourceHash && declaredSourceHash !== sourceHash ? {
+        declaredSourceHash,
+        sourceHashVerified: false
+      } : {}),
       ...input.nativeSourceMetadata
     }
   });
@@ -816,7 +965,16 @@ export function importNativeSource(input) {
     metadata: {
       parser: nativeAst.parser,
       sourcePath,
-      semanticStatus
+      semanticStatus,
+      ...(sourcePreservation ? {
+        sourcePreservationId: sourcePreservation.id,
+        sourcePreservationSummary: sourcePreservation.summary
+      } : {})
+      ,
+      ...(declaredSourceHash && declaredSourceHash !== sourceHash ? {
+        declaredSourceHash,
+        sourceHashVerified: false
+      } : {})
     }
   }];
   const lossSummary = summarizeNativeImportLosses(losses, {
@@ -896,6 +1054,14 @@ export function importNativeSource(input) {
       sourcePath,
       semanticStatus,
       nativeImportLossSummary: lossSummary,
+      ...(sourcePreservation ? {
+        sourcePreservationId: sourcePreservation.id,
+        sourcePreservation
+      } : {}),
+      ...(declaredSourceHash && declaredSourceHash !== sourceHash ? {
+        declaredSourceHash,
+        sourceHashVerified: false
+      } : {}),
       ...input.universalAstMetadata
     }
   });
@@ -915,6 +1081,14 @@ export function importNativeSource(input) {
       semanticIndexId: semanticIndex?.id,
       universalAstId: universalAst.id,
       sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id),
+      ...(sourcePreservation ? {
+        sourcePreservationId: sourcePreservation.id,
+        sourcePreservationSummary: sourcePreservation.summary
+      } : {}),
+      ...(declaredSourceHash && declaredSourceHash !== sourceHash ? {
+        declaredSourceHash,
+        sourceHashVerified: false
+      } : {}),
       nativeImportLossSummary: lossSummary
     }
   });
@@ -937,6 +1111,14 @@ export function importNativeSource(input) {
       sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id),
       semanticStatus,
       mappings: resultSourceMapMappings,
+      ...(sourcePreservation ? {
+        sourcePreservationId: sourcePreservation.id,
+        sourcePreservation
+      } : {}),
+      ...(declaredSourceHash && declaredSourceHash !== sourceHash ? {
+        declaredSourceHash,
+        sourceHashVerified: false
+      } : {}),
       nativeImportLossSummary: lossSummary,
       ...input.metadata
     }
@@ -1040,7 +1222,7 @@ function createLightweightNativeImport(input) {
     }
     if (declaration.loss) losses.push(declaration.loss);
   }
-  losses.push(...lightweightCoverageLosses(input, declarations));
+  losses.push(...lightweightCoverageLosses(input, declarations, input.sourcePreservation));
 
   const semanticIndex = createSemanticIndexRecord({
     id: `index_${idFragment(input.sourcePath ?? input.language)}`,
@@ -1076,7 +1258,15 @@ function createLightweightNativeImport(input) {
     losses,
     semanticIndex,
     mappings,
-    metadata: { parser, scanKind: 'lightweight-declaration-scan', declarationCount: declarations.length }
+    metadata: {
+      parser,
+      scanKind: 'lightweight-declaration-scan',
+      declarationCount: declarations.length,
+      ...(input.sourcePreservation ? {
+        sourcePreservationId: input.sourcePreservation.id,
+        sourcePreservationSummary: input.sourcePreservation.summary
+      } : {})
+    }
   };
 }
 
@@ -1121,18 +1311,30 @@ function nativeImportProjectionContext(importResult, options) {
 }
 
 function nativeProjectionSourceCandidate(context, options) {
-  const sourceText = options.sourceText ?? options.preservedSourceText ?? options.exactSourceText;
+  const preservation = sourcePreservationFromProjectionContext(context);
+  const explicitSourceText = options.sourceText ?? options.preservedSourceText ?? options.exactSourceText;
+  const sourceText = explicitSourceText ?? preservation?.sourceText;
   if (typeof sourceText !== 'string') return undefined;
-  const sourceHash = options.sourceHash ?? hashSemanticValue(sourceText);
+  const computedSourceHash = hashSemanticValue(sourceText);
+  const declaredSourceHash = options.sourceHash ?? (explicitSourceText === undefined ? preservation?.sourceHash : undefined);
+  const sourceHash = computedSourceHash;
   const hashVerified = Boolean(context.sourceHash);
   const exact = !context.sourceHash || sourceHash === context.sourceHash || options.verifySourceHash === false;
   return {
     sourceText,
     sourceHash,
+    declaredSourceHash,
     hashVerified,
     exact,
-    mismatch: hashVerified && sourceHash !== context.sourceHash && options.verifySourceHash !== false
+    mismatch: hashVerified && sourceHash !== context.sourceHash && options.verifySourceHash !== false,
+    sourcePreservationId: preservation?.id
   };
+}
+
+function sourcePreservationFromProjectionContext(context) {
+  return context.nativeSource?.metadata?.sourcePreservation
+    ?? context.nativeAst?.metadata?.sourcePreservation
+    ?? context.nativeSource?.ast?.metadata?.sourcePreservation;
 }
 
 function nativeProjectionDeclarations(importResult, context) {
@@ -1238,14 +1440,15 @@ function nativeProjectionStubLosses(context, candidateSource, declarations, opti
       : 'Exact native source text was not provided; emitted declaration stubs reconstructed from import metadata.';
   const losses = [nativeProjectionLoss(context, {
     id: `loss_${context.idPart}_native_source_stub`,
-    kind: 'sourcePreservation',
+    kind: candidateSource?.mismatch ? 'sourcePreservation' : 'targetProjectionLoss',
     severity: 'warning',
     message,
     metadata: {
       reason,
       projectionMode: 'native-source-stubs',
       expectedSourceHash: context.sourceHash,
-      providedSourceHash: candidateSource?.sourceHash
+      providedSourceHash: candidateSource?.sourceHash,
+      declaredSourceHash: candidateSource?.declaredSourceHash
     }
   })];
   if (!declarations.length) {
@@ -2249,7 +2452,7 @@ function opaqueBodyLoss(input, lineNumber, nodeId, name) {
   };
 }
 
-function lightweightCoverageLosses(input, declarations) {
+function lightweightCoverageLosses(input, declarations, sourcePreservation) {
   const id = idFragment(input.sourcePath ?? input.language);
   const span = declarations[0]?.span ?? {
     sourceId: input.sourceHash,
@@ -2291,10 +2494,273 @@ function lightweightCoverageLosses(input, declarations) {
       phase: 'read',
       sourceFormat: input.language,
       kind: 'sourcePreservation',
-      message: 'Comments, whitespace, token order, directives, and formatting are not preserved by the lightweight importer.',
-      span
+      message: sourcePreservation
+        ? 'Comments, whitespace, token order, directives, and formatting are preserved as opaque native source evidence; exact structural edits still require a parser adapter.'
+        : 'Comments, whitespace, token order, directives, and formatting are not preserved by the lightweight importer.',
+      span,
+      metadata: sourcePreservation ? {
+        sourcePreservationId: sourcePreservation.id,
+        sourcePreservationSummary: sourcePreservation.summary
+      } : undefined
     }
   ];
+}
+
+function scanPreservedSourceTokens(sourceText, input) {
+  const tokens = [];
+  const trivia = [];
+  const includeTokens = input.includeTokens !== false;
+  const includeTrivia = input.includeTrivia !== false;
+  const maxTokens = Number.isFinite(input.maxTokens) ? Math.max(0, input.maxTokens) : 20000;
+  const maxTrivia = Number.isFinite(input.maxTrivia) ? Math.max(0, input.maxTrivia) : 20000;
+  let offset = 0;
+  let line = 1;
+  let column = 1;
+  let truncated = false;
+  const push = (target, kind, text, start) => {
+    if ((target === tokens && !includeTokens) || (target === trivia && !includeTrivia)) return;
+    const max = target === tokens ? maxTokens : maxTrivia;
+    if (target.length >= max) {
+      truncated = true;
+      return;
+    }
+    target.push(preservedSourceSegment({
+      index: target.length,
+      kind,
+      text,
+      start,
+      end: { offset, line, column },
+      sourceHash: input.sourceHash,
+      sourcePath: input.sourcePath
+    }));
+  };
+  while (offset < sourceText.length) {
+    const start = { offset, line, column };
+    const char = sourceText[offset];
+    const next = sourceText[offset + 1];
+    if (char === '\r' || char === '\n') {
+      const text = char === '\r' && next === '\n' ? '\r\n' : char;
+      offset += text.length;
+      line += 1;
+      column = 1;
+      push(trivia, 'newline', text, start);
+      continue;
+    }
+    if (char === ' ' || char === '\t' || char === '\v' || char === '\f') {
+      let text = '';
+      while (offset < sourceText.length && /[ \t\v\f]/.test(sourceText[offset])) {
+        text += sourceText[offset];
+        offset += 1;
+        column += 1;
+      }
+      push(trivia, 'whitespace', text, start);
+      continue;
+    }
+    if (char === '/' && next === '/') {
+      let text = '';
+      while (offset < sourceText.length && sourceText[offset] !== '\n' && sourceText[offset] !== '\r') {
+        text += sourceText[offset];
+        offset += 1;
+        column += 1;
+      }
+      push(trivia, 'comment', text, start);
+      continue;
+    }
+    if (char === '/' && next === '*') {
+      let text = '';
+      while (offset < sourceText.length) {
+        const current = sourceText[offset];
+        text += current;
+        offset += 1;
+        if (current === '\n') {
+          line += 1;
+          column = 1;
+        } else {
+          column += 1;
+        }
+        if (current === '*' && sourceText[offset] === '/') {
+          text += '/';
+          offset += 1;
+          column += 1;
+          break;
+        }
+      }
+      push(trivia, 'comment', text, start);
+      continue;
+    }
+    if (char === '#' && isHashCommentLanguage(input.language)) {
+      let text = '';
+      while (offset < sourceText.length && sourceText[offset] !== '\n' && sourceText[offset] !== '\r') {
+        text += sourceText[offset];
+        offset += 1;
+        column += 1;
+      }
+      push(trivia, preservedHashLineKind(text), text, start);
+      continue;
+    }
+    if (char === '"' || char === '\'' || char === '`') {
+      const quote = char;
+      let text = char;
+      offset += 1;
+      column += 1;
+      let escaped = false;
+      while (offset < sourceText.length) {
+        const current = sourceText[offset];
+        text += current;
+        offset += 1;
+        if (current === '\n') {
+          line += 1;
+          column = 1;
+        } else {
+          column += 1;
+        }
+        if (escaped) {
+          escaped = false;
+        } else if (current === '\\') {
+          escaped = true;
+        } else if (current === quote) {
+          break;
+        }
+      }
+      push(tokens, 'string', text, start);
+      continue;
+    }
+    if (/[0-9]/.test(char)) {
+      let text = '';
+      while (offset < sourceText.length && /[0-9a-fA-F_xXoObBeE.+-]/.test(sourceText[offset])) {
+        text += sourceText[offset];
+        offset += 1;
+        column += 1;
+      }
+      push(tokens, 'number', text, start);
+      continue;
+    }
+    if (isIdentifierStart(char)) {
+      let text = '';
+      while (offset < sourceText.length && isIdentifierPart(sourceText[offset])) {
+        text += sourceText[offset];
+        offset += 1;
+        column += 1;
+      }
+      push(tokens, preservedKeywordSet.has(text) ? 'keyword' : 'identifier', text, start);
+      continue;
+    }
+    let text = char;
+    if (/[=+\-*/%&|^!<>?:.]/.test(char)) {
+      while (offset + text.length < sourceText.length && /[=+\-*/%&|^!<>?:.]/.test(sourceText[offset + text.length])) text += sourceText[offset + text.length];
+      offset += text.length;
+      column += text.length;
+      push(tokens, 'operator', text, start);
+    } else {
+      offset += 1;
+      column += 1;
+      push(tokens, /[()[\]{};,]/.test(char) ? 'punctuation' : 'unknown', text, start);
+    }
+  }
+  return { tokens, trivia, truncated };
+}
+
+function scanPreservedSourceDirectives(sourceText, input) {
+  const directives = [];
+  const maxDirectives = Number.isFinite(input.maxDirectives) ? Math.max(0, input.maxDirectives) : 20000;
+  let truncated = false;
+  let offset = 0;
+  for (const { line, number } of sourceLines(sourceText)) {
+    const trimmed = line.trim();
+    const directiveKind = preservedDirectiveKind(trimmed, input.language);
+    if (directiveKind) {
+      if (directives.length >= maxDirectives) {
+        truncated = true;
+        offset += line.length + 1;
+        continue;
+      }
+      const startColumn = Math.max(1, line.indexOf(trimmed) + 1);
+      directives.push({
+        id: `directive_${idFragment(input.sourcePath ?? input.language)}_${directives.length + 1}`,
+        kind: directiveKind,
+        text: trimmed,
+        textHash: hashSemanticValue(trimmed),
+        span: {
+          sourceId: input.sourceHash,
+          path: input.sourcePath,
+          start: offset + startColumn - 1,
+          end: offset + startColumn - 1 + trimmed.length,
+          startLine: number,
+          startColumn,
+          endLine: number,
+          endColumn: startColumn + trimmed.length
+        },
+        metadata: { language: input.language }
+      });
+    }
+    offset += line.length + 1;
+  }
+  return { directives, truncated };
+}
+
+function preservedSourceSegment(input) {
+  const id = `${input.kind}_${input.index + 1}_${idFragment(input.start.offset)}`;
+  return {
+    id,
+    kind: input.kind,
+    text: input.text,
+    textHash: hashSemanticValue(input.text),
+    span: {
+      sourceId: input.sourceHash,
+      path: input.sourcePath,
+      start: input.start.offset,
+      end: input.end.offset,
+      startLine: input.start.line,
+      startColumn: input.start.column,
+      endLine: input.end.line,
+      endColumn: input.end.column
+    }
+  };
+}
+
+function preservedDirectiveKind(trimmed, language) {
+  if (!trimmed) return undefined;
+  if (/^#\s*(include|define|if|ifdef|ifndef|elif|else|endif|pragma)\b/.test(trimmed)) return 'preprocessor';
+  if (/^#!\s*/.test(trimmed)) return 'shebang';
+  if (/^['"]use strict['"];?$/.test(trimmed)) return 'runtime-directive';
+  if (/^(import|export|package|module|namespace|use|using|from|require)\b/.test(trimmed)) return 'module-directive';
+  if (normalizeNativeLanguageId(language) === 'python' && /^from\s+\S+\s+import\b/.test(trimmed)) return 'module-directive';
+  return undefined;
+}
+
+function preservedHashLineKind(text) {
+  return preservedDirectiveKind(String(text).trim(), 'c') ? 'directive' : 'comment';
+}
+
+function isHashCommentLanguage(language) {
+  return ['python', 'ruby', 'shell', 'bash', 'zsh', 'r', 'perl', 'yaml', 'toml'].includes(normalizeNativeLanguageId(language));
+}
+
+function detectNewlineStyle(sourceText) {
+  const crlf = (sourceText.match(/\r\n/g) ?? []).length;
+  const normalized = sourceText.replace(/\r\n/g, '');
+  const lf = (normalized.match(/\n/g) ?? []).length;
+  const cr = (normalized.match(/\r/g) ?? []).length;
+  const kinds = [crlf ? 'crlf' : undefined, lf ? 'lf' : undefined, cr ? 'cr' : undefined].filter(Boolean);
+  if (!kinds.length) return 'none';
+  if (kinds.length > 1 || cr) return 'mixed';
+  return kinds[0];
+}
+
+const preservedKeywordSet = new Set([
+  'abstract', 'as', 'async', 'await', 'break', 'case', 'catch', 'class', 'const', 'continue', 'def', 'defer',
+  'do', 'else', 'enum', 'export', 'extends', 'extern', 'false', 'final', 'fn', 'for', 'from', 'func', 'function',
+  'if', 'impl', 'import', 'in', 'interface', 'let', 'match', 'mod', 'module', 'mut', 'namespace', 'new', 'nil',
+  'none', 'null', 'package', 'private', 'protected', 'pub', 'public', 'return', 'self', 'static', 'struct',
+  'switch', 'this', 'throw', 'trait', 'true', 'try', 'type', 'use', 'using', 'var', 'while', 'yield'
+]);
+
+function isIdentifierStart(char) {
+  return /[A-Za-z_$]/.test(char ?? '');
+}
+
+function isIdentifierPart(char) {
+  return /[A-Za-z0-9_$]/.test(char ?? '');
 }
 
 function sourceLines(sourceText) {
@@ -2636,11 +3102,13 @@ function nativeImportCategoryForLossKind(kind) {
   if (kind === 'preprocessor' || kind === 'conditionalCompilation' || kind === 'macroHygiene') return 'preprocessor';
   if (kind === 'metaprogramming' || kind === 'reflection' || kind === 'dynamicDispatch' || kind === 'dynamicRuntime') return 'metaprogramming';
   if (kind === 'generatedCode') return 'generatedCode';
-  if (kind === 'sourcePreservation' || kind === 'nonRoundTrippable') return 'sourcePreservation';
+  if (kind === 'overloadResolution' || kind === 'typeInference') return 'overloadTypeInference';
+  if (kind === 'sourcePreservation' || kind === 'commentsTrivia' || kind === 'nonRoundTrippable') return 'sourcePreservation';
   if (kind === 'parserDiagnostic') return 'parserDiagnostics';
   if (kind === 'unsupportedSyntax' || kind === 'unsupportedSemantic') return 'unsupportedSyntax';
   if (kind === 'partialSemanticIndex') return 'partialSemanticIndex';
   if (kind === 'sourceMapApproximation') return 'sourceMapApproximation';
+  if (kind === 'targetProjectionLoss') return 'targetProjectionLoss';
   return String(kind ?? 'opaqueNative');
 }
 
@@ -3004,6 +3472,20 @@ function createJavaScriptSyntaxImporterAdapter(options) {
     parser: options.parser,
     version: options.version,
     capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'exact-parser-ast',
+      exactAst: true,
+      tokens: false,
+      trivia: false,
+      diagnostics: true,
+      sourceRanges: true,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes a caller-owned ESTree/Babel-compatible AST into native AST nodes and declaration-level semantic index records.',
+        'The wrapper ignores parser token/trivia/comment arrays unless a host adapter explicitly maps them into preservation evidence.'
+      ]
+    }, options.coverage),
     supportedExtensions: options.supportedExtensions,
     diagnostics: options.diagnostics,
     parse(input) {
@@ -3454,6 +3936,14 @@ function createNativeProjectImportResult(input, imports) {
     mergeCandidates.push(...(result.mergeCandidates ?? []));
     operations.push(...(result.patch?.operations ?? []));
   }
+  const uniqueLosses = uniqueByLossId(losses);
+  const uniqueEvidence = uniqueByEvidenceId(evidence);
+  const nativeImportLossSummary = summarizeNativeImportLosses(uniqueLosses, {
+    evidence: uniqueEvidence,
+    scanKind: 'native-project-import',
+    semanticStatus: uniqueLosses.some((loss) => loss.severity === 'error') ? 'partial' : 'mapped'
+  });
+  const sourcePreservationSummary = summarizeProjectSourcePreservation(imports);
   const document = createDocument({
     id: input.documentId ?? `document_${idPart}`,
     name: input.documentName ?? input.name ?? 'NativeProject',
@@ -3464,6 +3954,8 @@ function createNativeProjectImportResult(input, imports) {
       semanticStatus: losses.some((loss) => loss.severity === 'error') ? 'partial' : 'mapped',
       projectRoot: input.projectRoot,
       sourceCount: imports.length,
+      nativeImportLossSummary,
+      sourcePreservationSummary,
       ...input.documentMetadata
     }
   });
@@ -3473,12 +3965,14 @@ function createNativeProjectImportResult(input, imports) {
     nativeSources,
     semanticIndex,
     sourceMaps,
-    losses: uniqueByLossId(losses),
-    evidence: uniqueByEvidenceId(evidence),
+    losses: uniqueLosses,
+    evidence: uniqueEvidence,
     metadata: {
       sourceLanguage: input.language ?? 'mixed',
       projectRoot: input.projectRoot,
       sourceCount: imports.length,
+      nativeImportLossSummary,
+      sourcePreservationSummary,
       ...input.universalAstMetadata
     }
   });
@@ -3487,12 +3981,14 @@ function createNativeProjectImportResult(input, imports) {
     author: input.author ?? '@shapeshift-labs/frontier-lang-compiler/importNativeProject',
     risk: losses.some((loss) => loss.severity === 'error') ? 'high' : losses.some((loss) => loss.severity === 'warning') ? 'medium' : 'low',
     operations,
-    evidence: uniqueByEvidenceId(evidence),
+    evidence: uniqueEvidence,
     metadata: {
       semanticIndexId: semanticIndex?.id,
       universalAstId: universalAst.id,
       sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id),
-      sourceCount: imports.length
+      sourceCount: imports.length,
+      nativeImportLossSummary,
+      sourcePreservationSummary
     }
   });
   return {
@@ -3508,14 +4004,32 @@ function createNativeProjectImportResult(input, imports) {
     semanticIndex,
     universalAst,
     sourceMaps,
-    losses: uniqueByLossId(losses),
-    evidence: uniqueByEvidenceId(evidence),
+    losses: uniqueLosses,
+    evidence: uniqueEvidence,
     mergeCandidates,
     metadata: {
       sourceCount: imports.length,
       sourcePaths: imports.map((result) => result.sourcePath).filter(Boolean),
+      nativeImportLossSummary,
+      sourcePreservationSummary,
       ...input.metadata
     }
+  };
+}
+
+function summarizeProjectSourcePreservation(imports) {
+  const records = imports
+    .map((result) => result.metadata?.sourcePreservation ?? result.nativeSource?.metadata?.sourcePreservation ?? result.nativeAst?.metadata?.sourcePreservation)
+    .filter(Boolean);
+  return {
+    total: records.length,
+    exactSourceAvailable: records.filter((record) => record.summary?.exactSourceAvailable).length,
+    sourceBytes: records.reduce((sum, record) => sum + (record.sourceBytes ?? 0), 0),
+    tokens: records.reduce((sum, record) => sum + (record.summary?.tokens ?? record.tokens?.length ?? 0), 0),
+    trivia: records.reduce((sum, record) => sum + (record.summary?.trivia ?? record.trivia?.length ?? 0), 0),
+    directives: records.reduce((sum, record) => sum + (record.summary?.directives ?? record.directives?.length ?? 0), 0),
+    truncated: records.some((record) => record.summary?.truncated === true),
+    ids: records.map((record) => record.id).filter(Boolean)
   };
 }
 
@@ -3564,9 +4078,15 @@ function normalizeNativeImporterAdapter(adapter) {
     parser: String(adapter.parser),
     version: adapter.version === undefined ? undefined : String(adapter.version)
   };
+  const capabilities = normalizeStringList(adapter.capabilities);
   return Object.freeze({
     ...summaryInput,
-    capabilities: normalizeStringList(adapter.capabilities),
+    capabilities,
+    coverage: normalizeNativeImporterAdapterCoverage(adapter.coverage, {
+      capabilities,
+      language: adapter.language,
+      parser: String(adapter.parser)
+    }),
     supportedExtensions: normalizeStringList(adapter.supportedExtensions).map((extension) => extension.startsWith('.') ? extension.toLowerCase() : `.${extension.toLowerCase()}`),
     diagnostics: normalizeAdapterDiagnostics(adapter.diagnostics, summaryInput, {
       language: adapter.language,
@@ -3574,6 +4094,138 @@ function normalizeNativeImporterAdapter(adapter) {
       parserVersion: adapter.version === undefined ? undefined : String(adapter.version)
     }, 'adapter')
   });
+}
+
+function nativeImporterAdapterCoverage(defaults = {}, overrides = {}) {
+  return {
+    ...defaults,
+    ...overrides,
+    semanticCoverage: {
+      ...(defaults.semanticCoverage ?? {}),
+      ...(overrides.semanticCoverage ?? {})
+    },
+    notes: uniqueStrings([...(defaults.notes ?? []), ...(overrides.notes ?? [])])
+  };
+}
+
+function normalizeNativeImporterAdapterCoverage(value = {}, context = {}) {
+  const capabilities = new Set(normalizeStringList(context.capabilities).map((capability) => capability.toLowerCase()));
+  const hasCapability = (...names) => names.some((name) => capabilities.has(String(name).toLowerCase()));
+  const exactAst = Boolean(value.exactAst ?? hasCapability('exactAst', 'exactAstImport'));
+  const sourceRanges = Boolean(value.sourceRanges ?? hasCapability('sourceRanges', 'sourceRange', 'ranges', 'sourceMaps'));
+  const generatedRanges = Boolean(value.generatedRanges ?? hasCapability('generatedRanges', 'generatedRange', 'generatedSourceMaps'));
+  const diagnostics = Boolean(value.diagnostics ?? hasCapability('diagnostics', 'parserDiagnostics'));
+  return Object.freeze({
+    exactness: String(value.exactness ?? inferredAdapterExactness(exactAst, capabilities)),
+    exactAst,
+    tokens: Boolean(value.tokens ?? hasCapability('tokens', 'tokenStream')),
+    trivia: Boolean(value.trivia ?? hasCapability('trivia', 'comments', 'formatting')),
+    diagnostics,
+    sourceRanges,
+    generatedRanges,
+    semanticCoverage: normalizeNativeImporterSemanticCoverage(value.semanticCoverage, {
+      capabilities,
+      sourceRanges,
+      generatedRanges
+    }),
+    notes: uniqueStrings(value.notes ?? inferredAdapterCoverageNotes(context, {
+      exactAst,
+      sourceRanges,
+      generatedRanges,
+      diagnostics
+    }))
+  });
+}
+
+function observeNativeImporterAdapterCoverage(coverage, parseResult = {}, context = {}) {
+  const nodes = parseResult.nativeAst?.nodes ?? parseResult.nodes ?? {};
+  const nodeList = Object.values(nodes);
+  const sourceMapMappings = parseResult.sourceMaps?.flatMap((sourceMap) => sourceMap.mappings ?? []) ?? parseResult.mappings ?? [];
+  const semanticIndex = parseResult.semanticIndex;
+  const semanticSymbols = semanticIndex?.symbols?.length ?? 0;
+  const observedSourceRanges = nodeList.some((node) => Boolean(node?.span)) || sourceMapMappings.some((mapping) => Boolean(mapping?.sourceSpan));
+  const observedGeneratedRanges = sourceMapMappings.some((mapping) => Boolean(mapping?.generatedSpan));
+  const observedSemanticCoverage = normalizeNativeImporterSemanticCoverage({
+    ...coverage.semanticCoverage,
+    level: semanticSymbols
+      ? maxSemanticCoverageLevel(coverage.semanticCoverage?.level, 'declaration-index')
+      : coverage.semanticCoverage?.level,
+    declarations: coverage.semanticCoverage?.declarations || semanticSymbols > 0,
+    symbols: coverage.semanticCoverage?.symbols || semanticSymbols > 0
+  }, {});
+  return Object.freeze({
+    ...coverage,
+    diagnostics: coverage.diagnostics || (context.diagnostics?.length ?? 0) > 0,
+    sourceRanges: coverage.sourceRanges || observedSourceRanges,
+    generatedRanges: coverage.generatedRanges || observedGeneratedRanges,
+    semanticCoverage: observedSemanticCoverage,
+    observed: {
+      diagnostics: context.diagnostics?.length ?? 0,
+      losses: context.losses?.length ?? 0,
+      nativeAstNodes: nodeList.length,
+      semanticSymbols,
+      sourceMapMappings: sourceMapMappings.length,
+      sourceRanges: observedSourceRanges,
+      generatedRanges: observedGeneratedRanges
+    }
+  });
+}
+
+function declarationSemanticCoverage() {
+  return {
+    level: 'declaration-index',
+    declarations: true,
+    symbols: true,
+    references: false,
+    types: false,
+    controlFlow: false
+  };
+}
+
+function normalizeNativeImporterSemanticCoverage(value = {}, context = {}) {
+  const capabilities = context.capabilities ?? new Set();
+  const hasCapability = (...names) => names.some((name) => capabilities.has(String(name).toLowerCase()));
+  const declarations = Boolean(value.declarations ?? hasCapability('semanticIndex', 'declarations'));
+  const symbols = Boolean(value.symbols ?? declarations);
+  const references = Boolean(value.references ?? hasCapability('references', 'referenceIndex'));
+  const types = Boolean(value.types ?? hasCapability('types', 'typeResolution', 'typeChecking'));
+  const controlFlow = Boolean(value.controlFlow ?? hasCapability('controlFlow', 'cfg'));
+  return Object.freeze({
+    level: String(value.level ?? inferredSemanticCoverageLevel({ declarations, symbols, references, types, controlFlow })),
+    declarations,
+    symbols,
+    references,
+    types,
+    controlFlow
+  });
+}
+
+function inferredAdapterExactness(exactAst, capabilities) {
+  if (exactAst) return 'exact-parser-ast';
+  if (capabilities.has('nativeast')) return 'adapter-reported-native-ast';
+  return 'loss-aware-native-ast';
+}
+
+function inferredSemanticCoverageLevel(input) {
+  if (input.references || input.types || input.controlFlow) return 'semantic-index';
+  if (input.declarations || input.symbols) return 'declaration-index';
+  return 'native-ast';
+}
+
+function maxSemanticCoverageLevel(left, right) {
+  const ranks = { 'native-ast': 0, 'declaration-index': 1, 'semantic-index': 2 };
+  const leftRank = ranks[left] ?? 0;
+  const rightRank = ranks[right] ?? 0;
+  return rightRank > leftRank ? right : left;
+}
+
+function inferredAdapterCoverageNotes(context, coverage) {
+  const notes = [];
+  if (!coverage.exactAst) notes.push('Adapter did not declare exact parser AST/CST coverage; import readiness depends on losses and evidence.');
+  if (!coverage.generatedRanges) notes.push('Adapter does not declare generated-range coverage unless parse output includes generated spans.');
+  if (!coverage.diagnostics) notes.push('Adapter did not declare parser diagnostics support.');
+  if (context.language && context.parser) notes.push(`Coverage summary applies to ${context.language} via ${context.parser}.`);
+  return notes;
 }
 
 function normalizeStringList(value) {
@@ -3669,6 +4321,7 @@ function adapterDiagnosticsEvidence(adapter, diagnostics, input) {
       parserVersion: input.parserVersion,
       sourceHash: input.sourceHash,
       capabilities: adapter.capabilities,
+      coverage: adapter.coverage,
       supportedExtensions: adapter.supportedExtensions,
       diagnostics: diagnostics.map(serializableDiagnostic),
       errors,
