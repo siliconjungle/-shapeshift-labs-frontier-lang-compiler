@@ -1465,6 +1465,38 @@ export interface GoAstNativeImporterAdapterOptions {
   readonly maxNodes?: number;
 }
 
+export interface JavaAstNativeImporterAdapterOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage;
+  readonly parser?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly coverage?: NativeImporterAdapterCoverageInput;
+  readonly supportedExtensions?: readonly string[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly ast?: unknown;
+  readonly compilationUnit?: unknown;
+  readonly unit?: unknown;
+  readonly sourceFile?: unknown;
+  readonly parse?: (sourceText: string, options: Record<string, unknown>) => unknown;
+  readonly parserModule?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly javac?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly jdt?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly javaParser?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly parserOptions?: Record<string, unknown>;
+  readonly javaVersion?: string;
+  readonly sourceLevel?: string;
+  readonly classPath?: readonly string[] | string | unknown;
+  readonly modulePath?: readonly string[] | string | unknown;
+  readonly generated?: boolean;
+  readonly annotationProcessing?: unknown;
+  readonly bindingEvidence?: unknown;
+  readonly positionResolver?: (position: unknown) => unknown;
+  readonly lineMap?: unknown;
+  readonly includeAnnotations?: boolean;
+  readonly maxNodes?: number;
+}
+
 export interface TreeSitterNativeImporterAdapterOptions {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage;
@@ -1838,6 +1870,7 @@ export declare function createPythonAstNativeImporterAdapter(options?: PythonAst
 export declare function createRustSynNativeImporterAdapter(options?: RustSynNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createClangAstNativeImporterAdapter(options?: ClangAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createGoAstNativeImporterAdapter(options?: GoAstNativeImporterAdapterOptions): NativeImporterAdapter;
+export declare function createJavaAstNativeImporterAdapter(options?: JavaAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createTreeSitterNativeImporterAdapter(options?: TreeSitterNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function runNativeImporterAdapter(adapter: NativeImporterAdapter, input: RunNativeImporterAdapterOptions): Promise<NativeImporterAdapterImportResult>;
 export declare function runNativeTargetProjectionAdapter(adapter: NativeTargetProjectionAdapter, input: NativeTargetProjectionAdapterInput): NativeTargetProjectionResult;

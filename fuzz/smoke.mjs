@@ -5,6 +5,7 @@ import {
   createClangAstNativeImporterAdapter,
   createEstreeNativeImporterAdapter,
   createGoAstNativeImporterAdapter,
+  createJavaAstNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
@@ -123,6 +124,7 @@ const pythonAstAdapter = createPythonAstNativeImporterAdapter();
 const rustSynAdapter = createRustSynNativeImporterAdapter();
 const clangAstAdapter = createClangAstNativeImporterAdapter();
 const goAstAdapter = createGoAstNativeImporterAdapter();
+const javaAstAdapter = createJavaAstNativeImporterAdapter();
 for (let index = 0; index < 50; index += 1) {
   const name = `fuzzImport${index}`;
   const sourcePath = `src/fuzz-${index}.js`;
@@ -264,6 +266,33 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(goAstImport.adapter.parser, 'go/parser');
   assert.equal(goAstImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
   assert.equal(goAstImport.semanticIndex.symbols.some((symbol) => symbol.name === `fuzzGo${index}`), true);
+  const javaAstImport = await runNativeImporterAdapter(javaAstAdapter, {
+    sourcePath: `src/Fuzz${index}.java`,
+    sourceText: `package fuzz;\npublic class FuzzJava${index} { private String value; public void fuzzJava${index}() {} }\n`,
+    adapterOptions: {
+      ast: {
+        kind: 'CompilationUnit',
+        packageDeclaration: { kind: 'PackageDeclaration', name: { qualifiedName: 'fuzz' } },
+        types: [{
+          kind: 'ClassDeclaration',
+          name: { identifier: `FuzzJava${index}` },
+          members: [{
+            kind: 'FieldDeclaration',
+            type: { name: 'String' },
+            variables: [{ kind: 'VariableDeclarator', name: { identifier: 'value' } }]
+          }, {
+            kind: 'MethodDeclaration',
+            name: { identifier: `fuzzJava${index}` },
+            returnType: { name: 'void' },
+            body: { kind: 'Block' }
+          }]
+        }]
+      }
+    }
+  });
+  assert.equal(javaAstImport.adapter.parser, 'javac');
+  assert.equal(javaAstImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
+  assert.equal(javaAstImport.semanticIndex.symbols.some((symbol) => symbol.name === `FuzzJava${index}`), true);
 
   const lightweight = importNativeSource({
     language: index % 2 === 0 ? 'javascript' : 'python',
@@ -367,13 +396,14 @@ assert.ok(matrix.languages.find((entry) => entry.language === 'javascript').impo
 assert.ok(matrix.languages.find((entry) => entry.language === 'python').imports.symbols >= 1);
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   imports: project.imports,
-  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter]
+  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter]
 });
 assert.ok(parserFormatMatrix.summary.formats >= 2);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'rust-syn').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'clang-ast-json').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'go-ast').adapters.total >= 1);
+assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'java-ast').adapters.total >= 1);
 const projectionMatrix = createProjectionTargetLossMatrix({ imports: project.imports });
 assert.equal(projectionMatrix.summary.languages, matrix.summary.languages);
 assert.ok(projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 2);

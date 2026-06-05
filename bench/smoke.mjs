@@ -5,6 +5,7 @@ import {
   createClangAstNativeImporterAdapter,
   createEstreeNativeImporterAdapter,
   createGoAstNativeImporterAdapter,
+  createJavaAstNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
@@ -81,7 +82,7 @@ const matrixDurationMs = performance.now() - matrixStart;
 const parserFormatMatrixStart = performance.now();
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   imports: nativeImportResults,
-  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter(), createGoAstNativeImporterAdapter()]
+  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter(), createGoAstNativeImporterAdapter(), createJavaAstNativeImporterAdapter()]
 });
 const parserFormatMatrixDurationMs = performance.now() - parserFormatMatrixStart;
 

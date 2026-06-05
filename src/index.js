@@ -427,6 +427,18 @@ export const NativeParserAstFormatProfiles = Object.freeze([
     supportsErrorRecovery: true,
     notes: ['Go go/ast trees expose parser syntax nodes and token positions; FileSet, build tags, generated-code classification, package loading, go/types, comments/trivia, and control-flow evidence remain host-owned.']
   }),
+  nativeParserAstFormatProfile('java-ast', {
+    aliases: ['javac', 'javac-tree', 'jdt', 'eclipse-jdt', 'javaparser', 'java-parser'],
+    kind: 'compiler-ast',
+    languages: ['java'],
+    parserAdapters: ['javac', 'jdt', 'javaparser', 'java-ast'],
+    exactness: 'exact-parser-ast',
+    sourceRangeModel: 'java-source-range',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsErrorRecovery: true,
+    notes: ['Java compiler/parser ASTs expose package/import/type/member declarations and source ranges; classpath/module-path, bindings, annotation processors, generated sources, Lombok expansion, comments/trivia, and control-flow evidence remain host-owned.']
+  }),
   nativeParserAstFormatProfile('tree-sitter', {
     kind: 'concrete-syntax-tree',
     languages: ['mixed'],
@@ -2850,6 +2862,71 @@ export function createGoAstNativeImporterAdapter(options = {}) {
         buildTags: input.options?.buildTags ?? options.buildTags ?? parsed?.buildTags,
         generated: input.options?.generated ?? options.generated ?? parsed?.generated,
         typeEvidence: input.options?.typeEvidence ?? options.typeEvidence ?? parsed?.typeEvidence
+      });
+    }
+  };
+}
+
+export function createJavaAstNativeImporterAdapter(options = {}) {
+  return {
+    id: options.id ?? 'frontier.java-ast-native-importer',
+    language: options.language ?? 'java',
+    parser: options.parser ?? 'javac',
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'exact-parser-ast',
+      exactAst: true,
+      tokens: false,
+      trivia: false,
+      diagnostics: true,
+      sourceRanges: true,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes caller-owned javac/JDT/JavaParser-shaped Java ASTs into native AST nodes and declaration-level semantic index records.',
+        'Java AST imports do not resolve overloads, bindings, annotation processors, generated Lombok code, classpaths, modules, bytecode, comments/trivia, or control flow by themselves; attach host evidence for those claims.'
+      ]
+    }, options.coverage),
+    supportedExtensions: options.supportedExtensions ?? ['.java'],
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const parsed = input.options?.ast
+        ?? input.options?.nativeAst
+        ?? input.options?.compilationUnit
+        ?? input.options?.unit
+        ?? input.options?.sourceFile
+        ?? options.ast
+        ?? options.compilationUnit
+        ?? options.unit
+        ?? options.sourceFile
+        ?? parseJavaAstSource(input, options);
+      const root = javaAstRoot(parsed);
+      if (!root) {
+        return missingInjectedParserResult(input, {
+          parser: options.parser ?? 'javac',
+          adapterId: options.id ?? 'frontier.java-ast-native-importer',
+          message: 'createJavaAstNativeImporterAdapter requires an injected Java AST object, parserModule.parse function, parse function, or adapterOptions.ast.'
+        });
+      }
+      const parseDiagnostics = normalizeParserErrors(parsed?.errors ?? parsed?.diagnostics ?? parsed?.problems, input, {
+        parser: options.parser ?? 'javac'
+      });
+      return createNativeImportFromJavaAst(root, input, {
+        parser: options.parser ?? 'javac',
+        astFormat: 'java-ast',
+        maxNodes: options.maxNodes,
+        diagnostics: parseDiagnostics,
+        javaVersion: options.javaVersion ?? input.options?.javaVersion ?? parsed?.javaVersion,
+        sourceLevel: options.sourceLevel ?? input.options?.sourceLevel ?? parsed?.sourceLevel,
+        classPath: input.options?.classPath ?? options.classPath ?? parsed?.classPath,
+        modulePath: input.options?.modulePath ?? options.modulePath ?? parsed?.modulePath,
+        generated: input.options?.generated ?? options.generated ?? parsed?.generated,
+        annotationProcessing: input.options?.annotationProcessing ?? options.annotationProcessing ?? parsed?.annotationProcessing,
+        bindingEvidence: input.options?.bindingEvidence ?? options.bindingEvidence ?? parsed?.bindingEvidence,
+        positionResolver: input.options?.positionResolver ?? options.positionResolver,
+        lineMap: input.options?.lineMap ?? options.lineMap ?? parsed?.lineMap,
+        includeAnnotations: options.includeAnnotations ?? input.options?.includeAnnotations
       });
     }
   };
@@ -7297,6 +7374,7 @@ function parserAstFormatIdForParser(parser) {
   if (text.includes('rust-analyzer') || text.includes('rowan')) return 'rust-analyzer-rowan';
   if (text.includes('clang') || text.includes('libclang')) return 'clang-ast-json';
   if (text === 'go' || text.includes('go-parser') || text.includes('go-ast') || text.includes('go/parser') || text.includes('go/ast')) return 'go-ast';
+  if (text === 'java' || text.includes('javac') || text.includes('jdt') || text.includes('javaparser') || text.includes('java-parser') || text.includes('java-ast')) return 'java-ast';
   if (text.includes('tree-sitter') || text.includes('treesitter')) return 'tree-sitter';
   if (text.includes('babel')) return 'babel';
   if (text.includes('estree')) return 'estree';
@@ -8378,6 +8456,23 @@ function parseGoAstSource(input, options) {
   return parse(input.sourceText, parserOptions);
 }
 
+function parseJavaAstSource(input, options) {
+  const parse = options.parse ?? options.parserModule?.parse ?? options.javac?.parse ?? options.jdt?.parse ?? options.javaParser?.parse;
+  if (typeof parse !== 'function') return undefined;
+  const parserOptions = {
+    sourcePath: input.sourcePath,
+    filename: input.sourcePath,
+    javaVersion: options.javaVersion ?? input.options?.javaVersion,
+    sourceLevel: options.sourceLevel ?? input.options?.sourceLevel,
+    classPath: options.classPath ?? input.options?.classPath,
+    modulePath: options.modulePath ?? input.options?.modulePath,
+    includeAnnotations: options.includeAnnotations ?? input.options?.includeAnnotations,
+    ...(options.parserOptions ?? {}),
+    ...(input.options?.parserOptions ?? {})
+  };
+  return parse(input.sourceText, parserOptions);
+}
+
 function createNativeImportFromSyntaxAst(ast, input, options) {
   const root = normalizeSyntaxAstRoot(ast, options.astFormat);
   if (!root) {
@@ -8562,6 +8657,45 @@ function createNativeImportFromGoAst(root, input, options) {
       generated: options.generated,
       fileSetEvidence: Boolean(options.fileSet),
       typeEvidence: goTypeEvidenceSummary(options.typeEvidence),
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createNativeImportFromJavaAst(root, input, options) {
+  const context = createAstNormalizationContext(input, options);
+  visitJavaAstNode(root, context, 'root');
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  if (options.generated && !context.losses.some((loss) => loss.kind === 'generatedCode')) {
+    context.losses.push(javaGeneratedCodeLoss(input, context.rootId, undefined, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: mergeNativeLosses(context.losses, options.diagnostics?.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, {
+      id: input.adapterId,
+      version: input.adapterVersion
+    }, input)) ?? []),
+    evidence: semantic.evidence,
+    diagnostics: options.diagnostics,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      javaVersion: options.javaVersion,
+      sourceLevel: options.sourceLevel,
+      classPathEvidence: javaPathEvidenceSummary(options.classPath),
+      modulePathEvidence: javaPathEvidenceSummary(options.modulePath),
+      annotationProcessing: javaAnnotationProcessingSummary(options.annotationProcessing),
+      bindingEvidence: javaBindingEvidenceSummary(options.bindingEvidence),
+      generated: options.generated,
+      includeAnnotations: Boolean(options.includeAnnotations),
       normalizedNodeCount: Object.keys(context.nodes).length,
       declarationCount: context.declarations.length,
       truncated: context.truncated
@@ -8968,6 +9102,78 @@ function visitGoAstNode(node, context, propertyPath) {
         astFormat: context.options.astFormat
       }
     });
+  }
+  return id;
+}
+
+function visitJavaAstNode(node, context, propertyPath) {
+  if (!isJavaAstNode(node) || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const kind = javaAstKind(node);
+  const span = spanFromJavaAstNode(node, context.input, context.options);
+  const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  for (const [field, value] of javaAstChildEntries(node, kind)) {
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        const childId = visitJavaAstNode(entry, context, `${propertyPath}.${field}[${index}]`);
+        if (childId) children.push(childId);
+      });
+    } else {
+      const childId = visitJavaAstNode(value, context, `${propertyPath}.${field}`);
+      if (childId) children.push(childId);
+    }
+  }
+  const declarations = javaAstDeclarations(node, kind, id, context.input);
+  const declaration = declarations[0];
+  const nativeNode = {
+    id,
+    kind,
+    languageKind: `${context.input.language}.${kind}`,
+    span,
+    value: declaration?.name ?? javaAstNodeValue(node),
+    fields: primitiveJavaAstFields(node, kind),
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      positionKind: javaAstPositionKind(node),
+      parser: context.options.parser
+    }
+  };
+  context.nodes[id] = nativeNode;
+  for (const entry of declarations) {
+    context.declarations.push({ ...entry, nativeNode });
+  }
+  if (javaRecoveredAstKind(kind) || javaProblemNode(node, kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_java_recovered_node`,
+      severity: 'error',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'unsupportedSyntax',
+      message: 'Java parser reported a recovered, erroneous, malformed, or problem node; semantic import is partial until syntax errors are resolved.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat,
+        nodeKind: kind
+      }
+    });
+  }
+  if (javaGeneratedCodeMarker(node, kind) || javaLombokAnnotationMarker(node, kind)) {
+    context.losses.push(javaGeneratedCodeLoss(context.input, id, span, context.options, {
+      nodeKind: kind,
+      generatedMarker: javaGeneratedCodeMarker(node, kind),
+      lombokMarker: javaLombokAnnotationMarker(node, kind)
+    }));
   }
   return id;
 }
@@ -11204,6 +11410,489 @@ function goTypeEvidenceSummary(value) {
   if (typeof value.hash === 'string') summary.hash = value.hash;
   if (Array.isArray(value.types)) summary.typeCount = value.types.length;
   if (Array.isArray(value.references)) summary.referenceCount = value.references.length;
+  return Object.keys(summary).length ? summary : { present: true };
+}
+
+function javaAstRoot(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  if (isJavaAstNode(value)) return value;
+  if (isJavaAstNode(value.ast)) return value.ast;
+  if (isJavaAstNode(value.root)) return value.root;
+  if (isJavaAstNode(value.compilationUnit)) return value.compilationUnit;
+  if (isJavaAstNode(value.unit)) return value.unit;
+  if (isJavaAstNode(value.sourceFile)) return value.sourceFile;
+  if (Array.isArray(value.types) || Array.isArray(value.imports) || value.packageDeclaration || value.package) {
+    return { kind: 'CompilationUnit', ...value };
+  }
+  return undefined;
+}
+
+function isJavaAstNode(value) {
+  return Boolean(value && typeof value === 'object' && typeof javaAstKind(value) === 'string');
+}
+
+function javaAstKind(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const declared = node.kind ?? node._type ?? node.type ?? node.nodeType ?? node.astKind ?? node.treeKind ?? node.nodeKind;
+  if (typeof declared === 'string') return normalizeJavaAstKind(declared);
+  if (Array.isArray(node.imports) || Array.isArray(node.types) || node.packageDeclaration || node.package) return 'CompilationUnit';
+  if (node.name && (node.members || node.bodyDeclarations || node.extends || node.implements || node.permittedTypes)) return 'ClassDeclaration';
+  if (node.name && (node.returnType || node.parameters || node.body) && (node.modifiers || node.thrownExceptions || node.throws)) return 'MethodDeclaration';
+  if (node.variables || node.fragments) return 'FieldDeclaration';
+  if (node.name && node.type && (node.initializer !== undefined || node.extraDimensions !== undefined)) return 'VariableDeclarator';
+  return undefined;
+}
+
+function normalizeJavaAstKind(kind) {
+  const text = String(kind).replace(/^(?:com\.sun\.source\.tree\.|org\.eclipse\.jdt\.core\.dom\.|com\.github\.javaparser\.ast\.)/, '');
+  const compact = text.replace(/[_\s.-]+/g, '').replace(/Tree$/, '').toLowerCase();
+  if (compact === 'compilationunit' || compact === 'compilationunitnode') return 'CompilationUnit';
+  if (compact === 'package' || compact === 'packagedeclaration' || compact === 'packageclause') return 'PackageDeclaration';
+  if (compact === 'import' || compact === 'importdeclaration') return 'ImportDeclaration';
+  if (compact === 'class' || compact === 'classdeclaration' || compact === 'normalclassdeclaration' || compact === 'classorinterfacedeclaration') return 'ClassDeclaration';
+  if (compact === 'interface' || compact === 'interfacedeclaration' || compact === 'normalinterfacedeclaration') return 'InterfaceDeclaration';
+  if (compact === 'enum' || compact === 'enumdeclaration') return 'EnumDeclaration';
+  if (compact === 'record' || compact === 'recorddeclaration') return 'RecordDeclaration';
+  if (compact === 'annotation' || compact === 'annotationdeclaration' || compact === 'annotationtypedeclaration' || compact === 'annotationinterface') return 'AnnotationDeclaration';
+  if (compact === 'method' || compact === 'methoddeclaration') return 'MethodDeclaration';
+  if (compact === 'constructor' || compact === 'constructordeclaration') return 'ConstructorDeclaration';
+  if (compact === 'variable' || compact === 'variabledeclaration' || compact === 'variabledeclarator' || compact === 'variabletree') return 'VariableDeclarator';
+  if (compact === 'field' || compact === 'fielddeclaration') return 'FieldDeclaration';
+  if (compact === 'enumconstant' || compact === 'enumconstantdeclaration') return 'EnumConstantDeclaration';
+  if (compact === 'parameter' || compact === 'formalparameter' || compact === 'receiverparameter') return 'Parameter';
+  if (compact === 'modifiers' || compact === 'modifier') return 'Modifiers';
+  if (compact === 'markerannotationexpr' || compact === 'singlememberannotationexpr' || compact === 'normalannotationexpr' || compact === 'annotationexpr') return 'Annotation';
+  if (compact === 'erroneous' || compact === 'erroneoustree' || compact === 'malformed' || compact === 'error' || compact === 'errornode' || compact === 'problem' || compact === 'problemtree' || compact === 'recovered') return 'Erroneous';
+  if (/^[A-Z0-9_]+$/.test(text)) return text.toLowerCase().split('_').map(upperFirst).join('');
+  return text;
+}
+
+function ignoredJavaAstField(key) {
+  return key === '_type'
+    || key === 'type'
+    || key === 'kind'
+    || key === 'nodeType'
+    || key === 'astKind'
+    || key === 'treeKind'
+    || key === 'nodeKind'
+    || key === 'parent'
+    || key === 'parentKind'
+    || key === 'parentField'
+    || key === 'binding'
+    || key === 'resolvedBinding'
+    || key === 'symbol'
+    || key === 'scope'
+    || key === 'range'
+    || key === 'loc'
+    || key === 'location'
+    || key === 'pos'
+    || key === 'end'
+    || key === 'start'
+    || key === 'endPosition'
+    || key === 'startPosition'
+    || key === 'length'
+    || key === 'name'
+    || key === 'identifier'
+    || key === 'simpleName'
+    || key === 'qualifiedName';
+}
+
+function primitiveJavaAstFields(node, kind) {
+  const fields = { kind };
+  const name = javaAstDeclarationName(node);
+  if (name) fields.name = name;
+  const importPath = javaAstImportPath(node);
+  if (importPath) fields.importPath = importPath;
+  const type = javaAstTypeName(node.type ?? node.typeName ?? node.returnType ?? node.elementType);
+  if (type) fields.type = type;
+  const packageName = javaAstPackageName(node);
+  if (packageName) fields.packageName = packageName;
+  const modifiers = javaAstModifierNames(node);
+  if (modifiers.length) fields.modifiers = modifiers.join(',');
+  if (node.static === true || node.isStatic === true) fields.static = true;
+  if (node.default === true || node.isDefault === true) fields.default = true;
+  if (node.generated === true || node.Generated === true) fields.generated = true;
+  if (typeof node.binaryName === 'string') fields.binaryName = node.binaryName;
+  if (typeof node.qualifiedName === 'string') fields.qualifiedName = node.qualifiedName;
+  if (Array.isArray(node.parameters)) fields.parameterCount = node.parameters.length;
+  if (Array.isArray(node.throws ?? node.thrownExceptions)) fields.throwsCount = (node.throws ?? node.thrownExceptions).length;
+  return fields;
+}
+
+function spanFromJavaAstNode(node, input, options = {}) {
+  const direct = spanFromJavaRange(node.range ?? node.loc ?? node.location, input)
+    ?? spanFromJavaLineFields(node, input);
+  if (direct) return direct;
+  const start = javaAstPosition(
+    node.begin ?? node.start ?? node.pos ?? node.position ?? node.startPosition ?? node.name?.range?.begin ?? node.name?.loc?.start,
+    options
+  );
+  const end = javaAstPosition(
+    node.end ?? node.endPosition ?? node.stopPosition ?? node.finishPosition ?? node.name?.range?.end ?? node.name?.loc?.end,
+    options
+  );
+  const sourceRange = node.sourceRange ?? node.rangeInfo;
+  const sourceStart = javaAstPosition(
+    sourceRange?.start ?? sourceRange?.offset ?? sourceRange?.startPosition,
+    options
+  );
+  const sourceEnd = javaAstPosition(
+    typeof sourceRange?.offset === 'number' && typeof sourceRange?.length === 'number'
+      ? sourceRange.offset + sourceRange.length
+      : sourceRange?.end ?? sourceRange?.endPosition,
+    options
+  );
+  const resolvedStart = start ?? sourceStart;
+  const resolvedEnd = end ?? sourceEnd;
+  if (!resolvedStart) return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: resolvedStart.path ?? resolvedEnd?.path ?? input.sourcePath,
+    startLine: resolvedStart.line,
+    startColumn: resolvedStart.column,
+    endLine: resolvedEnd?.line,
+    endColumn: resolvedEnd?.column
+  };
+}
+
+function spanFromJavaRange(range, input) {
+  if (!range || typeof range !== 'object') return undefined;
+  const start = range.begin ?? range.start;
+  const end = range.end ?? range.stop;
+  if (start && typeof start === 'object') {
+    const startLine = start.line ?? start.Line;
+    const startColumn = start.column ?? start.col ?? start.Column ?? start.character;
+    const endLine = end?.line ?? end?.Line;
+    const endColumn = end?.column ?? end?.col ?? end?.Column ?? end?.character;
+    if (typeof startLine === 'number') {
+      return {
+        sourceId: input.sourceHash,
+        path: start.path ?? start.file ?? end?.path ?? end?.file ?? input.sourcePath,
+        startLine,
+        startColumn,
+        endLine,
+        endColumn
+      };
+    }
+  }
+  return undefined;
+}
+
+function spanFromJavaLineFields(node, input) {
+  const startLine = node.startLine ?? node.line ?? node.beginLine ?? node.lineno;
+  if (typeof startLine !== 'number') return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: node.path ?? node.file ?? node.filename ?? input.sourcePath,
+    startLine,
+    startColumn: node.startColumn ?? node.column ?? node.beginColumn ?? node.col,
+    endLine: node.endLine ?? node.end_lineno,
+    endColumn: node.endColumn ?? node.end_col_offset
+  };
+}
+
+function javaAstPosition(value, options = {}) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'object') {
+    const position = value.position ?? value.Position ?? value.pos ?? value.start ?? value;
+    const line = position.line ?? position.Line ?? position.lineno;
+    const column = position.column ?? position.Column ?? position.col ?? position.character;
+    if (typeof line === 'number') {
+      return {
+        path: position.path ?? position.file ?? position.filename ?? position.Filename,
+        line,
+        column: typeof column === 'number' ? column : undefined
+      };
+    }
+  }
+  const resolver = typeof options.positionResolver === 'function'
+    ? options.positionResolver
+    : typeof options.lineMap?.position === 'function'
+      ? options.lineMap.position.bind(options.lineMap)
+      : typeof options.lineMap?.getPosition === 'function'
+        ? options.lineMap.getPosition.bind(options.lineMap)
+        : typeof options.lineMap?.getLineNumber === 'function'
+          ? (offset) => ({
+            line: options.lineMap.getLineNumber(offset),
+            column: typeof options.lineMap.getColumnNumber === 'function' ? options.lineMap.getColumnNumber(offset) : undefined
+          })
+          : undefined;
+  if (resolver) {
+    const resolved = resolver(value);
+    if (resolved !== value) return javaAstPosition(resolved, options);
+  }
+  return undefined;
+}
+
+function javaAstPositionKind(node) {
+  if (node.range?.begin || node.loc?.start) return 'line-column-range';
+  if (typeof node.startLine === 'number' || typeof node.line === 'number') return 'line-column-fields';
+  if (node.pos !== undefined || node.startPosition !== undefined) return 'offset-position';
+  if (node.sourceRange) return 'source-range';
+  return undefined;
+}
+
+function javaAstDeclarations(node, kind, nativeNodeId, input) {
+  if (kind === 'PackageDeclaration') {
+    const name = javaAstPackageName(node) ?? javaAstDeclarationName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'module', 'definition')] : [];
+  }
+  if (kind === 'ImportDeclaration') {
+    const name = javaAstImportPath(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'module', 'import')] : [];
+  }
+  if (javaTypeDeclarationKind(kind)) {
+    const name = javaAstDeclarationName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, javaTypeDeclarationSymbolKind(kind), 'definition')] : [];
+  }
+  if (kind === 'MethodDeclaration' || kind === 'ConstructorDeclaration') {
+    const name = javaAstDeclarationName(node);
+    if (!name) return [];
+    return [declarationRecord(input, nativeNodeId, name, 'method', javaAstHasBody(node) ? 'definition' : 'declaration')];
+  }
+  if (kind === 'FieldDeclaration') {
+    return javaAstFieldNames(node).map((name) => declarationRecord(input, nativeNodeId, name, 'property', 'definition'));
+  }
+  if (kind === 'VariableDeclarator') {
+    if (node.parentField === 'parameters' || node.parentKind === 'MethodDeclaration' || node.parentKind === 'ConstructorDeclaration') return [];
+    const name = javaAstDeclarationName(node);
+    if (!name) return [];
+    const symbolKind = node.parentKind === 'FieldDeclaration' || javaTypeDeclarationKind(node.parentKind) ? 'property' : 'variable';
+    return [declarationRecord(input, nativeNodeId, name, symbolKind, 'definition')];
+  }
+  if (kind === 'EnumConstantDeclaration') {
+    const name = javaAstDeclarationName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'enumMember', 'definition')] : [];
+  }
+  return [];
+}
+
+function javaAstChildEntries(node, kind = javaAstKind(node)) {
+  const fieldNames = Object.keys(node).filter((key) => !ignoredJavaAstField(key));
+  const entries = [];
+  for (const field of fieldNames) {
+    const value = node[field];
+    if (Array.isArray(value)) {
+      entries.push([field, value.map((entry) => javaAstChildWithParent(entry, kind, field))]);
+      continue;
+    }
+    if (value && typeof value === 'object') {
+      entries.push([field, javaAstChildWithParent(value, kind, field)]);
+    }
+  }
+  return entries.filter(([, value]) => Array.isArray(value)
+    ? value.some(isJavaAstNode)
+    : isJavaAstNode(value));
+}
+
+function javaAstChildWithParent(entry, parentKind, parentField) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
+  if (!isJavaAstNode(entry)) return entry;
+  return { parentKind, parentField, ...entry };
+}
+
+function javaAstNodeValue(node) {
+  return javaAstDeclarationName(node)
+    ?? javaAstImportPath(node)
+    ?? javaAstPackageName(node)
+    ?? javaAstTypeName(node.type ?? node.returnType ?? node.elementType)
+    ?? javaAstLiteralValue(node);
+}
+
+function javaAstDeclarationName(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  for (const key of ['name', 'identifier', 'simpleName', 'qualifiedName', 'id']) {
+    const value = node[key];
+    const name = javaAstName(value);
+    if (name) return name;
+  }
+  if (node.declaration && typeof node.declaration === 'object') return javaAstDeclarationName(node.declaration);
+  return undefined;
+}
+
+function javaAstName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.identifier === 'string') return value.identifier;
+  if (typeof value.name === 'string') return value.name;
+  if (typeof value.simpleName === 'string') return value.simpleName;
+  if (typeof value.qualifiedName === 'string') return value.qualifiedName;
+  if (typeof value.fullyQualifiedName === 'string') return value.fullyQualifiedName;
+  if (typeof value.id === 'string') return value.id;
+  if (typeof value.value === 'string') return value.value;
+  if (value.name && value.name !== value) return javaAstName(value.name);
+  if (value.identifier && value.identifier !== value) return javaAstName(value.identifier);
+  return undefined;
+}
+
+function javaAstPackageName(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  return javaAstName(node.packageName ?? node.packageDeclaration ?? node.package ?? node.name);
+}
+
+function javaAstImportPath(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const candidate = node.qualifiedIdentifier ?? node.qualifiedName ?? node.path ?? node.name ?? node.identifier;
+  const path = javaAstName(candidate);
+  if (!path) return undefined;
+  return node.asterisk || node.wildcard || node.onDemand || node.isAsterisk ? `${path.replace(/\.\*$/, '')}.*` : path;
+}
+
+function javaAstFieldNames(node) {
+  const fragments = node.variables ?? node.fragments ?? node.declarators ?? node.variableDeclarators;
+  if (Array.isArray(fragments)) return fragments.map(javaAstDeclarationName).filter(Boolean);
+  const name = javaAstDeclarationName(node);
+  return name ? [name] : [];
+}
+
+function javaAstTypeName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.name === 'string') return value.name;
+  if (typeof value.typeName === 'string') return value.typeName;
+  if (typeof value.qualifiedName === 'string') return value.qualifiedName;
+  if (value.elementType) {
+    const inner = javaAstTypeName(value.elementType);
+    return inner ? `${inner}[]` : '[]';
+  }
+  if (value.componentType) {
+    const inner = javaAstTypeName(value.componentType);
+    return inner ? `${inner}[]` : '[]';
+  }
+  if (Array.isArray(value.typeArguments)) {
+    const base = javaAstName(value.name) ?? javaAstName(value);
+    const args = value.typeArguments.map(javaAstTypeName).filter(Boolean);
+    return base ? `${base}<${args.join(', ')}>` : undefined;
+  }
+  return javaAstName(value);
+}
+
+function javaAstModifierNames(node) {
+  const modifiers = node.modifiers ?? node.Modifiers ?? node.flags;
+  if (!modifiers) return [];
+  if (Array.isArray(modifiers)) {
+    return uniqueStrings(modifiers.map((entry) => typeof entry === 'string' ? entry : javaAstName(entry) ?? entry.keyword ?? entry.kind).filter(Boolean));
+  }
+  if (typeof modifiers === 'string') return uniqueStrings(modifiers.split(/\s+/).filter(Boolean));
+  if (typeof modifiers === 'object') {
+    return uniqueStrings(Object.entries(modifiers)
+      .filter(([, enabled]) => enabled === true)
+      .map(([key]) => key));
+  }
+  return [];
+}
+
+function javaTypeDeclarationKind(kind) {
+  return kind === 'ClassDeclaration'
+    || kind === 'InterfaceDeclaration'
+    || kind === 'EnumDeclaration'
+    || kind === 'RecordDeclaration'
+    || kind === 'AnnotationDeclaration';
+}
+
+function javaTypeDeclarationSymbolKind(kind) {
+  if (kind === 'InterfaceDeclaration' || kind === 'AnnotationDeclaration') return 'interface';
+  if (kind === 'ClassDeclaration') return 'class';
+  return 'type';
+}
+
+function javaAstHasBody(node) {
+  return Boolean(node.body || node.block || node.statements || node.defaultValue || Array.isArray(node.bodyDeclarations));
+}
+
+function javaAstLiteralValue(node) {
+  const value = node.value ?? node.literal ?? node.token;
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  return undefined;
+}
+
+function javaRecoveredAstKind(kind) {
+  return kind === 'Erroneous'
+    || /Error|Erroneous|Malformed|Recovered|Problem|Missing/.test(String(kind));
+}
+
+function javaProblemNode(node, kind) {
+  return Boolean(node.problem || node.error || node.malformed || node.recovered || node.hasError || node.hasErrors || kind === 'Erroneous');
+}
+
+function javaGeneratedCodeMarker(node, kind) {
+  if (node.generated || node.Generated || node.isGenerated) return true;
+  if (kind === 'Annotation') {
+    const name = javaAstDeclarationName(node);
+    if (name && /(^|\.)(Generated|GeneratedValue)$/.test(name)) return true;
+  }
+  const annotations = node.annotations ?? node.modifiers?.annotations ?? node.modifiers;
+  if (Array.isArray(annotations)) {
+    return annotations.some((annotation) => {
+      const name = javaAstDeclarationName(annotation) ?? javaAstName(annotation);
+      return Boolean(name && /(^|\.)(Generated|GeneratedValue)$/.test(name));
+    });
+  }
+  return false;
+}
+
+function javaLombokAnnotationMarker(node, kind) {
+  if (kind !== 'Annotation') return false;
+  const name = javaAstDeclarationName(node);
+  return Boolean(name && /^(lombok\.|Data$|Value$|Builder$|Getter$|Setter$|AllArgsConstructor$|NoArgsConstructor$|RequiredArgsConstructor$)/.test(name));
+}
+
+function javaGeneratedCodeLoss(input, nodeId, span, options = {}, metadata = {}) {
+  return {
+    id: `loss_${idFragment(nodeId ?? input.sourcePath ?? 'java')}_java_generated_code`,
+    severity: 'warning',
+    phase: 'parse',
+    sourceFormat: input.language,
+    kind: 'generatedCode',
+    message: 'Java generated-source, annotation-generated, or Lombok-derived code marker was imported; regenerated members and source ownership require host evidence.',
+    span,
+    nodeId,
+    metadata: {
+      parser: options.parser,
+      astFormat: options.astFormat,
+      annotationProcessing: javaAnnotationProcessingSummary(options.annotationProcessing),
+      ...metadata
+    }
+  };
+}
+
+function javaPathEvidenceSummary(value) {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return { entryCount: value.length };
+  if (typeof value === 'string') return { entryCount: value.split(/[:;]/).filter(Boolean).length };
+  if (typeof value === 'object') {
+    const summary = {};
+    if (typeof value.hash === 'string') summary.hash = value.hash;
+    if (Array.isArray(value.entries)) summary.entryCount = value.entries.length;
+    if (Array.isArray(value.roots)) summary.rootCount = value.roots.length;
+    if (typeof value.source === 'string') summary.source = value.source;
+    return Object.keys(summary).length ? summary : { present: true };
+  }
+  return { present: true };
+}
+
+function javaAnnotationProcessingSummary(value) {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return { processorCount: value.length };
+  if (typeof value === 'object') {
+    const summary = {};
+    if (typeof value.hash === 'string') summary.hash = value.hash;
+    if (typeof value.enabled === 'boolean') summary.enabled = value.enabled;
+    if (Array.isArray(value.processors)) summary.processorCount = value.processors.length;
+    if (Array.isArray(value.generatedSources)) summary.generatedSourceCount = value.generatedSources.length;
+    return Object.keys(summary).length ? summary : { present: true };
+  }
+  return { present: Boolean(value) };
+}
+
+function javaBindingEvidenceSummary(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const summary = {};
+  if (typeof value.hash === 'string') summary.hash = value.hash;
+  if (Array.isArray(value.bindings)) summary.bindingCount = value.bindings.length;
+  if (Array.isArray(value.types)) summary.typeCount = value.types.length;
+  if (Array.isArray(value.references)) summary.referenceCount = value.references.length;
+  if (typeof value.solver === 'string') summary.solver = value.solver;
   return Object.keys(summary).length ? summary : { present: true };
 }
 
