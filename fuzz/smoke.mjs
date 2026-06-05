@@ -93,6 +93,27 @@ for (let index = 0; index < 50; index += 1) {
   });
   assert.equal(blockedNativeCompile.readiness.readiness, 'blocked');
   assert.equal(blockedNativeCompile.ok, false);
+  if (index % 5 === 0) {
+    const targetAdapter = {
+      id: `fuzz-target-adapter-${index}`,
+      sourceLanguage: lightweight.language,
+      target: index % 2 === 0 ? 'rust' : 'javascript',
+      coverage: {
+        readiness: 'needs-review',
+        handledLossKinds: ['dynamicRuntime', 'dynamicDispatch', 'typeInference', 'overloadResolution']
+      },
+      project() {
+        return { output: `// fuzz target adapter ${index}\n`, readiness: 'needs-review' };
+      }
+    };
+    const adapterNativeCompile = compileNativeSource(lightweight, {
+      target: targetAdapter.target,
+      targetAdapters: [targetAdapter]
+    });
+    assert.equal(adapterNativeCompile.outputMode, 'target-adapter');
+    assert.equal(adapterNativeCompile.targetCoverage.lossClass, 'targetAdapterProjection');
+    assert.ok(adapterNativeCompile.output.includes(`fuzz target adapter ${index}`));
+  }
 }
 
 const project = await importNativeProject({

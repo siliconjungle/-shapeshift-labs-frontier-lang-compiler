@@ -271,6 +271,7 @@ export type ProjectionTargetLossClass =
   | 'exactSourceProjection'
   | 'nativeSourceStubs'
   | 'unsupportedTargetFeatures'
+  | 'targetAdapterProjection'
   | 'missingAdapter'
   | string;
 
@@ -299,6 +300,9 @@ export interface ProjectionTargetCoverageEntry {
   readonly categories: readonly NativeImportTaxonomyKind[];
   readonly reason: string;
   readonly adapter?: string;
+  readonly adapterKind?: 'importer' | 'targetProjection' | string;
+  readonly adapterVersion?: string;
+  readonly adapterCoverage?: NativeTargetProjectionAdapterCoverageInput;
   readonly notes: readonly string[];
 }
 
@@ -339,6 +343,7 @@ export interface ProjectionTargetLossMatrix {
     readonly sourceProjectionByLossClass: Readonly<Record<ProjectionTargetLossClass, number>>;
     readonly exactSourceProjection: number;
     readonly nativeSourceStubs: number;
+    readonly targetAdapterProjection: number;
     readonly unsupportedTargetFeatures: number;
     readonly missingAdapters: number;
   };
@@ -353,6 +358,7 @@ export interface ProjectionTargetLossMatrixOptions {
   readonly languages?: readonly NativeImportLanguageProfile[];
   readonly imports?: readonly NativeSourceImportResult[];
   readonly adapters?: readonly NativeImporterAdapter[];
+  readonly targetAdapters?: readonly NativeTargetProjectionAdapter[];
   readonly targets?: readonly (FrontierCompileTarget | string)[];
   readonly generatedAt?: number;
 }
@@ -1124,6 +1130,94 @@ export type NativeImporterAdapterImportResult = NativeSourceImportResult & {
   readonly diagnostics: readonly NativeImporterAdapterDiagnostic[];
 };
 
+export interface NativeTargetProjectionAdapterCoverageInput {
+  readonly readiness?: SemanticMergeReadiness;
+  readonly lossKinds?: readonly NativeImportKnownLossKind[];
+  readonly handledLossKinds?: readonly NativeImportKnownLossKind[];
+  readonly sourceMapPrecision?: SourceMapMappingRecord['precision'] | 'none' | string;
+  readonly semanticCoverage?: Partial<NativeImporterAdapterSemanticCoverage>;
+  readonly notes?: readonly string[];
+}
+
+export interface NativeTargetProjectionAdapterSummary {
+  readonly id: string;
+  readonly sourceLanguage: FrontierSourceLanguage | string;
+  readonly target: FrontierCompileTarget | string;
+  readonly version?: string;
+  readonly capabilities: readonly string[];
+  readonly supportedParsers: readonly string[];
+  readonly supportedExtensions: readonly string[];
+  readonly coverage: Required<Pick<NativeTargetProjectionAdapterCoverageInput, 'readiness' | 'lossKinds' | 'handledLossKinds' | 'notes'>> & NativeTargetProjectionAdapterCoverageInput;
+  readonly diagnostics: readonly NativeImporterAdapterDiagnostic[];
+}
+
+export interface NativeTargetProjectionAdapterInput {
+  readonly importResult: NativeSourceImportResult;
+  readonly sourceProjection: NativeSourceProjectionResult;
+  readonly sourceLanguage: FrontierSourceLanguage | string;
+  readonly target: FrontierCompileTarget | string;
+  readonly targetPath?: string;
+  readonly targetCoverage?: ProjectionTargetCoverageEntry;
+  readonly options: Record<string, unknown>;
+  readonly metadata: Record<string, unknown>;
+}
+
+export interface NativeTargetProjectionAdapterResult {
+  readonly id?: string;
+  readonly output?: string;
+  readonly outputHash?: string;
+  readonly sourceMaps?: readonly SourceMapRecord[];
+  readonly losses?: readonly NativeAstLossRecord[];
+  readonly evidence?: readonly EvidenceRecord[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly readiness?: SemanticMergeReadiness;
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface NativeTargetProjectionAdapter {
+  readonly id: string;
+  readonly sourceLanguage?: FrontierSourceLanguage | string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly target: FrontierCompileTarget | string;
+  readonly targetLanguage?: FrontierCompileTarget | string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly supportedParsers?: readonly string[];
+  readonly supportedExtensions?: readonly string[];
+  readonly coverage?: NativeTargetProjectionAdapterCoverageInput;
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly project: (input: NativeTargetProjectionAdapterInput) => NativeTargetProjectionAdapterResult;
+}
+
+export interface NativeTargetProjectionAdapterResolverInput {
+  readonly importResult: NativeSourceImportResult;
+  readonly sourceProjection: NativeSourceProjectionResult;
+  readonly sourceLanguage: FrontierSourceLanguage | string;
+  readonly target: FrontierCompileTarget | string;
+  readonly sourcePath?: string;
+  readonly parser?: string;
+}
+
+export interface NativeTargetProjectionResult {
+  readonly kind: 'frontier.lang.nativeTargetProjection';
+  readonly version: 1;
+  readonly id: string;
+  readonly sourceLanguage: FrontierSourceLanguage | string;
+  readonly target: FrontierCompileTarget | string;
+  readonly targetPath?: string;
+  readonly adapter: NativeTargetProjectionAdapterSummary;
+  readonly output: string;
+  readonly outputHash: string;
+  readonly outputMode: 'target-adapter';
+  readonly sourceMaps: readonly SourceMapRecord[];
+  readonly losses: readonly NativeAstLossRecord[];
+  readonly lossSummary: NativeImportLossSummary;
+  readonly readiness: NativeImportReadinessClassification;
+  readonly evidence: readonly EvidenceRecord[];
+  readonly diagnostics: readonly NativeImporterAdapterDiagnostic[];
+  readonly metadata: Record<string, unknown>;
+}
+
 export interface NativeProjectSourceInput extends ImportNativeSourceOptions {
   readonly adapter?: NativeImporterAdapter | string;
   readonly adapterOptions?: Record<string, unknown>;
@@ -1221,11 +1315,19 @@ export interface NativeSourceProjectionResult {
   readonly metadata: Record<string, unknown>;
 }
 
-export type NativeSourceCompileOutputMode = NativeSourceProjectionMode | 'target-stubs';
+export type NativeSourceCompileOutputMode = NativeSourceProjectionMode | 'target-stubs' | 'target-adapter';
 
 export interface CompileNativeSourceOptions extends ProjectNativeImportToSourceOptions {
   readonly target?: FrontierCompileTarget | string;
   readonly adapters?: readonly NativeImporterAdapter[];
+  readonly targetAdapters?: readonly NativeTargetProjectionAdapter[];
+  readonly targetAdapter?: NativeTargetProjectionAdapter | string;
+  readonly targetAdapterResolver?: (
+    input: NativeTargetProjectionAdapterResolverInput,
+    adapters: readonly NativeTargetProjectionAdapter[]
+  ) => NativeTargetProjectionAdapter | undefined;
+  readonly targetAdapterOptions?: Record<string, unknown>;
+  readonly targetAdapterMetadata?: Record<string, unknown>;
   readonly languages?: readonly NativeImportLanguageProfile[];
   readonly generatedAt?: number;
   readonly emitOnBlocked?: boolean;
@@ -1249,6 +1351,7 @@ export interface NativeSourceCompileResult {
   readonly outputMode: NativeSourceCompileOutputMode;
   readonly importResult: NativeSourceImportResult;
   readonly projection: NativeSourceProjectionResult;
+  readonly targetProjection?: NativeTargetProjectionResult;
   readonly targetCoverage: ProjectionTargetCoverageEntry;
   readonly projectionMatrix: ProjectionTargetLossMatrix;
   readonly losses: readonly NativeAstLossRecord[];
@@ -1342,6 +1445,7 @@ export declare function createBabelNativeImporterAdapter(options?: JavaScriptNat
 export declare function createTypeScriptCompilerNativeImporterAdapter(options?: TypeScriptCompilerNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createTreeSitterNativeImporterAdapter(options?: TreeSitterNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function runNativeImporterAdapter(adapter: NativeImporterAdapter, input: RunNativeImporterAdapterOptions): Promise<NativeImporterAdapterImportResult>;
+export declare function runNativeTargetProjectionAdapter(adapter: NativeTargetProjectionAdapter, input: NativeTargetProjectionAdapterInput): NativeTargetProjectionResult;
 export declare function projectNativeImportToSource(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: ProjectNativeImportToSourceOptions): NativeSourceProjectionResult;
 export declare function importNativeSource(input: ImportNativeSourceOptions): NativeSourceImportResult;
 export declare function diffNativeSources(input: DiffNativeSourcesOptions): NativeSourceChangeSet;

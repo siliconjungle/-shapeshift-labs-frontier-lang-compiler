@@ -93,11 +93,12 @@ console.log(pythonProjection.sourceProjection.stubs.lossClass); // "nativeSource
 console.log(pythonProjection.targets.find((entry) => entry.target === 'rust').lossClass); // "missingAdapter"
 ```
 
-The projection target matrix separates four runtime/API classes:
+The projection target matrix separates five runtime/API classes:
 
 - `exactSourceProjection`: exact source can be emitted when the import carries matching source text or source-preservation evidence.
 - `nativeSourceStubs`: declaration stubs can be emitted, but bodies, resolved types, and executable semantics are review-required.
 - `unsupportedTargetFeatures`: a target slot exists, but the source profile or import evidence declares features such as macros, preprocessors, dynamic runtime behavior, generated code, unsupported syntax, or unresolved inference that this facade cannot prove lossless.
+- `targetAdapterProjection`: a host-owned native-to-target adapter is present and produced target output with its own evidence/readiness.
 - `missingAdapter`: no native-to-target projection adapter is declared; preserve or stub the original source language instead, or inject host-owned parser/semantic adapter evidence.
 
 Preserve exact native source text, token/trivia hashes, comments, whitespace, and source directives as evidence. This does not claim full semantic understanding; it keeps round-trip material available while exact parser adapters catch up:
@@ -191,6 +192,41 @@ console.log(rustCandidate.ok); // true only because emitOnBlocked requested code
 ```
 
 `compileNativeSource` returns the import result, projection, target loss matrix cell, combined losses, readiness, evidence, and output hash. Admission queues should treat `ok` as "code was emitted", not as merge approval; `readiness` and `targetCoverage` carry the merge signal.
+
+Provide a target projection adapter when the host owns real native-to-target translation semantics:
+
+```js
+const jsToRustAdapter = {
+  id: 'app-js-to-rust',
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  coverage: {
+    readiness: 'needs-review',
+    handledLossKinds: ['dynamicRuntime']
+  },
+  project(input) {
+    return {
+      output: `// projected from ${input.sourceLanguage}\npub fn add_todo() {}\n`,
+      readiness: 'needs-review',
+      evidence: [{
+        id: 'evidence_app_js_to_rust',
+        kind: 'projection',
+        status: 'passed',
+        summary: 'Host JS-to-Rust adapter emitted declaration-compatible Rust.'
+      }]
+    };
+  }
+};
+
+const rustWithAdapter = compileNativeSource(compiledJs.importResult, {
+  target: 'rust',
+  targetAdapters: [jsToRustAdapter]
+});
+
+console.log(rustWithAdapter.outputMode); // "target-adapter"
+console.log(rustWithAdapter.targetCoverage.lossClass); // "targetAdapterProjection"
+console.log(rustWithAdapter.targetProjection.adapter.id); // "app-js-to-rust"
+```
 
 Project a native import back to source. Exact source is preserved when the import carries matching source-preservation evidence or when supplied text matches the import hash; otherwise the compiler emits declaration stubs with review-required loss evidence:
 

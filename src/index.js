@@ -151,6 +151,7 @@ export const ProjectionTargetLossClasses = Object.freeze([
   'exactSourceProjection',
   'nativeSourceStubs',
   'unsupportedTargetFeatures',
+  'targetAdapterProjection',
   'missingAdapter'
 ]);
 
@@ -277,11 +278,38 @@ export function compileNativeSource(input, options = {}) {
   const projectionMatrix = createProjectionTargetLossMatrix({
     imports: [importResult],
     adapters: options.adapters,
+    targetAdapters: options.targetAdapters,
     languages: options.languages,
     targets: [target],
     generatedAt: options.generatedAt
   });
   const targetCoverage = nativeSourceCompileTargetCoverage(projectionMatrix, sourceLanguage, target);
+  const targetAdapter = resolveNativeTargetProjectionAdapter({
+    importResult,
+    sourceProjection: projection,
+    sourceLanguage,
+    target,
+    sourcePath: importResult.sourcePath ?? importResult.nativeSource?.sourcePath,
+    parser: importResult.nativeAst?.parser ?? importResult.nativeSource?.parser ?? options.parser
+  }, options);
+  const targetProjection = targetAdapter
+    ? runNativeTargetProjectionAdapter(targetAdapter, {
+      importResult,
+      sourceProjection: projection,
+      sourceLanguage,
+      target,
+      targetPath: options.targetPath,
+      targetCoverage,
+      options: options.targetAdapterOptions ?? {},
+      metadata: {
+        nativeCompileResultId: id,
+        sourceLanguage,
+        target,
+        projectionId: projection.id,
+        ...options.targetAdapterMetadata
+      }
+    })
+    : undefined;
   const targetLosses = nativeSourceCompileTargetLosses({
     importResult,
     projection,
@@ -290,26 +318,32 @@ export function compileNativeSource(input, options = {}) {
     target,
     idPart
   });
-  const outputMode = sameSourceTarget ? projection.mode : 'target-stubs';
+  const output = targetProjection?.output ?? projection.sourceText;
+  const outputHash = targetProjection?.outputHash ?? projection.outputHash;
+  const outputMode = targetProjection ? targetProjection.outputMode : sameSourceTarget ? projection.mode : 'target-stubs';
   const compileEvidence = nativeSourceCompileEvidence({
     id: options.compileEvidenceId ?? `evidence_${idPart}_${idFragment(target)}_native_source_compile`,
     importResult,
     projection,
+    targetProjection,
     targetCoverage,
     targetLosses,
     sourceLanguage,
     target,
+    outputHash,
     outputMode
   });
   const evidence = uniqueByEvidenceId([
     ...(importResult.evidence ?? []),
     ...(projection.evidence ?? []),
+    ...(targetProjection?.evidence ?? []),
     compileEvidence,
     ...(options.evidence ?? [])
   ]);
   const losses = uniqueByLossId([
     ...(importResult.losses ?? []),
     ...(projection.losses ?? []),
+    ...(targetProjection?.losses ?? []),
     ...targetLosses,
     ...(options.losses ?? [])
   ]);
@@ -333,11 +367,12 @@ export function compileNativeSource(input, options = {}) {
     target,
     language: sourceLanguage,
     sourcePath: importResult.sourcePath ?? importResult.nativeSource?.sourcePath,
-    output: projection.sourceText,
-    outputHash: projection.outputHash,
+    output,
+    outputHash,
     outputMode,
     importResult,
     projection,
+    targetProjection,
     targetCoverage,
     projectionMatrix,
     losses,
@@ -351,6 +386,8 @@ export function compileNativeSource(input, options = {}) {
       semanticIndexId: importResult.semanticIndex?.id ?? importResult.universalAst?.semanticIndex?.id,
       universalAstId: importResult.universalAst?.id,
       projectionId: projection.id,
+      targetProjectionId: targetProjection?.id,
+      targetProjectionAdapterId: targetProjection?.adapter?.id,
       projectionMode: projection.mode,
       outputMode,
       sourceTarget,
@@ -657,11 +694,13 @@ export function createNativeImportCoverageMatrix(input = {}) {
 export function createProjectionTargetLossMatrix(input = {}) {
   const imports = input.imports ?? [];
   const adapters = input.adapters ?? [];
-  const profiles = mergeNativeImportProfiles(input.languages ?? NativeImportLanguageProfiles, imports, adapters);
+  const targetAdapters = input.targetAdapters ?? [];
+  const profiles = mergeNativeImportProfiles(input.languages ?? NativeImportLanguageProfiles, imports, adapters, targetAdapters);
   const targets = normalizeProjectionMatrixTargets(input.targets ?? FrontierCompileTargets);
   const languages = profiles.map((profile) => projectionTargetCoverageForProfile(profile, {
     imports,
     adapters,
+    targetAdapters,
     targets
   }));
   const summary = projectionTargetLossMatrixSummary(languages);
@@ -674,7 +713,7 @@ export function createProjectionTargetLossMatrix(input = {}) {
     metadata: {
       compileTargets: targets,
       lossClasses: [...ProjectionTargetLossClasses],
-      note: 'Projection target coverage separates exact source preservation, declaration stubs, known unsupported target features, and missing native-to-target adapters.'
+      note: 'Projection target coverage separates exact source preservation, declaration stubs, host-owned target adapters, known unsupported target features, and missing native-to-target adapters.'
     }
   };
 }
@@ -1156,6 +1195,120 @@ export async function runNativeImporterAdapter(adapter, input = {}) {
     ...importNativeSource(importInput),
     adapter: adapterSummary,
     diagnostics
+  };
+}
+
+export function runNativeTargetProjectionAdapter(adapter, input = {}) {
+  const summary = normalizeNativeTargetProjectionAdapter(adapter);
+  const sourceLanguage = normalizeNativeLanguageId(input.sourceLanguage ?? summary.sourceLanguage);
+  const target = normalizeProjectionMatrixTargets([input.target ?? summary.target])[0] ?? summary.target;
+  const diagnosticContext = {
+    sourcePath: input.importResult?.sourcePath ?? input.importResult?.nativeSource?.sourcePath,
+    sourceHash: input.importResult?.sourceHash ?? input.importResult?.nativeSource?.sourceHash,
+    language: sourceLanguage,
+    parser: `target:${target}`,
+    parserVersion: summary.version
+  };
+  const projectInput = {
+    importResult: input.importResult,
+    sourceProjection: input.sourceProjection,
+    sourceLanguage,
+    target,
+    targetPath: input.targetPath,
+    targetCoverage: input.targetCoverage,
+    options: input.options ?? {},
+    metadata: input.metadata ?? {}
+  };
+  let projected;
+  let thrownDiagnostic;
+  try {
+    projected = adapter.project(projectInput) ?? {};
+  } catch (error) {
+    thrownDiagnostic = {
+      severity: 'error',
+      code: 'targetAdapter.project.threw',
+      phase: 'emit',
+      kind: 'targetProjectionLoss',
+      message: error instanceof Error ? error.message : String(error),
+      metadata: {
+        errorName: error instanceof Error ? error.name : undefined
+      }
+    };
+    projected = {};
+  }
+  const diagnostics = [
+    ...normalizeAdapterDiagnostics(summary.diagnostics, summary, diagnosticContext, 'target-adapter'),
+    ...(thrownDiagnostic ? normalizeAdapterDiagnostics([thrownDiagnostic], summary, diagnosticContext, 'throw') : []),
+    ...normalizeAdapterDiagnostics(projected.diagnostics, summary, diagnosticContext, 'project')
+  ];
+  const output = typeof projected.output === 'string' ? projected.output : input.sourceProjection?.sourceText ?? '';
+  const outputHash = projected.outputHash ?? hashSemanticValue(output);
+  const adapterEvidence = nativeTargetProjectionAdapterEvidence(summary, diagnostics, {
+    ...diagnosticContext,
+    sourceLanguage,
+    target,
+    outputHash,
+    targetPath: input.targetPath
+  });
+  const evidence = uniqueByEvidenceId([
+    ...(projected.evidence ?? []),
+    adapterEvidence
+  ]);
+  const losses = uniqueByLossId([
+    ...(projected.losses ?? []),
+    ...diagnostics.map((diagnostic, index) => nativeTargetProjectionDiagnosticToLoss(diagnostic, index, summary, {
+      ...diagnosticContext,
+      sourceLanguage,
+      target
+    }))
+  ]);
+  const lossSummary = summarizeNativeImportLosses(losses, {
+    evidence,
+    parser: diagnosticContext.parser,
+    scanKind: 'native-target-projection',
+    semanticStatus: input.importResult?.metadata?.semanticStatus
+  });
+  const classifiedReadiness = classifyNativeImportReadiness(losses, {
+    evidence,
+    parser: diagnosticContext.parser,
+    scanKind: 'native-target-projection',
+    semanticStatus: input.importResult?.metadata?.semanticStatus
+  });
+  const declaredReadiness = normalizeSemanticMergeReadiness(projected.readiness ?? summary.coverage.readiness);
+  const readiness = declaredReadiness
+    ? {
+      ...classifiedReadiness,
+      readiness: maxSemanticMergeReadiness(classifiedReadiness.readiness, declaredReadiness),
+      reasons: uniqueStrings([
+        ...classifiedReadiness.reasons,
+        ...(declaredReadiness === classifiedReadiness.readiness ? [] : [`Target adapter declared readiness ${declaredReadiness}.`])
+      ])
+    }
+    : classifiedReadiness;
+  return {
+    kind: 'frontier.lang.nativeTargetProjection',
+    version: 1,
+    id: projected.id ?? `native_target_projection_${idFragment(summary.id)}_${idFragment(sourceLanguage)}_${idFragment(target)}`,
+    sourceLanguage,
+    target,
+    targetPath: input.targetPath,
+    adapter: summary,
+    output,
+    outputHash,
+    outputMode: 'target-adapter',
+    sourceMaps: projected.sourceMaps ?? [],
+    losses,
+    lossSummary,
+    readiness,
+    evidence,
+    diagnostics: diagnostics.map(serializableDiagnostic),
+    metadata: {
+      importId: input.importResult?.id,
+      projectionId: input.sourceProjection?.id,
+      targetCoverageLossClass: input.targetCoverage?.lossClass,
+      targetCoverageReadiness: input.targetCoverage?.readiness,
+      ...projected.metadata
+    }
   };
 }
 
@@ -3950,6 +4103,7 @@ function projectionTargetCoverageForProfile(profile, context) {
   const aliases = new Set([profile.language, ...(profile.aliases ?? [])].map(normalizeNativeLanguageId).filter(Boolean));
   const matchingImports = (context.imports ?? []).filter((imported) => aliases.has(normalizeNativeLanguageId(imported?.language ?? imported?.nativeAst?.language)));
   const matchingAdapters = (context.adapters ?? []).filter((adapter) => aliases.has(normalizeNativeLanguageId(adapter?.language)));
+  const matchingTargetAdapters = (context.targetAdapters ?? []).filter((adapter) => aliases.has(normalizeNativeLanguageId(adapter?.sourceLanguage ?? adapter?.language)));
   const importedLossKinds = uniqueStrings(matchingImports.flatMap((imported) => (imported?.losses ?? []).map((loss) => loss.kind).filter(Boolean)));
   const knownLossKinds = uniqueStrings([...(profile.knownLossKinds ?? []), ...importedLossKinds]);
   const parserAdapters = uniqueStrings([
@@ -3960,6 +4114,7 @@ function projectionTargetCoverageForProfile(profile, context) {
   const targets = (context.targets ?? FrontierCompileTargets).map((target) => projectionTargetCoverageEntry(profile, target, {
     matchingImports,
     matchingAdapters,
+    matchingTargetAdapters,
     knownLossKinds
   }));
   return {
@@ -4037,8 +4192,14 @@ function projectionTargetCoverageEntry(profile, target, context) {
   const normalizedTarget = normalizeProjectionMatrixTargets([target])[0] ?? String(target);
   const declaredTargets = new Set(normalizeProjectionMatrixTargets(profile.projectionTargets ?? []));
   const adapterTargets = new Set((context.matchingAdapters ?? []).flatMap(adapterProjectionTargets));
+  const targetAdapter = matchingNativeTargetProjectionAdapter({
+    sourceLanguage: profile.language,
+    target: normalizedTarget,
+    sourcePath: context.matchingImports?.[0]?.sourcePath ?? context.matchingImports?.[0]?.nativeSource?.sourcePath
+  }, context.matchingTargetAdapters ?? []);
+  const targetAdapterSummary = targetAdapter ? normalizeNativeTargetProjectionAdapter(targetAdapter) : undefined;
   const sameSourceTarget = nativeLanguageCompileTarget(profile.language, profile.aliases) === normalizedTarget;
-  const hasProjectionAdapter = declaredTargets.has(normalizedTarget) || adapterTargets.has(normalizedTarget);
+  const hasProjectionAdapter = Boolean(targetAdapterSummary) || declaredTargets.has(normalizedTarget) || adapterTargets.has(normalizedTarget);
   if (!hasProjectionAdapter) {
     return {
       target: normalizedTarget,
@@ -4054,6 +4215,48 @@ function projectionTargetCoverageEntry(profile, target, context) {
   }
 
   const featureLossKinds = projectionUnsupportedFeatureLossKinds(context.knownLossKinds);
+  if (targetAdapterSummary) {
+    const handledLossKinds = new Set(targetAdapterSummary.coverage.handledLossKinds ?? []);
+    const unhandledFeatureLossKinds = featureLossKinds.filter((kind) => !handledLossKinds.has(kind));
+    if (unhandledFeatureLossKinds.length) {
+      return {
+        target: normalizedTarget,
+        lossClass: 'unsupportedTargetFeatures',
+        supported: true,
+        readiness: 'needs-review',
+        lossKinds: unhandledFeatureLossKinds,
+        categories: uniqueStrings(unhandledFeatureLossKinds.map(nativeImportCategoryForLossKind)),
+        reason: `${profile.language} has target adapter ${targetAdapterSummary.id}, but source feature losses remain unhandled for ${normalizedTarget}: ${unhandledFeatureLossKinds.join(', ')}.`,
+        adapter: targetAdapterSummary.id,
+        adapterKind: 'targetProjection',
+        adapterVersion: targetAdapterSummary.version,
+        adapterCoverage: targetAdapterSummary.coverage,
+        notes: uniqueStrings([
+          ...(targetAdapterSummary.coverage.notes ?? []),
+          'Adapter output is available, but merge readiness still requires review for unhandled source-language feature losses.'
+        ])
+      };
+    }
+    const adapterLossKinds = uniqueStrings(targetAdapterSummary.coverage.lossKinds ?? []);
+    return {
+      target: normalizedTarget,
+      lossClass: 'targetAdapterProjection',
+      supported: true,
+      readiness: targetAdapterSummary.coverage.readiness ?? 'needs-review',
+      lossKinds: adapterLossKinds,
+      categories: uniqueStrings(adapterLossKinds.map(nativeImportCategoryForLossKind)),
+      reason: `${profile.language} can project to ${normalizedTarget} through host target adapter ${targetAdapterSummary.id}.`,
+      adapter: targetAdapterSummary.id,
+      adapterKind: 'targetProjection',
+      adapterVersion: targetAdapterSummary.version,
+      adapterCoverage: targetAdapterSummary.coverage,
+      notes: uniqueStrings([
+        ...(targetAdapterSummary.coverage.notes ?? []),
+        'The host adapter owns native-to-target translation semantics and must provide evidence for merge admission.'
+      ])
+    };
+  }
+
   if (featureLossKinds.length) {
     return {
       target: normalizedTarget,
@@ -4115,6 +4318,7 @@ function projectionTargetLossMatrixSummary(languages) {
     sourceProjectionByLossClass,
     exactSourceProjection: (sourceProjectionByLossClass.exactSourceProjection ?? 0) + (byLossClass.exactSourceProjection ?? 0),
     nativeSourceStubs: (sourceProjectionByLossClass.nativeSourceStubs ?? 0) + (byLossClass.nativeSourceStubs ?? 0),
+    targetAdapterProjection: byLossClass.targetAdapterProjection ?? 0,
     unsupportedTargetFeatures: byLossClass.unsupportedTargetFeatures ?? 0,
     missingAdapters: byLossClass.missingAdapter ?? 0
   };
@@ -4324,9 +4528,11 @@ function nativeSourceCompileEvidence(input) {
     metadata: {
       importId: input.importResult.id,
       projectionId: input.projection.id,
+      targetProjectionId: input.targetProjection?.id,
+      targetProjectionAdapterId: input.targetProjection?.adapter?.id,
       sourceLanguage: input.sourceLanguage,
       target: input.target,
-      outputHash: input.projection.outputHash,
+      outputHash: input.outputHash ?? input.projection.outputHash,
       outputMode: input.outputMode,
       projectionMode: input.projection.mode,
       targetLossClass: input.targetCoverage.lossClass,
@@ -4359,7 +4565,7 @@ function nativeImportLanguageProfile(language, input = {}) {
   });
 }
 
-function mergeNativeImportProfiles(languages, imports, adapters) {
+function mergeNativeImportProfiles(languages, imports, adapters, targetAdapters = []) {
   const profilesByLanguage = new Map();
   for (const profile of languages) {
     const normalized = normalizeNativeLanguageId(profile.language ?? profile);
@@ -4383,6 +4589,16 @@ function mergeNativeImportProfiles(languages, imports, adapters) {
     profilesByLanguage.set(normalized, {
       ...existing,
       parserAdapters: uniqueStrings([...(existing.parserAdapters ?? []), adapter.parser ?? adapter.id].filter(Boolean))
+    });
+  }
+  for (const adapter of targetAdapters) {
+    const summary = safeNativeTargetProjectionAdapterSummary(adapter);
+    const normalized = normalizeNativeLanguageId(summary?.sourceLanguage);
+    if (!normalized) continue;
+    const existing = profilesByLanguage.get(normalized) ?? nativeImportLanguageProfile(normalized, { supportsLightweightScan: false, parserAdapters: [] });
+    profilesByLanguage.set(normalized, {
+      ...existing,
+      projectionTargets: uniqueStrings([...(existing.projectionTargets ?? []), summary.target].filter(Boolean))
     });
   }
   return [...profilesByLanguage.values()].sort((left, right) => left.language.localeCompare(right.language));
@@ -5217,6 +5433,11 @@ function maxSemanticMergeReadiness(left, right) {
   return leftRank >= rightRank ? left : right;
 }
 
+function normalizeSemanticMergeReadiness(value) {
+  const readiness = String(value ?? '').toLowerCase();
+  return Object.prototype.hasOwnProperty.call(semanticMergeReadinessRank, readiness) ? readiness : undefined;
+}
+
 export function createUniversalAstFromDocument(document, input = {}) {
   return createUniversalAstEnvelope({
     id: input.id ?? `universal_ast_${idFragment(document.id)}`,
@@ -5884,6 +6105,150 @@ function resolveNativeProjectAdapter(source, adapters, input) {
     const extensions = adapter.supportedExtensions ?? [];
     return !extensions.length || extensions.some((extension) => sourcePath.toLowerCase().endsWith(extension.toLowerCase()));
   });
+}
+
+function resolveNativeTargetProjectionAdapter(input, options = {}) {
+  const adapters = options.targetAdapters ?? [];
+  if (options.targetAdapter && typeof options.targetAdapter === 'object') return options.targetAdapter;
+  if (typeof options.targetAdapter === 'string') {
+    const explicit = adapters.find((adapter) => adapter?.id === options.targetAdapter);
+    if (explicit) return explicit;
+  }
+  if (typeof options.targetAdapterResolver === 'function') {
+    const resolved = options.targetAdapterResolver(input, adapters);
+    if (resolved) return resolved;
+  }
+  return matchingNativeTargetProjectionAdapter(input, adapters);
+}
+
+function matchingNativeTargetProjectionAdapter(input, adapters = []) {
+  return adapters.find((adapter) => nativeTargetProjectionAdapterMatches(adapter, input));
+}
+
+function nativeTargetProjectionAdapterMatches(adapter, input = {}) {
+  const summary = safeNativeTargetProjectionAdapterSummary(adapter);
+  if (!summary) return false;
+  if (input.sourceLanguage && normalizeNativeLanguageId(input.sourceLanguage) !== summary.sourceLanguage) return false;
+  const target = normalizeProjectionMatrixTargets([input.target])[0] ?? String(input.target ?? '').toLowerCase();
+  if (target && target !== summary.target) return false;
+  const parser = input.parser ? String(input.parser).toLowerCase() : undefined;
+  if (parser && summary.supportedParsers.length && !summary.supportedParsers.map((item) => item.toLowerCase()).includes(parser)) return false;
+  const sourcePath = String(input.sourcePath ?? '').toLowerCase();
+  if (sourcePath && summary.supportedExtensions.length) {
+    return summary.supportedExtensions.some((extension) => sourcePath.endsWith(extension));
+  }
+  return true;
+}
+
+function safeNativeTargetProjectionAdapterSummary(adapter) {
+  try {
+    return normalizeNativeTargetProjectionAdapter(adapter);
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeNativeTargetProjectionAdapter(adapter) {
+  if (!adapter || typeof adapter !== 'object') {
+    throw new Error('Native target projection adapter must be an object');
+  }
+  if (!adapter.id) throw new Error('Native target projection adapter requires an id');
+  const sourceLanguage = normalizeNativeLanguageId(adapter.sourceLanguage ?? adapter.language);
+  if (!sourceLanguage) throw new Error(`Native target projection adapter ${adapter.id} requires a sourceLanguage`);
+  const target = normalizeProjectionMatrixTargets([adapter.target ?? adapter.targetLanguage])[0];
+  if (!target) throw new Error(`Native target projection adapter ${adapter.id} requires a target`);
+  if (typeof adapter.project !== 'function') throw new Error(`Native target projection adapter ${adapter.id} requires a project function`);
+  const capabilities = normalizeStringList(adapter.capabilities);
+  const summaryInput = {
+    id: String(adapter.id),
+    sourceLanguage,
+    language: sourceLanguage,
+    target,
+    parser: `target:${target}`,
+    version: adapter.version === undefined ? undefined : String(adapter.version)
+  };
+  return Object.freeze({
+    id: summaryInput.id,
+    sourceLanguage,
+    target,
+    version: summaryInput.version,
+    capabilities,
+    supportedParsers: normalizeStringList(adapter.supportedParsers),
+    supportedExtensions: normalizeStringList(adapter.supportedExtensions).map((extension) => extension.startsWith('.') ? extension.toLowerCase() : `.${extension.toLowerCase()}`),
+    coverage: normalizeNativeTargetProjectionAdapterCoverage(adapter.coverage, { capabilities }),
+    diagnostics: normalizeAdapterDiagnostics(adapter.diagnostics, summaryInput, {
+      language: sourceLanguage,
+      parser: summaryInput.parser,
+      parserVersion: summaryInput.version
+    }, 'target-adapter')
+  });
+}
+
+function normalizeNativeTargetProjectionAdapterCoverage(value = {}, context = {}) {
+  const capabilities = new Set(normalizeStringList(context.capabilities).map((capability) => capability.toLowerCase()));
+  const lossKinds = uniqueStrings(value.lossKinds ?? []);
+  const handledLossKinds = uniqueStrings([
+    ...(value.handledLossKinds ?? []),
+    ...(capabilities.has('macros') || capabilities.has('macroexpansion') ? ['macroExpansion', 'macroHygiene'] : []),
+    ...(capabilities.has('preprocessor') ? ['preprocessor', 'conditionalCompilation'] : []),
+    ...(capabilities.has('dynamicruntime') ? ['dynamicRuntime', 'dynamicDispatch'] : []),
+    ...(capabilities.has('typeinference') ? ['typeInference', 'overloadResolution'] : [])
+  ]);
+  return Object.freeze({
+    readiness: normalizeSemanticMergeReadiness(value.readiness) ?? 'needs-review',
+    lossKinds,
+    handledLossKinds,
+    sourceMapPrecision: value.sourceMapPrecision,
+    semanticCoverage: value.semanticCoverage ?? {},
+    notes: uniqueStrings(value.notes ?? ['Target projection adapter output is host-owned evidence and should be reviewed unless declared ready.'])
+  });
+}
+
+function nativeTargetProjectionAdapterEvidence(adapter, diagnostics, input) {
+  const errors = diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length;
+  const warnings = diagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length;
+  return {
+    id: `evidence_${idFragment(adapter.id)}_native_target_projection_adapter`,
+    kind: 'projection',
+    status: errors ? 'failed' : 'passed',
+    path: input.sourcePath,
+    summary: `Ran ${adapter.id} native target projection adapter from ${input.sourceLanguage} to ${input.target} with ${diagnostics.length} diagnostic(s).`,
+    metadata: {
+      adapterId: adapter.id,
+      adapterVersion: adapter.version,
+      sourceLanguage: input.sourceLanguage,
+      target: input.target,
+      targetPath: input.targetPath,
+      outputHash: input.outputHash,
+      capabilities: adapter.capabilities,
+      coverage: adapter.coverage,
+      diagnostics: diagnostics.map(serializableDiagnostic),
+      errors,
+      warnings
+    }
+  };
+}
+
+function nativeTargetProjectionDiagnosticToLoss(diagnostic, index, adapter, input) {
+  return {
+    id: `loss_${idFragment(diagnostic.id ?? `${adapter.id}_${index}_${diagnostic.code ?? diagnostic.severity}`)}`,
+    severity: diagnostic.severity,
+    phase: diagnostic.phase ?? 'emit',
+    sourceFormat: input.sourceLanguage,
+    kind: diagnostic.kind ?? 'targetProjectionLoss',
+    message: diagnostic.message,
+    span: diagnostic.span,
+    metadata: {
+      adapterId: adapter.id,
+      adapterVersion: adapter.version,
+      diagnosticId: diagnostic.id,
+      diagnosticCode: diagnostic.code,
+      sourceLanguage: input.sourceLanguage,
+      target: input.target,
+      path: diagnostic.path,
+      ...diagnostic.metadata
+    }
+  };
 }
 
 function normalizeNativeImporterAdapter(adapter) {

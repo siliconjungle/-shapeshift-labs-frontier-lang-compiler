@@ -101,6 +101,27 @@ const nativeCompiles = nativeImportResults.map((imported, index) => compileNativ
 const nativeCompileDurationMs = performance.now() - nativeCompileStart;
 const nativeCompileBytes = nativeCompiles.reduce((sum, result) => sum + result.output.length, 0);
 const nativeCompileBlocked = nativeCompiles.filter((result) => result.readiness.readiness === 'blocked').length;
+const nativeTargetAdapterStart = performance.now();
+const nativeTargetAdapterCompiles = nativeImportResults.slice(0, 25).map((imported, index) => {
+  const target = index % 2 === 0 ? 'rust' : 'python';
+  return compileNativeSource(imported, {
+    target,
+    targetAdapters: [{
+      id: `bench-target-adapter-${index}`,
+      sourceLanguage: imported.language,
+      target,
+      coverage: {
+        readiness: 'needs-review',
+        handledLossKinds: ['dynamicRuntime', 'dynamicDispatch', 'typeInference', 'overloadResolution']
+      },
+      project() {
+        return { output: `// bench target adapter ${index}\n`, readiness: 'needs-review' };
+      }
+    }]
+  });
+});
+const nativeTargetAdapterDurationMs = performance.now() - nativeTargetAdapterStart;
+const nativeTargetAdapterBytes = nativeTargetAdapterCompiles.reduce((sum, result) => sum + result.output.length, 0);
 
 console.log(JSON.stringify({
   compiles: 250,
@@ -132,5 +153,8 @@ console.log(JSON.stringify({
   nativeCompiles: nativeCompiles.length,
   nativeCompileBytes,
   nativeCompileBlocked,
-  nativeCompileDurationMs: Number(nativeCompileDurationMs.toFixed(2))
+  nativeCompileDurationMs: Number(nativeCompileDurationMs.toFixed(2)),
+  nativeTargetAdapterCompiles: nativeTargetAdapterCompiles.length,
+  nativeTargetAdapterBytes,
+  nativeTargetAdapterDurationMs: Number(nativeTargetAdapterDurationMs.toFixed(2))
 }));

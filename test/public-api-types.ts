@@ -37,6 +37,7 @@ import {
   renderTargetAstWithSourceMap,
   resolveCapabilityAdapters,
   runNativeImporterAdapter,
+  runNativeTargetProjectionAdapter,
   summarizeNativeImportLosses,
   writeUniversalAstJson
 } from '../src/index.js';
@@ -69,6 +70,10 @@ import type {
   NativeImporterAdapterImportResult,
   NativeImporterAdapterParseInput,
   NativeImporterAdapterParseResult,
+  NativeTargetProjectionAdapter,
+  NativeTargetProjectionAdapterInput,
+  NativeTargetProjectionAdapterResult,
+  NativeTargetProjectionResult,
   NativeProjectImportResult,
   NativeSourceChangeSet,
   NativeSourceChangeSymbol,
@@ -131,6 +136,7 @@ type ExpectedPublicRuntimeExport =
   | 'renderTargetAstWithSourceMap'
   | 'resolveCapabilityAdapters'
   | 'runNativeImporterAdapter'
+  | 'runNativeTargetProjectionAdapter'
   | 'summarizeNativeImportLosses'
   | 'writeUniversalAstJson';
 
@@ -193,9 +199,40 @@ const readinessBySeverity = NativeImportReadinessBySeverity[summary.highestSever
 
 const projectionOptions: ProjectNativeImportToSourceOptions = { preferPreservedSource: true };
 const projection: NativeSourceProjectionResult = projectNativeImportToSource(imported, projectionOptions);
-const nativeCompileOptions: CompileNativeSourceOptions = { target: 'javascript', emitOnBlocked: true };
+const targetProjectionAdapter: NativeTargetProjectionAdapter = {
+  id: 'fixture-target-projection-api-types',
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  coverage: {
+    readiness: 'needs-review',
+    handledLossKinds: ['dynamicRuntime']
+  },
+  project(input: NativeTargetProjectionAdapterInput): NativeTargetProjectionAdapterResult {
+    return {
+      output: `// ${input.sourceLanguage} to ${input.target}\n`,
+      readiness: 'needs-review'
+    };
+  }
+};
+const nativeCompileOptions: CompileNativeSourceOptions = {
+  target: 'rust',
+  emitOnBlocked: true,
+  targetAdapters: [targetProjectionAdapter],
+  targetAdapter: targetProjectionAdapter.id,
+  targetAdapterOptions: { mode: 'api-types' },
+  targetAdapterMetadata: { fixture: true }
+};
 const nativeCompiled: NativeSourceCompileResult = compileNativeSource(imported, nativeCompileOptions);
 const nativeCompileMode: NativeSourceCompileOutputMode = nativeCompiled.outputMode;
+const targetProjection: NativeTargetProjectionResult | undefined = nativeCompiled.targetProjection;
+const directTargetProjection: NativeTargetProjectionResult = runNativeTargetProjectionAdapter(targetProjectionAdapter, {
+  importResult: imported,
+  sourceProjection: projection,
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  options: {},
+  metadata: {}
+});
 const sidecar: SemanticImportSidecar = createSemanticImportSidecar(imported, { targetPath: 'dist/api-types.js' });
 const regionTaxonomy: SemanticImportRegionTaxonomySummary = sidecar.regionTaxonomy;
 const contract: NativeImportResultContract = createNativeImportResultContract(imported, { sidecarId: sidecar.id });
@@ -267,6 +304,7 @@ const projectionLossOptions: ProjectionTargetLossMatrixOptions = {
   generatedAt: 2,
   imports: [imported],
   adapters: [estreeAdapter],
+  targetAdapters: [targetProjectionAdapter],
   targets: ['javascript', 'rust']
 };
 const projectionLossMatrix: ProjectionTargetLossMatrix = createProjectionTargetLossMatrix(projectionLossOptions);
@@ -304,6 +342,11 @@ void readiness;
 void roundtripReadiness;
 void readinessBySeverity;
 void projection;
+void targetProjectionAdapter;
+void nativeCompiled;
+void nativeCompileMode;
+void targetProjection;
+void directTargetProjection;
 void sidecar;
 void regionTaxonomy;
 void contractSource;

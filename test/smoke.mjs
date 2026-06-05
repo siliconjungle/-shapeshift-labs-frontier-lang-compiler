@@ -33,6 +33,7 @@ import {
   renderTargetAstWithSourceMap,
   resolveCapabilityAdapters,
   runNativeImporterAdapter,
+  runNativeTargetProjectionAdapter,
   classifyNativeImportRoundtripReadiness,
   classifyNativeImportReadiness,
   compileNativeSource,
@@ -56,7 +57,8 @@ for (const requiredExport of [
   'emitForTargetWithSourceMap',
   'importNativeSource',
   'importNativeProject',
-  'renderTargetAstWithSourceMap'
+  'renderTargetAstWithSourceMap',
+  'runNativeTargetProjectionAdapter'
 ]) {
   assert.equal(publicRuntimeExports.includes(requiredExport), true, `missing public export ${requiredExport}`);
 }
@@ -707,6 +709,108 @@ assert.equal(rustNativeCompileBlocked.losses.some((loss) => loss.severity === 'e
 assert.equal(rustNativeCompileBlocked.readiness.readiness, 'blocked');
 const rustNativeCompileEmitted = compileNativeSource(scannedJsImport, { target: 'rust', emitOnBlocked: true });
 assert.equal(rustNativeCompileEmitted.ok, true);
+const handledProjectionLossKinds = [
+  'macroExpansion',
+  'macroHygiene',
+  'preprocessor',
+  'conditionalCompilation',
+  'metaprogramming',
+  'reflection',
+  'dynamicRuntime',
+  'dynamicDispatch',
+  'generatedCode',
+  'overloadResolution',
+  'typeInference',
+  'unsupportedSyntax',
+  'unsupportedSemantic'
+];
+const jsToRustTargetAdapter = {
+  id: 'fixture-js-to-rust-target-adapter',
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  version: '1.0.0',
+  capabilities: ['declaration-stubs'],
+  coverage: {
+    readiness: 'ready',
+    handledLossKinds: handledProjectionLossKinds,
+    notes: ['Fixture adapter emits deterministic Rust declaration stubs for smoke tests.']
+  },
+  project(input) {
+    assert.equal(input.sourceLanguage, 'javascript');
+    assert.equal(input.target, 'rust');
+    assert.equal(input.targetCoverage.lossClass, 'targetAdapterProjection');
+    return {
+      output: 'pub fn add_todo_from_adapter() {}\n',
+      readiness: 'ready',
+      evidence: [{
+        id: 'evidence_fixture_js_to_rust_projected',
+        kind: 'projection',
+        status: 'passed',
+        summary: 'Fixture JS-to-Rust target projection adapter emitted deterministic output.'
+      }],
+      metadata: { fixture: true }
+    };
+  }
+};
+const targetAdapterProjection = runNativeTargetProjectionAdapter(jsToRustTargetAdapter, {
+  importResult: scannedJsImport,
+  sourceProjection: stubNativeProjection,
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  targetCoverage: {
+    target: 'rust',
+    lossClass: 'targetAdapterProjection',
+    supported: true,
+    readiness: 'ready',
+    lossKinds: [],
+    categories: [],
+    reason: 'fixture',
+    notes: []
+  },
+  options: {},
+  metadata: {}
+});
+assert.equal(targetAdapterProjection.kind, 'frontier.lang.nativeTargetProjection');
+assert.equal(targetAdapterProjection.outputMode, 'target-adapter');
+assert.match(targetAdapterProjection.output, /add_todo_from_adapter/);
+assert.equal(targetAdapterProjection.evidence.some((entry) => entry.id === 'evidence_fixture_js_to_rust_projected'), true);
+const rustNativeCompileWithAdapter = compileNativeSource(scannedJsImport, {
+  target: 'rust',
+  targetAdapters: [jsToRustTargetAdapter]
+});
+assert.equal(rustNativeCompileWithAdapter.ok, true);
+assert.equal(rustNativeCompileWithAdapter.outputMode, 'target-adapter');
+assert.equal(rustNativeCompileWithAdapter.output, 'pub fn add_todo_from_adapter() {}\n');
+assert.equal(rustNativeCompileWithAdapter.targetProjection.adapter.id, 'fixture-js-to-rust-target-adapter');
+assert.equal(rustNativeCompileWithAdapter.targetCoverage.lossClass, 'targetAdapterProjection');
+assert.equal(rustNativeCompileWithAdapter.targetCoverage.adapterKind, 'targetProjection');
+assert.equal(rustNativeCompileWithAdapter.projectionMatrix.summary.targetAdapterProjection >= 1, true);
+assert.equal(rustNativeCompileWithAdapter.losses.some((loss) => loss.id.includes('missing_projection_adapter')), false);
+const adapterProjectionMatrix = createProjectionTargetLossMatrix({
+  imports: [scannedJsImport],
+  targets: ['rust'],
+  targetAdapters: [jsToRustTargetAdapter]
+});
+const jsToRustCoverage = adapterProjectionMatrix.languages.find((entry) => entry.language === 'javascript').targets.find((entry) => entry.target === 'rust');
+assert.equal(jsToRustCoverage.lossClass, 'targetAdapterProjection');
+assert.equal(jsToRustCoverage.supported, true);
+assert.equal(jsToRustCoverage.adapter, 'fixture-js-to-rust-target-adapter');
+const throwingTargetAdapter = {
+  ...jsToRustTargetAdapter,
+  id: 'fixture-js-to-rust-throwing-target-adapter',
+  project() {
+    throw new Error('fixture projection failed');
+  }
+};
+const rustNativeCompileThrowingAdapter = compileNativeSource(scannedJsImport, {
+  target: 'rust',
+  targetAdapters: [throwingTargetAdapter]
+});
+assert.equal(rustNativeCompileThrowingAdapter.ok, false);
+assert.equal(rustNativeCompileThrowingAdapter.outputMode, 'target-adapter');
+assert.equal(rustNativeCompileThrowingAdapter.readiness.readiness, 'blocked');
+assert.equal(rustNativeCompileThrowingAdapter.targetProjection.diagnostics.some((diagnostic) => diagnostic.code === 'targetAdapter.project.threw'), true);
+assert.equal(rustNativeCompileThrowingAdapter.losses.some((loss) => loss.kind === 'targetProjectionLoss' && loss.severity === 'error'), true);
 const staleNativeProjection = projectNativeImportToSource(preservedNativeImport, {
   sourceText: 'export function preservedNative() { return false; }\n'
 });
