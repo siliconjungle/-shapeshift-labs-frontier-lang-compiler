@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import {
   compileFrontierSource,
+  createBabelNativeImporterAdapter,
+  createEstreeNativeImporterAdapter,
+  createTreeSitterNativeImporterAdapter,
+  createTypeScriptCompilerNativeImporterAdapter,
   createUniversalAstFromDocument,
   emitForTarget,
+  importNativeProject,
   importNativeSource,
   normalizeCompileTarget,
   projectFrontierAst,
@@ -10,6 +15,8 @@ import {
   renderTargetAst,
   resolveCapabilityAdapters,
   runNativeImporterAdapter,
+  classifyNativeImportReadiness,
+  summarizeNativeImportLosses,
   writeUniversalAstJson
 } from '../dist/index.js';
 
@@ -106,6 +113,11 @@ assert.equal(nativeImport.patch.operations[0].op, 'upsertNode');
 assert.equal(nativeImport.evidence[0].status, 'passed');
 assert.equal(nativeImport.mergeCandidates.length, 1);
 assert.equal(nativeImport.mergeCandidates[0].kind, 'frontier.lang.semanticMergeCandidate');
+assert.equal(nativeImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
+assert.equal(nativeImport.mergeCandidates[0].metadata.nativeImportLossSummary.categories.includes('opaqueBodies'), true);
+const nativeLossSummary = summarizeNativeImportLosses(nativeImport.losses, { evidence: nativeImport.evidence });
+assert.equal(nativeLossSummary.highestSeverity, 'warning');
+assert.equal(classifyNativeImportReadiness(nativeImport.losses).readiness, 'needs-review');
 const adapterImport = await runNativeImporterAdapter({
   id: 'fixture-estree-importer',
   language: 'javascript',
@@ -166,6 +178,158 @@ assert.equal(failedAdapterImport.nativeAst.rootId, 'adapter_error_root');
 assert.equal(failedAdapterImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parse.threw'), true);
 assert.equal(failedAdapterImport.losses.some((loss) => loss.severity === 'error'), true);
 assert.equal(failedAdapterImport.evidence.some((record) => record.id === 'evidence_throwing_typescript_importer_native_importer_adapter' && record.status === 'failed'), true);
+function assertScannedSymbol(importResult, symbolName, idPart = symbolName.toLowerCase()) {
+  assert.equal(importResult.semanticIndex.symbols.some((symbol) => symbol.name === symbolName), true);
+  assert.equal(importResult.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes(idPart)), true);
+  assert.equal(importResult.losses.some((loss) => loss.kind === 'declarationOnlyCoverage'), true);
+}
+function symbolByName(importResult, name) {
+  return importResult.semanticIndex.symbols.find((symbol) => symbol.name === name);
+}
+function mappedSymbol(importResult, symbolId) {
+  return importResult.sourceMaps[0].mappings.find((mapping) => mapping.semanticSymbolId === symbolId);
+}
+const estreeAdapterImport = await runNativeImporterAdapter(createEstreeNativeImporterAdapter(), {
+  sourcePath: 'src/estree.js',
+  sourceText: 'export function fromEstree() { return true; }\n',
+  adapterOptions: {
+    ast: {
+      type: 'Program',
+      sourceType: 'module',
+      loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 45 } },
+      body: [{
+        type: 'FunctionDeclaration',
+        id: { type: 'Identifier', name: 'fromEstree', loc: { start: { line: 1, column: 16 }, end: { line: 1, column: 26 } } },
+        loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 45 } },
+        body: { type: 'BlockStatement', body: [], loc: { start: { line: 1, column: 29 }, end: { line: 1, column: 45 } } }
+      }]
+    }
+  }
+});
+assert.equal(estreeAdapterImport.adapter.parser, 'estree');
+assert.equal(estreeAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromEstree'), true);
+assert.equal(estreeAdapterImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('fromestree')), true);
+const babelAdapterImport = await runNativeImporterAdapter(createBabelNativeImporterAdapter({
+  parserModule: {
+    parse(sourceText, options) {
+      assert.equal(options.sourceFilename, 'src/babel.ts');
+      assert.equal(sourceText.includes('fromBabel'), true);
+      return {
+        type: 'File',
+        program: {
+          type: 'Program',
+          sourceType: 'module',
+          loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 48 } },
+          body: [{
+            type: 'FunctionDeclaration',
+            id: { type: 'Identifier', name: 'fromBabel' },
+            loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 48 } }
+          }]
+        },
+        errors: []
+      };
+    }
+  }
+}), {
+  sourcePath: 'src/babel.ts',
+  sourceText: 'export function fromBabel(value: string) { return value; }\n'
+});
+assert.equal(babelAdapterImport.adapter.parser, 'babel');
+assert.equal(babelAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromBabel'), true);
+const tsMock = {
+  ScriptTarget: { Latest: 99 },
+  ScriptKind: { TS: 3 },
+  SyntaxKind: { 0: 'SourceFile', 1: 'FunctionDeclaration', 2: 'Identifier' },
+  createSourceFile(fileName, sourceText) {
+    const sourceFile = {
+      kind: 0,
+      fileName,
+      pos: 0,
+      end: sourceText.length,
+      getLineAndCharacterOfPosition(position) {
+        return { line: 0, character: position };
+      }
+    };
+    sourceFile.children = [{
+      kind: 1,
+      pos: 0,
+      end: sourceText.length,
+      name: { kind: 2, escapedText: 'fromTs' },
+      children: []
+    }];
+    return sourceFile;
+  },
+  forEachChild(node, visit) {
+    for (const child of node.children ?? []) visit(child);
+  }
+};
+const tsAdapterImport = await runNativeImporterAdapter(createTypeScriptCompilerNativeImporterAdapter({ typescript: tsMock }), {
+  sourcePath: 'src/ts.ts',
+  sourceText: 'export function fromTs(): boolean { return true; }\n'
+});
+assert.equal(tsAdapterImport.adapter.parser, 'typescript-compiler-api');
+assert.equal(tsAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromTs'), true);
+const treeName = {
+  type: 'identifier',
+  text: 'from_tree',
+  startPosition: { row: 0, column: 9 },
+  endPosition: { row: 0, column: 18 },
+  namedChildren: []
+};
+const treeRoot = {
+  type: 'source_file',
+  startPosition: { row: 0, column: 0 },
+  endPosition: { row: 0, column: 22 },
+  namedChildren: [{
+    type: 'function_declaration',
+    startPosition: { row: 0, column: 0 },
+    endPosition: { row: 0, column: 22 },
+    namedChildren: [treeName],
+    childForFieldName(field) {
+      return field === 'name' ? treeName : null;
+    }
+  }]
+};
+const treeImport = await runNativeImporterAdapter(createTreeSitterNativeImporterAdapter({
+  language: 'javascript',
+  tree: { rootNode: treeRoot }
+}), {
+  sourcePath: 'src/tree.js',
+  sourceText: 'function from_tree() {}\n'
+});
+assert.equal(treeImport.adapter.parser, 'tree-sitter');
+assert.equal(treeImport.semanticIndex.symbols.some((symbol) => symbol.name === 'from_tree'), true);
+const projectImport = await importNativeProject({
+  id: 'project_smoke',
+  projectRoot: 'src',
+  adapters: [createEstreeNativeImporterAdapter()],
+  sources: [{
+    language: 'javascript',
+    adapter: 'frontier.estree-native-importer',
+    sourcePath: 'src/project.js',
+    sourceText: 'export function projectJs() {}\n',
+    adapterOptions: {
+      ast: {
+        type: 'Program',
+        loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 30 } },
+        body: [{
+          type: 'FunctionDeclaration',
+          id: { type: 'Identifier', name: 'projectJs' },
+          loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 30 } }
+        }]
+      }
+    }
+  }, {
+    language: 'python',
+    sourcePath: 'project.py',
+    sourceText: 'def project_py():\n    return True\n'
+  }]
+});
+assert.equal(projectImport.kind, 'frontier.lang.projectImportResult');
+assert.equal(projectImport.imports.length, 2);
+assert.equal(projectImport.nativeSources.length, 2);
+assert.equal(projectImport.semanticIndex.symbols.some((symbol) => symbol.name === 'projectJs'), true);
+assert.equal(projectImport.semanticIndex.symbols.some((symbol) => symbol.name === 'project_py'), true);
 const scannedJsImport = importNativeSource({
   language: 'javascript',
   sourcePath: 'src/scanned.js',
@@ -182,7 +346,14 @@ assert.equal(scannedLossKinds.includes('declarationOnlyCoverage'), true);
 assert.equal(scannedLossKinds.includes('partialSemanticIndex'), true);
 assert.equal(scannedLossKinds.includes('sourceMapApproximation'), true);
 assert.equal(scannedLossKinds.includes('sourcePreservation'), true);
-assert.equal(scannedJsImport.mergeCandidates[0].readiness, 'ready-with-losses');
+assert.equal(scannedJsImport.mergeCandidates[0].readiness, 'needs-review');
+assert.equal(scannedJsImport.metadata.nativeImportLossSummary.categories.includes('sourcePreservation'), true);
+assert.throws(() => importNativeSource({
+  language: 'javascript',
+  sourcePath: 'bad-map.js',
+  sourceText: 'export function badMap() {}\n',
+  mappings: [{ id: 'map_without_reference', precision: 'unknown' }]
+}), /Source-map mapping 1 must reference/);
 const scannedPythonImport = importNativeSource({
   language: 'python',
   sourcePath: 'todo.py',
@@ -241,6 +412,96 @@ const scannedRubyImport = importNativeSource({
   sourceText: 'require "json"\nmodule Demo\nclass Todo\nend\ndef add_todo(title)\nend\nend\n'
 });
 assert.equal(scannedRubyImport.semanticIndex.symbols.some((symbol) => symbol.name === 'add_todo'), true);
+const scannedKotlinImport = importNativeSource({
+  language: 'kotlin',
+  sourcePath: 'Todo.kt',
+  sourceText: 'package demo\nimport kotlinx.coroutines.CoroutineScope\nclass TodoStore\nfun addTodo(title: String) = title\n'
+});
+assertScannedSymbol(scannedKotlinImport, 'addTodo', 'addtodo');
+assert.equal(scannedKotlinImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+const scannedScalaImport = importNativeSource({
+  language: 'scala',
+  sourcePath: 'Todo.scala',
+  sourceText: 'package demo\nimport scala.collection.mutable.ListBuffer\ncase class Todo(title: String)\ndef addTodo(title: String) = title\n'
+});
+assertScannedSymbol(scannedScalaImport, 'addTodo', 'addtodo');
+const scannedDartImport = importNativeSource({
+  language: 'dart',
+  sourcePath: 'todo.dart',
+  sourceText: 'import "dart:convert";\nclass TodoStore {}\nString addTodo(String title) => title;\n'
+});
+assertScannedSymbol(scannedDartImport, 'addTodo', 'addtodo');
+const scannedLuaImport = importNativeSource({
+  language: 'lua',
+  sourcePath: 'todo.lua',
+  sourceText: 'local json = require("json")\nfunction add_todo(title)\n  return title\nend\n'
+});
+assertScannedSymbol(scannedLuaImport, 'add_todo', 'add_todo');
+const scannedShellImport = importNativeSource({
+  language: 'shell',
+  sourcePath: 'todo.sh',
+  sourceText: 'source ./lib.sh\nadd_todo() {\n  echo "$1"\n}\n'
+});
+assertScannedSymbol(scannedShellImport, 'add_todo', 'add_todo');
+const scannedSqlImport = importNativeSource({
+  language: 'sql',
+  sourcePath: 'todo.sql',
+  sourceText: 'CREATE TABLE todos (id INTEGER PRIMARY KEY);\nCREATE VIEW todo_titles AS SELECT id FROM todos;\n'
+});
+assertScannedSymbol(scannedSqlImport, 'todos');
+const scannedSqlQueryImport = importNativeSource({
+  language: 'sql',
+  sourcePath: 'query.sql',
+  sourceText: 'SELECT * FROM todos;\n'
+});
+assert.equal(scannedSqlQueryImport.semanticIndex.symbols.length, 0);
+assert.equal(scannedSqlQueryImport.losses.some((loss) => loss.kind === 'declarationOnlyCoverage'), true);
+const scannedZigImport = importNativeSource({
+  language: 'zig',
+  sourcePath: 'src/todo.zig',
+  sourceText: 'const std = @import("std");\npub const Todo = struct { title: []const u8 };\npub fn addTodo(title: []const u8) void {}\ncomptime { @compileError("generated"); }\n'
+});
+assert.equal(symbolByName(scannedZigImport, 'addTodo').id, 'symbol:zig:addtodo');
+assert.equal(scannedZigImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+assert.equal(mappedSymbol(scannedZigImport, 'symbol:zig:addtodo').sourceSpan.startLine, 3);
+assert.equal(scannedZigImport.losses.some((loss) => loss.kind === 'generatedCode'), true);
+const scannedElixirImport = importNativeSource({
+  language: 'elixir',
+  sourcePath: 'lib/todo.ex',
+  sourceText: 'defmodule Demo.Todo do\n  alias Demo.Repo\n  use GenServer\n  def add_todo(title), do: title\n  defmacro generated(), do: quote(do: :ok)\nend\n'
+});
+assert.equal(symbolByName(scannedElixirImport, 'add_todo').id, 'symbol:elixir:add_todo');
+assert.equal(scannedElixirImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+assert.equal(mappedSymbol(scannedElixirImport, 'symbol:elixir:add_todo').sourceSpan.startLine, 4);
+assert.equal(scannedElixirImport.losses.some((loss) => loss.kind === 'macroExpansion'), true);
+const scannedErlangImport = importNativeSource({
+  language: 'erlang',
+  sourcePath: 'src/todo.erl',
+  sourceText: '-module(todo).\n-include("todo.hrl").\n-define(TODO(Name), {todo, Name}).\n-record(todo, {title}).\nadd_todo(Title) -> ?TODO(Title).\n'
+});
+assert.equal(symbolByName(scannedErlangImport, 'add_todo').id, 'symbol:erlang:add_todo');
+assert.equal(scannedErlangImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+assert.equal(mappedSymbol(scannedErlangImport, 'symbol:erlang:add_todo').sourceSpan.startLine, 5);
+assert.equal(scannedErlangImport.losses.some((loss) => loss.kind === 'preprocessor'), true);
+assert.equal(scannedErlangImport.losses.some((loss) => loss.kind === 'macroExpansion'), true);
+const scannedHaskellImport = importNativeSource({
+  language: 'haskell',
+  sourcePath: 'src/Todo.hs',
+  sourceText: "{-# LANGUAGE TemplateHaskell #-}\nmodule Todo where\nimport qualified Data.Text as T\ndata Todo = Todo Text\naddTodo :: Text -> Todo\naddTodo title = Todo title\n$(deriveJSON defaultOptions ''Todo)\n"
+});
+assert.equal(symbolByName(scannedHaskellImport, 'addTodo').id, 'symbol:haskell:addtodo');
+assert.equal(scannedHaskellImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+assert.equal(mappedSymbol(scannedHaskellImport, 'symbol:haskell:addtodo').sourceSpan.startLine, 5);
+assert.equal(scannedHaskellImport.losses.some((loss) => loss.kind === 'macroExpansion'), true);
+const scannedRImport = importNativeSource({
+  language: 'r',
+  sourcePath: 'todo.R',
+  sourceText: 'library(dplyr)\nTodo <- R6Class("Todo", list())\nadd_todo <- function(title) { title }\nsetClass("TodoRecord", slots = list(title = "character"))\neval(parse(text = "generated <- TRUE"))\n'
+});
+assert.equal(symbolByName(scannedRImport, 'add_todo').id, 'symbol:r:add_todo');
+assert.equal(scannedRImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+assert.equal(mappedSymbol(scannedRImport, 'symbol:r:add_todo').sourceSpan.startLine, 3);
+assert.equal(scannedRImport.losses.some((loss) => loss.kind === 'dynamicRuntime'), true);
 const universalAst = createUniversalAstFromDocument(result.document, { id: 'uast_todo', evidence: nativeImport.evidence });
 const universalJson = writeUniversalAstJson(universalAst);
 assert.equal(readUniversalAstJson(universalJson).document.id, 'mod_todo');

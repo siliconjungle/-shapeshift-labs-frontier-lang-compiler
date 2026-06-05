@@ -38,6 +38,56 @@ console.log(imported.nativeSource.ast.rootId);
 console.log(imported.patch.operations.length);
 ```
 
+Native imports include source maps, semantic merge candidates, and a loss summary for admission queues and dashboards. Informational losses produce `ready-with-losses`, warning losses produce `needs-review`, and error losses or failed import evidence produce `blocked`:
+
+```js
+import { classifyNativeImportReadiness, summarizeNativeImportLosses } from '@shapeshift-labs/frontier-lang-compiler';
+
+const summary = summarizeNativeImportLosses(imported.losses, { evidence: imported.evidence });
+const readiness = classifyNativeImportReadiness(imported.losses, { evidence: imported.evidence });
+
+console.log(summary.categories);
+console.log(readiness.readiness);
+```
+
+Use injected parser adapters when a real language parser is available but should not become a compiler runtime dependency:
+
+```js
+import {
+  createBabelNativeImporterAdapter,
+  importNativeProject,
+  runNativeImporterAdapter
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const babelAdapter = createBabelNativeImporterAdapter({
+  parserModule: await import('@babel/parser')
+});
+
+const imported = await runNativeImporterAdapter(babelAdapter, {
+  sourcePath: 'src/todo.ts',
+  sourceText
+});
+
+const project = await importNativeProject({
+  projectRoot: 'src',
+  adapters: [babelAdapter],
+  sources: [
+    { language: 'typescript', adapter: babelAdapter.id, sourcePath: 'src/todo.ts', sourceText },
+    { language: 'python', sourcePath: 'tools/todo.py', sourceText: pythonSource }
+  ]
+});
+
+console.log(imported.universalAst.sourceMaps.length);
+console.log(project.semanticIndex.symbols.length);
+```
+
+The built-in adapter factories are dependency-light wrappers for caller-owned parsers or ASTs:
+
+- `createEstreeNativeImporterAdapter`
+- `createBabelNativeImporterAdapter`
+- `createTypeScriptCompilerNativeImporterAdapter`
+- `createTreeSitterNativeImporterAdapter`
+
 ## Related Packages
 
 The published Frontier package family is generated from one shared package catalog so READMEs stay in sync across packages:

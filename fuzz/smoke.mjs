@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
-import { compileFrontierSource } from '../dist/index.js';
+import {
+  compileFrontierSource,
+  createEstreeNativeImporterAdapter,
+  importNativeProject,
+  importNativeSource,
+  runNativeImporterAdapter
+} from '../dist/index.js';
 
 const targets = ['typescript', 'javascript', 'rust', 'python', 'c'];
 for (let index = 0; index < 100; index += 1) {
@@ -21,3 +27,52 @@ action updateItem @id("action_${index}") {
   assert.equal(result.ok, true);
   assert.ok(result.output.length > 0);
 }
+
+const estreeAdapter = createEstreeNativeImporterAdapter();
+for (let index = 0; index < 50; index += 1) {
+  const name = `fuzzImport${index}`;
+  const sourcePath = `src/fuzz-${index}.js`;
+  const imported = await runNativeImporterAdapter(estreeAdapter, {
+    sourcePath,
+    sourceText: `export function ${name}() { return ${index}; }\n`,
+    adapterOptions: {
+      ast: {
+        type: 'Program',
+        loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 48 } },
+        body: [{
+          type: 'FunctionDeclaration',
+          id: { type: 'Identifier', name },
+          loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 48 } }
+        }]
+      }
+    }
+  });
+  assert.equal(imported.nativeAst.rootId.startsWith('native_program'), true);
+  assert.equal(imported.semanticIndex.symbols.some((symbol) => symbol.name === name), true);
+  assert.ok(imported.sourceMaps[0].mappings.length >= 1);
+
+  const lightweight = importNativeSource({
+    language: index % 2 === 0 ? 'javascript' : 'python',
+    sourcePath: index % 2 === 0 ? `src/light-${index}.js` : `light-${index}.py`,
+    sourceText: index % 2 === 0
+      ? `export function light${index}() { return true; }\n`
+      : `def light_${index}():\n    return True\n`
+  });
+  assert.ok(lightweight.semanticIndex.symbols.length >= 1);
+  assert.ok(lightweight.mergeCandidates.length >= 1);
+}
+
+const project = await importNativeProject({
+  sources: [{
+    language: 'javascript',
+    sourcePath: 'src/project-fuzz.js',
+    sourceText: 'export function projectFuzz() {}\n'
+  }, {
+    language: 'python',
+    sourcePath: 'project_fuzz.py',
+    sourceText: 'def project_fuzz():\n    return True\n'
+  }]
+});
+assert.equal(project.kind, 'frontier.lang.projectImportResult');
+assert.equal(project.imports.length, 2);
+assert.ok(project.semanticIndex.symbols.length >= 2);

@@ -10,6 +10,7 @@ import {
   hashSemanticValue,
   nativeSourceNode,
   stableUniversalAstJson,
+  validateSourceMapRecord,
   validateUniversalAstEnvelope
 } from '@shapeshift-labs/frontier-lang-kernel';
 import { parseFrontierFile, parseFrontierSource } from '@shapeshift-labs/frontier-lang-parser';
@@ -50,6 +51,56 @@ const canonicalTargets = Object.freeze({
   rs: 'rust',
   py: 'python',
   h: 'c'
+});
+
+const lossSeverityRank = Object.freeze({
+  none: 0,
+  info: 1,
+  warning: 2,
+  error: 3
+});
+
+const semanticMergeReadinessRank = Object.freeze({
+  ready: 0,
+  'ready-with-losses': 1,
+  'needs-review': 2,
+  blocked: 3
+});
+
+export const NativeImportTaxonomyKinds = Object.freeze([
+  'exactAstImport',
+  'declarationsOnly',
+  'opaqueBodies',
+  'macroExpansion',
+  'preprocessor',
+  'metaprogramming',
+  'generatedCode',
+  'sourcePreservation',
+  'parserDiagnostics',
+  'unsupportedSyntax',
+  'partialSemanticIndex',
+  'sourceMapApproximation'
+]);
+
+export const NativeImportLossKinds = Object.freeze([
+  'declarationOnlyCoverage',
+  'opaqueNative',
+  'macroExpansion',
+  'preprocessor',
+  'metaprogramming',
+  'generatedCode',
+  'sourcePreservation',
+  'parserDiagnostic',
+  'unsupportedSyntax',
+  'partialSemanticIndex',
+  'sourceMapApproximation'
+]);
+
+export const NativeImportReadinessBySeverity = Object.freeze({
+  none: 'ready',
+  info: 'ready-with-losses',
+  warning: 'needs-review',
+  error: 'blocked'
 });
 
 export function normalizeCompileTarget(target) {
@@ -134,6 +185,187 @@ export function resolveCapabilityAdapters(document, target = 'typescript', optio
         reason: unsupported?.reason
       };
     });
+}
+
+export function summarizeNativeImportLosses(losses = [], options = {}) {
+  const normalizedLosses = normalizeNativeLossRecords(losses);
+  const bySeverity = { info: 0, warning: 0, error: 0 };
+  const byKind = {};
+  const blockingLossIds = [];
+  const reviewLossIds = [];
+  const informationalLossIds = [];
+  let highestSeverity = 'none';
+
+  for (const loss of normalizedLosses) {
+    bySeverity[loss.severity] += 1;
+    byKind[loss.kind] = (byKind[loss.kind] ?? 0) + 1;
+    if (lossSeverityRank[loss.severity] > lossSeverityRank[highestSeverity]) {
+      highestSeverity = loss.severity;
+    }
+    if (loss.severity === 'error') blockingLossIds.push(loss.id);
+    else if (loss.severity === 'warning') reviewLossIds.push(loss.id);
+    else informationalLossIds.push(loss.id);
+  }
+
+  const failedEvidenceIds = (options.evidence ?? [])
+    .filter((record) => record?.status === 'failed')
+    .map((record) => record.id)
+    .filter(Boolean);
+  const exactAst = Boolean(options.exactAst) && normalizedLosses.length === 0;
+  const categories = uniqueStrings([
+    ...(exactAst ? ['exactAstImport'] : []),
+    ...normalizedLosses.map((loss) => nativeImportCategoryForLossKind(loss.kind))
+  ]);
+  const semanticMergeReadiness = failedEvidenceIds.length
+    ? 'blocked'
+    : NativeImportReadinessBySeverity[highestSeverity];
+  const readinessReasons = nativeImportReadinessReasons({
+    exactAst,
+    failedEvidenceIds,
+    blockingLossIds,
+    reviewLossIds,
+    informationalLossIds
+  });
+
+  return {
+    total: normalizedLosses.length,
+    hasLosses: normalizedLosses.length > 0,
+    exactAst,
+    highestSeverity,
+    semanticMergeReadiness,
+    readinessReasons,
+    categories,
+    bySeverity,
+    byKind,
+    blockingLossIds,
+    reviewLossIds,
+    informationalLossIds,
+    failedEvidenceIds,
+    parser: options.parser,
+    scanKind: options.scanKind,
+    semanticStatus: options.semanticStatus
+  };
+}
+
+export function classifyNativeImportReadiness(losses = [], options = {}) {
+  const summary = summarizeNativeImportLosses(losses, options);
+  return {
+    readiness: summary.semanticMergeReadiness,
+    reasons: summary.readinessReasons,
+    summary
+  };
+}
+
+export function createEstreeNativeImporterAdapter(options = {}) {
+  return createJavaScriptSyntaxImporterAdapter({
+    id: 'frontier.estree-native-importer',
+    language: 'javascript',
+    parser: 'estree',
+    supportedExtensions: ['.js', '.mjs', '.cjs', '.jsx'],
+    astFormat: 'estree',
+    ...options
+  });
+}
+
+export function createBabelNativeImporterAdapter(options = {}) {
+  return createJavaScriptSyntaxImporterAdapter({
+    id: 'frontier.babel-native-importer',
+    language: 'javascript',
+    parser: 'babel',
+    supportedExtensions: ['.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx'],
+    astFormat: 'babel',
+    defaultParserOptions: {
+      errorRecovery: true,
+      ranges: true,
+      sourceType: 'unambiguous',
+      plugins: ['typescript', 'jsx']
+    },
+    ...options
+  });
+}
+
+export function createTypeScriptCompilerNativeImporterAdapter(options = {}) {
+  return {
+    id: options.id ?? 'frontier.typescript-compiler-native-importer',
+    language: options.language ?? 'typescript',
+    parser: options.parser ?? 'typescript-compiler-api',
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    supportedExtensions: options.supportedExtensions ?? ['.ts', '.tsx', '.js', '.jsx'],
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const ts = options.typescript ?? options.ts ?? input.options?.typescript ?? input.options?.ts;
+      const sourceFile = input.options?.sourceFile ?? input.options?.ast ?? options.sourceFile ?? createTypeScriptSourceFile(ts, input, options);
+      if (!sourceFile) {
+        return missingInjectedParserResult(input, {
+          parser: options.parser ?? 'typescript-compiler-api',
+          adapterId: options.id ?? 'frontier.typescript-compiler-native-importer',
+          message: 'createTypeScriptCompilerNativeImporterAdapter requires an injected TypeScript module, createSourceFile function, sourceFile, or adapterOptions.sourceFile.'
+        });
+      }
+      return createNativeImportFromTypeScriptAst(sourceFile, input, {
+        parser: options.parser ?? 'typescript-compiler-api',
+        astFormat: 'typescript-compiler-api',
+        ts,
+        maxNodes: options.maxNodes,
+        includeTokens: options.includeTokens
+      });
+    }
+  };
+}
+
+export function createTreeSitterNativeImporterAdapter(options = {}) {
+  return {
+    id: options.id ?? `frontier.tree-sitter-${idFragment(options.language ?? 'source')}-native-importer`,
+    language: options.language ?? 'source',
+    parser: options.parserName ?? options.parser ?? 'tree-sitter',
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    supportedExtensions: options.supportedExtensions ?? [],
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const tree = input.options?.tree ?? options.tree ?? parseTreeSitterSource(input, options);
+      const root = tree?.rootNode ?? tree;
+      if (!root) {
+        return missingInjectedParserResult(input, {
+          parser: options.parserName ?? options.parser ?? 'tree-sitter',
+          adapterId: options.id ?? `frontier.tree-sitter-${idFragment(options.language ?? input.language)}-native-importer`,
+          message: 'createTreeSitterNativeImporterAdapter requires an injected tree-sitter parser/tree or adapterOptions.tree.'
+        });
+      }
+      return createNativeImportFromTreeSitter(root, input, {
+        parser: options.parserName ?? options.parser ?? 'tree-sitter',
+        astFormat: 'tree-sitter',
+        maxNodes: options.maxNodes
+      });
+    }
+  };
+}
+
+export async function importNativeProject(input = {}) {
+  const sources = input.sources ?? [];
+  const adapters = input.adapters ?? [];
+  const imports = [];
+  for (const [index, source] of sources.entries()) {
+    const adapter = source.adapter && typeof source.adapter === 'object'
+      ? source.adapter
+      : resolveNativeProjectAdapter(source, adapters, input);
+    if (adapter) {
+      imports.push(await runNativeImporterAdapter(adapter, {
+        ...source,
+        adapterOptions: source.adapterOptions ?? input.adapterOptions,
+        adapterMetadata: {
+          projectImportId: input.id,
+          sourceIndex: index,
+          ...input.adapterMetadata,
+          ...source.adapterMetadata
+        }
+      }));
+    } else {
+      imports.push(importNativeSource(source));
+    }
+  }
+  return createNativeProjectImportResult(input, imports);
 }
 
 export async function runNativeImporterAdapter(adapter, input = {}) {
@@ -260,6 +492,8 @@ export function importNativeSource(input) {
   if (!language) throw new Error('importNativeSource requires a language or nativeAst.language');
   const sourcePath = input.sourcePath ?? input.nativeAst?.sourcePath;
   const sourceHash = input.sourceHash ?? input.nativeAst?.sourceHash ?? (input.sourceText ? hashSemanticValue(input.sourceText) : hashSemanticValue(input.nativeAst?.nodes ?? input.nativeAst ?? {}));
+  const targetPath = input.targetPath ?? input.target?.emitPath;
+  const targetHash = input.targetHash;
   const importIdPart = idFragment(input.id ?? input.nativeSourceId ?? sourcePath ?? language);
   const lightweight = !input.nativeAst && !input.nodes && input.sourceText
     ? createLightweightNativeImport({
@@ -295,7 +529,9 @@ export function importNativeSource(input) {
     }
   });
   const frontierNodeIds = input.frontierNodeIds ?? input.semanticNodes?.map((node) => node.id) ?? [];
-  const losses = input.losses ?? nativeAst.losses ?? lightweight?.losses ?? [];
+  const semanticNodes = input.semanticNodes ?? [];
+  const semanticStatus = input.semanticStatus ?? (semanticNodes.length ? 'mapped' : 'native-only');
+  const losses = normalizeNativeLossRecords(input.losses ?? nativeAst.losses ?? lightweight?.losses ?? []);
   const nativeSource = nativeSourceNode({
     id: input.nativeSourceId ?? `native_source_${importIdPart}`,
     name: input.name ?? sourcePath?.split(/[\\/]/).filter(Boolean).at(-1) ?? `${language}NativeSource`,
@@ -310,12 +546,11 @@ export function importNativeSource(input) {
     losses,
     target: input.target,
     metadata: {
-      semanticStatus: input.semanticStatus ?? (input.semanticNodes?.length ? 'mapped' : 'native-only'),
+      semanticStatus,
       mappings: input.mappings ?? [],
       ...input.nativeSourceMetadata
     }
   });
-  const semanticNodes = input.semanticNodes ?? [];
   const document = createDocument({
     id: input.documentId ?? `document_${importIdPart}`,
     name: input.documentName ?? nativeSource.name,
@@ -323,11 +558,11 @@ export function importNativeSource(input) {
     rootIds: input.rootIds,
     metadata: {
       sourceLanguage: language,
-      semanticStatus: input.semanticStatus ?? (semanticNodes.length ? 'mapped' : 'native-only'),
+      semanticStatus,
       ...input.documentMetadata
     }
   });
-  const evidence = input.evidence ?? [{
+  const baseEvidence = input.evidence ?? [{
     id: input.evidenceId ?? `evidence_${importIdPart}_import`,
     kind: 'import',
     status: losses.some((loss) => loss.severity === 'error') ? 'failed' : 'passed',
@@ -336,9 +571,17 @@ export function importNativeSource(input) {
     metadata: {
       parser: nativeAst.parser,
       sourcePath,
-      semanticStatus: input.semanticStatus ?? (semanticNodes.length ? 'mapped' : 'native-only')
+      semanticStatus
     }
   }];
+  const lossSummary = summarizeNativeImportLosses(losses, {
+    exactAst: Boolean(input.nativeAst || input.nodes),
+    evidence: baseEvidence,
+    parser: nativeAst.parser,
+    scanKind: lightweight?.metadata?.scanKind,
+    semanticStatus
+  });
+  const evidence = attachNativeImportLossSummary(baseEvidence, lossSummary);
   const semanticIndex = input.semanticIndex ?? lightweight?.semanticIndex;
   const sourceMapMappings = normalizeSourceMapMappings(
     input.mappings ?? lightweight?.mappings ?? inferSourceMapMappings({
@@ -353,16 +596,20 @@ export function importNativeSource(input) {
       nativeSource,
       evidence,
       losses,
-      target: input.target
+      target: input.target,
+      targetPath,
+      targetHash
     }
   );
+  const inferredTargetPath = targetPath ?? commonGeneratedTargetPath(sourceMapMappings);
   const inferredSourceMaps = sourceMapMappings.length
     ? [createSourceMapRecord({
       id: input.sourceMapId ?? `source_map_${importIdPart}`,
       sourcePath,
       sourceHash,
       target: input.target,
-      targetPath: input.target?.emitPath,
+      targetPath: inferredTargetPath,
+      targetHash,
       semanticIndexId: semanticIndex?.id,
       nativeAstId: nativeAst.id,
       nativeSourceId: nativeSource.id,
@@ -371,11 +618,26 @@ export function importNativeSource(input) {
       metadata: {
         sourceLanguage: language,
         parser: nativeAst.parser,
-        semanticStatus: input.semanticStatus ?? (semanticNodes.length ? 'mapped' : 'native-only')
+        semanticStatus
       }
     })]
     : [];
-  const sourceMaps = input.sourceMaps ?? inferredSourceMaps;
+  const sourceMaps = normalizeSourceMaps(input.sourceMaps ?? inferredSourceMaps, {
+    document,
+    nativeSources: [nativeSource],
+    nativeAst,
+    nativeSource,
+    semanticIndex,
+    evidence,
+    losses,
+    target: input.target,
+    targetPath: inferredTargetPath,
+    targetHash,
+    sourcePath,
+    sourceHash,
+    defaultSourceMapId: `source_map_${importIdPart}`
+  });
+  const resultSourceMapMappings = sourceMaps.flatMap((sourceMap) => sourceMap.mappings ?? []);
   const universalAst = createUniversalAstEnvelope({
     id: input.universalAstId ?? `universal_ast_${importIdPart}`,
     document,
@@ -387,7 +649,8 @@ export function importNativeSource(input) {
     metadata: {
       sourceLanguage: language,
       sourcePath,
-      semanticStatus: input.semanticStatus ?? (semanticNodes.length ? 'mapped' : 'native-only'),
+      semanticStatus,
+      nativeImportLossSummary: lossSummary,
       ...input.universalAstMetadata
     }
   });
@@ -406,32 +669,35 @@ export function importNativeSource(input) {
       sourcePath,
       semanticIndexId: semanticIndex?.id,
       universalAstId: universalAst.id,
-      sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id)
+      sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id),
+      nativeImportLossSummary: lossSummary
+    }
+  });
+  const importResult = createImportResult({
+    id: input.id ?? `import_${importIdPart}`,
+    language,
+    sourcePath,
+    document,
+    patch,
+    nativeAst,
+    semanticIndex,
+    universalAst,
+    sourceMaps,
+    losses,
+    evidence,
+    metadata: {
+      nativeSourceId: nativeSource.id,
+      semanticIndexId: semanticIndex?.id,
+      universalAstId: universalAst.id,
+      sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id),
+      semanticStatus,
+      mappings: resultSourceMapMappings,
+      nativeImportLossSummary: lossSummary,
+      ...input.metadata
     }
   });
   return {
-    ...createImportResult({
-      id: input.id ?? `import_${importIdPart}`,
-      language,
-      sourcePath,
-      document,
-      patch,
-      nativeAst,
-      semanticIndex,
-      universalAst,
-      sourceMaps,
-      losses,
-      evidence,
-      metadata: {
-        nativeSourceId: nativeSource.id,
-        semanticIndexId: semanticIndex?.id,
-        universalAstId: universalAst.id,
-        sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id),
-        semanticStatus: input.semanticStatus ?? (semanticNodes.length ? 'mapped' : 'native-only'),
-        mappings: sourceMapMappings,
-        ...input.metadata
-      }
-    }),
+    ...withNativeImportReadiness(importResult, lossSummary),
     nativeSource
   };
 }
@@ -566,6 +832,17 @@ function scanNativeDeclarations(input) {
   if (language === 'csharp' || language === 'c#') return scanCSharp(input);
   if (language === 'php') return scanPhp(input);
   if (language === 'ruby' || language === 'rb') return scanRuby(input);
+  if (language === 'kotlin' || language === 'kt') return scanKotlin(input);
+  if (language === 'scala' || language === 'sc') return scanScala(input);
+  if (language === 'dart') return scanDart(input);
+  if (language === 'lua') return scanLua(input);
+  if (language === 'shell' || language === 'sh' || language === 'bash' || language === 'zsh') return scanShell(input);
+  if (language === 'sql' || language === 'postgresql' || language === 'postgres' || language === 'mysql' || language === 'sqlite') return scanSql(input);
+  if (language === 'zig') return scanZig(input);
+  if (language === 'elixir' || language === 'ex' || language === 'exs') return scanElixir(input);
+  if (language === 'erlang' || language === 'erl' || language === 'hrl') return scanErlang(input);
+  if (language === 'haskell' || language === 'hs') return scanHaskell(input);
+  if (language === 'r') return scanR(input);
   return scanGenericDeclarations(input);
 }
 
@@ -768,6 +1045,298 @@ function scanRuby(input) {
   return declarations;
 }
 
+function scanKotlin(input) {
+  const declarations = [];
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    if ((match = trimmed.match(/^package\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)/))) {
+      declarations.push(nativeDeclaration(input, number, 'PackageHeader', 'package', match[1], {}, false));
+    } else if ((match = trimmed.match(/^import\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*(?:\.\*)?)(?:\s+as\s+[A-Za-z_]\w*)?$/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'ImportDirective', 'package'));
+    } else if ((match = trimmed.match(/^(?:(?:public|private|protected|internal|expect|actual|open|final|abstract|sealed|data|value)\s+)*(?:(enum|annotation)\s+)?(class|interface|object)\s+([A-Za-z_]\w*)/))) {
+      declarations.push(nativeDeclaration(input, number, kotlinDeclarationKind(match[2], match[1]), kotlinSymbolKind(match[2], match[1]), match[3], {}, trimmed.includes('{')));
+    } else if ((match = trimmed.match(/^(?:(?:public|private|protected|internal|expect|actual|open|final|abstract|inline|tailrec|operator|infix|external|suspend|override)\s+)*fun\s+(?:<[^>]+>\s*)?(?:[A-Za-z_][\w.<>?]*\.)?([A-Za-z_]\w*)\s*\(([^)]*)\)/))) {
+      declarations.push(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{') || trimmed.includes('=')));
+    } else if ((match = trimmed.match(/^(?:(?:public|private|protected|internal|expect|actual)\s+)*typealias\s+([A-Za-z_]\w*)\s*=/))) {
+      declarations.push(nativeDeclaration(input, number, 'TypeAliasDeclaration', 'type', match[1], {}, false));
+    } else if ((match = trimmed.match(/^(?:(?:public|private|protected|internal|expect|actual|open|final|abstract|override|const|lateinit)\s+)*(?:val|var)\s+([A-Za-z_]\w*)\b/))) {
+      declarations.push(nativeDeclaration(input, number, 'PropertyDeclaration', 'variable', match[1], {}, false));
+    }
+  }
+  return declarations;
+}
+
+function scanScala(input) {
+  const declarations = [];
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    if ((match = trimmed.match(/^package\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)/))) {
+      declarations.push(nativeDeclaration(input, number, 'PackageClause', 'package', match[1], {}, false));
+    } else if ((match = trimmed.match(/^import\s+(.+?);?$/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1].trim(), 'Import', 'package'));
+    } else if ((match = trimmed.match(/^(?:(?:private|protected|final|sealed|abstract|case|implicit|lazy|override|inline|transparent|open)\s+)*(class|trait|object|enum)\s+([A-Za-z_]\w*)/))) {
+      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Def`, scalaSymbolKind(match[1]), match[2], {}, trimmed.includes('{') || trimmed.includes(':')));
+    } else if ((match = trimmed.match(/^(?:(?:private|protected|final|implicit|override|inline)\s+)*def\s+([A-Za-z_]\w*)\s*(?:\[[^\]]+\])?\s*\(([^)]*)\)/))) {
+      declarations.push(nativeDeclaration(input, number, 'DefDef', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{') || trimmed.includes('=')));
+    } else if ((match = trimmed.match(/^(?:(?:private|protected|final|implicit|opaque)\s+)*type\s+([A-Za-z_]\w*)\b/))) {
+      declarations.push(nativeDeclaration(input, number, 'TypeDef', 'type', match[1], {}, false));
+    } else if ((match = trimmed.match(/^(?:(?:private|protected|final|implicit|lazy|override|inline)\s+)*(?:val|var)\s+([A-Za-z_]\w*)\b/))) {
+      declarations.push(nativeDeclaration(input, number, 'ValDef', 'variable', match[1], {}, false));
+    }
+  }
+  return declarations;
+}
+
+function scanDart(input) {
+  const declarations = [];
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    if ((match = trimmed.match(/^(?:import|export)\s+['"]([^'"]+)['"]/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'UriBasedDirective', 'library'));
+    } else if ((match = trimmed.match(/^part\s+['"]([^'"]+)['"]/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'PartDirective', 'library'));
+    } else if ((match = trimmed.match(/^(?:(?:abstract|base|final|interface|sealed)\s+)*(class|mixin|enum)\s+([A-Za-z_]\w*)/))) {
+      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Declaration`, dartSymbolKind(match[1]), match[2], {}, trimmed.includes('{')));
+    } else if ((match = trimmed.match(/^extension\s+([A-Za-z_]\w*)\s+on\s+.+\{/))) {
+      declarations.push(nativeDeclaration(input, number, 'ExtensionDeclaration', 'implementation', match[1], {}, true));
+    } else if ((match = trimmed.match(/^typedef\s+([A-Za-z_]\w*)\b/))) {
+      declarations.push(nativeDeclaration(input, number, 'TypeAlias', 'type', match[1], {}, false));
+    } else if ((match = trimmed.match(/^(?:(?:external|static)\s+)*(?:[A-Za-z_]\w*(?:<[^>]+>)?\??|void)\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?:async\s*)?(?:\{|=>|;)/))) {
+      declarations.push(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{') || trimmed.includes('=>')));
+    } else if ((match = trimmed.match(/^(?:(?:static|external|late)\s+)*(?:const|final|var)\s+(?:[A-Za-z_]\w*(?:<[^>]+>)?\??\s+)?([A-Za-z_]\w*)\b/))) {
+      declarations.push(nativeDeclaration(input, number, 'VariableDeclaration', 'variable', match[1], {}, false));
+    }
+  }
+  return declarations;
+}
+
+function scanLua(input) {
+  const declarations = [];
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    if ((match = trimmed.match(/^(?:local\s+[A-Za-z_]\w*\s*=\s*)?require\s*\(?\s*['"]([^'"]+)['"]\s*\)?/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'RequireCall', 'module'));
+    } else if ((match = trimmed.match(/^(?:local\s+)?function\s+([A-Za-z_]\w*(?:[.:][A-Za-z_]\w*)*)\s*\(([^)]*)\)/))) {
+      declarations.push(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, true));
+    } else if ((match = trimmed.match(/^(?:local\s+)?([A-Za-z_]\w*(?:[.:][A-Za-z_]\w*)*)\s*=\s*function\s*\(([^)]*)\)/))) {
+      declarations.push(nativeDeclaration(input, number, 'FunctionAssignment', 'function', match[1], { parameters: splitParameters(match[2]) }, true));
+    } else if ((match = trimmed.match(/^local\s+([A-Za-z_]\w*)\s*=\s*(?:\{|\w+)/))) {
+      declarations.push(nativeDeclaration(input, number, 'LocalDeclaration', 'variable', match[1], {}, false));
+    }
+  }
+  return declarations;
+}
+
+function scanShell(input) {
+  const declarations = [];
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    if ((match = trimmed.match(/^(?:source|\.)\s+(?:"([^"]+)"|'([^']+)'|([./A-Za-z0-9_-][\w./-]*))(?:\s|$)/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1] ?? match[2] ?? match[3], 'SourceCommand', 'file'));
+    } else if ((match = trimmed.match(/^function\s+([A-Za-z_][\w-]*)\s*(?:\(\s*\))?\s*(?:\{|$)/))) {
+      declarations.push(nativeDeclaration(input, number, 'FunctionDefinition', 'function', match[1], {}, true));
+    } else if ((match = trimmed.match(/^([A-Za-z_][\w-]*)\s*\(\s*\)\s*(?:\{|$)/))) {
+      declarations.push(nativeDeclaration(input, number, 'FunctionDefinition', 'function', match[1], {}, true));
+    } else if ((match = trimmed.match(/^(?:export\s+)?(?:readonly\s+)?([A-Za-z_]\w*)=/))) {
+      declarations.push(nativeDeclaration(input, number, 'VariableAssignment', 'variable', match[1], {}, false));
+    } else if ((match = trimmed.match(/^alias\s+([A-Za-z_][\w-]*)=/))) {
+      declarations.push(nativeDeclaration(input, number, 'AliasDeclaration', 'function', match[1], {}, false));
+    }
+  }
+  return declarations;
+}
+
+function scanSql(input) {
+  const declarations = [];
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    if ((match = trimmed.match(/^CREATE\s+EXTENSION\s+(?:IF\s+NOT\s+EXISTS\s+)?((?:"[^"]+"|`[^`]+`|\[[^\]]+\]|[A-Za-z_][\w$-]*))/i))) {
+      declarations.push(nativeImportDeclaration(input, number, normalizeSqlIdentifier(match[1]), 'CreateExtensionStatement', 'extension'));
+    } else if ((match = trimmed.match(/^CREATE\s+(?:OR\s+REPLACE\s+)?(?:TEMP(?:ORARY)?\s+)?((?:UNIQUE\s+)?INDEX|MATERIALIZED\s+VIEW|TABLE|VIEW|FUNCTION|PROCEDURE|TRIGGER|SCHEMA|TYPE)\s+(?:IF\s+NOT\s+EXISTS\s+)?((?:"[^"]+"|`[^`]+`|\[[^\]]+\]|[A-Za-z_][\w$]*)(?:\s*\.\s*(?:"[^"]+"|`[^`]+`|\[[^\]]+\]|[A-Za-z_][\w$]*))?)/i))) {
+      const objectKind = match[1].toUpperCase().replace(/\s+/g, ' ');
+      declarations.push(nativeDeclaration(input, number, sqlLanguageKind(objectKind), sqlSymbolKind(objectKind), normalizeSqlIdentifier(match[2]), { objectKind }, trimmed.includes('(')));
+    }
+  }
+  return declarations;
+}
+
+function scanZig(input) {
+  const declarations = [];
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    if ((match = trimmed.match(/^(?:(?:pub|export)\s+)?(?:const|var)\s+([A-Za-z_]\w*)\s*=\s*@import\(\s*["']([^"']+)["']\s*\)\s*;?/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[2], 'ImportDeclaration', 'module'));
+    } else if ((match = trimmed.match(/^(?:(?:pub|export)\s+)?usingnamespace\s+@import\(\s*["']([^"']+)["']\s*\)\s*;?/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'UsingNamespaceImport', 'module'));
+    } else if ((match = trimmed.match(/^(?:(?:pub|export)\s+)?const\s+([A-Za-z_]\w*)\s*=\s*(?:extern\s+)?(struct|enum|union|opaque|error)\b/))) {
+      declarations.push(nativeDeclaration(input, number, `Const${upperFirst(match[2])}Declaration`, 'type', match[1], { zigKind: match[2] }, trimmed.includes('{')));
+    } else if ((match = trimmed.match(/^(?:(?:pub|export|extern|inline)\s+)*(?:fn)\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/))) {
+      declarations.push(nativeDeclaration(input, number, 'FnDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{')));
+    } else if ((match = trimmed.match(/^(?:(?:pub|export)\s+)?const\s+([A-Za-z_]\w*)\b/))) {
+      declarations.push(nativeDeclaration(input, number, 'ConstDeclaration', 'constant', match[1], {}, false));
+    } else if ((match = trimmed.match(/^(?:(?:pub|export)\s+)?var\s+([A-Za-z_]\w*)\b/))) {
+      declarations.push(nativeDeclaration(input, number, 'VarDeclaration', 'variable', match[1], {}, false));
+    }
+    if (/^\s*comptime\b|@(?:cImport|compileError|field|hasDecl|hasField|setEvalBranchQuota|This|Type|typeInfo)\b/.test(trimmed)) {
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'generatedCode', zigMetaName(trimmed)));
+    }
+  }
+  return declarations;
+}
+
+function scanElixir(input) {
+  const declarations = [];
+  let currentModule;
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    let recordedMeta = false;
+    if ((match = trimmed.match(/^defmodule\s+([A-Z]\w*(?:\.[A-Z]\w*)*)\s+do\b/))) {
+      currentModule = match[1];
+      declarations.push(nativeDeclaration(input, number, 'ModuleDefinition', 'module', match[1], {}, true));
+    } else if ((match = trimmed.match(/^(?:alias|import|require)\s+([A-Z]\w*(?:\.[A-Z]\w*)*)/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'ImportDirective', 'module'));
+    } else if ((match = trimmed.match(/^use\s+([A-Z]\w*(?:\.[A-Z]\w*)*)/))) {
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'macroExpansion', match[1]));
+      recordedMeta = true;
+    } else if ((match = trimmed.match(/^(defmacro|defmacrop|defguard|defguardp|defdelegate)\s+([A-Za-z_]\w*[!?]?)/))) {
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'macroExpansion', match[2]));
+      recordedMeta = true;
+    } else if ((match = trimmed.match(/^defp?\s+([A-Za-z_]\w*[!?]?)\s*(?:\(([^)]*)\)|([^,]*))?/))) {
+      declarations.push(nativeDeclaration(input, number, 'FunctionDefinition', 'function', match[1], { parameters: splitParameters(match[2] ?? match[3]) }, /\bdo\b/.test(trimmed)));
+    } else if (trimmed.startsWith('defstruct')) {
+      declarations.push(nativeDeclaration(input, number, 'StructDefinition', 'type', currentModule ?? `struct_${number}`, {}, true));
+    } else if ((match = trimmed.match(/^@(type|typep|opaque|callback)\s+([A-Za-z_]\w*[!?]?)/))) {
+      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Attribute`, match[1] === 'callback' ? 'function' : 'type', match[2], {}, false));
+    }
+    if (!recordedMeta && /(?:\bquote\s+do\b|\bunquote(?:_splicing)?\b|@(?:before_compile|after_compile|on_definition|derive)\b)/.test(trimmed)) {
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'macroExpansion', elixirMetaName(trimmed)));
+    }
+  }
+  return declarations;
+}
+
+function scanErlang(input) {
+  const declarations = [];
+  const seenFunctions = new Set();
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    let recordedMacro = false;
+    if ((match = trimmed.match(/^-module\(([a-z][A-Za-z0-9_@]*)\)\./))) {
+      declarations.push(nativeDeclaration(input, number, 'ModuleAttribute', 'module', match[1], {}, false));
+    } else if ((match = trimmed.match(/^-include(?:_lib)?\(["']([^"']+)["']\)\./))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'IncludeAttribute', 'module'));
+    } else if ((match = trimmed.match(/^-import\(([a-z][A-Za-z0-9_@]*)\s*,/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'ImportAttribute', 'module'));
+    } else if ((match = trimmed.match(/^-behaviou?r\(([a-z][A-Za-z0-9_@]*)\)\./))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'BehaviourAttribute', 'module'));
+    } else if ((match = trimmed.match(/^-record\(([a-z][A-Za-z0-9_@]*)\s*,/))) {
+      declarations.push(nativeDeclaration(input, number, 'RecordAttribute', 'type', match[1], {}, false));
+    } else if ((match = trimmed.match(/^-(type|opaque)\s+([a-z][A-Za-z0-9_@]*)\s*\(/))) {
+      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Attribute`, 'type', match[2], {}, false));
+    } else if ((match = trimmed.match(/^-callback\s+([a-z][A-Za-z0-9_@]*)\s*\(/))) {
+      declarations.push(nativeDeclaration(input, number, 'CallbackAttribute', 'function', match[1], {}, false));
+    } else if ((match = trimmed.match(/^-define\(([^,\s)]+)/))) {
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'preprocessor', match[1]));
+      recordedMacro = true;
+    } else if (/^-compile\([^)]*parse_transform/.test(trimmed)) {
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'generatedCode', 'parse_transform'));
+      recordedMacro = true;
+    } else if ((match = trimmed.match(/^([a-z][A-Za-z0-9_@]*|'[^']+')\s*\(([^)]*)\)\s*(?:when\s+.*?)?->/))) {
+      const name = erlangAtomName(match[1]);
+      if (!seenFunctions.has(name)) {
+        seenFunctions.add(name);
+        declarations.push(nativeDeclaration(input, number, 'FunctionClause', 'function', name, { parameters: splitParameters(match[2]) }, true));
+      }
+    }
+    if (!recordedMacro && /(^|[^A-Za-z0-9_])\?[A-Za-z_]\w*/.test(trimmed)) {
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'macroExpansion', erlangMacroName(trimmed)));
+    }
+  }
+  return declarations;
+}
+
+function scanHaskell(input) {
+  const declarations = [];
+  const seenFunctions = new Set();
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    if (/^#\s*(?:if|ifdef|ifndef|else|elif|endif|define|include)\b/.test(trimmed)) {
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'preprocessor', haskellMetaName(trimmed)));
+    } else if ((match = trimmed.match(/^\{-#\s+LANGUAGE\s+(.+?)#-\}/))) {
+      const extensions = match[1].split(',').map((part) => part.trim());
+      if (extensions.some((extension) => /^(TemplateHaskell|QuasiQuotes|CPP)$/.test(extension))) {
+        declarations.push(nativeMacroLoss(input, number, trimmed, extensions.includes('CPP') ? 'preprocessor' : 'macroExpansion', extensions.join('_')));
+      }
+    } else if (/^\$\(|\[[a-zA-Z]*\||\b\$\([^)]+\)/.test(trimmed)) {
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'macroExpansion', haskellMetaName(trimmed)));
+    } else if ((match = trimmed.match(/^module\s+([A-Z][A-Za-z0-9_.']*)\b/))) {
+      declarations.push(nativeDeclaration(input, number, 'ModuleDeclaration', 'module', match[1], {}, false));
+    } else if ((match = trimmed.match(/^import\s+(?:safe\s+)?(?:qualified\s+)?([A-Z][A-Za-z0-9_.']*)/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'ImportDeclaration', 'module'));
+    } else if ((match = trimmed.match(/^foreign\s+import\s+([A-Za-z_]\w*)/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'ForeignImportDeclaration', 'foreign'));
+    } else if ((match = trimmed.match(/^(data|newtype|type)\s+([A-Z][A-Za-z0-9_']*)\b/))) {
+      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Declaration`, 'type', match[2], {}, /(?:where|=)/.test(trimmed)));
+    } else if ((match = trimmed.match(/^class\s+(?:\([^)]*\)\s*=>\s*)?([A-Z][A-Za-z0-9_']*)\b/))) {
+      declarations.push(nativeDeclaration(input, number, 'ClassDeclaration', 'type', match[1], {}, /\bwhere\b/.test(trimmed)));
+    } else if ((match = trimmed.match(/^([a-z_][A-Za-z0-9_']*)\s*::\s*(.+)$/))) {
+      seenFunctions.add(match[1]);
+      declarations.push(nativeDeclaration(input, number, 'FunctionSignature', 'function', match[1], { signature: match[2].trim() }, false));
+    } else if ((match = trimmed.match(/^([a-z_][A-Za-z0-9_']*)\b[^=]*=/))) {
+      if (!seenFunctions.has(match[1])) {
+        seenFunctions.add(match[1]);
+        declarations.push(nativeDeclaration(input, number, 'FunctionBinding', 'function', match[1], {}, true));
+      }
+    }
+  }
+  return declarations;
+}
+
+function scanR(input) {
+  const declarations = [];
+  for (const { line, number } of sourceLines(input.sourceText)) {
+    const trimmed = line.trim();
+    let match;
+    if ((match = trimmed.match(/^(?:library|require)\s*\(\s*["']?([A-Za-z_][\w.-]*)["']?/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'LibraryCall', 'package'));
+    } else if ((match = trimmed.match(/^importFrom\s*\(\s*["']?([A-Za-z_][\w.-]*)["']?/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'ImportFromCall', 'package'));
+    } else if ((match = trimmed.match(/^source\s*\(\s*["']([^"']+)["']/))) {
+      declarations.push(nativeImportDeclaration(input, number, match[1], 'SourceCall', 'module'));
+    } else if ((match = trimmed.match(/^([A-Za-z_][\w.]*)\s*(?:<-|=)\s*function\s*\(([^)]*)\)/))) {
+      declarations.push(nativeDeclaration(input, number, 'FunctionAssignment', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{')));
+    } else if ((match = trimmed.match(/^([A-Za-z_][\w.]*)\s*<-\s*R6Class\s*\(\s*["']([^"']+)["']/))) {
+      declarations.push(nativeDeclaration(input, number, 'R6ClassDeclaration', 'class', match[2] || match[1], { binding: match[1] }, true));
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'dynamicRuntime', match[2] || match[1]));
+    } else if ((match = trimmed.match(/^setClass\s*\(\s*["']([^"']+)["']/))) {
+      declarations.push(nativeDeclaration(input, number, 'S4ClassDeclaration', 'class', match[1], {}, true));
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'dynamicRuntime', match[1]));
+    } else if ((match = trimmed.match(/^setGeneric\s*\(\s*["']([^"']+)["']/))) {
+      declarations.push(nativeDeclaration(input, number, 'S4GenericDeclaration', 'function', match[1], {}, true));
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'dynamicRuntime', match[1]));
+    } else if ((match = trimmed.match(/^setMethod\s*\(\s*["']([^"']+)["']/))) {
+      declarations.push(nativeDeclaration(input, number, 'S4MethodDeclaration', 'method', match[1], {}, true));
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'dynamicDispatch', match[1]));
+    } else if ((match = trimmed.match(/^([A-Z][A-Za-z0-9_.]*)\s*(?:<-|=)\s*/))) {
+      declarations.push(nativeDeclaration(input, number, 'ConstantAssignment', 'constant', match[1], {}, false));
+    }
+    if (/(?:eval|parse|substitute|quote|bquote|assign)\s*\(|<<-|\{\{|!!!|!!/.test(trimmed)) {
+      declarations.push(nativeMacroLoss(input, number, trimmed, 'dynamicRuntime', rMetaName(trimmed)));
+    }
+  }
+  return declarations;
+}
+
 function scanGenericDeclarations(input) {
   return sourceLines(input.sourceText)
     .filter(({ line }) => /\b(function|class|struct|enum|trait|interface|def)\b/.test(line))
@@ -802,6 +1371,78 @@ function phpSymbolKind(kind) {
   if (kind === 'trait') return 'trait';
   if (kind === 'enum') return 'type';
   return 'class';
+}
+
+function kotlinDeclarationKind(kind, prefix) {
+  if (prefix === 'enum') return 'EnumClassDeclaration';
+  if (prefix === 'annotation') return 'AnnotationClassDeclaration';
+  return `${upperFirst(kind)}Declaration`;
+}
+
+function kotlinSymbolKind(kind, prefix) {
+  if (kind === 'interface') return 'interface';
+  if (kind === 'object') return 'module';
+  if (prefix === 'enum' || prefix === 'annotation') return 'type';
+  return 'class';
+}
+
+function scalaSymbolKind(kind) {
+  if (kind === 'trait') return 'trait';
+  if (kind === 'object') return 'module';
+  if (kind === 'enum') return 'type';
+  return 'class';
+}
+
+function dartSymbolKind(kind) {
+  if (kind === 'mixin') return 'trait';
+  if (kind === 'enum') return 'type';
+  return 'class';
+}
+
+function sqlSymbolKind(kind) {
+  if (kind === 'FUNCTION' || kind === 'PROCEDURE' || kind === 'TRIGGER') return 'function';
+  if (kind.includes('INDEX')) return 'index';
+  if (kind === 'SCHEMA') return 'namespace';
+  return 'type';
+}
+
+function sqlLanguageKind(kind) {
+  return `Create${kind.toLowerCase().split(/\s+/).map(upperFirst).join('')}Statement`;
+}
+
+function normalizeSqlIdentifier(value) {
+  return String(value)
+    .split(/\s*\.\s*/)
+    .map((part) => part.replace(/^"|"$/g, '').replace(/^`|`$/g, '').replace(/^\[|\]$/g, ''))
+    .join('.');
+}
+
+function zigMetaName(source) {
+  const match = source.match(/@([A-Za-z_]\w*)|^\s*(comptime)\b/);
+  return match?.[1] ?? match?.[2] ?? 'comptime';
+}
+
+function elixirMetaName(source) {
+  const match = source.match(/@([A-Za-z_]\w*)|\b(unquote(?:_splicing)?|quote)\b/);
+  return match?.[1] ?? match?.[2] ?? 'macro';
+}
+
+function erlangAtomName(value) {
+  return String(value).startsWith("'") ? String(value).slice(1, -1) : String(value);
+}
+
+function erlangMacroName(source) {
+  const match = source.match(/\?([A-Za-z_]\w*)/);
+  return match?.[1] ?? 'macro';
+}
+
+function haskellMetaName(source) {
+  return idFragment(source).slice(0, 40);
+}
+
+function rMetaName(source) {
+  const match = source.match(/([A-Za-z_][\w.]*)\s*\(/);
+  return match?.[1] ?? 'dynamic';
 }
 
 function nativeDeclaration(input, lineNumber, languageKind, symbolKind, name, fields = {}, hasBody = false) {
@@ -990,33 +1631,61 @@ function inferSourceMapMappings(input) {
 }
 
 function normalizeSourceMapMappings(mappings, context) {
+  if (mappings === undefined || mappings === null) return [];
+  if (!Array.isArray(mappings)) {
+    throw new Error('Source-map mappings must be an array');
+  }
   const semanticIndex = context.semanticIndex;
   const nativeAst = context.nativeAst;
   const nativeSource = context.nativeSource;
   const symbolsById = new Map((semanticIndex?.symbols ?? []).map((symbol) => [symbol.id, symbol]));
   const occurrencesById = new Map((semanticIndex?.occurrences ?? []).map((occurrence) => [occurrence.id, occurrence]));
-  const evidenceIds = (context.evidence ?? []).map((record) => record.id);
-  return (mappings ?? [])
-    .filter((mapping) => mapping && typeof mapping === 'object')
+  const evidenceIds = uniqueStrings([
+    ...(semanticIndex?.evidence ?? []).map((record) => record.id),
+    ...(context.evidence ?? []).map((record) => record.id),
+    ...(context.sourceMapEvidence ?? []).map((record) => record.id)
+  ]);
+  const usedMappingIds = new Set();
+  return mappings
     .map((mapping, index) => {
+      if (!mapping || typeof mapping !== 'object') {
+        throw new Error(`Source-map mapping ${index + 1} must be an object`);
+      }
       const occurrence = mapping.semanticOccurrenceId ? occurrencesById.get(mapping.semanticOccurrenceId) : undefined;
       const symbol = mapping.semanticSymbolId ? symbolsById.get(mapping.semanticSymbolId) : occurrence ? symbolsById.get(occurrence.symbolId) : undefined;
       const nativeAstNodeId = mapping.nativeAstNodeId ?? occurrence?.nativeAstNodeId;
       const nativeNode = nativeAstNodeId ? nativeAst?.nodes?.[nativeAstNodeId] : undefined;
       const sourceSpan = mapping.sourceSpan ?? occurrence?.span ?? nativeNode?.span;
-      return {
+      const target = mapping.target ?? mapping.generatedSpan?.target ?? context.target;
+      const generatedSpan = normalizeGeneratedSpan(mapping.generatedSpan, target, context.targetPath, context.targetHash);
+      if (
+        !nativeAstNodeId &&
+        !mapping.semanticNodeId &&
+        !mapping.semanticSymbolId &&
+        !mapping.semanticOccurrenceId &&
+        !sourceSpan &&
+        !generatedSpan &&
+        !mapping.generatedName
+      ) {
+        throw new Error(`Source-map mapping ${index + 1} must reference a native AST node, semantic node, symbol, occurrence, source span, or generated span`);
+      }
+      const normalizedMapping = {
         ...mapping,
-        id: mapping.id ?? `map_${idFragment(nativeAstNodeId ?? mapping.semanticSymbolId ?? mapping.semanticNodeId ?? index + 1)}`,
         nativeSourceId: mapping.nativeSourceId ?? nativeSource?.id,
         nativeAstNodeId,
         semanticSymbolId: mapping.semanticSymbolId ?? occurrence?.symbolId,
         semanticOccurrenceId: mapping.semanticOccurrenceId ?? occurrence?.id,
         semanticNodeId: mapping.semanticNodeId ?? occurrence?.semanticNodeId ?? symbol?.semanticNodeId,
         sourceSpan,
-        target: mapping.target ?? context.target,
-        evidenceIds: mapping.evidenceIds ?? evidenceIds,
-        lossIds: mapping.lossIds ?? lossIdsForNativeNode(context.losses ?? nativeAst?.losses ?? [], nativeAstNodeId),
-        precision: mapping.precision ?? (sourceSpan ? 'declaration' : 'unknown')
+        generatedSpan,
+        target,
+        evidenceIds: normalizeReferenceIds(mapping.evidenceIds, evidenceIds),
+        lossIds: normalizeReferenceIds(mapping.lossIds, lossIdsForNativeNode(context.losses ?? nativeAst?.losses ?? [], nativeAstNodeId)),
+        precision: normalizeSourceMapPrecision(mapping.precision, sourceSpan, generatedSpan)
+      };
+      return {
+        ...normalizedMapping,
+        id: reserveUniqueId(sourceMapMappingBaseId(normalizedMapping, index), usedMappingIds)
       };
     });
 }
@@ -1026,6 +1695,280 @@ function lossIdsForNativeNode(losses, nativeAstNodeId) {
   return (losses ?? [])
     .filter((loss) => loss.nodeId === nativeAstNodeId)
     .map((loss) => loss.id);
+}
+
+function normalizeSourceMaps(sourceMaps, context) {
+  if (sourceMaps === undefined || sourceMaps === null) return [];
+  if (!Array.isArray(sourceMaps)) {
+    throw new Error('Native import sourceMaps must be an array');
+  }
+  const usedSourceMapIds = new Set();
+  return sourceMaps.map((sourceMap, index) => {
+    if (!sourceMap || typeof sourceMap !== 'object') {
+      throw new Error(`Native import source map ${index + 1} must be an object`);
+    }
+    const id = reserveUniqueId(String(sourceMap.id ?? `${context.defaultSourceMapId}_${index + 1}`), usedSourceMapIds);
+    const evidence = uniqueRecordsById([...(sourceMap.evidence ?? []), ...(context.evidence ?? [])]);
+    const target = sourceMap.target ?? context.target;
+    const targetPath = sourceMap.targetPath ?? context.targetPath;
+    const targetHash = sourceMap.targetHash ?? context.targetHash;
+    const mappings = normalizeSourceMapMappings(sourceMap.mappings ?? [], {
+      ...context,
+      target,
+      targetPath,
+      targetHash,
+      sourceMapEvidence: evidence
+    });
+    const normalized = createSourceMapRecord({
+      ...sourceMap,
+      id,
+      sourcePath: sourceMap.sourcePath ?? context.sourcePath,
+      sourceHash: sourceMap.sourceHash ?? context.sourceHash,
+      target,
+      targetPath: targetPath ?? commonGeneratedTargetPath(mappings),
+      targetHash,
+      semanticIndexId: sourceMap.semanticIndexId ?? context.semanticIndex?.id,
+      nativeAstId: sourceMap.nativeAstId ?? context.nativeAst?.id,
+      nativeSourceId: sourceMap.nativeSourceId ?? context.nativeSource?.id,
+      mappings,
+      evidence
+    });
+    const issues = validateSourceMapRecord(normalized, {
+      document: context.document,
+      nativeSources: context.nativeSources,
+      nativeAst: context.nativeAst,
+      semanticIndex: context.semanticIndex,
+      losses: context.losses,
+      evidence: context.evidence
+    });
+    if (issues.length) {
+      throw new Error(`Invalid Frontier native source map ${normalized.id}: ${issues.join('; ')}`);
+    }
+    return normalized;
+  });
+}
+
+function normalizeGeneratedSpan(generatedSpan, target, targetPath, targetHash) {
+  if (!generatedSpan) return generatedSpan;
+  return {
+    ...generatedSpan,
+    target: generatedSpan.target ?? target,
+    targetPath: generatedSpan.targetPath ?? target?.emitPath ?? targetPath,
+    targetHash: generatedSpan.targetHash ?? targetHash
+  };
+}
+
+function normalizeSourceMapPrecision(value, sourceSpan, generatedSpan) {
+  const explicit = value === undefined || value === null ? '' : String(value).trim();
+  if (explicit) {
+    const normalized = explicit.toLowerCase();
+    if (normalized === 'exact' || normalized === 'declaration' || normalized === 'line' || normalized === 'estimated' || normalized === 'unknown') return normalized;
+    if (normalized === 'estimate' || normalized === 'approx' || normalized === 'approximate' || normalized === 'approximated') return 'estimated';
+    return explicit;
+  }
+  if (hasExactSpan(sourceSpan) && hasExactSpan(generatedSpan)) return 'exact';
+  if (sourceSpan?.startLine && generatedSpan?.startLine) return 'line';
+  if (sourceSpan?.startLine) return 'declaration';
+  if (generatedSpan?.startLine) return 'line';
+  return 'unknown';
+}
+
+function hasExactSpan(span) {
+  return Boolean(span && (
+    (typeof span.start === 'number' && typeof span.end === 'number') ||
+    (
+      typeof span.startLine === 'number' &&
+      typeof span.startColumn === 'number' &&
+      typeof span.endLine === 'number' &&
+      typeof span.endColumn === 'number'
+    )
+  ));
+}
+
+function normalizeReferenceIds(value, fallback = []) {
+  if (value === undefined || value === null) return uniqueStrings(fallback);
+  return uniqueStrings(Array.isArray(value) ? value : [value]);
+}
+
+function sourceMapMappingBaseId(mapping, index) {
+  const explicit = mapping.id === undefined || mapping.id === null ? '' : String(mapping.id).trim();
+  if (explicit) return explicit;
+  const span = mapping.sourceSpan ?? mapping.generatedSpan;
+  const spanPart = span
+    ? `${span.path ?? span.targetPath ?? span.sourceId ?? 'span'}_${span.start ?? span.startLine ?? ''}_${span.end ?? span.endLine ?? ''}`
+    : undefined;
+  return `map_${idFragment([
+    mapping.nativeAstNodeId,
+    mapping.semanticOccurrenceId,
+    mapping.semanticSymbolId,
+    mapping.semanticNodeId,
+    spanPart,
+    index + 1
+  ].filter(Boolean).join('_'))}`;
+}
+
+function reserveUniqueId(baseId, usedIds) {
+  const safeBase = String(baseId || 'id');
+  if (!usedIds.has(safeBase)) {
+    usedIds.add(safeBase);
+    return safeBase;
+  }
+  let index = 2;
+  while (usedIds.has(`${safeBase}_${index}`)) index += 1;
+  const id = `${safeBase}_${index}`;
+  usedIds.add(id);
+  return id;
+}
+
+function commonGeneratedTargetPath(mappings) {
+  const paths = uniqueStrings((mappings ?? [])
+    .map((mapping) => mapping.generatedSpan?.targetPath ?? mapping.target?.emitPath)
+    .filter(Boolean));
+  return paths.length === 1 ? paths[0] : undefined;
+}
+
+function uniqueRecordsById(records) {
+  const seen = new Set();
+  const result = [];
+  for (const record of records ?? []) {
+    if (!record?.id || seen.has(record.id)) continue;
+    seen.add(record.id);
+    result.push(record);
+  }
+  return result;
+}
+
+function normalizeNativeLossRecords(losses) {
+  return (Array.isArray(losses) ? losses : [losses])
+    .filter((loss) => loss !== undefined && loss !== null)
+    .map((loss, index) => normalizeNativeLossRecord(loss, `loss_${index + 1}`));
+}
+
+function normalizeNativeLossRecord(loss, fallbackId) {
+  const record = typeof loss === 'string' ? { message: loss } : loss ?? {};
+  const severity = normalizeLossSeverity(record.severity);
+  const kind = normalizeNativeLossKind(record, severity);
+  const category = nativeImportCategoryForLossKind(kind);
+  return {
+    ...record,
+    id: String(record.id ?? fallbackId),
+    severity,
+    kind,
+    message: String(record.message ?? `${kind} loss during native import.`),
+    metadata: {
+      lossCategory: category,
+      semanticMergeAdmission: semanticMergeAdmissionForSeverity(severity),
+      dashboardSeverity: severity,
+      ...record.metadata
+    }
+  };
+}
+
+function normalizeLossSeverity(value) {
+  const severity = String(value ?? 'warning').toLowerCase();
+  if (severity === 'error') return 'error';
+  if (severity === 'info') return 'info';
+  return 'warning';
+}
+
+function normalizeNativeLossKind(loss, severity) {
+  const kind = String(loss.kind ?? '').trim();
+  if (kind) return kind;
+  if (loss.metadata?.diagnosticId || loss.metadata?.diagnosticCode) {
+    return severity === 'error' ? 'unsupportedSyntax' : 'parserDiagnostic';
+  }
+  return severity === 'error' ? 'unsupportedSyntax' : 'opaqueNative';
+}
+
+function nativeImportCategoryForLossKind(kind) {
+  if (kind === 'declarationOnlyCoverage') return 'declarationsOnly';
+  if (kind === 'opaqueNative') return 'opaqueBodies';
+  if (kind === 'macroExpansion') return 'macroExpansion';
+  if (kind === 'preprocessor' || kind === 'conditionalCompilation' || kind === 'macroHygiene') return 'preprocessor';
+  if (kind === 'metaprogramming' || kind === 'reflection' || kind === 'dynamicDispatch' || kind === 'dynamicRuntime') return 'metaprogramming';
+  if (kind === 'generatedCode') return 'generatedCode';
+  if (kind === 'sourcePreservation' || kind === 'nonRoundTrippable') return 'sourcePreservation';
+  if (kind === 'parserDiagnostic') return 'parserDiagnostics';
+  if (kind === 'unsupportedSyntax' || kind === 'unsupportedSemantic') return 'unsupportedSyntax';
+  if (kind === 'partialSemanticIndex') return 'partialSemanticIndex';
+  if (kind === 'sourceMapApproximation') return 'sourceMapApproximation';
+  return String(kind ?? 'opaqueNative');
+}
+
+function semanticMergeAdmissionForSeverity(severity) {
+  if (severity === 'error') return 'blocked';
+  if (severity === 'warning') return 'review';
+  return 'disclose';
+}
+
+function nativeImportReadinessReasons(input) {
+  if (input.failedEvidenceIds.length) {
+    return [`Failed native import evidence prevents merge: ${input.failedEvidenceIds.join(', ')}`];
+  }
+  if (input.blockingLossIds.length) {
+    return [`Native import error loss(es) block semantic merge: ${input.blockingLossIds.join(', ')}`];
+  }
+  if (input.reviewLossIds.length) {
+    return [`Native import warning loss(es) require review: ${input.reviewLossIds.join(', ')}`];
+  }
+  if (input.informationalLossIds.length) {
+    return [`Native import recorded informational loss(es): ${input.informationalLossIds.join(', ')}`];
+  }
+  if (input.exactAst) return ['Native import supplied exact AST coverage with no recorded loss.'];
+  return ['Native import has no recorded loss.'];
+}
+
+function attachNativeImportLossSummary(evidence, lossSummary) {
+  return (evidence ?? []).map((record) => ({
+    ...record,
+    metadata: {
+      ...record.metadata,
+      nativeImportLossSummary: lossSummary,
+      semanticMergeReadiness: lossSummary.semanticMergeReadiness,
+      lossCategories: lossSummary.categories
+    }
+  }));
+}
+
+function withNativeImportReadiness(importResult, lossSummary) {
+  const mergeCandidates = (importResult.mergeCandidates ?? []).map((candidate) => {
+    const readiness = maxSemanticMergeReadiness(candidate.readiness, lossSummary.semanticMergeReadiness);
+    return {
+      ...candidate,
+      readiness,
+      reasons: uniqueStrings([
+        ...(candidate.reasons ?? []),
+        ...lossSummary.readinessReasons
+      ]),
+      metadata: {
+        ...candidate.metadata,
+        nativeImportLossSummary: lossSummary,
+        severityReadiness: lossSummary.semanticMergeReadiness,
+        finalReadiness: readiness,
+        lossCategories: lossSummary.categories,
+        lossSeverityCounts: lossSummary.bySeverity,
+        lossKindCounts: lossSummary.byKind
+      }
+    };
+  });
+  return {
+    ...importResult,
+    mergeCandidates,
+    metadata: {
+      ...importResult.metadata,
+      nativeImportLossSummary: lossSummary,
+      semanticMergeReadiness: mergeCandidates[0]?.readiness ?? lossSummary.semanticMergeReadiness,
+      lossCategories: lossSummary.categories,
+      lossSeverityCounts: lossSummary.bySeverity,
+      lossKindCounts: lossSummary.byKind
+    }
+  };
+}
+
+function maxSemanticMergeReadiness(left, right) {
+  const leftRank = semanticMergeReadinessRank[left] ?? semanticMergeReadinessRank['needs-review'];
+  const rightRank = semanticMergeReadinessRank[right] ?? semanticMergeReadinessRank['needs-review'];
+  return leftRank >= rightRank ? left : right;
 }
 
 export function createUniversalAstFromDocument(document, input = {}) {
@@ -1058,6 +2001,536 @@ export function writeUniversalAstJson(envelope) {
 
 export function emitForTarget(document, target = 'typescript', options = {}) {
   return renderTargetAst(projectFrontierAst(document, target, options), target);
+}
+
+function createJavaScriptSyntaxImporterAdapter(options) {
+  return {
+    id: options.id,
+    language: options.language,
+    parser: options.parser,
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    supportedExtensions: options.supportedExtensions,
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const ast = input.options?.ast ?? input.options?.nativeAst ?? options.ast ?? parseJavaScriptSyntax(input, options);
+      if (!ast) {
+        return missingInjectedParserResult(input, {
+          parser: options.parser,
+          adapterId: options.id,
+          message: `${options.id} requires an injected parse function, parserModule.parse, ast, or adapterOptions.ast.`
+        });
+      }
+      const parseDiagnostics = normalizeParserErrors(ast.errors, input, options);
+      return createNativeImportFromSyntaxAst(ast, input, {
+        parser: options.parser,
+        astFormat: options.astFormat,
+        maxNodes: options.maxNodes,
+        diagnostics: parseDiagnostics
+      });
+    }
+  };
+}
+
+function parseJavaScriptSyntax(input, options) {
+  const parse = options.parse ?? options.parserModule?.parse ?? options.babelParser?.parse;
+  if (typeof parse !== 'function') return undefined;
+  const parserOptions = {
+    sourceFilename: input.sourcePath,
+    ...(options.defaultParserOptions ?? {}),
+    ...(typeof options.parserOptions === 'function'
+      ? options.parserOptions(input)
+      : options.parserOptions ?? {}),
+    ...(input.options?.parserOptions ?? {})
+  };
+  return parse(input.sourceText, parserOptions);
+}
+
+function createTypeScriptSourceFile(ts, input, options) {
+  if (typeof options.createSourceFile === 'function') return options.createSourceFile(input, ts);
+  if (!ts || typeof ts.createSourceFile !== 'function') return undefined;
+  const scriptTarget = options.scriptTarget ?? ts.ScriptTarget?.Latest ?? ts.ScriptTarget?.ESNext ?? 99;
+  const scriptKind = options.scriptKind ?? inferTypeScriptScriptKind(ts, input);
+  return ts.createSourceFile(input.sourcePath ?? 'frontier-input.ts', input.sourceText, scriptTarget, true, scriptKind);
+}
+
+function inferTypeScriptScriptKind(ts, input) {
+  const path = String(input.sourcePath ?? '').toLowerCase();
+  if (path.endsWith('.tsx')) return ts.ScriptKind?.TSX;
+  if (path.endsWith('.jsx')) return ts.ScriptKind?.JSX;
+  if (path.endsWith('.js') || path.endsWith('.mjs') || path.endsWith('.cjs')) return ts.ScriptKind?.JS;
+  return ts.ScriptKind?.TS;
+}
+
+function parseTreeSitterSource(input, options) {
+  const parser = options.parserInstance ?? options.treeSitterParser ?? options.parser;
+  if (parser && typeof parser.parse === 'function') return parser.parse(input.sourceText);
+  if (typeof options.parse === 'function') return options.parse(input);
+  return undefined;
+}
+
+function createNativeImportFromSyntaxAst(ast, input, options) {
+  const root = normalizeSyntaxAstRoot(ast, options.astFormat);
+  if (!root) {
+    return missingInjectedParserResult(input, {
+      parser: options.parser,
+      adapterId: input.adapterId,
+      message: 'Injected AST did not contain an object root node.'
+    });
+  }
+  const context = createAstNormalizationContext(input, options);
+  visitSyntaxAstNode(root, context, 'root');
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: mergeNativeLosses(context.losses, options.diagnostics?.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, {
+      id: input.adapterId,
+      version: input.adapterVersion
+    }, input)) ?? []),
+    evidence: semantic.evidence,
+    diagnostics: options.diagnostics,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createNativeImportFromTypeScriptAst(sourceFile, input, options) {
+  const context = createAstNormalizationContext(input, options);
+  visitTypeScriptAstNode(sourceFile, sourceFile, context, 'root', options.ts);
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: context.losses,
+    evidence: semantic.evidence,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createNativeImportFromTreeSitter(root, input, options) {
+  const context = createAstNormalizationContext(input, options);
+  visitTreeSitterNode(root, context, 'root');
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: context.losses,
+    evidence: semantic.evidence,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createAstNormalizationContext(input, options) {
+  return {
+    input,
+    options,
+    maxNodes: Number.isFinite(options.maxNodes) ? Math.max(1, options.maxNodes) : 5000,
+    counter: 0,
+    objectIds: new WeakMap(),
+    nodes: {},
+    declarations: [],
+    losses: [],
+    rootId: undefined,
+    truncated: false
+  };
+}
+
+function normalizeSyntaxAstRoot(ast, astFormat) {
+  if (!ast || typeof ast !== 'object') return undefined;
+  if (astFormat === 'babel' && ast.program && typeof ast.program === 'object') return ast.program;
+  return ast;
+}
+
+function visitSyntaxAstNode(node, context, propertyPath) {
+  if (!isSyntaxAstNode(node) || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const id = nativeNodeId(context, node.type ?? node.kind ?? 'Node', node.loc, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  const fields = primitiveSyntaxFields(node);
+  for (const [key, value] of Object.entries(node)) {
+    if (ignoredSyntaxField(key)) continue;
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        const childId = visitSyntaxAstNode(entry, context, `${propertyPath}.${key}[${index}]`);
+        if (childId) children.push(childId);
+      });
+    } else {
+      const childId = visitSyntaxAstNode(value, context, `${propertyPath}.${key}`);
+      if (childId) children.push(childId);
+    }
+  }
+  const declaration = syntaxDeclaration(node, id, context.input, context.options);
+  const nativeNode = {
+    id,
+    kind: String(node.type ?? node.kind ?? 'Node'),
+    languageKind: `${context.input.language}.${node.type ?? node.kind ?? 'Node'}`,
+    span: spanFromLoc(node.loc, context.input),
+    value: declaration?.name ?? literalSyntaxValue(node),
+    fields,
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      start: numberOrUndefined(node.start),
+      end: numberOrUndefined(node.end),
+      range: Array.isArray(node.range) ? node.range.slice(0, 2) : undefined
+    }
+  };
+  context.nodes[id] = nativeNode;
+  if (declaration) context.declarations.push({ ...declaration, nativeNode });
+  return id;
+}
+
+function visitTypeScriptAstNode(node, sourceFile, context, propertyPath, ts) {
+  if (!node || typeof node !== 'object' || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const kind = typeScriptKindName(node, ts);
+  const span = spanFromTypeScriptNode(node, sourceFile);
+  const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  const visitChild = (child) => {
+    const childId = visitTypeScriptAstNode(child, sourceFile, context, `${propertyPath}.${children.length}`, ts);
+    if (childId) children.push(childId);
+  };
+  if (ts && typeof ts.forEachChild === 'function') {
+    ts.forEachChild(node, visitChild);
+  } else if (typeof node.forEachChild === 'function') {
+    node.forEachChild(visitChild);
+  } else if (Array.isArray(node.children)) {
+    node.children.forEach(visitChild);
+  }
+  const declaration = typeScriptDeclaration(node, kind, id, context.input, context.options);
+  const nativeNode = {
+    id,
+    kind,
+    languageKind: `${context.input.language}.${kind}`,
+    span,
+    value: declaration?.name ?? typeScriptNodeValue(node),
+    fields: primitiveTypeScriptFields(node, kind),
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      pos: numberOrUndefined(node.pos),
+      end: numberOrUndefined(node.end)
+    }
+  };
+  context.nodes[id] = nativeNode;
+  if (declaration) context.declarations.push({ ...declaration, nativeNode });
+  return id;
+}
+
+function visitTreeSitterNode(node, context, propertyPath) {
+  if (!node || typeof node !== 'object' || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const kind = String(node.type ?? node.kind ?? 'node');
+  const span = spanFromTreeSitterNode(node, context.input);
+  const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  const rawChildren = Array.isArray(node.namedChildren)
+    ? node.namedChildren
+    : Array.isArray(node.children)
+      ? node.children
+      : [];
+  rawChildren.forEach((child, index) => {
+    const childId = visitTreeSitterNode(child, context, `${propertyPath}.children[${index}]`);
+    if (childId) children.push(childId);
+  });
+  const declaration = treeSitterDeclaration(node, kind, id, context.input, context.options);
+  const nativeNode = {
+    id,
+    kind,
+    languageKind: `${context.input.language}.${kind}`,
+    span,
+    value: declaration?.name ?? shortNodeText(node),
+    fields: {
+      named: Boolean(node.isNamed ?? node.named),
+      missing: Boolean(node.isMissing),
+      error: Boolean(node.hasError || kind === 'ERROR')
+    },
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      startIndex: numberOrUndefined(node.startIndex),
+      endIndex: numberOrUndefined(node.endIndex)
+    }
+  };
+  context.nodes[id] = nativeNode;
+  if (declaration) context.declarations.push({ ...declaration, nativeNode });
+  if (node.hasError || kind === 'ERROR') {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_tree_sitter_error`,
+      severity: 'error',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'unsupportedSyntax',
+      message: 'Tree-sitter reported a parse error node.',
+      span,
+      nodeId: id
+    });
+  }
+  return id;
+}
+
+function semanticIndexFromNativeDeclarations(declarations, input, options) {
+  const documentId = `doc_${idFragment(input.sourcePath ?? input.language)}_${idFragment(input.sourceHash)}`;
+  const evidenceId = `evidence_${idFragment(input.sourcePath ?? input.language)}_${idFragment(options.astFormat ?? options.parser)}_import`;
+  const symbols = [];
+  const occurrences = [];
+  const relations = [];
+  const facts = [];
+  const mappings = [];
+  for (const declaration of declarations) {
+    const symbolId = declaration.symbolId ?? `symbol:${input.language}:${declaration.role === 'import' ? 'import:' : ''}${idFragment(declaration.name)}`;
+    const occurrenceId = `occ_${idFragment(declaration.nativeNode.id)}_${declaration.role ?? 'definition'}`;
+    symbols.push({
+      id: symbolId,
+      scheme: 'frontier',
+      name: declaration.name,
+      kind: declaration.symbolKind,
+      language: input.language,
+      nativeAstNodeId: declaration.nativeNode.id,
+      signatureHash: hashSemanticValue([input.language, declaration.nativeNode.kind, declaration.name, declaration.nativeNode.fields ?? {}]),
+      definitionSpan: declaration.nativeNode.span
+    });
+    occurrences.push({
+      id: occurrenceId,
+      documentId,
+      symbolId,
+      role: declaration.role ?? 'definition',
+      span: declaration.nativeNode.span,
+      nativeAstNodeId: declaration.nativeNode.id
+    });
+    relations.push({
+      id: `rel_${idFragment(documentId)}_${idFragment(declaration.nativeNode.id)}`,
+      sourceId: documentId,
+      predicate: relationPredicateForDeclaration(declaration),
+      targetId: symbolId
+    });
+    facts.push({
+      id: `fact_${idFragment(declaration.nativeNode.id)}_kind`,
+      predicate: 'nativeKind',
+      subjectId: symbolId,
+      value: declaration.nativeNode.languageKind
+    });
+    mappings.push({
+      id: `map_${idFragment(declaration.nativeNode.id)}`,
+      nativeAstNodeId: declaration.nativeNode.id,
+      semanticSymbolId: symbolId,
+      semanticOccurrenceId: occurrenceId,
+      sourceSpan: declaration.nativeNode.span,
+      evidenceIds: [evidenceId],
+      lossIds: [],
+      precision: declaration.nativeNode.span ? 'declaration' : 'unknown'
+    });
+  }
+  const evidence = [{
+    id: evidenceId,
+    kind: 'import',
+    status: 'passed',
+    path: input.sourcePath,
+    summary: `Normalized ${options.astFormat ?? options.parser} native AST with ${declarations.length} declaration(s).`,
+    metadata: {
+      parser: options.parser,
+      astFormat: options.astFormat,
+      language: input.language,
+      sourceHash: input.sourceHash
+    }
+  }];
+  return {
+    semanticIndex: createSemanticIndexRecord({
+      id: `index_${idFragment(input.sourcePath ?? input.language)}_${idFragment(options.astFormat ?? options.parser)}`,
+      documents: [{
+        id: documentId,
+        path: input.sourcePath ?? `${input.language}:memory`,
+        language: input.language,
+        sourceHash: input.sourceHash
+      }],
+      symbols,
+      occurrences,
+      relations,
+      facts,
+      evidence,
+      metadata: {
+        parser: options.parser,
+        astFormat: options.astFormat,
+        coverage: 'native-ast-declarations'
+      }
+    }),
+    mappings,
+    evidence
+  };
+}
+
+function createNativeProjectImportResult(input, imports) {
+  const idPart = idFragment(input.id ?? input.projectRoot ?? 'native_project');
+  const nodes = {};
+  const rootIds = [];
+  const semanticIndex = mergeSemanticIndexes(imports, input, idPart);
+  const nativeSources = [];
+  const sourceMaps = [];
+  const losses = [];
+  const evidence = [];
+  const mergeCandidates = [];
+  const operations = [];
+  for (const result of imports) {
+    for (const node of Object.values(result.document?.nodes ?? {})) {
+      nodes[node.id] = node;
+    }
+    rootIds.push(...(result.document?.rootIds ?? []));
+    if (result.nativeSource) nativeSources.push(result.nativeSource);
+    sourceMaps.push(...(result.sourceMaps ?? []));
+    losses.push(...(result.losses ?? []));
+    evidence.push(...(result.evidence ?? []));
+    mergeCandidates.push(...(result.mergeCandidates ?? []));
+    operations.push(...(result.patch?.operations ?? []));
+  }
+  const document = createDocument({
+    id: input.documentId ?? `document_${idPart}`,
+    name: input.documentName ?? input.name ?? 'NativeProject',
+    nodes: Object.values(nodes),
+    rootIds: uniqueStrings(rootIds),
+    metadata: {
+      sourceLanguage: input.language ?? 'mixed',
+      semanticStatus: losses.some((loss) => loss.severity === 'error') ? 'partial' : 'mapped',
+      projectRoot: input.projectRoot,
+      sourceCount: imports.length,
+      ...input.documentMetadata
+    }
+  });
+  const universalAst = createUniversalAstEnvelope({
+    id: input.universalAstId ?? `universal_ast_${idPart}`,
+    document,
+    nativeSources,
+    semanticIndex,
+    sourceMaps,
+    losses: uniqueByLossId(losses),
+    evidence: uniqueByEvidenceId(evidence),
+    metadata: {
+      sourceLanguage: input.language ?? 'mixed',
+      projectRoot: input.projectRoot,
+      sourceCount: imports.length,
+      ...input.universalAstMetadata
+    }
+  });
+  const patch = createPatch({
+    id: input.patchId ?? `patch_${idPart}_project_import`,
+    author: input.author ?? '@shapeshift-labs/frontier-lang-compiler/importNativeProject',
+    risk: losses.some((loss) => loss.severity === 'error') ? 'high' : losses.some((loss) => loss.severity === 'warning') ? 'medium' : 'low',
+    operations,
+    evidence: uniqueByEvidenceId(evidence),
+    metadata: {
+      semanticIndexId: semanticIndex?.id,
+      universalAstId: universalAst.id,
+      sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id),
+      sourceCount: imports.length
+    }
+  });
+  return {
+    kind: 'frontier.lang.projectImportResult',
+    version: 1,
+    id: input.id ?? `project_import_${idPart}`,
+    language: input.language ?? 'mixed',
+    projectRoot: input.projectRoot,
+    imports,
+    document,
+    patch,
+    nativeSources,
+    semanticIndex,
+    universalAst,
+    sourceMaps,
+    losses: uniqueByLossId(losses),
+    evidence: uniqueByEvidenceId(evidence),
+    mergeCandidates,
+    metadata: {
+      sourceCount: imports.length,
+      sourcePaths: imports.map((result) => result.sourcePath).filter(Boolean),
+      ...input.metadata
+    }
+  };
+}
+
+function mergeSemanticIndexes(imports, input, idPart) {
+  const indexes = imports.map((result) => result.semanticIndex ?? result.universalAst?.semanticIndex).filter(Boolean);
+  if (!indexes.length) return undefined;
+  return createSemanticIndexRecord({
+    id: input.semanticIndexId ?? `index_${idPart}_project`,
+    documents: indexes.flatMap((index) => index.documents ?? []),
+    symbols: indexes.flatMap((index) => index.symbols ?? []),
+    occurrences: indexes.flatMap((index) => index.occurrences ?? []),
+    relations: indexes.flatMap((index) => index.relations ?? []),
+    facts: indexes.flatMap((index) => index.facts ?? []),
+    evidence: indexes.flatMap((index) => index.evidence ?? []),
+    metadata: {
+      projectRoot: input.projectRoot,
+      sourceCount: imports.length,
+      mergedIndexCount: indexes.length
+    }
+  });
+}
+
+function resolveNativeProjectAdapter(source, adapters, input) {
+  if (typeof input.adapterResolver === 'function') return input.adapterResolver(source, adapters);
+  const language = source.language;
+  const sourcePath = source.sourcePath ?? '';
+  return adapters.find((adapter) => {
+    if (source.adapter && adapter.id === source.adapter) return true;
+    if (language && adapter.language !== language) return false;
+    const extensions = adapter.supportedExtensions ?? [];
+    return !extensions.length || extensions.some((extension) => sourcePath.toLowerCase().endsWith(extension.toLowerCase()));
+  });
 }
 
 function normalizeNativeImporterAdapter(adapter) {
@@ -1199,6 +2672,336 @@ function serializableDiagnostic(diagnostic) {
     span: diagnostic.span,
     metadata: diagnostic.metadata
   };
+}
+
+function missingInjectedParserResult(input, details) {
+  const rootId = `native_${idFragment(details.adapterId ?? details.parser)}_missing_parser`;
+  const diagnostic = {
+    severity: 'error',
+    code: 'adapter.parser.missing',
+    phase: 'parse',
+    kind: 'unsupportedSyntax',
+    message: details.message,
+    path: input.sourcePath,
+    metadata: {
+      adapterId: details.adapterId,
+      parser: details.parser
+    }
+  };
+  return {
+    rootId,
+    nodes: {
+      [rootId]: {
+        id: rootId,
+        kind: 'MissingInjectedParser',
+        languageKind: `${input.language}.missingInjectedParser`,
+        value: details.parser,
+        metadata: {
+          adapterId: details.adapterId,
+          parser: details.parser,
+          reason: 'missing-injected-parser'
+        }
+      }
+    },
+    diagnostics: [diagnostic],
+    losses: [{
+      id: `loss_${idFragment(rootId)}`,
+      severity: 'error',
+      phase: 'parse',
+      sourceFormat: input.language,
+      kind: 'unsupportedSyntax',
+      message: details.message,
+      nodeId: rootId,
+      metadata: {
+        adapterId: details.adapterId,
+        parser: details.parser
+      }
+    }],
+    metadata: {
+      parser: details.parser,
+      adapterId: details.adapterId,
+      missingInjectedParser: true
+    }
+  };
+}
+
+function normalizeParserErrors(errors, input, options) {
+  return (errors ?? []).map((error, index) => ({
+    id: `diagnostic_${idFragment(options.parser)}_parser_error_${index + 1}`,
+    severity: 'error',
+    code: error.code ?? error.reasonCode,
+    phase: 'parse',
+    kind: 'unsupportedSyntax',
+    message: String(error.message ?? 'Parser reported a syntax error.'),
+    path: input.sourcePath,
+    span: spanFromLoc(error.loc ? { start: error.loc, end: error.loc } : undefined, input),
+    metadata: {
+      parser: options.parser,
+      reasonCode: error.reasonCode
+    }
+  }));
+}
+
+function nativeNodeId(context, kind, loc, propertyPath) {
+  context.counter += 1;
+  const start = loc?.start;
+  const line = start?.line ?? 'x';
+  const column = start?.column ?? 'x';
+  return `native_${idFragment(kind)}_${idFragment(line)}_${idFragment(column)}_${context.counter}_${idFragment(propertyPath)}`;
+}
+
+function isSyntaxAstNode(value) {
+  return Boolean(value && typeof value === 'object' && typeof (value.type ?? value.kind) === 'string');
+}
+
+function ignoredSyntaxField(key) {
+  return key === 'type'
+    || key === 'kind'
+    || key === 'loc'
+    || key === 'start'
+    || key === 'end'
+    || key === 'range'
+    || key === 'comments'
+    || key === 'leadingComments'
+    || key === 'trailingComments'
+    || key === 'innerComments'
+    || key === 'tokens'
+    || key === 'extra'
+    || key === 'parent';
+}
+
+function primitiveSyntaxFields(node) {
+  const fields = {};
+  for (const key of ['name', 'operator', 'sourceType', 'async', 'generator', 'computed', 'static', 'exportKind', 'importKind', 'optional']) {
+    if (typeof node[key] === 'string' || typeof node[key] === 'number' || typeof node[key] === 'boolean' || node[key] === null) {
+      fields[key] = node[key];
+    }
+  }
+  const literal = literalSyntaxValue(node);
+  if (literal !== undefined) fields.literal = literal;
+  if (node.source && typeof node.source === 'object' && typeof node.source.value === 'string') fields.source = node.source.value;
+  return fields;
+}
+
+function literalSyntaxValue(node) {
+  if (node.value === null || typeof node.value === 'string' || typeof node.value === 'number' || typeof node.value === 'boolean') return node.value;
+  return undefined;
+}
+
+function spanFromLoc(loc, input) {
+  if (!loc?.start) return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: input.sourcePath ?? loc.filename,
+    startLine: loc.start.line,
+    startColumn: typeof loc.start.column === 'number' ? loc.start.column + 1 : undefined,
+    endLine: loc.end?.line,
+    endColumn: typeof loc.end?.column === 'number' ? loc.end.column + 1 : undefined
+  };
+}
+
+function syntaxDeclaration(node, nativeNodeId, input) {
+  const kind = String(node.type ?? node.kind ?? '');
+  if (kind === 'ImportDeclaration') {
+    const name = node.source?.value;
+    if (typeof name === 'string') return declarationRecord(input, nativeNodeId, name, 'module', 'import');
+  }
+  if (kind === 'ExportNamedDeclaration' || kind === 'ExportAllDeclaration') {
+    const name = node.source?.value;
+    if (typeof name === 'string') return declarationRecord(input, nativeNodeId, name, 'module', 'export');
+  }
+  if (kind === 'FunctionDeclaration') return namedDeclaration(input, nativeNodeId, node.id, 'function');
+  if (kind === 'ClassDeclaration') return namedDeclaration(input, nativeNodeId, node.id, 'class');
+  if (kind === 'TSInterfaceDeclaration' || kind === 'InterfaceDeclaration') return namedDeclaration(input, nativeNodeId, node.id, 'interface');
+  if (kind === 'TSTypeAliasDeclaration' || kind === 'TypeAliasDeclaration') return namedDeclaration(input, nativeNodeId, node.id, 'type');
+  if (kind === 'VariableDeclarator') return namedDeclaration(input, nativeNodeId, node.id, 'variable');
+  return undefined;
+}
+
+function typeScriptDeclaration(node, kind, nativeNodeId, input) {
+  if (kind === 'ImportDeclaration' || kind === 'ImportEqualsDeclaration') {
+    const name = stringFromTsExpression(node.moduleSpecifier) ?? stringFromTsExpression(node.externalModuleReference?.expression);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'module', 'import');
+  }
+  if (kind === 'FunctionDeclaration') return namedDeclaration(input, nativeNodeId, node.name, 'function');
+  if (kind === 'ClassDeclaration') return namedDeclaration(input, nativeNodeId, node.name, 'class');
+  if (kind === 'InterfaceDeclaration') return namedDeclaration(input, nativeNodeId, node.name, 'interface');
+  if (kind === 'TypeAliasDeclaration' || kind === 'EnumDeclaration') return namedDeclaration(input, nativeNodeId, node.name, 'type');
+  if (kind === 'VariableDeclaration') return namedDeclaration(input, nativeNodeId, node.name, 'variable');
+  if (kind === 'MethodDeclaration' || kind === 'MethodSignature') return namedDeclaration(input, nativeNodeId, node.name, 'method');
+  return undefined;
+}
+
+function treeSitterDeclaration(node, kind, nativeNodeId, input) {
+  if (/import|include|use/.test(kind)) {
+    const name = treeSitterFieldText(node, 'path') ?? treeSitterFieldText(node, 'source') ?? shortNodeText(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'module', 'import');
+  }
+  if (/function|method|fn_item|function_declaration/.test(kind)) {
+    const name = treeSitterFieldText(node, 'name');
+    if (name) return declarationRecord(input, nativeNodeId, name, 'function', 'definition');
+  }
+  if (/class/.test(kind)) {
+    const name = treeSitterFieldText(node, 'name');
+    if (name) return declarationRecord(input, nativeNodeId, name, 'class', 'definition');
+  }
+  if (/interface/.test(kind)) {
+    const name = treeSitterFieldText(node, 'name');
+    if (name) return declarationRecord(input, nativeNodeId, name, 'interface', 'definition');
+  }
+  if (/struct|enum|type/.test(kind)) {
+    const name = treeSitterFieldText(node, 'name');
+    if (name) return declarationRecord(input, nativeNodeId, name, 'type', 'definition');
+  }
+  return undefined;
+}
+
+function namedDeclaration(input, nativeNodeId, nameNode, symbolKind) {
+  const name = identifierName(nameNode);
+  return name ? declarationRecord(input, nativeNodeId, name, symbolKind, 'definition') : undefined;
+}
+
+function declarationRecord(input, nativeNodeId, name, symbolKind, role = 'definition') {
+  return {
+    name: String(name),
+    symbolKind,
+    role,
+    symbolId: `symbol:${input.language}:${role === 'import' ? 'import:' : ''}${idFragment(name)}`,
+    nativeNodeId
+  };
+}
+
+function relationPredicateForDeclaration(declaration) {
+  if (declaration.role === 'import') return 'imports';
+  if (declaration.role === 'export') return 'exports';
+  return 'defines';
+}
+
+function identifierName(node) {
+  if (!node) return undefined;
+  if (typeof node === 'string') return node;
+  if (typeof node.name === 'string') return node.name;
+  if (typeof node.escapedText === 'string') return node.escapedText;
+  if (typeof node.text === 'string') return node.text;
+  if (node.type === 'Identifier' && typeof node.value === 'string') return node.value;
+  return undefined;
+}
+
+function stringFromTsExpression(node) {
+  if (!node) return undefined;
+  if (typeof node.text === 'string') return node.text;
+  if (typeof node.value === 'string') return node.value;
+  return identifierName(node);
+}
+
+function typeScriptKindName(node, ts) {
+  if (typeof node.kindName === 'string') return node.kindName;
+  if (ts?.SyntaxKind && node.kind !== undefined) return ts.SyntaxKind[node.kind] ?? `SyntaxKind${node.kind}`;
+  if (typeof node.kind === 'string') return node.kind;
+  return `SyntaxKind${node.kind ?? 'Unknown'}`;
+}
+
+function spanFromTypeScriptNode(node, sourceFile) {
+  const start = typeof node.getStart === 'function' ? node.getStart(sourceFile) : node.pos;
+  const end = typeof node.getEnd === 'function' ? node.getEnd() : node.end;
+  if (typeof start !== 'number' || typeof sourceFile?.getLineAndCharacterOfPosition !== 'function') return undefined;
+  const startPos = sourceFile.getLineAndCharacterOfPosition(start);
+  const endPos = typeof end === 'number' ? sourceFile.getLineAndCharacterOfPosition(end) : undefined;
+  return {
+    sourceId: sourceFile.sourceHash,
+    path: sourceFile.fileName,
+    startLine: startPos.line + 1,
+    startColumn: startPos.character + 1,
+    endLine: endPos ? endPos.line + 1 : undefined,
+    endColumn: endPos ? endPos.character + 1 : undefined
+  };
+}
+
+function typeScriptNodeValue(node) {
+  return identifierName(node.name) ?? stringFromTsExpression(node.moduleSpecifier) ?? undefined;
+}
+
+function primitiveTypeScriptFields(node, kind) {
+  const fields = { kind };
+  const name = identifierName(node.name);
+  if (name) fields.name = name;
+  const moduleSpecifier = stringFromTsExpression(node.moduleSpecifier);
+  if (moduleSpecifier) fields.moduleSpecifier = moduleSpecifier;
+  return fields;
+}
+
+function spanFromTreeSitterNode(node, input) {
+  const start = node.startPosition;
+  if (!start) return undefined;
+  const end = node.endPosition;
+  return {
+    sourceId: input.sourceHash,
+    path: input.sourcePath,
+    startLine: start.row + 1,
+    startColumn: start.column + 1,
+    endLine: end ? end.row + 1 : undefined,
+    endColumn: end ? end.column + 1 : undefined
+  };
+}
+
+function treeSitterFieldText(node, field) {
+  if (typeof node.childForFieldName !== 'function') return undefined;
+  return shortNodeText(node.childForFieldName(field));
+}
+
+function shortNodeText(node) {
+  if (!node || typeof node.text !== 'string') return undefined;
+  const text = node.text.trim();
+  if (!text || text.length > 160) return undefined;
+  return text.replace(/^['"]|['"]$/g, '');
+}
+
+function truncatedAstLoss(input, context, options) {
+  return {
+    id: `loss_${idFragment(input.sourcePath ?? input.language)}_${idFragment(options.astFormat ?? options.parser)}_truncated`,
+    severity: 'warning',
+    phase: 'read',
+    sourceFormat: input.language,
+    kind: 'opaqueNative',
+    message: `Native AST normalization stopped after ${context.maxNodes} node(s).`,
+    metadata: {
+      parser: options.parser,
+      astFormat: options.astFormat,
+      maxNodes: context.maxNodes
+    }
+  };
+}
+
+function uniqueStrings(values) {
+  return [...new Set((values ?? []).map((value) => String(value)).filter(Boolean))];
+}
+
+function uniqueByLossId(values) {
+  const seen = new Set();
+  const result = [];
+  for (const value of values ?? []) {
+    const id = value?.id ?? `loss_${result.length + 1}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    result.push(value.id ? value : { ...value, id });
+  }
+  return result;
+}
+
+function uniqueByEvidenceId(values) {
+  const seen = new Set();
+  const result = [];
+  for (const value of values ?? []) {
+    const id = value?.id ?? `evidence_${result.length + 1}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    result.push(value.id ? value : { ...value, id });
+  }
+  return result;
+}
+
+function numberOrUndefined(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 function idFragment(value) {

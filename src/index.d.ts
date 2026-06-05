@@ -11,6 +11,8 @@ import type {
   NativeAstNode,
   NativeAstRecord,
   NativeSourceNode,
+  SemanticMergeCandidateRecord,
+  SemanticMergeReadiness,
   SemanticIndexRecord,
   SemanticNode,
   SemanticPatchBundle,
@@ -71,6 +73,68 @@ export interface CapabilityResolution {
   readonly reason?: string;
 }
 
+export type NativeImportTaxonomyKind =
+  | 'exactAstImport'
+  | 'declarationsOnly'
+  | 'opaqueBodies'
+  | 'macroExpansion'
+  | 'preprocessor'
+  | 'metaprogramming'
+  | 'generatedCode'
+  | 'sourcePreservation'
+  | 'parserDiagnostics'
+  | 'unsupportedSyntax'
+  | 'partialSemanticIndex'
+  | 'sourceMapApproximation'
+  | string;
+
+export type NativeImportKnownLossKind =
+  | 'declarationOnlyCoverage'
+  | 'opaqueNative'
+  | 'macroExpansion'
+  | 'preprocessor'
+  | 'metaprogramming'
+  | 'generatedCode'
+  | 'sourcePreservation'
+  | 'parserDiagnostic'
+  | 'unsupportedSyntax'
+  | 'partialSemanticIndex'
+  | 'sourceMapApproximation'
+  | string;
+
+export interface NativeImportLossSummaryOptions {
+  readonly exactAst?: boolean;
+  readonly evidence?: readonly EvidenceRecord[];
+  readonly parser?: string;
+  readonly scanKind?: string;
+  readonly semanticStatus?: string;
+}
+
+export interface NativeImportLossSummary {
+  readonly total: number;
+  readonly hasLosses: boolean;
+  readonly exactAst: boolean;
+  readonly highestSeverity: 'none' | NativeAstLossRecord['severity'];
+  readonly semanticMergeReadiness: SemanticMergeReadiness;
+  readonly readinessReasons: readonly string[];
+  readonly categories: readonly NativeImportTaxonomyKind[];
+  readonly bySeverity: Readonly<Record<NativeAstLossRecord['severity'], number>>;
+  readonly byKind: Readonly<Record<string, number>>;
+  readonly blockingLossIds: readonly string[];
+  readonly reviewLossIds: readonly string[];
+  readonly informationalLossIds: readonly string[];
+  readonly failedEvidenceIds: readonly string[];
+  readonly parser?: string;
+  readonly scanKind?: string;
+  readonly semanticStatus?: string;
+}
+
+export interface NativeImportReadinessClassification {
+  readonly readiness: SemanticMergeReadiness;
+  readonly reasons: readonly string[];
+  readonly summary: NativeImportLossSummary;
+}
+
 export interface NativeImporterAdapterDiagnostic {
   readonly id?: string;
   readonly severity?: 'info' | 'warning' | 'error';
@@ -115,6 +179,8 @@ export interface ImportNativeSourceOptions {
   readonly patchId?: string;
   readonly author?: string;
   readonly target?: CompileTarget;
+  readonly targetPath?: string;
+  readonly targetHash?: string;
   readonly semanticIndex?: SemanticIndexRecord;
   readonly sourceMapId?: string;
   readonly sourceMaps?: readonly SourceMapRecord[];
@@ -157,6 +223,56 @@ export interface NativeImporterAdapter {
   readonly parse: (input: NativeImporterAdapterParseInput) => NativeImporterAdapterParseResult | Promise<NativeImporterAdapterParseResult>;
 }
 
+export interface JavaScriptNativeImporterAdapterOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage;
+  readonly parser?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly supportedExtensions?: readonly string[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly ast?: unknown;
+  readonly parse?: (sourceText: string, options: Record<string, unknown>) => unknown;
+  readonly parserModule?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly babelParser?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly parserOptions?: Record<string, unknown> | ((input: NativeImporterAdapterParseInput) => Record<string, unknown>);
+  readonly maxNodes?: number;
+}
+
+export interface TypeScriptCompilerNativeImporterAdapterOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage;
+  readonly parser?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly supportedExtensions?: readonly string[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly typescript?: unknown;
+  readonly ts?: unknown;
+  readonly sourceFile?: unknown;
+  readonly createSourceFile?: (input: NativeImporterAdapterParseInput, typescript?: unknown) => unknown;
+  readonly scriptTarget?: unknown;
+  readonly scriptKind?: unknown;
+  readonly maxNodes?: number;
+  readonly includeTokens?: boolean;
+}
+
+export interface TreeSitterNativeImporterAdapterOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage;
+  readonly parser?: string | { readonly parse?: (sourceText: string) => unknown };
+  readonly parserName?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly supportedExtensions?: readonly string[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly parserInstance?: { readonly parse: (sourceText: string) => unknown };
+  readonly treeSitterParser?: { readonly parse: (sourceText: string) => unknown };
+  readonly parse?: (input: NativeImporterAdapterParseInput) => unknown;
+  readonly tree?: unknown;
+  readonly maxNodes?: number;
+}
+
 export interface NativeImporterAdapterSummary {
   readonly id: string;
   readonly language: FrontierSourceLanguage;
@@ -181,15 +297,71 @@ export type NativeImporterAdapterImportResult = NativeSourceImportResult & {
   readonly diagnostics: readonly NativeImporterAdapterDiagnostic[];
 };
 
+export interface NativeProjectSourceInput extends ImportNativeSourceOptions {
+  readonly adapter?: NativeImporterAdapter | string;
+  readonly adapterOptions?: Record<string, unknown>;
+  readonly adapterMetadata?: Record<string, unknown>;
+}
+
+export interface ImportNativeProjectOptions {
+  readonly id?: string;
+  readonly name?: string;
+  readonly language?: FrontierSourceLanguage | 'mixed';
+  readonly projectRoot?: string;
+  readonly documentId?: string;
+  readonly documentName?: string;
+  readonly documentMetadata?: Record<string, unknown>;
+  readonly universalAstId?: string;
+  readonly universalAstMetadata?: Record<string, unknown>;
+  readonly semanticIndexId?: string;
+  readonly patchId?: string;
+  readonly author?: string;
+  readonly metadata?: Record<string, unknown>;
+  readonly adapterOptions?: Record<string, unknown>;
+  readonly adapterMetadata?: Record<string, unknown>;
+  readonly adapters?: readonly NativeImporterAdapter[];
+  readonly adapterResolver?: (source: NativeProjectSourceInput, adapters: readonly NativeImporterAdapter[]) => NativeImporterAdapter | undefined;
+  readonly sources: readonly NativeProjectSourceInput[];
+}
+
+export interface NativeProjectImportResult {
+  readonly kind: 'frontier.lang.projectImportResult';
+  readonly version: 1;
+  readonly id: string;
+  readonly language: FrontierSourceLanguage | 'mixed';
+  readonly projectRoot?: string;
+  readonly imports: readonly NativeSourceImportResult[];
+  readonly document: FrontierLangDocument;
+  readonly patch: SemanticPatchBundle;
+  readonly nativeSources: readonly NativeSourceNode[];
+  readonly semanticIndex?: SemanticIndexRecord;
+  readonly universalAst: FrontierUniversalAstEnvelope;
+  readonly sourceMaps: readonly SourceMapRecord[];
+  readonly losses: readonly NativeAstLossRecord[];
+  readonly evidence: readonly EvidenceRecord[];
+  readonly mergeCandidates: readonly SemanticMergeCandidateRecord[];
+  readonly metadata?: Record<string, unknown>;
+}
+
 export declare const FrontierCompileTargets: readonly FrontierCompileTarget[];
+export declare const NativeImportTaxonomyKinds: readonly NativeImportTaxonomyKind[];
+export declare const NativeImportLossKinds: readonly NativeImportKnownLossKind[];
+export declare const NativeImportReadinessBySeverity: Readonly<Record<NativeImportLossSummary['highestSeverity'], SemanticMergeReadiness>>;
 export declare function normalizeCompileTarget(target?: string): FrontierCompileTarget;
 export declare function compileFrontierSource(source: string, options?: FrontierCompileOptions): FrontierCompileResult;
 export declare function compileFrontierDocument(document: FrontierLangDocument, options?: FrontierCompileOptions): FrontierCompileResult;
 export declare function projectFrontierAst(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: FrontierCompileEmitOptions): FrontierTargetAst;
 export declare function renderTargetAst(ast: FrontierTargetAst, target?: FrontierCompileOptions['target']): string;
 export declare function resolveCapabilityAdapters(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: { readonly platform?: string }): readonly CapabilityResolution[];
+export declare function summarizeNativeImportLosses(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportLossSummary;
+export declare function classifyNativeImportReadiness(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportReadinessClassification;
+export declare function createEstreeNativeImporterAdapter(options?: JavaScriptNativeImporterAdapterOptions): NativeImporterAdapter;
+export declare function createBabelNativeImporterAdapter(options?: JavaScriptNativeImporterAdapterOptions): NativeImporterAdapter;
+export declare function createTypeScriptCompilerNativeImporterAdapter(options?: TypeScriptCompilerNativeImporterAdapterOptions): NativeImporterAdapter;
+export declare function createTreeSitterNativeImporterAdapter(options?: TreeSitterNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function runNativeImporterAdapter(adapter: NativeImporterAdapter, input: RunNativeImporterAdapterOptions): Promise<NativeImporterAdapterImportResult>;
 export declare function importNativeSource(input: ImportNativeSourceOptions): NativeSourceImportResult;
+export declare function importNativeProject(input: ImportNativeProjectOptions): Promise<NativeProjectImportResult>;
 export declare function createUniversalAstFromDocument(document: FrontierLangDocument, input?: {
   readonly id?: string;
   readonly semanticIndex?: SemanticIndexRecord;
