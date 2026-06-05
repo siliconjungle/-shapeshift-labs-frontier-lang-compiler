@@ -101,6 +101,8 @@ assert.equal(nativeImport.semanticIndex.symbols[0].id, 'symbol:addTodo');
 assert.equal(nativeImport.universalAst.semanticIndex.id, 'index_todo_js');
 assert.equal(nativeImport.patch.operations[0].op, 'upsertNode');
 assert.equal(nativeImport.evidence[0].status, 'passed');
+assert.equal(nativeImport.mergeCandidates.length, 1);
+assert.equal(nativeImport.mergeCandidates[0].kind, 'frontier.lang.semanticMergeCandidate');
 const adapterImport = await runNativeImporterAdapter({
   id: 'fixture-estree-importer',
   language: 'javascript',
