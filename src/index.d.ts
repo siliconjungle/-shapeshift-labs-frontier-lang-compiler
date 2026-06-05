@@ -1497,6 +1497,40 @@ export interface JavaAstNativeImporterAdapterOptions {
   readonly maxNodes?: number;
 }
 
+export interface CSharpRoslynNativeImporterAdapterOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage;
+  readonly parser?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly coverage?: NativeImporterAdapterCoverageInput;
+  readonly supportedExtensions?: readonly string[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly ast?: unknown;
+  readonly nativeAst?: unknown;
+  readonly syntaxTree?: unknown;
+  readonly tree?: unknown;
+  readonly root?: unknown;
+  readonly compilationUnit?: unknown;
+  readonly parse?: (sourceText: string, options: Record<string, unknown>) => unknown;
+  readonly parserModule?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly roslyn?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly csharpRoslyn?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly parserOptions?: Record<string, unknown>;
+  readonly csharpVersion?: string;
+  readonly languageVersion?: string;
+  readonly nullableContext?: string | boolean;
+  readonly sourceCodeKind?: string;
+  readonly generated?: boolean;
+  readonly projectReferences?: unknown;
+  readonly analyzerDiagnostics?: unknown;
+  readonly semanticModelEvidence?: unknown;
+  readonly sourceGeneratorEvidence?: unknown;
+  readonly positionResolver?: (position: unknown) => unknown;
+  readonly lineMap?: unknown;
+  readonly maxNodes?: number;
+}
+
 export interface TreeSitterNativeImporterAdapterOptions {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage;
@@ -1871,6 +1905,7 @@ export declare function createRustSynNativeImporterAdapter(options?: RustSynNati
 export declare function createClangAstNativeImporterAdapter(options?: ClangAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createGoAstNativeImporterAdapter(options?: GoAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createJavaAstNativeImporterAdapter(options?: JavaAstNativeImporterAdapterOptions): NativeImporterAdapter;
+export declare function createCSharpRoslynNativeImporterAdapter(options?: CSharpRoslynNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createTreeSitterNativeImporterAdapter(options?: TreeSitterNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function runNativeImporterAdapter(adapter: NativeImporterAdapter, input: RunNativeImporterAdapterOptions): Promise<NativeImporterAdapterImportResult>;
 export declare function runNativeTargetProjectionAdapter(adapter: NativeTargetProjectionAdapter, input: NativeTargetProjectionAdapterInput): NativeTargetProjectionResult;

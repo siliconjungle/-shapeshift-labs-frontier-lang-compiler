@@ -23,6 +23,7 @@ import {
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
+  createCSharpRoslynNativeImporterAdapter,
   createClangAstNativeImporterAdapter,
   createGoAstNativeImporterAdapter,
   createJavaAstNativeImporterAdapter,
@@ -114,6 +115,7 @@ import type {
   ProjectionTargetLossMatrix,
   ProjectionTargetLossMatrixOptions,
   ClangAstNativeImporterAdapterOptions,
+  CSharpRoslynNativeImporterAdapterOptions,
   GoAstNativeImporterAdapterOptions,
   JavaAstNativeImporterAdapterOptions,
   RustSynNativeImporterAdapterOptions,
@@ -154,6 +156,7 @@ type ExpectedPublicRuntimeExport =
   | 'createNativeParserAstFormatMatrix'
   | 'createProjectionTargetLossMatrix'
   | 'createNativeSourcePreservation'
+  | 'createCSharpRoslynNativeImporterAdapter'
   | 'createClangAstNativeImporterAdapter'
   | 'createGoAstNativeImporterAdapter'
   | 'createJavaAstNativeImporterAdapter'
@@ -352,6 +355,7 @@ const rustSynAdapter: NativeImporterAdapter = createRustSynNativeImporterAdapter
 const clangAstAdapter: NativeImporterAdapter = createClangAstNativeImporterAdapter();
 const goAstAdapter: NativeImporterAdapter = createGoAstNativeImporterAdapter();
 const javaAstAdapter: NativeImporterAdapter = createJavaAstNativeImporterAdapter();
+const csharpRoslynAdapter: NativeImporterAdapter = createCSharpRoslynNativeImporterAdapter();
 const treeAdapter: NativeImporterAdapter = createTreeSitterNativeImporterAdapter({ language: 'javascript' });
 
 const adapterDiagnostic: NativeImporterAdapterDiagnostic = {
@@ -395,7 +399,7 @@ const adapterCapabilityEvidence: Promise<NativeImporterAdapterCoverageCapability
 const parserFormatOptions: NativeParserAstFormatMatrixOptions = {
   generatedAt: 4,
   imports: [imported],
-  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, treeAdapter]
+  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, csharpRoslynAdapter, treeAdapter]
 };
 const parserFormatMatrix: NativeParserAstFormatMatrix = createNativeParserAstFormatMatrix(parserFormatOptions);
 const rustSynAdapterOptions: RustSynNativeImporterAdapterOptions = {
@@ -424,6 +428,13 @@ const javaAstAdapterOptions: JavaAstNativeImporterAdapterOptions = {
   bindingEvidence: { hash: 'fixture-java-bindings' },
   annotationProcessing: { enabled: false, processors: [] },
   ast: { kind: 'CompilationUnit', types: [] }
+};
+const csharpRoslynAdapterOptions: CSharpRoslynNativeImporterAdapterOptions = {
+  languageVersion: '12',
+  nullableContext: 'enabled',
+  projectReferences: { hash: 'fixture-csharp-projects', projects: ['Todo.csproj'] },
+  semanticModelEvidence: { solver: 'roslyn', hash: 'fixture-csharp-semantic-model' },
+  ast: { kind: 'CompilationUnit', members: [] }
 };
 const projectionLossOptions: ProjectionTargetLossMatrixOptions = {
   generatedAt: 2,
@@ -491,6 +502,10 @@ void adapterCoverageAggregate;
 void adapterCapabilityEvidence;
 void parserFormatMatrix;
 void rustSynAdapterOptions;
+void clangAstAdapterOptions;
+void goAstAdapterOptions;
+void javaAstAdapterOptions;
+void csharpRoslynAdapterOptions;
 void projectionLossMatrix;
 void projectImport;
 void parsedUniversalAst;

@@ -439,6 +439,19 @@ export const NativeParserAstFormatProfiles = Object.freeze([
     supportsErrorRecovery: true,
     notes: ['Java compiler/parser ASTs expose package/import/type/member declarations and source ranges; classpath/module-path, bindings, annotation processors, generated sources, Lombok expansion, comments/trivia, and control-flow evidence remain host-owned.']
   }),
+  nativeParserAstFormatProfile('roslyn-csharp', {
+    aliases: ['roslyn', 'csharp-roslyn', 'c#-roslyn', 'microsoft-codeanalysis-csharp', 'csharp-syntax'],
+    kind: 'compiler-ast',
+    languages: ['csharp'],
+    parserAdapters: ['roslyn', 'microsoft.codeanalysis.csharp', 'csharp-roslyn'],
+    exactness: 'exact-parser-ast',
+    sourceRangeModel: 'text-span-line-position-span',
+    preservesTokens: true,
+    preservesTrivia: true,
+    supportsIncremental: true,
+    supportsErrorRecovery: true,
+    notes: ['Roslyn C# syntax trees expose immutable nodes, tokens, trivia, spans, diagnostics, directives, and skipped text; SemanticModel symbols, nullable analysis, generated sources, partial type stitching, analyzer results, and project references remain host-owned evidence.']
+  }),
   nativeParserAstFormatProfile('tree-sitter', {
     kind: 'concrete-syntax-tree',
     languages: ['mixed'],
@@ -2927,6 +2940,73 @@ export function createJavaAstNativeImporterAdapter(options = {}) {
         positionResolver: input.options?.positionResolver ?? options.positionResolver,
         lineMap: input.options?.lineMap ?? options.lineMap ?? parsed?.lineMap,
         includeAnnotations: options.includeAnnotations ?? input.options?.includeAnnotations
+      });
+    }
+  };
+}
+
+export function createCSharpRoslynNativeImporterAdapter(options = {}) {
+  return {
+    id: options.id ?? 'frontier.csharp-roslyn-native-importer',
+    language: options.language ?? 'csharp',
+    parser: options.parser ?? 'roslyn',
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'exact-parser-ast',
+      exactAst: true,
+      tokens: true,
+      trivia: true,
+      diagnostics: true,
+      sourceRanges: true,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes caller-owned Roslyn C# SyntaxTree/SyntaxNode-shaped objects into native AST nodes and declaration-level semantic index records.',
+        'Roslyn syntax imports do not resolve SemanticModel symbols, overloads, nullable flow, source generators, partial types, project references, or analyzer results by themselves; attach host evidence for those claims.'
+      ]
+    }, options.coverage),
+    supportedExtensions: options.supportedExtensions ?? ['.cs'],
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const parsed = input.options?.ast
+        ?? input.options?.nativeAst
+        ?? input.options?.syntaxTree
+        ?? input.options?.tree
+        ?? input.options?.root
+        ?? input.options?.compilationUnit
+        ?? options.ast
+        ?? options.syntaxTree
+        ?? options.tree
+        ?? options.root
+        ?? options.compilationUnit
+        ?? parseCSharpRoslynSource(input, options);
+      const root = csharpRoslynRoot(parsed);
+      if (!root) {
+        return missingInjectedParserResult(input, {
+          parser: options.parser ?? 'roslyn',
+          adapterId: options.id ?? 'frontier.csharp-roslyn-native-importer',
+          message: 'createCSharpRoslynNativeImporterAdapter requires an injected Roslyn SyntaxTree/SyntaxNode object, parserModule.parse function, parse function, or adapterOptions.ast.'
+        });
+      }
+      const parseDiagnostics = normalizeParserErrors(parsed?.errors ?? parsed?.diagnostics ?? parsed?.parseDiagnostics, input, {
+        parser: options.parser ?? 'roslyn'
+      });
+      return createNativeImportFromCSharpRoslyn(root, input, {
+        parser: options.parser ?? 'roslyn',
+        astFormat: 'roslyn-csharp',
+        maxNodes: options.maxNodes,
+        diagnostics: parseDiagnostics,
+        csharpVersion: options.csharpVersion ?? input.options?.csharpVersion ?? parsed?.csharpVersion,
+        languageVersion: options.languageVersion ?? input.options?.languageVersion ?? parsed?.languageVersion,
+        nullableContext: input.options?.nullableContext ?? options.nullableContext ?? parsed?.nullableContext,
+        generated: input.options?.generated ?? options.generated ?? parsed?.generated ?? csharpGeneratedSourcePath(input.sourcePath),
+        projectReferences: input.options?.projectReferences ?? options.projectReferences ?? parsed?.projectReferences,
+        analyzerDiagnostics: input.options?.analyzerDiagnostics ?? options.analyzerDiagnostics ?? parsed?.analyzerDiagnostics,
+        semanticModelEvidence: input.options?.semanticModelEvidence ?? options.semanticModelEvidence ?? parsed?.semanticModelEvidence,
+        sourceGeneratorEvidence: input.options?.sourceGeneratorEvidence ?? options.sourceGeneratorEvidence ?? parsed?.sourceGeneratorEvidence,
+        positionResolver: input.options?.positionResolver ?? options.positionResolver,
+        lineMap: input.options?.lineMap ?? options.lineMap ?? parsed?.lineMap
       });
     }
   };
@@ -7375,6 +7455,7 @@ function parserAstFormatIdForParser(parser) {
   if (text.includes('clang') || text.includes('libclang')) return 'clang-ast-json';
   if (text === 'go' || text.includes('go-parser') || text.includes('go-ast') || text.includes('go/parser') || text.includes('go/ast')) return 'go-ast';
   if (text === 'java' || text.includes('javac') || text.includes('jdt') || text.includes('javaparser') || text.includes('java-parser') || text.includes('java-ast')) return 'java-ast';
+  if (text === 'csharp' || text === 'c#' || text === 'cs' || text.includes('roslyn') || text.includes('microsoft-codeanalysis-csharp') || text.includes('csharp-syntax')) return 'roslyn-csharp';
   if (text.includes('tree-sitter') || text.includes('treesitter')) return 'tree-sitter';
   if (text.includes('babel')) return 'babel';
   if (text.includes('estree')) return 'estree';
@@ -8473,6 +8554,22 @@ function parseJavaAstSource(input, options) {
   return parse(input.sourceText, parserOptions);
 }
 
+function parseCSharpRoslynSource(input, options) {
+  const parse = options.parse ?? options.parserModule?.parse ?? options.roslyn?.parse ?? options.csharpRoslyn?.parse;
+  if (typeof parse !== 'function') return undefined;
+  const parserOptions = {
+    sourcePath: input.sourcePath,
+    filename: input.sourcePath,
+    languageVersion: options.languageVersion ?? input.options?.languageVersion,
+    csharpVersion: options.csharpVersion ?? input.options?.csharpVersion,
+    nullableContext: options.nullableContext ?? input.options?.nullableContext,
+    kind: options.sourceCodeKind ?? input.options?.sourceCodeKind,
+    ...(options.parserOptions ?? {}),
+    ...(input.options?.parserOptions ?? {})
+  };
+  return parse(input.sourceText, parserOptions);
+}
+
 function createNativeImportFromSyntaxAst(ast, input, options) {
   const root = normalizeSyntaxAstRoot(ast, options.astFormat);
   if (!root) {
@@ -8696,6 +8793,45 @@ function createNativeImportFromJavaAst(root, input, options) {
       bindingEvidence: javaBindingEvidenceSummary(options.bindingEvidence),
       generated: options.generated,
       includeAnnotations: Boolean(options.includeAnnotations),
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createNativeImportFromCSharpRoslyn(root, input, options) {
+  const context = createAstNormalizationContext(input, options);
+  visitCSharpRoslynNode(root, context, 'root');
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  if (options.generated && !context.losses.some((loss) => loss.kind === 'generatedCode')) {
+    context.losses.push(csharpGeneratedCodeLoss(input, context.rootId, undefined, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: mergeNativeLosses(context.losses, options.diagnostics?.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, {
+      id: input.adapterId,
+      version: input.adapterVersion
+    }, input)) ?? []),
+    evidence: semantic.evidence,
+    diagnostics: options.diagnostics,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      csharpVersion: options.csharpVersion,
+      languageVersion: options.languageVersion,
+      nullableContext: options.nullableContext,
+      generated: options.generated,
+      projectReferences: csharpEvidenceSummary(options.projectReferences),
+      analyzerDiagnostics: csharpEvidenceSummary(options.analyzerDiagnostics),
+      semanticModelEvidence: csharpEvidenceSummary(options.semanticModelEvidence),
+      sourceGeneratorEvidence: csharpEvidenceSummary(options.sourceGeneratorEvidence),
       normalizedNodeCount: Object.keys(context.nodes).length,
       declarationCount: context.declarations.length,
       truncated: context.truncated
@@ -9174,6 +9310,92 @@ function visitJavaAstNode(node, context, propertyPath) {
       generatedMarker: javaGeneratedCodeMarker(node, kind),
       lombokMarker: javaLombokAnnotationMarker(node, kind)
     }));
+  }
+  return id;
+}
+
+function visitCSharpRoslynNode(node, context, propertyPath) {
+  if (!isCSharpRoslynNode(node) || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const kind = csharpRoslynKind(node);
+  const span = spanFromCSharpRoslynNode(node, context.input, context.options);
+  const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  for (const [field, value] of csharpRoslynChildEntries(node, kind)) {
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        const childId = visitCSharpRoslynNode(entry, context, `${propertyPath}.${field}[${index}]`);
+        if (childId) children.push(childId);
+      });
+    } else {
+      const childId = visitCSharpRoslynNode(value, context, `${propertyPath}.${field}`);
+      if (childId) children.push(childId);
+    }
+  }
+  const declarations = csharpRoslynDeclarations(node, kind, id, context.input);
+  const declaration = declarations[0];
+  const nativeNode = {
+    id,
+    kind,
+    languageKind: `${context.input.language}.${kind}`,
+    span,
+    value: declaration?.name ?? csharpRoslynNodeValue(node),
+    fields: primitiveCSharpRoslynFields(node, kind),
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      rawKind: numberOrUndefined(node.rawKind ?? node.RawKind),
+      positionKind: csharpRoslynPositionKind(node),
+      parser: context.options.parser
+    }
+  };
+  context.nodes[id] = nativeNode;
+  for (const entry of declarations) {
+    context.declarations.push({ ...entry, nativeNode });
+  }
+  if (csharpRoslynRecoveredKind(kind) || csharpRoslynProblemNode(node, kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_csharp_roslyn_recovered_node`,
+      severity: 'error',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'unsupportedSyntax',
+      message: 'Roslyn reported skipped text, missing syntax, or syntax diagnostics; semantic import is partial until syntax errors are resolved.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat,
+        nodeKind: kind
+      }
+    });
+  }
+  if (csharpRoslynDirectiveKind(kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_csharp_preprocessor`,
+      severity: 'warning',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'preprocessor',
+      message: 'C# preprocessor directive was imported as syntax; conditional compilation state and inactive branches require host evidence.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat,
+        nodeKind: kind
+      }
+    });
+  }
+  if (csharpGeneratedCodeMarker(node, kind)) {
+    context.losses.push(csharpGeneratedCodeLoss(context.input, id, span, context.options, { nodeKind: kind }));
   }
   return id;
 }
@@ -11894,6 +12116,497 @@ function javaBindingEvidenceSummary(value) {
   if (Array.isArray(value.references)) summary.referenceCount = value.references.length;
   if (typeof value.solver === 'string') summary.solver = value.solver;
   return Object.keys(summary).length ? summary : { present: true };
+}
+
+function csharpRoslynRoot(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  if (isCSharpRoslynNode(value)) return value;
+  if (isCSharpRoslynNode(value.ast)) return value.ast;
+  if (isCSharpRoslynNode(value.root)) return value.root;
+  if (isCSharpRoslynNode(value.rootNode)) return value.rootNode;
+  if (isCSharpRoslynNode(value.compilationUnit)) return value.compilationUnit;
+  if (isCSharpRoslynNode(value.syntaxTree)) return csharpRoslynRoot(value.syntaxTree);
+  if (isCSharpRoslynNode(value.tree)) return csharpRoslynRoot(value.tree);
+  if (Array.isArray(value.members) || Array.isArray(value.usings) || Array.isArray(value.externs)) {
+    return { kind: 'CompilationUnit', ...value };
+  }
+  return undefined;
+}
+
+function isCSharpRoslynNode(value) {
+  return Boolean(value && typeof value === 'object' && typeof csharpRoslynKind(value) === 'string');
+}
+
+function csharpRoslynKind(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const declared = node.kind ?? node.Kind ?? node._type ?? node.type ?? node.nodeType ?? node.syntaxKind ?? node.SyntaxKind;
+  if (typeof declared === 'string') return normalizeCSharpRoslynKind(declared);
+  if (Array.isArray(node.members) || Array.isArray(node.usings) || Array.isArray(node.externs)) return 'CompilationUnit';
+  if (node.identifier && (node.members || node.baseList || node.parameterList || node.modifiers)) return 'ClassDeclaration';
+  if (node.declaration && (node.eventKeyword || node.eventField)) return 'EventFieldDeclaration';
+  if (node.declaration && Array.isArray(node.declaration.variables)) return 'FieldDeclaration';
+  return undefined;
+}
+
+function normalizeCSharpRoslynKind(kind) {
+  const text = String(kind)
+    .replace(/^(?:Microsoft\.CodeAnalysis\.CSharp\.Syntax\.|Microsoft\.CodeAnalysis\.CSharp\.)/, '')
+    .replace(/Syntax$/, '');
+  const compact = text.replace(/[_\s.-]+/g, '').toLowerCase();
+  if (compact === 'compilationunit') return 'CompilationUnit';
+  if (compact === 'usingdirective') return 'UsingDirective';
+  if (compact === 'namespacedeclaration') return 'NamespaceDeclaration';
+  if (compact === 'filescopednamespacedeclaration') return 'FileScopedNamespaceDeclaration';
+  if (compact === 'classdeclaration') return 'ClassDeclaration';
+  if (compact === 'interfacedeclaration') return 'InterfaceDeclaration';
+  if (compact === 'structdeclaration') return 'StructDeclaration';
+  if (compact === 'recorddeclaration') return 'RecordDeclaration';
+  if (compact === 'recordstructdeclaration') return 'RecordStructDeclaration';
+  if (compact === 'enumdeclaration') return 'EnumDeclaration';
+  if (compact === 'methoddeclaration') return 'MethodDeclaration';
+  if (compact === 'constructordeclaration') return 'ConstructorDeclaration';
+  if (compact === 'destructordeclaration') return 'DestructorDeclaration';
+  if (compact === 'operatordeclaration') return 'OperatorDeclaration';
+  if (compact === 'conversionoperatordeclaration') return 'ConversionOperatorDeclaration';
+  if (compact === 'propertydeclaration') return 'PropertyDeclaration';
+  if (compact === 'indexerdeclaration') return 'IndexerDeclaration';
+  if (compact === 'fielddeclaration') return 'FieldDeclaration';
+  if (compact === 'variabledeclarator') return 'VariableDeclarator';
+  if (compact === 'eventdeclaration') return 'EventDeclaration';
+  if (compact === 'eventfielddeclaration') return 'EventFieldDeclaration';
+  if (compact === 'delegatedeclaration') return 'DelegateDeclaration';
+  if (compact === 'enummemberdeclaration') return 'EnumMemberDeclaration';
+  if (compact === 'attributelist') return 'AttributeList';
+  if (compact === 'attribute') return 'Attribute';
+  if (compact === 'parameter') return 'Parameter';
+  if (compact === 'incompletemember') return 'IncompleteMember';
+  if (compact === 'skippedtokenstrivia' || compact === 'skippedtokens') return 'SkippedTokensTrivia';
+  if (compact.endsWith('directivetrivia')) return `${upperFirst(compact.slice(0, -'directivetrivia'.length))}DirectiveTrivia`;
+  if (/^[A-Z0-9_]+$/.test(text)) return text.toLowerCase().split('_').map(upperFirst).join('');
+  return text;
+}
+
+function ignoredCSharpRoslynField(key) {
+  return key === '_type'
+    || key === 'type'
+    || key === 'kind'
+    || key === 'Kind'
+    || key === 'nodeType'
+    || key === 'syntaxKind'
+    || key === 'SyntaxKind'
+    || key === 'rawKind'
+    || key === 'RawKind'
+    || key === 'parent'
+    || key === 'parentKind'
+    || key === 'parentField'
+    || key === 'span'
+    || key === 'Span'
+    || key === 'fullSpan'
+    || key === 'FullSpan'
+    || key === 'lineSpan'
+    || key === 'location'
+    || key === 'locations'
+    || key === 'identifier'
+    || key === 'name'
+    || key === 'simpleName'
+    || key === 'qualifiedName'
+    || key === 'semanticModel'
+    || key === 'symbol'
+    || key === 'declaredSymbol'
+    || key === 'typeInfo'
+    || key === 'conversion'
+    || key === 'constantValue';
+}
+
+function primitiveCSharpRoslynFields(node, kind) {
+  const fields = { kind };
+  const name = csharpRoslynDeclarationName(node);
+  if (name) fields.name = name;
+  const importPath = csharpRoslynUsingPath(node);
+  if (importPath) fields.importPath = importPath;
+  const type = csharpRoslynTypeName(node.type ?? node.Type ?? node.returnType ?? node.ReturnType);
+  if (type) fields.type = type;
+  const modifiers = csharpRoslynModifierNames(node);
+  if (modifiers.length) fields.modifiers = modifiers.join(',');
+  const alias = csharpRoslynName(node.alias ?? node.Alias);
+  if (alias) fields.alias = alias;
+  if (node.static === true || node.isStatic === true) fields.static = true;
+  if (node.global === true || node.isGlobal === true) fields.global = true;
+  if (node.generated === true || node.Generated === true) fields.generated = true;
+  if (node.containsDiagnostics === true || node.ContainsDiagnostics === true) fields.containsDiagnostics = true;
+  if (node.containsSkippedText === true || node.ContainsSkippedText === true) fields.containsSkippedText = true;
+  if (node.isMissing === true || node.IsMissing === true) fields.isMissing = true;
+  if (Array.isArray(node.parameterList?.parameters ?? node.parameters)) fields.parameterCount = (node.parameterList?.parameters ?? node.parameters).length;
+  if (Array.isArray(node.attributeLists)) fields.attributeListCount = node.attributeLists.length;
+  return fields;
+}
+
+function spanFromCSharpRoslynNode(node, input, options = {}) {
+  const lineSpan = node.lineSpan ?? node.location?.lineSpan ?? node.location?.LineSpan ?? node.FileLinePositionSpan;
+  const fromLineSpan = spanFromCSharpLineSpan(lineSpan, input);
+  if (fromLineSpan) return fromLineSpan;
+  const direct = spanFromCSharpLineFields(node, input);
+  if (direct) return direct;
+  const start = csharpRoslynPosition(node.start ?? node.Start ?? node.span?.start ?? node.Span?.Start ?? node.position, options);
+  const end = csharpRoslynPosition(node.end ?? node.End ?? node.span?.end ?? node.Span?.End, options);
+  if (!start) return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: start.path ?? end?.path ?? input.sourcePath,
+    startLine: start.line,
+    startColumn: start.column,
+    endLine: end?.line,
+    endColumn: end?.column
+  };
+}
+
+function spanFromCSharpLineSpan(lineSpan, input) {
+  if (!lineSpan || typeof lineSpan !== 'object') return undefined;
+  const start = lineSpan.startLinePosition ?? lineSpan.StartLinePosition ?? lineSpan.start ?? lineSpan.Start;
+  const end = lineSpan.endLinePosition ?? lineSpan.EndLinePosition ?? lineSpan.end ?? lineSpan.End;
+  const line = start?.line ?? start?.Line;
+  if (typeof line !== 'number') return undefined;
+  const character = start.character ?? start.Character ?? start.column ?? start.Column;
+  const endLine = end?.line ?? end?.Line;
+  const endCharacter = end?.character ?? end?.Character ?? end?.column ?? end?.Column;
+  return {
+    sourceId: input.sourceHash,
+    path: lineSpan.path ?? lineSpan.filePath ?? lineSpan.FilePath ?? input.sourcePath,
+    startLine: line + 1,
+    startColumn: typeof character === 'number' ? character + 1 : undefined,
+    endLine: typeof endLine === 'number' ? endLine + 1 : undefined,
+    endColumn: typeof endCharacter === 'number' ? endCharacter + 1 : undefined
+  };
+}
+
+function spanFromCSharpLineFields(node, input) {
+  const startLine = node.startLine ?? node.line ?? node.beginLine;
+  if (typeof startLine !== 'number') return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: node.path ?? node.filePath ?? node.file ?? input.sourcePath,
+    startLine,
+    startColumn: node.startColumn ?? node.column ?? node.beginColumn,
+    endLine: node.endLine,
+    endColumn: node.endColumn
+  };
+}
+
+function csharpRoslynPosition(value, options = {}) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'object') {
+    const position = value.position ?? value.Position ?? value;
+    const line = position.line ?? position.Line;
+    const column = position.column ?? position.Column ?? position.character ?? position.Character;
+    if (typeof line === 'number') {
+      return {
+        path: position.path ?? position.filePath ?? position.FilePath ?? position.file,
+        line,
+        column: typeof column === 'number' ? column : undefined
+      };
+    }
+  }
+  const resolver = typeof options.positionResolver === 'function'
+    ? options.positionResolver
+    : typeof options.lineMap?.position === 'function'
+      ? options.lineMap.position.bind(options.lineMap)
+      : typeof options.lineMap?.getLinePosition === 'function'
+        ? options.lineMap.getLinePosition.bind(options.lineMap)
+        : undefined;
+  if (resolver) {
+    const resolved = resolver(value);
+    if (resolved !== value) return csharpRoslynPosition(resolved, options);
+  }
+  return undefined;
+}
+
+function csharpRoslynPositionKind(node) {
+  if (node.lineSpan || node.location?.lineSpan) return 'line-position-span';
+  if (node.span || node.Span) return 'text-span';
+  if (typeof node.startLine === 'number' || typeof node.line === 'number') return 'line-column-fields';
+  return undefined;
+}
+
+function csharpRoslynDeclarations(node, kind, nativeNodeId, input) {
+  if (kind === 'UsingDirective') {
+    const name = csharpRoslynUsingPath(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'module', 'import')] : [];
+  }
+  if (kind === 'NamespaceDeclaration' || kind === 'FileScopedNamespaceDeclaration') {
+    const name = csharpRoslynDeclarationName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'namespace', 'definition')] : [];
+  }
+  if (csharpRoslynTypeDeclarationKind(kind)) {
+    const name = csharpRoslynDeclarationName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, csharpRoslynTypeDeclarationSymbolKind(kind), 'definition')] : [];
+  }
+  if (kind === 'DelegateDeclaration') {
+    const name = csharpRoslynDeclarationName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'type', 'definition')] : [];
+  }
+  if (csharpRoslynMethodLikeKind(kind)) {
+    const name = csharpRoslynDeclarationName(node) ?? csharpRoslynOperatorName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'method', csharpRoslynHasBody(node) ? 'definition' : 'declaration')] : [];
+  }
+  if (kind === 'PropertyDeclaration' || kind === 'IndexerDeclaration') {
+    const name = csharpRoslynDeclarationName(node) ?? (kind === 'IndexerDeclaration' ? 'this[]' : undefined);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'property', 'definition')] : [];
+  }
+  if (kind === 'FieldDeclaration') {
+    return csharpRoslynVariableNames(node).map((name) => declarationRecord(input, nativeNodeId, name, 'property', 'definition'));
+  }
+  if (kind === 'EventDeclaration') {
+    const name = csharpRoslynDeclarationName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'event', 'definition')] : [];
+  }
+  if (kind === 'EventFieldDeclaration') {
+    return csharpRoslynVariableNames(node).map((name) => declarationRecord(input, nativeNodeId, name, 'event', 'definition'));
+  }
+  if (kind === 'VariableDeclarator') {
+    if (node.parentKind === 'FieldDeclaration') {
+      const name = csharpRoslynDeclarationName(node);
+      return name ? [declarationRecord(input, nativeNodeId, name, 'property', 'definition')] : [];
+    }
+    if (node.parentKind === 'EventFieldDeclaration') {
+      const name = csharpRoslynDeclarationName(node);
+      return name ? [declarationRecord(input, nativeNodeId, name, 'event', 'definition')] : [];
+    }
+    return [];
+  }
+  if (kind === 'EnumMemberDeclaration') {
+    const name = csharpRoslynDeclarationName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'enumMember', 'definition')] : [];
+  }
+  return [];
+}
+
+function csharpRoslynChildEntries(node, kind = csharpRoslynKind(node)) {
+  const fieldNames = Object.keys(node).filter((key) => !ignoredCSharpRoslynField(key));
+  const entries = [];
+  for (const field of fieldNames) {
+    const value = node[field];
+    if (Array.isArray(value)) {
+      entries.push([field, value.map((entry) => csharpRoslynChildWithParent(entry, kind, field))]);
+      continue;
+    }
+    if (value && typeof value === 'object') {
+      entries.push([field, csharpRoslynChildWithParent(value, kind, field)]);
+    }
+  }
+  return entries.filter(([, value]) => Array.isArray(value)
+    ? value.some(isCSharpRoslynNode)
+    : isCSharpRoslynNode(value));
+}
+
+function csharpRoslynChildWithParent(entry, parentKind, parentField) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
+  if (!isCSharpRoslynNode(entry)) return entry;
+  return { parentKind, parentField, ...entry };
+}
+
+function csharpRoslynNodeValue(node) {
+  return csharpRoslynDeclarationName(node)
+    ?? csharpRoslynUsingPath(node)
+    ?? csharpRoslynTypeName(node.type ?? node.returnType)
+    ?? csharpRoslynLiteralValue(node);
+}
+
+function csharpRoslynDeclarationName(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  for (const key of ['identifier', 'name', 'simpleName', 'qualifiedName', 'id']) {
+    const value = node[key];
+    const name = csharpRoslynName(value);
+    if (name) return name;
+  }
+  if (node.declaration && typeof node.declaration === 'object') return csharpRoslynDeclarationName(node.declaration);
+  return undefined;
+}
+
+function csharpRoslynName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.text === 'string') return value.text;
+  if (typeof value.valueText === 'string') return value.valueText;
+  if (typeof value.identifier === 'string') return value.identifier;
+  if (typeof value.name === 'string') return value.name;
+  if (typeof value.qualifiedName === 'string') return value.qualifiedName;
+  if (typeof value.value === 'string') return value.value;
+  if (value.identifier && value.identifier !== value) return csharpRoslynName(value.identifier);
+  if (value.name && value.name !== value) return csharpRoslynName(value.name);
+  return undefined;
+}
+
+function csharpRoslynUsingPath(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  return csharpRoslynName(node.name ?? node.Name ?? node.qualifiedName ?? node.path);
+}
+
+function csharpRoslynVariableNames(node) {
+  const variables = node.variables
+    ?? node.declaration?.variables
+    ?? node.Declaration?.Variables
+    ?? node.variableDeclarators;
+  if (Array.isArray(variables)) return variables.map(csharpRoslynDeclarationName).filter(Boolean);
+  const name = csharpRoslynDeclarationName(node);
+  return name ? [name] : [];
+}
+
+function csharpRoslynTypeName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.name === 'string') return value.name;
+  if (typeof value.text === 'string') return value.text;
+  if (typeof value.valueText === 'string') return value.valueText;
+  if (typeof value.qualifiedName === 'string') return value.qualifiedName;
+  if (value.elementType) {
+    const inner = csharpRoslynTypeName(value.elementType);
+    return inner ? `${inner}[]` : '[]';
+  }
+  if (Array.isArray(value.typeArgumentList?.arguments ?? value.typeArguments)) {
+    const base = csharpRoslynName(value.name) ?? csharpRoslynName(value);
+    const args = (value.typeArgumentList?.arguments ?? value.typeArguments).map(csharpRoslynTypeName).filter(Boolean);
+    return base ? `${base}<${args.join(', ')}>` : undefined;
+  }
+  return csharpRoslynName(value);
+}
+
+function csharpRoslynModifierNames(node) {
+  const modifiers = node.modifiers ?? node.Modifiers;
+  if (!modifiers) return [];
+  if (Array.isArray(modifiers)) {
+    return uniqueStrings(modifiers.map((entry) => typeof entry === 'string' ? entry : csharpRoslynName(entry) ?? entry.kind).filter(Boolean));
+  }
+  if (typeof modifiers === 'string') return uniqueStrings(modifiers.split(/\s+/).filter(Boolean));
+  if (typeof modifiers === 'object') {
+    return uniqueStrings(Object.entries(modifiers)
+      .filter(([, enabled]) => enabled === true)
+      .map(([key]) => key));
+  }
+  return [];
+}
+
+function csharpRoslynTypeDeclarationKind(kind) {
+  return kind === 'ClassDeclaration'
+    || kind === 'InterfaceDeclaration'
+    || kind === 'StructDeclaration'
+    || kind === 'RecordDeclaration'
+    || kind === 'RecordStructDeclaration'
+    || kind === 'EnumDeclaration';
+}
+
+function csharpRoslynTypeDeclarationSymbolKind(kind) {
+  if (kind === 'ClassDeclaration' || kind === 'RecordDeclaration') return 'class';
+  if (kind === 'InterfaceDeclaration') return 'interface';
+  return 'type';
+}
+
+function csharpRoslynMethodLikeKind(kind) {
+  return kind === 'MethodDeclaration'
+    || kind === 'ConstructorDeclaration'
+    || kind === 'DestructorDeclaration'
+    || kind === 'OperatorDeclaration'
+    || kind === 'ConversionOperatorDeclaration';
+}
+
+function csharpRoslynHasBody(node) {
+  return Boolean(node.body || node.expressionBody || node.accessorList || Array.isArray(node.statements));
+}
+
+function csharpRoslynOperatorName(node, kind) {
+  if (kind === 'ConstructorDeclaration') return csharpRoslynDeclarationName(node);
+  if (kind === 'DestructorDeclaration') return `~${csharpRoslynDeclarationName(node) ?? 'destructor'}`;
+  if (kind === 'OperatorDeclaration') return `operator ${csharpRoslynName(node.operatorToken) ?? csharpRoslynName(node.operatorKeyword) ?? 'operator'}`;
+  if (kind === 'ConversionOperatorDeclaration') return `operator ${csharpRoslynTypeName(node.type) ?? 'conversion'}`;
+  return undefined;
+}
+
+function csharpRoslynLiteralValue(node) {
+  const value = node.value ?? node.literal;
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  return undefined;
+}
+
+function csharpRoslynRecoveredKind(kind) {
+  return kind === 'IncompleteMember'
+    || kind === 'SkippedTokensTrivia'
+    || /Skipped|Missing|Bad|Incomplete/.test(String(kind));
+}
+
+function csharpRoslynProblemNode(node, kind) {
+  return Boolean(
+    node.containsDiagnostics
+    || node.ContainsDiagnostics
+    || node.containsSkippedText
+    || node.ContainsSkippedText
+    || node.isMissing
+    || node.IsMissing
+    || node.hasDiagnostics
+    || node.HasDiagnostics
+    || kind === 'IncompleteMember'
+    || kind === 'SkippedTokensTrivia'
+  );
+}
+
+function csharpRoslynDirectiveKind(kind) {
+  return /DirectiveTrivia$/.test(String(kind)) || /^(IfDirective|ElifDirective|ElseDirective|EndIfDirective|DefineDirective|UndefDirective|NullableDirective|RegionDirective|EndRegionDirective|PragmaWarningDirective|LineDirective|ErrorDirective|WarningDirective|LoadDirective|ReferenceDirective)/.test(String(kind));
+}
+
+function csharpGeneratedCodeMarker(node, kind) {
+  if (node.generated || node.Generated || node.isGenerated) return true;
+  const path = String(node.filePath ?? node.path ?? node.sourcePath ?? '');
+  if (csharpGeneratedSourcePath(path)) return true;
+  if (kind === 'Attribute') {
+    const name = csharpRoslynDeclarationName(node);
+    if (name && /(^|\.)(GeneratedCode|CompilerGenerated|DebuggerNonUserCode)Attribute?$/.test(name)) return true;
+  }
+  const attributes = node.attributeLists ?? node.attributes;
+  if (Array.isArray(attributes)) {
+    return JSON.stringify(attributes).includes('GeneratedCode')
+      || JSON.stringify(attributes).includes('CompilerGenerated');
+  }
+  return false;
+}
+
+function csharpGeneratedSourcePath(path) {
+  return typeof path === 'string' && /\.(g|generated|designer)\.cs$/i.test(path);
+}
+
+function csharpGeneratedCodeLoss(input, nodeId, span, options = {}, metadata = {}) {
+  return {
+    id: `loss_${idFragment(nodeId ?? input.sourcePath ?? 'csharp')}_csharp_generated_code`,
+    severity: 'warning',
+    phase: 'parse',
+    sourceFormat: input.language,
+    kind: 'generatedCode',
+    message: 'C# generated-source or source-generator marker was imported; generated member provenance and source ownership require host evidence.',
+    span,
+    nodeId,
+    metadata: {
+      parser: options.parser,
+      astFormat: options.astFormat,
+      sourceGeneratorEvidence: csharpEvidenceSummary(options.sourceGeneratorEvidence),
+      ...metadata
+    }
+  };
+}
+
+function csharpEvidenceSummary(value) {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return { entryCount: value.length };
+  if (typeof value === 'string') return { value };
+  if (typeof value === 'object') {
+    const summary = {};
+    if (typeof value.hash === 'string') summary.hash = value.hash;
+    if (typeof value.solver === 'string') summary.solver = value.solver;
+    if (Array.isArray(value.entries)) summary.entryCount = value.entries.length;
+    if (Array.isArray(value.references)) summary.referenceCount = value.references.length;
+    if (Array.isArray(value.symbols)) summary.symbolCount = value.symbols.length;
+    if (Array.isArray(value.diagnostics)) summary.diagnosticCount = value.diagnostics.length;
+    if (Array.isArray(value.generators)) summary.generatorCount = value.generators.length;
+    if (Array.isArray(value.projects)) summary.projectCount = value.projects.length;
+    return Object.keys(summary).length ? summary : { present: true };
+  }
+  return { present: true };
 }
 
 function declarationRecord(input, nativeNodeId, name, symbolKind, role = 'definition') {

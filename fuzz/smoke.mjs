@@ -3,6 +3,7 @@ import {
   compileNativeSource,
   compileFrontierSource,
   createClangAstNativeImporterAdapter,
+  createCSharpRoslynNativeImporterAdapter,
   createEstreeNativeImporterAdapter,
   createGoAstNativeImporterAdapter,
   createJavaAstNativeImporterAdapter,
@@ -125,6 +126,7 @@ const rustSynAdapter = createRustSynNativeImporterAdapter();
 const clangAstAdapter = createClangAstNativeImporterAdapter();
 const goAstAdapter = createGoAstNativeImporterAdapter();
 const javaAstAdapter = createJavaAstNativeImporterAdapter();
+const csharpRoslynAdapter = createCSharpRoslynNativeImporterAdapter();
 for (let index = 0; index < 50; index += 1) {
   const name = `fuzzImport${index}`;
   const sourcePath = `src/fuzz-${index}.js`;
@@ -293,6 +295,38 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(javaAstImport.adapter.parser, 'javac');
   assert.equal(javaAstImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
   assert.equal(javaAstImport.semanticIndex.symbols.some((symbol) => symbol.name === `FuzzJava${index}`), true);
+  const csharpRoslynImport = await runNativeImporterAdapter(csharpRoslynAdapter, {
+    sourcePath: `src/Fuzz${index}.cs`,
+    sourceText: `namespace fuzz; public class FuzzCSharp${index} { private string value; public void FuzzCSharpMethod${index}() {} }\n`,
+    adapterOptions: {
+      ast: {
+        kind: 'CompilationUnit',
+        members: [{
+          kind: 'FileScopedNamespaceDeclaration',
+          name: { qualifiedName: 'fuzz' },
+          members: [{
+            kind: 'ClassDeclaration',
+            identifier: { text: `FuzzCSharp${index}` },
+            members: [{
+              kind: 'FieldDeclaration',
+              declaration: {
+                type: { name: 'string' },
+                variables: [{ kind: 'VariableDeclarator', identifier: { text: 'value' } }]
+              }
+            }, {
+              kind: 'MethodDeclaration',
+              identifier: { text: `FuzzCSharpMethod${index}` },
+              returnType: { name: 'void' },
+              body: { kind: 'Block', statements: [] }
+            }]
+          }]
+        }]
+      }
+    }
+  });
+  assert.equal(csharpRoslynImport.adapter.parser, 'roslyn');
+  assert.equal(csharpRoslynImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
+  assert.equal(csharpRoslynImport.semanticIndex.symbols.some((symbol) => symbol.name === `FuzzCSharp${index}`), true);
 
   const lightweight = importNativeSource({
     language: index % 2 === 0 ? 'javascript' : 'python',
@@ -396,7 +430,7 @@ assert.ok(matrix.languages.find((entry) => entry.language === 'javascript').impo
 assert.ok(matrix.languages.find((entry) => entry.language === 'python').imports.symbols >= 1);
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   imports: project.imports,
-  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter]
+  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, csharpRoslynAdapter]
 });
 assert.ok(parserFormatMatrix.summary.formats >= 2);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast').adapters.total >= 1);
@@ -404,6 +438,7 @@ assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'rust-syn').ad
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'clang-ast-json').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'go-ast').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'java-ast').adapters.total >= 1);
+assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'roslyn-csharp').adapters.total >= 1);
 const projectionMatrix = createProjectionTargetLossMatrix({ imports: project.imports });
 assert.equal(projectionMatrix.summary.languages, matrix.summary.languages);
 assert.ok(projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 2);
