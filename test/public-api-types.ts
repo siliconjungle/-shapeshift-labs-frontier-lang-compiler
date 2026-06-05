@@ -53,6 +53,8 @@ import type {
   NativeImportRoundtripReadinessStatus,
   NativeImportTaxonomyKind,
   NativeImporterAdapter,
+  NativeImporterAdapterCoverageAggregate,
+  NativeImporterAdapterCoverageCapabilityEvidence,
   NativeImporterAdapterDiagnostic,
   NativeImporterAdapterImportResult,
   NativeImporterAdapterParseInput,
@@ -216,6 +218,9 @@ const coverageOptions: NativeImportCoverageMatrixOptions = {
   adapters: [estreeAdapter, babelAdapter, tsAdapter, treeAdapter]
 };
 const coverage: NativeImportCoverageMatrix = createNativeImportCoverageMatrix(coverageOptions);
+const adapterCoverageAggregate: NativeImporterAdapterCoverageAggregate = coverage.summary.adapterCoverage;
+const adapterCapabilityEvidence: Promise<NativeImporterAdapterCoverageCapabilityEvidence | undefined> = adapterImport
+  .then((result) => result.adapter.coverage.capabilityEvidence);
 
 const projectImport: Promise<NativeProjectImportResult> = importNativeProject({
   projectRoot: 'src',
@@ -252,6 +257,8 @@ void regionTaxonomy;
 void contractSource;
 void adapterImport;
 void coverage;
+void adapterCoverageAggregate;
+void adapterCapabilityEvidence;
 void projectImport;
 void parsedUniversalAst;
 void (null as unknown as PublicRuntimeExportsMatchDeclarations);

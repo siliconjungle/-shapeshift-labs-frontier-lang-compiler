@@ -493,6 +493,7 @@ export function createNativeImportCoverageMatrix(input = {}) {
     for (const [kind, count] of Object.entries(entry.imports.lossKinds)) {
       totals.lossKinds[kind] = (totals.lossKinds[kind] ?? 0) + count;
     }
+    totals.adapterCoverage = mergeNativeImporterAdapterCoverageAggregates(totals.adapterCoverage, entry.adapterCoverage);
     return totals;
   }, {
     languages: 0,
@@ -504,7 +505,8 @@ export function createNativeImportCoverageMatrix(input = {}) {
     sourceMapMappings: 0,
     losses: 0,
     byReadiness: {},
-    lossKinds: {}
+    lossKinds: {},
+    adapterCoverage: emptyNativeImporterAdapterCoverageAggregate()
   });
   return {
     kind: 'frontier.lang.nativeImportCoverageMatrix',
@@ -3440,6 +3442,10 @@ function nativeImportCoverageForProfile(profile, imports, adapters) {
     : profile.supportsLightweightScan ? profile.defaultReadiness : 'blocked';
   const importedParsers = uniqueStrings(matchingImports.map((imported) => imported?.nativeAst?.parser ?? imported?.parser ?? imported?.metadata?.parser).filter(Boolean));
   const sourceMaps = matchingImports.flatMap((imported) => imported?.sourceMaps ?? imported?.universalAst?.sourceMaps ?? []);
+  const adapterCoverage = summarizeNativeImporterAdapterCoverageEntries([
+    ...matchingImports.map((imported) => nativeImporterAdapterCoverageEntryFromImport(imported)).filter(Boolean),
+    ...matchingAdapters.map((adapter) => nativeImporterAdapterCoverageEntryFromAdapter(adapter)).filter(Boolean)
+  ]);
   return {
     language: profile.language,
     aliases: profile.aliases,
@@ -3450,6 +3456,7 @@ function nativeImportCoverageForProfile(profile, imports, adapters) {
     knownLossKinds: uniqueStrings([...(profile.knownLossKinds ?? []), ...Object.keys(lossSummary.byKind)]),
     defaultReadiness: profile.defaultReadiness,
     notes: profile.notes,
+    adapterCoverage,
     imports: {
       total: matchingImports.length,
       parsers: importedParsers,
@@ -3463,6 +3470,125 @@ function nativeImportCoverageForProfile(profile, imports, adapters) {
       lossCategories: lossSummary.categories
     }
   };
+}
+
+function nativeImporterAdapterCoverageEntryFromImport(imported) {
+  const coverage = imported?.adapter?.coverage
+    ?? imported?.metadata?.adapterCoverage
+    ?? imported?.nativeAst?.metadata?.adapterCoverage
+    ?? imported?.nativeSource?.metadata?.adapterCoverage;
+  if (!coverage) return undefined;
+  return {
+    adapterId: imported?.adapter?.id ?? imported?.metadata?.adapterId ?? imported?.nativeAst?.metadata?.adapterId,
+    language: imported?.adapter?.language ?? imported?.language ?? imported?.nativeAst?.language,
+    parser: imported?.adapter?.parser ?? imported?.nativeAst?.parser ?? imported?.nativeSource?.parser,
+    coverage
+  };
+}
+
+function nativeImporterAdapterCoverageEntryFromAdapter(adapter) {
+  if (!adapter) return undefined;
+  const summary = normalizeNativeImporterAdapter(adapter);
+  return {
+    adapterId: summary.id,
+    language: summary.language,
+    parser: summary.parser,
+    coverage: summary.coverage
+  };
+}
+
+function summarizeNativeImporterAdapterCoverageEntries(entries = []) {
+  const aggregate = emptyNativeImporterAdapterCoverageAggregate();
+  for (const entry of entries) {
+    const coverage = normalizeNativeImporterAdapterCoverageForEvidence(entry.coverage);
+    const capabilityEvidence = coverage.capabilityEvidence;
+    const summary = {
+      adapterId: entry.adapterId,
+      language: entry.language,
+      parser: entry.parser,
+      exactness: coverage.exactness,
+      declared: capabilityNamesByBoolean(capabilityEvidence.capabilities, 'declared'),
+      observed: capabilityNamesByBoolean(capabilityEvidence.capabilities, 'observed'),
+      effective: capabilityNamesByBoolean(capabilityEvidence.capabilities, 'effective'),
+      gaps: capabilityEvidence.gaps,
+      declaredOnly: capabilityEvidence.declaredOnly,
+      observedOnly: capabilityEvidence.observedOnly
+    };
+    aggregate.total += 1;
+    aggregate.summaries.push(summary);
+    incrementCoverageCapabilityCounts(aggregate.declared, summary.declared);
+    incrementCoverageCapabilityCounts(aggregate.observed, summary.observed);
+    incrementCoverageCapabilityCounts(aggregate.effective, summary.effective);
+    incrementCoverageCapabilityCounts(aggregate.gaps, summary.gaps);
+    incrementCoverageCapabilityCounts(aggregate.declaredOnly, summary.declaredOnly);
+    incrementCoverageCapabilityCounts(aggregate.observedOnly, summary.observedOnly);
+  }
+  return {
+    ...aggregate,
+    summaries: Object.freeze(aggregate.summaries)
+  };
+}
+
+function normalizeNativeImporterAdapterCoverageForEvidence(coverage = {}) {
+  if (coverage.capabilityEvidence) return coverage;
+  const declared = coverage.declared ?? adapterCoverageSnapshotFromSummary(coverage);
+  const observed = normalizeNativeImporterAdapterObservedCoverage(coverage.observed, declared);
+  const effective = effectiveNativeImporterAdapterCoverage(declared, observed);
+  return {
+    ...coverage,
+    ...effective,
+    declared,
+    observed,
+    capabilityEvidence: nativeImporterAdapterCapabilityEvidence(declared, observed, effective)
+  };
+}
+
+function emptyNativeImporterAdapterCoverageAggregate() {
+  return {
+    total: 0,
+    declared: {},
+    observed: {},
+    effective: {},
+    gaps: {},
+    declaredOnly: {},
+    observedOnly: {},
+    summaries: []
+  };
+}
+
+function mergeNativeImporterAdapterCoverageAggregates(left, right) {
+  const merged = emptyNativeImporterAdapterCoverageAggregate();
+  for (const aggregate of [left, right]) {
+    if (!aggregate) continue;
+    merged.total += aggregate.total ?? 0;
+    incrementCoverageCapabilityCounts(merged.declared, aggregate.declared ?? {});
+    incrementCoverageCapabilityCounts(merged.observed, aggregate.observed ?? {});
+    incrementCoverageCapabilityCounts(merged.effective, aggregate.effective ?? {});
+    incrementCoverageCapabilityCounts(merged.gaps, aggregate.gaps ?? {});
+    incrementCoverageCapabilityCounts(merged.declaredOnly, aggregate.declaredOnly ?? {});
+    incrementCoverageCapabilityCounts(merged.observedOnly, aggregate.observedOnly ?? {});
+    merged.summaries.push(...(aggregate.summaries ?? []));
+  }
+  return {
+    ...merged,
+    summaries: Object.freeze(merged.summaries)
+  };
+}
+
+function capabilityNamesByBoolean(rows, property) {
+  return rows.filter((row) => row[property]).map((row) => row.capability);
+}
+
+function incrementCoverageCapabilityCounts(target, capabilities) {
+  if (Array.isArray(capabilities)) {
+    for (const capability of capabilities) {
+      target[capability] = (target[capability] ?? 0) + 1;
+    }
+    return;
+  }
+  for (const [capability, count] of Object.entries(capabilities ?? {})) {
+    target[capability] = (target[capability] ?? 0) + count;
+  }
 }
 
 function semanticImportSidecarEntry(imported, index, options) {
@@ -4828,7 +4954,7 @@ function normalizeNativeImporterAdapterCoverage(value = {}, context = {}) {
   const sourceRanges = Boolean(value.sourceRanges ?? hasCapability('sourceRanges', 'sourceRange', 'ranges', 'sourceMaps'));
   const generatedRanges = Boolean(value.generatedRanges ?? hasCapability('generatedRanges', 'generatedRange', 'generatedSourceMaps'));
   const diagnostics = Boolean(value.diagnostics ?? hasCapability('diagnostics', 'parserDiagnostics'));
-  return Object.freeze({
+  const declared = freezeNativeImporterAdapterCoverageSnapshot({
     exactness: String(value.exactness ?? inferredAdapterExactness(exactAst, capabilities)),
     exactAst,
     tokens: Boolean(value.tokens ?? hasCapability('tokens', 'tokenStream')),
@@ -4840,13 +4966,21 @@ function normalizeNativeImporterAdapterCoverage(value = {}, context = {}) {
       capabilities,
       sourceRanges,
       generatedRanges
-    }),
+    })
+  });
+  const observed = normalizeNativeImporterAdapterObservedCoverage(value.observed, declared);
+  const effective = effectiveNativeImporterAdapterCoverage(declared, observed);
+  return Object.freeze({
+    ...effective,
+    declared,
+    observed,
     notes: uniqueStrings(value.notes ?? inferredAdapterCoverageNotes(context, {
       exactAst,
       sourceRanges,
       generatedRanges,
       diagnostics
-    }))
+    })),
+    capabilityEvidence: nativeImporterAdapterCapabilityEvidence(declared, observed, effective)
   });
 }
 
@@ -4856,31 +4990,297 @@ function observeNativeImporterAdapterCoverage(coverage, parseResult = {}, contex
   const sourceMapMappings = parseResult.sourceMaps?.flatMap((sourceMap) => sourceMap.mappings ?? []) ?? parseResult.mappings ?? [];
   const semanticIndex = parseResult.semanticIndex;
   const semanticSymbols = semanticIndex?.symbols?.length ?? 0;
-  const observedSourceRanges = nodeList.some((node) => Boolean(node?.span)) || sourceMapMappings.some((mapping) => Boolean(mapping?.sourceSpan));
-  const observedGeneratedRanges = sourceMapMappings.some((mapping) => Boolean(mapping?.generatedSpan));
-  const observedSemanticCoverage = normalizeNativeImporterSemanticCoverage({
-    ...coverage.semanticCoverage,
-    level: semanticSymbols
-      ? maxSemanticCoverageLevel(coverage.semanticCoverage?.level, 'declaration-index')
-      : coverage.semanticCoverage?.level,
-    declarations: coverage.semanticCoverage?.declarations || semanticSymbols > 0,
-    symbols: coverage.semanticCoverage?.symbols || semanticSymbols > 0
-  }, {});
+  const declared = coverage.declared ?? adapterCoverageSnapshotFromSummary(coverage);
+  const observed = observeNativeImporterAdapterCoverageDetails(parseResult, context, {
+    declared,
+    nodeList,
+    sourceMapMappings,
+    semanticIndex,
+    semanticSymbols
+  });
+  const effective = effectiveNativeImporterAdapterCoverage(declared, observed);
   return Object.freeze({
     ...coverage,
-    diagnostics: coverage.diagnostics || (context.diagnostics?.length ?? 0) > 0,
-    sourceRanges: coverage.sourceRanges || observedSourceRanges,
-    generatedRanges: coverage.generatedRanges || observedGeneratedRanges,
-    semanticCoverage: observedSemanticCoverage,
-    observed: {
-      diagnostics: context.diagnostics?.length ?? 0,
-      losses: context.losses?.length ?? 0,
-      nativeAstNodes: nodeList.length,
-      semanticSymbols,
-      sourceMapMappings: sourceMapMappings.length,
-      sourceRanges: observedSourceRanges,
-      generatedRanges: observedGeneratedRanges
-    }
+    ...effective,
+    declared,
+    observed,
+    capabilityEvidence: nativeImporterAdapterCapabilityEvidence(declared, observed, effective)
+  });
+}
+
+function adapterCoverageSnapshotFromSummary(coverage = {}) {
+  return freezeNativeImporterAdapterCoverageSnapshot({
+    exactness: coverage.exactness ?? 'unknown',
+    exactAst: coverage.exactAst,
+    tokens: coverage.tokens,
+    trivia: coverage.trivia,
+    diagnostics: coverage.diagnostics,
+    sourceRanges: coverage.sourceRanges,
+    generatedRanges: coverage.generatedRanges,
+    semanticCoverage: coverage.semanticCoverage
+  });
+}
+
+function freezeNativeImporterAdapterCoverageSnapshot(value = {}) {
+  return Object.freeze({
+    exactness: String(value.exactness ?? 'unknown'),
+    exactAst: Boolean(value.exactAst),
+    tokens: Boolean(value.tokens),
+    trivia: Boolean(value.trivia),
+    diagnostics: Boolean(value.diagnostics),
+    sourceRanges: Boolean(value.sourceRanges),
+    generatedRanges: Boolean(value.generatedRanges),
+    semanticCoverage: normalizeNativeImporterSemanticCoverage(value.semanticCoverage, {})
+  });
+}
+
+function normalizeNativeImporterAdapterObservedCoverage(value = {}, declared = {}) {
+  const diagnostics = Number(value.diagnostics ?? value.parserDiagnostics ?? 0) || 0;
+  const semanticCoverage = normalizeNativeImporterSemanticCoverage({
+    ...(value.semanticCoverage ?? {}),
+    declarations: value.semanticCoverage?.declarations ?? value.declarations,
+    symbols: value.semanticCoverage?.symbols ?? value.symbols,
+    references: value.semanticCoverage?.references ?? value.references,
+    types: value.semanticCoverage?.types ?? value.types,
+    controlFlow: value.semanticCoverage?.controlFlow ?? value.controlFlow
+  }, {});
+  const nativeAstNodes = Number(value.nativeAstNodes ?? 0) || 0;
+  const exactness = String(value.exactness ?? observedAdapterExactness(declared, nativeAstNodes));
+  return Object.freeze({
+    exactness,
+    exactAst: Boolean(value.exactAst ?? (declared.exactAst && nativeAstNodes > 0)),
+    tokens: Boolean(value.tokens),
+    tokenCount: Number(value.tokenCount ?? 0) || 0,
+    trivia: Boolean(value.trivia),
+    triviaCount: Number(value.triviaCount ?? 0) || 0,
+    diagnostics,
+    parserDiagnostics: diagnostics,
+    diagnosticErrors: Number(value.diagnosticErrors ?? 0) || 0,
+    diagnosticWarnings: Number(value.diagnosticWarnings ?? 0) || 0,
+    diagnosticInfos: Number(value.diagnosticInfos ?? 0) || 0,
+    losses: Number(value.losses ?? 0) || 0,
+    nativeAstNodes,
+    semanticSymbols: Number(value.semanticSymbols ?? 0) || 0,
+    semanticReferences: Number(value.semanticReferences ?? 0) || 0,
+    semanticTypes: Number(value.semanticTypes ?? 0) || 0,
+    semanticControlFlow: Number(value.semanticControlFlow ?? 0) || 0,
+    references: Boolean(value.references ?? semanticCoverage.references),
+    types: Boolean(value.types ?? semanticCoverage.types),
+    controlFlow: Boolean(value.controlFlow ?? semanticCoverage.controlFlow),
+    sourceMapMappings: Number(value.sourceMapMappings ?? 0) || 0,
+    sourceRanges: Boolean(value.sourceRanges),
+    sourceRangeNodes: Number(value.sourceRangeNodes ?? 0) || 0,
+    sourceRangeMappings: Number(value.sourceRangeMappings ?? 0) || 0,
+    generatedRanges: Boolean(value.generatedRanges),
+    generatedRangeMappings: Number(value.generatedRangeMappings ?? 0) || 0,
+    semanticCoverage
+  });
+}
+
+function observeNativeImporterAdapterCoverageDetails(parseResult = {}, context = {}, observedContext = {}) {
+  const declared = observedContext.declared ?? {};
+  const nodeList = observedContext.nodeList ?? Object.values(parseResult.nativeAst?.nodes ?? parseResult.nodes ?? {});
+  const sourceMapMappings = observedContext.sourceMapMappings
+    ?? parseResult.sourceMaps?.flatMap((sourceMap) => sourceMap.mappings ?? [])
+    ?? parseResult.mappings
+    ?? [];
+  const semanticIndex = observedContext.semanticIndex ?? parseResult.semanticIndex;
+  const semanticSymbols = observedContext.semanticSymbols ?? semanticIndex?.symbols?.length ?? 0;
+  const diagnostics = context.diagnostics ?? [];
+  const diagnosticErrors = diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length;
+  const diagnosticWarnings = diagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length;
+  const diagnosticInfos = diagnostics.filter((diagnostic) => diagnostic.severity === 'info').length;
+  const sourceRangeNodes = nodeList.filter((node) => Boolean(node?.span)).length;
+  const sourceRangeMappings = sourceMapMappings.filter((mapping) => Boolean(mapping?.sourceSpan)).length;
+  const generatedRangeMappings = sourceMapMappings.filter((mapping) => Boolean(mapping?.generatedSpan)).length;
+  const preservation = adapterCoverageSourcePreservation(parseResult);
+  const tokenCount = preservation?.summary?.tokens ?? preservation?.tokens?.length ?? 0;
+  const triviaCount = preservation?.summary?.trivia ?? preservation?.trivia?.length ?? 0;
+  const semanticEvidence = observeNativeImporterSemanticEvidence(semanticIndex);
+  const semanticCoverage = normalizeNativeImporterSemanticCoverage({
+    level: maxSemanticCoverageLevel(
+      semanticSymbols || semanticEvidence.declarations
+        ? 'declaration-index'
+        : 'native-ast',
+      semanticEvidence.references || semanticEvidence.types || semanticEvidence.controlFlow
+        ? 'semantic-index'
+        : semanticSymbols ? 'declaration-index' : 'native-ast'
+    ),
+    declarations: semanticSymbols > 0 || semanticEvidence.declarations > 0,
+    symbols: semanticSymbols > 0,
+    references: semanticEvidence.references > 0,
+    types: semanticEvidence.types > 0,
+    controlFlow: semanticEvidence.controlFlow > 0
+  }, {});
+  return normalizeNativeImporterAdapterObservedCoverage({
+    exactness: observedAdapterExactness(declared, nodeList.length),
+    exactAst: Boolean(declared.exactAst && nodeList.length > 0),
+    tokens: tokenCount > 0,
+    tokenCount,
+    trivia: triviaCount > 0,
+    triviaCount,
+    diagnostics: diagnostics.length,
+    parserDiagnostics: diagnostics.length,
+    diagnosticErrors,
+    diagnosticWarnings,
+    diagnosticInfos,
+    losses: context.losses?.length ?? 0,
+    nativeAstNodes: nodeList.length,
+    semanticSymbols,
+    semanticReferences: semanticEvidence.references,
+    semanticTypes: semanticEvidence.types,
+    semanticControlFlow: semanticEvidence.controlFlow,
+    references: semanticEvidence.references > 0,
+    types: semanticEvidence.types > 0,
+    controlFlow: semanticEvidence.controlFlow > 0,
+    sourceMapMappings: sourceMapMappings.length,
+    sourceRanges: sourceRangeNodes > 0 || sourceRangeMappings > 0,
+    sourceRangeNodes,
+    sourceRangeMappings,
+    generatedRanges: generatedRangeMappings > 0,
+    generatedRangeMappings,
+    semanticCoverage
+  }, declared);
+}
+
+function adapterCoverageSourcePreservation(parseResult = {}) {
+  return parseResult.sourcePreservation
+    ?? parseResult.nativeAst?.metadata?.sourcePreservation
+    ?? parseResult.nativeAstMetadata?.sourcePreservation
+    ?? parseResult.metadata?.sourcePreservation;
+}
+
+function observeNativeImporterSemanticEvidence(semanticIndex = {}) {
+  const occurrences = semanticIndex?.occurrences ?? [];
+  const relations = semanticIndex?.relations ?? [];
+  const facts = semanticIndex?.facts ?? [];
+  const symbols = semanticIndex?.symbols ?? [];
+  const referenceRelations = relations.filter((relation) => semanticPredicateMatches(relation?.predicate, ['reference', 'call', 'read', 'write', 'use']));
+  const typeFacts = facts.filter((fact) => semanticPredicateMatches(fact?.predicate, ['type', 'declaredtype', 'inferredtype', 'typeof']));
+  const typedSymbols = symbols.filter((symbol) => Boolean(symbol?.declaredType ?? symbol?.inferredType ?? symbol?.typeId ?? symbol?.valueType));
+  const controlFlowRecords = [
+    ...relations.filter((relation) => semanticPredicateMatches(relation?.predicate, ['controlflow', 'cfg', 'flow'])),
+    ...facts.filter((fact) => semanticPredicateMatches(fact?.predicate, ['controlflow', 'cfg', 'flow']))
+  ];
+  return {
+    declarations: occurrences.filter((occurrence) => occurrence?.role === 'definition' || occurrence?.role === 'declaration').length,
+    references: occurrences.filter((occurrence) => {
+      const role = String(occurrence?.role ?? '').toLowerCase();
+      return role && role !== 'definition' && role !== 'declaration';
+    }).length + referenceRelations.length,
+    types: typeFacts.length + typedSymbols.length,
+    controlFlow: controlFlowRecords.length
+  };
+}
+
+function semanticPredicateMatches(value, fragments) {
+  const predicate = String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return fragments.some((fragment) => predicate.includes(fragment));
+}
+
+function observedAdapterExactness(declared = {}, nativeAstNodes = 0) {
+  if (!nativeAstNodes) return 'unknown';
+  if (declared.exactAst) return declared.exactness ?? 'exact-parser-ast';
+  return 'adapter-reported-native-ast';
+}
+
+function effectiveNativeImporterAdapterCoverage(declared, observed) {
+  const semanticCoverage = normalizeNativeImporterSemanticCoverage({
+    level: maxSemanticCoverageLevel(declared.semanticCoverage?.level, observed.semanticCoverage?.level),
+    declarations: declared.semanticCoverage?.declarations || observed.semanticCoverage?.declarations,
+    symbols: declared.semanticCoverage?.symbols || observed.semanticCoverage?.symbols,
+    references: declared.semanticCoverage?.references || observed.semanticCoverage?.references,
+    types: declared.semanticCoverage?.types || observed.semanticCoverage?.types,
+    controlFlow: declared.semanticCoverage?.controlFlow || observed.semanticCoverage?.controlFlow
+  }, {});
+  return freezeNativeImporterAdapterCoverageSnapshot({
+    exactness: effectiveAdapterExactness(declared, observed),
+    exactAst: declared.exactAst || observed.exactAst,
+    tokens: declared.tokens || observed.tokens,
+    trivia: declared.trivia || observed.trivia,
+    diagnostics: declared.diagnostics || observed.parserDiagnostics > 0,
+    sourceRanges: declared.sourceRanges || observed.sourceRanges,
+    generatedRanges: declared.generatedRanges || observed.generatedRanges,
+    semanticCoverage
+  });
+}
+
+function effectiveAdapterExactness(declared, observed) {
+  if (declared.exactAst || observed.exactAst) return declared.exactness ?? 'exact-parser-ast';
+  if (observed.nativeAstNodes > 0) return observed.exactness ?? 'adapter-reported-native-ast';
+  return declared.exactness ?? 'unknown';
+}
+
+function nativeImporterAdapterCapabilityEvidence(declared, observed, effective) {
+  const capabilityRows = [
+    adapterCoverageCapabilityRow('exactAst', declared.exactAst, observed.exactAst, effective.exactAst, observed.nativeAstNodes),
+    adapterCoverageCapabilityRow('tokens', declared.tokens, observed.tokens, effective.tokens, observed.tokenCount),
+    adapterCoverageCapabilityRow('trivia', declared.trivia, observed.trivia, effective.trivia, observed.triviaCount),
+    adapterCoverageCapabilityRow('parserDiagnostics', declared.diagnostics, observed.parserDiagnostics > 0, effective.diagnostics, observed.parserDiagnostics),
+    adapterCoverageCapabilityRow('sourceRanges', declared.sourceRanges, observed.sourceRanges, effective.sourceRanges, observed.sourceRangeNodes + observed.sourceRangeMappings),
+    adapterCoverageCapabilityRow('generatedRanges', declared.generatedRanges, observed.generatedRanges, effective.generatedRanges, observed.generatedRangeMappings),
+    adapterCoverageCapabilityRow('semanticDeclarations', declared.semanticCoverage.declarations, observed.semanticCoverage.declarations, effective.semanticCoverage.declarations, observed.semanticSymbols),
+    adapterCoverageCapabilityRow('semanticSymbols', declared.semanticCoverage.symbols, observed.semanticCoverage.symbols, effective.semanticCoverage.symbols, observed.semanticSymbols),
+    adapterCoverageCapabilityRow('references', declared.semanticCoverage.references, observed.semanticCoverage.references, effective.semanticCoverage.references, observed.semanticReferences),
+    adapterCoverageCapabilityRow('types', declared.semanticCoverage.types, observed.semanticCoverage.types, effective.semanticCoverage.types, observed.semanticTypes),
+    adapterCoverageCapabilityRow('controlFlow', declared.semanticCoverage.controlFlow, observed.semanticCoverage.controlFlow, effective.semanticCoverage.controlFlow, observed.semanticControlFlow)
+  ];
+  const reviewCapabilities = new Set(['exactAst', 'tokens', 'trivia', 'parserDiagnostics', 'sourceRanges', 'generatedRanges', 'references', 'types', 'controlFlow']);
+  return Object.freeze({
+    declared,
+    observed,
+    effective,
+    capabilities: Object.freeze(capabilityRows),
+    gaps: Object.freeze(capabilityRows.filter((row) => reviewCapabilities.has(row.capability) && !row.effective).map((row) => row.capability)),
+    declaredOnly: Object.freeze(capabilityRows.filter((row) => row.declared && !row.observed).map((row) => row.capability)),
+    observedOnly: Object.freeze(capabilityRows.filter((row) => !row.declared && row.observed).map((row) => row.capability)),
+    parserDiagnostics: Object.freeze({
+      declared: declared.diagnostics,
+      observed: observed.parserDiagnostics > 0,
+      count: observed.parserDiagnostics,
+      errors: observed.diagnosticErrors,
+      warnings: observed.diagnosticWarnings,
+      infos: observed.diagnosticInfos
+    }),
+    sourceRanges: Object.freeze({
+      declared: declared.sourceRanges,
+      observed: observed.sourceRanges,
+      nativeAstNodes: observed.nativeAstNodes,
+      sourceRangeNodes: observed.sourceRangeNodes,
+      sourceMapMappings: observed.sourceMapMappings,
+      sourceRangeMappings: observed.sourceRangeMappings,
+      generatedRangeMappings: observed.generatedRangeMappings
+    }),
+    tokensTrivia: Object.freeze({
+      tokens: Object.freeze({ declared: declared.tokens, observed: observed.tokens, count: observed.tokenCount }),
+      trivia: Object.freeze({ declared: declared.trivia, observed: observed.trivia, count: observed.triviaCount })
+    }),
+    semantic: Object.freeze({
+      level: Object.freeze({
+        declared: declared.semanticCoverage.level,
+        observed: observed.semanticCoverage.level,
+        effective: effective.semanticCoverage.level
+      }),
+      declarations: adapterCoverageCapabilityRow('semanticDeclarations', declared.semanticCoverage.declarations, observed.semanticCoverage.declarations, effective.semanticCoverage.declarations, observed.semanticSymbols),
+      symbols: adapterCoverageCapabilityRow('semanticSymbols', declared.semanticCoverage.symbols, observed.semanticCoverage.symbols, effective.semanticCoverage.symbols, observed.semanticSymbols),
+      references: adapterCoverageCapabilityRow('references', declared.semanticCoverage.references, observed.semanticCoverage.references, effective.semanticCoverage.references, observed.semanticReferences),
+      types: adapterCoverageCapabilityRow('types', declared.semanticCoverage.types, observed.semanticCoverage.types, effective.semanticCoverage.types, observed.semanticTypes),
+      controlFlow: adapterCoverageCapabilityRow('controlFlow', declared.semanticCoverage.controlFlow, observed.semanticCoverage.controlFlow, effective.semanticCoverage.controlFlow, observed.semanticControlFlow)
+    })
+  });
+}
+
+function adapterCoverageCapabilityRow(capability, declared, observed, effective, count = 0) {
+  const status = declared && observed
+    ? 'declared-and-observed'
+    : declared ? 'declared-unobserved' : observed ? 'observed-undeclared' : 'absent';
+  return Object.freeze({
+    capability,
+    declared: Boolean(declared),
+    observed: Boolean(observed),
+    effective: Boolean(effective),
+    count: Number(count ?? 0) || 0,
+    status
   });
 }
 

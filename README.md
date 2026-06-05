@@ -171,6 +171,9 @@ const project = await importNativeProject({
 console.log(imported.universalAst.sourceMaps.length);
 console.log(project.semanticIndex.symbols.length);
 console.log(imported.adapter.coverage.exactness);
+console.log(imported.adapter.coverage.capabilityEvidence.declared.exactness);
+console.log(imported.adapter.coverage.capabilityEvidence.observed.sourceRanges);
+console.log(imported.adapter.coverage.capabilityEvidence.gaps);
 console.log(imported.adapter.coverage.semanticCoverage.level);
 console.log(project.metadata.sourcePreservationSummary.total);
 ```
@@ -183,6 +186,8 @@ The built-in adapter factories are dependency-light wrappers for caller-owned pa
 - `createTreeSitterNativeImporterAdapter`
 
 Adapter summaries include a structured `coverage` record so merge queues can distinguish exact parser AST imports from declaration scans. The record declares exactness, parser token/trivia support, diagnostics support, source-range and generated-range support, and semantic coverage. Built-in wrappers normalize native AST/CST nodes and declaration-level semantic indexes; they do not claim resolved references, types, control flow, generated ranges, or token/trivia fidelity unless the host adapter supplies that evidence.
+
+Coverage records also keep declared, observed, and effective capability evidence separate. `coverage.capabilityEvidence.gaps` highlights missing exact AST, token/trivia, parser diagnostics, source range, generated range, reference, type, and control-flow evidence for the current adapter/import. `observedOnly` means the import produced evidence the adapter did not declare, while `declaredOnly` means the adapter declared support that this run did not exercise.
 
 ## Related Packages
 

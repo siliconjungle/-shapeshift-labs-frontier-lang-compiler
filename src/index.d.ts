@@ -174,6 +174,28 @@ export interface NativeImportLanguageProfile {
   readonly notes: readonly string[];
 }
 
+export interface NativeImporterAdapterCoverageAggregate {
+  readonly total: number;
+  readonly declared: Readonly<Record<string, number>>;
+  readonly observed: Readonly<Record<string, number>>;
+  readonly effective: Readonly<Record<string, number>>;
+  readonly gaps: Readonly<Record<string, number>>;
+  readonly declaredOnly: Readonly<Record<string, number>>;
+  readonly observedOnly: Readonly<Record<string, number>>;
+  readonly summaries: readonly {
+    readonly adapterId?: string;
+    readonly language?: FrontierSourceLanguage | string;
+    readonly parser?: string;
+    readonly exactness?: NativeImporterAdapterExactness;
+    readonly declared: readonly string[];
+    readonly observed: readonly string[];
+    readonly effective: readonly string[];
+    readonly gaps: readonly string[];
+    readonly declaredOnly: readonly string[];
+    readonly observedOnly: readonly string[];
+  }[];
+}
+
 export interface NativeImportCoverageLanguage {
   readonly language: FrontierSourceLanguage;
   readonly aliases: readonly string[];
@@ -184,6 +206,7 @@ export interface NativeImportCoverageLanguage {
   readonly knownLossKinds: readonly NativeImportKnownLossKind[];
   readonly defaultReadiness: SemanticMergeReadiness;
   readonly notes: readonly string[];
+  readonly adapterCoverage: NativeImporterAdapterCoverageAggregate;
   readonly imports: {
     readonly total: number;
     readonly parsers: readonly string[];
@@ -214,6 +237,7 @@ export interface NativeImportCoverageMatrix {
     readonly losses: number;
     readonly byReadiness: Readonly<Record<string, number>>;
     readonly lossKinds: Readonly<Record<string, number>>;
+    readonly adapterCoverage: NativeImporterAdapterCoverageAggregate;
   };
   readonly metadata: {
     readonly compileTargets: readonly FrontierCompileTarget[];
@@ -618,14 +642,97 @@ export interface NativeImporterAdapterSemanticCoverage {
   readonly controlFlow: boolean;
 }
 
+export interface NativeImporterAdapterCoverageSnapshot {
+  readonly exactness: NativeImporterAdapterExactness;
+  readonly exactAst: boolean;
+  readonly tokens: boolean;
+  readonly trivia: boolean;
+  readonly diagnostics: boolean;
+  readonly sourceRanges: boolean;
+  readonly generatedRanges: boolean;
+  readonly semanticCoverage: NativeImporterAdapterSemanticCoverage;
+}
+
 export interface NativeImporterAdapterCoverageObserved {
+  readonly exactness?: NativeImporterAdapterExactness;
+  readonly exactAst?: boolean;
+  readonly tokens?: boolean;
+  readonly tokenCount?: number;
+  readonly trivia?: boolean;
+  readonly triviaCount?: number;
   readonly diagnostics: number;
+  readonly parserDiagnostics?: number;
+  readonly diagnosticErrors?: number;
+  readonly diagnosticWarnings?: number;
+  readonly diagnosticInfos?: number;
   readonly losses: number;
   readonly nativeAstNodes: number;
   readonly semanticSymbols: number;
+  readonly semanticReferences?: number;
+  readonly semanticTypes?: number;
+  readonly semanticControlFlow?: number;
+  readonly references?: boolean;
+  readonly types?: boolean;
+  readonly controlFlow?: boolean;
   readonly sourceMapMappings: number;
   readonly sourceRanges: boolean;
+  readonly sourceRangeNodes?: number;
+  readonly sourceRangeMappings?: number;
   readonly generatedRanges: boolean;
+  readonly generatedRangeMappings?: number;
+  readonly semanticCoverage?: NativeImporterAdapterSemanticCoverage;
+}
+
+export interface NativeImporterAdapterCoverageCapabilityRow {
+  readonly capability: string;
+  readonly declared: boolean;
+  readonly observed: boolean;
+  readonly effective: boolean;
+  readonly count: number;
+  readonly status: 'declared-and-observed' | 'declared-unobserved' | 'observed-undeclared' | 'absent';
+}
+
+export interface NativeImporterAdapterCoverageCapabilityEvidence {
+  readonly declared: NativeImporterAdapterCoverageSnapshot;
+  readonly observed: NativeImporterAdapterCoverageObserved;
+  readonly effective: NativeImporterAdapterCoverageSnapshot;
+  readonly capabilities: readonly NativeImporterAdapterCoverageCapabilityRow[];
+  readonly gaps: readonly string[];
+  readonly declaredOnly: readonly string[];
+  readonly observedOnly: readonly string[];
+  readonly parserDiagnostics: {
+    readonly declared: boolean;
+    readonly observed: boolean;
+    readonly count: number;
+    readonly errors: number;
+    readonly warnings: number;
+    readonly infos: number;
+  };
+  readonly sourceRanges: {
+    readonly declared: boolean;
+    readonly observed: boolean;
+    readonly nativeAstNodes: number;
+    readonly sourceRangeNodes: number;
+    readonly sourceMapMappings: number;
+    readonly sourceRangeMappings: number;
+    readonly generatedRangeMappings: number;
+  };
+  readonly tokensTrivia: {
+    readonly tokens: { readonly declared: boolean; readonly observed: boolean; readonly count: number };
+    readonly trivia: { readonly declared: boolean; readonly observed: boolean; readonly count: number };
+  };
+  readonly semantic: {
+    readonly level: {
+      readonly declared: string;
+      readonly observed: string;
+      readonly effective: string;
+    };
+    readonly declarations: NativeImporterAdapterCoverageCapabilityRow;
+    readonly symbols: NativeImporterAdapterCoverageCapabilityRow;
+    readonly references: NativeImporterAdapterCoverageCapabilityRow;
+    readonly types: NativeImporterAdapterCoverageCapabilityRow;
+    readonly controlFlow: NativeImporterAdapterCoverageCapabilityRow;
+  };
 }
 
 export interface NativeImporterAdapterCoverageSummary {
@@ -638,11 +745,13 @@ export interface NativeImporterAdapterCoverageSummary {
   readonly generatedRanges: boolean;
   readonly semanticCoverage: NativeImporterAdapterSemanticCoverage;
   readonly notes: readonly string[];
+  readonly declared?: NativeImporterAdapterCoverageSnapshot;
   readonly observed?: NativeImporterAdapterCoverageObserved;
+  readonly capabilityEvidence?: NativeImporterAdapterCoverageCapabilityEvidence;
 }
 
 export type NativeImporterAdapterCoverageInput =
-  Omit<Partial<NativeImporterAdapterCoverageSummary>, 'semanticCoverage' | 'observed'> & {
+  Omit<Partial<NativeImporterAdapterCoverageSummary>, 'semanticCoverage' | 'observed' | 'declared' | 'capabilityEvidence'> & {
     readonly semanticCoverage?: Partial<NativeImporterAdapterSemanticCoverage>;
     readonly observed?: Partial<NativeImporterAdapterCoverageObserved>;
   };

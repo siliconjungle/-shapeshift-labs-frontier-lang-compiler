@@ -53,6 +53,9 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(imported.nativeAst.rootId.startsWith('native_program'), true);
   assert.equal(imported.semanticIndex.symbols.some((symbol) => symbol.name === name), true);
   assert.ok(imported.sourceMaps[0].mappings.length >= 1);
+  assert.equal(imported.adapter.coverage.capabilityEvidence.declared.exactAst, true);
+  assert.equal(imported.adapter.coverage.capabilityEvidence.observed.sourceRanges, true);
+  assert.equal(imported.adapter.coverage.capabilityEvidence.gaps.includes('tokens'), true);
 
   const lightweight = importNativeSource({
     language: index % 2 === 0 ? 'javascript' : 'python',
