@@ -14,6 +14,8 @@ import type {
   SemanticIndexRecord,
   SemanticNode,
   SemanticPatchBundle,
+  SourceMapMappingRecord,
+  SourceMapRecord,
   SourceSpan
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { Diagnostic } from '@shapeshift-labs/frontier-lang-checker';
@@ -104,7 +106,7 @@ export interface ImportNativeSourceOptions {
   readonly nodes?: Readonly<Record<string, NativeAstNode>>;
   readonly semanticNodes?: readonly SemanticNode[];
   readonly frontierNodeIds?: readonly string[];
-  readonly mappings?: readonly unknown[];
+  readonly mappings?: readonly SourceMapMappingRecord[];
   readonly semanticStatus?: 'native-only' | 'mapped' | 'partial' | string;
   readonly losses?: readonly NativeAstLossRecord[];
   readonly evidence?: readonly EvidenceRecord[];
@@ -114,6 +116,8 @@ export interface ImportNativeSourceOptions {
   readonly author?: string;
   readonly target?: CompileTarget;
   readonly semanticIndex?: SemanticIndexRecord;
+  readonly sourceMapId?: string;
+  readonly sourceMaps?: readonly SourceMapRecord[];
   readonly universalAstId?: string;
   readonly universalAstMetadata?: Record<string, unknown>;
   readonly metadata?: Record<string, unknown>;
@@ -189,6 +193,7 @@ export declare function importNativeSource(input: ImportNativeSourceOptions): Na
 export declare function createUniversalAstFromDocument(document: FrontierLangDocument, input?: {
   readonly id?: string;
   readonly semanticIndex?: SemanticIndexRecord;
+  readonly sourceMaps?: readonly SourceMapRecord[];
   readonly evidence?: readonly EvidenceRecord[];
   readonly metadata?: Record<string, unknown>;
 }): FrontierUniversalAstEnvelope;

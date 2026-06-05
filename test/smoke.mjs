@@ -99,6 +99,9 @@ assert.equal(nativeImport.kind, 'frontier.lang.importResult');
 assert.equal(nativeImport.nativeSource.kind, 'nativeSource');
 assert.equal(nativeImport.semanticIndex.symbols[0].id, 'symbol:addTodo');
 assert.equal(nativeImport.universalAst.semanticIndex.id, 'index_todo_js');
+assert.equal(nativeImport.sourceMaps[0].kind, 'frontier.lang.sourceMap');
+assert.equal(nativeImport.sourceMaps[0].mappings[0].nativeAstNodeId, 'fn_add');
+assert.equal(nativeImport.universalAst.sourceMaps[0].id, nativeImport.sourceMaps[0].id);
 assert.equal(nativeImport.patch.operations[0].op, 'upsertNode');
 assert.equal(nativeImport.evidence[0].status, 'passed');
 assert.equal(nativeImport.mergeCandidates.length, 1);
@@ -140,6 +143,7 @@ assert.deepEqual(adapterImport.adapter.supportedExtensions, ['.js', '.mjs']);
 assert.equal(adapterImport.nativeAst.parser, 'estree');
 assert.equal(adapterImport.nativeAst.parserVersion, '1.0.0');
 assert.equal(adapterImport.nativeAst.metadata.adapterId, 'fixture-estree-importer');
+assert.equal(adapterImport.sourceMaps[0].mappings.some((mapping) => mapping.nativeAstNodeId === 'adapter_fn'), true);
 assert.equal(adapterImport.metadata.adapterId, 'fixture-estree-importer');
 assert.equal(adapterImport.metadata.requestId, 'adapter-smoke');
 assert.equal(adapterImport.diagnostics.length, 2);
@@ -171,26 +175,72 @@ assert.equal(scannedJsImport.nativeAst.rootId, 'native_root');
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'addTodo'), true);
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TodoStore'), true);
 assert.equal(scannedJsImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('addtodo')), true);
 assert.equal(scannedJsImport.losses.some((loss) => loss.kind === 'opaqueNative'), true);
+const scannedLossKinds = scannedJsImport.losses.map((loss) => loss.kind);
+assert.equal(scannedLossKinds.includes('declarationOnlyCoverage'), true);
+assert.equal(scannedLossKinds.includes('partialSemanticIndex'), true);
+assert.equal(scannedLossKinds.includes('sourceMapApproximation'), true);
+assert.equal(scannedLossKinds.includes('sourcePreservation'), true);
+assert.equal(scannedJsImport.mergeCandidates[0].readiness, 'ready-with-losses');
 const scannedPythonImport = importNativeSource({
   language: 'python',
   sourcePath: 'todo.py',
   sourceText: 'import json\nclass TodoStore:\n    pass\ndef add_todo(title):\n    return title\n'
 });
 assert.equal(scannedPythonImport.semanticIndex.symbols.some((symbol) => symbol.name === 'add_todo'), true);
+assert.equal(scannedPythonImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('add_todo')), true);
 const scannedRustImport = importNativeSource({
   language: 'rust',
   sourcePath: 'src/lib.rs',
   sourceText: 'use std::sync::Arc;\npub struct Todo;\npub fn add_todo(title: String) {}\nmacro_rules! todo_macro { () => {} }\n'
 });
 assert.equal(scannedRustImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
+assert.equal(scannedRustImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('todo')), true);
 const scannedCImport = importNativeSource({
   language: 'c',
   sourcePath: 'todo.h',
   sourceText: '#include <stdint.h>\n#define TODO_MAX 32\ntypedef struct Todo { int done; } Todo;\nvoid add_todo(void);\n'
 });
 assert.equal(scannedCImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TODO_MAX'), true);
+assert.equal(scannedCImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('todo_max')), true);
 assert.equal(scannedCImport.losses.some((loss) => loss.kind === 'preprocessor'), true);
+const scannedJavaImport = importNativeSource({
+  language: 'java',
+  sourcePath: 'Todo.java',
+  sourceText: 'package demo;\nimport java.util.List;\npublic class Todo {\n  public void addTodo(String title) {}\n}\n'
+});
+assert.equal(scannedJavaImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
+const scannedGoImport = importNativeSource({
+  language: 'go',
+  sourcePath: 'todo.go',
+  sourceText: 'package todo\nimport "fmt"\ntype Todo struct {}\nfunc AddTodo(title string) {}\n'
+});
+assert.equal(scannedGoImport.semanticIndex.symbols.some((symbol) => symbol.name === 'AddTodo'), true);
+const scannedSwiftImport = importNativeSource({
+  language: 'swift',
+  sourcePath: 'Todo.swift',
+  sourceText: 'import Foundation\nstruct Todo {\n  let title: String\n}\nfunc addTodo(_ title: String) {}\n'
+});
+assert.equal(scannedSwiftImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
+const scannedCSharpImport = importNativeSource({
+  language: 'csharp',
+  sourcePath: 'Todo.cs',
+  sourceText: 'using System;\nnamespace Demo;\npublic class Todo {\n  public void AddTodo(string title) {}\n}\n'
+});
+assert.equal(scannedCSharpImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
+const scannedPhpImport = importNativeSource({
+  language: 'php',
+  sourcePath: 'Todo.php',
+  sourceText: '<?php\nnamespace Demo;\nuse Psr\\Log\\LoggerInterface;\nclass Todo {}\nfunction addTodo($title) {}\n'
+});
+assert.equal(scannedPhpImport.semanticIndex.symbols.some((symbol) => symbol.name === 'addTodo'), true);
+const scannedRubyImport = importNativeSource({
+  language: 'ruby',
+  sourcePath: 'todo.rb',
+  sourceText: 'require "json"\nmodule Demo\nclass Todo\nend\ndef add_todo(title)\nend\nend\n'
+});
+assert.equal(scannedRubyImport.semanticIndex.symbols.some((symbol) => symbol.name === 'add_todo'), true);
 const universalAst = createUniversalAstFromDocument(result.document, { id: 'uast_todo', evidence: nativeImport.evidence });
 const universalJson = writeUniversalAstJson(universalAst);
 assert.equal(readUniversalAstJson(universalJson).document.id, 'mod_todo');
