@@ -10,6 +10,7 @@ import {
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
+  createClangAstNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
   createSemanticImportSidecar,
@@ -63,6 +64,7 @@ for (const requiredExport of [
   'ProjectionTargetLossClasses',
   'createNativeImportResultContract',
   'createNativeParserAstFormatMatrix',
+  'createClangAstNativeImporterAdapter',
   'createPythonAstNativeImporterAdapter',
   'createRustSynNativeImporterAdapter',
   'createProjectionTargetLossMatrix',
@@ -883,6 +885,115 @@ const missingRustSynImport = await runNativeImporterAdapter(createRustSynNativeI
 });
 assert.equal(missingRustSynImport.nativeAst.nodes[missingRustSynImport.nativeAst.rootId].kind, 'MissingInjectedParser');
 assert.equal(missingRustSynImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parser.missing'), true);
+const clangFixtureSource = '#include <stdint.h>\ntypedef struct CThing { int value; } CThing;\nint from_c(CThing thing) { return thing.value; }\n';
+const clangFixture = {
+  kind: 'TranslationUnitDecl',
+  inner: [{
+    kind: 'IncludeDirective',
+    file: 'stdint.h',
+    loc: { line: 1, col: 1 }
+  }, {
+    kind: 'TypedefDecl',
+    name: 'CThing',
+    type: { qualType: 'struct CThing' },
+    range: { begin: { line: 2, col: 1 }, end: { line: 2, col: 48 } },
+    inner: [{
+      kind: 'RecordDecl',
+      name: 'CThing',
+      tagUsed: 'struct',
+      completeDefinition: true,
+      range: { begin: { line: 2, col: 9 }, end: { line: 2, col: 36 } },
+      inner: [{
+        kind: 'FieldDecl',
+        name: 'value',
+        type: { qualType: 'int' },
+        range: { begin: { line: 2, col: 25 }, end: { line: 2, col: 33 } }
+      }]
+    }]
+  }, {
+    kind: 'FunctionDecl',
+    name: 'from_c',
+    type: { qualType: 'int (CThing)' },
+    isThisDeclarationADefinition: true,
+    range: { begin: { line: 3, col: 1 }, end: { line: 3, col: 47 } },
+    inner: [{
+      kind: 'ParmVarDecl',
+      name: 'thing',
+      type: { qualType: 'CThing' },
+      range: { begin: { line: 3, col: 12 }, end: { line: 3, col: 24 } }
+    }, {
+      kind: 'CompoundStmt',
+      range: { begin: { line: 3, col: 25 }, end: { line: 3, col: 47 } },
+      inner: [{
+        kind: 'ReturnStmt',
+        range: { begin: { line: 3, col: 27 }, end: { line: 3, col: 45 } }
+      }]
+    }]
+  }]
+};
+const clangImport = await runNativeImporterAdapter(createClangAstNativeImporterAdapter({ cStandard: 'c11' }), {
+  sourcePath: 'src/clang_ast.c',
+  sourceText: clangFixtureSource,
+  adapterOptions: { ast: clangFixture, compileFlags: ['-std=c11'] }
+});
+assert.equal(clangImport.adapter.parser, 'clang');
+assert.equal(clangImport.adapter.coverage.exactness, 'exact-parser-ast');
+assert.equal(clangImport.nativeAst.parser, 'clang');
+assert.equal(clangImport.metadata.astFormat, 'clang-ast-json');
+assert.equal(clangImport.metadata.cStandard, 'c11');
+assert.equal(clangImport.semanticIndex.symbols.some((symbol) => symbol.name === 'from_c' && symbol.kind === 'function'), true);
+assert.equal(clangImport.semanticIndex.symbols.some((symbol) => symbol.name === 'CThing'), true);
+assert.equal(clangImport.semanticIndex.symbols.some((symbol) => symbol.name === 'value' && symbol.kind === 'property'), true);
+assert.equal(clangImport.semanticIndex.occurrences.some((occurrence) => occurrence.role === 'import'), true);
+assert.equal(clangImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('from_c')), true);
+const scannedClangFixtureImport = importNativeSource({
+  language: 'c',
+  sourcePath: 'src/clang_ast.c',
+  sourceText: clangFixtureSource
+});
+assert.equal(clangImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
+assert.equal(clangImport.losses.length, 0);
+assert.equal(scannedClangFixtureImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
+assert.equal(scannedClangFixtureImport.metadata.nativeImportLossSummary.exactAst, false);
+assert.ok(clangImport.semanticIndex.symbols.length > scannedClangFixtureImport.semanticIndex.symbols.length);
+const clangMacroImport = await runNativeImporterAdapter(createClangAstNativeImporterAdapter(), {
+  sourcePath: 'src/clang_macro.c',
+  sourceText: '#define GENERATED 1\nint generated(void) { return GENERATED; }\n',
+  adapterOptions: {
+    ast: {
+      kind: 'TranslationUnitDecl',
+      inner: []
+    },
+    preprocessorRecords: [{ kind: 'MacroDefinitionRecord', name: 'GENERATED', loc: { line: 1, col: 1 } }],
+    includeGraph: { hash: 'fixture-include-graph', edges: [] }
+  }
+});
+assert.equal(clangMacroImport.losses.some((loss) => loss.kind === 'preprocessor'), true);
+assert.equal(clangMacroImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
+assert.equal(clangMacroImport.metadata.preprocessorRecordCount, 1);
+assert.equal(clangMacroImport.metadata.includeGraph.hash, 'fixture-include-graph');
+const malformedClangImport = await runNativeImporterAdapter(createClangAstNativeImporterAdapter({
+  parserModule: {
+    parse() {
+      return {
+        ast: { kind: 'TranslationUnitDecl', inner: [] },
+        diagnostics: [{ code: 'ClangSyntaxError', message: 'expected identifier', loc: { line: 1, column: 5 } }]
+      };
+    }
+  }
+}), {
+  sourcePath: 'src/malformed_clang.c',
+  sourceText: 'int {\n'
+});
+assert.equal(malformedClangImport.diagnostics.some((diagnostic) => diagnostic.code === 'ClangSyntaxError'), true);
+assert.equal(malformedClangImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'blocked');
+const missingClangImport = await runNativeImporterAdapter(createClangAstNativeImporterAdapter(), {
+  sourcePath: 'src/missing_clang.c',
+  sourceText: 'int missing(void) { return 0; }\n',
+  adapterOptions: { ast: { body: [] } }
+});
+assert.equal(missingClangImport.nativeAst.nodes[missingClangImport.nativeAst.rootId].kind, 'MissingInjectedParser');
+assert.equal(missingClangImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parser.missing'), true);
 const treeName = {
   type: 'identifier',
   text: 'from_tree',
@@ -1606,13 +1717,14 @@ assert.equal(haskellCoverage.imports.readiness, 'needs-review');
 assert.deepEqual(coverageMatrix.metadata.projectionTargetLossClasses, [...ProjectionTargetLossClasses]);
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   generatedAt: 234,
-  imports: [estreeAdapterImport, babelAdapterImport, tsAdapterImport, pythonAstImport, rustSynImport, treeImport],
+  imports: [estreeAdapterImport, babelAdapterImport, tsAdapterImport, pythonAstImport, rustSynImport, clangImport, treeImport],
   adapters: [
     createEstreeNativeImporterAdapter(),
     createBabelNativeImporterAdapter(),
     createTypeScriptCompilerNativeImporterAdapter({ typescript: tsMock }),
     createPythonAstNativeImporterAdapter(),
     createRustSynNativeImporterAdapter(),
+    createClangAstNativeImporterAdapter(),
     createTreeSitterNativeImporterAdapter({ language: 'javascript' })
   ]
 });
@@ -1620,13 +1732,15 @@ assert.equal(parserFormatMatrix.kind, 'frontier.lang.nativeParserAstFormatMatrix
 assert.equal(parserFormatMatrix.generatedAt, 234);
 assert.equal(NativeParserAstFormats.includes('python-ast'), true);
 assert.equal(NativeParserAstFormats.includes('rust-syn'), true);
+assert.equal(NativeParserAstFormats.includes('clang-ast-json'), true);
 assert.equal(NativeParserAstFormatProfiles.some((profile) => profile.id === 'tree-sitter'), true);
 assert.equal(getNativeParserAstFormatProfile('python_ast').id, 'python-ast');
 assert.equal(getNativeParserAstFormatProfile('syn').id, 'rust-syn');
+assert.equal(getNativeParserAstFormatProfile('libclang').id, 'clang-ast-json');
 assert.ok(parserFormatMatrix.summary.formats >= 10);
-assert.equal(parserFormatMatrix.summary.imports, 6);
+assert.equal(parserFormatMatrix.summary.imports, 7);
 assert.ok(parserFormatMatrix.summary.nativeAstNodes >= 5);
-assert.ok(parserFormatMatrix.summary.effectiveCapabilities.exactAst >= 4);
+assert.ok(parserFormatMatrix.summary.effectiveCapabilities.exactAst >= 5);
 const pythonAstFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast');
 assert.equal(pythonAstFormatCoverage.imports.total, 1);
 assert.equal(pythonAstFormatCoverage.imports.readiness, 'ready');
@@ -1637,6 +1751,11 @@ assert.equal(rustSynFormatCoverage.imports.total, 1);
 assert.equal(rustSynFormatCoverage.imports.readiness, 'ready');
 assert.equal(rustSynFormatCoverage.imports.symbols >= 3, true);
 assert.equal(rustSynFormatCoverage.adapters.total, 1);
+const clangAstFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'clang-ast-json');
+assert.equal(clangAstFormatCoverage.imports.total, 1);
+assert.equal(clangAstFormatCoverage.imports.readiness, 'ready');
+assert.equal(clangAstFormatCoverage.imports.symbols >= 3, true);
+assert.equal(clangAstFormatCoverage.adapters.total, 1);
 const treeSitterFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'tree-sitter');
 assert.equal(treeSitterFormatCoverage.imports.total, 1);
 assert.equal(treeSitterFormatCoverage.supportsIncremental, true);

@@ -2,6 +2,7 @@ import { performance } from 'node:perf_hooks';
 import {
   compileNativeSource,
   compileFrontierSource,
+  createClangAstNativeImporterAdapter,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeParserAstFormatMatrix,
@@ -79,7 +80,7 @@ const matrixDurationMs = performance.now() - matrixStart;
 const parserFormatMatrixStart = performance.now();
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   imports: nativeImportResults,
-  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter()]
+  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter()]
 });
 const parserFormatMatrixDurationMs = performance.now() - parserFormatMatrixStart;
 

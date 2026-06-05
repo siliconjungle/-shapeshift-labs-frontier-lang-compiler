@@ -23,6 +23,7 @@ import {
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
+  createClangAstNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
   createSemanticImportSidecar,
@@ -110,6 +111,7 @@ import type {
   ProjectionTargetLossClass,
   ProjectionTargetLossMatrix,
   ProjectionTargetLossMatrixOptions,
+  ClangAstNativeImporterAdapterOptions,
   RustSynNativeImporterAdapterOptions,
   SemanticImportSidecar,
   SemanticImportRegionTaxonomySummary
@@ -148,6 +150,7 @@ type ExpectedPublicRuntimeExport =
   | 'createNativeParserAstFormatMatrix'
   | 'createProjectionTargetLossMatrix'
   | 'createNativeSourcePreservation'
+  | 'createClangAstNativeImporterAdapter'
   | 'createPythonAstNativeImporterAdapter'
   | 'createRustSynNativeImporterAdapter'
   | 'createSemanticImportSidecar'
@@ -340,6 +343,7 @@ const babelAdapter: NativeImporterAdapter = createBabelNativeImporterAdapter();
 const tsAdapter: NativeImporterAdapter = createTypeScriptCompilerNativeImporterAdapter();
 const pythonAstAdapter: NativeImporterAdapter = createPythonAstNativeImporterAdapter();
 const rustSynAdapter: NativeImporterAdapter = createRustSynNativeImporterAdapter();
+const clangAstAdapter: NativeImporterAdapter = createClangAstNativeImporterAdapter();
 const treeAdapter: NativeImporterAdapter = createTreeSitterNativeImporterAdapter({ language: 'javascript' });
 
 const adapterDiagnostic: NativeImporterAdapterDiagnostic = {
@@ -383,12 +387,19 @@ const adapterCapabilityEvidence: Promise<NativeImporterAdapterCoverageCapability
 const parserFormatOptions: NativeParserAstFormatMatrixOptions = {
   generatedAt: 4,
   imports: [imported],
-  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, rustSynAdapter, treeAdapter]
+  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, treeAdapter]
 };
 const parserFormatMatrix: NativeParserAstFormatMatrix = createNativeParserAstFormatMatrix(parserFormatOptions);
 const rustSynAdapterOptions: RustSynNativeImporterAdapterOptions = {
   rustEdition: '2021',
   ast: { kind: 'File', items: [] }
+};
+const clangAstAdapterOptions: ClangAstNativeImporterAdapterOptions = {
+  cStandard: 'c11',
+  compileFlags: ['-std=c11'],
+  preprocessorRecords: [{ kind: 'MacroDefinitionRecord', name: 'FEATURE' }],
+  includeGraph: { hash: 'fixture' },
+  ast: { kind: 'TranslationUnitDecl', inner: [] }
 };
 const projectionLossOptions: ProjectionTargetLossMatrixOptions = {
   generatedAt: 2,

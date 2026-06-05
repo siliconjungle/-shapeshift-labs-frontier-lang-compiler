@@ -403,6 +403,18 @@ export const NativeParserAstFormatProfiles = Object.freeze([
     supportsErrorRecovery: true,
     notes: ['rust-analyzer uses rowan-backed concrete syntax trees with AST wrappers; semantic richness still depends on host analysis evidence.']
   }),
+  nativeParserAstFormatProfile('clang-ast-json', {
+    aliases: ['clang', 'libclang', 'clang-json', 'clang-ast-dump-json'],
+    kind: 'compiler-ast',
+    languages: ['c', 'cpp'],
+    parserAdapters: ['clang', 'libclang', 'clang-ast-json'],
+    exactness: 'exact-parser-ast',
+    sourceRangeModel: 'clang-loc-range',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsErrorRecovery: false,
+    notes: ['Clang JSON AST dumps expose compiler AST declarations and source ranges after preprocessing; compile commands, macros, inactive branches, type checking, and lossless formatting remain host-owned evidence.']
+  }),
   nativeParserAstFormatProfile('tree-sitter', {
     kind: 'concrete-syntax-tree',
     languages: ['mixed'],
@@ -2706,6 +2718,64 @@ export function createRustSynNativeImporterAdapter(options = {}) {
         diagnostics: parseDiagnostics,
         rustEdition: options.rustEdition ?? input.options?.rustEdition ?? parsed?.rustEdition,
         includeAttributes: options.includeAttributes ?? input.options?.includeAttributes
+      });
+    }
+  };
+}
+
+export function createClangAstNativeImporterAdapter(options = {}) {
+  return {
+    id: options.id ?? 'frontier.clang-ast-native-importer',
+    language: options.language ?? 'c',
+    parser: options.parser ?? 'clang',
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'exact-parser-ast',
+      exactAst: true,
+      tokens: false,
+      trivia: false,
+      diagnostics: true,
+      sourceRanges: true,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes caller-owned Clang -ast-dump=json shaped ASTs into native AST nodes and declaration-level semantic index records.',
+        'Clang JSON ASTs reflect a preprocessed compiler view; compile commands, macros, inactive preprocessor branches, comments/trivia, and full type/reference analysis require host evidence.'
+      ]
+    }, options.coverage),
+    supportedExtensions: options.supportedExtensions ?? ['.c', '.h', '.cc', '.cpp', '.cxx', '.hpp', '.hh'],
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const parsed = input.options?.ast
+        ?? input.options?.nativeAst
+        ?? input.options?.translationUnit
+        ?? input.options?.tu
+        ?? options.ast
+        ?? options.translationUnit
+        ?? options.tu
+        ?? parseClangAstSource(input, options);
+      const root = clangAstRoot(parsed);
+      if (!root) {
+        return missingInjectedParserResult(input, {
+          parser: options.parser ?? 'clang',
+          adapterId: options.id ?? 'frontier.clang-ast-native-importer',
+          message: 'createClangAstNativeImporterAdapter requires an injected Clang JSON AST object, parserModule.parse function, parse function, or adapterOptions.ast.'
+        });
+      }
+      const parseDiagnostics = normalizeParserErrors(parsed?.errors ?? parsed?.diagnostics, input, {
+        parser: options.parser ?? 'clang'
+      });
+      return createNativeImportFromClangAst(root, input, {
+        parser: options.parser ?? 'clang',
+        astFormat: 'clang-ast-json',
+        maxNodes: options.maxNodes,
+        diagnostics: parseDiagnostics,
+        cStandard: options.cStandard ?? input.options?.cStandard ?? parsed?.cStandard,
+        compileFlags: options.compileFlags ?? input.options?.compileFlags ?? parsed?.compileFlags,
+        includeSystemHeaders: options.includeSystemHeaders ?? input.options?.includeSystemHeaders,
+        preprocessorRecords: input.options?.preprocessorRecords ?? options.preprocessorRecords ?? parsed?.preprocessorRecords,
+        includeGraph: input.options?.includeGraph ?? options.includeGraph ?? parsed?.includeGraph
       });
     }
   };
@@ -7151,6 +7221,7 @@ function parserAstFormatIdForParser(parser) {
   if (text.includes('python') && text.includes('ast')) return 'python-ast';
   if (text === 'syn' || text.includes('rust-syn')) return 'rust-syn';
   if (text.includes('rust-analyzer') || text.includes('rowan')) return 'rust-analyzer-rowan';
+  if (text.includes('clang') || text.includes('libclang')) return 'clang-ast-json';
   if (text.includes('tree-sitter') || text.includes('treesitter')) return 'tree-sitter';
   if (text.includes('babel')) return 'babel';
   if (text.includes('estree')) return 'estree';
@@ -8199,6 +8270,23 @@ function parseRustSynSource(input, options) {
   return parse(input.sourceText, parserOptions);
 }
 
+function parseClangAstSource(input, options) {
+  const parse = options.parse ?? options.parserModule?.parse ?? options.clang?.parse ?? options.libclang?.parse;
+  if (typeof parse !== 'function') return undefined;
+  const parserOptions = {
+    sourcePath: input.sourcePath,
+    filename: input.sourcePath,
+    language: options.language ?? input.language,
+    standard: options.cStandard ?? input.options?.cStandard,
+    compileFlags: options.compileFlags ?? input.options?.compileFlags,
+    includeSystemHeaders: options.includeSystemHeaders ?? input.options?.includeSystemHeaders,
+    astDumpFormat: 'json',
+    ...(options.parserOptions ?? {}),
+    ...(input.options?.parserOptions ?? {})
+  };
+  return parse(input.sourceText, parserOptions);
+}
+
 function createNativeImportFromSyntaxAst(ast, input, options) {
   const root = normalizeSyntaxAstRoot(ast, options.astFormat);
   if (!root) {
@@ -8312,6 +8400,42 @@ function createNativeImportFromRustSyn(root, input, options) {
       parser: options.parser,
       rustEdition: options.rustEdition,
       includeAttributes: Boolean(options.includeAttributes),
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createNativeImportFromClangAst(root, input, options) {
+  const context = createAstNormalizationContext(input, options);
+  visitClangAstNode(root, context, 'root');
+  for (const [index, record] of clangPreprocessorRecords(options.preprocessorRecords).entries()) {
+    visitClangAstNode(record, context, `preprocessorRecords[${index}]`);
+  }
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: mergeNativeLosses(context.losses, options.diagnostics?.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, {
+      id: input.adapterId,
+      version: input.adapterVersion
+    }, input)) ?? []),
+    evidence: semantic.evidence,
+    diagnostics: options.diagnostics,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      cStandard: options.cStandard,
+      compileFlags: Array.isArray(options.compileFlags) ? options.compileFlags.slice() : options.compileFlags,
+      includeSystemHeaders: Boolean(options.includeSystemHeaders),
+      preprocessorRecordCount: clangPreprocessorRecords(options.preprocessorRecords).length,
+      includeGraph: serializableIncludeGraphSummary(options.includeGraph),
       normalizedNodeCount: Object.keys(context.nodes).length,
       declarationCount: context.declarations.length,
       truncated: context.truncated
@@ -8552,6 +8676,67 @@ function visitRustSynNode(node, context, propertyPath) {
       sourceFormat: context.input.language,
       kind: 'macroExpansion',
       message: 'Rust macro syntax was parsed but macro expansion and generated items require host compiler evidence.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat
+      }
+    });
+  }
+  return id;
+}
+
+function visitClangAstNode(node, context, propertyPath) {
+  if (!isClangAstNode(node) || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const kind = clangAstKind(node);
+  const span = spanFromClangAstNode(node, context.input);
+  const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  for (const [field, value] of clangAstChildEntries(node)) {
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        const childId = visitClangAstNode(entry, context, `${propertyPath}.${field}[${index}]`);
+        if (childId) children.push(childId);
+      });
+    } else {
+      const childId = visitClangAstNode(value, context, `${propertyPath}.${field}`);
+      if (childId) children.push(childId);
+    }
+  }
+  const declaration = clangAstDeclaration(node, kind, id, context.input);
+  const nativeNode = {
+    id,
+    kind,
+    languageKind: `${context.input.language}.${kind}`,
+    span,
+    value: declaration?.name ?? clangAstNodeValue(node),
+    fields: primitiveClangAstFields(node, kind),
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      clangId: typeof node.id === 'string' || typeof node.id === 'number' ? String(node.id) : undefined,
+      locationKind: clangLocationKind(node)
+    }
+  };
+  context.nodes[id] = nativeNode;
+  if (declaration) context.declarations.push({ ...declaration, nativeNode });
+  if (clangPreprocessorKind(kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_clang_preprocessor`,
+      severity: 'warning',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'preprocessor',
+      message: 'Clang AST preprocessor records were imported, but macro expansion, inactive branches, and compile-command provenance require host evidence.',
       span,
       nodeId: id,
       metadata: {
@@ -10227,6 +10412,249 @@ function rustSynLiteralValue(node) {
 
 function rustSynMacroKind(kind) {
   return /Macro|MacroRules|MacroCall/.test(String(kind));
+}
+
+function clangAstRoot(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  if (Array.isArray(value)) return { kind: 'TranslationUnitDecl', inner: value };
+  if (isClangAstNode(value)) return value;
+  if (Array.isArray(value.ast)) return { kind: 'TranslationUnitDecl', inner: value.ast };
+  if (isClangAstNode(value.ast)) return value.ast;
+  if (isClangAstNode(value.root)) return value.root;
+  if (isClangAstNode(value.translationUnit)) return value.translationUnit;
+  if (isClangAstNode(value.tu)) return value.tu;
+  if (isClangAstNode(value.file)) return value.file;
+  if (isClangAstNode(value.sourceFile)) return value.sourceFile;
+  return undefined;
+}
+
+function isClangAstNode(value) {
+  return Boolean(value && typeof value === 'object' && typeof clangAstKind(value) === 'string');
+}
+
+function clangAstKind(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const declared = node.kind ?? node._type ?? node.type ?? node.nodeType ?? node.declKind ?? node.stmtKind;
+  if (typeof declared === 'string') return declared;
+  if (Array.isArray(node.inner) || Array.isArray(node.children) || Array.isArray(node.decls)) return 'TranslationUnitDecl';
+  return undefined;
+}
+
+function ignoredClangAstField(key) {
+  return key === '_type'
+    || key === 'type'
+    || key === 'kind'
+    || key === 'nodeType'
+    || key === 'declKind'
+    || key === 'stmtKind'
+    || key === 'id'
+    || key === 'loc'
+    || key === 'range'
+    || key === 'name'
+    || key === 'displayName'
+    || key === 'qualifiedName'
+    || key === 'mangledName'
+    || key === 'parent'
+    || key === 'parentDeclContextId'
+    || key === 'previousDecl'
+    || key === 'referencedDecl';
+}
+
+function primitiveClangAstFields(node, kind) {
+  const fields = { kind };
+  const name = clangDeclarationName(node);
+  if (name) fields.name = name;
+  const type = clangTypeName(node.type ?? node.qualType);
+  if (type) fields.type = type;
+  for (const key of [
+    'mangledName',
+    'storageClass',
+    'tagUsed',
+    'completeDefinition',
+    'isThisDeclarationADefinition',
+    'inline',
+    'isUsed',
+    'isReferenced',
+    'valueCategory',
+    'opcode',
+    'castKind'
+  ]) {
+    const value = node[key];
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) fields[key] = value;
+  }
+  const includePath = clangIncludePath(node);
+  if (includePath) fields.includePath = includePath;
+  const literal = clangLiteralValue(node);
+  if (literal !== undefined) fields.literal = literal;
+  const referenced = clangDeclarationName(node.referencedDecl);
+  if (referenced) fields.referenced = referenced;
+  return fields;
+}
+
+function spanFromClangAstNode(node, input) {
+  const range = node.range ?? {};
+  const begin = range.begin ?? node.loc ?? node.spellingLoc ?? node.expansionLoc;
+  const end = range.end ?? node.end;
+  const start = clangLocPosition(begin);
+  if (!start) return undefined;
+  const finish = clangLocPosition(end);
+  return {
+    sourceId: input.sourceHash,
+    path: start.path ?? finish?.path ?? input.sourcePath,
+    startLine: start.line,
+    startColumn: start.column,
+    endLine: finish?.line,
+    endColumn: finish?.column
+  };
+}
+
+function clangLocPosition(loc) {
+  if (!loc || typeof loc !== 'object') return undefined;
+  const expanded = loc.expansionLoc ?? loc.spellingLoc ?? loc;
+  const line = expanded.line ?? expanded.startLine ?? expanded.begin?.line;
+  const column = expanded.col ?? expanded.column ?? expanded.startColumn ?? expanded.begin?.col ?? expanded.begin?.column;
+  if (typeof line !== 'number') return undefined;
+  return {
+    path: expanded.file ?? expanded.filename ?? expanded.path,
+    line,
+    column: typeof column === 'number' ? column : undefined
+  };
+}
+
+function clangLocationKind(node) {
+  const loc = node.loc ?? node.range?.begin;
+  if (!loc || typeof loc !== 'object') return undefined;
+  if (loc.expansionLoc) return 'expansionLoc';
+  if (loc.spellingLoc) return 'spellingLoc';
+  if (loc.includedFrom) return 'includedFrom';
+  return 'clang-loc';
+}
+
+function clangAstDeclaration(node, kind, nativeNodeId, input) {
+  if (kind === 'FunctionDecl' || kind === 'CXXMethodDecl' || kind === 'FunctionTemplateDecl') {
+    const name = clangDeclarationName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, kind === 'CXXMethodDecl' ? 'method' : 'function', clangDeclarationAction(node));
+  }
+  if (kind === 'ParmVarDecl') {
+    const name = clangDeclarationName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'parameter', 'definition');
+  }
+  if (kind === 'RecordDecl' || kind === 'CXXRecordDecl' || kind === 'ClassTemplateDecl') {
+    const name = clangDeclarationName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, kind === 'CXXRecordDecl' ? 'class' : 'type', clangDeclarationAction(node));
+  }
+  if (kind === 'FieldDecl') {
+    const name = clangDeclarationName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'property', 'definition');
+  }
+  if (kind === 'TypedefDecl' || kind === 'TypeAliasDecl' || kind === 'TypeAliasTemplateDecl') {
+    const name = clangDeclarationName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'type', 'definition');
+  }
+  if (kind === 'EnumDecl') {
+    const name = clangDeclarationName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'type', clangDeclarationAction(node));
+  }
+  if (kind === 'EnumConstantDecl') {
+    const name = clangDeclarationName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'enumMember', 'definition');
+  }
+  if (kind === 'VarDecl') {
+    const name = clangDeclarationName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'variable', clangDeclarationAction(node));
+  }
+  if (/IncludeDirective|InclusionDirective/.test(kind)) {
+    const name = clangIncludePath(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'module', 'import');
+  }
+  if (/MacroDefinition|MacroExpansion|MacroInstantiation/.test(kind)) {
+    const name = clangDeclarationName(node) ?? clangIncludePath(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'macro', 'definition');
+  }
+  return undefined;
+}
+
+function clangDeclarationAction(node) {
+  if (node.isThisDeclarationADefinition === false) return 'declaration';
+  if (node.isThisDeclarationADefinition === true) return 'definition';
+  if (Array.isArray(node.inner) && node.inner.some((entry) => ['CompoundStmt', 'FieldDecl', 'EnumConstantDecl'].includes(clangAstKind(entry)))) return 'definition';
+  return 'declaration';
+}
+
+function clangAstChildEntries(node) {
+  const fieldNames = Object.keys(node).filter((key) => !ignoredClangAstField(key));
+  return fieldNames
+    .map((field) => [field, node[field]])
+    .filter(([, value]) => Array.isArray(value)
+      ? value.some(isClangAstNode)
+      : isClangAstNode(value));
+}
+
+function clangAstNodeValue(node) {
+  return clangDeclarationName(node)
+    ?? clangIncludePath(node)
+    ?? clangTypeName(node.type ?? node.qualType)
+    ?? clangLiteralValue(node);
+}
+
+function clangDeclarationName(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  for (const key of ['qualifiedName', 'displayName', 'name', 'mangledName']) {
+    if (typeof node[key] === 'string' && node[key]) return node[key];
+  }
+  if (node.name && typeof node.name === 'object') return clangDeclarationName(node.name);
+  if (node.referencedDecl && typeof node.referencedDecl === 'object') return clangDeclarationName(node.referencedDecl);
+  if (node.decl && typeof node.decl === 'object') return clangDeclarationName(node.decl);
+  return undefined;
+}
+
+function clangIncludePath(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  for (const key of ['file', 'filename', 'path', 'spelling', 'source']) {
+    if (typeof node[key] === 'string' && node[key]) return node[key];
+  }
+  if (node.include && typeof node.include === 'object') return clangIncludePath(node.include);
+  return undefined;
+}
+
+function clangTypeName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.qualType === 'string') return value.qualType;
+  if (typeof value.desugaredQualType === 'string') return value.desugaredQualType;
+  if (typeof value.name === 'string') return value.name;
+  if (value.type && typeof value.type === 'object') return clangTypeName(value.type);
+  return undefined;
+}
+
+function clangLiteralValue(node) {
+  const value = node.value ?? node.val ?? node.literal;
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (typeof node.valueAsString === 'string') return node.valueAsString;
+  return undefined;
+}
+
+function clangPreprocessorKind(kind) {
+  return /Macro|Preprocess|Preprocessor|IfDirective|IfdefDirective|IfndefDirective|ElifDirective|ElseDirective|EndifDirective/.test(String(kind));
+}
+
+function clangPreprocessorRecords(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(isClangAstNode);
+  if (typeof value === 'object' && Array.isArray(value.records)) return value.records.filter(isClangAstNode);
+  if (isClangAstNode(value)) return [value];
+  return [];
+}
+
+function serializableIncludeGraphSummary(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  if (Array.isArray(value)) return { edgeCount: value.length };
+  const summary = {};
+  if (typeof value.hash === 'string') summary.hash = value.hash;
+  if (typeof value.root === 'string') summary.root = value.root;
+  if (Array.isArray(value.edges)) summary.edgeCount = value.edges.length;
+  if (Array.isArray(value.includes)) summary.includeCount = value.includes.length;
+  return Object.keys(summary).length ? summary : { present: true };
 }
 
 function declarationRecord(input, nativeNodeId, name, symbolKind, role = 'definition') {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   compileNativeSource,
   compileFrontierSource,
+  createClangAstNativeImporterAdapter,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeParserAstFormatMatrix,
@@ -119,6 +120,7 @@ assert.equal(falsePositiveRegionImport.semanticIndex.symbols.some((symbol) => sy
 const estreeAdapter = createEstreeNativeImporterAdapter();
 const pythonAstAdapter = createPythonAstNativeImporterAdapter();
 const rustSynAdapter = createRustSynNativeImporterAdapter();
+const clangAstAdapter = createClangAstNativeImporterAdapter();
 for (let index = 0; index < 50; index += 1) {
   const name = `fuzzImport${index}`;
   const sourcePath = `src/fuzz-${index}.js`;
@@ -191,6 +193,38 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(rustSynImport.adapter.parser, 'syn');
   assert.equal(rustSynImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
   assert.equal(rustSynImport.semanticIndex.symbols.some((symbol) => symbol.name === `fuzz_rust_${index}`), true);
+  const clangAstImport = await runNativeImporterAdapter(clangAstAdapter, {
+    sourcePath: `src/fuzz-${index}.c`,
+    sourceText: `typedef struct FuzzC${index} { int value; } FuzzC${index};\nint fuzz_c_${index}(void) { return ${index}; }\n`,
+    adapterOptions: {
+      ast: {
+        kind: 'TranslationUnitDecl',
+        inner: [{
+          kind: 'TypedefDecl',
+          name: `FuzzC${index}`,
+          type: { qualType: `struct FuzzC${index}` },
+          range: { begin: { line: 1, col: 1 } },
+          inner: [{
+            kind: 'RecordDecl',
+            name: `FuzzC${index}`,
+            tagUsed: 'struct',
+            completeDefinition: true,
+            inner: [{ kind: 'FieldDecl', name: 'value', type: { qualType: 'int' } }]
+          }]
+        }, {
+          kind: 'FunctionDecl',
+          name: `fuzz_c_${index}`,
+          type: { qualType: 'int (void)' },
+          isThisDeclarationADefinition: true,
+          range: { begin: { line: 2, col: 1 } },
+          inner: [{ kind: 'CompoundStmt' }]
+        }]
+      }
+    }
+  });
+  assert.equal(clangAstImport.adapter.parser, 'clang');
+  assert.equal(clangAstImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
+  assert.equal(clangAstImport.semanticIndex.symbols.some((symbol) => symbol.name === `fuzz_c_${index}`), true);
 
   const lightweight = importNativeSource({
     language: index % 2 === 0 ? 'javascript' : 'python',
@@ -294,11 +328,12 @@ assert.ok(matrix.languages.find((entry) => entry.language === 'javascript').impo
 assert.ok(matrix.languages.find((entry) => entry.language === 'python').imports.symbols >= 1);
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   imports: project.imports,
-  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter]
+  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter]
 });
 assert.ok(parserFormatMatrix.summary.formats >= 2);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'rust-syn').adapters.total >= 1);
+assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'clang-ast-json').adapters.total >= 1);
 const projectionMatrix = createProjectionTargetLossMatrix({ imports: project.imports });
 assert.equal(projectionMatrix.summary.languages, matrix.summary.languages);
 assert.ok(projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 2);

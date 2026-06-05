@@ -1410,6 +1410,31 @@ export interface RustSynNativeImporterAdapterOptions {
   readonly maxNodes?: number;
 }
 
+export interface ClangAstNativeImporterAdapterOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage;
+  readonly parser?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly coverage?: NativeImporterAdapterCoverageInput;
+  readonly supportedExtensions?: readonly string[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly ast?: unknown;
+  readonly translationUnit?: unknown;
+  readonly tu?: unknown;
+  readonly parse?: (sourceText: string, options: Record<string, unknown>) => unknown;
+  readonly parserModule?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly clang?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly libclang?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly parserOptions?: Record<string, unknown>;
+  readonly cStandard?: 'c89' | 'c99' | 'c11' | 'c17' | 'c23' | 'gnu11' | 'gnu17' | 'gnu23' | string;
+  readonly compileFlags?: readonly string[];
+  readonly includeSystemHeaders?: boolean;
+  readonly preprocessorRecords?: readonly unknown[] | { readonly records?: readonly unknown[] };
+  readonly includeGraph?: unknown;
+  readonly maxNodes?: number;
+}
+
 export interface TreeSitterNativeImporterAdapterOptions {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage;
@@ -1781,6 +1806,7 @@ export declare function createBabelNativeImporterAdapter(options?: JavaScriptNat
 export declare function createTypeScriptCompilerNativeImporterAdapter(options?: TypeScriptCompilerNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createPythonAstNativeImporterAdapter(options?: PythonAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createRustSynNativeImporterAdapter(options?: RustSynNativeImporterAdapterOptions): NativeImporterAdapter;
+export declare function createClangAstNativeImporterAdapter(options?: ClangAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createTreeSitterNativeImporterAdapter(options?: TreeSitterNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function runNativeImporterAdapter(adapter: NativeImporterAdapter, input: RunNativeImporterAdapterOptions): Promise<NativeImporterAdapterImportResult>;
 export declare function runNativeTargetProjectionAdapter(adapter: NativeTargetProjectionAdapter, input: NativeTargetProjectionAdapterInput): NativeTargetProjectionResult;

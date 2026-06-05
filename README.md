@@ -332,6 +332,7 @@ Use injected parser adapters when a real language parser is available but should
 ```js
 import {
   createBabelNativeImporterAdapter,
+  createClangAstNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
   importNativeProject,
@@ -348,6 +349,11 @@ const rustSynAdapter = createRustSynNativeImporterAdapter({
   parserModule: hostRustSynParser,
   rustEdition: '2021'
 });
+const clangAstAdapter = createClangAstNativeImporterAdapter({
+  parserModule: hostClangJsonParser,
+  cStandard: 'c11',
+  compileFlags: ['-std=c11']
+});
 
 const imported = await runNativeImporterAdapter(babelAdapter, {
   sourcePath: 'src/todo.ts',
@@ -356,11 +362,12 @@ const imported = await runNativeImporterAdapter(babelAdapter, {
 
 const project = await importNativeProject({
   projectRoot: 'src',
-  adapters: [babelAdapter, pythonAstAdapter, rustSynAdapter],
+  adapters: [babelAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter],
   sources: [
     { language: 'typescript', adapter: babelAdapter.id, sourcePath: 'src/todo.ts', sourceText },
     { language: 'python', adapter: pythonAstAdapter.id, sourcePath: 'tools/todo.py', sourceText: pythonSource },
-    { language: 'rust', adapter: rustSynAdapter.id, sourcePath: 'src/todo.rs', sourceText: rustSource }
+    { language: 'rust', adapter: rustSynAdapter.id, sourcePath: 'src/todo.rs', sourceText: rustSource },
+    { language: 'c', adapter: clangAstAdapter.id, sourcePath: 'native/todo.c', sourceText: cSource }
   ]
 });
 
@@ -381,6 +388,7 @@ The built-in adapter factories are dependency-light wrappers for caller-owned pa
 - `createTypeScriptCompilerNativeImporterAdapter`
 - `createPythonAstNativeImporterAdapter`
 - `createRustSynNativeImporterAdapter`
+- `createClangAstNativeImporterAdapter`
 - `createTreeSitterNativeImporterAdapter`
 
 Adapter summaries include a structured `coverage` record so merge queues can distinguish exact parser AST imports from declaration scans. The record declares exactness, parser token/trivia support, diagnostics support, source-range and generated-range support, and semantic coverage. Built-in wrappers normalize native AST/CST nodes and declaration-level semantic indexes; they do not claim resolved references, types, control flow, generated ranges, or token/trivia fidelity unless the host adapter supplies that evidence.
