@@ -116,6 +116,7 @@ Ask the compiler what is actually covered before sending native imports into a m
 ```js
 import {
   createNativeImportCoverageMatrix,
+  createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
   importNativeSource
 } from '@shapeshift-labs/frontier-lang-compiler';
@@ -131,6 +132,9 @@ const python = matrix.languages.find((entry) => entry.language === 'python');
 
 console.log(python.imports.readiness); // scanner imports are intentionally review-required
 console.log(python.parserAdapters); // host-owned exact parsers such as LibCST can be injected
+
+const parserMatrix = createNativeParserAstFormatMatrix({ imports: [imported] });
+console.log(parserMatrix.formats.find((entry) => entry.id === 'python-ast')?.adapters.total ?? 0);
 
 const projectionMatrix = createProjectionTargetLossMatrix({ imports: [imported] });
 const pythonProjection = projectionMatrix.languages.find((entry) => entry.language === 'python');
@@ -328,12 +332,16 @@ Use injected parser adapters when a real language parser is available but should
 ```js
 import {
   createBabelNativeImporterAdapter,
+  createPythonAstNativeImporterAdapter,
   importNativeProject,
   runNativeImporterAdapter
 } from '@shapeshift-labs/frontier-lang-compiler';
 
 const babelAdapter = createBabelNativeImporterAdapter({
   parserModule: await import('@babel/parser')
+});
+const pythonAstAdapter = createPythonAstNativeImporterAdapter({
+  parserModule: hostPythonAstParser
 });
 
 const imported = await runNativeImporterAdapter(babelAdapter, {
@@ -343,10 +351,10 @@ const imported = await runNativeImporterAdapter(babelAdapter, {
 
 const project = await importNativeProject({
   projectRoot: 'src',
-  adapters: [babelAdapter],
+  adapters: [babelAdapter, pythonAstAdapter],
   sources: [
     { language: 'typescript', adapter: babelAdapter.id, sourcePath: 'src/todo.ts', sourceText },
-    { language: 'python', sourcePath: 'tools/todo.py', sourceText: pythonSource }
+    { language: 'python', adapter: pythonAstAdapter.id, sourcePath: 'tools/todo.py', sourceText: pythonSource }
   ]
 });
 
@@ -365,6 +373,7 @@ The built-in adapter factories are dependency-light wrappers for caller-owned pa
 - `createEstreeNativeImporterAdapter`
 - `createBabelNativeImporterAdapter`
 - `createTypeScriptCompilerNativeImporterAdapter`
+- `createPythonAstNativeImporterAdapter`
 - `createTreeSitterNativeImporterAdapter`
 
 Adapter summaries include a structured `coverage` record so merge queues can distinguish exact parser AST imports from declaration scans. The record declares exactness, parser token/trivia support, diagnostics support, source-range and generated-range support, and semantic coverage. Built-in wrappers normalize native AST/CST nodes and declaration-level semantic indexes; they do not claim resolved references, types, control flow, generated ranges, or token/trivia fidelity unless the host adapter supplies that evidence.

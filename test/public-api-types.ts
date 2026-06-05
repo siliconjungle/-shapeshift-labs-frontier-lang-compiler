@@ -8,6 +8,8 @@ import {
   NativeImportRegionTaxonomyKinds,
   NativeImportRoundtripReadinessStatuses,
   NativeImportTaxonomyKinds,
+  NativeParserAstFormats,
+  NativeParserAstFormatProfiles,
   ProjectionTargetLossClasses,
   classifyNativeImportReadiness,
   classifyNativeImportRoundtripReadiness,
@@ -18,8 +20,10 @@ import {
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeImportResultContract,
+  createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
+  createPythonAstNativeImporterAdapter,
   createSemanticImportSidecar,
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
@@ -30,6 +34,7 @@ import {
   emitForTargetWithSourceMap,
   ExternalSemanticIndexFormats,
   getNativeImportFeatureEvidencePolicy,
+  getNativeParserAstFormatProfile,
   importExternalSemanticIndex,
   importNativeProject,
   importNativeSource,
@@ -68,6 +73,9 @@ import type {
   NativeImportKnownLossKind,
   NativeImportLanguageProfile,
   NativeImportLossSummary,
+  NativeParserAstFormatMatrix,
+  NativeParserAstFormatMatrixOptions,
+  NativeParserAstFormatProfile,
   NativeImportReadinessClassification,
   NativeImportRegionTaxonomyKind,
   NativeImportResultContract,
@@ -122,6 +130,8 @@ type ExpectedPublicRuntimeExport =
   | 'NativeImportRegionTaxonomyKinds'
   | 'NativeImportRoundtripReadinessStatuses'
   | 'NativeImportTaxonomyKinds'
+  | 'NativeParserAstFormats'
+  | 'NativeParserAstFormatProfiles'
   | 'ProjectionTargetLossClasses'
   | 'ExternalSemanticIndexFormats'
   | 'classifyNativeImportReadiness'
@@ -133,8 +143,10 @@ type ExpectedPublicRuntimeExport =
   | 'createEstreeNativeImporterAdapter'
   | 'createNativeImportCoverageMatrix'
   | 'createNativeImportResultContract'
+  | 'createNativeParserAstFormatMatrix'
   | 'createProjectionTargetLossMatrix'
   | 'createNativeSourcePreservation'
+  | 'createPythonAstNativeImporterAdapter'
   | 'createSemanticImportSidecar'
   | 'createTreeSitterNativeImporterAdapter'
   | 'createTypeScriptCompilerNativeImporterAdapter'
@@ -144,6 +156,7 @@ type ExpectedPublicRuntimeExport =
   | 'emitForTarget'
   | 'emitForTargetWithSourceMap'
   | 'getNativeImportFeatureEvidencePolicy'
+  | 'getNativeParserAstFormatProfile'
   | 'importExternalSemanticIndex'
   | 'importNativeProject'
   | 'importNativeSource'
@@ -174,6 +187,9 @@ const routeRegionKind: NativeImportRegionTaxonomyKind = 'route';
 const roundtripStatus: NativeImportRoundtripReadinessStatus = NativeImportRoundtripReadinessStatuses[0] ?? 'source-preserved';
 const projectionLossClass: ProjectionTargetLossClass = ProjectionTargetLossClasses[0] ?? 'exactSourceProjection';
 const languageProfiles: readonly NativeImportLanguageProfile[] = NativeImportLanguageProfiles;
+const parserAstFormats: readonly string[] = NativeParserAstFormats;
+const parserAstFormatProfiles: readonly NativeParserAstFormatProfile[] = NativeParserAstFormatProfiles;
+const pythonAstFormatProfile: NativeParserAstFormatProfile | undefined = getNativeParserAstFormatProfile('python_ast');
 const externalSemanticFormat: ExternalSemanticIndexFormat = ExternalSemanticIndexFormats[0] ?? 'scip';
 
 const source = `
@@ -319,6 +335,7 @@ if (changedRegionProjectionSummary) changedRegionProjectionSummary.autoMergeClai
 const estreeAdapter: NativeImporterAdapter = createEstreeNativeImporterAdapter();
 const babelAdapter: NativeImporterAdapter = createBabelNativeImporterAdapter();
 const tsAdapter: NativeImporterAdapter = createTypeScriptCompilerNativeImporterAdapter();
+const pythonAstAdapter: NativeImporterAdapter = createPythonAstNativeImporterAdapter();
 const treeAdapter: NativeImporterAdapter = createTreeSitterNativeImporterAdapter({ language: 'javascript' });
 
 const adapterDiagnostic: NativeImporterAdapterDiagnostic = {
@@ -359,6 +376,12 @@ const coverage: NativeImportCoverageMatrix = createNativeImportCoverageMatrix(co
 const adapterCoverageAggregate: NativeImporterAdapterCoverageAggregate = coverage.summary.adapterCoverage;
 const adapterCapabilityEvidence: Promise<NativeImporterAdapterCoverageCapabilityEvidence | undefined> = adapterImport
   .then((result) => result.adapter.coverage.capabilityEvidence);
+const parserFormatOptions: NativeParserAstFormatMatrixOptions = {
+  generatedAt: 4,
+  imports: [imported],
+  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, treeAdapter]
+};
+const parserFormatMatrix: NativeParserAstFormatMatrix = createNativeParserAstFormatMatrix(parserFormatOptions);
 const projectionLossOptions: ProjectionTargetLossMatrixOptions = {
   generatedAt: 2,
   imports: [imported],
@@ -396,6 +419,9 @@ void regionKind;
 void roundtripStatus;
 void projectionLossClass;
 void languageProfiles;
+void parserAstFormats;
+void parserAstFormatProfiles;
+void pythonAstFormatProfile;
 void compiledAgain;
 void emitted;
 void mappedEmit;
@@ -420,6 +446,7 @@ void adapterImport;
 void coverage;
 void adapterCoverageAggregate;
 void adapterCapabilityEvidence;
+void parserFormatMatrix;
 void projectionLossMatrix;
 void projectImport;
 void parsedUniversalAst;

@@ -4,8 +4,10 @@ import {
   compileFrontierSource,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
+  createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
+  createPythonAstNativeImporterAdapter,
   createSemanticImportSidecar,
   diffNativeSources,
   importExternalSemanticIndex,
@@ -72,6 +74,13 @@ const importDurationMs = performance.now() - importStart;
 const matrixStart = performance.now();
 const coverageMatrix = createNativeImportCoverageMatrix({ imports: nativeImportResults });
 const matrixDurationMs = performance.now() - matrixStart;
+
+const parserFormatMatrixStart = performance.now();
+const parserFormatMatrix = createNativeParserAstFormatMatrix({
+  imports: nativeImportResults,
+  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter()]
+});
+const parserFormatMatrixDurationMs = performance.now() - parserFormatMatrixStart;
 
 const projectionMatrixStart = performance.now();
 const projectionLossMatrix = createProjectionTargetLossMatrix({ imports: nativeImportResults });
@@ -228,6 +237,10 @@ console.log(JSON.stringify({
   adapterCoverageTokenGaps: coverageMatrix.summary.adapterCoverage.gaps.tokens ?? 0,
   adapterCoverageReferenceGaps: coverageMatrix.summary.adapterCoverage.gaps.references ?? 0,
   coverageMatrixDurationMs: Number(matrixDurationMs.toFixed(2)),
+  parserFormatMatrixFormats: parserFormatMatrix.summary.formats,
+  parserFormatMatrixImports: parserFormatMatrix.summary.imports,
+  parserFormatMatrixNativeAstNodes: parserFormatMatrix.summary.nativeAstNodes,
+  parserFormatMatrixDurationMs: Number(parserFormatMatrixDurationMs.toFixed(2)),
   projectionMatrixLanguages: projectionLossMatrix.summary.languages,
   projectionMatrixMissingAdapters: projectionLossMatrix.summary.missingAdapters,
   projectionMatrixUnsupportedTargetFeatures: projectionLossMatrix.summary.unsupportedTargetFeatures,

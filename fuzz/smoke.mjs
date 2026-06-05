@@ -4,7 +4,9 @@ import {
   compileFrontierSource,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
+  createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
+  createPythonAstNativeImporterAdapter,
   createSemanticImportSidecar,
   diffNativeSources,
   importExternalSemanticIndex,
@@ -114,6 +116,7 @@ assert.equal(falsePositiveRegionImport.semanticIndex.symbols.some((symbol) => sy
 assert.equal(falsePositiveRegionImport.semanticIndex.symbols.some((symbol) => symbol.name === 'realRoutes./real'), true);
 
 const estreeAdapter = createEstreeNativeImporterAdapter();
+const pythonAstAdapter = createPythonAstNativeImporterAdapter();
 for (let index = 0; index < 50; index += 1) {
   const name = `fuzzImport${index}`;
   const sourcePath = `src/fuzz-${index}.js`;
@@ -138,6 +141,30 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(imported.adapter.coverage.capabilityEvidence.declared.exactAst, true);
   assert.equal(imported.adapter.coverage.capabilityEvidence.observed.sourceRanges, true);
   assert.equal(imported.adapter.coverage.capabilityEvidence.gaps.includes('tokens'), true);
+  const pythonAstImport = await runNativeImporterAdapter(pythonAstAdapter, {
+    sourcePath: `src/fuzz-${index}.py`,
+    sourceText: `def fuzz_py_${index}(value):\n    return value\n`,
+    adapterOptions: {
+      ast: {
+        _type: 'Module',
+        body: [{
+          _type: 'FunctionDef',
+          name: `fuzz_py_${index}`,
+          lineno: 1,
+          col_offset: 0,
+          end_lineno: 2,
+          end_col_offset: 16,
+          args: { _type: 'arguments', args: [{ _type: 'arg', arg: 'value', lineno: 1, col_offset: 12 }], defaults: [] },
+          body: [{ _type: 'Return', lineno: 2, col_offset: 4, value: { _type: 'Name', id: 'value', lineno: 2, col_offset: 11 } }],
+          decorator_list: []
+        }],
+        type_ignores: []
+      }
+    }
+  });
+  assert.equal(pythonAstImport.adapter.parser, 'python-ast');
+  assert.equal(pythonAstImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
+  assert.equal(pythonAstImport.semanticIndex.symbols.some((symbol) => symbol.name === `fuzz_py_${index}`), true);
 
   const lightweight = importNativeSource({
     language: index % 2 === 0 ? 'javascript' : 'python',
@@ -239,6 +266,12 @@ const matrix = createNativeImportCoverageMatrix({ imports: project.imports });
 assert.equal(matrix.summary.imports, 2);
 assert.ok(matrix.languages.find((entry) => entry.language === 'javascript').imports.symbols >= 1);
 assert.ok(matrix.languages.find((entry) => entry.language === 'python').imports.symbols >= 1);
+const parserFormatMatrix = createNativeParserAstFormatMatrix({
+  imports: project.imports,
+  adapters: [estreeAdapter, pythonAstAdapter]
+});
+assert.ok(parserFormatMatrix.summary.formats >= 2);
+assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast').adapters.total >= 1);
 const projectionMatrix = createProjectionTargetLossMatrix({ imports: project.imports });
 assert.equal(projectionMatrix.summary.languages, matrix.summary.languages);
 assert.ok(projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 2);

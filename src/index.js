@@ -333,6 +333,100 @@ export const NativeImportLanguageProfiles = Object.freeze([
   nativeImportLanguageProfile('r', { aliases: ['R'], extensions: ['.r', '.R'], parserAdapters: ['r-parser', 'tree-sitter'], lossKinds: ['declarationOnlyCoverage', 'opaqueNative', 'dynamicRuntime', 'sourceMapApproximation', 'sourcePreservation'] })
 ]);
 
+export const NativeParserAstFormatProfiles = Object.freeze([
+  nativeParserAstFormatProfile('estree', {
+    kind: 'abstract-ast',
+    languages: ['javascript'],
+    parserAdapters: ['estree'],
+    exactness: 'exact-parser-ast',
+    sourceRangeModel: 'loc-range',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsErrorRecovery: false,
+    notes: ['Community JavaScript AST shape used by many JS tooling parsers.']
+  }),
+  nativeParserAstFormatProfile('babel', {
+    kind: 'abstract-ast',
+    languages: ['javascript', 'typescript'],
+    parserAdapters: ['babel'],
+    exactness: 'exact-parser-ast',
+    sourceRangeModel: 'loc-range',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsErrorRecovery: true,
+    notes: ['Babel-compatible ESTree-like ASTs can report parser errors when error recovery is enabled.']
+  }),
+  nativeParserAstFormatProfile('typescript-compiler-api', {
+    kind: 'compiler-ast',
+    languages: ['typescript', 'javascript'],
+    parserAdapters: ['typescript-compiler-api'],
+    exactness: 'exact-parser-ast',
+    sourceRangeModel: 'pos-end',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsErrorRecovery: true,
+    notes: ['TypeScript SourceFile trees can be parsed without a full Program; richer type/checker evidence remains host-owned.']
+  }),
+  nativeParserAstFormatProfile('python-ast', {
+    kind: 'abstract-ast',
+    languages: ['python'],
+    parserAdapters: ['python-ast'],
+    exactness: 'exact-parser-ast',
+    sourceRangeModel: 'lineno-col-offset',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsErrorRecovery: false,
+    notes: ['Python stdlib AST exposes versioned abstract grammar and source locations, but not formatting trivia.']
+  }),
+  nativeParserAstFormatProfile('tree-sitter', {
+    kind: 'concrete-syntax-tree',
+    languages: ['mixed'],
+    parserAdapters: ['tree-sitter'],
+    exactness: 'parser-tree',
+    sourceRangeModel: 'row-column',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsIncremental: true,
+    supportsErrorRecovery: true,
+    notes: ['Tree-sitter provides cross-language concrete syntax trees; language-specific queries still decide semantic richness.']
+  }),
+  nativeParserAstFormatProfile('libcst', {
+    kind: 'concrete-syntax-tree',
+    languages: ['python'],
+    parserAdapters: ['libcst'],
+    exactness: 'parser-tree',
+    sourceRangeModel: 'metadata-position-provider',
+    preservesTokens: true,
+    preservesTrivia: true,
+    supportsErrorRecovery: false,
+    notes: ['LibCST-style trees preserve formatting and are best treated as host-owned evidence until normalized explicitly.']
+  }),
+  nativeParserAstFormatProfile('scip', {
+    kind: 'semantic-index',
+    languages: ['mixed'],
+    parserAdapters: ['scip'],
+    exactness: 'loss-aware-native-ast',
+    sourceRangeModel: 'range-tuples',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsErrorRecovery: false,
+    notes: ['SCIP is semantic index evidence rather than a full parser AST; it is useful for symbols/references and source maps.']
+  }),
+  nativeParserAstFormatProfile('lsif', {
+    kind: 'semantic-index',
+    languages: ['mixed'],
+    parserAdapters: ['lsif'],
+    exactness: 'loss-aware-native-ast',
+    sourceRangeModel: 'lsp-ranges',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsErrorRecovery: false,
+    notes: ['LSIF graph dumps are semantic/source-map evidence, not complete native ASTs.']
+  })
+]);
+
+export const NativeParserAstFormats = Object.freeze(NativeParserAstFormatProfiles.map((profile) => profile.id));
+
 export const ExternalSemanticIndexFormats = Object.freeze([
   'frontier-semantic-index',
   'scip',
@@ -2125,6 +2219,57 @@ export function createNativeImportCoverageMatrix(input = {}) {
   };
 }
 
+export function getNativeParserAstFormatProfile(format) {
+  const normalized = normalizeParserAstFormatId(format);
+  return NativeParserAstFormatProfiles.find((profile) => profile.id === normalized || profile.aliases.includes(normalized));
+}
+
+export function createNativeParserAstFormatMatrix(input = {}) {
+  const imports = input.imports ?? [];
+  const adapters = input.adapters ?? [];
+  const profiles = mergeNativeParserAstFormatProfiles(input.formats ?? NativeParserAstFormatProfiles, imports, adapters);
+  const formats = profiles.map((profile) => nativeParserAstFormatCoverageForProfile(profile, imports, adapters));
+  const summary = formats.reduce((totals, entry) => {
+    totals.formats += 1;
+    totals.adapterSlots += entry.parserAdapters.length;
+    totals.adapters += entry.adapters.total;
+    totals.imports += entry.imports.total;
+    totals.nativeAstNodes += entry.imports.nativeAstNodes;
+    totals.symbols += entry.imports.symbols;
+    totals.sourceMapMappings += entry.imports.sourceMapMappings;
+    totals.losses += entry.imports.losses;
+    totals.byKind[entry.kind] = (totals.byKind[entry.kind] ?? 0) + 1;
+    totals.byReadiness[entry.imports.readiness] = (totals.byReadiness[entry.imports.readiness] ?? 0) + 1;
+    for (const [capability, count] of Object.entries(entry.adapters.effectiveCapabilities)) {
+      totals.effectiveCapabilities[capability] = (totals.effectiveCapabilities[capability] ?? 0) + count;
+    }
+    return totals;
+  }, {
+    formats: 0,
+    adapterSlots: 0,
+    adapters: 0,
+    imports: 0,
+    nativeAstNodes: 0,
+    symbols: 0,
+    sourceMapMappings: 0,
+    losses: 0,
+    byKind: {},
+    byReadiness: {},
+    effectiveCapabilities: {}
+  });
+  return {
+    kind: 'frontier.lang.nativeParserAstFormatMatrix',
+    version: 1,
+    generatedAt: input.generatedAt ?? Date.now(),
+    formats,
+    summary,
+    metadata: {
+      note: 'Parser AST format coverage describes normalization evidence and host-parser obligations; it is not a lossless portability claim.',
+      profileIds: profiles.map((profile) => profile.id)
+    }
+  };
+}
+
 export function createProjectionTargetLossMatrix(input = {}) {
   const imports = input.imports ?? [];
   const adapters = input.adapters ?? [];
@@ -2430,6 +2575,57 @@ export function createTypeScriptCompilerNativeImporterAdapter(options = {}) {
         ts,
         maxNodes: options.maxNodes,
         includeTokens: options.includeTokens
+      });
+    }
+  };
+}
+
+export function createPythonAstNativeImporterAdapter(options = {}) {
+  return {
+    id: options.id ?? 'frontier.python-ast-native-importer',
+    language: options.language ?? 'python',
+    parser: options.parser ?? 'python-ast',
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'exact-parser-ast',
+      exactAst: true,
+      tokens: false,
+      trivia: false,
+      diagnostics: true,
+      sourceRanges: true,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes caller-owned Python stdlib ast trees into native AST nodes and declaration-level semantic index records.',
+        'Python ast does not preserve comments, whitespace, or concrete formatting; use LibCST/parso-style host evidence for round-trip trivia.'
+      ]
+    }, options.coverage),
+    supportedExtensions: options.supportedExtensions ?? ['.py', '.pyi'],
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const parsed = input.options?.ast
+        ?? input.options?.nativeAst
+        ?? options.ast
+        ?? parsePythonAstSource(input, options);
+      const root = pythonAstRoot(parsed);
+      if (!root) {
+        return missingInjectedParserResult(input, {
+          parser: options.parser ?? 'python-ast',
+          adapterId: options.id ?? 'frontier.python-ast-native-importer',
+          message: 'createPythonAstNativeImporterAdapter requires an injected Python AST object, parserModule.parse function, parse function, or adapterOptions.ast.'
+        });
+      }
+      const parseDiagnostics = normalizeParserErrors(parsed?.errors ?? parsed?.diagnostics, input, {
+        parser: options.parser ?? 'python-ast'
+      });
+      return createNativeImportFromPythonAst(root, input, {
+        parser: options.parser ?? 'python-ast',
+        astFormat: 'python-ast',
+        maxNodes: options.maxNodes,
+        diagnostics: parseDiagnostics,
+        pythonVersion: options.pythonVersion ?? input.options?.pythonVersion ?? parsed?.pythonVersion,
+        includeAttributes: options.includeAttributes ?? input.options?.includeAttributes
       });
     }
   };
@@ -6767,6 +6963,132 @@ function nativeImportLanguageProfile(language, input = {}) {
   });
 }
 
+function nativeParserAstFormatProfile(id, input = {}) {
+  return Object.freeze({
+    id,
+    aliases: Object.freeze(uniqueStrings(input.aliases ?? [])),
+    kind: input.kind ?? 'abstract-ast',
+    languages: Object.freeze(uniqueStrings(input.languages ?? [])),
+    parserAdapters: Object.freeze(uniqueStrings(input.parserAdapters ?? [id])),
+    exactness: input.exactness ?? 'unknown',
+    sourceRangeModel: input.sourceRangeModel ?? 'unknown',
+    preservesTokens: Boolean(input.preservesTokens),
+    preservesTrivia: Boolean(input.preservesTrivia),
+    supportsIncremental: Boolean(input.supportsIncremental),
+    supportsErrorRecovery: Boolean(input.supportsErrorRecovery),
+    notes: Object.freeze(uniqueStrings(input.notes ?? []))
+  });
+}
+
+function normalizeParserAstFormatId(format) {
+  return String(format ?? '').trim().toLowerCase().replace(/[_\s]+/g, '-');
+}
+
+function mergeNativeParserAstFormatProfiles(profiles, imports, adapters) {
+  const byId = new Map((profiles ?? []).map((profile) => [normalizeParserAstFormatId(profile.id ?? profile), nativeParserAstFormatProfile(normalizeParserAstFormatId(profile.id ?? profile), profile)]));
+  for (const adapter of adapters ?? []) {
+    const summary = safeNativeImporterAdapterSummary(adapter);
+    if (!summary) continue;
+    const formatId = parserAstFormatIdForParser(summary.parser);
+    if (!byId.has(formatId)) {
+      byId.set(formatId, nativeParserAstFormatProfile(formatId, {
+        languages: [summary.language],
+        parserAdapters: [summary.parser],
+        exactness: summary.coverage.exactness,
+        sourceRangeModel: summary.coverage.sourceRanges ? 'adapter-reported' : 'unknown'
+      }));
+    }
+  }
+  for (const imported of imports ?? []) {
+    const formatId = parserAstFormatIdForImport(imported);
+    if (formatId && !byId.has(formatId)) {
+      byId.set(formatId, nativeParserAstFormatProfile(formatId, {
+        languages: [imported.language].filter(Boolean),
+        parserAdapters: [imported.parser ?? imported.nativeAst?.parser ?? formatId],
+        exactness: 'unknown',
+        sourceRangeModel: (imported.sourceMaps ?? []).some((sourceMap) => sourceMap.mappings?.some((mapping) => mapping.sourceSpan)) ? 'adapter-reported' : 'unknown'
+      }));
+    }
+  }
+  return [...byId.values()].sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function nativeParserAstFormatCoverageForProfile(profile, imports, adapters) {
+  const formatIds = new Set([profile.id, ...profile.aliases].map(normalizeParserAstFormatId));
+  const adapterParsers = new Set(profile.parserAdapters.map(parserAstFormatIdForParser));
+  const matchingAdapters = (adapters ?? [])
+    .map((adapter) => safeNativeImporterAdapterSummary(adapter))
+    .filter(Boolean)
+    .filter((adapter) => formatIds.has(parserAstFormatIdForParser(adapter.parser)) || adapterParsers.has(parserAstFormatIdForParser(adapter.parser)));
+  const matchingImports = (imports ?? [])
+    .filter((imported) => {
+      const formatId = parserAstFormatIdForImport(imported);
+      return formatId && (formatIds.has(formatId) || adapterParsers.has(formatId));
+    });
+  const effectiveCapabilities = {};
+  for (const adapter of matchingAdapters) {
+    for (const row of adapter.coverage.capabilityEvidence?.capabilities ?? []) {
+      if (row.effective) effectiveCapabilities[row.capability] = (effectiveCapabilities[row.capability] ?? 0) + 1;
+    }
+  }
+  const readiness = matchingImports.reduce(
+    (current, imported) => maxSemanticMergeReadiness(current, nativeImportReadiness(imported)),
+    matchingImports.length ? 'ready' : 'needs-review'
+  );
+  return {
+    id: profile.id,
+    kind: profile.kind,
+    languages: profile.languages,
+    parserAdapters: profile.parserAdapters,
+    exactness: profile.exactness,
+    sourceRangeModel: profile.sourceRangeModel,
+    preservesTokens: profile.preservesTokens,
+    preservesTrivia: profile.preservesTrivia,
+    supportsIncremental: profile.supportsIncremental,
+    supportsErrorRecovery: profile.supportsErrorRecovery,
+    notes: profile.notes,
+    adapters: {
+      total: matchingAdapters.length,
+      ids: matchingAdapters.map((adapter) => adapter.id),
+      parsers: uniqueStrings(matchingAdapters.map((adapter) => adapter.parser)),
+      effectiveCapabilities
+    },
+    imports: {
+      total: matchingImports.length,
+      sourcePaths: matchingImports.map((imported) => imported.sourcePath).filter(Boolean),
+      readiness,
+      nativeAstNodes: matchingImports.reduce((sum, imported) => sum + Object.keys(imported.nativeAst?.nodes ?? {}).length, 0),
+      symbols: matchingImports.reduce((sum, imported) => sum + (imported.semanticIndex?.symbols?.length ?? 0), 0),
+      sourceMapMappings: matchingImports.reduce((sum, imported) => sum + (imported.sourceMaps ?? []).reduce((mapSum, sourceMap) => mapSum + (sourceMap.mappings?.length ?? 0), 0), 0),
+      losses: matchingImports.reduce((sum, imported) => sum + (imported.losses?.length ?? 0), 0)
+    }
+  };
+}
+
+function parserAstFormatIdForParser(parser) {
+  const text = normalizeParserAstFormatId(parser);
+  if (text.includes('typescript')) return 'typescript-compiler-api';
+  if (text.includes('python') && text.includes('ast')) return 'python-ast';
+  if (text.includes('tree-sitter') || text.includes('treesitter')) return 'tree-sitter';
+  if (text.includes('babel')) return 'babel';
+  if (text.includes('estree')) return 'estree';
+  if (text.includes('libcst')) return 'libcst';
+  if (text.includes('scip')) return 'scip';
+  if (text.includes('lsif')) return 'lsif';
+  return text || 'unknown';
+}
+
+function parserAstFormatIdForImport(imported) {
+  return parserAstFormatIdForParser(
+    imported?.metadata?.adapter?.parser
+      ?? imported?.metadata?.astFormat
+      ?? imported?.nativeAst?.metadata?.astFormat
+      ?? imported?.nativeAst?.parser
+      ?? imported?.parser
+      ?? imported?.metadata?.parser
+  );
+}
+
 function mergeNativeImportProfiles(languages, imports, adapters, targetAdapters = []) {
   const profilesByLanguage = new Map();
   for (const profile of languages) {
@@ -7764,6 +8086,23 @@ function parseTreeSitterSource(input, options) {
   return undefined;
 }
 
+function parsePythonAstSource(input, options) {
+  const parse = options.parse ?? options.parserModule?.parse ?? options.pythonAst?.parse;
+  if (typeof parse !== 'function') return undefined;
+  const parserOptions = {
+    sourcePath: input.sourcePath,
+    filename: input.sourcePath,
+    mode: options.mode ?? input.options?.mode ?? 'exec',
+    typeComments: options.typeComments ?? input.options?.typeComments,
+    featureVersion: options.featureVersion ?? input.options?.featureVersion,
+    optimize: options.optimize ?? input.options?.optimize,
+    includeAttributes: options.includeAttributes ?? input.options?.includeAttributes,
+    ...(options.parserOptions ?? {}),
+    ...(input.options?.parserOptions ?? {})
+  };
+  return parse(input.sourceText, parserOptions);
+}
+
 function createNativeImportFromSyntaxAst(ast, input, options) {
   const root = normalizeSyntaxAstRoot(ast, options.astFormat);
   if (!root) {
@@ -7817,6 +8156,36 @@ function createNativeImportFromTypeScriptAst(sourceFile, input, options) {
     metadata: {
       astFormat: options.astFormat,
       parser: options.parser,
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createNativeImportFromPythonAst(root, input, options) {
+  const context = createAstNormalizationContext(input, options);
+  visitPythonAstNode(root, context, 'root');
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: mergeNativeLosses(context.losses, options.diagnostics?.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, {
+      id: input.adapterId,
+      version: input.adapterVersion
+    }, input)) ?? []),
+    evidence: semantic.evidence,
+    diagnostics: options.diagnostics,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      pythonVersion: options.pythonVersion,
+      includeAttributes: Boolean(options.includeAttributes),
       normalizedNodeCount: Object.keys(context.nodes).length,
       declarationCount: context.declarations.length,
       truncated: context.truncated
@@ -7953,6 +8322,53 @@ function visitTypeScriptAstNode(node, sourceFile, context, propertyPath, ts) {
       propertyPath,
       pos: numberOrUndefined(node.pos),
       end: numberOrUndefined(node.end)
+    }
+  };
+  context.nodes[id] = nativeNode;
+  if (declaration) context.declarations.push({ ...declaration, nativeNode });
+  return id;
+}
+
+function visitPythonAstNode(node, context, propertyPath) {
+  if (!isPythonAstNode(node) || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const kind = pythonAstKind(node);
+  const span = spanFromPythonAstNode(node, context.input);
+  const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  for (const [field, value] of pythonAstChildEntries(node)) {
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        const childId = visitPythonAstNode(entry, context, `${propertyPath}.${field}[${index}]`);
+        if (childId) children.push(childId);
+      });
+    } else {
+      const childId = visitPythonAstNode(value, context, `${propertyPath}.${field}`);
+      if (childId) children.push(childId);
+    }
+  }
+  const declaration = pythonAstDeclaration(node, kind, id, context.input);
+  const nativeNode = {
+    id,
+    kind,
+    languageKind: `${context.input.language}.${kind}`,
+    span,
+    value: declaration?.name ?? pythonAstNodeValue(node),
+    fields: primitivePythonAstFields(node, kind),
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      lineno: numberOrUndefined(node.lineno ?? node.line),
+      colOffset: numberOrUndefined(node.col_offset ?? node.colOffset),
+      endLineno: numberOrUndefined(node.end_lineno ?? node.endLine),
+      endColOffset: numberOrUndefined(node.end_col_offset ?? node.endColOffset)
     }
   };
   context.nodes[id] = nativeNode;
@@ -8453,6 +8869,14 @@ function nativeTargetProjectionDiagnosticToLoss(diagnostic, index, adapter, inpu
       ...diagnostic.metadata
     }
   };
+}
+
+function safeNativeImporterAdapterSummary(adapter) {
+  try {
+    return normalizeNativeImporterAdapter(adapter);
+  } catch {
+    return undefined;
+  }
 }
 
 function normalizeNativeImporterAdapter(adapter) {
@@ -9089,6 +9513,23 @@ function isSyntaxAstNode(value) {
   return Boolean(value && typeof value === 'object' && typeof (value.type ?? value.kind) === 'string');
 }
 
+function pythonAstRoot(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  if (isPythonAstNode(value)) return value;
+  if (isPythonAstNode(value.ast)) return value.ast;
+  if (isPythonAstNode(value.root)) return value.root;
+  if (isPythonAstNode(value.module)) return value.module;
+  return undefined;
+}
+
+function isPythonAstNode(value) {
+  return Boolean(value && typeof value === 'object' && typeof pythonAstKind(value) === 'string');
+}
+
+function pythonAstKind(node) {
+  return node?._type ?? node?.type ?? node?.kind ?? node?.nodeType;
+}
+
 function ignoredSyntaxField(key) {
   return key === 'type'
     || key === 'kind'
@@ -9105,6 +9546,24 @@ function ignoredSyntaxField(key) {
     || key === 'parent';
 }
 
+function ignoredPythonAstField(key) {
+  return key === '_type'
+    || key === 'type'
+    || key === 'kind'
+    || key === 'nodeType'
+    || key === '_fields'
+    || key === 'lineno'
+    || key === 'col_offset'
+    || key === 'end_lineno'
+    || key === 'end_col_offset'
+    || key === 'line'
+    || key === 'colOffset'
+    || key === 'endLine'
+    || key === 'endColOffset'
+    || key === 'ctx'
+    || key === 'parent';
+}
+
 function primitiveSyntaxFields(node) {
   const fields = {};
   for (const key of ['name', 'operator', 'sourceType', 'async', 'generator', 'computed', 'static', 'exportKind', 'importKind', 'optional']) {
@@ -9118,8 +9577,33 @@ function primitiveSyntaxFields(node) {
   return fields;
 }
 
+function primitivePythonAstFields(node, kind) {
+  const fields = { kind };
+  for (const key of ['name', 'id', 'arg', 'module', 'level', 'attr', 'asname', 'type_comment']) {
+    if (typeof node[key] === 'string' || typeof node[key] === 'number' || typeof node[key] === 'boolean' || node[key] === null) {
+      fields[key] = node[key];
+    }
+  }
+  if (Array.isArray(node.names)) {
+    fields.names = node.names
+      .map((entry) => pythonAliasName(entry))
+      .filter(Boolean)
+      .join(',');
+  }
+  const literal = pythonAstLiteralValue(node);
+  if (literal !== undefined) fields.literal = literal;
+  return fields;
+}
+
 function literalSyntaxValue(node) {
   if (node.value === null || typeof node.value === 'string' || typeof node.value === 'number' || typeof node.value === 'boolean') return node.value;
+  return undefined;
+}
+
+function pythonAstLiteralValue(node) {
+  if (node.value === null || typeof node.value === 'string' || typeof node.value === 'number' || typeof node.value === 'boolean') return node.value;
+  if (typeof node.s === 'string' || typeof node.s === 'number') return node.s;
+  if (typeof node.n === 'number') return node.n;
   return undefined;
 }
 
@@ -9132,6 +9616,22 @@ function spanFromLoc(loc, input) {
     startColumn: typeof loc.start.column === 'number' ? loc.start.column + 1 : undefined,
     endLine: loc.end?.line,
     endColumn: typeof loc.end?.column === 'number' ? loc.end.column + 1 : undefined
+  };
+}
+
+function spanFromPythonAstNode(node, input) {
+  const line = node.lineno ?? node.line;
+  if (typeof line !== 'number') return undefined;
+  const col = node.col_offset ?? node.colOffset;
+  const endLine = node.end_lineno ?? node.endLine;
+  const endCol = node.end_col_offset ?? node.endColOffset;
+  return {
+    sourceId: input.sourceHash,
+    path: input.sourcePath,
+    startLine: line,
+    startColumn: typeof col === 'number' ? col + 1 : undefined,
+    endLine: typeof endLine === 'number' ? endLine : undefined,
+    endColumn: typeof endCol === 'number' ? endCol + 1 : undefined
   };
 }
 
@@ -9150,6 +9650,24 @@ function syntaxDeclaration(node, nativeNodeId, input) {
   if (kind === 'TSInterfaceDeclaration' || kind === 'InterfaceDeclaration') return namedDeclaration(input, nativeNodeId, node.id, 'interface');
   if (kind === 'TSTypeAliasDeclaration' || kind === 'TypeAliasDeclaration') return namedDeclaration(input, nativeNodeId, node.id, 'type');
   if (kind === 'VariableDeclarator') return namedDeclaration(input, nativeNodeId, node.id, 'variable');
+  return undefined;
+}
+
+function pythonAstDeclaration(node, kind, nativeNodeId, input) {
+  if (kind === 'Import') {
+    const name = (node.names ?? []).map((entry) => pythonAliasName(entry)).find(Boolean);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'module', 'import');
+  }
+  if (kind === 'ImportFrom') {
+    const name = node.module ?? (node.names ?? []).map((entry) => pythonAliasName(entry)).find(Boolean);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'module', 'import');
+  }
+  if (kind === 'FunctionDef' || kind === 'AsyncFunctionDef') return declarationRecord(input, nativeNodeId, node.name, 'function', 'definition');
+  if (kind === 'ClassDef') return declarationRecord(input, nativeNodeId, node.name, 'class', 'definition');
+  if (kind === 'AnnAssign' || kind === 'Assign') {
+    const name = pythonAssignmentName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'variable', 'definition');
+  }
   return undefined;
 }
 
@@ -9194,6 +9712,49 @@ function treeSitterDeclaration(node, kind, nativeNodeId, input) {
 function namedDeclaration(input, nativeNodeId, nameNode, symbolKind) {
   const name = identifierName(nameNode);
   return name ? declarationRecord(input, nativeNodeId, name, symbolKind, 'definition') : undefined;
+}
+
+function pythonAstChildEntries(node) {
+  const fieldNames = Array.isArray(node._fields)
+    ? node._fields
+    : Object.keys(node).filter((key) => !ignoredPythonAstField(key));
+  return fieldNames
+    .map((field) => [field, node[field]])
+    .filter(([, value]) => Array.isArray(value)
+      ? value.some(isPythonAstNode)
+      : isPythonAstNode(value));
+}
+
+function pythonAstNodeValue(node) {
+  return node.name ?? node.id ?? node.arg ?? node.module ?? pythonAstLiteralValue(node);
+}
+
+function pythonAliasName(alias) {
+  if (!alias) return undefined;
+  if (typeof alias === 'string') return alias;
+  return alias.name ?? alias.asname ?? alias.id;
+}
+
+function pythonAssignmentName(node) {
+  if (node.target) return pythonTargetName(node.target);
+  for (const target of node.targets ?? []) {
+    const name = pythonTargetName(target);
+    if (name) return name;
+  }
+  return undefined;
+}
+
+function pythonTargetName(target) {
+  if (!target) return undefined;
+  if (typeof target === 'string') return target;
+  if (typeof target.id === 'string') return target.id;
+  if (typeof target.name === 'string') return target.name;
+  if (typeof target.arg === 'string') return target.arg;
+  if (target.attr && target.value) {
+    const base = pythonTargetName(target.value);
+    return base ? `${base}.${target.attr}` : target.attr;
+  }
+  return undefined;
 }
 
 function declarationRecord(input, nativeNodeId, name, symbolKind, role = 'definition') {

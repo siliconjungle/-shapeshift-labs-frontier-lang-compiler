@@ -236,6 +236,88 @@ export interface NativeImportLanguageProfile {
   readonly notes: readonly string[];
 }
 
+export type NativeParserAstFormatKind =
+  | 'abstract-ast'
+  | 'concrete-syntax-tree'
+  | 'compiler-ast'
+  | 'semantic-index'
+  | string;
+
+export interface NativeParserAstFormatProfile {
+  readonly id: string;
+  readonly aliases: readonly string[];
+  readonly kind: NativeParserAstFormatKind;
+  readonly languages: readonly (FrontierSourceLanguage | 'mixed' | string)[];
+  readonly parserAdapters: readonly string[];
+  readonly exactness: NativeImporterAdapterExactness;
+  readonly sourceRangeModel: string;
+  readonly preservesTokens: boolean;
+  readonly preservesTrivia: boolean;
+  readonly supportsIncremental: boolean;
+  readonly supportsErrorRecovery: boolean;
+  readonly notes: readonly string[];
+}
+
+export interface NativeParserAstFormatCoverage {
+  readonly id: string;
+  readonly kind: NativeParserAstFormatKind;
+  readonly languages: readonly (FrontierSourceLanguage | 'mixed' | string)[];
+  readonly parserAdapters: readonly string[];
+  readonly exactness: NativeImporterAdapterExactness;
+  readonly sourceRangeModel: string;
+  readonly preservesTokens: boolean;
+  readonly preservesTrivia: boolean;
+  readonly supportsIncremental: boolean;
+  readonly supportsErrorRecovery: boolean;
+  readonly notes: readonly string[];
+  readonly adapters: {
+    readonly total: number;
+    readonly ids: readonly string[];
+    readonly parsers: readonly string[];
+    readonly effectiveCapabilities: Readonly<Record<string, number>>;
+  };
+  readonly imports: {
+    readonly total: number;
+    readonly sourcePaths: readonly string[];
+    readonly readiness: SemanticMergeReadiness;
+    readonly nativeAstNodes: number;
+    readonly symbols: number;
+    readonly sourceMapMappings: number;
+    readonly losses: number;
+  };
+}
+
+export interface NativeParserAstFormatMatrix {
+  readonly kind: 'frontier.lang.nativeParserAstFormatMatrix';
+  readonly version: 1;
+  readonly generatedAt: number;
+  readonly formats: readonly NativeParserAstFormatCoverage[];
+  readonly summary: {
+    readonly formats: number;
+    readonly adapterSlots: number;
+    readonly adapters: number;
+    readonly imports: number;
+    readonly nativeAstNodes: number;
+    readonly symbols: number;
+    readonly sourceMapMappings: number;
+    readonly losses: number;
+    readonly byKind: Readonly<Record<string, number>>;
+    readonly byReadiness: Readonly<Record<string, number>>;
+    readonly effectiveCapabilities: Readonly<Record<string, number>>;
+  };
+  readonly metadata: {
+    readonly note: string;
+    readonly profileIds: readonly string[];
+  };
+}
+
+export interface NativeParserAstFormatMatrixOptions {
+  readonly formats?: readonly NativeParserAstFormatProfile[];
+  readonly imports?: readonly NativeSourceImportResult[];
+  readonly adapters?: readonly NativeImporterAdapter[];
+  readonly generatedAt?: number;
+}
+
 export interface NativeImporterAdapterCoverageAggregate {
   readonly total: number;
   readonly declared: Readonly<Record<string, number>>;
@@ -1283,6 +1365,29 @@ export interface TypeScriptCompilerNativeImporterAdapterOptions {
   readonly includeTokens?: boolean;
 }
 
+export interface PythonAstNativeImporterAdapterOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage;
+  readonly parser?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly coverage?: NativeImporterAdapterCoverageInput;
+  readonly supportedExtensions?: readonly string[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly ast?: unknown;
+  readonly parse?: (sourceText: string, options: Record<string, unknown>) => unknown;
+  readonly parserModule?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly pythonAst?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly parserOptions?: Record<string, unknown>;
+  readonly mode?: 'exec' | 'eval' | 'single' | 'func_type' | string;
+  readonly pythonVersion?: string;
+  readonly featureVersion?: string | number;
+  readonly typeComments?: boolean;
+  readonly optimize?: number;
+  readonly includeAttributes?: boolean;
+  readonly maxNodes?: number;
+}
+
 export interface TreeSitterNativeImporterAdapterOptions {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage;
@@ -1625,6 +1730,8 @@ export declare const ProjectionTargetLossClasses: readonly ProjectionTargetLossC
 export declare const NativeImportReadinessBySeverity: Readonly<Record<NativeImportLossSummary['highestSeverity'], SemanticMergeReadiness>>;
 export declare const NativeImportFeatureEvidencePolicies: Readonly<Record<string, NativeImportFeatureEvidencePolicy>>;
 export declare const NativeImportLanguageProfiles: readonly NativeImportLanguageProfile[];
+export declare const NativeParserAstFormatProfiles: readonly NativeParserAstFormatProfile[];
+export declare const NativeParserAstFormats: readonly string[];
 export declare const ExternalSemanticIndexFormats: readonly ExternalSemanticIndexFormat[];
 export declare function normalizeCompileTarget(target?: string): FrontierCompileTarget;
 export declare function compileFrontierSource(source: string, options?: FrontierCompileOptions): FrontierCompileResult;
@@ -1641,6 +1748,8 @@ export declare function summarizeNativeImportLosses(losses?: readonly NativeAstL
 export declare function classifyNativeImportReadiness(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportReadinessClassification;
 export declare function classifyNativeImportRoundtripReadiness(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: NativeImportRoundtripReadinessOptions): NativeImportRoundtripReadinessClassification;
 export declare function createNativeImportCoverageMatrix(options?: NativeImportCoverageMatrixOptions): NativeImportCoverageMatrix;
+export declare function getNativeParserAstFormatProfile(format?: string): NativeParserAstFormatProfile | undefined;
+export declare function createNativeParserAstFormatMatrix(options?: NativeParserAstFormatMatrixOptions): NativeParserAstFormatMatrix;
 export declare function createProjectionTargetLossMatrix(options?: ProjectionTargetLossMatrixOptions): ProjectionTargetLossMatrix;
 export declare function createNativeSourcePreservation(options: CreateNativeSourcePreservationOptions): NativeSourcePreservation;
 export declare function createSemanticImportSidecar(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: SemanticImportSidecarOptions): SemanticImportSidecar;
@@ -1648,6 +1757,7 @@ export declare function createNativeImportResultContract(importResult: NativeSou
 export declare function createEstreeNativeImporterAdapter(options?: JavaScriptNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createBabelNativeImporterAdapter(options?: JavaScriptNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createTypeScriptCompilerNativeImporterAdapter(options?: TypeScriptCompilerNativeImporterAdapterOptions): NativeImporterAdapter;
+export declare function createPythonAstNativeImporterAdapter(options?: PythonAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createTreeSitterNativeImporterAdapter(options?: TreeSitterNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function runNativeImporterAdapter(adapter: NativeImporterAdapter, input: RunNativeImporterAdapterOptions): Promise<NativeImporterAdapterImportResult>;
 export declare function runNativeTargetProjectionAdapter(adapter: NativeTargetProjectionAdapter, input: NativeTargetProjectionAdapterInput): NativeTargetProjectionResult;
