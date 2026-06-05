@@ -28,7 +28,9 @@ import {
   diffNativeSources,
   emitForTarget,
   emitForTargetWithSourceMap,
+  ExternalSemanticIndexFormats,
   getNativeImportFeatureEvidencePolicy,
+  importExternalSemanticIndex,
   importNativeProject,
   importNativeSource,
   normalizeCompileTarget,
@@ -48,6 +50,8 @@ import type {
   CapabilityResolution,
   CompileNativeSourceOptions,
   CreateNativeSourcePreservationOptions,
+  ExternalSemanticIndexFormat,
+  ExternalSemanticIndexImportResult,
   FrontierCompileOptions,
   FrontierCompileResult,
   FrontierCompileTarget,
@@ -115,6 +119,7 @@ type ExpectedPublicRuntimeExport =
   | 'NativeImportRoundtripReadinessStatuses'
   | 'NativeImportTaxonomyKinds'
   | 'ProjectionTargetLossClasses'
+  | 'ExternalSemanticIndexFormats'
   | 'classifyNativeImportReadiness'
   | 'classifyNativeImportRoundtripReadiness'
   | 'compileNativeSource'
@@ -135,6 +140,7 @@ type ExpectedPublicRuntimeExport =
   | 'emitForTarget'
   | 'emitForTargetWithSourceMap'
   | 'getNativeImportFeatureEvidencePolicy'
+  | 'importExternalSemanticIndex'
   | 'importNativeProject'
   | 'importNativeSource'
   | 'normalizeCompileTarget'
@@ -163,6 +169,7 @@ const regionKind: NativeImportRegionTaxonomyKind = NativeImportRegionTaxonomyKin
 const roundtripStatus: NativeImportRoundtripReadinessStatus = NativeImportRoundtripReadinessStatuses[0] ?? 'source-preserved';
 const projectionLossClass: ProjectionTargetLossClass = ProjectionTargetLossClasses[0] ?? 'exactSourceProjection';
 const languageProfiles: readonly NativeImportLanguageProfile[] = NativeImportLanguageProfiles;
+const externalSemanticFormat: ExternalSemanticIndexFormat = ExternalSemanticIndexFormats[0] ?? 'scip';
 
 const source = `
 module ApiTypes @id("mod_api_types")
@@ -202,6 +209,22 @@ const imported: NativeSourceImportResult = importNativeSource({
   sourceText: preservation.sourceText,
   sourcePreservation: preservation
 });
+const externalSemanticImport: ExternalSemanticIndexImportResult = importExternalSemanticIndex({
+  format: externalSemanticFormat,
+  language: 'javascript',
+  payload: {
+    kind: 'frontier.lang.semanticIndex',
+    version: 1,
+    id: 'index_api_types_external',
+    documents: [{ id: 'doc_api_types_external', path: 'src/api-types.js', language: 'javascript' }],
+    symbols: [{ id: 'symbol:apiTypes', scheme: 'frontier', name: 'apiTypes', kind: 'function', language: 'javascript' }],
+    occurrences: [{ id: 'occ_api_types_external', documentId: 'doc_api_types_external', symbolId: 'symbol:apiTypes', role: 'definition', span: { path: 'src/api-types.js', startLine: 1, startColumn: 1 } }],
+    relations: [],
+    facts: []
+  }
+});
+externalSemanticImport.semanticIndex satisfies typeof externalSemanticImport.universalAst.semanticIndex;
+externalSemanticImport.summary.readiness satisfies ExternalSemanticIndexImportResult['readiness']['readiness'];
 
 const summary: NativeImportLossSummary = summarizeNativeImportLosses(imported.losses, { evidence: imported.evidence });
 const featureEvidenceSummary: NativeImportFeatureEvidenceSummary = summarizeNativeImportFeatureEvidence(imported.losses, {

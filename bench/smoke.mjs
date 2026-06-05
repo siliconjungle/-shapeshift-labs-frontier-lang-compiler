@@ -7,6 +7,7 @@ import {
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createSemanticImportSidecar,
+  importExternalSemanticIndex,
   importNativeSource,
   projectNativeImportToSource,
   runNativeImporterAdapter,
@@ -134,6 +135,40 @@ const nativeTargetAdapterDurationMs = performance.now() - nativeTargetAdapterSta
 const nativeTargetAdapterBytes = nativeTargetAdapterCompiles.reduce((sum, result) => sum + result.output.length, 0);
 const nativeTargetAdapterSourceMaps = nativeTargetAdapterCompiles.reduce((sum, result) => sum + result.sourceMaps.length, 0);
 
+const externalSemanticStart = performance.now();
+const externalSemanticImports = [];
+for (let index = 0; index < 100; index += 1) {
+  externalSemanticImports.push(importExternalSemanticIndex({
+    format: index % 2 === 0 ? 'scip' : 'lsp',
+    language: index % 2 === 0 ? 'typescript' : 'python',
+    payload: index % 2 === 0
+      ? {
+        metadata: { project_root: '/bench' },
+        documents: [{
+          relative_path: `src/external-${index}.ts`,
+          language: 'typescript',
+          occurrences: [{
+            symbol: `scip-typescript npm bench 1.0.0 src/external-${index}.ts/ external${index}().`,
+            range: [0, 16, 24],
+            symbol_roles: 1
+          }]
+        }]
+      }
+      : {
+        uri: `file:///bench/src/external-${index}.py`,
+        languageId: 'python',
+        documentSymbols: [{
+          name: `external_${index}`,
+          kind: 12,
+          range: { start: { line: 0, character: 0 }, end: { line: 1, character: 0 } }
+        }]
+      }
+  }));
+}
+const externalSemanticDurationMs = performance.now() - externalSemanticStart;
+const externalSemanticSymbols = externalSemanticImports.reduce((sum, imported) => sum + imported.semanticIndex.symbols.length, 0);
+const externalSemanticMappings = externalSemanticImports.reduce((sum, imported) => sum + imported.summary.sourceMapMappings, 0);
+
 console.log(JSON.stringify({
   compiles: 250,
   bytes,
@@ -172,5 +207,9 @@ console.log(JSON.stringify({
   nativeTargetAdapterCompiles: nativeTargetAdapterCompiles.length,
   nativeTargetAdapterBytes,
   nativeTargetAdapterSourceMaps,
-  nativeTargetAdapterDurationMs: Number(nativeTargetAdapterDurationMs.toFixed(2))
+  nativeTargetAdapterDurationMs: Number(nativeTargetAdapterDurationMs.toFixed(2)),
+  externalSemanticImports: externalSemanticImports.length,
+  externalSemanticSymbols,
+  externalSemanticMappings,
+  externalSemanticDurationMs: Number(externalSemanticDurationMs.toFixed(2))
 }));

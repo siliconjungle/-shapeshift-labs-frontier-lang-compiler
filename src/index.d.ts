@@ -1067,6 +1067,63 @@ export type NativeSourceImportResult = LanguageImportResult & {
   readonly universalAst: FrontierUniversalAstEnvelope;
 };
 
+export type ExternalSemanticIndexFormat =
+  | 'frontier-semantic-index'
+  | 'scip'
+  | 'lsif'
+  | 'lsp'
+  | 'semanticdb'
+  | string;
+
+export interface ImportExternalSemanticIndexOptions {
+  readonly format?: ExternalSemanticIndexFormat;
+  readonly payload?: unknown;
+  readonly semanticIndex?: SemanticIndexRecord;
+  readonly id?: string;
+  readonly semanticIndexId?: string;
+  readonly universalAstId?: string;
+  readonly documentId?: string;
+  readonly documentName?: string;
+  readonly sourceMapId?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly projectRoot?: string;
+  readonly parser?: string;
+  readonly evidence?: readonly EvidenceRecord[];
+  readonly metadata?: Record<string, unknown>;
+  readonly universalAstMetadata?: Record<string, unknown>;
+}
+
+export interface ExternalSemanticIndexImportSummary {
+  readonly documents: number;
+  readonly symbols: number;
+  readonly occurrences: number;
+  readonly relations: number;
+  readonly facts: number;
+  readonly sourceMapMappings: number;
+  readonly losses: number;
+  readonly readiness: SemanticMergeReadiness;
+}
+
+export interface ExternalSemanticIndexImportResult {
+  readonly kind: 'frontier.lang.externalSemanticIndexImport';
+  readonly version: 1;
+  readonly id: string;
+  readonly format: ExternalSemanticIndexFormat;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly projectRoot?: string;
+  readonly semanticIndex: SemanticIndexRecord;
+  readonly universalAst: FrontierUniversalAstEnvelope;
+  readonly sourceMaps: readonly SourceMapRecord[];
+  readonly losses: readonly NativeAstLossRecord[];
+  readonly evidence: readonly EvidenceRecord[];
+  readonly readiness: NativeImportReadinessClassification;
+  readonly summary: ExternalSemanticIndexImportSummary;
+  readonly metadata: Record<string, unknown>;
+}
+
 export interface NativeImporterAdapterParseInput {
   readonly sourceText: string;
   readonly sourcePath?: string;
@@ -1474,6 +1531,7 @@ export declare const ProjectionTargetLossClasses: readonly ProjectionTargetLossC
 export declare const NativeImportReadinessBySeverity: Readonly<Record<NativeImportLossSummary['highestSeverity'], SemanticMergeReadiness>>;
 export declare const NativeImportFeatureEvidencePolicies: Readonly<Record<string, NativeImportFeatureEvidencePolicy>>;
 export declare const NativeImportLanguageProfiles: readonly NativeImportLanguageProfile[];
+export declare const ExternalSemanticIndexFormats: readonly ExternalSemanticIndexFormat[];
 export declare function normalizeCompileTarget(target?: string): FrontierCompileTarget;
 export declare function compileFrontierSource(source: string, options?: FrontierCompileOptions): FrontierCompileResult;
 export declare function compileFrontierDocument(document: FrontierLangDocument, options?: FrontierCompileOptions): FrontierCompileResult;
@@ -1500,6 +1558,7 @@ export declare function createTreeSitterNativeImporterAdapter(options?: TreeSitt
 export declare function runNativeImporterAdapter(adapter: NativeImporterAdapter, input: RunNativeImporterAdapterOptions): Promise<NativeImporterAdapterImportResult>;
 export declare function runNativeTargetProjectionAdapter(adapter: NativeTargetProjectionAdapter, input: NativeTargetProjectionAdapterInput): NativeTargetProjectionResult;
 export declare function projectNativeImportToSource(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: ProjectNativeImportToSourceOptions): NativeSourceProjectionResult;
+export declare function importExternalSemanticIndex(input: ImportExternalSemanticIndexOptions | SemanticIndexRecord): ExternalSemanticIndexImportResult;
 export declare function importNativeSource(input: ImportNativeSourceOptions): NativeSourceImportResult;
 export declare function diffNativeSources(input: DiffNativeSourcesOptions): NativeSourceChangeSet;
 export declare function diffNativeSourceImports(input: DiffNativeSourceImportsOptions): NativeSourceChangeSet;

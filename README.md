@@ -50,6 +50,34 @@ console.log(imported.nativeSource.ast.rootId);
 console.log(imported.patch.operations.length);
 ```
 
+Import external code-intelligence payloads into Frontier semantic evidence when a project already has language tooling such as SCIP, LSIF, LSP, or SemanticDB:
+
+```js
+import { importExternalSemanticIndex } from '@shapeshift-labs/frontier-lang-compiler';
+
+const importedIndex = importExternalSemanticIndex({
+  format: 'scip',
+  language: 'typescript',
+  payload: {
+    metadata: { project_root: '/repo' },
+    documents: [{
+      relative_path: 'src/todo.ts',
+      occurrences: [{
+        symbol: 'scip-typescript npm todo 1.0.0 src/todo.ts/ addTodo().',
+        range: [0, 16, 23],
+        symbol_roles: 1
+      }]
+    }]
+  }
+});
+
+console.log(importedIndex.semanticIndex.symbols.length);
+console.log(importedIndex.summary.sourceMapMappings);
+console.log(importedIndex.readiness.readiness); // "ready-with-losses" or review-required
+```
+
+External semantic-index imports create Frontier `SemanticIndexRecord`, `SourceMapRecord`, evidence, losses, ownership facts, and a universal AST envelope. They are a bridge from existing language servers/indexers into semantic merge tooling; they do not claim full parser AST coverage, macro expansion, type checking, comments/trivia preservation, or lossless cross-language code generation by themselves.
+
 Native imports include source maps, semantic merge candidates, and a loss summary for admission queues and dashboards. Informational losses produce `ready-with-losses`, warning losses produce `needs-review`, and error losses or failed import evidence produce `blocked`:
 
 ```js

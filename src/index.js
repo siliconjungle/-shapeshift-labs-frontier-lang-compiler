@@ -329,6 +329,14 @@ export const NativeImportLanguageProfiles = Object.freeze([
   nativeImportLanguageProfile('r', { aliases: ['R'], extensions: ['.r', '.R'], parserAdapters: ['r-parser', 'tree-sitter'], lossKinds: ['declarationOnlyCoverage', 'opaqueNative', 'dynamicRuntime', 'sourceMapApproximation', 'sourcePreservation'] })
 ]);
 
+export const ExternalSemanticIndexFormats = Object.freeze([
+  'frontier-semantic-index',
+  'scip',
+  'lsif',
+  'lsp',
+  'semanticdb'
+]);
+
 export function normalizeCompileTarget(target) {
   const normalized = String(target ?? 'typescript').toLowerCase();
   const canonical = canonicalTargets[normalized] ?? normalized;
@@ -542,6 +550,1216 @@ export function compileNativeSource(input, options = {}) {
       ...options.metadata
     }
   };
+}
+
+export function importExternalSemanticIndex(input) {
+  const payload = input?.payload ?? input?.semanticIndex ?? input;
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('importExternalSemanticIndex requires a payload object');
+  }
+  const format = normalizeExternalSemanticIndexFormat(input?.format ?? inferExternalSemanticIndexFormat(payload));
+  const idPart = idFragment(input?.id ?? input?.sourcePath ?? input?.projectRoot ?? format);
+  const context = {
+    format,
+    idPart,
+    language: normalizeExternalSemanticLanguage(input?.language ?? payload.language ?? payload.languageId),
+    sourcePath: input?.sourcePath ?? payload.sourcePath ?? payload.uri ?? payload.path,
+    sourceHash: input?.sourceHash ?? payload.sourceHash ?? payload.md5,
+    projectRoot: input?.projectRoot ?? payload.projectRoot ?? payload.project_root ?? payload.metadata?.projectRoot ?? payload.metadata?.project_root,
+    parser: input?.parser ?? `${format}.external-semantic-index`,
+    metadata: input?.metadata ?? {}
+  };
+  const normalized = normalizeExternalSemanticIndexPayload(payload, context);
+  const evidence = attachNativeImportLossSummary(
+    uniqueByEvidenceId([...(normalized.evidence ?? []), ...(input?.evidence ?? [])]),
+    summarizeNativeImportLosses(normalized.losses ?? [], {
+      evidence: [...(normalized.evidence ?? []), ...(input?.evidence ?? [])],
+      parser: context.parser,
+      scanKind: 'external-semantic-index',
+      semanticStatus: normalized.semanticStatus
+    })
+  );
+  const losses = normalizeNativeLossRecords(normalized.losses ?? []);
+  const semanticIndex = createSemanticIndexRecord({
+    id: input?.semanticIndexId ?? normalized.semanticIndexId ?? `index_${idPart}_${idFragment(format)}`,
+    repository: normalized.repository,
+    documents: normalized.documents,
+    symbols: normalized.symbols,
+    occurrences: normalized.occurrences,
+    relations: normalized.relations,
+    facts: normalized.facts,
+    evidence,
+    metadata: {
+      format,
+      parser: context.parser,
+      source: 'external-semantic-index',
+      projectRoot: context.projectRoot,
+      semanticStatus: normalized.semanticStatus,
+      ...normalized.metadata,
+      ...context.metadata
+    }
+  });
+  const sourceMapMappings = externalSemanticSourceMapMappings(semanticIndex, {
+    evidence,
+    losses,
+    sourcePath: context.sourcePath,
+    sourceHash: context.sourceHash
+  });
+  const sourceMaps = sourceMapMappings.length
+    ? [createSourceMapRecord({
+      id: input?.sourceMapId ?? `source_map_${idPart}_${idFragment(format)}`,
+      sourcePath: context.sourcePath,
+      sourceHash: context.sourceHash,
+      semanticIndexId: semanticIndex.id,
+      mappings: sourceMapMappings,
+      evidence,
+      metadata: {
+        format,
+        source: 'external-semantic-index',
+        projectRoot: context.projectRoot
+      }
+    })]
+    : [];
+  const document = createDocument({
+    id: input?.documentId ?? `document_${idPart}_${idFragment(format)}`,
+    name: input?.documentName ?? context.sourcePath ?? `${format} semantic index`,
+    nodes: [],
+    rootIds: [],
+    metadata: {
+      sourceLanguage: context.language,
+      sourcePath: context.sourcePath,
+      sourceHash: context.sourceHash,
+      semanticStatus: normalized.semanticStatus,
+      externalSemanticIndexFormat: format
+    }
+  });
+  const universalAst = createUniversalAstEnvelope({
+    id: input?.universalAstId ?? `universal_ast_${idPart}_${idFragment(format)}`,
+    document,
+    nativeSources: [],
+    semanticIndex,
+    sourceMaps,
+    losses,
+    evidence,
+    metadata: {
+      sourceLanguage: context.language,
+      sourcePath: context.sourcePath,
+      sourceHash: context.sourceHash,
+      projectRoot: context.projectRoot,
+      externalSemanticIndexFormat: format,
+      semanticStatus: normalized.semanticStatus,
+      ...input?.universalAstMetadata
+    }
+  });
+  const readiness = classifyNativeImportReadiness(losses, {
+    evidence,
+    parser: context.parser,
+    scanKind: 'external-semantic-index',
+    semanticStatus: normalized.semanticStatus
+  });
+  return {
+    kind: 'frontier.lang.externalSemanticIndexImport',
+    version: 1,
+    id: input?.id ?? `external_semantic_index_${idPart}_${idFragment(format)}`,
+    format,
+    language: context.language,
+    sourcePath: context.sourcePath,
+    projectRoot: context.projectRoot,
+    semanticIndex,
+    universalAst,
+    sourceMaps,
+    losses,
+    evidence,
+    readiness,
+    summary: {
+      documents: semanticIndex.documents.length,
+      symbols: semanticIndex.symbols.length,
+      occurrences: semanticIndex.occurrences.length,
+      relations: semanticIndex.relations.length,
+      facts: semanticIndex.facts.length,
+      sourceMapMappings: sourceMaps.reduce((sum, sourceMap) => sum + (sourceMap.mappings?.length ?? 0), 0),
+      losses: losses.length,
+      readiness: readiness.readiness
+    },
+    metadata: {
+      format,
+      parser: context.parser,
+      semanticStatus: normalized.semanticStatus,
+      payloadHash: hashSemanticValue(payload),
+      ...normalized.metadata,
+      ...context.metadata
+    }
+  };
+}
+
+function normalizeExternalSemanticIndexFormat(format) {
+  const normalized = String(format ?? 'frontier-semantic-index').trim().toLowerCase();
+  const aliases = {
+    frontier: 'frontier-semantic-index',
+    'frontier.semantic-index': 'frontier-semantic-index',
+    'frontier.lang.semanticindex': 'frontier-semantic-index',
+    scipindex: 'scip',
+    'sourcegraph-scip': 'scip',
+    lsp: 'lsp',
+    'language-server-protocol': 'lsp',
+    semanticdb: 'semanticdb',
+    'scala-semanticdb': 'semanticdb'
+  };
+  return aliases[normalized] ?? normalized;
+}
+
+function inferExternalSemanticIndexFormat(payload) {
+  if (payload.kind === 'frontier.lang.semanticIndex') return 'frontier-semantic-index';
+  if (Array.isArray(payload) && payload.some((entry) => entry?.type === 'vertex' || entry?.type === 'edge')) return 'lsif';
+  if (Array.isArray(payload.vertices) || Array.isArray(payload.edges)) return 'lsif';
+  if (Array.isArray(payload.documents) && payload.documents.some((document) => document?.relative_path ?? document?.relativePath)) return 'scip';
+  if (payload.metadata?.project_root || payload.metadata?.projectRoot || payload.external_symbols || payload.externalSymbols) return 'scip';
+  if (Array.isArray(payload.documents) && payload.documents.some((document) => document?.symbols && document?.occurrences && (document?.uri || document?.md5 || document?.schema))) return 'semanticdb';
+  if (Array.isArray(payload.documentSymbols) || Array.isArray(payload.symbols) || payload.semanticTokens || payload.location || payload.range) return 'lsp';
+  return 'frontier-semantic-index';
+}
+
+function normalizeExternalSemanticIndexPayload(payload, context) {
+  if (context.format === 'frontier-semantic-index') return normalizeFrontierSemanticIndexPayload(payload, context);
+  if (context.format === 'scip') return normalizeScipPayload(payload, context);
+  if (context.format === 'lsif') return normalizeLsifPayload(payload, context);
+  if (context.format === 'lsp') return normalizeLspPayload(payload, context);
+  if (context.format === 'semanticdb') return normalizeSemanticDbPayload(payload, context);
+  return normalizeGenericExternalSemanticIndexPayload(payload, context);
+}
+
+function externalSemanticBase(context, metadata = {}) {
+  return {
+    repository: context.projectRoot ? { root: context.projectRoot } : undefined,
+    documents: [],
+    symbols: [],
+    occurrences: [],
+    relations: [],
+    facts: [],
+    evidence: [externalSemanticEvidence(context, 'passed', `Imported ${context.format} semantic index payload.`)],
+    losses: [externalSemanticCoverageLoss(context)],
+    semanticStatus: 'external-semantic-index',
+    metadata
+  };
+}
+
+function normalizeFrontierSemanticIndexPayload(payload, context) {
+  const result = externalSemanticBase(context, { sourceFormat: payload.kind ?? 'frontier.lang.semanticIndex' });
+  result.repository = payload.repository ?? result.repository;
+  result.documents = normalizeArray(payload.documents).map((document, index) => externalDocument(document, context, index));
+  result.symbols = normalizeArray(payload.symbols).map((symbol, index) => externalSymbol(symbol, context, index));
+  result.occurrences = normalizeArray(payload.occurrences).map((occurrence, index) => externalOccurrence(occurrence, context, index));
+  result.relations = normalizeArray(payload.relations).map((relation, index) => externalRelation(relation, context, index));
+  result.facts = normalizeArray(payload.facts).map((fact, index) => externalFact(fact, context, index));
+  result.evidence = uniqueByEvidenceId([...(payload.evidence ?? []), ...result.evidence]);
+  if (payload.metadata) result.metadata = { ...result.metadata, ...payload.metadata };
+  return withExternalEmptyLoss(result, context);
+}
+
+function normalizeScipPayload(payload, context) {
+  const result = externalSemanticBase(context, { sourceFormat: 'scip' });
+  const metadata = payload.metadata ?? {};
+  const projectRoot = context.projectRoot ?? metadata.project_root ?? metadata.projectRoot;
+  result.repository = projectRoot ? { root: projectRoot } : undefined;
+  const documents = normalizeArray(payload.documents);
+  for (const [documentIndex, document] of documents.entries()) {
+    const path = document.relative_path ?? document.relativePath ?? document.path ?? context.sourcePath ?? `scip-document-${documentIndex + 1}`;
+    const language = normalizeExternalSemanticLanguage(document.language ?? context.language);
+    const documentId = document.id ?? `doc_${idFragment(path)}`;
+    result.documents.push({
+      id: documentId,
+      path,
+      language,
+      sourceHash: document.sourceHash ?? document.md5 ?? context.sourceHash,
+      metadata: {
+        format: 'scip',
+        projectRoot,
+        textDocumentEncoding: metadata.text_document_encoding ?? metadata.textDocumentEncoding,
+        documentIndex
+      }
+    });
+    const documentSymbols = new Map();
+    for (const symbolInfo of [...normalizeArray(document.symbols), ...normalizeArray(payload.external_symbols ?? payload.externalSymbols)]) {
+      const symbolId = scipSymbolId(symbolInfo.symbol, context, normalizeArray(document.symbols).includes(symbolInfo) ? documentId : undefined);
+      if (!symbolId || documentSymbols.has(symbolId)) continue;
+      documentSymbols.set(symbolId, true);
+      result.symbols.push({
+        id: symbolId,
+        scheme: 'scip',
+        name: symbolInfo.display_name ?? symbolInfo.displayName ?? nameFromExternalSymbol(symbolInfo.symbol),
+        kind: normalizeExternalSymbolKind(symbolInfo.kind),
+        language,
+        signatureHash: hashSemanticValue([symbolInfo.symbol, symbolInfo.signature_documentation ?? symbolInfo.signatureDocumentation]),
+        metadata: {
+          format: 'scip',
+          rawSymbol: symbolInfo.symbol,
+          documentation: symbolInfo.documentation,
+          enclosingSymbol: symbolInfo.enclosing_symbol ?? symbolInfo.enclosingSymbol,
+          external: !normalizeArray(document.symbols).includes(symbolInfo)
+        }
+      });
+      result.facts.push(...scipSymbolFacts(symbolInfo, symbolId));
+      result.relations.push(...scipRelationshipRelations(symbolInfo, symbolId, context));
+    }
+    for (const [occurrenceIndex, occurrence] of normalizeArray(document.occurrences).entries()) {
+      const symbolId = scipSymbolId(occurrence.symbol, context, documentId);
+      if (!symbolId) continue;
+      const role = scipOccurrenceRole(occurrence.symbol_roles ?? occurrence.symbolRoles);
+      if (!documentSymbols.has(symbolId)) {
+        documentSymbols.set(symbolId, true);
+        result.symbols.push({
+          id: symbolId,
+          scheme: 'scip',
+          name: nameFromExternalSymbol(occurrence.symbol),
+          kind: scipSyntaxKind(occurrence.syntax_kind ?? occurrence.syntaxKind),
+          language,
+          metadata: { format: 'scip', rawSymbol: occurrence.symbol, inferredFromOccurrence: true }
+        });
+      }
+      result.occurrences.push({
+        id: occurrence.id ?? `occ_${idFragment(documentId)}_${occurrenceIndex + 1}`,
+        documentId,
+        symbolId,
+        role,
+        span: spanFromScipOccurrence(occurrence, path, context.sourceHash),
+        metadata: {
+          format: 'scip',
+          symbolRoles: occurrence.symbol_roles ?? occurrence.symbolRoles,
+          roleSet: scipOccurrenceRoleSet(occurrence.symbol_roles ?? occurrence.symbolRoles),
+          syntaxKind: occurrence.syntax_kind ?? occurrence.syntaxKind,
+          overrideDocumentation: occurrence.override_documentation ?? occurrence.overrideDocumentation
+        }
+      });
+      for (const diagnostic of normalizeArray(occurrence.diagnostics)) {
+        const scopedDiagnostic = { ...diagnostic, range: diagnostic.range ?? occurrence.range };
+        result.facts.push(externalDiagnosticFact(scopedDiagnostic, context, documentId, path, result.facts.length));
+        result.losses.push(externalDiagnosticLoss(scopedDiagnostic, context, path));
+      }
+      if (scipOccurrenceRoleSet(occurrence.symbol_roles ?? occurrence.symbolRoles).includes('generated')) {
+        result.losses.push({
+          id: `loss_${idFragment(documentId)}_${occurrenceIndex + 1}_generated_scip_occurrence`,
+          severity: 'warning',
+          phase: 'index',
+          sourceFormat: 'scip',
+          kind: 'generatedCode',
+          message: 'SCIP occurrence is marked generated; merge admission should review generated/source ownership before applying patches.',
+          span: spanFromScipOccurrence(occurrence, path, context.sourceHash),
+          semanticSymbolId: symbolId,
+          metadata: { format: 'scip', symbolRoles: occurrence.symbol_roles ?? occurrence.symbolRoles }
+        });
+      }
+    }
+  }
+  return withExternalEmptyLoss(result, context);
+}
+
+function normalizeLsifPayload(payload, context) {
+  const result = externalSemanticBase(context, { sourceFormat: 'lsif' });
+  const records = Array.isArray(payload) ? payload : [...normalizeArray(payload.vertices), ...normalizeArray(payload.edges)];
+  const vertices = new Map(records.filter((record) => record?.type === 'vertex').map((record) => [record.id, record]));
+  const edges = records.filter((record) => record?.type === 'edge');
+  const documentByVertex = new Map();
+  const documentIdByRange = new Map();
+  const resultSetByRange = new Map();
+  const monikerByOut = new Map();
+  const definitionRangeIds = new Set();
+  for (const vertex of vertices.values()) {
+    if (vertex.label === 'document') {
+      const path = uriToPath(vertex.uri) ?? vertex.uri ?? context.sourcePath ?? `lsif-document-${result.documents.length + 1}`;
+      const documentId = `doc_${idFragment(vertex.id ?? path)}`;
+      documentByVertex.set(vertex.id, { id: documentId, path, language: normalizeExternalSemanticLanguage(vertex.languageId ?? context.language) });
+      result.documents.push({
+        id: documentId,
+        path,
+        language: normalizeExternalSemanticLanguage(vertex.languageId ?? context.language),
+        metadata: { format: 'lsif', vertexId: vertex.id, uri: vertex.uri }
+      });
+    }
+    if (vertex.label === 'moniker') monikerByOut.set(vertex.id, vertex);
+  }
+  for (const edge of edges) {
+    if (edge.label === 'next') resultSetByRange.set(edge.outV, edge.inV);
+    if (edge.label === 'moniker') monikerByOut.set(edge.outV, vertices.get(edge.inV) ?? edge);
+    if (edge.label === 'contains') {
+      const document = documentByVertex.get(edge.outV);
+      if (document) {
+        for (const rangeId of normalizeArray(edge.inVs ?? edge.inV)) {
+          documentIdByRange.set(rangeId, document.id);
+        }
+      }
+    }
+    if (edge.label === 'item' && (edge.property === 'definitions' || edge.property === 'declarations')) {
+      for (const rangeId of normalizeArray(edge.inVs ?? edge.inV)) definitionRangeIds.add(rangeId);
+    }
+  }
+  const documentIds = result.documents.map((document) => document.id);
+  const defaultDocument = result.documents[0] ?? {
+    id: `doc_${idFragment(context.sourcePath ?? 'lsif')}`,
+    path: context.sourcePath ?? 'lsif:memory',
+    language: context.language
+  };
+  if (!result.documents.length) result.documents.push(defaultDocument);
+  for (const [vertexId, vertex] of vertices.entries()) {
+    if (vertex.label !== 'range') continue;
+    const resultSetId = resultSetByRange.get(vertexId);
+    const moniker = monikerByOut.get(resultSetId) ?? monikerByOut.get(vertexId);
+    const symbolId = moniker?.identifier
+      ? `symbol:lsif:${idFragment(moniker.scheme ?? moniker.kind ?? 'moniker')}:${idFragment(moniker.identifier)}`
+      : `symbol:lsif:${idFragment(resultSetId ?? vertexId)}`;
+    const documentId = documentIdByRange.get(vertexId) ?? documentIds[0] ?? defaultDocument.id;
+    const owningDocument = result.documents.find((document) => document.id === documentId) ?? defaultDocument;
+    const span = spanFromLspRange(vertex, owningDocument.path, context.sourceHash, 0);
+    if (!result.symbols.some((symbol) => symbol.id === symbolId)) {
+      result.symbols.push({
+        id: symbolId,
+        scheme: 'lsif',
+        name: moniker?.identifier ?? `range:${vertexId}`,
+        kind: moniker?.kind ?? 'symbol',
+        language: owningDocument.language,
+        definitionSpan: definitionRangeIds.has(vertexId) ? span : undefined,
+        metadata: { format: 'lsif', resultSetId, moniker }
+      });
+    }
+    result.occurrences.push({
+      id: `occ_${idFragment(vertexId)}`,
+      documentId,
+      symbolId,
+      role: definitionRangeIds.has(vertexId) ? 'definition' : 'reference',
+      span,
+      metadata: { format: 'lsif', vertexId, resultSetId }
+    });
+  }
+  for (const edge of edges) {
+    if (edge.label === 'textDocument/definition' || edge.label === 'textDocument/references' || edge.label === 'textDocument/declaration') {
+      result.relations.push({
+        id: `rel_${idFragment(edge.id ?? `${edge.outV}_${edge.inV}_${edge.label}`)}`,
+        sourceId: `lsif:${edge.outV}`,
+        predicate: edge.label,
+        targetId: `lsif:${edge.inV}`,
+        metadata: { format: 'lsif', edge }
+      });
+    }
+  }
+  return withExternalEmptyLoss(result, context);
+}
+
+function normalizeLspPayload(payload, context) {
+  const result = externalSemanticBase(context, { sourceFormat: 'lsp' });
+  const documents = normalizeLspDocuments(payload, context);
+  for (const [documentIndex, document] of documents.entries()) {
+    const sourcePath = uriToPath(document.uri) ?? document.sourcePath ?? document.path ?? context.sourcePath ?? `lsp-document-${documentIndex + 1}`;
+    const language = normalizeExternalSemanticLanguage(document.languageId ?? document.language ?? context.language);
+    const documentId = document.id ?? `doc_${idFragment(sourcePath)}`;
+    result.documents.push({
+      id: documentId,
+      path: sourcePath,
+      language,
+      sourceHash: document.sourceHash ?? context.sourceHash,
+      metadata: { format: 'lsp', uri: document.uri, documentIndex }
+    });
+    const symbols = normalizeArray(document.documentSymbols ?? document.symbols ?? payload.documentSymbols ?? payload.symbols);
+    for (const symbol of symbols) addLspSymbol(result, symbol, {
+      context,
+      documentId,
+      sourcePath,
+      language,
+      parentName: symbol.containerName
+    });
+    const semanticTokens = document.semanticTokens ?? payload.semanticTokens;
+    if (semanticTokens) addLspSemanticTokens(result, semanticTokens, { context, documentId, sourcePath, language });
+    for (const diagnostic of normalizeArray(document.diagnostics ?? payload.diagnostics)) {
+      result.facts.push(externalDiagnosticFact(diagnostic, context, documentId, sourcePath, result.facts.length));
+      result.losses.push(externalDiagnosticLoss(diagnostic, context, sourcePath));
+    }
+  }
+  return withExternalEmptyLoss(result, context);
+}
+
+function normalizeSemanticDbPayload(payload, context) {
+  const result = externalSemanticBase(context, { sourceFormat: 'semanticdb' });
+  const documents = normalizeArray(payload.documents ?? payload.textDocuments ?? payload);
+  for (const [documentIndex, document] of documents.entries()) {
+    const sourcePath = uriToPath(document.uri) ?? document.uri ?? document.path ?? context.sourcePath ?? `semanticdb-document-${documentIndex + 1}`;
+    const language = normalizeExternalSemanticLanguage(document.language ?? context.language ?? 'scala');
+    const documentId = document.id ?? `doc_${idFragment(sourcePath)}`;
+    result.documents.push({
+      id: documentId,
+      path: sourcePath,
+      language,
+      sourceHash: document.md5 ?? document.sourceHash ?? context.sourceHash,
+      metadata: { format: 'semanticdb', schema: document.schema, documentIndex }
+    });
+    for (const [symbolIndex, symbolInfo] of normalizeArray(document.symbols).entries()) {
+      const symbolId = semanticDbSymbolId(symbolInfo.symbol, context, documentId);
+      result.symbols.push({
+        id: symbolId,
+        scheme: 'semanticdb',
+        name: symbolInfo.display_name ?? symbolInfo.displayName ?? nameFromExternalSymbol(symbolInfo.symbol),
+        kind: normalizeExternalSymbolKind(symbolInfo.kind),
+        language,
+        signatureHash: hashSemanticValue(symbolInfo.signature ?? symbolInfo.signature_documentation ?? symbolInfo.signatureDocumentation ?? symbolInfo),
+        metadata: { format: 'semanticdb', symbolIndex, rawSymbol: symbolInfo.symbol, properties: symbolInfo.properties }
+      });
+      result.facts.push(...semanticDbSymbolFacts(symbolInfo, symbolId));
+    }
+    for (const [occurrenceIndex, occurrence] of normalizeArray(document.occurrences).entries()) {
+      const symbolId = semanticDbSymbolId(occurrence.symbol, context, documentId);
+      if (!result.symbols.some((symbol) => symbol.id === symbolId)) {
+        result.symbols.push({
+          id: symbolId,
+          scheme: 'semanticdb',
+          name: nameFromExternalSymbol(occurrence.symbol),
+          kind: 'symbol',
+          language,
+          metadata: { format: 'semanticdb', inferredFromOccurrence: true, rawSymbol: occurrence.symbol }
+        });
+      }
+      result.occurrences.push({
+        id: occurrence.id ?? `occ_${idFragment(documentId)}_${occurrenceIndex + 1}`,
+        documentId,
+        symbolId,
+        role: semanticDbOccurrenceRole(occurrence.role),
+        span: spanFromSemanticDbRange(occurrence.range, sourcePath, document.md5 ?? context.sourceHash),
+        metadata: { format: 'semanticdb', role: occurrence.role }
+      });
+    }
+    for (const diagnostic of normalizeArray(document.diagnostics)) {
+      result.facts.push(externalDiagnosticFact(diagnostic, context, documentId, sourcePath, result.facts.length));
+      result.losses.push(externalDiagnosticLoss(diagnostic, context, sourcePath));
+    }
+  }
+  return withExternalEmptyLoss(result, context);
+}
+
+function normalizeGenericExternalSemanticIndexPayload(payload, context) {
+  const result = externalSemanticBase(context, { sourceFormat: context.format, genericPayload: true });
+  result.losses.push({
+    id: `loss_${context.idPart}_${idFragment(context.format)}_unsupported_payload`,
+    severity: 'warning',
+    phase: 'index',
+    sourceFormat: context.format,
+    kind: 'unsupportedSemantic',
+    message: `External semantic index format ${context.format} is not recognized; payload hash is preserved as evidence only.`,
+    metadata: { format: context.format, payloadHash: hashSemanticValue(payload) }
+  });
+  return result;
+}
+
+function normalizeArray(value) {
+  if (value === undefined || value === null) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function normalizeExternalSemanticLanguage(value) {
+  if (value === undefined || value === null || value === '') return undefined;
+  const raw = typeof value === 'number' ? externalLanguageNameByNumber[value] : String(value);
+  return normalizeNativeLanguageId(raw);
+}
+
+function externalDocument(document, context, index) {
+  const path = document.path ?? document.uri ?? document.relative_path ?? document.relativePath ?? context.sourcePath ?? `external-document-${index + 1}`;
+  return {
+    id: document.id ?? `doc_${idFragment(path)}`,
+    path: uriToPath(path) ?? path,
+    language: normalizeExternalSemanticLanguage(document.language ?? document.languageId ?? context.language),
+    sourceHash: document.sourceHash ?? document.md5 ?? context.sourceHash,
+    metadata: { format: context.format, ...document.metadata }
+  };
+}
+
+function externalSymbol(symbol, context, index) {
+  const id = symbol.id ?? symbol.symbolId ?? symbol.symbol ?? `symbol:${context.format}:${index + 1}`;
+  return {
+    ...symbol,
+    id: String(id),
+    scheme: symbol.scheme ?? context.format,
+    name: symbol.name ?? symbol.display_name ?? symbol.displayName ?? nameFromExternalSymbol(id),
+    kind: normalizeExternalSymbolKind(symbol.kind),
+    language: normalizeExternalSemanticLanguage(symbol.language ?? context.language),
+    definitionSpan: normalizeExternalSpan(symbol.definitionSpan ?? symbol.span, context.sourcePath, context.sourceHash),
+    metadata: { format: context.format, rawSymbol: symbol.symbol, ...symbol.metadata }
+  };
+}
+
+function externalOccurrence(occurrence, context, index) {
+  return {
+    ...occurrence,
+    id: occurrence.id ?? `occ_${context.idPart}_${index + 1}`,
+    documentId: occurrence.documentId ?? occurrence.document_id ?? `doc_${idFragment(occurrence.path ?? context.sourcePath ?? context.format)}`,
+    symbolId: occurrence.symbolId ?? occurrence.symbol_id ?? occurrence.symbol ?? `symbol:${context.format}:unknown`,
+    role: normalizeExternalOccurrenceRole(occurrence.role),
+    span: normalizeExternalSpan(occurrence.span ?? occurrence.range, occurrence.path ?? context.sourcePath, context.sourceHash),
+    metadata: { format: context.format, ...occurrence.metadata }
+  };
+}
+
+function externalRelation(relation, context, index) {
+  return {
+    ...relation,
+    id: relation.id ?? `rel_${context.idPart}_${index + 1}`,
+    sourceId: relation.sourceId ?? relation.source_id ?? relation.subjectId ?? relation.subject_id ?? `external:${context.format}`,
+    predicate: relation.predicate ?? relation.label ?? relation.kind ?? 'related',
+    targetId: relation.targetId ?? relation.target_id ?? relation.objectId ?? relation.object_id ?? relation.symbol ?? `external:${context.format}`,
+    metadata: { format: context.format, ...relation.metadata }
+  };
+}
+
+function externalFact(fact, context, index) {
+  return {
+    ...fact,
+    id: fact.id ?? `fact_${context.idPart}_${index + 1}`,
+    predicate: fact.predicate ?? fact.kind ?? 'externalFact',
+    subjectId: fact.subjectId ?? fact.subject_id ?? fact.symbolId ?? fact.symbol_id ?? `external:${context.format}`,
+    value: fact.value ?? fact.data ?? fact,
+    metadata: { format: context.format, ...fact.metadata }
+  };
+}
+
+function externalSemanticEvidence(context, status, summary, metadata = {}) {
+  return {
+    id: `evidence_${context.idPart}_${idFragment(context.format)}_external_semantic_index`,
+    kind: 'import',
+    status,
+    path: context.sourcePath,
+    summary,
+    metadata: {
+      format: context.format,
+      parser: context.parser,
+      projectRoot: context.projectRoot,
+      ...metadata
+    }
+  };
+}
+
+function externalSemanticCoverageLoss(context) {
+  return {
+    id: `loss_${context.idPart}_${idFragment(context.format)}_partial_semantic_index`,
+    severity: 'info',
+    phase: 'index',
+    sourceFormat: context.format,
+    kind: 'partialSemanticIndex',
+    message: `${context.format} payload imported symbols, occurrences, and facts as external semantic evidence; full parser AST, comments, trivia, and executable semantics still require a native parser adapter.`,
+    semanticIndexId: context.semanticIndexId,
+    metadata: {
+      format: context.format,
+      parser: context.parser,
+      source: 'external-semantic-index'
+    }
+  };
+}
+
+function withExternalEmptyLoss(result, context) {
+  if (!result.documents.length) {
+    result.documents.push({
+      id: `doc_${context.idPart}_${idFragment(context.format)}`,
+      path: context.sourcePath ?? `${context.format}:memory`,
+      language: context.language,
+      sourceHash: context.sourceHash,
+      metadata: { format: context.format, inferred: true }
+    });
+  }
+  if (!result.symbols.length && !result.occurrences.length) {
+    result.losses.push({
+      id: `loss_${context.idPart}_${idFragment(context.format)}_empty_semantic_index`,
+      severity: 'warning',
+      phase: 'index',
+      sourceFormat: context.format,
+      kind: 'partialSemanticIndex',
+      message: `${context.format} payload did not contain symbols or occurrences that Frontier can map.`,
+      metadata: { format: context.format }
+    });
+  }
+  attachExternalOwnership(result, context);
+  result.symbols = uniqueRecordsById(result.symbols);
+  result.occurrences = uniqueRecordsById(result.occurrences);
+  result.relations = uniqueRecordsById(result.relations);
+  result.facts = uniqueRecordsById(result.facts);
+  result.losses = uniqueByLossId(result.losses);
+  result.evidence = uniqueByEvidenceId(result.evidence);
+  return result;
+}
+
+function attachExternalOwnership(result, context) {
+  const occurrencesBySymbol = new Map();
+  for (const occurrence of result.occurrences) {
+    if (!occurrencesBySymbol.has(occurrence.symbolId)) occurrencesBySymbol.set(occurrence.symbolId, []);
+    occurrencesBySymbol.get(occurrence.symbolId).push(occurrence);
+    result.relations.push({
+      id: `rel_${idFragment(occurrence.documentId)}_${idFragment(occurrence.id)}_${idFragment(occurrence.role)}`,
+      sourceId: occurrence.documentId,
+      predicate: externalRelationPredicateForOccurrence(occurrence),
+      targetId: occurrence.symbolId,
+      metadata: {
+        format: context.format,
+        source: 'external-semantic-index',
+        occurrenceId: occurrence.id,
+        role: occurrence.role
+      }
+    });
+  }
+  result.symbols = result.symbols.map((symbol) => {
+    const occurrences = occurrencesBySymbol.get(symbol.id) ?? [];
+    const definition = occurrences.find((occurrence) => occurrence.role === 'definition') ?? occurrences[0];
+    const sourceSpan = symbol.definitionSpan ?? definition?.span;
+    const regionKind = semanticRegionKindForSymbol(symbol, undefined, undefined);
+    const key = [
+      'external',
+      symbol.language ?? context.language ?? 'unknown',
+      sourceSpan?.path ?? context.sourcePath ?? 'memory',
+      regionKind,
+      symbol.name ?? symbol.id
+    ].join('#');
+    const region = {
+      id: `region_${idFragment(key)}`,
+      key,
+      regionKind,
+      granularity: 'symbol',
+      language: symbol.language ?? context.language,
+      documentId: definition?.documentId,
+      sourcePath: sourceSpan?.path ?? context.sourcePath,
+      sourceHash: context.sourceHash,
+      symbolId: symbol.id,
+      symbolName: symbol.name,
+      symbolKind: symbol.kind,
+      sourceSpan,
+      precision: sourceSpan ? 'declaration' : 'unknown',
+      mergePolicy: semanticRegionMergePolicy(regionKind),
+      metadata: {
+        format: context.format,
+        source: 'external-semantic-index'
+      }
+    };
+    result.facts.push({
+      id: `fact_${idFragment(symbol.id)}_ownership_region`,
+      predicate: 'semanticOwnershipRegion',
+      subjectId: symbol.id,
+      value: region
+    }, {
+      id: `fact_${idFragment(symbol.id)}_ownership_region_taxonomy`,
+      predicate: 'semanticOwnershipRegionTaxonomy',
+      subjectId: symbol.id,
+      value: {
+        regionKind: region.regionKind,
+        granularity: region.granularity,
+        key: region.key
+      }
+    });
+    return {
+      ...symbol,
+      definitionSpan: symbol.definitionSpan ?? definition?.span,
+      metadata: {
+        ...symbol.metadata,
+        ownershipRegionId: symbol.metadata?.ownershipRegionId ?? region.id,
+        ownershipRegionKey: symbol.metadata?.ownershipRegionKey ?? region.key,
+        ownershipRegionKind: symbol.metadata?.ownershipRegionKind ?? region.regionKind
+      }
+    };
+  });
+}
+
+function externalRelationPredicateForOccurrence(occurrence) {
+  const role = String(occurrence.role ?? '').toLowerCase();
+  if (role === 'definition' || role === 'declaration') return 'defines';
+  if (role === 'import') return 'imports';
+  if (role === 'write') return 'writes';
+  if (role === 'read') return 'reads';
+  return 'references';
+}
+
+function externalSemanticSourceMapMappings(semanticIndex, context) {
+  const symbolsById = new Map((semanticIndex.symbols ?? []).map((symbol) => [symbol.id, symbol]));
+  const evidenceIds = (context.evidence ?? []).map((record) => record.id).filter(Boolean);
+  const lossIds = (context.losses ?? []).map((loss) => loss.id).filter(Boolean);
+  return (semanticIndex.occurrences ?? [])
+    .filter((occurrence) => occurrence.span)
+    .map((occurrence, index) => {
+      const symbol = symbolsById.get(occurrence.symbolId);
+      return {
+        id: `map_${idFragment(occurrence.id ?? `${occurrence.symbolId}_${index + 1}`)}`,
+        semanticSymbolId: occurrence.symbolId,
+        semanticOccurrenceId: occurrence.id,
+        sourceSpan: occurrence.span,
+        evidenceIds,
+        lossIds,
+        ownershipRegionId: symbol?.metadata?.ownershipRegionId,
+        ownershipRegionKey: symbol?.metadata?.ownershipRegionKey,
+        ownershipRegionKind: symbol?.metadata?.ownershipRegionKind,
+        precision: occurrence.span ? 'declaration' : 'unknown',
+        metadata: {
+          source: 'external-semantic-index'
+        }
+      };
+    });
+}
+
+function scipSymbolId(symbol, context, documentId) {
+  if (!symbol) return undefined;
+  const raw = String(symbol);
+  if (raw.startsWith('symbol:')) return raw;
+  const scope = /^local\b/i.test(raw) ? `${documentId ?? context.idPart}:` : '';
+  return `symbol:scip:${idFragment(scope + raw)}`;
+}
+
+function semanticDbSymbolId(symbol, context, documentId) {
+  if (!symbol) return `symbol:semanticdb:${context.idPart}:unknown`;
+  if (String(symbol).startsWith('symbol:')) return String(symbol);
+  const scope = /^local\d+$/i.test(String(symbol)) ? `${documentId}:` : '';
+  return `symbol:semanticdb:${idFragment(scope + symbol)}`;
+}
+
+function nameFromExternalSymbol(symbol) {
+  const value = String(symbol ?? 'symbol');
+  const cleaned = value
+    .replace(/^symbol:[^:]+:/, '')
+    .replace(/[`'"]/g, '')
+    .split(/[\/#.:() +]+/)
+    .filter(Boolean)
+    .at(-1);
+  return cleaned || value;
+}
+
+const externalSymbolKindByNumber = Object.freeze({
+  1: 'array',
+  2: 'assertion',
+  3: 'associatedType',
+  4: 'attribute',
+  7: 'class',
+  8: 'constant',
+  9: 'constructor',
+  11: 'enum',
+  12: 'enumMember',
+  13: 'event',
+  15: 'field',
+  16: 'file',
+  17: 'function',
+  21: 'interface',
+  25: 'macro',
+  26: 'method',
+  28: 'message',
+  29: 'module',
+  30: 'namespace',
+  35: 'package',
+  37: 'parameter',
+  41: 'property',
+  42: 'protocol',
+  49: 'struct',
+  53: 'trait',
+  54: 'type',
+  55: 'typeAlias',
+  58: 'typeParameter',
+  61: 'variable',
+  66: 'abstractMethod'
+});
+
+const lspSymbolKindByNumber = Object.freeze({
+  1: 'file',
+  2: 'module',
+  3: 'namespace',
+  4: 'package',
+  5: 'class',
+  6: 'method',
+  7: 'property',
+  8: 'field',
+  9: 'constructor',
+  10: 'enum',
+  11: 'interface',
+  12: 'function',
+  13: 'variable',
+  14: 'constant',
+  22: 'enumMember',
+  23: 'struct',
+  26: 'typeParameter'
+});
+
+const externalLanguageNameByNumber = Object.freeze({
+  1: 'csharp',
+  2: 'swift',
+  3: 'dart',
+  4: 'kotlin',
+  5: 'scala',
+  6: 'java',
+  15: 'python',
+  16: 'ruby',
+  17: 'elixir',
+  18: 'erlang',
+  19: 'php',
+  22: 'javascript',
+  23: 'typescript',
+  33: 'go',
+  34: 'c',
+  35: 'cpp',
+  38: 'zig',
+  40: 'rust',
+  44: 'haskell',
+  54: 'r',
+  69: 'sql'
+});
+
+function normalizeExternalSymbolKind(kind) {
+  if (kind === undefined || kind === null || kind === '') return 'symbol';
+  if (typeof kind === 'number') return externalSymbolKindByNumber[kind] ?? lspSymbolKindByNumber[kind] ?? `kind${kind}`;
+  return String(kind).replace(/^[A-Z_]+_/, '').replace(/^[A-Z]/, (letter) => letter.toLowerCase());
+}
+
+function normalizeLspSymbolKind(kind) {
+  if (typeof kind === 'number') return lspSymbolKindByNumber[kind] ?? `kind${kind}`;
+  return normalizeExternalSymbolKind(kind);
+}
+
+function scipSyntaxKind(kind) {
+  const normalized = typeof kind === 'number' ? kind : Number(kind);
+  if (normalized === 15 || normalized === 16) return 'function';
+  if (normalized === 19 || normalized === 20) return 'type';
+  if (normalized === 25 || normalized === 26) return 'module';
+  if (normalized === 9 || normalized === 10 || normalized === 12) return 'variable';
+  return 'symbol';
+}
+
+function normalizeExternalOccurrenceRole(role) {
+  const value = String(role ?? 'reference').toLowerCase();
+  if (value.includes('def')) return 'definition';
+  if (value.includes('decl')) return 'declaration';
+  if (value.includes('import')) return 'import';
+  if (value.includes('write')) return 'write';
+  if (value.includes('read')) return 'read';
+  return value === '2' ? 'definition' : value === '1' ? 'reference' : 'reference';
+}
+
+function scipOccurrenceRole(value) {
+  const role = Number(value ?? 0);
+  if ((role & 0x1) > 0) return 'definition';
+  if ((role & 0x2) > 0) return 'import';
+  if ((role & 0x4) > 0) return 'write';
+  if ((role & 0x8) > 0) return 'read';
+  return 'reference';
+}
+
+function scipOccurrenceRoleSet(value) {
+  const role = Number(value ?? 0);
+  const roles = [];
+  if ((role & 0x1) > 0) roles.push('definition');
+  if ((role & 0x2) > 0) roles.push('import');
+  if ((role & 0x4) > 0) roles.push('write');
+  if ((role & 0x8) > 0) roles.push('read');
+  if ((role & 0x10) > 0) roles.push('generated');
+  if ((role & 0x20) > 0) roles.push('test');
+  if ((role & 0x40) > 0) roles.push('forwardDefinition');
+  return roles.length ? roles : ['reference'];
+}
+
+function semanticDbOccurrenceRole(value) {
+  const role = String(value ?? 'reference').toLowerCase();
+  if (role === '2' || role.includes('definition')) return 'definition';
+  return 'reference';
+}
+
+function scipRelationshipRelations(symbolInfo, symbolId, context) {
+  return normalizeArray(symbolInfo.relationships).flatMap((relationship, index) => {
+    const targetId = scipSymbolId(relationship.symbol, context);
+    if (!targetId) return [];
+    const predicates = [];
+    if (relationship.is_reference ?? relationship.isReference) predicates.push('references');
+    if (relationship.is_implementation ?? relationship.isImplementation) predicates.push('implements');
+    if (relationship.is_type_definition ?? relationship.isTypeDefinition) predicates.push('typeDefinition');
+    if (relationship.is_definition ?? relationship.isDefinition) predicates.push('definitionOf');
+    return (predicates.length ? predicates : ['related']).map((predicate) => ({
+      id: `rel_${idFragment(symbolId)}_${idFragment(targetId)}_${idFragment(predicate)}_${index + 1}`,
+      sourceId: symbolId,
+      predicate,
+      targetId,
+      metadata: { format: 'scip', relationship }
+    }));
+  });
+}
+
+function scipSymbolFacts(symbolInfo, symbolId) {
+  const facts = [];
+  if (symbolInfo.documentation) {
+    facts.push({
+      id: `fact_${idFragment(symbolId)}_documentation`,
+      predicate: 'documentation',
+      subjectId: symbolId,
+      value: normalizeArray(symbolInfo.documentation)
+    });
+  }
+  const signature = symbolInfo.signature_documentation ?? symbolInfo.signatureDocumentation;
+  if (signature) {
+    facts.push({
+      id: `fact_${idFragment(symbolId)}_signature`,
+      predicate: 'signature',
+      subjectId: symbolId,
+      value: signature
+    });
+  }
+  for (const [index, relationship] of normalizeArray(symbolInfo.relationships).entries()) {
+    facts.push({
+      id: `fact_${idFragment(symbolId)}_relationship_${index + 1}`,
+      predicate: 'relationship',
+      subjectId: symbolId,
+      value: relationship
+    });
+  }
+  return facts;
+}
+
+function semanticDbSymbolFacts(symbolInfo, symbolId) {
+  const facts = [];
+  for (const key of ['signature', 'properties', 'annotations', 'access', 'language']) {
+    if (symbolInfo[key] !== undefined) {
+      facts.push({
+        id: `fact_${idFragment(symbolId)}_${idFragment(key)}`,
+        predicate: key,
+        subjectId: symbolId,
+        value: symbolInfo[key]
+      });
+    }
+  }
+  return facts;
+}
+
+function normalizeLspDocuments(payload, context) {
+  if (Array.isArray(payload.documents)) return payload.documents;
+  if (payload.textDocument || payload.uri || payload.documentSymbols || payload.symbols || payload.semanticTokens || payload.diagnostics) {
+    return [{
+      ...payload,
+      uri: payload.uri ?? payload.textDocument?.uri,
+      languageId: payload.languageId ?? payload.language ?? context.language,
+      documentSymbols: payload.documentSymbols,
+      symbols: payload.symbols,
+      semanticTokens: payload.semanticTokens,
+      diagnostics: payload.diagnostics
+    }];
+  }
+  return [{ uri: context.sourcePath, languageId: context.language }];
+}
+
+function addLspSymbol(result, symbol, input) {
+  const location = symbol.location ?? {};
+  const range = symbol.range ?? location.range ?? symbol.selectionRange;
+  const sourcePath = uriToPath(location.uri ?? symbol.uri) ?? input.sourcePath;
+  const symbolName = symbol.name ?? symbol.containerName ?? `symbol_${result.symbols.length + 1}`;
+  const symbolId = symbol.id ?? `symbol:lsp:${idFragment(input.language ?? 'unknown')}:${idFragment([input.parentName, symbolName].filter(Boolean).join('.'))}`;
+  const ownershipSpan = spanFromLspRange(range, sourcePath, input.context.sourceHash, 0);
+  const selectionSpan = spanFromLspRange(symbol.selectionRange ?? range, sourcePath, input.context.sourceHash, 0);
+  if (!result.symbols.some((entry) => entry.id === symbolId)) {
+    result.symbols.push({
+      id: symbolId,
+      scheme: 'lsp',
+      name: symbolName,
+      kind: normalizeLspSymbolKind(symbol.kind),
+      language: input.language,
+      definitionSpan: ownershipSpan,
+      signatureHash: hashSemanticValue([symbolName, symbol.kind, symbol.detail]),
+      metadata: {
+        format: 'lsp',
+        detail: symbol.detail,
+        tags: symbol.tags,
+        deprecated: symbol.deprecated,
+        containerName: symbol.containerName,
+        parentName: input.parentName
+      }
+    });
+  }
+  result.occurrences.push({
+    id: `occ_${idFragment(symbolId)}_${result.occurrences.length + 1}`,
+    documentId: input.documentId,
+    symbolId,
+    role: 'definition',
+    span: selectionSpan,
+    metadata: { format: 'lsp', range, selectionRange: symbol.selectionRange }
+  });
+  for (const child of normalizeArray(symbol.children)) {
+    addLspSymbol(result, child, {
+      ...input,
+      parentName: [input.parentName, symbolName].filter(Boolean).join('.')
+    });
+  }
+}
+
+function addLspSemanticTokens(result, semanticTokens, input) {
+  const data = normalizeArray(semanticTokens.data);
+  const legend = semanticTokens.legend ?? {};
+  let line = 0;
+  let character = 0;
+  for (let index = 0; index + 4 < data.length; index += 5) {
+    line += Number(data[index] ?? 0);
+    character = Number(data[index] ?? 0) === 0 ? character + Number(data[index + 1] ?? 0) : Number(data[index + 1] ?? 0);
+    const length = Number(data[index + 2] ?? 0);
+    const tokenType = legend.tokenTypes?.[Number(data[index + 3] ?? 0)] ?? `tokenType${data[index + 3] ?? 0}`;
+    const span = {
+      path: input.sourcePath,
+      startLine: line + 1,
+      startColumn: character + 1,
+      endLine: line + 1,
+      endColumn: character + length + 1
+    };
+    result.facts.push({
+      id: `fact_${idFragment(input.documentId)}_semantic_token_${index / 5 + 1}`,
+      predicate: 'semanticToken',
+      subjectId: input.documentId,
+      value: {
+        tokenType,
+        tokenModifiers: semanticTokenModifiers(Number(data[index + 4] ?? 0), legend.tokenModifiers),
+        span
+      },
+      metadata: { format: 'lsp' }
+    });
+  }
+}
+
+function semanticTokenModifiers(bitset, modifiers = []) {
+  const result = [];
+  for (let index = 0; index < modifiers.length; index += 1) {
+    if ((bitset & (1 << index)) > 0) result.push(modifiers[index]);
+  }
+  return result;
+}
+
+function externalDiagnosticFact(diagnostic, context, documentId, sourcePath, index) {
+  return {
+    id: diagnostic.id ? `fact_${idFragment(diagnostic.id)}_diagnostic` : `fact_${context.idPart}_${idFragment(sourcePath)}_diagnostic_${index + 1}`,
+    predicate: `${context.format}.diagnostic`,
+    subjectId: documentId,
+    value: {
+      severity: diagnostic.severity,
+      code: diagnostic.code,
+      message: diagnostic.message,
+      source: diagnostic.source,
+      tags: diagnostic.tags,
+      range: diagnostic.range,
+      span: normalizeExternalSpan(diagnostic.range ?? diagnostic.span, sourcePath, context.sourceHash)
+    },
+    metadata: {
+      format: context.format,
+      source: 'external-semantic-index'
+    }
+  };
+}
+
+function externalDiagnosticLoss(diagnostic, context, sourcePath) {
+  const severity = externalDiagnosticSeverity(diagnostic.severity);
+  return {
+    id: diagnostic.id ?? `loss_${context.idPart}_${idFragment(diagnostic.code ?? diagnostic.message ?? severity)}_${idFragment(sourcePath)}`,
+    severity,
+    phase: 'index',
+    sourceFormat: context.format,
+    kind: severity === 'error' ? 'unsupportedSemantic' : 'partialSemanticIndex',
+    message: String(diagnostic.message ?? `${context.format} diagnostic reported ${severity}.`),
+    span: normalizeExternalSpan(diagnostic.range ?? diagnostic.span, sourcePath, context.sourceHash),
+    metadata: {
+      format: context.format,
+      code: diagnostic.code,
+      source: diagnostic.source,
+      tags: diagnostic.tags
+    }
+  };
+}
+
+function externalDiagnosticSeverity(value) {
+  if (value === undefined || value === null || value === '') return 'error';
+  const raw = String(value).toLowerCase();
+  if (raw === '1' || raw.includes('error')) return 'error';
+  if (raw === '3' || raw.includes('info') || raw.includes('hint')) return 'info';
+  return 'warning';
+}
+
+function spanFromScipOccurrence(occurrence, sourcePath, sourceHash) {
+  if (occurrence.single_line_range || occurrence.singleLineRange) {
+    const range = occurrence.single_line_range ?? occurrence.singleLineRange;
+    return {
+      sourceId: sourceHash,
+      path: sourcePath,
+      startLine: Number(range.line ?? 0) + 1,
+      startColumn: Number(range.start_character ?? range.startCharacter ?? 0) + 1,
+      endLine: Number(range.line ?? 0) + 1,
+      endColumn: Number(range.end_character ?? range.endCharacter ?? 0) + 1
+    };
+  }
+  if (occurrence.multi_line_range || occurrence.multiLineRange) {
+    const range = occurrence.multi_line_range ?? occurrence.multiLineRange;
+    return {
+      sourceId: sourceHash,
+      path: sourcePath,
+      startLine: Number(range.start_line ?? range.startLine ?? 0) + 1,
+      startColumn: Number(range.start_character ?? range.startCharacter ?? 0) + 1,
+      endLine: Number(range.end_line ?? range.endLine ?? 0) + 1,
+      endColumn: Number(range.end_character ?? range.endCharacter ?? 0) + 1
+    };
+  }
+  const range = occurrence.range;
+  if (Array.isArray(range) && range.length >= 3) {
+    const startLine = Number(range[0] ?? 0);
+    const startColumn = Number(range[1] ?? 0);
+    const endLine = range.length >= 4 ? Number(range[2] ?? startLine) : startLine;
+    const endColumn = range.length >= 4 ? Number(range[3] ?? startColumn) : Number(range[2] ?? startColumn);
+    return {
+      sourceId: sourceHash,
+      path: sourcePath,
+      startLine: startLine + 1,
+      startColumn: startColumn + 1,
+      endLine: endLine + 1,
+      endColumn: endColumn + 1
+    };
+  }
+  return undefined;
+}
+
+function spanFromSemanticDbRange(range, sourcePath, sourceHash) {
+  if (!range) return undefined;
+  return {
+    sourceId: sourceHash,
+    path: sourcePath,
+    startLine: Number(range.start_line ?? range.startLine ?? 0) + 1,
+    startColumn: Number(range.start_character ?? range.startCharacter ?? 0) + 1,
+    endLine: Number(range.end_line ?? range.endLine ?? 0) + 1,
+    endColumn: Number(range.end_character ?? range.endCharacter ?? 0) + 1
+  };
+}
+
+function spanFromLspRange(range, sourcePath, sourceHash, base = 0) {
+  if (!range) return undefined;
+  const source = range.start && range.end ? range : { start: range, end: range.end ?? range };
+  return {
+    sourceId: sourceHash,
+    path: sourcePath,
+    startLine: Number(source.start?.line ?? source.startLine ?? 0) + (base === 0 ? 1 : 0),
+    startColumn: Number(source.start?.character ?? source.startColumn ?? 0) + (base === 0 ? 1 : 0),
+    endLine: Number(source.end?.line ?? source.endLine ?? source.start?.line ?? 0) + (base === 0 ? 1 : 0),
+    endColumn: Number(source.end?.character ?? source.endColumn ?? source.start?.character ?? 0) + (base === 0 ? 1 : 0)
+  };
+}
+
+function normalizeExternalSpan(value, sourcePath, sourceHash) {
+  if (!value) return undefined;
+  if (Array.isArray(value)) {
+    return spanFromScipOccurrence({ range: value }, sourcePath, sourceHash);
+  }
+  if (value.start || value.end || value.line !== undefined) return spanFromLspRange(value, sourcePath, sourceHash, 0);
+  if (value.startLine !== undefined || value.start_line !== undefined) {
+    return {
+      sourceId: value.sourceId ?? sourceHash,
+      path: value.path ?? sourcePath,
+      start: value.start,
+      end: value.end,
+      startLine: Number(value.startLine ?? value.start_line),
+      startColumn: value.startColumn ?? value.start_character,
+      endLine: value.endLine ?? value.end_line,
+      endColumn: value.endColumn ?? value.end_character
+    };
+  }
+  return undefined;
+}
+
+function uriToPath(uri) {
+  if (typeof uri !== 'string') return undefined;
+  if (uri.startsWith('file://')) {
+    try {
+      return decodeURIComponent(new URL(uri).pathname);
+    } catch {
+      return uri.replace(/^file:\/\//, '');
+    }
+  }
+  return uri;
 }
 
 export function projectFrontierAst(document, target = 'typescript', options = {}) {

@@ -6,6 +6,7 @@ import {
   createNativeImportCoverageMatrix,
   createProjectionTargetLossMatrix,
   createSemanticImportSidecar,
+  importExternalSemanticIndex,
   importNativeProject,
   importNativeSource,
   projectNativeImportToSource,
@@ -32,6 +33,41 @@ action updateItem @id("action_${index}") {
   const result = compileFrontierSource(source, { target: targets[index % targets.length] });
   assert.equal(result.ok, true);
   assert.ok(result.output.length > 0);
+}
+
+for (let index = 0; index < 40; index += 1) {
+  const external = importExternalSemanticIndex({
+    format: index % 2 === 0 ? 'lsp' : 'scip',
+    language: index % 2 === 0 ? 'javascript' : 'rust',
+    payload: index % 2 === 0
+      ? {
+        uri: `file:///repo/src/external-${index}.js`,
+        languageId: 'javascript',
+        documentSymbols: [{
+          name: `external${index}`,
+          kind: 12,
+          range: { start: { line: index % 7, character: 0 }, end: { line: index % 7, character: 20 } }
+        }],
+        diagnostics: index % 9 === 0 ? [{ severity: 2, message: 'fuzz warning' }] : []
+      }
+      : {
+        metadata: { project_root: '/repo' },
+        documents: [{
+          relative_path: `src/external-${index}.rs`,
+          language: 'rust',
+          occurrences: [{
+            symbol: `scip-rust cargo fuzz 1.0.0 src/external-${index}.rs/ external${index}().`,
+            range: [index % 5, 4, 12],
+            symbol_roles: 1
+          }]
+        }]
+      }
+  });
+  assert.equal(external.kind, 'frontier.lang.externalSemanticIndexImport');
+  assert.ok(external.semanticIndex.documents.length >= 1);
+  assert.ok(external.semanticIndex.symbols.length >= 1);
+  assert.ok(external.summary.sourceMapMappings >= 1);
+  assert.ok(['ready-with-losses', 'needs-review'].includes(external.readiness.readiness));
 }
 
 const estreeAdapter = createEstreeNativeImporterAdapter();
