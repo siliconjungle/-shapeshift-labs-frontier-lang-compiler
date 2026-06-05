@@ -8,6 +8,7 @@ import {
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createPythonAstNativeImporterAdapter,
+  createRustSynNativeImporterAdapter,
   createSemanticImportSidecar,
   diffNativeSources,
   importExternalSemanticIndex,
@@ -78,7 +79,7 @@ const matrixDurationMs = performance.now() - matrixStart;
 const parserFormatMatrixStart = performance.now();
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   imports: nativeImportResults,
-  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter()]
+  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter()]
 });
 const parserFormatMatrixDurationMs = performance.now() - parserFormatMatrixStart;
 

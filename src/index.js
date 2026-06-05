@@ -378,6 +378,31 @@ export const NativeParserAstFormatProfiles = Object.freeze([
     supportsErrorRecovery: false,
     notes: ['Python stdlib AST exposes versioned abstract grammar and source locations, but not formatting trivia.']
   }),
+  nativeParserAstFormatProfile('rust-syn', {
+    aliases: ['syn'],
+    kind: 'abstract-ast',
+    languages: ['rust'],
+    parserAdapters: ['syn', 'rust-syn'],
+    exactness: 'exact-parser-ast',
+    sourceRangeModel: 'proc-macro2-span',
+    preservesTokens: false,
+    preservesTrivia: false,
+    supportsErrorRecovery: false,
+    notes: ['syn parses Rust token streams into an abstract syntax tree; macro expansion, name resolution, type checking, and lossless trivia remain host-owned evidence.']
+  }),
+  nativeParserAstFormatProfile('rust-analyzer-rowan', {
+    aliases: ['rowan', 'rust-analyzer'],
+    kind: 'concrete-syntax-tree',
+    languages: ['rust'],
+    parserAdapters: ['rust-analyzer-rowan'],
+    exactness: 'parser-tree',
+    sourceRangeModel: 'text-range',
+    preservesTokens: true,
+    preservesTrivia: true,
+    supportsIncremental: true,
+    supportsErrorRecovery: true,
+    notes: ['rust-analyzer uses rowan-backed concrete syntax trees with AST wrappers; semantic richness still depends on host analysis evidence.']
+  }),
   nativeParserAstFormatProfile('tree-sitter', {
     kind: 'concrete-syntax-tree',
     languages: ['mixed'],
@@ -2625,6 +2650,61 @@ export function createPythonAstNativeImporterAdapter(options = {}) {
         maxNodes: options.maxNodes,
         diagnostics: parseDiagnostics,
         pythonVersion: options.pythonVersion ?? input.options?.pythonVersion ?? parsed?.pythonVersion,
+        includeAttributes: options.includeAttributes ?? input.options?.includeAttributes
+      });
+    }
+  };
+}
+
+export function createRustSynNativeImporterAdapter(options = {}) {
+  return {
+    id: options.id ?? 'frontier.rust-syn-native-importer',
+    language: options.language ?? 'rust',
+    parser: options.parser ?? 'syn',
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'exact-parser-ast',
+      exactAst: true,
+      tokens: false,
+      trivia: false,
+      diagnostics: true,
+      sourceRanges: false,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes caller-owned syn-shaped Rust ASTs into native AST nodes and declaration-level semantic index records.',
+        'syn does not expand macros, resolve names, type-check, or preserve full concrete syntax/trivia; attach rust-analyzer/rustc evidence for those claims.'
+      ]
+    }, options.coverage),
+    supportedExtensions: options.supportedExtensions ?? ['.rs'],
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const parsed = input.options?.ast
+        ?? input.options?.nativeAst
+        ?? input.options?.file
+        ?? input.options?.sourceFile
+        ?? options.ast
+        ?? options.file
+        ?? options.sourceFile
+        ?? parseRustSynSource(input, options);
+      const root = rustSynAstRoot(parsed);
+      if (!root) {
+        return missingInjectedParserResult(input, {
+          parser: options.parser ?? 'syn',
+          adapterId: options.id ?? 'frontier.rust-syn-native-importer',
+          message: 'createRustSynNativeImporterAdapter requires an injected syn-shaped AST object, parserModule.parse function, parse function, or adapterOptions.ast.'
+        });
+      }
+      const parseDiagnostics = normalizeParserErrors(parsed?.errors ?? parsed?.diagnostics, input, {
+        parser: options.parser ?? 'syn'
+      });
+      return createNativeImportFromRustSyn(root, input, {
+        parser: options.parser ?? 'syn',
+        astFormat: 'rust-syn',
+        maxNodes: options.maxNodes,
+        diagnostics: parseDiagnostics,
+        rustEdition: options.rustEdition ?? input.options?.rustEdition ?? parsed?.rustEdition,
         includeAttributes: options.includeAttributes ?? input.options?.includeAttributes
       });
     }
@@ -7069,6 +7149,8 @@ function parserAstFormatIdForParser(parser) {
   const text = normalizeParserAstFormatId(parser);
   if (text.includes('typescript')) return 'typescript-compiler-api';
   if (text.includes('python') && text.includes('ast')) return 'python-ast';
+  if (text === 'syn' || text.includes('rust-syn')) return 'rust-syn';
+  if (text.includes('rust-analyzer') || text.includes('rowan')) return 'rust-analyzer-rowan';
   if (text.includes('tree-sitter') || text.includes('treesitter')) return 'tree-sitter';
   if (text.includes('babel')) return 'babel';
   if (text.includes('estree')) return 'estree';
@@ -8103,6 +8185,20 @@ function parsePythonAstSource(input, options) {
   return parse(input.sourceText, parserOptions);
 }
 
+function parseRustSynSource(input, options) {
+  const parse = options.parse ?? options.parserModule?.parse ?? options.rustSyn?.parse ?? options.syn?.parse;
+  if (typeof parse !== 'function') return undefined;
+  const parserOptions = {
+    sourcePath: input.sourcePath,
+    filename: input.sourcePath,
+    edition: options.rustEdition ?? input.options?.rustEdition ?? '2021',
+    includeAttributes: options.includeAttributes ?? input.options?.includeAttributes,
+    ...(options.parserOptions ?? {}),
+    ...(input.options?.parserOptions ?? {})
+  };
+  return parse(input.sourceText, parserOptions);
+}
+
 function createNativeImportFromSyntaxAst(ast, input, options) {
   const root = normalizeSyntaxAstRoot(ast, options.astFormat);
   if (!root) {
@@ -8185,6 +8281,36 @@ function createNativeImportFromPythonAst(root, input, options) {
       astFormat: options.astFormat,
       parser: options.parser,
       pythonVersion: options.pythonVersion,
+      includeAttributes: Boolean(options.includeAttributes),
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createNativeImportFromRustSyn(root, input, options) {
+  const context = createAstNormalizationContext(input, options);
+  visitRustSynNode(root, context, 'root');
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: mergeNativeLosses(context.losses, options.diagnostics?.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, {
+      id: input.adapterId,
+      version: input.adapterVersion
+    }, input)) ?? []),
+    evidence: semantic.evidence,
+    diagnostics: options.diagnostics,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      rustEdition: options.rustEdition,
       includeAttributes: Boolean(options.includeAttributes),
       normalizedNodeCount: Object.keys(context.nodes).length,
       declarationCount: context.declarations.length,
@@ -8373,6 +8499,67 @@ function visitPythonAstNode(node, context, propertyPath) {
   };
   context.nodes[id] = nativeNode;
   if (declaration) context.declarations.push({ ...declaration, nativeNode });
+  return id;
+}
+
+function visitRustSynNode(node, context, propertyPath) {
+  if (!isRustSynAstNode(node) || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const kind = rustSynKind(node);
+  const payload = rustSynPayload(node);
+  const span = spanFromRustSynNode(payload, context.input);
+  const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  for (const [field, value] of rustSynChildEntries(node)) {
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        const childId = visitRustSynNode(entry, context, `${propertyPath}.${field}[${index}]`);
+        if (childId) children.push(childId);
+      });
+    } else {
+      const childId = visitRustSynNode(value, context, `${propertyPath}.${field}`);
+      if (childId) children.push(childId);
+    }
+  }
+  const declaration = rustSynDeclaration(payload, kind, id, context.input);
+  const nativeNode = {
+    id,
+    kind,
+    languageKind: `${context.input.language}.${kind}`,
+    span,
+    value: declaration?.name ?? rustSynNodeValue(payload),
+    fields: primitiveRustSynFields(payload, kind),
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      spanKind: rustSynSpanKind(payload)
+    }
+  };
+  context.nodes[id] = nativeNode;
+  if (declaration) context.declarations.push({ ...declaration, nativeNode });
+  if (rustSynMacroKind(kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_rust_macro_expansion`,
+      severity: 'warning',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'macroExpansion',
+      message: 'Rust macro syntax was parsed but macro expansion and generated items require host compiler evidence.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat
+      }
+    });
+  }
   return id;
 }
 
@@ -9530,6 +9717,87 @@ function pythonAstKind(node) {
   return node?._type ?? node?.type ?? node?.kind ?? node?.nodeType;
 }
 
+function rustSynAstRoot(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  if (isRustSynAstNode(value)) return value;
+  if (isRustSynAstNode(value.ast)) return value.ast;
+  if (isRustSynAstNode(value.file)) return value.file;
+  if (isRustSynAstNode(value.root)) return value.root;
+  if (isRustSynAstNode(value.module)) return value.module;
+  if (isRustSynAstNode(value.sourceFile)) return value.sourceFile;
+  return undefined;
+}
+
+function isRustSynAstNode(value) {
+  return Boolean(value && typeof value === 'object' && typeof rustSynKind(value) === 'string');
+}
+
+function rustSynKind(node) {
+  const declared = node?._type ?? node?.type ?? node?.kind ?? node?.nodeType ?? node?.synKind;
+  if (typeof declared === 'string') return normalizeRustSynKind(declared);
+  const wrapper = rustSynWrapperKind(node);
+  if (wrapper) return normalizeRustSynKind(wrapper);
+  if (Array.isArray(node?.items)) return 'File';
+  if (node?.sig && node?.block) return 'ItemFn';
+  if (node?.ident && node?.fields && Array.isArray(node?.variants)) return 'ItemEnum';
+  if (node?.ident && node?.fields) return 'ItemStruct';
+  if (node?.ident && Array.isArray(node?.items)) return 'ItemMod';
+  if (node?.trait_ || node?.self_ty || node?.selfType) return 'ItemImpl';
+  if (node?.path && (node?.tree || node?.trees)) return 'ItemUse';
+  return undefined;
+}
+
+function rustSynPayload(node) {
+  if (!node || typeof node !== 'object') return node;
+  const wrapper = rustSynWrapperKind(node);
+  return wrapper ? node[wrapper] : node;
+}
+
+function rustSynWrapperKind(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const keys = Object.keys(node).filter((key) => !ignoredRustSynField(key));
+  if (keys.length !== 1) return undefined;
+  const key = keys[0];
+  const value = node[key];
+  if (!value || typeof value !== 'object') return undefined;
+  if (/^(?:Fn|Struct|Enum|Trait|Impl|Use|Mod|Type|Const|Static|Union|Macro)$/.test(key)) return key;
+  if (/^(?:Item|ImplItem|TraitItem|ForeignItem)/.test(key)) return key;
+  return undefined;
+}
+
+function normalizeRustSynKind(kind) {
+  const text = String(kind);
+  const compact = text.replace(/^(?:syn::)?/, '').replace(/^Item::/, 'Item').replace(/^ImplItem::/, 'ImplItem').replace(/^TraitItem::/, 'TraitItem');
+  if (/^fn$/i.test(compact)) return 'ItemFn';
+  if (/^struct$/i.test(compact)) return 'ItemStruct';
+  if (/^enum$/i.test(compact)) return 'ItemEnum';
+  if (/^trait$/i.test(compact)) return 'ItemTrait';
+  if (/^impl$/i.test(compact)) return 'ItemImpl';
+  if (/^use$/i.test(compact)) return 'ItemUse';
+  if (/^mod$/i.test(compact)) return 'ItemMod';
+  if (/^type$/i.test(compact)) return 'ItemType';
+  if (/^const$/i.test(compact)) return 'ItemConst';
+  if (/^static$/i.test(compact)) return 'ItemStatic';
+  if (/^union$/i.test(compact)) return 'ItemUnion';
+  if (/^item_fn$/i.test(compact)) return 'ItemFn';
+  if (/^item_struct$/i.test(compact)) return 'ItemStruct';
+  if (/^item_enum$/i.test(compact)) return 'ItemEnum';
+  if (/^item_trait$/i.test(compact)) return 'ItemTrait';
+  if (/^item_impl$/i.test(compact)) return 'ItemImpl';
+  if (/^item_use$/i.test(compact)) return 'ItemUse';
+  if (/^item_mod$/i.test(compact)) return 'ItemMod';
+  if (/^item_type$/i.test(compact)) return 'ItemType';
+  if (/^item_const$/i.test(compact)) return 'ItemConst';
+  if (/^item_static$/i.test(compact)) return 'ItemStatic';
+  if (/^item_union$/i.test(compact)) return 'ItemUnion';
+  if (/^item_macro$/i.test(compact)) return 'ItemMacro';
+  if (/^macro$/i.test(compact)) return 'Macro';
+  if (/^impl_item_fn$/i.test(compact)) return 'ImplItemFn';
+  if (/^trait_item_fn$/i.test(compact)) return 'TraitItemFn';
+  if (/^foreign_item_fn$/i.test(compact)) return 'ForeignItemFn';
+  return compact;
+}
+
 function ignoredSyntaxField(key) {
   return key === 'type'
     || key === 'kind'
@@ -9564,6 +9832,18 @@ function ignoredPythonAstField(key) {
     || key === 'parent';
 }
 
+function ignoredRustSynField(key) {
+  return key === '_type'
+    || key === 'type'
+    || key === 'kind'
+    || key === 'nodeType'
+    || key === 'synKind'
+    || key === 'span'
+    || key === 'tokens'
+    || key === 'tokenStream'
+    || key === 'parent';
+}
+
 function primitiveSyntaxFields(node) {
   const fields = {};
   for (const key of ['name', 'operator', 'sourceType', 'async', 'generator', 'computed', 'static', 'exportKind', 'importKind', 'optional']) {
@@ -9592,6 +9872,22 @@ function primitivePythonAstFields(node, kind) {
   }
   const literal = pythonAstLiteralValue(node);
   if (literal !== undefined) fields.literal = literal;
+  return fields;
+}
+
+function primitiveRustSynFields(node, kind) {
+  const fields = { kind };
+  const ident = rustSynIdentName(node.ident ?? node.name ?? node.sig?.ident);
+  if (ident) fields.ident = ident;
+  const path = rustSynPathName(node.path ?? node.trait_ ?? node.self_ty ?? node.selfType ?? node.ty);
+  if (path) fields.path = path;
+  const visibility = rustSynVisibility(node.vis ?? node.visibility);
+  if (visibility) fields.visibility = visibility;
+  for (const key of ['mutability', 'defaultness', 'constness', 'asyncness', 'unsafety', 'abi']) {
+    const value = node[key];
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) fields[key] = value;
+  }
+  if (Array.isArray(node.attrs) && node.attrs.length) fields.attributeCount = node.attrs.length;
   return fields;
 }
 
@@ -9635,6 +9931,36 @@ function spanFromPythonAstNode(node, input) {
   };
 }
 
+function spanFromRustSynNode(node, input) {
+  const span = node.span ?? node.ident?.span ?? node.sig?.ident?.span ?? node.name?.span;
+  if (!span || typeof span !== 'object') return undefined;
+  const start = span.start ?? span.lo ?? span.begin;
+  const end = span.end ?? span.hi;
+  const startLine = span.startLine ?? span.line ?? start?.line;
+  const startColumn = span.startColumn ?? span.column ?? start?.column;
+  const endLine = span.endLine ?? end?.line;
+  const endColumn = span.endColumn ?? end?.column;
+  if (typeof startLine !== 'number') return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: input.sourcePath,
+    startLine,
+    startColumn: typeof startColumn === 'number' ? rustSynColumnToOneBased(startColumn, span) : undefined,
+    endLine: typeof endLine === 'number' ? endLine : undefined,
+    endColumn: typeof endColumn === 'number' ? rustSynColumnToOneBased(endColumn, span) : undefined
+  };
+}
+
+function rustSynColumnToOneBased(column, span) {
+  return span.columnBase === 1 || span.columnsOneBased ? column : column + 1;
+}
+
+function rustSynSpanKind(node) {
+  const span = node.span ?? node.ident?.span ?? node.sig?.ident?.span ?? node.name?.span;
+  if (!span || typeof span !== 'object') return undefined;
+  return span.kind ?? span.source ?? 'host-span';
+}
+
 function syntaxDeclaration(node, nativeNodeId, input) {
   const kind = String(node.type ?? node.kind ?? '');
   if (kind === 'ImportDeclaration') {
@@ -9667,6 +9993,46 @@ function pythonAstDeclaration(node, kind, nativeNodeId, input) {
   if (kind === 'AnnAssign' || kind === 'Assign') {
     const name = pythonAssignmentName(node);
     if (name) return declarationRecord(input, nativeNodeId, name, 'variable', 'definition');
+  }
+  return undefined;
+}
+
+function rustSynDeclaration(node, kind, nativeNodeId, input) {
+  if (kind === 'ItemUse' || kind === 'UseTree' || kind === 'UsePath' || kind === 'UseName') {
+    const name = rustSynUseName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'module', 'import');
+  }
+  if (kind === 'ItemFn' || kind === 'ForeignItemFn') {
+    const name = rustSynIdentName(node.sig?.ident ?? node.ident ?? node.name);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'function', 'definition');
+  }
+  if (kind === 'ImplItemFn' || kind === 'TraitItemFn') {
+    const name = rustSynIdentName(node.sig?.ident ?? node.ident ?? node.name);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'method', 'definition');
+  }
+  if (kind === 'ItemStruct' || kind === 'ItemUnion') {
+    const name = rustSynIdentName(node.ident ?? node.name);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'class', 'definition');
+  }
+  if (kind === 'ItemEnum' || kind === 'ItemTrait' || kind === 'ItemType') {
+    const name = rustSynIdentName(node.ident ?? node.name);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'type', 'definition');
+  }
+  if (kind === 'ItemMod') {
+    const name = rustSynIdentName(node.ident ?? node.name);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'module', 'definition');
+  }
+  if (kind === 'ItemConst' || kind === 'ItemStatic') {
+    const name = rustSynIdentName(node.ident ?? node.name);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'variable', 'definition');
+  }
+  if (kind === 'ItemImpl') {
+    const name = rustSynImplName(node);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'type', 'definition');
+  }
+  if (rustSynMacroKind(kind)) {
+    const name = rustSynIdentName(node.ident ?? node.mac?.path ?? node.path);
+    if (name) return declarationRecord(input, nativeNodeId, name, 'macro', 'definition');
   }
   return undefined;
 }
@@ -9725,8 +10091,24 @@ function pythonAstChildEntries(node) {
       : isPythonAstNode(value));
 }
 
+function rustSynChildEntries(node) {
+  const payload = rustSynPayload(node);
+  const fieldNames = Object.keys(payload).filter((key) => !ignoredRustSynField(key));
+  return fieldNames
+    .map((field) => [field, payload[field]])
+    .filter(([, value]) => Array.isArray(value)
+      ? value.some(isRustSynAstNode)
+      : isRustSynAstNode(value));
+}
+
 function pythonAstNodeValue(node) {
   return node.name ?? node.id ?? node.arg ?? node.module ?? pythonAstLiteralValue(node);
+}
+
+function rustSynNodeValue(node) {
+  return rustSynIdentName(node.ident ?? node.name ?? node.sig?.ident)
+    ?? rustSynPathName(node.path ?? node.trait_ ?? node.self_ty ?? node.selfType ?? node.ty)
+    ?? rustSynLiteralValue(node);
 }
 
 function pythonAliasName(alias) {
@@ -9755,6 +10137,96 @@ function pythonTargetName(target) {
     return base ? `${base}.${target.attr}` : target.attr;
   }
   return undefined;
+}
+
+function rustSynIdentName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.ident === 'string') return value.ident;
+  if (typeof value.name === 'string') return value.name;
+  if (typeof value.text === 'string') return value.text;
+  if (typeof value.sym === 'string') return value.sym;
+  if (typeof value.value === 'string') return value.value;
+  if (typeof value.path === 'string') return value.path;
+  return rustSynPathName(value.path ?? value);
+}
+
+function rustSynPathName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.ident === 'string') return value.ident;
+  if (typeof value.name === 'string') return value.name;
+  if (typeof value.path === 'string') return value.path;
+  if (value.path && typeof value.path === 'object') return rustSynPathName(value.path);
+  if (Array.isArray(value.segments)) {
+    const names = value.segments
+      .map((segment) => rustSynIdentName(segment.ident ?? segment))
+      .filter(Boolean);
+    return names.length ? names.join('::') : undefined;
+  }
+  if (Array.isArray(value.qself)) return value.qself.map(rustSynPathName).filter(Boolean).join('::');
+  if (value.leading_colon && value.segments) {
+    const name = rustSynPathName({ segments: value.segments });
+    return name ? `::${name}` : undefined;
+  }
+  return undefined;
+}
+
+function rustSynUseName(node) {
+  if (!node) return undefined;
+  if (node.prefix && node.tree) {
+    const prefix = rustSynPathName(node.prefix);
+    const child = rustSynUseName(node.tree);
+    return [prefix, child].filter(Boolean).join('::') || undefined;
+  }
+  if (node.ident && node.tree) {
+    const prefix = rustSynIdentName(node.ident);
+    const child = rustSynUseName(node.tree);
+    return [prefix, child].filter(Boolean).join('::') || undefined;
+  }
+  if (node.path && node.tree) {
+    const prefix = rustSynPathName(node.path);
+    const child = rustSynUseName(node.tree);
+    return [prefix, child].filter(Boolean).join('::') || undefined;
+  }
+  if (Array.isArray(node.trees)) return node.trees.map(rustSynUseName).find(Boolean);
+  if (node.tree) return rustSynUseName(node.tree);
+  if (node.path) return rustSynPathName(node.path);
+  if (node.name) return rustSynIdentName(node.name);
+  if (node.ident) return rustSynIdentName(node.ident);
+  if (node.rename) return rustSynIdentName(node.rename);
+  return undefined;
+}
+
+function rustSynImplName(node) {
+  const selfType = rustSynPathName(node.self_ty ?? node.selfType ?? node.ty);
+  const traitPath = Array.isArray(node.trait_)
+    ? rustSynPathName(node.trait_[1] ?? node.trait_[0])
+    : rustSynPathName(node.trait_);
+  if (selfType && traitPath) return `${selfType}.${traitPath}.impl`;
+  if (selfType) return `${selfType}.impl`;
+  if (traitPath) return `${traitPath}.impl`;
+  return undefined;
+}
+
+function rustSynVisibility(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.kind === 'string') return value.kind;
+  if (typeof value.type === 'string') return value.type;
+  if (value.pub || value.Public) return 'pub';
+  if (value.restricted || value.Restricted) return 'restricted';
+  return undefined;
+}
+
+function rustSynLiteralValue(node) {
+  const value = node.value ?? node.lit?.value ?? node.lit;
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  return undefined;
+}
+
+function rustSynMacroKind(kind) {
+  return /Macro|MacroRules|MacroCall/.test(String(kind));
 }
 
 function declarationRecord(input, nativeNodeId, name, symbolKind, role = 'definition') {

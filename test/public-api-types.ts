@@ -24,6 +24,7 @@ import {
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createPythonAstNativeImporterAdapter,
+  createRustSynNativeImporterAdapter,
   createSemanticImportSidecar,
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
@@ -109,6 +110,7 @@ import type {
   ProjectionTargetLossClass,
   ProjectionTargetLossMatrix,
   ProjectionTargetLossMatrixOptions,
+  RustSynNativeImporterAdapterOptions,
   SemanticImportSidecar,
   SemanticImportRegionTaxonomySummary
 } from '../src/index.js';
@@ -147,6 +149,7 @@ type ExpectedPublicRuntimeExport =
   | 'createProjectionTargetLossMatrix'
   | 'createNativeSourcePreservation'
   | 'createPythonAstNativeImporterAdapter'
+  | 'createRustSynNativeImporterAdapter'
   | 'createSemanticImportSidecar'
   | 'createTreeSitterNativeImporterAdapter'
   | 'createTypeScriptCompilerNativeImporterAdapter'
@@ -336,6 +339,7 @@ const estreeAdapter: NativeImporterAdapter = createEstreeNativeImporterAdapter()
 const babelAdapter: NativeImporterAdapter = createBabelNativeImporterAdapter();
 const tsAdapter: NativeImporterAdapter = createTypeScriptCompilerNativeImporterAdapter();
 const pythonAstAdapter: NativeImporterAdapter = createPythonAstNativeImporterAdapter();
+const rustSynAdapter: NativeImporterAdapter = createRustSynNativeImporterAdapter();
 const treeAdapter: NativeImporterAdapter = createTreeSitterNativeImporterAdapter({ language: 'javascript' });
 
 const adapterDiagnostic: NativeImporterAdapterDiagnostic = {
@@ -379,9 +383,13 @@ const adapterCapabilityEvidence: Promise<NativeImporterAdapterCoverageCapability
 const parserFormatOptions: NativeParserAstFormatMatrixOptions = {
   generatedAt: 4,
   imports: [imported],
-  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, treeAdapter]
+  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, rustSynAdapter, treeAdapter]
 };
 const parserFormatMatrix: NativeParserAstFormatMatrix = createNativeParserAstFormatMatrix(parserFormatOptions);
+const rustSynAdapterOptions: RustSynNativeImporterAdapterOptions = {
+  rustEdition: '2021',
+  ast: { kind: 'File', items: [] }
+};
 const projectionLossOptions: ProjectionTargetLossMatrixOptions = {
   generatedAt: 2,
   imports: [imported],
@@ -447,6 +455,7 @@ void coverage;
 void adapterCoverageAggregate;
 void adapterCapabilityEvidence;
 void parserFormatMatrix;
+void rustSynAdapterOptions;
 void projectionLossMatrix;
 void projectImport;
 void parsedUniversalAst;

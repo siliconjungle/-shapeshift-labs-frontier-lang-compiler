@@ -333,6 +333,7 @@ Use injected parser adapters when a real language parser is available but should
 import {
   createBabelNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
+  createRustSynNativeImporterAdapter,
   importNativeProject,
   runNativeImporterAdapter
 } from '@shapeshift-labs/frontier-lang-compiler';
@@ -343,6 +344,10 @@ const babelAdapter = createBabelNativeImporterAdapter({
 const pythonAstAdapter = createPythonAstNativeImporterAdapter({
   parserModule: hostPythonAstParser
 });
+const rustSynAdapter = createRustSynNativeImporterAdapter({
+  parserModule: hostRustSynParser,
+  rustEdition: '2021'
+});
 
 const imported = await runNativeImporterAdapter(babelAdapter, {
   sourcePath: 'src/todo.ts',
@@ -351,10 +356,11 @@ const imported = await runNativeImporterAdapter(babelAdapter, {
 
 const project = await importNativeProject({
   projectRoot: 'src',
-  adapters: [babelAdapter, pythonAstAdapter],
+  adapters: [babelAdapter, pythonAstAdapter, rustSynAdapter],
   sources: [
     { language: 'typescript', adapter: babelAdapter.id, sourcePath: 'src/todo.ts', sourceText },
-    { language: 'python', adapter: pythonAstAdapter.id, sourcePath: 'tools/todo.py', sourceText: pythonSource }
+    { language: 'python', adapter: pythonAstAdapter.id, sourcePath: 'tools/todo.py', sourceText: pythonSource },
+    { language: 'rust', adapter: rustSynAdapter.id, sourcePath: 'src/todo.rs', sourceText: rustSource }
   ]
 });
 
@@ -374,6 +380,7 @@ The built-in adapter factories are dependency-light wrappers for caller-owned pa
 - `createBabelNativeImporterAdapter`
 - `createTypeScriptCompilerNativeImporterAdapter`
 - `createPythonAstNativeImporterAdapter`
+- `createRustSynNativeImporterAdapter`
 - `createTreeSitterNativeImporterAdapter`
 
 Adapter summaries include a structured `coverage` record so merge queues can distinguish exact parser AST imports from declaration scans. The record declares exactness, parser token/trivia support, diagnostics support, source-range and generated-range support, and semantic coverage. Built-in wrappers normalize native AST/CST nodes and declaration-level semantic indexes; they do not claim resolved references, types, control flow, generated ranges, or token/trivia fidelity unless the host adapter supplies that evidence.

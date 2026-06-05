@@ -7,6 +7,7 @@ import {
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
   createPythonAstNativeImporterAdapter,
+  createRustSynNativeImporterAdapter,
   createSemanticImportSidecar,
   diffNativeSources,
   importExternalSemanticIndex,
@@ -117,6 +118,7 @@ assert.equal(falsePositiveRegionImport.semanticIndex.symbols.some((symbol) => sy
 
 const estreeAdapter = createEstreeNativeImporterAdapter();
 const pythonAstAdapter = createPythonAstNativeImporterAdapter();
+const rustSynAdapter = createRustSynNativeImporterAdapter();
 for (let index = 0; index < 50; index += 1) {
   const name = `fuzzImport${index}`;
   const sourcePath = `src/fuzz-${index}.js`;
@@ -165,6 +167,30 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(pythonAstImport.adapter.parser, 'python-ast');
   assert.equal(pythonAstImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
   assert.equal(pythonAstImport.semanticIndex.symbols.some((symbol) => symbol.name === `fuzz_py_${index}`), true);
+  const rustSynImport = await runNativeImporterAdapter(rustSynAdapter, {
+    sourcePath: `src/fuzz-${index}.rs`,
+    sourceText: `pub struct FuzzRust${index};\npub fn fuzz_rust_${index}() {}\n`,
+    adapterOptions: {
+      ast: {
+        kind: 'File',
+        items: [{
+          kind: 'ItemStruct',
+          ident: `FuzzRust${index}`,
+          vis: 'pub',
+          span: { startLine: 1, startColumn: 0 }
+        }, {
+          kind: 'ItemFn',
+          vis: 'pub',
+          sig: { kind: 'Signature', ident: `fuzz_rust_${index}`, inputs: [] },
+          block: { kind: 'Block', stmts: [] },
+          span: { startLine: 2, startColumn: 0 }
+        }]
+      }
+    }
+  });
+  assert.equal(rustSynImport.adapter.parser, 'syn');
+  assert.equal(rustSynImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
+  assert.equal(rustSynImport.semanticIndex.symbols.some((symbol) => symbol.name === `fuzz_rust_${index}`), true);
 
   const lightweight = importNativeSource({
     language: index % 2 === 0 ? 'javascript' : 'python',
@@ -268,10 +294,11 @@ assert.ok(matrix.languages.find((entry) => entry.language === 'javascript').impo
 assert.ok(matrix.languages.find((entry) => entry.language === 'python').imports.symbols >= 1);
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   imports: project.imports,
-  adapters: [estreeAdapter, pythonAstAdapter]
+  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter]
 });
 assert.ok(parserFormatMatrix.summary.formats >= 2);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast').adapters.total >= 1);
+assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'rust-syn').adapters.total >= 1);
 const projectionMatrix = createProjectionTargetLossMatrix({ imports: project.imports });
 assert.equal(projectionMatrix.summary.languages, matrix.summary.languages);
 assert.ok(projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 2);
