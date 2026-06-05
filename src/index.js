@@ -359,6 +359,25 @@ export function compileNativeSource(input, options = {}) {
     scanKind: 'native-source-compile',
     semanticStatus: importResult.metadata?.semanticStatus ?? options.semanticStatus
   });
+  const sourceMaps = options.emitSourceMap === false
+    ? []
+    : nativeSourceCompileSourceMaps({
+      id: options.sourceMapId ?? `source_map_${idFragment(id)}_${idFragment(target)}`,
+      importResult,
+      projection,
+      targetProjection,
+      sourceLanguage,
+      target,
+      targetPath: options.targetPath ?? targetProjection?.targetPath,
+      targetHash: options.targetHash ?? outputHash,
+      output,
+      outputHash,
+      outputMode,
+      evidence,
+      losses,
+      compileResultId: id
+    });
+  const sourceMap = sourceMaps[0];
   return {
     kind: 'frontier.lang.nativeSourceCompileResult',
     version: 1,
@@ -370,6 +389,8 @@ export function compileNativeSource(input, options = {}) {
     output,
     outputHash,
     outputMode,
+    sourceMap,
+    sourceMaps,
     importResult,
     projection,
     targetProjection,
@@ -388,8 +409,13 @@ export function compileNativeSource(input, options = {}) {
       projectionId: projection.id,
       targetProjectionId: targetProjection?.id,
       targetProjectionAdapterId: targetProjection?.adapter?.id,
+      sourceMapId: sourceMap?.id,
+      sourceMapIds: sourceMaps.map((record) => record.id).filter(Boolean),
+      sourceMapMappings: sourceMaps.reduce((sum, record) => sum + (record.mappings?.length ?? 0), 0),
       projectionMode: projection.mode,
       outputMode,
+      targetPath: sourceMap?.targetPath ?? options.targetPath ?? targetProjection?.targetPath,
+      targetHash: sourceMap?.targetHash ?? options.targetHash ?? outputHash,
       sourceTarget,
       sameSourceTarget,
       targetLossClass: targetCoverage.lossClass,
@@ -4542,6 +4568,251 @@ function nativeSourceCompileEvidence(input) {
       targetLossIds: input.targetLosses.map((loss) => loss.id)
     }
   };
+}
+
+function nativeSourceCompileSourceMaps(input) {
+  const adapterSourceMaps = input.targetProjection?.sourceMaps ?? [];
+  if (adapterSourceMaps.length) return adapterSourceMaps;
+  const targetPath = nativeSourceCompileTargetPath(input);
+  const targetHash = input.targetHash ?? input.outputHash;
+  const target = nativeSourceCompileMapTarget(input, targetPath);
+  const mappings = input.projection.mode === 'preserved-source'
+    ? nativeSourceCompilePreservedMappings({ ...input, targetPath, targetHash, target })
+    : nativeSourceCompileDeclarationMappings({ ...input, targetPath, targetHash, target });
+  const resolvedMappings = mappings.length
+    ? mappings
+    : [nativeSourceCompileFileMapping({ ...input, targetPath, targetHash, target })];
+  return [createSourceMapRecord({
+    id: input.id,
+    sourcePath: input.importResult.sourcePath ?? input.importResult.nativeSource?.sourcePath,
+    sourceHash: input.importResult.nativeSource?.sourceHash ?? input.importResult.nativeAst?.sourceHash ?? input.importResult.sourceHash,
+    target,
+    targetPath: targetPath ?? commonGeneratedTargetPath(resolvedMappings),
+    targetHash,
+    semanticIndexId: input.importResult.semanticIndex?.id ?? input.importResult.universalAst?.semanticIndex?.id,
+    universalAstId: input.importResult.universalAst?.id,
+    nativeAstId: input.importResult.nativeAst?.id ?? input.importResult.nativeSource?.ast?.id,
+    nativeSourceId: input.importResult.nativeSource?.id,
+    mappings: resolvedMappings,
+    evidence: input.evidence ?? [],
+    metadata: {
+      compileResultId: input.compileResultId,
+      importId: input.importResult.id,
+      projectionId: input.projection.id,
+      targetProjectionId: input.targetProjection?.id,
+      targetProjectionAdapterId: input.targetProjection?.adapter?.id,
+      sourceLanguage: input.sourceLanguage,
+      target: input.target,
+      outputMode: input.outputMode,
+      outputHash: input.outputHash,
+      generatedBy: 'compileNativeSource'
+    }
+  })];
+}
+
+function nativeSourceCompilePreservedMappings(input) {
+  const sourceMaps = input.importResult.sourceMaps ?? input.importResult.universalAst?.sourceMaps ?? [];
+  const sourceHash = input.importResult.nativeSource?.sourceHash ?? input.importResult.nativeAst?.sourceHash ?? input.importResult.sourceHash;
+  const exact = input.projection.mode === 'preserved-source' && (!input.projection.sourceHash || input.outputHash === input.projection.sourceHash);
+  const usedIds = new Set();
+  return sourceMaps
+    .flatMap((sourceMap) => sourceMap?.mappings ?? [])
+    .filter((mapping) => mapping?.sourceSpan)
+    .map((mapping, index) => ({
+      id: reserveUniqueId(`compile_map_${idFragment(mapping.id ?? mapping.semanticSymbolId ?? mapping.nativeAstNodeId ?? index + 1)}`, usedIds),
+      nativeSourceId: mapping.nativeSourceId ?? input.importResult.nativeSource?.id,
+      nativeAstNodeId: mapping.nativeAstNodeId,
+      semanticSymbolId: mapping.semanticSymbolId,
+      semanticOccurrenceId: mapping.semanticOccurrenceId,
+      semanticNodeId: mapping.semanticNodeId,
+      mergeCandidateId: mapping.mergeCandidateId,
+      sourceSpan: {
+        ...mapping.sourceSpan,
+        sourceId: mapping.sourceSpan.sourceId ?? sourceHash,
+        path: mapping.sourceSpan.path ?? input.importResult.sourcePath ?? input.importResult.nativeSource?.sourcePath
+      },
+      generatedSpan: nativeSourceCompileGeneratedSpanFromSource(mapping.sourceSpan, input, mapping.generatedName),
+      target: input.target,
+      generatedName: mapping.generatedName,
+      evidenceIds: uniqueStrings([
+        ...(mapping.evidenceIds ?? []),
+        ...(input.evidence ?? []).map((record) => record.id).filter(Boolean)
+      ]),
+      lossIds: uniqueStrings([
+        ...(mapping.lossIds ?? []),
+        ...lossIdsForNativeNode(input.losses ?? [], mapping.nativeAstNodeId)
+      ]),
+      ownershipRegionId: mapping.ownershipRegionId,
+      ownershipRegionKey: mapping.ownershipRegionKey,
+      ownershipRegionKind: mapping.ownershipRegionKind,
+      precision: exact ? 'exact' : mapping.precision === 'exact' ? 'line' : mapping.precision ?? 'line',
+      metadata: {
+        ...mapping.metadata,
+        compileResultId: input.compileResultId,
+        sourceMapOrigin: 'preserved-source'
+      }
+    }));
+}
+
+function nativeSourceCompileDeclarationMappings(input) {
+  const usedIds = new Set();
+  return (input.projection.declarations ?? []).map((declaration, index) => {
+    const generated = nativeSourceCompileDeclarationGeneratedSpan(input, declaration);
+    return {
+      id: reserveUniqueId(`compile_map_${idFragment(declaration.symbolId ?? declaration.nativeAstNodeId ?? declaration.name ?? index + 1)}`, usedIds),
+      nativeSourceId: input.importResult.nativeSource?.id,
+      nativeAstNodeId: declaration.nativeAstNodeId,
+      semanticSymbolId: declaration.symbolId,
+      sourceSpan: declaration.sourceSpan,
+      generatedSpan: generated.span,
+      target: input.target,
+      generatedName: generated.name,
+      evidenceIds: (input.evidence ?? []).map((record) => record.id).filter(Boolean),
+      lossIds: lossIdsForNativeNode(input.losses ?? [], declaration.nativeAstNodeId),
+      ownershipRegionId: declaration.ownershipRegionId,
+      ownershipRegionKey: declaration.metadata?.ownershipRegionKey,
+      ownershipRegionKind: declaration.metadata?.ownershipRegionKind,
+      precision: generated.exactName ? 'declaration' : 'estimated',
+      metadata: {
+        ...declaration.metadata,
+        compileResultId: input.compileResultId,
+        declarationKind: declaration.kind,
+        sourceMapOrigin: input.outputMode === 'target-adapter' ? 'target-adapter-fallback' : 'declaration-stub'
+      }
+    };
+  });
+}
+
+function nativeSourceCompileFileMapping(input) {
+  const rootSpan = input.importResult.nativeAst?.nodes?.[input.importResult.nativeAst?.rootId]?.span
+    ?? input.importResult.nativeSource?.ast?.nodes?.[input.importResult.nativeSource?.ast?.rootId]?.span
+    ?? input.projection.declarations?.find((declaration) => declaration.sourceSpan)?.sourceSpan;
+  return {
+    id: `compile_map_${idFragment(input.compileResultId ?? input.id)}_file`,
+    nativeSourceId: input.importResult.nativeSource?.id,
+    sourceSpan: rootSpan,
+    generatedSpan: nativeSourceCompileFullGeneratedSpan(input),
+    target: input.target,
+    evidenceIds: (input.evidence ?? []).map((record) => record.id).filter(Boolean),
+    precision: input.projection.mode === 'preserved-source' && input.outputHash === input.projection.sourceHash ? 'line' : 'estimated',
+    metadata: {
+      compileResultId: input.compileResultId,
+      sourceMapOrigin: 'file-fallback'
+    }
+  };
+}
+
+function nativeSourceCompileGeneratedSpanFromSource(sourceSpan, input, generatedName) {
+  if (!sourceSpan) return nativeSourceCompileFullGeneratedSpan(input, generatedName);
+  return {
+    ...sourceSpan,
+    sourceId: input.targetHash ?? input.outputHash,
+    path: input.targetPath,
+    target: input.target,
+    targetPath: input.targetPath,
+    targetHash: input.targetHash ?? input.outputHash,
+    generatedName
+  };
+}
+
+function nativeSourceCompileDeclarationGeneratedSpan(input, declaration) {
+  const identifiers = uniqueStrings([
+    declaration.name,
+    safeProjectionIdentifier(declaration.name),
+    upperFirst(safeProjectionIdentifier(declaration.name)),
+    safeProjectionIdentifier(declaration.name).toUpperCase()
+  ]).filter(Boolean);
+  for (const identifier of identifiers) {
+    const offset = input.output.indexOf(identifier);
+    if (offset >= 0) {
+      return {
+        name: identifier,
+        exactName: true,
+        span: nativeSourceCompileGeneratedSpanForOffset(input, offset, identifier.length, identifier)
+      };
+    }
+  }
+  return {
+    name: safeProjectionIdentifier(declaration.name),
+    exactName: false,
+    span: nativeSourceCompileFullGeneratedSpan(input, safeProjectionIdentifier(declaration.name))
+  };
+}
+
+function nativeSourceCompileGeneratedSpanForOffset(input, offset, length, generatedName) {
+  const start = lineColumnForOffset(input.output, offset);
+  const end = lineColumnForOffset(input.output, offset + Math.max(1, length));
+  return {
+    sourceId: input.targetHash ?? input.outputHash,
+    path: input.targetPath,
+    startLine: start.line,
+    startColumn: start.column,
+    endLine: end.line,
+    endColumn: end.column,
+    target: input.target,
+    targetPath: input.targetPath,
+    targetHash: input.targetHash ?? input.outputHash,
+    generatedName
+  };
+}
+
+function nativeSourceCompileFullGeneratedSpan(input, generatedName) {
+  const lines = String(input.output ?? '').split(/\r?\n/);
+  const lastLine = lines.at(-1) ?? '';
+  return {
+    sourceId: input.targetHash ?? input.outputHash,
+    path: input.targetPath,
+    startLine: 1,
+    startColumn: 1,
+    endLine: Math.max(1, lines.length),
+    endColumn: Math.max(1, lastLine.length + 1),
+    target: input.target,
+    targetPath: input.targetPath,
+    targetHash: input.targetHash ?? input.outputHash,
+    generatedName
+  };
+}
+
+function nativeSourceCompileTargetPath(input) {
+  if (input.targetPath) return input.targetPath;
+  const sourcePath = input.importResult.sourcePath ?? input.importResult.nativeSource?.sourcePath;
+  if (!sourcePath) return undefined;
+  const targetExt = nativeSourceCompileTargetExtension(input.target);
+  if (!targetExt) return sourcePath;
+  return sourcePath.replace(/(\.[^./\\]+)?$/, targetExt);
+}
+
+function nativeSourceCompileTargetExtension(target) {
+  const normalized = normalizeNativeLanguageId(target);
+  if (normalized === 'typescript') return '.ts';
+  if (normalized === 'javascript') return '.js';
+  if (normalized === 'rust') return '.rs';
+  if (normalized === 'python') return '.py';
+  if (normalized === 'c') return '.h';
+  return undefined;
+}
+
+function nativeSourceCompileMapTarget(input, targetPath) {
+  return {
+    language: input.target,
+    emitPath: targetPath
+  };
+}
+
+function lineColumnForOffset(source, offset) {
+  const text = String(source ?? '');
+  const safeOffset = Math.max(0, Math.min(offset, text.length));
+  let line = 1;
+  let column = 1;
+  for (let index = 0; index < safeOffset; index += 1) {
+    if (text[index] === '\n') {
+      line += 1;
+      column = 1;
+    } else {
+      column += 1;
+    }
+  }
+  return { line, column };
 }
 
 function nativeProjectionTargetsForLanguage(language, aliases = []) {

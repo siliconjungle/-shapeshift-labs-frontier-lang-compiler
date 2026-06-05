@@ -1331,6 +1331,10 @@ export interface CompileNativeSourceOptions extends ProjectNativeImportToSourceO
   readonly languages?: readonly NativeImportLanguageProfile[];
   readonly generatedAt?: number;
   readonly emitOnBlocked?: boolean;
+  readonly emitSourceMap?: boolean;
+  readonly targetPath?: string;
+  readonly targetHash?: string;
+  readonly sourceMapId?: string;
   readonly projectionId?: string;
   readonly projectionEvidenceId?: string;
   readonly compileEvidenceId?: string;
@@ -1349,6 +1353,8 @@ export interface NativeSourceCompileResult {
   readonly output: string;
   readonly outputHash: string;
   readonly outputMode: NativeSourceCompileOutputMode;
+  readonly sourceMap?: SourceMapRecord;
+  readonly sourceMaps: readonly SourceMapRecord[];
   readonly importResult: NativeSourceImportResult;
   readonly projection: NativeSourceProjectionResult;
   readonly targetProjection?: NativeTargetProjectionResult;

@@ -88,11 +88,16 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(nativeCompile.targetCoverage.supported, true);
   assert.ok(nativeCompile.projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 1);
   assert.ok(nativeCompile.output.length > 0);
+  assert.equal(nativeCompile.sourceMaps.length, 1);
+  assert.ok(nativeCompile.sourceMap.mappings.length >= 1);
+  assert.ok(nativeCompile.sourceMap.targetHash);
   const blockedNativeCompile = compileNativeSource(lightweight, {
     target: index % 2 === 0 ? 'rust' : 'javascript'
   });
   assert.equal(blockedNativeCompile.readiness.readiness, 'blocked');
   assert.equal(blockedNativeCompile.ok, false);
+  assert.equal(blockedNativeCompile.sourceMaps.length, 1);
+  assert.ok(blockedNativeCompile.sourceMap.mappings.length >= 1);
   if (index % 5 === 0) {
     const targetAdapter = {
       id: `fuzz-target-adapter-${index}`,
@@ -113,6 +118,8 @@ for (let index = 0; index < 50; index += 1) {
     assert.equal(adapterNativeCompile.outputMode, 'target-adapter');
     assert.equal(adapterNativeCompile.targetCoverage.lossClass, 'targetAdapterProjection');
     assert.ok(adapterNativeCompile.output.includes(`fuzz target adapter ${index}`));
+    assert.equal(adapterNativeCompile.sourceMaps.length, 1);
+    assert.ok(adapterNativeCompile.sourceMap.mappings.length >= 1);
   }
 }
 

@@ -183,15 +183,18 @@ console.log(compiledJs.readiness.readiness); // scanner imports can still be "ne
 
 const rustCandidate = compileNativeSource(compiledJs.importResult, {
   target: 'rust',
+  targetPath: 'dist/runtime.rs',
   emitOnBlocked: true
 });
 
 console.log(rustCandidate.outputMode); // "target-stubs"
 console.log(rustCandidate.targetCoverage.lossClass); // "missingAdapter" without a JS-to-Rust adapter
 console.log(rustCandidate.ok); // true only because emitOnBlocked requested code anyway
+console.log(rustCandidate.sourceMap.targetPath); // "dist/runtime.rs"
+console.log(rustCandidate.sourceMap.mappings[0]?.semanticSymbolId); // generated span -> source symbol
 ```
 
-`compileNativeSource` returns the import result, projection, target loss matrix cell, combined losses, readiness, evidence, and output hash. Admission queues should treat `ok` as "code was emitted", not as merge approval; `readiness` and `targetCoverage` carry the merge signal.
+`compileNativeSource` returns the import result, projection, target loss matrix cell, combined losses, readiness, evidence, output hash, and generated-output source maps. Same-language preserved output uses exact source mappings when the hash matches; generated stubs use declaration-level spans; adapter output uses adapter-supplied maps when present and otherwise gets an estimated fallback. Admission queues should treat `ok` as "code was emitted", not as merge approval; `readiness`, `targetCoverage`, and source-map precision carry the merge signal.
 
 Provide a target projection adapter when the host owns real native-to-target translation semantics:
 
@@ -220,12 +223,14 @@ const jsToRustAdapter = {
 
 const rustWithAdapter = compileNativeSource(compiledJs.importResult, {
   target: 'rust',
+  targetPath: 'dist/runtime.rs',
   targetAdapters: [jsToRustAdapter]
 });
 
 console.log(rustWithAdapter.outputMode); // "target-adapter"
 console.log(rustWithAdapter.targetCoverage.lossClass); // "targetAdapterProjection"
 console.log(rustWithAdapter.targetProjection.adapter.id); // "app-js-to-rust"
+console.log(rustWithAdapter.sourceMaps.length); // adapter maps or compiler fallback map
 ```
 
 Project a native import back to source. Exact source is preserved when the import carries matching source-preservation evidence or when supplied text matches the import hash; otherwise the compiler emits declaration stubs with review-required loss evidence:

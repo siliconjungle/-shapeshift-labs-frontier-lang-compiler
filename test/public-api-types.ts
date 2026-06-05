@@ -217,6 +217,10 @@ const targetProjectionAdapter: NativeTargetProjectionAdapter = {
 const nativeCompileOptions: CompileNativeSourceOptions = {
   target: 'rust',
   emitOnBlocked: true,
+  emitSourceMap: true,
+  sourceMapId: 'api-types-native-compile-map',
+  targetPath: 'dist/api-types.rs',
+  targetHash: 'fnv1a32:api-types-target',
   targetAdapters: [targetProjectionAdapter],
   targetAdapter: targetProjectionAdapter.id,
   targetAdapterOptions: { mode: 'api-types' },
@@ -224,6 +228,8 @@ const nativeCompileOptions: CompileNativeSourceOptions = {
 };
 const nativeCompiled: NativeSourceCompileResult = compileNativeSource(imported, nativeCompileOptions);
 const nativeCompileMode: NativeSourceCompileOutputMode = nativeCompiled.outputMode;
+const nativeCompileSourceMap: NativeSourceCompileResult['sourceMap'] = nativeCompiled.sourceMap;
+const nativeCompileSourceMaps: NativeSourceCompileResult['sourceMaps'] = nativeCompiled.sourceMaps;
 const targetProjection: NativeTargetProjectionResult | undefined = nativeCompiled.targetProjection;
 const directTargetProjection: NativeTargetProjectionResult = runNativeTargetProjectionAdapter(targetProjectionAdapter, {
   importResult: imported,
@@ -345,6 +351,8 @@ void projection;
 void targetProjectionAdapter;
 void nativeCompiled;
 void nativeCompileMode;
+void nativeCompileSourceMap;
+void nativeCompileSourceMaps;
 void targetProjection;
 void directTargetProjection;
 void sidecar;

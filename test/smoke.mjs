@@ -681,7 +681,10 @@ assert.equal(stubNativeProjection.lossSummary.highestSeverity, 'warning');
 assert.equal(stubNativeProjection.losses.some((loss) => loss.kind === 'targetProjectionLoss'), true);
 assert.equal(stubNativeProjection.lossSummary.categories.includes('targetProjectionLoss'), true);
 assert.equal(stubNativeProjection.readiness.readiness, 'needs-review');
-const sameLanguageNativeCompile = compileNativeSource(preservedNativeImport);
+const sameLanguageNativeCompile = compileNativeSource(preservedNativeImport, {
+  sourceMapId: 'smoke-preserved-compile-map',
+  targetPath: 'dist/preserved-native.js'
+});
 assert.equal(sameLanguageNativeCompile.kind, 'frontier.lang.nativeSourceCompileResult');
 assert.equal(sameLanguageNativeCompile.target, 'javascript');
 assert.equal(sameLanguageNativeCompile.language, 'javascript');
@@ -694,6 +697,18 @@ assert.equal(sameLanguageNativeCompile.projectionMatrix.summary.sourceProjection
 assert.equal(sameLanguageNativeCompile.projectionMatrix.summary.languages >= 1, true);
 assert.equal(sameLanguageNativeCompile.readiness.readiness, 'needs-review');
 assert.equal(sameLanguageNativeCompile.lossSummary.categories.includes('declarationsOnly'), true);
+assert.equal(sameLanguageNativeCompile.sourceMap.kind, 'frontier.lang.sourceMap');
+assert.equal(sameLanguageNativeCompile.sourceMap.id, 'smoke-preserved-compile-map');
+assert.equal(sameLanguageNativeCompile.sourceMap.targetPath, 'dist/preserved-native.js');
+assert.equal(sameLanguageNativeCompile.sourceMap.targetHash, sameLanguageNativeCompile.outputHash);
+assert.equal(sameLanguageNativeCompile.sourceMaps.length, 1);
+assert.equal(sameLanguageNativeCompile.sourceMap.mappings.length >= 1, true);
+assert.equal(sameLanguageNativeCompile.sourceMap.mappings.some((mapping) => mapping.precision === 'exact'), true);
+assert.equal(sameLanguageNativeCompile.sourceMap.mappings.some((mapping) => mapping.generatedSpan?.targetPath === 'dist/preserved-native.js'), true);
+assert.equal(sameLanguageNativeCompile.metadata.sourceMapIds.includes('smoke-preserved-compile-map'), true);
+const nativeCompileWithoutSourceMap = compileNativeSource(preservedNativeImport, { emitSourceMap: false });
+assert.equal(nativeCompileWithoutSourceMap.sourceMaps.length, 0);
+assert.equal(nativeCompileWithoutSourceMap.sourceMap, undefined);
 const sameLanguageNativeCompileWithLosses = compileNativeSource(preservedNativeImport, { emitOnBlocked: true });
 assert.equal(sameLanguageNativeCompileWithLosses.ok, true);
 const rustNativeCompileBlocked = compileNativeSource(scannedJsImport, { target: 'rust' });
@@ -709,6 +724,10 @@ assert.equal(rustNativeCompileBlocked.losses.some((loss) => loss.severity === 'e
 assert.equal(rustNativeCompileBlocked.readiness.readiness, 'blocked');
 const rustNativeCompileEmitted = compileNativeSource(scannedJsImport, { target: 'rust', emitOnBlocked: true });
 assert.equal(rustNativeCompileEmitted.ok, true);
+assert.equal(rustNativeCompileEmitted.sourceMap.kind, 'frontier.lang.sourceMap');
+assert.equal(rustNativeCompileEmitted.sourceMap.targetPath, 'src/scanned.rs');
+assert.equal(rustNativeCompileEmitted.sourceMap.mappings.some((mapping) => mapping.semanticSymbolId?.includes('addtodo') && mapping.precision === 'declaration'), true);
+assert.equal(rustNativeCompileEmitted.sourceMap.mappings.some((mapping) => mapping.generatedSpan?.targetPath === 'src/scanned.rs'), true);
 const handledProjectionLossKinds = [
   'macroExpansion',
   'macroHygiene',
@@ -786,6 +805,9 @@ assert.equal(rustNativeCompileWithAdapter.targetCoverage.lossClass, 'targetAdapt
 assert.equal(rustNativeCompileWithAdapter.targetCoverage.adapterKind, 'targetProjection');
 assert.equal(rustNativeCompileWithAdapter.projectionMatrix.summary.targetAdapterProjection >= 1, true);
 assert.equal(rustNativeCompileWithAdapter.losses.some((loss) => loss.id.includes('missing_projection_adapter')), false);
+assert.equal(rustNativeCompileWithAdapter.sourceMap.kind, 'frontier.lang.sourceMap');
+assert.equal(rustNativeCompileWithAdapter.sourceMap.mappings.some((mapping) => mapping.metadata?.sourceMapOrigin === 'target-adapter-fallback'), true);
+assert.equal(rustNativeCompileWithAdapter.sourceMap.targetHash, rustNativeCompileWithAdapter.outputHash);
 const adapterProjectionMatrix = createProjectionTargetLossMatrix({
   imports: [scannedJsImport],
   targets: ['rust'],

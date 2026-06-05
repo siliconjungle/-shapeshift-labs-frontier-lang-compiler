@@ -100,6 +100,8 @@ const nativeCompiles = nativeImportResults.map((imported, index) => compileNativ
 }));
 const nativeCompileDurationMs = performance.now() - nativeCompileStart;
 const nativeCompileBytes = nativeCompiles.reduce((sum, result) => sum + result.output.length, 0);
+const nativeCompileSourceMaps = nativeCompiles.reduce((sum, result) => sum + result.sourceMaps.length, 0);
+const nativeCompileSourceMapMappings = nativeCompiles.reduce((sum, result) => sum + result.sourceMaps.reduce((mapSum, sourceMap) => mapSum + sourceMap.mappings.length, 0), 0);
 const nativeCompileBlocked = nativeCompiles.filter((result) => result.readiness.readiness === 'blocked').length;
 const nativeTargetAdapterStart = performance.now();
 const nativeTargetAdapterCompiles = nativeImportResults.slice(0, 25).map((imported, index) => {
@@ -122,6 +124,7 @@ const nativeTargetAdapterCompiles = nativeImportResults.slice(0, 25).map((import
 });
 const nativeTargetAdapterDurationMs = performance.now() - nativeTargetAdapterStart;
 const nativeTargetAdapterBytes = nativeTargetAdapterCompiles.reduce((sum, result) => sum + result.output.length, 0);
+const nativeTargetAdapterSourceMaps = nativeTargetAdapterCompiles.reduce((sum, result) => sum + result.sourceMaps.length, 0);
 
 console.log(JSON.stringify({
   compiles: 250,
@@ -152,9 +155,12 @@ console.log(JSON.stringify({
   projectionDurationMs: Number(projectionDurationMs.toFixed(2)),
   nativeCompiles: nativeCompiles.length,
   nativeCompileBytes,
+  nativeCompileSourceMaps,
+  nativeCompileSourceMapMappings,
   nativeCompileBlocked,
   nativeCompileDurationMs: Number(nativeCompileDurationMs.toFixed(2)),
   nativeTargetAdapterCompiles: nativeTargetAdapterCompiles.length,
   nativeTargetAdapterBytes,
+  nativeTargetAdapterSourceMaps,
   nativeTargetAdapterDurationMs: Number(nativeTargetAdapterDurationMs.toFixed(2))
 }));
