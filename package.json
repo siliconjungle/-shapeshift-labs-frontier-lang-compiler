@@ -16,11 +16,14 @@
     "dist",
     "examples",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "bench",
+    "benchmarks/package-bench.mjs"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "npm run build && node test/smoke.mjs",
+    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit -p test/tsconfig.json",
     "fuzz": "npm run build && node fuzz/smoke.mjs",
     "bench": "npm run build && node bench/smoke.mjs",
     "prepare": "npm run build",
@@ -61,5 +64,8 @@
     "@shapeshift-labs/frontier-lang-rust": "0.2.0",
     "@shapeshift-labs/frontier-lang-python": "0.2.0",
     "@shapeshift-labs/frontier-lang-c": "0.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
