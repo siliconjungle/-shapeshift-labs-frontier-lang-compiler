@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import * as compilerApi from '../dist/index.js';
 import {
   compileFrontierSource,
   createBabelNativeImporterAdapter,
@@ -30,6 +32,20 @@ import {
   summarizeNativeImportLosses,
   writeUniversalAstJson
 } from '../dist/index.js';
+
+const publicRuntimeExports = Object.keys(compilerApi).sort();
+const publicDeclarationExports = publicValueExportsFromDeclaration(new URL('../dist/index.d.ts', import.meta.url));
+assert.deepEqual(publicRuntimeExports, publicDeclarationExports);
+for (const requiredExport of [
+  'NativeImportRegionTaxonomyKinds',
+  'createNativeImportResultContract',
+  'classifyNativeImportRoundtripReadiness',
+  'createSemanticImportSidecar',
+  'importNativeSource',
+  'importNativeProject'
+]) {
+  assert.equal(publicRuntimeExports.includes(requiredExport), true, `missing public export ${requiredExport}`);
+}
 
 const source = `
 module TodoApp @id("mod_todo")
@@ -204,6 +220,14 @@ assert.equal(failedAdapterImport.nativeAst.rootId, 'adapter_error_root');
 assert.equal(failedAdapterImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parse.threw'), true);
 assert.equal(failedAdapterImport.losses.some((loss) => loss.severity === 'error'), true);
 assert.equal(failedAdapterImport.evidence.some((record) => record.id === 'evidence_throwing_typescript_importer_native_importer_adapter' && record.status === 'failed'), true);
+function publicValueExportsFromDeclaration(url) {
+  const text = readFileSync(url, 'utf8');
+  const names = [];
+  for (const match of text.matchAll(/^export declare (?:const|function) ([A-Za-z_$][\w$]*)/gm)) {
+    names.push(match[1]);
+  }
+  return names.sort();
+}
 function assertScannedSymbol(importResult, symbolName, idPart = symbolName.toLowerCase()) {
   assert.equal(importResult.semanticIndex.symbols.some((symbol) => symbol.name === symbolName), true);
   assert.equal(importResult.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes(idPart)), true);
