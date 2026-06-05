@@ -21,11 +21,11 @@ import type {
   SourceSpan
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { Diagnostic } from '@shapeshift-labs/frontier-lang-checker';
-import type { EmitTypeScriptOptions, TypeScriptAstModule } from '@shapeshift-labs/frontier-lang-typescript';
-import type { EmitJavaScriptOptions, JavaScriptAstModule } from '@shapeshift-labs/frontier-lang-javascript';
-import type { EmitRustOptions, RustAstModule } from '@shapeshift-labs/frontier-lang-rust';
-import type { EmitPythonOptions, PythonAstModule } from '@shapeshift-labs/frontier-lang-python';
-import type { CAstHeader, EmitCHeaderOptions } from '@shapeshift-labs/frontier-lang-c';
+import type { EmitTypeScriptOptions, TypeScriptAstModule, TypeScriptDocumentSourceMapResult, TypeScriptGeneratedSourceMapResult } from '@shapeshift-labs/frontier-lang-typescript';
+import type { EmitJavaScriptOptions, EmitJavaScriptWithSourceMapResult, JavaScriptAstModule, JavaScriptSourceMapResult } from '@shapeshift-labs/frontier-lang-javascript';
+import type { EmitRustOptions, EmitRustWithSourceMapResult, RustAstModule, RustSourceMapResult } from '@shapeshift-labs/frontier-lang-rust';
+import type { EmitPythonOptions, EmitPythonWithSourceMapResult, PythonAstModule, PythonSourceMapResult } from '@shapeshift-labs/frontier-lang-python';
+import type { CAstHeader, CSourceMapResult, EmitCHeaderOptions, EmitCHeaderWithSourceMapResult } from '@shapeshift-labs/frontier-lang-c';
 
 export type FrontierCompileTarget = 'typescript' | 'javascript' | 'rust' | 'python' | 'c';
 
@@ -42,6 +42,20 @@ export type FrontierTargetAst =
   | RustAstModule
   | PythonAstModule
   | CAstHeader;
+
+export type FrontierTargetSourceMapResult =
+  | TypeScriptGeneratedSourceMapResult
+  | JavaScriptSourceMapResult
+  | RustSourceMapResult
+  | PythonSourceMapResult
+  | CSourceMapResult;
+
+export type FrontierTargetDocumentSourceMapResult =
+  | TypeScriptDocumentSourceMapResult
+  | EmitJavaScriptWithSourceMapResult
+  | EmitRustWithSourceMapResult
+  | EmitPythonWithSourceMapResult
+  | EmitCHeaderWithSourceMapResult;
 
 export interface FrontierCompileOptions {
   readonly target?: FrontierCompileTarget | 'ts' | 'js' | 'rs' | 'py' | 'h';
@@ -1180,6 +1194,8 @@ export declare function compileFrontierSource(source: string, options?: Frontier
 export declare function compileFrontierDocument(document: FrontierLangDocument, options?: FrontierCompileOptions): FrontierCompileResult;
 export declare function projectFrontierAst(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: FrontierCompileEmitOptions): FrontierTargetAst;
 export declare function renderTargetAst(ast: FrontierTargetAst, target?: FrontierCompileOptions['target']): string;
+export declare function renderTargetAstWithSourceMap(ast: FrontierTargetAst, target?: FrontierCompileOptions['target'], options?: FrontierCompileEmitOptions): FrontierTargetSourceMapResult;
+export declare function emitForTargetWithSourceMap(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: FrontierCompileEmitOptions): FrontierTargetDocumentSourceMapResult;
 export declare function resolveCapabilityAdapters(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: { readonly platform?: string }): readonly CapabilityResolution[];
 export declare function summarizeNativeImportLosses(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportLossSummary;
 export declare function classifyNativeImportReadiness(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportReadinessClassification;

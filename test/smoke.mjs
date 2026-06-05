@@ -14,6 +14,7 @@ import {
   createTypeScriptCompilerNativeImporterAdapter,
   createUniversalAstFromDocument,
   emitForTarget,
+  emitForTargetWithSourceMap,
   importNativeProject,
   importNativeSource,
   NativeImportLanguageProfiles,
@@ -27,6 +28,7 @@ import {
   projectFrontierAst,
   readUniversalAstJson,
   renderTargetAst,
+  renderTargetAstWithSourceMap,
   resolveCapabilityAdapters,
   runNativeImporterAdapter,
   classifyNativeImportRoundtripReadiness,
@@ -45,8 +47,10 @@ for (const requiredExport of [
   'createProjectionTargetLossMatrix',
   'classifyNativeImportRoundtripReadiness',
   'createSemanticImportSidecar',
+  'emitForTargetWithSourceMap',
   'importNativeSource',
-  'importNativeProject'
+  'importNativeProject',
+  'renderTargetAstWithSourceMap'
 ]) {
   assert.equal(publicRuntimeExports.includes(requiredExport), true, `missing public export ${requiredExport}`);
 }
@@ -105,6 +109,16 @@ assert.equal(result.ast.kind, 'typescript.module');
 assert.equal(renderTargetAst(result.ast, 'typescript'), result.output);
 assert.match(result.output, /export interface Todo/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const TodoSchema/);
+const javascriptMappedOutput = emitForTargetWithSourceMap(result.document, 'javascript', { targetPath: 'todo.js' });
+assert.match(javascriptMappedOutput.code, /export const TodoSchema/);
+assert.equal(javascriptMappedOutput.ast.kind, 'javascript.module');
+assert.equal(javascriptMappedOutput.sourceMap.target.language, 'javascript');
+assert.equal(javascriptMappedOutput.sourceMap.targetPath, 'todo.js');
+assert.equal(javascriptMappedOutput.sourceMap.mappings.some((mapping) => mapping.semanticNodeId === 'ent_todo'), true);
+const rustMappedOutput = renderTargetAstWithSourceMap(projectFrontierAst(result.document, 'rust'), 'rust', { targetPath: 'todo.rs' });
+assert.match(rustMappedOutput.code, /pub struct Todo/);
+assert.equal(rustMappedOutput.sourceMap.target.language, 'rust');
+assert.equal(rustMappedOutput.sourceMap.mappings.some((mapping) => mapping.semanticNodeId === 'ent_todo'), true);
 assert.equal(projectFrontierAst(result.document, 'javascript').kind, 'javascript.module');
 assert.equal(projectFrontierAst(result.document, 'rust').kind, 'rust.module');
 assert.equal(projectFrontierAst(result.document, 'python').kind, 'python.module');

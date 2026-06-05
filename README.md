@@ -9,6 +9,18 @@ const result = compileFrontierSource(source, { target: 'typescript' });
 if (result.ok) console.log(result.output);
 ```
 
+Emit code with declaration-level source-map sidecars for semantic review and merge admission:
+
+```js
+import { emitForTargetWithSourceMap } from '@shapeshift-labs/frontier-lang-compiler';
+
+const { code, sourceMap, ast } = emitForTargetWithSourceMap(document, 'javascript', {
+  sourcePath: 'todo.frontier',
+  targetPath: 'todo.js',
+  semanticIndexId: 'semantic_index_todo'
+});
+```
+
 Resolve target-specific capability bindings without hardcoding one runtime into the source graph:
 
 ```js

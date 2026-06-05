@@ -23,6 +23,7 @@ import {
   createTypeScriptCompilerNativeImporterAdapter,
   createUniversalAstFromDocument,
   emitForTarget,
+  emitForTargetWithSourceMap,
   importNativeProject,
   importNativeSource,
   normalizeCompileTarget,
@@ -30,6 +31,7 @@ import {
   projectNativeImportToSource,
   readUniversalAstJson,
   renderTargetAst,
+  renderTargetAstWithSourceMap,
   resolveCapabilityAdapters,
   runNativeImporterAdapter,
   summarizeNativeImportLosses,
@@ -42,6 +44,8 @@ import type {
   FrontierCompileResult,
   FrontierCompileTarget,
   FrontierTargetAst,
+  FrontierTargetDocumentSourceMapResult,
+  FrontierTargetSourceMapResult,
   NativeImportContractSource,
   NativeImportCoverageMatrix,
   NativeImportCoverageMatrixOptions,
@@ -105,6 +109,7 @@ type ExpectedPublicRuntimeExport =
   | 'createTypeScriptCompilerNativeImporterAdapter'
   | 'createUniversalAstFromDocument'
   | 'emitForTarget'
+  | 'emitForTargetWithSourceMap'
   | 'importNativeProject'
   | 'importNativeSource'
   | 'normalizeCompileTarget'
@@ -112,6 +117,7 @@ type ExpectedPublicRuntimeExport =
   | 'projectNativeImportToSource'
   | 'readUniversalAstJson'
   | 'renderTargetAst'
+  | 'renderTargetAstWithSourceMap'
   | 'resolveCapabilityAdapters'
   | 'runNativeImporterAdapter'
   | 'summarizeNativeImportLosses'
@@ -147,8 +153,10 @@ const compileOptions: FrontierCompileOptions = { target, emitOnError: false };
 const compiled: FrontierCompileResult = compileFrontierSource(source, compileOptions);
 const compiledAgain: FrontierCompileResult = compileFrontierDocument(compiled.document, { target: 'javascript' });
 const emitted: string = emitForTarget(compiled.document, 'js');
+const mappedEmit: FrontierTargetDocumentSourceMapResult = emitForTargetWithSourceMap(compiled.document, 'js', { targetPath: 'api-types.js' });
 const projectedAst: FrontierTargetAst = projectFrontierAst(compiled.document, 'python');
 const rendered: string = renderTargetAst(projectedAst, 'python');
+const mappedRender: FrontierTargetSourceMapResult = renderTargetAstWithSourceMap(projectedAst, 'python', { targetPath: 'api-types.py' });
 const capabilityResolutions: readonly CapabilityResolution[] = resolveCapabilityAdapters(compiled.document, target);
 
 const preservationOptions: CreateNativeSourcePreservationOptions = {
@@ -262,7 +270,9 @@ void projectionLossClass;
 void languageProfiles;
 void compiledAgain;
 void emitted;
+void mappedEmit;
 void rendered;
+void mappedRender;
 void capabilityResolutions;
 void readiness;
 void roundtripReadiness;

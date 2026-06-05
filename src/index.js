@@ -15,11 +15,11 @@ import {
 } from '@shapeshift-labs/frontier-lang-kernel';
 import { parseFrontierFile, parseFrontierSource } from '@shapeshift-labs/frontier-lang-parser';
 import { checkDocument } from '@shapeshift-labs/frontier-lang-checker';
-import { renderTypeScriptAst, toTypeScriptAst } from '@shapeshift-labs/frontier-lang-typescript';
-import { renderJavaScriptAst, toJavaScriptAst } from '@shapeshift-labs/frontier-lang-javascript';
-import { renderRustAst, toRustAst } from '@shapeshift-labs/frontier-lang-rust';
-import { renderPythonAst, toPythonAst } from '@shapeshift-labs/frontier-lang-python';
-import { renderCAst, toCAst } from '@shapeshift-labs/frontier-lang-c';
+import { renderTypeScriptAst, renderTypeScriptAstWithSourceMap, toTypeScriptAst } from '@shapeshift-labs/frontier-lang-typescript';
+import { renderJavaScriptAst, renderJavaScriptAstWithSourceMap, toJavaScriptAst } from '@shapeshift-labs/frontier-lang-javascript';
+import { renderRustAst, renderRustAstWithSourceMap, toRustAst } from '@shapeshift-labs/frontier-lang-rust';
+import { renderPythonAst, renderPythonAstWithSourceMap, toPythonAst } from '@shapeshift-labs/frontier-lang-python';
+import { renderCAst, renderCAstWithSourceMap, toCAst } from '@shapeshift-labs/frontier-lang-c';
 
 export const FrontierCompileTargets = Object.freeze([
   'typescript',
@@ -43,6 +43,14 @@ const renderers = Object.freeze({
   rust: renderRustAst,
   python: renderPythonAst,
   c: renderCAst
+});
+
+const sourceMapRenderers = Object.freeze({
+  typescript: renderTypeScriptAstWithSourceMap,
+  javascript: renderJavaScriptAstWithSourceMap,
+  rust: renderRustAstWithSourceMap,
+  python: renderPythonAstWithSourceMap,
+  c: renderCAstWithSourceMap
 });
 
 const canonicalTargets = Object.freeze({
@@ -254,6 +262,12 @@ export function renderTargetAst(ast, target = 'typescript') {
   const normalized = normalizeCompileTarget(target);
   const renderer = renderers[normalized];
   return renderer(ast);
+}
+
+export function renderTargetAstWithSourceMap(ast, target = 'typescript', options = {}) {
+  const normalized = normalizeCompileTarget(target);
+  const renderer = sourceMapRenderers[normalized];
+  return renderer(ast, options);
 }
 
 export function resolveCapabilityAdapters(document, target = 'typescript', options = {}) {
@@ -4565,6 +4579,16 @@ export function writeUniversalAstJson(envelope) {
 
 export function emitForTarget(document, target = 'typescript', options = {}) {
   return renderTargetAst(projectFrontierAst(document, target, options), target);
+}
+
+export function emitForTargetWithSourceMap(document, target = 'typescript', options = {}) {
+  const normalized = normalizeCompileTarget(target);
+  const ast = projectFrontierAst(document, normalized, options);
+  const result = renderTargetAstWithSourceMap(ast, normalized, {
+    sourceMapId: options.sourceMapId ?? `sourcemap_${idFragment(document.id)}_${normalized}`,
+    ...options
+  });
+  return { ...result, ast };
 }
 
 function createJavaScriptSyntaxImporterAdapter(options) {
