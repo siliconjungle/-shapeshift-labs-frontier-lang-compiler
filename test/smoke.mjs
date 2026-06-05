@@ -8,6 +8,7 @@ import {
   createNativeImportCoverageMatrix,
   createNativeImportResultContract,
   createNativeParserAstFormatMatrix,
+  createNativeParserFeatureMatrix,
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createCSharpRoslynNativeImporterAdapter,
@@ -35,6 +36,8 @@ import {
   NativeImportLossKinds,
   NativeParserAstFormats,
   NativeParserAstFormatProfiles,
+  NativeParserFeatureCategories,
+  NativeParserFeatureCoverageStatuses,
   NativeImportRegionTaxonomyKinds,
   NativeImportRoundtripReadinessStatuses,
   NativeImportTaxonomyKinds,
@@ -53,6 +56,7 @@ import {
   compileNativeSource,
   getNativeImportFeatureEvidencePolicy,
   getNativeParserAstFormatProfile,
+  queryNativeParserFeatureMatrix,
   summarizeNativeImportFeatureEvidence,
   summarizeNativeImportLosses,
   writeUniversalAstJson
@@ -65,10 +69,13 @@ for (const requiredExport of [
   'NativeImportFeatureEvidencePolicies',
   'NativeParserAstFormats',
   'NativeParserAstFormatProfiles',
+  'NativeParserFeatureCategories',
+  'NativeParserFeatureCoverageStatuses',
   'NativeImportRegionTaxonomyKinds',
   'ProjectionTargetLossClasses',
   'createNativeImportResultContract',
   'createNativeParserAstFormatMatrix',
+  'createNativeParserFeatureMatrix',
   'createCSharpRoslynNativeImporterAdapter',
   'createClangAstNativeImporterAdapter',
   'createGoAstNativeImporterAdapter',
@@ -86,6 +93,7 @@ for (const requiredExport of [
   'emitForTargetWithSourceMap',
   'getNativeImportFeatureEvidencePolicy',
   'getNativeParserAstFormatProfile',
+  'queryNativeParserFeatureMatrix',
   'ExternalSemanticIndexFormats',
   'importExternalSemanticIndex',
   'importNativeSource',
@@ -2582,6 +2590,64 @@ assert.equal(swiftSyntaxFormatCoverage.adapters.total, 1);
 const treeSitterFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'tree-sitter');
 assert.equal(treeSitterFormatCoverage.imports.total, 1);
 assert.equal(treeSitterFormatCoverage.supportsIncremental, true);
+const parserFeatureMatrix = createNativeParserFeatureMatrix({
+  generatedAt: 345,
+  imports: [estreeAdapterImport, scannedEstreeFixtureImport, rustSynMacroImport],
+  adapters: [
+    createEstreeNativeImporterAdapter(),
+    createRustSynNativeImporterAdapter()
+  ],
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+});
+assert.equal(parserFeatureMatrix.kind, 'frontier.lang.nativeParserFeatureMatrix');
+assert.equal(parserFeatureMatrix.generatedAt, 345);
+assert.deepEqual(parserFeatureMatrix.metadata.categories, [...NativeParserFeatureCategories]);
+assert.deepEqual(parserFeatureMatrix.metadata.statuses, [...NativeParserFeatureCoverageStatuses]);
+assert.equal(parserFeatureMatrix.metadata.requiredFeatures.includes('syntax'), true);
+assert.equal(parserFeatureMatrix.summary.parsers >= 2, true);
+assert.equal(parserFeatureMatrix.summary.byFeatureStatus.syntax.full >= 1, true);
+assert.equal(parserFeatureMatrix.summary.byFeatureStatus.macroMetaprogramming['evidence-required'] >= 1, true);
+const estreeFeatureQuery = queryNativeParserFeatureMatrix(parserFeatureMatrix, {
+  language: 'javascript',
+  parser: 'estree',
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation'],
+  minimumReadiness: 'ready'
+});
+assert.equal(estreeFeatureQuery.kind, 'frontier.lang.nativeParserFeatureQuery');
+assert.equal(estreeFeatureQuery.found, true);
+assert.equal(estreeFeatureQuery.row.features.syntax.status, 'full');
+assert.equal(estreeFeatureQuery.row.features.semantic.status, 'full');
+assert.equal(estreeFeatureQuery.row.features.sourcePreservation.status, 'full');
+assert.equal(estreeFeatureQuery.row.imports.readiness, 'ready');
+assert.equal(estreeFeatureQuery.merge.mergeReady, true);
+assert.deepEqual(estreeFeatureQuery.merge.blockingFeatures, []);
+const lightweightFeatureQuery = queryNativeParserFeatureMatrix(
+  createNativeParserFeatureMatrix({
+    imports: [scannedEstreeFixtureImport],
+    includeEmptyParsers: false
+  }),
+  {
+    language: 'javascript',
+    parser: 'javascript.lightweight-declaration-scan',
+    requiredFeatures: ['syntax', 'semantic', 'sourcePreservation'],
+    minimumReadiness: 'ready'
+  }
+);
+assert.equal(lightweightFeatureQuery.found, true);
+assert.equal(lightweightFeatureQuery.row.features.syntax.status, 'partial');
+assert.equal(lightweightFeatureQuery.row.imports.readiness, 'needs-review');
+assert.equal(lightweightFeatureQuery.merge.mergeReady, false);
+assert.equal(lightweightFeatureQuery.merge.blockingFeatures.includes('syntax'), true);
+const rustMacroFeatureQuery = queryNativeParserFeatureMatrix(parserFeatureMatrix, {
+  language: 'rust',
+  parser: 'syn',
+  requiredFeatures: ['syntax', 'semantic', 'macroMetaprogramming'],
+  minimumReadiness: 'ready'
+});
+assert.equal(rustMacroFeatureQuery.found, true);
+assert.equal(rustMacroFeatureQuery.row.features.macroMetaprogramming.status, 'evidence-required');
+assert.equal(rustMacroFeatureQuery.merge.mergeReady, false);
+assert.equal(rustMacroFeatureQuery.merge.blockingFeatures.includes('macroMetaprogramming'), true);
 const projectionLossMatrix = createProjectionTargetLossMatrix({
   generatedAt: 321,
   imports: [

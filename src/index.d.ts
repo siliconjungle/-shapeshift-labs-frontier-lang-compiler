@@ -318,6 +318,161 @@ export interface NativeParserAstFormatMatrixOptions {
   readonly generatedAt?: number;
 }
 
+export type NativeParserFeatureCategory =
+  | 'syntax'
+  | 'semantic'
+  | 'type'
+  | 'controlFlow'
+  | 'macroMetaprogramming'
+  | 'sourcePreservation'
+  | string;
+
+export type NativeParserFeatureCoverageStatus =
+  | 'full'
+  | 'partial'
+  | 'evidence-required'
+  | 'missing'
+  | 'blocked'
+  | 'not-applicable'
+  | string;
+
+export interface NativeParserFeatureCoverage {
+  readonly category: NativeParserFeatureCategory;
+  readonly status: NativeParserFeatureCoverageStatus;
+  readonly readiness: SemanticMergeReadiness;
+  readonly mergeReady: boolean;
+  readonly supported: boolean;
+  readonly capabilities: Readonly<Record<string, unknown>>;
+  readonly gaps: readonly string[];
+  readonly lossKinds: Readonly<Record<string, number>>;
+  readonly reasons: readonly string[];
+  readonly notes: readonly string[];
+}
+
+export interface NativeParserFeatureCoverageMap {
+  readonly syntax: NativeParserFeatureCoverage;
+  readonly semantic: NativeParserFeatureCoverage;
+  readonly type: NativeParserFeatureCoverage;
+  readonly controlFlow: NativeParserFeatureCoverage;
+  readonly macroMetaprogramming: NativeParserFeatureCoverage;
+  readonly sourcePreservation: NativeParserFeatureCoverage;
+  readonly [category: string]: NativeParserFeatureCoverage;
+}
+
+export interface NativeParserFeatureMergeAssessment {
+  readonly mergeReady: boolean;
+  readonly readiness: SemanticMergeReadiness;
+  readonly requiredFeatures: readonly NativeParserFeatureCategory[];
+  readonly minimumReadiness: SemanticMergeReadiness;
+  readonly blockingFeatures: readonly NativeParserFeatureCategory[];
+  readonly reviewFeatures: readonly NativeParserFeatureCategory[];
+  readonly reasons: readonly string[];
+}
+
+export interface NativeParserFeatureParserRow {
+  readonly language: FrontierSourceLanguage | string;
+  readonly aliases: readonly string[];
+  readonly parser: string;
+  readonly parserFormat: string;
+  readonly parserAliases: readonly string[];
+  readonly parserAdapters: readonly string[];
+  readonly extensions: readonly string[];
+  readonly supportsLightweightScan: boolean;
+  readonly projectionTargets: readonly (FrontierCompileTarget | string)[];
+  readonly knownLossKinds: readonly NativeImportKnownLossKind[];
+  readonly defaultReadiness: SemanticMergeReadiness;
+  readonly notes: readonly string[];
+  readonly adapters: {
+    readonly total: number;
+    readonly ids: readonly string[];
+    readonly versions: readonly string[];
+    readonly exactness: readonly NativeImporterAdapterExactness[];
+    readonly coverage: NativeImporterAdapterCoverageAggregate;
+  };
+  readonly imports: {
+    readonly total: number;
+    readonly sourcePaths: readonly string[];
+    readonly readiness: SemanticMergeReadiness;
+    readonly readinessReasons: readonly string[];
+    readonly nativeAstNodes: number;
+    readonly symbols: number;
+    readonly references: number;
+    readonly types: number;
+    readonly controlFlow: number;
+    readonly sourceMaps: number;
+    readonly sourceMapMappings: number;
+    readonly losses: number;
+    readonly lossKinds: Readonly<Record<string, number>>;
+    readonly lossCategories: readonly NativeImportTaxonomyKind[];
+    readonly sourcePreservation: NativeImportSourcePreservationContract;
+  };
+  readonly features: NativeParserFeatureCoverageMap;
+  readonly merge: NativeParserFeatureMergeAssessment;
+}
+
+export interface NativeParserFeatureLanguageSummary {
+  readonly language: FrontierSourceLanguage | string;
+  readonly aliases: readonly string[];
+  readonly parserRows: number;
+  readonly parsers: readonly string[];
+  readonly imports: number;
+  readonly adapters: number;
+  readonly mergeReadyParsers: readonly string[];
+  readonly readiness: SemanticMergeReadiness;
+}
+
+export interface NativeParserFeatureMatrix {
+  readonly kind: 'frontier.lang.nativeParserFeatureMatrix';
+  readonly version: 1;
+  readonly generatedAt: number;
+  readonly parsers: readonly NativeParserFeatureParserRow[];
+  readonly languages: readonly NativeParserFeatureLanguageSummary[];
+  readonly summary: {
+    readonly languages: number;
+    readonly parsers: number;
+    readonly imports: number;
+    readonly adapters: number;
+    readonly mergeReady: number;
+    readonly byReadiness: Readonly<Record<SemanticMergeReadiness, number>>;
+    readonly byFeatureStatus: Readonly<Record<NativeParserFeatureCategory, Readonly<Record<NativeParserFeatureCoverageStatus, number>>>>;
+    readonly byFeatureReadiness: Readonly<Record<NativeParserFeatureCategory, Readonly<Record<SemanticMergeReadiness, number>>>>;
+  };
+  readonly metadata: {
+    readonly categories: readonly NativeParserFeatureCategory[];
+    readonly statuses: readonly NativeParserFeatureCoverageStatus[];
+    readonly requiredFeatures: readonly NativeParserFeatureCategory[];
+    readonly minimumReadiness: SemanticMergeReadiness;
+    readonly note: string;
+  };
+}
+
+export interface NativeParserFeatureMatrixOptions {
+  readonly languages?: readonly NativeImportLanguageProfile[];
+  readonly imports?: readonly NativeSourceImportResult[];
+  readonly adapters?: readonly NativeImporterAdapter[];
+  readonly requiredFeatures?: readonly NativeParserFeatureCategory[];
+  readonly minimumReadiness?: SemanticMergeReadiness;
+  readonly includeEmptyParsers?: boolean;
+  readonly generatedAt?: number;
+}
+
+export interface NativeParserFeatureMatrixQuery {
+  readonly language?: FrontierSourceLanguage | string;
+  readonly parser?: string;
+  readonly requiredFeatures?: readonly NativeParserFeatureCategory[];
+  readonly minimumReadiness?: SemanticMergeReadiness;
+}
+
+export interface NativeParserFeatureMatrixQueryResult {
+  readonly kind: 'frontier.lang.nativeParserFeatureQuery';
+  readonly version: 1;
+  readonly found: boolean;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly parser?: string;
+  readonly row?: NativeParserFeatureParserRow;
+  readonly merge: NativeParserFeatureMergeAssessment;
+}
+
 export interface NativeImporterAdapterCoverageAggregate {
   readonly total: number;
   readonly declared: Readonly<Record<string, number>>;
@@ -1942,6 +2097,8 @@ export declare const NativeImportTaxonomyKinds: readonly NativeImportTaxonomyKin
 export declare const NativeImportLossKinds: readonly NativeImportKnownLossKind[];
 export declare const NativeImportRegionTaxonomyKinds: readonly NativeImportRegionTaxonomyKind[];
 export declare const ProjectionTargetLossClasses: readonly ProjectionTargetLossClass[];
+export declare const NativeParserFeatureCategories: readonly NativeParserFeatureCategory[];
+export declare const NativeParserFeatureCoverageStatuses: readonly NativeParserFeatureCoverageStatus[];
 export declare const NativeImportReadinessBySeverity: Readonly<Record<NativeImportLossSummary['highestSeverity'], SemanticMergeReadiness>>;
 export declare const NativeImportFeatureEvidencePolicies: Readonly<Record<string, NativeImportFeatureEvidencePolicy>>;
 export declare const NativeImportLanguageProfiles: readonly NativeImportLanguageProfile[];
@@ -1965,6 +2122,8 @@ export declare function classifyNativeImportRoundtripReadiness(importResult: Nat
 export declare function createNativeImportCoverageMatrix(options?: NativeImportCoverageMatrixOptions): NativeImportCoverageMatrix;
 export declare function getNativeParserAstFormatProfile(format?: string): NativeParserAstFormatProfile | undefined;
 export declare function createNativeParserAstFormatMatrix(options?: NativeParserAstFormatMatrixOptions): NativeParserAstFormatMatrix;
+export declare function createNativeParserFeatureMatrix(options?: NativeParserFeatureMatrixOptions): NativeParserFeatureMatrix;
+export declare function queryNativeParserFeatureMatrix(matrixOrOptions?: NativeParserFeatureMatrix | NativeParserFeatureMatrixOptions, query?: NativeParserFeatureMatrixQuery): NativeParserFeatureMatrixQueryResult;
 export declare function createProjectionTargetLossMatrix(options?: ProjectionTargetLossMatrixOptions): ProjectionTargetLossMatrix;
 export declare function createNativeSourcePreservation(options: CreateNativeSourcePreservationOptions): NativeSourcePreservation;
 export declare function createSemanticImportSidecar(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: SemanticImportSidecarOptions): SemanticImportSidecar;

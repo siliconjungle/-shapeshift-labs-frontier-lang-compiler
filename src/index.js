@@ -277,6 +277,24 @@ export const ProjectionTargetLossClasses = Object.freeze([
   'missingAdapter'
 ]);
 
+export const NativeParserFeatureCategories = Object.freeze([
+  'syntax',
+  'semantic',
+  'type',
+  'controlFlow',
+  'macroMetaprogramming',
+  'sourcePreservation'
+]);
+
+export const NativeParserFeatureCoverageStatuses = Object.freeze([
+  'full',
+  'partial',
+  'evidence-required',
+  'missing',
+  'blocked',
+  'not-applicable'
+]);
+
 export const NativeImportLanguageProfiles = Object.freeze([
   nativeImportLanguageProfile('javascript', {
     aliases: ['js', 'mjs', 'cjs', 'jsx'],
@@ -2366,6 +2384,78 @@ export function createNativeParserAstFormatMatrix(input = {}) {
       note: 'Parser AST format coverage describes normalization evidence and host-parser obligations; it is not a lossless portability claim.',
       profileIds: profiles.map((profile) => profile.id)
     }
+  };
+}
+
+export function createNativeParserFeatureMatrix(input = {}) {
+  const imports = input.imports ?? [];
+  const adapters = input.adapters ?? [];
+  const profiles = mergeNativeImportProfiles(input.languages ?? NativeImportLanguageProfiles, imports, adapters);
+  const parsers = nativeParserFeatureRowsForProfiles(profiles, {
+    imports,
+    adapters,
+    requiredFeatures: input.requiredFeatures,
+    minimumReadiness: input.minimumReadiness,
+    includeEmptyParsers: input.includeEmptyParsers
+  });
+  const summary = nativeParserFeatureMatrixSummary(parsers);
+  return {
+    kind: 'frontier.lang.nativeParserFeatureMatrix',
+    version: 1,
+    generatedAt: input.generatedAt ?? Date.now(),
+    parsers,
+    languages: summarizeNativeParserFeatureLanguages(profiles, parsers),
+    summary,
+    metadata: {
+      categories: [...NativeParserFeatureCategories],
+      statuses: [...NativeParserFeatureCoverageStatuses],
+      requiredFeatures: normalizeNativeParserRequiredFeatures(input.requiredFeatures),
+      minimumReadiness: normalizeSemanticMergeReadiness(input.minimumReadiness ?? 'ready'),
+      note: 'Native parser feature coverage is admission evidence per language/parser. It does not promote lightweight scans or host adapters beyond their declared and observed capabilities.'
+    }
+  };
+}
+
+export function queryNativeParserFeatureMatrix(matrixOrInput = {}, query = {}) {
+  const matrix = matrixOrInput?.kind === 'frontier.lang.nativeParserFeatureMatrix'
+    ? matrixOrInput
+    : createNativeParserFeatureMatrix(matrixOrInput);
+  const language = normalizeNativeLanguageId(query.language);
+  const parser = query.parser === undefined ? undefined : parserAstFormatIdForParser(query.parser);
+  const requiredFeatures = normalizeNativeParserRequiredFeatures(query.requiredFeatures ?? matrix.metadata?.requiredFeatures);
+  const minimumReadiness = normalizeSemanticMergeReadiness(query.minimumReadiness ?? matrix.metadata?.minimumReadiness ?? 'ready');
+  const row = matrix.parsers.find((entry) => {
+    if (language && normalizeNativeLanguageId(entry.language) !== language && !(entry.aliases ?? []).map(normalizeNativeLanguageId).includes(language)) {
+      return false;
+    }
+    if (!parser) return true;
+    const parserIds = [
+      entry.parser,
+      entry.parserFormat,
+      ...(entry.parserAliases ?? []),
+      ...(entry.parserAdapters ?? [])
+    ].map(parserAstFormatIdForParser);
+    return parserIds.includes(parser);
+  });
+  const merge = row
+    ? nativeParserFeatureMergeAssessment(row, { requiredFeatures, minimumReadiness })
+    : {
+      mergeReady: false,
+      readiness: 'blocked',
+      requiredFeatures,
+      minimumReadiness,
+      blockingFeatures: requiredFeatures,
+      reviewFeatures: [],
+      reasons: [`No native parser feature coverage row matched language=${query.language ?? '*'} parser=${query.parser ?? '*'}.`]
+    };
+  return {
+    kind: 'frontier.lang.nativeParserFeatureQuery',
+    version: 1,
+    found: Boolean(row),
+    language: row?.language ?? language,
+    parser: row?.parser ?? parser,
+    row,
+    merge
   };
 }
 
@@ -7521,6 +7611,557 @@ function nativeParserAstFormatProfile(id, input = {}) {
 
 function normalizeParserAstFormatId(format) {
   return String(format ?? '').trim().toLowerCase().replace(/[_\s]+/g, '-');
+}
+
+const nativeParserMacroMetaprogrammingLossKinds = new Set([
+  'macroExpansion',
+  'macroHygiene',
+  'preprocessor',
+  'conditionalCompilation',
+  'metaprogramming',
+  'reflection',
+  'generatedCode'
+]);
+
+const nativeParserTypeCoverageLossKinds = new Set([
+  'typeInference',
+  'overloadResolution',
+  'overloadTypeInference',
+  'unsupportedSemantic'
+]);
+
+function nativeParserFeatureRowsForProfiles(profiles, context) {
+  const rows = [];
+  for (const profile of profiles) {
+    const matchingImports = nativeParserFeatureImportsForProfile(profile, context.imports);
+    const matchingAdapters = nativeParserFeatureAdapterSummariesForProfile(profile, context.adapters);
+    for (const parser of nativeParserFeatureParserSlots(profile, matchingImports, matchingAdapters)) {
+      const row = nativeParserFeatureRowForParser(profile, parser, {
+        ...context,
+        imports: matchingImports.filter((imported) => nativeParserFeatureParserMatches(nativeParserParserForImport(imported), parser)),
+        adapters: matchingAdapters.filter((adapter) => nativeParserFeatureParserMatches(adapter.parser, parser))
+      });
+      if (context.includeEmptyParsers === false && row.imports.total === 0 && row.adapters.total === 0) continue;
+      rows.push(row);
+    }
+  }
+  return rows.sort((left, right) => {
+    const languageOrder = left.language.localeCompare(right.language);
+    return languageOrder || left.parser.localeCompare(right.parser);
+  });
+}
+
+function nativeParserFeatureRowForParser(profile, parser, context) {
+  const imports = context.imports ?? [];
+  const adapters = context.adapters ?? [];
+  const parserFormat = parserAstFormatIdForParser(parser);
+  const parserProfile = getNativeParserAstFormatProfile(parserFormat);
+  const adapterCoverage = summarizeNativeImporterAdapterCoverageEntries([
+    ...imports.map((imported) => nativeImporterAdapterCoverageEntryFromImport(imported)).filter(Boolean),
+    ...adapters.map((adapter) => ({
+      adapterId: adapter.id,
+      language: adapter.language,
+      parser: adapter.parser,
+      coverage: adapter.coverage
+    }))
+  ]);
+  const losses = imports.flatMap((imported) => imported?.losses ?? imported?.nativeAst?.losses ?? []);
+  const evidence = imports.flatMap((imported) => imported?.evidence ?? []);
+  const lossSummary = summarizeNativeImportLosses(losses, { evidence, parser });
+  const semanticEvidence = nativeParserFeatureSemanticEvidence(imports);
+  const sourceMaps = imports.flatMap((imported) => imported?.sourceMaps ?? imported?.universalAst?.sourceMaps ?? []);
+  const sourceMapMappings = sourceMaps.reduce((sum, sourceMap) => sum + (sourceMap?.mappings?.length ?? 0), 0);
+  const sourcePreservation = summarizeImportSourcePreservation(undefined, imports);
+  const nativeAstNodes = imports.reduce((sum, imported) => sum + Object.keys(imported?.nativeAst?.nodes ?? imported?.nativeSource?.ast?.nodes ?? {}).length, 0);
+  const featureContext = {
+    profile,
+    parser,
+    parserFormat,
+    parserProfile,
+    imports,
+    adapters,
+    adapterCoverage,
+    losses,
+    evidence,
+    lossSummary,
+    semanticEvidence,
+    sourceMaps,
+    sourceMapMappings,
+    sourcePreservation,
+    nativeAstNodes
+  };
+  const features = {
+    syntax: nativeParserSyntaxFeature(featureContext),
+    semantic: nativeParserSemanticFeature(featureContext),
+    type: nativeParserTypeFeature(featureContext),
+    controlFlow: nativeParserControlFlowFeature(featureContext),
+    macroMetaprogramming: nativeParserMacroMetaprogrammingFeature(featureContext),
+    sourcePreservation: nativeParserSourcePreservationFeature(featureContext)
+  };
+  const importReadiness = imports.length
+    ? lossSummary.semanticMergeReadiness
+    : adapters.length ? 'needs-review' : normalizeSemanticMergeReadiness(profile.defaultReadiness) ?? 'needs-review';
+  const row = {
+    language: profile.language,
+    aliases: profile.aliases,
+    parser,
+    parserFormat,
+    parserAliases: uniqueStrings([...(parserProfile?.aliases ?? []), ...(parserProfile?.parserAdapters ?? [])]),
+    parserAdapters: uniqueStrings([parser, ...(parserProfile?.parserAdapters ?? [])]),
+    extensions: profile.extensions,
+    supportsLightweightScan: profile.supportsLightweightScan,
+    projectionTargets: profile.projectionTargets,
+    knownLossKinds: uniqueStrings([...(profile.knownLossKinds ?? []), ...Object.keys(lossSummary.byKind)]),
+    defaultReadiness: profile.defaultReadiness,
+    notes: uniqueStrings([...(profile.notes ?? []), ...(parserProfile?.notes ?? [])]),
+    adapters: {
+      total: adapters.length,
+      ids: adapters.map((adapter) => adapter.id),
+      versions: uniqueStrings(adapters.map((adapter) => adapter.version).filter(Boolean)),
+      exactness: uniqueStrings(adapters.map((adapter) => adapter.coverage?.exactness).filter(Boolean)),
+      coverage: adapterCoverage
+    },
+    imports: {
+      total: imports.length,
+      sourcePaths: uniqueStrings(imports.map((imported) => imported?.sourcePath ?? imported?.nativeSource?.sourcePath ?? imported?.nativeAst?.sourcePath).filter(Boolean)),
+      readiness: importReadiness,
+      readinessReasons: imports.length ? lossSummary.readinessReasons : nativeImportCoverageReasons(profile),
+      nativeAstNodes,
+      symbols: semanticEvidence.symbols,
+      references: semanticEvidence.references,
+      types: semanticEvidence.types,
+      controlFlow: semanticEvidence.controlFlow,
+      sourceMaps: sourceMaps.length,
+      sourceMapMappings,
+      losses: lossSummary.total,
+      lossKinds: lossSummary.byKind,
+      lossCategories: lossSummary.categories,
+      sourcePreservation
+    },
+    features
+  };
+  return {
+    ...row,
+    merge: nativeParserFeatureMergeAssessment(row, {
+      requiredFeatures: context.requiredFeatures,
+      minimumReadiness: context.minimumReadiness
+    })
+  };
+}
+
+function nativeParserSyntaxFeature(context) {
+  const blockingSyntaxLosses = context.losses.filter((loss) => loss.severity === 'error' && (loss.kind === 'unsupportedSyntax' || loss.kind === 'parserDiagnostic'));
+  const exactAst = context.adapterCoverage.effective.exactAst ?? 0;
+  const sourceRanges = context.adapterCoverage.effective.sourceRanges ?? 0;
+  const parserDiagnostics = context.adapterCoverage.effective.parserDiagnostics ?? 0;
+  let status = 'missing';
+  const reasons = [];
+  if (blockingSyntaxLosses.length) {
+    status = 'blocked';
+    reasons.push('Parser diagnostics or unsupported syntax errors block syntax coverage.');
+  } else if (exactAst > 0 && (sourceRanges > 0 || context.sourceMapMappings > 0)) {
+    status = 'full';
+    reasons.push('Exact parser AST and source-range evidence are available.');
+  } else if (exactAst > 0 || sourceRanges > 0 || context.nativeAstNodes > 1 || context.sourceMapMappings > 0) {
+    status = 'partial';
+    reasons.push('Syntax evidence exists, but exact AST/source-range coverage is incomplete.');
+  } else if (context.adapters.length || context.parserProfile) {
+    status = 'evidence-required';
+    reasons.push('Parser slot is declared, but no observed syntax import evidence is attached.');
+  } else {
+    reasons.push('No syntax parser coverage is declared or observed.');
+  }
+  return nativeParserFeatureCoverage('syntax', status, {
+    capabilities: {
+      exactAst,
+      sourceRanges,
+      parserDiagnostics,
+      nativeAstNodes: context.nativeAstNodes,
+      sourceMapMappings: context.sourceMapMappings
+    },
+    gaps: nativeParserFeatureCapabilityGaps(context.adapterCoverage, ['exactAst', 'sourceRanges', 'parserDiagnostics']),
+    lossKinds: nativeParserFeatureLossKindCounts(context.losses, ['unsupportedSyntax', 'parserDiagnostic']),
+    reasons,
+    notes: ['Syntax coverage covers parser AST/CST structure, diagnostics, source ranges, and source-map anchors.']
+  });
+}
+
+function nativeParserSemanticFeature(context) {
+  const declarations = (context.adapterCoverage.effective.semanticDeclarations ?? 0) + context.semanticEvidence.declarations;
+  const symbols = (context.adapterCoverage.effective.semanticSymbols ?? 0) + context.semanticEvidence.symbols;
+  let status = 'missing';
+  const reasons = [];
+  if (symbols > 0 && declarations > 0) {
+    status = 'full';
+    reasons.push('Declaration and symbol evidence are available.');
+  } else if (symbols > 0 || declarations > 0 || context.nativeAstNodes > 1) {
+    status = 'partial';
+    reasons.push('Semantic evidence is present, but declaration/symbol coverage is incomplete.');
+  } else if (context.adapters.length || context.imports.length) {
+    status = 'evidence-required';
+    reasons.push('Import evidence exists, but no semantic declarations or symbols were observed.');
+  } else {
+    reasons.push('No semantic index evidence is declared or observed.');
+  }
+  return nativeParserFeatureCoverage('semantic', status, {
+    capabilities: {
+      declarations,
+      symbols,
+      semanticIndexLevel: nativeParserFeatureSemanticLevel(context.adapterCoverage, context.semanticEvidence)
+    },
+    gaps: nativeParserFeatureCapabilityGaps(context.adapterCoverage, ['semanticDeclarations', 'semanticSymbols']),
+    lossKinds: nativeParserFeatureLossKindCounts(context.losses, ['partialSemanticIndex', 'unsupportedSemantic']),
+    reasons,
+    notes: ['Semantic coverage covers declaration and symbol evidence. References, types, and control flow are reported separately.']
+  });
+}
+
+function nativeParserTypeFeature(context) {
+  const types = (context.adapterCoverage.effective.types ?? 0) + context.semanticEvidence.types;
+  const typeLossKinds = nativeParserFeaturePresentLossKinds(context, nativeParserTypeCoverageLossKinds);
+  let status = 'missing';
+  const reasons = [];
+  if (types > 0) {
+    status = 'full';
+    reasons.push('Resolved or declared type evidence is available.');
+  } else if (typeLossKinds.length > 0 || context.semanticEvidence.symbols > 0) {
+    status = 'evidence-required';
+    reasons.push('Type-sensitive coverage needs compiler or language-server evidence.');
+  } else {
+    reasons.push('No type evidence is declared or observed.');
+  }
+  return nativeParserFeatureCoverage('type', status, {
+    capabilities: { types },
+    gaps: nativeParserFeatureCapabilityGaps(context.adapterCoverage, ['types']),
+    lossKinds: nativeParserFeatureLossKindCounts(context.losses, [...nativeParserTypeCoverageLossKinds]),
+    reasons,
+    notes: ['Type coverage covers declared/inferred type facts and overload or inference evidence.']
+  });
+}
+
+function nativeParserControlFlowFeature(context) {
+  const controlFlow = (context.adapterCoverage.effective.controlFlow ?? 0) + context.semanticEvidence.controlFlow;
+  let status = 'missing';
+  const reasons = [];
+  if (controlFlow > 0) {
+    status = 'full';
+    reasons.push('Control-flow or CFG evidence is available.');
+  } else if (context.imports.length || context.adapters.length) {
+    status = 'evidence-required';
+    reasons.push('Control-flow evidence was not observed for this parser row.');
+  } else {
+    reasons.push('No control-flow evidence is declared or observed.');
+  }
+  return nativeParserFeatureCoverage('controlFlow', status, {
+    capabilities: { controlFlow },
+    gaps: nativeParserFeatureCapabilityGaps(context.adapterCoverage, ['controlFlow']),
+    lossKinds: {},
+    reasons,
+    notes: ['Control-flow coverage covers call/branch/CFG facts supplied by host parsers or semantic indexers.']
+  });
+}
+
+function nativeParserMacroMetaprogrammingFeature(context) {
+  const macroLossKinds = nativeParserFeaturePresentLossKinds(context, nativeParserMacroMetaprogrammingLossKinds);
+  const macroLosses = context.losses.filter((loss) => nativeParserMacroMetaprogrammingLossKinds.has(loss.kind));
+  const featureEvidence = summarizeNativeImportFeatureEvidence(macroLosses, { evidence: context.evidence });
+  const generatedRanges = context.adapterCoverage.effective.generatedRanges ?? 0;
+  let status = 'not-applicable';
+  const reasons = [];
+  if (!macroLossKinds.length) {
+    reasons.push('No macro, preprocessor, generator, or metaprogramming coverage risk is declared for this parser row.');
+  } else if (macroLosses.some((loss) => loss.severity === 'error')) {
+    status = 'blocked';
+    reasons.push('Macro or metaprogramming evidence includes blocking loss records.');
+  } else if (featureEvidence.missingRequiredEvidence.length > 0 || generatedRanges === 0) {
+    status = 'evidence-required';
+    reasons.push('Macro/metaprogramming coverage requires generated-range and policy evidence before merge admission.');
+  } else {
+    status = 'partial';
+    reasons.push('Macro/metaprogramming risk has attached evidence, but this facade still treats generated behavior as review-required.');
+  }
+  return nativeParserFeatureCoverage('macroMetaprogramming', status, {
+    capabilities: {
+      generatedRanges,
+      policyKinds: featureEvidence.policyKinds,
+      highestRisk: featureEvidence.highestRisk
+    },
+    gaps: nativeParserFeatureCapabilityGaps(context.adapterCoverage, ['generatedRanges']),
+    lossKinds: nativeParserFeatureLossKindCounts(context.losses, [...nativeParserMacroMetaprogrammingLossKinds]),
+    reasons: uniqueStrings([...reasons, ...featureEvidence.reasons]),
+    notes: ['Macro/metaprogramming coverage covers macros, preprocessors, generated code, reflection, and conditional compilation evidence.']
+  });
+}
+
+function nativeParserSourcePreservationFeature(context) {
+  const exactSource = context.sourcePreservation.exactSourceAvailable;
+  const tokens = context.sourcePreservation.tokens + (context.adapterCoverage.effective.tokens ?? 0);
+  const trivia = context.sourcePreservation.trivia + (context.adapterCoverage.effective.trivia ?? 0);
+  const sourceRanges = context.adapterCoverage.effective.sourceRanges ?? 0;
+  let status = 'missing';
+  const reasons = [];
+  if (exactSource > 0 && (tokens > 0 || trivia > 0 || sourceRanges > 0)) {
+    status = 'full';
+    reasons.push('Exact source text and token/trivia or source-range evidence are available.');
+  } else if (exactSource > 0 || tokens > 0 || trivia > 0 || sourceRanges > 0) {
+    status = 'partial';
+    reasons.push('Source-preservation evidence exists, but exact source, tokens, trivia, or ranges are incomplete.');
+  } else if (context.imports.length || context.adapters.length) {
+    status = 'evidence-required';
+    reasons.push('Import or adapter evidence exists, but no exact source-preservation record was observed.');
+  } else {
+    reasons.push('No source-preservation evidence is declared or observed.');
+  }
+  return nativeParserFeatureCoverage('sourcePreservation', status, {
+    capabilities: {
+      exactSourceAvailable: exactSource,
+      tokens,
+      trivia,
+      comments: context.sourcePreservation.comments,
+      whitespace: context.sourcePreservation.whitespace,
+      directives: context.sourcePreservation.directives,
+      sourceRanges
+    },
+    gaps: nativeParserFeatureCapabilityGaps(context.adapterCoverage, ['tokens', 'trivia', 'sourceRanges']),
+    lossKinds: nativeParserFeatureLossKindCounts(context.losses, ['sourcePreservation', 'commentsTrivia', 'sourceMapApproximation']),
+    reasons,
+    notes: ['Source-preservation coverage covers exact source text, token/trivia retention, comments, whitespace, directives, and source ranges.']
+  });
+}
+
+function nativeParserFeatureCoverage(category, status, input = {}) {
+  const normalizedStatus = NativeParserFeatureCoverageStatuses.includes(status) ? status : 'missing';
+  return Object.freeze({
+    category,
+    status: normalizedStatus,
+    readiness: nativeParserFeatureReadinessForStatus(normalizedStatus),
+    mergeReady: nativeParserFeatureStatusMergeReady(normalizedStatus),
+    supported: normalizedStatus === 'full' || normalizedStatus === 'partial' || normalizedStatus === 'not-applicable',
+    capabilities: Object.freeze(input.capabilities ?? {}),
+    gaps: Object.freeze(uniqueStrings(input.gaps ?? [])),
+    lossKinds: Object.freeze(input.lossKinds ?? {}),
+    reasons: Object.freeze(uniqueStrings(input.reasons ?? [])),
+    notes: Object.freeze(uniqueStrings(input.notes ?? []))
+  });
+}
+
+function nativeParserFeatureReadinessForStatus(status) {
+  if (status === 'full' || status === 'not-applicable') return 'ready';
+  if (status === 'partial') return 'ready-with-losses';
+  if (status === 'blocked') return 'blocked';
+  return 'needs-review';
+}
+
+function nativeParserFeatureStatusMergeReady(status) {
+  return status === 'full' || status === 'not-applicable';
+}
+
+function nativeParserFeatureMergeAssessment(row, input = {}) {
+  const requiredFeatures = normalizeNativeParserRequiredFeatures(input.requiredFeatures);
+  const minimumReadiness = normalizeSemanticMergeReadiness(input.minimumReadiness ?? 'ready') ?? 'ready';
+  const featureReadiness = requiredFeatures.reduce(
+    (current, category) => maxSemanticMergeReadiness(current, row.features?.[category]?.readiness ?? 'blocked'),
+    'ready'
+  );
+  const readiness = maxSemanticMergeReadiness(row.imports?.readiness ?? 'needs-review', featureReadiness);
+  const blockingFeatures = requiredFeatures.filter((category) => !nativeParserFeatureStatusMergeReady(row.features?.[category]?.status));
+  const reviewFeatures = requiredFeatures.filter((category) => {
+    const featureReadiness = row.features?.[category]?.readiness ?? 'blocked';
+    return semanticMergeReadinessRank[featureReadiness] > semanticMergeReadinessRank.ready
+      && semanticMergeReadinessRank[featureReadiness] <= semanticMergeReadinessRank['needs-review'];
+  });
+  const reasons = [];
+  if ((row.imports?.total ?? 0) === 0) reasons.push('No native import evidence matched this language/parser row.');
+  for (const category of blockingFeatures) {
+    const feature = row.features?.[category];
+    reasons.push(`${category} coverage is ${feature?.status ?? 'missing'}: ${(feature?.reasons ?? []).join(' ')}`);
+  }
+  if (semanticMergeReadinessRank[readiness] > semanticMergeReadinessRank[minimumReadiness]) {
+    reasons.push(`Readiness ${readiness} is weaker than required threshold ${minimumReadiness}.`);
+  }
+  const mergeReady = (row.imports?.total ?? 0) > 0
+    && blockingFeatures.length === 0
+    && semanticMergeReadinessRank[readiness] <= semanticMergeReadinessRank[minimumReadiness];
+  if (mergeReady) reasons.push(`Native import is merge-ready for required features: ${requiredFeatures.join(', ')}.`);
+  return Object.freeze({
+    mergeReady,
+    readiness,
+    requiredFeatures,
+    minimumReadiness,
+    blockingFeatures,
+    reviewFeatures,
+    reasons: uniqueStrings(reasons)
+  });
+}
+
+function normalizeNativeParserRequiredFeatures(value) {
+  const requested = normalizeStringList(value);
+  const features = requested.length ? requested : ['syntax', 'semantic', 'sourcePreservation'];
+  return uniqueStrings(features.map(normalizeNativeParserFeatureCategory).filter((feature) => NativeParserFeatureCategories.includes(feature)));
+}
+
+function normalizeNativeParserFeatureCategory(value) {
+  const normalized = String(value ?? '').trim().replace(/[-_\s]+([a-zA-Z])/g, (_, letter) => letter.toUpperCase());
+  if (normalized.toLowerCase() === 'macrometaprogramming' || normalized.toLowerCase() === 'macro') return 'macroMetaprogramming';
+  if (normalized.toLowerCase() === 'controlflow' || normalized.toLowerCase() === 'cfg') return 'controlFlow';
+  if (normalized.toLowerCase() === 'sourcepreservation' || normalized.toLowerCase() === 'source') return 'sourcePreservation';
+  if (normalized.toLowerCase() === 'types') return 'type';
+  return normalized;
+}
+
+function nativeParserFeatureMatrixSummary(rows) {
+  const summary = {
+    languages: new Set(),
+    parsers: rows.length,
+    imports: 0,
+    adapters: 0,
+    mergeReady: 0,
+    byReadiness: {},
+    byFeatureStatus: {},
+    byFeatureReadiness: {}
+  };
+  for (const row of rows) {
+    summary.languages.add(row.language);
+    summary.imports += row.imports.total;
+    summary.adapters += row.adapters.total;
+    if (row.merge.mergeReady) summary.mergeReady += 1;
+    summary.byReadiness[row.merge.readiness] = (summary.byReadiness[row.merge.readiness] ?? 0) + 1;
+    for (const [category, feature] of Object.entries(row.features)) {
+      summary.byFeatureStatus[category] ??= {};
+      summary.byFeatureReadiness[category] ??= {};
+      summary.byFeatureStatus[category][feature.status] = (summary.byFeatureStatus[category][feature.status] ?? 0) + 1;
+      summary.byFeatureReadiness[category][feature.readiness] = (summary.byFeatureReadiness[category][feature.readiness] ?? 0) + 1;
+    }
+  }
+  return {
+    ...summary,
+    languages: summary.languages.size
+  };
+}
+
+function summarizeNativeParserFeatureLanguages(profiles, rows) {
+  return profiles.map((profile) => {
+    const languageRows = rows.filter((row) => row.language === profile.language);
+    return {
+      language: profile.language,
+      aliases: profile.aliases,
+      parserRows: languageRows.length,
+      parsers: languageRows.map((row) => row.parser),
+      imports: languageRows.reduce((sum, row) => sum + row.imports.total, 0),
+      adapters: languageRows.reduce((sum, row) => sum + row.adapters.total, 0),
+      mergeReadyParsers: languageRows.filter((row) => row.merge.mergeReady).map((row) => row.parser),
+      readiness: languageRows.reduce((current, row) => maxSemanticMergeReadiness(current, row.merge.readiness), 'ready')
+    };
+  });
+}
+
+function nativeParserFeatureParserSlots(profile, imports, adapters) {
+  const slots = [
+    ...(profile.parserAdapters ?? []),
+    ...adapters.map((adapter) => adapter.parser),
+    ...imports.map(nativeParserParserForImport)
+  ].filter(Boolean);
+  if (!slots.length && profile.supportsLightweightScan) slots.push(`${profile.language}.lightweight-declaration-scan`);
+  const seen = new Set();
+  const result = [];
+  for (const slot of slots) {
+    const key = `${normalizeParserAstFormatId(slot)}#${parserAstFormatIdForParser(slot)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(String(slot));
+  }
+  return result;
+}
+
+function nativeParserFeatureImportsForProfile(profile, imports = []) {
+  const languages = nativeParserFeatureLanguageSet(profile);
+  return imports.filter((imported) => languages.has(normalizeNativeLanguageId(imported?.language ?? imported?.nativeAst?.language ?? imported?.nativeSource?.language)));
+}
+
+function nativeParserFeatureAdapterSummariesForProfile(profile, adapters = []) {
+  const languages = nativeParserFeatureLanguageSet(profile);
+  return adapters
+    .map((adapter) => safeNativeImporterAdapterSummary(adapter))
+    .filter(Boolean)
+    .filter((adapter) => languages.has(normalizeNativeLanguageId(adapter.language)));
+}
+
+function nativeParserFeatureLanguageSet(profile) {
+  return new Set([profile.language, ...(profile.aliases ?? [])].map(normalizeNativeLanguageId).filter(Boolean));
+}
+
+function nativeParserParserForImport(imported) {
+  return imported?.adapter?.parser
+    ?? imported?.metadata?.adapterCoverage?.parser
+    ?? imported?.nativeAst?.parser
+    ?? imported?.nativeSource?.parser
+    ?? imported?.parser
+    ?? imported?.metadata?.parser;
+}
+
+function nativeParserFeatureParserMatches(candidateParser, rowParser) {
+  if (!candidateParser || !rowParser) return false;
+  const candidate = normalizeParserAstFormatId(candidateParser);
+  const row = normalizeParserAstFormatId(rowParser);
+  return candidate === row || parserAstFormatIdForParser(candidateParser) === parserAstFormatIdForParser(rowParser);
+}
+
+function nativeParserFeatureSemanticEvidence(imports) {
+  const totals = {
+    declarations: 0,
+    symbols: 0,
+    references: 0,
+    types: 0,
+    controlFlow: 0
+  };
+  for (const imported of imports) {
+    const semanticIndex = imported?.semanticIndex ?? imported?.universalAst?.semanticIndex;
+    const evidence = observeNativeImporterSemanticEvidence(semanticIndex);
+    totals.declarations += evidence.declarations;
+    totals.symbols += semanticIndex?.symbols?.length ?? 0;
+    totals.references += evidence.references;
+    totals.types += evidence.types;
+    totals.controlFlow += evidence.controlFlow;
+  }
+  return totals;
+}
+
+function nativeParserFeatureSemanticLevel(adapterCoverage, semanticEvidence) {
+  if ((adapterCoverage.effective.types ?? 0) > 0 || (adapterCoverage.effective.controlFlow ?? 0) > 0 || semanticEvidence.types > 0 || semanticEvidence.controlFlow > 0 || semanticEvidence.references > 0) {
+    return 'semantic-index';
+  }
+  if ((adapterCoverage.effective.semanticDeclarations ?? 0) > 0 || (adapterCoverage.effective.semanticSymbols ?? 0) > 0 || semanticEvidence.declarations > 0 || semanticEvidence.symbols > 0) {
+    return 'declaration-index';
+  }
+  return 'native-ast';
+}
+
+function nativeParserFeatureCapabilityGaps(adapterCoverage, capabilities) {
+  const gaps = new Set();
+  for (const capability of capabilities) {
+    if ((adapterCoverage.effective?.[capability] ?? 0) === 0) gaps.add(capability);
+  }
+  for (const capability of Object.keys(adapterCoverage.gaps ?? {})) {
+    if (capabilities.includes(capability)) gaps.add(capability);
+  }
+  return [...gaps];
+}
+
+function nativeParserFeatureLossKindCounts(losses, kinds) {
+  const wanted = new Set(kinds);
+  const counts = {};
+  for (const loss of losses) {
+    if (!wanted.has(loss?.kind)) continue;
+    counts[loss.kind] = (counts[loss.kind] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function nativeParserFeaturePresentLossKinds(context, kindSet) {
+  return uniqueStrings([
+    ...(context.profile.knownLossKinds ?? []),
+    ...Object.keys(context.lossSummary.byKind ?? {})
+  ].filter((kind) => kindSet.has(kind)));
 }
 
 function mergeNativeParserAstFormatProfiles(profiles, imports, adapters) {

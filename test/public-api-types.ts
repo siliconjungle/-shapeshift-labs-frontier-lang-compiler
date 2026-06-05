@@ -10,7 +10,10 @@ import {
   NativeImportTaxonomyKinds,
   NativeParserAstFormats,
   NativeParserAstFormatProfiles,
+  NativeParserFeatureCategories,
+  NativeParserFeatureCoverageStatuses,
   ProjectionTargetLossClasses,
+  queryNativeParserFeatureMatrix,
   classifyNativeImportReadiness,
   classifyNativeImportRoundtripReadiness,
   compileNativeSource,
@@ -21,6 +24,7 @@ import {
   createNativeImportCoverageMatrix,
   createNativeImportResultContract,
   createNativeParserAstFormatMatrix,
+  createNativeParserFeatureMatrix,
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createCSharpRoslynNativeImporterAdapter,
@@ -83,6 +87,11 @@ import type {
   NativeParserAstFormatMatrix,
   NativeParserAstFormatMatrixOptions,
   NativeParserAstFormatProfile,
+  NativeParserFeatureCategory,
+  NativeParserFeatureCoverageStatus,
+  NativeParserFeatureMatrix,
+  NativeParserFeatureMatrixOptions,
+  NativeParserFeatureMatrixQueryResult,
   NativeImportReadinessClassification,
   NativeImportRegionTaxonomyKind,
   NativeImportResultContract,
@@ -146,6 +155,8 @@ type ExpectedPublicRuntimeExport =
   | 'NativeImportTaxonomyKinds'
   | 'NativeParserAstFormats'
   | 'NativeParserAstFormatProfiles'
+  | 'NativeParserFeatureCategories'
+  | 'NativeParserFeatureCoverageStatuses'
   | 'ProjectionTargetLossClasses'
   | 'ExternalSemanticIndexFormats'
   | 'classifyNativeImportReadiness'
@@ -158,6 +169,7 @@ type ExpectedPublicRuntimeExport =
   | 'createNativeImportCoverageMatrix'
   | 'createNativeImportResultContract'
   | 'createNativeParserAstFormatMatrix'
+  | 'createNativeParserFeatureMatrix'
   | 'createProjectionTargetLossMatrix'
   | 'createNativeSourcePreservation'
   | 'createCSharpRoslynNativeImporterAdapter'
@@ -178,6 +190,7 @@ type ExpectedPublicRuntimeExport =
   | 'emitForTargetWithSourceMap'
   | 'getNativeImportFeatureEvidencePolicy'
   | 'getNativeParserAstFormatProfile'
+  | 'queryNativeParserFeatureMatrix'
   | 'importExternalSemanticIndex'
   | 'importNativeProject'
   | 'importNativeSource'
@@ -211,6 +224,8 @@ const languageProfiles: readonly NativeImportLanguageProfile[] = NativeImportLan
 const parserAstFormats: readonly string[] = NativeParserAstFormats;
 const parserAstFormatProfiles: readonly NativeParserAstFormatProfile[] = NativeParserAstFormatProfiles;
 const pythonAstFormatProfile: NativeParserAstFormatProfile | undefined = getNativeParserAstFormatProfile('python_ast');
+const parserFeatureCategories: readonly NativeParserFeatureCategory[] = NativeParserFeatureCategories;
+const parserFeatureStatuses: readonly NativeParserFeatureCoverageStatus[] = NativeParserFeatureCoverageStatuses;
 const externalSemanticFormat: ExternalSemanticIndexFormat = ExternalSemanticIndexFormats[0] ?? 'scip';
 
 const source = `
@@ -269,6 +284,18 @@ externalSemanticImport.semanticIndex satisfies typeof externalSemanticImport.uni
 externalSemanticImport.summary.readiness satisfies ExternalSemanticIndexImportResult['readiness']['readiness'];
 
 const summary: NativeImportLossSummary = summarizeNativeImportLosses(imported.losses, { evidence: imported.evidence });
+const parserFeatureMatrixOptions: NativeParserFeatureMatrixOptions = {
+  imports: [imported],
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+};
+const parserFeatureMatrix: NativeParserFeatureMatrix = createNativeParserFeatureMatrix(parserFeatureMatrixOptions);
+const parserFeatureQuery: NativeParserFeatureMatrixQueryResult = queryNativeParserFeatureMatrix(parserFeatureMatrix, {
+  language: 'javascript',
+  parser: imported.nativeAst?.parser ?? 'javascript.lightweight-declaration-scan',
+  requiredFeatures: parserFeatureCategories.slice(0, 2)
+});
+parserFeatureStatuses.includes(parserFeatureQuery.row?.features.syntax.status ?? 'missing');
+parserFeatureQuery.merge.mergeReady satisfies boolean;
 const featureEvidenceSummary: NativeImportFeatureEvidenceSummary = summarizeNativeImportFeatureEvidence(imported.losses, {
   evidence: imported.evidence
 });

@@ -10,6 +10,7 @@ import {
   createKotlinPsiNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeParserAstFormatMatrix,
+  createNativeParserFeatureMatrix,
   createProjectionTargetLossMatrix,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
@@ -20,6 +21,7 @@ import {
   importNativeProject,
   importNativeSource,
   projectNativeImportToSource,
+  queryNativeParserFeatureMatrix,
   runNativeImporterAdapter,
   summarizeNativeImportFeatureEvidence
 } from '../dist/index.js';
@@ -499,6 +501,20 @@ assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'java-ast').ad
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'kotlin-psi').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'roslyn-csharp').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'swift-syntax').adapters.total >= 1);
+const parserFeatureMatrix = createNativeParserFeatureMatrix({
+  imports: project.imports,
+  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, kotlinPsiAdapter, csharpRoslynAdapter, swiftSyntaxAdapter],
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+});
+assert.ok(parserFeatureMatrix.summary.parsers >= 2);
+assert.ok(parserFeatureMatrix.summary.byFeatureStatus.syntax.partial >= 1);
+const projectFeatureQuery = queryNativeParserFeatureMatrix(parserFeatureMatrix, {
+  language: 'javascript',
+  parser: 'javascript.lightweight-declaration-scan',
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+});
+assert.equal(projectFeatureQuery.found, true);
+assert.equal(projectFeatureQuery.merge.mergeReady, false);
 const projectionMatrix = createProjectionTargetLossMatrix({ imports: project.imports });
 assert.equal(projectionMatrix.summary.languages, matrix.summary.languages);
 assert.ok(projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 2);

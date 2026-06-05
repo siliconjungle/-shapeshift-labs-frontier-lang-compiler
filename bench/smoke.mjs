@@ -10,6 +10,7 @@ import {
   createKotlinPsiNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeParserAstFormatMatrix,
+  createNativeParserFeatureMatrix,
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createPythonAstNativeImporterAdapter,
@@ -20,6 +21,7 @@ import {
   importExternalSemanticIndex,
   importNativeSource,
   projectNativeImportToSource,
+  queryNativeParserFeatureMatrix,
   runNativeImporterAdapter,
   summarizeNativeImportFeatureEvidence
 } from '../dist/index.js';
@@ -120,6 +122,19 @@ const parserFormatMatrix = createNativeParserAstFormatMatrix({
   adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter(), createGoAstNativeImporterAdapter(), createJavaAstNativeImporterAdapter(), kotlinPsiAdapter, createCSharpRoslynNativeImporterAdapter(), createSwiftSyntaxNativeImporterAdapter()]
 });
 const parserFormatMatrixDurationMs = performance.now() - parserFormatMatrixStart;
+
+const parserFeatureMatrixStart = performance.now();
+const parserFeatureMatrix = createNativeParserFeatureMatrix({
+  imports: nativeImportResults,
+  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter(), createGoAstNativeImporterAdapter(), createJavaAstNativeImporterAdapter(), kotlinPsiAdapter, createCSharpRoslynNativeImporterAdapter(), createSwiftSyntaxNativeImporterAdapter()],
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+});
+const parserFeatureQuery = queryNativeParserFeatureMatrix(parserFeatureMatrix, {
+  language: 'javascript',
+  parser: 'estree',
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+});
+const parserFeatureMatrixDurationMs = performance.now() - parserFeatureMatrixStart;
 
 const projectionMatrixStart = performance.now();
 const projectionLossMatrix = createProjectionTargetLossMatrix({ imports: nativeImportResults });
@@ -280,6 +295,11 @@ console.log(JSON.stringify({
   parserFormatMatrixImports: parserFormatMatrix.summary.imports,
   parserFormatMatrixNativeAstNodes: parserFormatMatrix.summary.nativeAstNodes,
   parserFormatMatrixDurationMs: Number(parserFormatMatrixDurationMs.toFixed(2)),
+  parserFeatureMatrixParsers: parserFeatureMatrix.summary.parsers,
+  parserFeatureMatrixMergeReady: parserFeatureMatrix.summary.mergeReady,
+  parserFeatureMatrixSyntaxFull: parserFeatureMatrix.summary.byFeatureStatus.syntax?.full ?? 0,
+  parserFeatureQueryMergeReady: parserFeatureQuery.merge.mergeReady,
+  parserFeatureMatrixDurationMs: Number(parserFeatureMatrixDurationMs.toFixed(2)),
   projectionMatrixLanguages: projectionLossMatrix.summary.languages,
   projectionMatrixMissingAdapters: projectionLossMatrix.summary.missingAdapters,
   projectionMatrixUnsupportedTargetFeatures: projectionLossMatrix.summary.unsupportedTargetFeatures,
