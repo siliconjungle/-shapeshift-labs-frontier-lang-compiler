@@ -2,7 +2,10 @@ import { performance } from 'node:perf_hooks';
 import {
   compileFrontierSource,
   createEstreeNativeImporterAdapter,
+  createNativeImportCoverageMatrix,
+  createSemanticImportSidecar,
   importNativeSource,
+  projectNativeImportToSource,
   runNativeImporterAdapter
 } from '../dist/index.js';
 
@@ -32,6 +35,7 @@ const compileDurationMs = performance.now() - start;
 const importStart = performance.now();
 const estreeAdapter = createEstreeNativeImporterAdapter();
 let nativeSymbols = 0;
+const nativeImportResults = [];
 for (let index = 0; index < 150; index += 1) {
   const imported = index % 2 === 0
     ? importNativeSource({
@@ -55,8 +59,23 @@ for (let index = 0; index < 150; index += 1) {
       }
     });
   nativeSymbols += imported.semanticIndex?.symbols?.length ?? 0;
+  nativeImportResults.push(imported);
 }
 const importDurationMs = performance.now() - importStart;
+
+const matrixStart = performance.now();
+const coverageMatrix = createNativeImportCoverageMatrix({ imports: nativeImportResults });
+const matrixDurationMs = performance.now() - matrixStart;
+
+const sidecarStart = performance.now();
+const semanticSidecars = nativeImportResults.map((imported) => createSemanticImportSidecar(imported));
+const sidecarDurationMs = performance.now() - sidecarStart;
+const sidecarOwnershipRegions = semanticSidecars.reduce((sum, sidecar) => sum + sidecar.ownershipRegions.length, 0);
+
+const projectionStart = performance.now();
+const nativeProjections = nativeImportResults.map((imported) => projectNativeImportToSource(imported));
+const projectionDurationMs = performance.now() - projectionStart;
+const projectionBytes = nativeProjections.reduce((sum, projection) => sum + projection.sourceText.length, 0);
 
 console.log(JSON.stringify({
   compiles: 250,
@@ -64,5 +83,14 @@ console.log(JSON.stringify({
   compileDurationMs: Number(compileDurationMs.toFixed(2)),
   nativeImports: 150,
   nativeSymbols,
-  nativeImportDurationMs: Number(importDurationMs.toFixed(2))
+  nativeImportDurationMs: Number(importDurationMs.toFixed(2)),
+  coverageMatrixLanguages: coverageMatrix.summary.languages,
+  coverageMatrixImports: coverageMatrix.summary.imports,
+  coverageMatrixDurationMs: Number(matrixDurationMs.toFixed(2)),
+  semanticSidecars: semanticSidecars.length,
+  sidecarOwnershipRegions,
+  sidecarDurationMs: Number(sidecarDurationMs.toFixed(2)),
+  nativeProjections: nativeProjections.length,
+  projectionBytes,
+  projectionDurationMs: Number(projectionDurationMs.toFixed(2))
 }));

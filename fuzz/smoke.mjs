@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import {
   compileFrontierSource,
   createEstreeNativeImporterAdapter,
+  createNativeImportCoverageMatrix,
+  createSemanticImportSidecar,
   importNativeProject,
   importNativeSource,
+  projectNativeImportToSource,
   runNativeImporterAdapter
 } from '../dist/index.js';
 
@@ -60,6 +63,15 @@ for (let index = 0; index < 50; index += 1) {
   });
   assert.ok(lightweight.semanticIndex.symbols.length >= 1);
   assert.ok(lightweight.mergeCandidates.length >= 1);
+  const sidecar = createSemanticImportSidecar(lightweight);
+  assert.equal(sidecar.summary.emptySemanticIndex, false);
+  assert.ok(sidecar.ownershipRegions.length >= 1);
+  assert.ok(sidecar.patchHints.length >= 1);
+  const projection = projectNativeImportToSource(lightweight, {
+    ...(index % 4 === 0 ? { sourceText: lightweight.nativeSource.ast.metadata.sourceBytes ? (index % 2 === 0 ? `export function light${index}() { return true; }\n` : `def light_${index}():\n    return True\n`) : undefined } : {})
+  });
+  assert.equal(projection.kind, 'frontier.lang.nativeSourceProjection');
+  assert.ok(projection.sourceText.length > 0);
 }
 
 const project = await importNativeProject({
@@ -76,3 +88,10 @@ const project = await importNativeProject({
 assert.equal(project.kind, 'frontier.lang.projectImportResult');
 assert.equal(project.imports.length, 2);
 assert.ok(project.semanticIndex.symbols.length >= 2);
+const matrix = createNativeImportCoverageMatrix({ imports: project.imports });
+assert.equal(matrix.summary.imports, 2);
+assert.ok(matrix.languages.find((entry) => entry.language === 'javascript').imports.symbols >= 1);
+assert.ok(matrix.languages.find((entry) => entry.language === 'python').imports.symbols >= 1);
+const projectSidecar = createSemanticImportSidecar(project);
+assert.equal(projectSidecar.summary.imports, 2);
+assert.equal(projectSidecar.summary.emptySemanticIndex, false);

@@ -3,13 +3,17 @@ import {
   compileFrontierSource,
   createBabelNativeImporterAdapter,
   createEstreeNativeImporterAdapter,
+  createNativeImportCoverageMatrix,
+  createSemanticImportSidecar,
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
   createUniversalAstFromDocument,
   emitForTarget,
   importNativeProject,
   importNativeSource,
+  NativeImportLanguageProfiles,
   normalizeCompileTarget,
+  projectNativeImportToSource,
   projectFrontierAst,
   readUniversalAstJson,
   renderTargetAst,
@@ -189,9 +193,43 @@ function symbolByName(importResult, name) {
 function mappedSymbol(importResult, symbolId) {
   return importResult.sourceMaps[0].mappings.find((mapping) => mapping.semanticSymbolId === symbolId);
 }
+function nativeNodeForSymbol(importResult, name) {
+  const symbol = symbolByName(importResult, name);
+  assert.ok(symbol, `expected scanned symbol ${name}`);
+  return importResult.nativeAst.nodes[symbol.nativeAstNodeId];
+}
+const readinessRank = {
+  ready: 0,
+  'ready-with-losses': 1,
+  'needs-review': 2,
+  blocked: 3
+};
+function assertExactAdapterOutranksScanner(adapterImport, scannerImport, symbolName) {
+  const adapterSummary = adapterImport.metadata.nativeImportLossSummary;
+  const scannerSummary = scannerImport.metadata.nativeImportLossSummary;
+  assert.equal(adapterImport.semanticIndex.symbols.some((symbol) => symbol.name === symbolName), true);
+  assert.equal(scannerImport.semanticIndex.symbols.some((symbol) => symbol.name === symbolName), true);
+  assert.equal(adapterSummary.exactAst, true);
+  assert.equal(adapterSummary.semanticMergeReadiness, 'ready');
+  assert.equal(adapterImport.mergeCandidates[0].readiness, 'ready');
+  assert.equal(adapterImport.losses.length, 0);
+  assert.equal(adapterSummary.categories.includes('exactAstImport'), true);
+  assert.equal(scannerSummary.exactAst, false);
+  assert.equal(scannerSummary.semanticMergeReadiness, 'needs-review');
+  assert.equal(scannerImport.mergeCandidates[0].readiness, 'needs-review');
+  assert.equal(scannerImport.losses.some((loss) => loss.kind === 'declarationOnlyCoverage'), true);
+  assert.equal(scannerImport.losses.some((loss) => loss.kind === 'sourcePreservation'), true);
+  assert.equal(scannerSummary.categories.includes('declarationsOnly'), true);
+  assert.equal(scannerSummary.categories.includes('sourcePreservation'), true);
+  assert.equal(
+    readinessRank[adapterSummary.semanticMergeReadiness] < readinessRank[scannerSummary.semanticMergeReadiness],
+    true
+  );
+}
+const estreeFixtureSource = 'export function fromEstree() { return true; }\n';
 const estreeAdapterImport = await runNativeImporterAdapter(createEstreeNativeImporterAdapter(), {
   sourcePath: 'src/estree.js',
-  sourceText: 'export function fromEstree() { return true; }\n',
+  sourceText: estreeFixtureSource,
   adapterOptions: {
     ast: {
       type: 'Program',
@@ -209,6 +247,13 @@ const estreeAdapterImport = await runNativeImporterAdapter(createEstreeNativeImp
 assert.equal(estreeAdapterImport.adapter.parser, 'estree');
 assert.equal(estreeAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromEstree'), true);
 assert.equal(estreeAdapterImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('fromestree')), true);
+const scannedEstreeFixtureImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/estree.js',
+  sourceText: estreeFixtureSource
+});
+assertExactAdapterOutranksScanner(estreeAdapterImport, scannedEstreeFixtureImport, 'fromEstree');
+const babelFixtureSource = 'export function fromBabel(value: string) { return value; }\n';
 const babelAdapterImport = await runNativeImporterAdapter(createBabelNativeImporterAdapter({
   parserModule: {
     parse(sourceText, options) {
@@ -232,10 +277,47 @@ const babelAdapterImport = await runNativeImporterAdapter(createBabelNativeImpor
   }
 }), {
   sourcePath: 'src/babel.ts',
-  sourceText: 'export function fromBabel(value: string) { return value; }\n'
+  sourceText: babelFixtureSource
 });
 assert.equal(babelAdapterImport.adapter.parser, 'babel');
 assert.equal(babelAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromBabel'), true);
+const scannedBabelFixtureImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/babel.ts',
+  sourceText: babelFixtureSource
+});
+assertExactAdapterOutranksScanner(babelAdapterImport, scannedBabelFixtureImport, 'fromBabel');
+const malformedBabelImport = await runNativeImporterAdapter(createBabelNativeImporterAdapter({
+  parserModule: {
+    parse(sourceText, options) {
+      assert.equal(options.sourceFilename, 'src/malformed-babel.ts');
+      assert.equal(sourceText, 'export function broken( {\n');
+      return {
+        type: 'File',
+        program: {
+          type: 'Program',
+          sourceType: 'module',
+          loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 26 } },
+          body: []
+        },
+        errors: [{
+          reasonCode: 'UnexpectedToken',
+          message: 'Unexpected token, expected ")"',
+          loc: { line: 1, column: 24 }
+        }]
+      };
+    }
+  }
+}), {
+  sourcePath: 'src/malformed-babel.ts',
+  sourceText: 'export function broken( {\n'
+});
+assert.equal(malformedBabelImport.diagnostics.some((diagnostic) => diagnostic.severity === 'error' && diagnostic.code === 'UnexpectedToken'), true);
+assert.equal(malformedBabelImport.losses.some((loss) => loss.severity === 'error' && loss.kind === 'unsupportedSyntax' && loss.metadata?.diagnosticCode === 'UnexpectedToken'), true);
+assert.equal(malformedBabelImport.evidence.some((record) => record.status === 'failed' && record.metadata?.errors === 1), true);
+assert.equal(malformedBabelImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'blocked');
+assert.equal(malformedBabelImport.mergeCandidates[0].readiness, 'blocked');
+assert.equal(malformedBabelImport.patch.risk, 'high');
 const tsMock = {
   ScriptTarget: { Latest: 99 },
   ScriptKind: { TS: 3 },
@@ -263,12 +345,19 @@ const tsMock = {
     for (const child of node.children ?? []) visit(child);
   }
 };
+const tsFixtureSource = 'export function fromTs(): boolean { return true; }\n';
 const tsAdapterImport = await runNativeImporterAdapter(createTypeScriptCompilerNativeImporterAdapter({ typescript: tsMock }), {
   sourcePath: 'src/ts.ts',
-  sourceText: 'export function fromTs(): boolean { return true; }\n'
+  sourceText: tsFixtureSource
 });
 assert.equal(tsAdapterImport.adapter.parser, 'typescript-compiler-api');
 assert.equal(tsAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromTs'), true);
+const scannedTsFixtureImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/ts.ts',
+  sourceText: tsFixtureSource
+});
+assertExactAdapterOutranksScanner(tsAdapterImport, scannedTsFixtureImport, 'fromTs');
 const treeName = {
   type: 'identifier',
   text: 'from_tree',
@@ -290,15 +379,22 @@ const treeRoot = {
     }
   }]
 };
+const treeFixtureSource = 'function from_tree() {}\n';
 const treeImport = await runNativeImporterAdapter(createTreeSitterNativeImporterAdapter({
   language: 'javascript',
   tree: { rootNode: treeRoot }
 }), {
   sourcePath: 'src/tree.js',
-  sourceText: 'function from_tree() {}\n'
+  sourceText: treeFixtureSource
 });
 assert.equal(treeImport.adapter.parser, 'tree-sitter');
 assert.equal(treeImport.semanticIndex.symbols.some((symbol) => symbol.name === 'from_tree'), true);
+const scannedTreeFixtureImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/tree.js',
+  sourceText: treeFixtureSource
+});
+assertExactAdapterOutranksScanner(treeImport, scannedTreeFixtureImport, 'from_tree');
 const projectImport = await importNativeProject({
   id: 'project_smoke',
   projectRoot: 'src',
@@ -333,13 +429,16 @@ assert.equal(projectImport.semanticIndex.symbols.some((symbol) => symbol.name ==
 const scannedJsImport = importNativeSource({
   language: 'javascript',
   sourcePath: 'src/scanned.js',
-  sourceText: 'import { nanoid } from "nanoid";\nexport function addTodo(title) { return { id: nanoid(), title }; }\nexport class TodoStore {}\n'
+  sourceText: 'import { nanoid } from "nanoid";\nexport function addTodo(title) { return { id: nanoid(), title }; }\nexport const TODO_LIMIT = 128;\nexport class TodoStore {\n  save(title) { return addTodo(title); }\n}\n'
 });
 assert.equal(scannedJsImport.nativeAst.rootId, 'native_root');
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'addTodo'), true);
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TodoStore'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TODO_LIMIT'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TodoStore.save'), true);
 assert.equal(scannedJsImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
 assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('addtodo')), true);
+assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.ownershipRegionId), true);
 assert.equal(scannedJsImport.losses.some((loss) => loss.kind === 'opaqueNative'), true);
 const scannedLossKinds = scannedJsImport.losses.map((loss) => loss.kind);
 assert.equal(scannedLossKinds.includes('declarationOnlyCoverage'), true);
@@ -348,6 +447,56 @@ assert.equal(scannedLossKinds.includes('sourceMapApproximation'), true);
 assert.equal(scannedLossKinds.includes('sourcePreservation'), true);
 assert.equal(scannedJsImport.mergeCandidates[0].readiness, 'needs-review');
 assert.equal(scannedJsImport.metadata.nativeImportLossSummary.categories.includes('sourcePreservation'), true);
+const scannedJsSidecar = createSemanticImportSidecar(scannedJsImport, { generatedAt: 123, targetPath: 'dist/scanned.js' });
+assert.equal(scannedJsSidecar.kind, 'frontier.lang.semanticImportSidecar');
+assert.equal(scannedJsSidecar.generatedAt, 123);
+assert.equal(scannedJsSidecar.summary.emptySemanticIndex, false);
+assert.ok(scannedJsSidecar.summary.symbols >= 4);
+assert.ok(scannedJsSidecar.ownershipRegions.length >= 4);
+assert.equal(scannedJsSidecar.symbols.some((symbol) => symbol.name === 'TodoStore.save' && symbol.ownershipRegionId), true);
+assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.sourcePath === 'src/scanned.js' && hint.projection.targetPath === 'dist/scanned.js'), true);
+const preservedNativeSource = 'export function preservedNative() { return true; }\n';
+const preservedNativeImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/preserved-native.js',
+  sourceText: preservedNativeSource
+});
+const preservedNativeProjection = projectNativeImportToSource(preservedNativeImport, {
+  sourceText: preservedNativeSource
+});
+assert.equal(preservedNativeProjection.kind, 'frontier.lang.nativeSourceProjection');
+assert.equal(preservedNativeProjection.mode, 'preserved-source');
+assert.equal(preservedNativeProjection.sourceText, preservedNativeSource);
+assert.equal(preservedNativeProjection.lossSummary.highestSeverity, 'none');
+assert.equal(preservedNativeProjection.readiness.readiness, 'ready');
+assert.equal(preservedNativeProjection.metadata.sourceHashVerified, true);
+assert.equal(preservedNativeProjection.metadata.nativeImportLossSummary.highestSeverity, 'warning');
+const stubNativeProjection = projectNativeImportToSource(scannedJsImport);
+assert.equal(stubNativeProjection.mode, 'native-source-stubs');
+assert.match(stubNativeProjection.sourceText, /export function addTodo/);
+assert.match(stubNativeProjection.sourceText, /export class TodoStore/);
+assert.equal(stubNativeProjection.lossSummary.highestSeverity, 'warning');
+assert.equal(stubNativeProjection.lossSummary.categories.includes('sourcePreservation'), true);
+assert.equal(stubNativeProjection.readiness.readiness, 'needs-review');
+const staleNativeProjection = projectNativeImportToSource(preservedNativeImport, {
+  sourceText: 'export function preservedNative() { return false; }\n'
+});
+assert.equal(staleNativeProjection.mode, 'native-source-stubs');
+assert.equal(staleNativeProjection.losses.some((loss) => loss.metadata?.reason === 'source-hash-mismatch'), true);
+assert.equal(staleNativeProjection.lossSummary.categories.includes('sourcePreservation'), true);
+const incompleteLightweightJsImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/incomplete.js',
+  sourceText: 'export function incomplete(\n'
+});
+assert.equal(incompleteLightweightJsImport.kind, 'frontier.lang.importResult');
+assert.equal(incompleteLightweightJsImport.semanticIndex.symbols.length, 0);
+assert.equal(incompleteLightweightJsImport.losses.length > 0, true);
+assert.equal(incompleteLightweightJsImport.metadata.nativeImportLossSummary.exactAst, false);
+assert.equal(incompleteLightweightJsImport.metadata.nativeImportLossSummary.hasLosses, true);
+assert.equal(incompleteLightweightJsImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
+assert.equal(incompleteLightweightJsImport.evidence.some((record) => record.metadata?.nativeImportLossSummary?.semanticMergeReadiness === 'needs-review'), true);
+assert.equal(incompleteLightweightJsImport.mergeCandidates[0].readiness, 'needs-review');
 assert.throws(() => importNativeSource({
   language: 'javascript',
   sourcePath: 'bad-map.js',
@@ -385,21 +534,53 @@ assert.equal(scannedJavaImport.semanticIndex.symbols.some((symbol) => symbol.nam
 const scannedGoImport = importNativeSource({
   language: 'go',
   sourcePath: 'todo.go',
-  sourceText: 'package todo\nimport "fmt"\ntype Todo struct {}\nfunc AddTodo(title string) {}\n'
+  sourceText: 'package todo\nimport (\n  tasklog "example.com/project/log"\n)\ntype TodoId = string\ntype Todo struct {}\ntype Store struct {}\nfunc AddTodo(title string) {}\nfunc (store *Store) Save[T any](title string) error { return nil }\n'
 });
 assert.equal(scannedGoImport.semanticIndex.symbols.some((symbol) => symbol.name === 'AddTodo'), true);
+assert.equal(scannedGoImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+assert.equal(symbolByName(scannedGoImport, 'TodoId').kind, 'type');
+assert.equal(symbolByName(scannedGoImport, 'Store.Save').kind, 'method');
+const scannedGoReceiverNode = nativeNodeForSymbol(scannedGoImport, 'Store.Save');
+assert.equal(scannedGoReceiverNode.kind, 'MethodDecl');
+assert.equal(scannedGoReceiverNode.fields.methodName, 'Save');
+assert.deepEqual(scannedGoReceiverNode.fields.receiver, { raw: 'store *Store', name: 'store', rawType: '*Store', type: 'Store' });
+assert.deepEqual(scannedGoReceiverNode.fields.typeParameters, ['T any']);
 const scannedSwiftImport = importNativeSource({
   language: 'swift',
   sourcePath: 'Todo.swift',
-  sourceText: 'import Foundation\nstruct Todo {\n  let title: String\n}\nfunc addTodo(_ title: String) {}\n'
+  sourceText: 'import Foundation\nprotocol TodoRenderable {}\nextension TodoRenderable where Self: AnyObject {\n  func renderTodo() {}\n}\nstruct Todo {\n  public var title: String { get }\n}\npublic extension Todo: Sendable {\n  static var empty: Todo { Todo() }\n}\nfunc addTodo(_ title: String) {}\n'
 });
 assert.equal(scannedSwiftImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
+assert.equal(symbolByName(scannedSwiftImport, 'TodoRenderable').kind, 'protocol');
+const scannedSwiftProtocolExtensionNode = nativeNodeForSymbol(scannedSwiftImport, 'TodoRenderable.protocolExtension');
+assert.equal(scannedSwiftProtocolExtensionNode.kind, 'ProtocolExtensionDecl');
+assert.equal(scannedSwiftProtocolExtensionNode.fields.extendedType, 'TodoRenderable');
+assert.equal(scannedSwiftProtocolExtensionNode.fields.constraints, 'Self: AnyObject');
+const scannedSwiftExtensionNode = nativeNodeForSymbol(scannedSwiftImport, 'Todo.extension');
+assert.equal(scannedSwiftExtensionNode.kind, 'ExtensionDecl');
+assert.deepEqual(scannedSwiftExtensionNode.fields.conformances, ['Sendable']);
+const scannedSwiftPropertyNode = nativeNodeForSymbol(scannedSwiftImport, 'title');
+assert.equal(scannedSwiftPropertyNode.kind, 'PropertyDecl');
+assert.equal(scannedSwiftPropertyNode.fields.valueType, 'String');
 const scannedCSharpImport = importNativeSource({
   language: 'csharp',
   sourcePath: 'Todo.cs',
-  sourceText: 'using System;\nnamespace Demo;\npublic class Todo {\n  public void AddTodo(string title) {}\n}\n'
+  sourceText: 'using System;\nusing JsonMap = System.Collections.Generic.Dictionary<string, object>;\nnamespace Demo;\npublic delegate void TodoChanged(object sender, EventArgs args);\npublic class Todo {\n  public string Title { get; init; }\n  public event EventHandler? Changed;\n  public void AddTodo(string title) {}\n}\npublic static class TodoExtensions {\n  public static string Label(this Todo todo) => todo.Title;\n}\n'
 });
 assert.equal(scannedCSharpImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
+assert.equal(symbolByName(scannedCSharpImport, 'JsonMap').kind, 'type');
+assert.equal(nativeNodeForSymbol(scannedCSharpImport, 'JsonMap').fields.target, 'System.Collections.Generic.Dictionary<string, object>');
+assert.equal(symbolByName(scannedCSharpImport, 'TodoChanged').kind, 'type');
+assert.deepEqual(nativeNodeForSymbol(scannedCSharpImport, 'TodoChanged').fields.parameters, ['object sender', 'EventArgs args']);
+const scannedCSharpPropertyNode = nativeNodeForSymbol(scannedCSharpImport, 'Title');
+assert.equal(scannedCSharpPropertyNode.kind, 'PropertyDeclaration');
+assert.deepEqual(scannedCSharpPropertyNode.fields.accessors, ['get', 'init']);
+const scannedCSharpEventNode = nativeNodeForSymbol(scannedCSharpImport, 'Changed');
+assert.equal(scannedCSharpEventNode.kind, 'EventDeclaration');
+assert.equal(scannedCSharpEventNode.fields.eventType, 'EventHandler?');
+const scannedCSharpExtensionMethodNode = nativeNodeForSymbol(scannedCSharpImport, 'Label');
+assert.equal(scannedCSharpExtensionMethodNode.kind, 'ExtensionMethodDeclaration');
+assert.deepEqual(scannedCSharpExtensionMethodNode.fields.extensionReceiver, { type: 'Todo', name: 'todo' });
 const scannedPhpImport = importNativeSource({
   language: 'php',
   sourcePath: 'Todo.php',
@@ -502,6 +683,41 @@ assert.equal(symbolByName(scannedRImport, 'add_todo').id, 'symbol:r:add_todo');
 assert.equal(scannedRImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
 assert.equal(mappedSymbol(scannedRImport, 'symbol:r:add_todo').sourceSpan.startLine, 3);
 assert.equal(scannedRImport.losses.some((loss) => loss.kind === 'dynamicRuntime'), true);
+const coverageMatrix = createNativeImportCoverageMatrix({
+  generatedAt: 123,
+  imports: [
+    nativeImport,
+    scannedJsImport,
+    scannedPythonImport,
+    scannedRustImport,
+    scannedCImport,
+    scannedRImport
+  ],
+  adapters: [createEstreeNativeImporterAdapter()]
+});
+assert.equal(coverageMatrix.kind, 'frontier.lang.nativeImportCoverageMatrix');
+assert.equal(coverageMatrix.generatedAt, 123);
+assert.ok(coverageMatrix.summary.languages >= 20);
+assert.equal(coverageMatrix.summary.imports, 6);
+assert.ok(coverageMatrix.summary.sourceMapMappings >= 6);
+assert.ok(coverageMatrix.summary.lossKinds.opaqueNative >= 1);
+assert.equal(NativeImportLanguageProfiles.some((profile) => profile.language === 'python'), true);
+const jsCoverage = coverageMatrix.languages.find((entry) => entry.language === 'javascript');
+assert.ok(jsCoverage);
+assert.equal(jsCoverage.imports.total, 2);
+assert.equal(jsCoverage.supportsLightweightScan, true);
+assert.equal(jsCoverage.parserAdapters.includes('estree'), true);
+assert.ok(jsCoverage.imports.symbols >= 2);
+const pythonCoverage = coverageMatrix.languages.find((entry) => entry.language === 'python');
+assert.equal(pythonCoverage.imports.readiness, 'needs-review');
+assert.equal(pythonCoverage.parserAdapters.includes('libcst'), true);
+const haskellCoverage = coverageMatrix.languages.find((entry) => entry.language === 'haskell');
+assert.equal(haskellCoverage.imports.total, 0);
+assert.equal(haskellCoverage.imports.readiness, 'needs-review');
+const projectSidecar = createSemanticImportSidecar(projectImport, { generatedAt: 456 });
+assert.equal(projectSidecar.summary.imports, 2);
+assert.equal(projectSidecar.summary.emptySemanticIndex, false);
+assert.equal(projectSidecar.imports.some((entry) => entry.emptySemanticIndex === false), true);
 const universalAst = createUniversalAstFromDocument(result.document, { id: 'uast_todo', evidence: nativeImport.evidence });
 const universalJson = writeUniversalAstJson(universalAst);
 assert.equal(readUniversalAstJson(universalJson).document.id, 'mod_todo');

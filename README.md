@@ -50,6 +50,73 @@ console.log(summary.categories);
 console.log(readiness.readiness);
 ```
 
+Ask the compiler what is actually covered before sending native imports into a merge queue:
+
+```js
+import {
+  createNativeImportCoverageMatrix,
+  importNativeSource
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const imported = importNativeSource({
+  language: 'python',
+  sourcePath: 'todo.py',
+  sourceText: 'def add_todo(title):\n    return title\n'
+});
+
+const matrix = createNativeImportCoverageMatrix({ imports: [imported] });
+const python = matrix.languages.find((entry) => entry.language === 'python');
+
+console.log(python.imports.readiness); // scanner imports are intentionally review-required
+console.log(python.parserAdapters); // host-owned exact parsers such as LibCST can be injected
+```
+
+Create a compact semantic sidecar for swarm merge admission. This is the artifact a coordinator can index instead of reading a worker directory by hand:
+
+```js
+import {
+  createSemanticImportSidecar,
+  importNativeSource
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const imported = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/runtime.ts',
+  sourceText: `
+    export class Runtime {
+      step(frame: number) { return frame + 1; }
+    }
+  `
+});
+
+const sidecar = createSemanticImportSidecar(imported);
+
+console.log(sidecar.summary.emptySemanticIndex); // false when symbols were found
+console.log(sidecar.ownershipRegions[0].key); // source#src/runtime.ts#class#Runtime
+console.log(sidecar.patchHints[0].supportedOperations); // source-region patch operations
+```
+
+Project a native import back to source. Exact source is preserved only when the supplied text matches the import hash; otherwise the compiler emits declaration stubs with review-required loss evidence:
+
+```js
+import {
+  importNativeSource,
+  projectNativeImportToSource
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const sourceText = 'export function step(frame) { return frame + 1; }\n';
+const imported = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/runtime.js',
+  sourceText
+});
+
+const projection = projectNativeImportToSource(imported, { sourceText });
+
+console.log(projection.mode); // "preserved-source"
+console.log(projection.readiness.readiness); // "ready"
+```
+
 Use injected parser adapters when a real language parser is available but should not become a compiler runtime dependency:
 
 ```js
