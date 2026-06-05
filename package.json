@@ -1,0 +1,65 @@
+{
+  "name": "@shapeshift-labs/frontier-lang-compiler",
+  "version": "0.2.0",
+  "description": "Compiler facade for Frontier Lang source documents and language projection adapters.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "npm run build && node test/smoke.mjs",
+    "fuzz": "npm run build && node fuzz/smoke.mjs",
+    "bench": "npm run build && node bench/smoke.mjs",
+    "prepare": "npm run build",
+    "prepack": "npm test",
+    "pack:dry": "npm pack --dry-run",
+    "readme:packages": "node benchmarks/package-readme-sections.mjs",
+    "readme:packages:check": "node benchmarks/package-readme-sections.mjs --check"
+  },
+  "keywords": [
+    "frontier",
+    "semantic-merge",
+    "compiler",
+    "typescript",
+    "javascript",
+    "rust",
+    "python",
+    "c"
+  ],
+  "author": "ShapeShift Labs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/siliconjungle/-shapeshift-labs-frontier-lang-compiler.git"
+  },
+  "bugs": {
+    "url": "https://github.com/siliconjungle/-shapeshift-labs-frontier-lang-compiler/issues"
+  },
+  "homepage": "https://github.com/siliconjungle/-shapeshift-labs-frontier-lang-compiler#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@shapeshift-labs/frontier-lang-kernel": "0.3.0",
+    "@shapeshift-labs/frontier-lang-parser": "0.3.0",
+    "@shapeshift-labs/frontier-lang-checker": "0.3.0",
+    "@shapeshift-labs/frontier-lang-typescript": "0.3.0",
+    "@shapeshift-labs/frontier-lang-javascript": "0.2.0",
+    "@shapeshift-labs/frontier-lang-rust": "0.2.0",
+    "@shapeshift-labs/frontier-lang-python": "0.2.0",
+    "@shapeshift-labs/frontier-lang-c": "0.2.0"
+  }
+}
