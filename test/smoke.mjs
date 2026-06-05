@@ -1,5 +1,16 @@
 import assert from 'node:assert/strict';
-import { compileFrontierSource, emitForTarget, importNativeSource, normalizeCompileTarget, projectFrontierAst, renderTargetAst, resolveCapabilityAdapters } from '../dist/index.js';
+import {
+  compileFrontierSource,
+  createUniversalAstFromDocument,
+  emitForTarget,
+  importNativeSource,
+  normalizeCompileTarget,
+  projectFrontierAst,
+  readUniversalAstJson,
+  renderTargetAst,
+  resolveCapabilityAdapters,
+  writeUniversalAstJson
+} from '../dist/index.js';
 
 const source = `
 module TodoApp @id("mod_todo")
@@ -71,12 +82,27 @@ const nativeImport = importNativeSource({
     program: { id: 'program', kind: 'Program', languageKind: 'ESTree.Program', children: ['fn_add'] },
     fn_add: { id: 'fn_add', kind: 'FunctionDeclaration', languageKind: 'ESTree.FunctionDeclaration', span: { path: 'src/todo.js', startLine: 1, endLine: 3 } }
   },
+  semanticIndex: {
+    kind: 'frontier.lang.semanticIndex',
+    version: 1,
+    id: 'index_todo_js',
+    documents: [{ id: 'doc_todo_js', path: 'src/todo.js', language: 'javascript', nativeSourceId: 'native_source_src_todo_js' }],
+    symbols: [{ id: 'symbol:addTodo', scheme: 'frontier', name: 'addTodo', kind: 'function', language: 'javascript', nativeAstNodeId: 'fn_add' }],
+    occurrences: [{ id: 'occ_add_def', documentId: 'doc_todo_js', symbolId: 'symbol:addTodo', role: 'definition', nativeAstNodeId: 'fn_add' }],
+    relations: [{ id: 'rel_doc_defines_add', sourceId: 'doc_todo_js', predicate: 'defines', targetId: 'symbol:addTodo' }],
+    facts: []
+  },
   losses: [{ id: 'loss_body', severity: 'warning', kind: 'opaqueNative', message: 'Function body retained as native AST.' }]
 });
 assert.equal(nativeImport.kind, 'frontier.lang.importResult');
 assert.equal(nativeImport.nativeSource.kind, 'nativeSource');
+assert.equal(nativeImport.semanticIndex.symbols[0].id, 'symbol:addTodo');
+assert.equal(nativeImport.universalAst.semanticIndex.id, 'index_todo_js');
 assert.equal(nativeImport.patch.operations[0].op, 'upsertNode');
 assert.equal(nativeImport.evidence[0].status, 'passed');
+const universalAst = createUniversalAstFromDocument(result.document, { id: 'uast_todo', evidence: nativeImport.evidence });
+const universalJson = writeUniversalAstJson(universalAst);
+assert.equal(readUniversalAstJson(universalJson).document.id, 'mod_todo');
 assert.match(compileFrontierSource(source, { target: 'rust' }).output, /pub struct Todo/);
 assert.match(compileFrontierSource(source, { target: 'python' }).output, /class Todo/);
 assert.match(compileFrontierSource(source, { target: 'c' }).output, /typedef struct Todo/);

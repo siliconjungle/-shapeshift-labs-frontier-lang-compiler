@@ -3,9 +3,12 @@ import {
   createImportResult,
   createNativeAstRecord,
   createPatch,
+  createUniversalAstEnvelope,
   hashDocumentBase,
   hashSemanticValue,
-  nativeSourceNode
+  nativeSourceNode,
+  stableUniversalAstJson,
+  validateUniversalAstEnvelope
 } from '@shapeshift-labs/frontier-lang-kernel';
 import { parseFrontierFile, parseFrontierSource } from '@shapeshift-labs/frontier-lang-parser';
 import { checkDocument } from '@shapeshift-labs/frontier-lang-checker';
@@ -202,6 +205,21 @@ export function importNativeSource(input) {
       semanticStatus: input.semanticStatus ?? (semanticNodes.length ? 'mapped' : 'native-only')
     }
   }];
+  const semanticIndex = input.semanticIndex;
+  const universalAst = createUniversalAstEnvelope({
+    id: input.universalAstId ?? `universal_ast_${importIdPart}`,
+    document,
+    nativeSources: [nativeSource],
+    semanticIndex,
+    losses,
+    evidence,
+    metadata: {
+      sourceLanguage: language,
+      sourcePath,
+      semanticStatus: input.semanticStatus ?? (semanticNodes.length ? 'mapped' : 'native-only'),
+      ...input.universalAstMetadata
+    }
+  });
   const patch = input.patch ?? createPatch({
     id: input.patchId ?? `patch_${importIdPart}_import`,
     author: input.author ?? '@shapeshift-labs/frontier-lang-compiler/importNativeSource',
@@ -212,7 +230,7 @@ export function importNativeSource(input) {
       touches: [{ id: node.id, access: node.kind === 'nativeSource' ? 'evidence' : 'schema' }]
     })),
     evidence,
-    metadata: { sourceLanguage: language, sourcePath }
+    metadata: { sourceLanguage: language, sourcePath, semanticIndexId: semanticIndex?.id, universalAstId: universalAst.id }
   });
   return {
     ...createImportResult({
@@ -222,10 +240,14 @@ export function importNativeSource(input) {
       document,
       patch,
       nativeAst,
+      semanticIndex,
+      universalAst,
       losses,
       evidence,
       metadata: {
         nativeSourceId: nativeSource.id,
+        semanticIndexId: semanticIndex?.id,
+        universalAstId: universalAst.id,
         semanticStatus: input.semanticStatus ?? (semanticNodes.length ? 'mapped' : 'native-only'),
         mappings: input.mappings ?? [],
         ...input.metadata
@@ -233,6 +255,33 @@ export function importNativeSource(input) {
     }),
     nativeSource
   };
+}
+
+export function createUniversalAstFromDocument(document, input = {}) {
+  return createUniversalAstEnvelope({
+    id: input.id ?? `universal_ast_${idFragment(document.id)}`,
+    document,
+    semanticIndex: input.semanticIndex,
+    evidence: input.evidence ?? [],
+    metadata: input.metadata
+  });
+}
+
+export function readUniversalAstJson(source) {
+  const envelope = JSON.parse(source);
+  const issues = validateUniversalAstEnvelope(envelope);
+  if (issues.length > 0) {
+    throw new Error(`Invalid Frontier universal AST JSON: ${issues.join('; ')}`);
+  }
+  return envelope;
+}
+
+export function writeUniversalAstJson(envelope) {
+  const issues = validateUniversalAstEnvelope(envelope);
+  if (issues.length > 0) {
+    throw new Error(`Invalid Frontier universal AST envelope: ${issues.join('; ')}`);
+  }
+  return stableUniversalAstJson(envelope);
 }
 
 export function emitForTarget(document, target = 'typescript', options = {}) {

@@ -4,12 +4,14 @@ import type {
   CompileTarget,
   EvidenceRecord,
   FrontierLangDocument,
+  FrontierUniversalAstEnvelope,
   FrontierSourceLanguage,
   LanguageImportResult,
   NativeAstLossRecord,
   NativeAstNode,
   NativeAstRecord,
   NativeSourceNode,
+  SemanticIndexRecord,
   SemanticNode,
   SemanticPatchBundle
 } from '@shapeshift-labs/frontier-lang-kernel';
@@ -97,11 +99,16 @@ export interface ImportNativeSourceOptions {
   readonly patchId?: string;
   readonly author?: string;
   readonly target?: CompileTarget;
+  readonly semanticIndex?: SemanticIndexRecord;
+  readonly universalAstId?: string;
+  readonly universalAstMetadata?: Record<string, unknown>;
   readonly metadata?: Record<string, unknown>;
 }
 
 export type NativeSourceImportResult = LanguageImportResult & {
   readonly nativeSource: NativeSourceNode;
+  readonly semanticIndex?: SemanticIndexRecord;
+  readonly universalAst: FrontierUniversalAstEnvelope;
 };
 
 export declare const FrontierCompileTargets: readonly FrontierCompileTarget[];
@@ -112,4 +119,12 @@ export declare function projectFrontierAst(document: FrontierLangDocument, targe
 export declare function renderTargetAst(ast: FrontierTargetAst, target?: FrontierCompileOptions['target']): string;
 export declare function resolveCapabilityAdapters(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: { readonly platform?: string }): readonly CapabilityResolution[];
 export declare function importNativeSource(input: ImportNativeSourceOptions): NativeSourceImportResult;
+export declare function createUniversalAstFromDocument(document: FrontierLangDocument, input?: {
+  readonly id?: string;
+  readonly semanticIndex?: SemanticIndexRecord;
+  readonly evidence?: readonly EvidenceRecord[];
+  readonly metadata?: Record<string, unknown>;
+}): FrontierUniversalAstEnvelope;
+export declare function readUniversalAstJson(source: string): FrontierUniversalAstEnvelope;
+export declare function writeUniversalAstJson(envelope: FrontierUniversalAstEnvelope): string;
 export declare function emitForTarget(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: FrontierCompileEmitOptions): string;
