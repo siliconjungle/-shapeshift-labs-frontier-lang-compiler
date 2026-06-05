@@ -27,6 +27,7 @@ import {
   createClangAstNativeImporterAdapter,
   createGoAstNativeImporterAdapter,
   createJavaAstNativeImporterAdapter,
+  createKotlinPsiNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
   createSwiftSyntaxNativeImporterAdapter,
@@ -119,6 +120,7 @@ import type {
   CSharpRoslynNativeImporterAdapterOptions,
   GoAstNativeImporterAdapterOptions,
   JavaAstNativeImporterAdapterOptions,
+  KotlinPsiNativeImporterAdapterOptions,
   RustSynNativeImporterAdapterOptions,
   SwiftSyntaxNativeImporterAdapterOptions,
   SemanticImportSidecar,
@@ -162,6 +164,7 @@ type ExpectedPublicRuntimeExport =
   | 'createClangAstNativeImporterAdapter'
   | 'createGoAstNativeImporterAdapter'
   | 'createJavaAstNativeImporterAdapter'
+  | 'createKotlinPsiNativeImporterAdapter'
   | 'createPythonAstNativeImporterAdapter'
   | 'createRustSynNativeImporterAdapter'
   | 'createSwiftSyntaxNativeImporterAdapter'
@@ -358,6 +361,7 @@ const rustSynAdapter: NativeImporterAdapter = createRustSynNativeImporterAdapter
 const clangAstAdapter: NativeImporterAdapter = createClangAstNativeImporterAdapter();
 const goAstAdapter: NativeImporterAdapter = createGoAstNativeImporterAdapter();
 const javaAstAdapter: NativeImporterAdapter = createJavaAstNativeImporterAdapter();
+const kotlinPsiAdapter: NativeImporterAdapter = createKotlinPsiNativeImporterAdapter();
 const csharpRoslynAdapter: NativeImporterAdapter = createCSharpRoslynNativeImporterAdapter();
 const swiftSyntaxAdapter: NativeImporterAdapter = createSwiftSyntaxNativeImporterAdapter();
 const treeAdapter: NativeImporterAdapter = createTreeSitterNativeImporterAdapter({ language: 'javascript' });
@@ -403,7 +407,7 @@ const adapterCapabilityEvidence: Promise<NativeImporterAdapterCoverageCapability
 const parserFormatOptions: NativeParserAstFormatMatrixOptions = {
   generatedAt: 4,
   imports: [imported],
-  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, csharpRoslynAdapter, swiftSyntaxAdapter, treeAdapter]
+  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, kotlinPsiAdapter, csharpRoslynAdapter, swiftSyntaxAdapter, treeAdapter]
 };
 const parserFormatMatrix: NativeParserAstFormatMatrix = createNativeParserAstFormatMatrix(parserFormatOptions);
 const rustSynAdapterOptions: RustSynNativeImporterAdapterOptions = {
@@ -432,6 +436,19 @@ const javaAstAdapterOptions: JavaAstNativeImporterAdapterOptions = {
   bindingEvidence: { hash: 'fixture-java-bindings' },
   annotationProcessing: { enabled: false, processors: [] },
   ast: { kind: 'CompilationUnit', types: [] }
+};
+const kotlinPsiAdapterOptions: KotlinPsiNativeImporterAdapterOptions = {
+  kotlinVersion: '2.1',
+  languageVersion: '2.1',
+  apiVersion: '2.1',
+  analysisApiEvidence: { hash: 'fixture-kotlin-analysis-api' },
+  firEvidence: { hash: 'fixture-kotlin-fir' },
+  compilerPluginEvidence: { hash: 'fixture-kotlin-plugins', plugins: ['kotlinx.serialization'] },
+  kspEvidence: { hash: 'fixture-kotlin-ksp' },
+  kaptEvidence: { hash: 'fixture-kotlin-kapt' },
+  multiplatformEvidence: { hash: 'fixture-kotlin-mpp', targetPlatform: 'jvm' },
+  buildVariantEvidence: { hash: 'fixture-kotlin-build-variant', selectedVariant: 'debug' },
+  ast: { kind: 'KtFile', declarations: [] }
 };
 const csharpRoslynAdapterOptions: CSharpRoslynNativeImporterAdapterOptions = {
   languageVersion: '12',

@@ -7,6 +7,7 @@ import {
   createEstreeNativeImporterAdapter,
   createGoAstNativeImporterAdapter,
   createJavaAstNativeImporterAdapter,
+  createKotlinPsiNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
@@ -48,6 +49,7 @@ const compileDurationMs = performance.now() - start;
 
 const importStart = performance.now();
 const estreeAdapter = createEstreeNativeImporterAdapter();
+const kotlinPsiAdapter = createKotlinPsiNativeImporterAdapter();
 let nativeSymbols = 0;
 const nativeImportResults = [];
 for (let index = 0; index < 150; index += 1) {
@@ -75,6 +77,37 @@ for (let index = 0; index < 150; index += 1) {
   nativeSymbols += imported.semanticIndex?.symbols?.length ?? 0;
   nativeImportResults.push(imported);
 }
+for (let index = 0; index < 50; index += 1) {
+  const imported = await runNativeImporterAdapter(kotlinPsiAdapter, {
+    sourcePath: `src/bench-${index}.kt`,
+    sourceText: `package bench\nclass BenchKotlin${index}(val title: String) { fun render${index}() = title }\n`,
+    adapterOptions: {
+      ast: {
+        kind: 'KtFile',
+        packageDirective: { kind: 'KtPackageDirective', fqName: 'bench' },
+        declarations: [{
+          kind: 'KtClass',
+          name: `BenchKotlin${index}`,
+          declarations: [{
+            kind: 'KtPrimaryConstructor',
+            parameters: [{
+              kind: 'KtParameter',
+              name: 'title',
+              typeReference: { text: 'String' },
+              valOrVarKeyword: 'val'
+            }]
+          }, {
+            kind: 'KtNamedFunction',
+            name: `render${index}`,
+            bodyExpression: { kind: 'KtBlockExpression' }
+          }]
+        }]
+      }
+    }
+  });
+  nativeSymbols += imported.semanticIndex?.symbols?.length ?? 0;
+  nativeImportResults.push(imported);
+}
 const importDurationMs = performance.now() - importStart;
 
 const matrixStart = performance.now();
@@ -84,7 +117,7 @@ const matrixDurationMs = performance.now() - matrixStart;
 const parserFormatMatrixStart = performance.now();
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   imports: nativeImportResults,
-  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter(), createGoAstNativeImporterAdapter(), createJavaAstNativeImporterAdapter(), createCSharpRoslynNativeImporterAdapter(), createSwiftSyntaxNativeImporterAdapter()]
+  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter(), createGoAstNativeImporterAdapter(), createJavaAstNativeImporterAdapter(), kotlinPsiAdapter, createCSharpRoslynNativeImporterAdapter(), createSwiftSyntaxNativeImporterAdapter()]
 });
 const parserFormatMatrixDurationMs = performance.now() - parserFormatMatrixStart;
 
@@ -233,7 +266,7 @@ console.log(JSON.stringify({
   compiles: 250,
   bytes,
   compileDurationMs: Number(compileDurationMs.toFixed(2)),
-  nativeImports: 150,
+  nativeImports: nativeImportResults.length,
   nativeSymbols,
   nativeImportDurationMs: Number(importDurationMs.toFixed(2)),
   coverageMatrixLanguages: coverageMatrix.summary.languages,

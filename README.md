@@ -336,8 +336,10 @@ import {
   createCSharpRoslynNativeImporterAdapter,
   createGoAstNativeImporterAdapter,
   createJavaAstNativeImporterAdapter,
+  createKotlinPsiNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
+  createSwiftSyntaxNativeImporterAdapter,
   importNativeProject,
   runNativeImporterAdapter
 } from '@shapeshift-labs/frontier-lang-compiler';
@@ -366,6 +368,11 @@ const javaAstAdapter = createJavaAstNativeImporterAdapter({
   javaVersion: '21',
   sourceLevel: '21'
 });
+const kotlinPsiAdapter = createKotlinPsiNativeImporterAdapter({
+  parserModule: hostKotlinPsiParser,
+  kotlinVersion: '2.1',
+  analysisApiEvidence: { hash: kotlinAnalysisApiIndexHash }
+});
 const csharpRoslynAdapter = createCSharpRoslynNativeImporterAdapter({
   parserModule: hostRoslynParser,
   languageVersion: '12',
@@ -384,7 +391,7 @@ const imported = await runNativeImporterAdapter(babelAdapter, {
 
 const project = await importNativeProject({
   projectRoot: 'src',
-  adapters: [babelAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, csharpRoslynAdapter, swiftSyntaxAdapter],
+  adapters: [babelAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, kotlinPsiAdapter, csharpRoslynAdapter, swiftSyntaxAdapter],
   sources: [
     { language: 'typescript', adapter: babelAdapter.id, sourcePath: 'src/todo.ts', sourceText },
     { language: 'python', adapter: pythonAstAdapter.id, sourcePath: 'tools/todo.py', sourceText: pythonSource },
@@ -392,6 +399,7 @@ const project = await importNativeProject({
     { language: 'c', adapter: clangAstAdapter.id, sourcePath: 'native/todo.c', sourceText: cSource },
     { language: 'go', adapter: goAstAdapter.id, sourcePath: 'cmd/todo/main.go', sourceText: goSource },
     { language: 'java', adapter: javaAstAdapter.id, sourcePath: 'src/main/java/Todo.java', sourceText: javaSource },
+    { language: 'kotlin', adapter: kotlinPsiAdapter.id, sourcePath: 'src/main/kotlin/Todo.kt', sourceText: kotlinSource },
     { language: 'csharp', adapter: csharpRoslynAdapter.id, sourcePath: 'src/Todo.cs', sourceText: csharpSource },
     { language: 'swift', adapter: swiftSyntaxAdapter.id, sourcePath: 'Sources/Todo.swift', sourceText: swiftSource }
   ]
@@ -417,6 +425,7 @@ The built-in adapter factories are dependency-light wrappers for caller-owned pa
 - `createClangAstNativeImporterAdapter`
 - `createGoAstNativeImporterAdapter`
 - `createJavaAstNativeImporterAdapter`
+- `createKotlinPsiNativeImporterAdapter`
 - `createCSharpRoslynNativeImporterAdapter`
 - `createSwiftSyntaxNativeImporterAdapter`
 - `createTreeSitterNativeImporterAdapter`

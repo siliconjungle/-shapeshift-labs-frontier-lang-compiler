@@ -7,6 +7,7 @@ import {
   createEstreeNativeImporterAdapter,
   createGoAstNativeImporterAdapter,
   createJavaAstNativeImporterAdapter,
+  createKotlinPsiNativeImporterAdapter,
   createNativeImportCoverageMatrix,
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
@@ -127,6 +128,7 @@ const rustSynAdapter = createRustSynNativeImporterAdapter();
 const clangAstAdapter = createClangAstNativeImporterAdapter();
 const goAstAdapter = createGoAstNativeImporterAdapter();
 const javaAstAdapter = createJavaAstNativeImporterAdapter();
+const kotlinPsiAdapter = createKotlinPsiNativeImporterAdapter();
 const csharpRoslynAdapter = createCSharpRoslynNativeImporterAdapter();
 const swiftSyntaxAdapter = createSwiftSyntaxNativeImporterAdapter();
 for (let index = 0; index < 50; index += 1) {
@@ -297,6 +299,36 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(javaAstImport.adapter.parser, 'javac');
   assert.equal(javaAstImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
   assert.equal(javaAstImport.semanticIndex.symbols.some((symbol) => symbol.name === `FuzzJava${index}`), true);
+  const kotlinPsiImport = await runNativeImporterAdapter(kotlinPsiAdapter, {
+    sourcePath: `src/Fuzz${index}.kt`,
+    sourceText: `package fuzz\nclass FuzzKotlin${index}(val value: String) { fun fuzzKotlin${index}() {} }\n`,
+    adapterOptions: {
+      ast: {
+        kind: 'KtFile',
+        packageDirective: { kind: 'KtPackageDirective', fqName: 'fuzz' },
+        declarations: [{
+          kind: 'KtClass',
+          name: `FuzzKotlin${index}`,
+          declarations: [{
+            kind: 'KtPrimaryConstructor',
+            parameters: [{
+              kind: 'KtParameter',
+              name: 'value',
+              typeReference: { text: 'String' },
+              valOrVarKeyword: 'val'
+            }]
+          }, {
+            kind: 'KtNamedFunction',
+            name: `fuzzKotlin${index}`,
+            bodyExpression: { kind: 'KtBlockExpression' }
+          }]
+        }]
+      }
+    }
+  });
+  assert.equal(kotlinPsiImport.adapter.parser, 'kotlin-psi');
+  assert.equal(kotlinPsiImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
+  assert.equal(kotlinPsiImport.semanticIndex.symbols.some((symbol) => symbol.name === `FuzzKotlin${index}`), true);
   const csharpRoslynImport = await runNativeImporterAdapter(csharpRoslynAdapter, {
     sourcePath: `src/Fuzz${index}.cs`,
     sourceText: `namespace fuzz; public class FuzzCSharp${index} { private string value; public void FuzzCSharpMethod${index}() {} }\n`,
@@ -456,7 +488,7 @@ assert.ok(matrix.languages.find((entry) => entry.language === 'javascript').impo
 assert.ok(matrix.languages.find((entry) => entry.language === 'python').imports.symbols >= 1);
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   imports: project.imports,
-  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, csharpRoslynAdapter, swiftSyntaxAdapter]
+  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, kotlinPsiAdapter, csharpRoslynAdapter, swiftSyntaxAdapter]
 });
 assert.ok(parserFormatMatrix.summary.formats >= 2);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast').adapters.total >= 1);
@@ -464,6 +496,7 @@ assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'rust-syn').ad
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'clang-ast-json').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'go-ast').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'java-ast').adapters.total >= 1);
+assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'kotlin-psi').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'roslyn-csharp').adapters.total >= 1);
 assert.ok(parserFormatMatrix.formats.find((entry) => entry.id === 'swift-syntax').adapters.total >= 1);
 const projectionMatrix = createProjectionTargetLossMatrix({ imports: project.imports });

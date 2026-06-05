@@ -14,6 +14,7 @@ import {
   createClangAstNativeImporterAdapter,
   createGoAstNativeImporterAdapter,
   createJavaAstNativeImporterAdapter,
+  createKotlinPsiNativeImporterAdapter,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
   createSwiftSyntaxNativeImporterAdapter,
@@ -72,6 +73,7 @@ for (const requiredExport of [
   'createClangAstNativeImporterAdapter',
   'createGoAstNativeImporterAdapter',
   'createJavaAstNativeImporterAdapter',
+  'createKotlinPsiNativeImporterAdapter',
   'createSwiftSyntaxNativeImporterAdapter',
   'createPythonAstNativeImporterAdapter',
   'createRustSynNativeImporterAdapter',
@@ -1651,6 +1653,130 @@ const missingSwiftImport = await runNativeImporterAdapter(createSwiftSyntaxNativ
 });
 assert.equal(missingSwiftImport.nativeAst.nodes[missingSwiftImport.nativeAst.rootId].kind, 'MissingInjectedParser');
 assert.equal(missingSwiftImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parser.missing'), true);
+const kotlinFixtureSource = 'package demo\nimport kotlinx.coroutines.flow.Flow\n@Serializable data class Todo(val title: String) { suspend fun addTodo(title: String) {} }\nexpect class PlatformStore\n';
+const kotlinFixture = {
+  kind: 'KtFile',
+  packageDirective: {
+    kind: 'KtPackageDirective',
+    fqName: 'demo',
+    startLine: 1,
+    startColumn: 1
+  },
+  imports: [{
+    kind: 'KtImportDirective',
+    importedFqName: 'kotlinx.coroutines.flow.Flow',
+    startLine: 2,
+    startColumn: 1
+  }],
+  declarations: [{
+    kind: 'KtClass',
+    name: 'Todo',
+    classKind: 'class',
+    modifiers: ['data'],
+    annotationEntries: [{ kind: 'KtAnnotationEntry', shortName: 'Serializable' }],
+    startLine: 3,
+    startColumn: 1,
+    declarations: [{
+      kind: 'KtPrimaryConstructor',
+      parameters: [{
+        kind: 'KtParameter',
+        name: 'title',
+        typeReference: { text: 'String' },
+        valOrVarKeyword: 'val',
+        startLine: 3,
+        startColumn: 35
+      }]
+    }, {
+      kind: 'KtNamedFunction',
+      name: 'addTodo',
+      modifiers: ['suspend'],
+      valueParameters: [{ kind: 'KtParameter', name: 'title', typeReference: { text: 'String' } }],
+      bodyExpression: { kind: 'KtBlockExpression' },
+      startLine: 3,
+      startColumn: 56
+    }]
+  }, {
+    kind: 'KtClass',
+    name: 'PlatformStore',
+    modifiers: ['expect'],
+    classKind: 'class',
+    startLine: 4,
+    startColumn: 1
+  }]
+};
+const kotlinPsiImport = await runNativeImporterAdapter(createKotlinPsiNativeImporterAdapter({
+  kotlinVersion: '2.1',
+  languageVersion: '2.1',
+  apiVersion: '2.1',
+  analysisApiEvidence: { hash: 'kotlin-analysis-api-fixture', symbols: ['Todo'] },
+  multiplatformEvidence: { hash: 'kotlin-mpp-fixture', targetPlatform: 'common' }
+}), {
+  sourcePath: 'src/Todo.kt',
+  sourceText: kotlinFixtureSource,
+  adapterOptions: { ast: kotlinFixture }
+});
+assert.equal(kotlinPsiImport.adapter.parser, 'kotlin-psi');
+assert.equal(kotlinPsiImport.adapter.coverage.exactness, 'exact-parser-ast');
+assert.equal(kotlinPsiImport.adapter.coverage.tokens, true);
+assert.equal(kotlinPsiImport.adapter.coverage.trivia, true);
+assert.equal(kotlinPsiImport.nativeAst.parser, 'kotlin-psi');
+assert.equal(kotlinPsiImport.metadata.astFormat, 'kotlin-psi');
+assert.equal(kotlinPsiImport.metadata.kotlinVersion, '2.1');
+assert.equal(kotlinPsiImport.metadata.analysisApiEvidence.hash, 'kotlin-analysis-api-fixture');
+assert.equal(kotlinPsiImport.semanticIndex.symbols.some((symbol) => symbol.name === 'demo' && symbol.kind === 'namespace'), true);
+assert.equal(kotlinPsiImport.semanticIndex.symbols.some((symbol) => symbol.name === 'kotlinx.coroutines.flow.Flow' && symbol.kind === 'module'), true);
+assert.equal(kotlinPsiImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo' && symbol.kind === 'class'), true);
+assert.equal(kotlinPsiImport.semanticIndex.symbols.some((symbol) => symbol.name === 'title' && symbol.kind === 'property'), true);
+assert.equal(kotlinPsiImport.semanticIndex.symbols.some((symbol) => symbol.name === 'addTodo' && symbol.kind === 'method'), true);
+assert.equal(kotlinPsiImport.semanticIndex.symbols.some((symbol) => symbol.name === 'PlatformStore' && symbol.kind === 'class'), true);
+assert.equal(kotlinPsiImport.losses.some((loss) => loss.kind === 'metaprogramming'), true);
+assert.equal(kotlinPsiImport.losses.some((loss) => loss.kind === 'unsupportedSemantic' && loss.metadata?.feature === 'coroutine'), true);
+assert.equal(kotlinPsiImport.losses.some((loss) => loss.kind === 'unsupportedSemantic' && loss.metadata?.feature === 'expect-actual'), true);
+assert.equal(kotlinPsiImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
+const generatedKotlinImport = await runNativeImporterAdapter(createKotlinPsiNativeImporterAdapter(), {
+  sourcePath: 'build/generated/ksp/GeneratedTodo.kt',
+  sourceText: 'class GeneratedTodo\n',
+  adapterOptions: {
+    ast: {
+      kind: 'KtFile',
+      declarations: [{ kind: 'KtClass', name: 'GeneratedTodo' }]
+    }
+  }
+});
+assert.equal(generatedKotlinImport.losses.some((loss) => loss.kind === 'generatedCode'), true);
+const scriptKotlinImport = await runNativeImporterAdapter(createKotlinPsiNativeImporterAdapter(), {
+  sourcePath: 'scripts/setup.main.kts',
+  sourceText: 'println("setup")\n',
+  adapterOptions: {
+    ast: {
+      kind: 'KtScript',
+      statements: [{ kind: 'KtCallExpression', calleeExpression: { text: 'println' } }]
+    }
+  }
+});
+assert.equal(scriptKotlinImport.metadata.script, true);
+assert.equal(scriptKotlinImport.losses.some((loss) => loss.kind === 'unsupportedSemantic' && loss.metadata?.feature === 'script'), true);
+const malformedKotlinImport = await runNativeImporterAdapter(createKotlinPsiNativeImporterAdapter({
+  parse(sourceText) {
+    return {
+      ast: { kind: 'KtFile', declarations: [{ kind: 'PsiErrorElement', text: sourceText, startLine: 2, startColumn: 1 }] },
+      diagnostics: [{ code: 'KOTLIN_PARSE', message: 'expected declaration', loc: { line: 2, column: 1 } }]
+    };
+  }
+}), {
+  sourcePath: 'src/Broken.kt',
+  sourceText: 'class Broken {\n'
+});
+assert.equal(malformedKotlinImport.diagnostics.some((diagnostic) => diagnostic.code === 'KOTLIN_PARSE'), true);
+assert.equal(malformedKotlinImport.losses.some((loss) => loss.kind === 'unsupportedSyntax' && loss.severity === 'error'), true);
+assert.equal(malformedKotlinImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'blocked');
+const missingKotlinImport = await runNativeImporterAdapter(createKotlinPsiNativeImporterAdapter(), {
+  sourcePath: 'src/missing_kotlin.kt',
+  sourceText: 'class Missing\n',
+  adapterOptions: { ast: { body: [] } }
+});
+assert.equal(missingKotlinImport.nativeAst.nodes[missingKotlinImport.nativeAst.rootId].kind, 'MissingInjectedParser');
+assert.equal(missingKotlinImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parser.missing'), true);
 const treeName = {
   type: 'identifier',
   text: 'from_tree',
@@ -2374,7 +2500,7 @@ assert.equal(haskellCoverage.imports.readiness, 'needs-review');
 assert.deepEqual(coverageMatrix.metadata.projectionTargetLossClasses, [...ProjectionTargetLossClasses]);
 const parserFormatMatrix = createNativeParserAstFormatMatrix({
   generatedAt: 234,
-  imports: [estreeAdapterImport, babelAdapterImport, tsAdapterImport, pythonAstImport, rustSynImport, clangImport, goAstImport, javaAstImport, csharpRoslynImport, swiftSyntaxImport, treeImport],
+  imports: [estreeAdapterImport, babelAdapterImport, tsAdapterImport, pythonAstImport, rustSynImport, clangImport, goAstImport, javaAstImport, kotlinPsiImport, csharpRoslynImport, swiftSyntaxImport, treeImport],
   adapters: [
     createEstreeNativeImporterAdapter(),
     createBabelNativeImporterAdapter(),
@@ -2384,6 +2510,7 @@ const parserFormatMatrix = createNativeParserAstFormatMatrix({
     createClangAstNativeImporterAdapter(),
     createGoAstNativeImporterAdapter(),
     createJavaAstNativeImporterAdapter(),
+    createKotlinPsiNativeImporterAdapter(),
     createCSharpRoslynNativeImporterAdapter(),
     createSwiftSyntaxNativeImporterAdapter(),
     createTreeSitterNativeImporterAdapter({ language: 'javascript' })
@@ -2396,6 +2523,7 @@ assert.equal(NativeParserAstFormats.includes('rust-syn'), true);
 assert.equal(NativeParserAstFormats.includes('clang-ast-json'), true);
 assert.equal(NativeParserAstFormats.includes('go-ast'), true);
 assert.equal(NativeParserAstFormats.includes('java-ast'), true);
+assert.equal(NativeParserAstFormats.includes('kotlin-psi'), true);
 assert.equal(NativeParserAstFormats.includes('roslyn-csharp'), true);
 assert.equal(NativeParserAstFormats.includes('swift-syntax'), true);
 assert.equal(NativeParserAstFormatProfiles.some((profile) => profile.id === 'tree-sitter'), true);
@@ -2404,10 +2532,11 @@ assert.equal(getNativeParserAstFormatProfile('syn').id, 'rust-syn');
 assert.equal(getNativeParserAstFormatProfile('libclang').id, 'clang-ast-json');
 assert.equal(getNativeParserAstFormatProfile('go/parser').id, 'go-ast');
 assert.equal(getNativeParserAstFormatProfile('javac').id, 'java-ast');
+assert.equal(getNativeParserAstFormatProfile('kotlin-compiler').id, 'kotlin-psi');
 assert.equal(getNativeParserAstFormatProfile('roslyn').id, 'roslyn-csharp');
 assert.equal(getNativeParserAstFormatProfile('SwiftSyntax').id, 'swift-syntax');
-assert.ok(parserFormatMatrix.summary.formats >= 10);
-assert.equal(parserFormatMatrix.summary.imports, 11);
+assert.ok(parserFormatMatrix.summary.formats >= 11);
+assert.equal(parserFormatMatrix.summary.imports, 12);
 assert.ok(parserFormatMatrix.summary.nativeAstNodes >= 5);
 assert.ok(parserFormatMatrix.summary.effectiveCapabilities.exactAst >= 9);
 const pythonAstFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'python-ast');
@@ -2435,6 +2564,11 @@ assert.equal(javaAstFormatCoverage.imports.total, 1);
 assert.equal(javaAstFormatCoverage.imports.readiness, 'ready');
 assert.equal(javaAstFormatCoverage.imports.symbols >= 8, true);
 assert.equal(javaAstFormatCoverage.adapters.total, 1);
+const kotlinPsiFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'kotlin-psi');
+assert.equal(kotlinPsiFormatCoverage.imports.total, 1);
+assert.equal(kotlinPsiFormatCoverage.imports.readiness, 'needs-review');
+assert.equal(kotlinPsiFormatCoverage.imports.symbols >= 5, true);
+assert.equal(kotlinPsiFormatCoverage.adapters.total, 1);
 const csharpRoslynFormatCoverage = parserFormatMatrix.formats.find((entry) => entry.id === 'roslyn-csharp');
 assert.equal(csharpRoslynFormatCoverage.imports.total, 1);
 assert.equal(csharpRoslynFormatCoverage.imports.readiness, 'ready');

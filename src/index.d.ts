@@ -1497,6 +1497,45 @@ export interface JavaAstNativeImporterAdapterOptions {
   readonly maxNodes?: number;
 }
 
+export interface KotlinPsiNativeImporterAdapterOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage;
+  readonly parser?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly coverage?: NativeImporterAdapterCoverageInput;
+  readonly supportedExtensions?: readonly string[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly ast?: unknown;
+  readonly nativeAst?: unknown;
+  readonly ktFile?: unknown;
+  readonly file?: unknown;
+  readonly sourceFile?: unknown;
+  readonly root?: unknown;
+  readonly parse?: (sourceText: string, options: Record<string, unknown>) => unknown;
+  readonly parserModule?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly kotlinPsi?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly kotlinCompiler?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly intellijPsi?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
+  readonly parserOptions?: Record<string, unknown>;
+  readonly kotlinVersion?: string;
+  readonly languageVersion?: string;
+  readonly apiVersion?: string;
+  readonly script?: boolean;
+  readonly generated?: boolean;
+  readonly analysisApiEvidence?: unknown;
+  readonly firEvidence?: unknown;
+  readonly compilerPluginEvidence?: unknown;
+  readonly kspEvidence?: unknown;
+  readonly kaptEvidence?: unknown;
+  readonly multiplatformEvidence?: unknown;
+  readonly buildVariantEvidence?: unknown;
+  readonly positionResolver?: (position: unknown) => unknown;
+  readonly lineMap?: unknown;
+  readonly includeAnnotations?: boolean;
+  readonly maxNodes?: number;
+}
+
 export interface CSharpRoslynNativeImporterAdapterOptions {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage;
@@ -1938,6 +1977,7 @@ export declare function createRustSynNativeImporterAdapter(options?: RustSynNati
 export declare function createClangAstNativeImporterAdapter(options?: ClangAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createGoAstNativeImporterAdapter(options?: GoAstNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createJavaAstNativeImporterAdapter(options?: JavaAstNativeImporterAdapterOptions): NativeImporterAdapter;
+export declare function createKotlinPsiNativeImporterAdapter(options?: KotlinPsiNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createCSharpRoslynNativeImporterAdapter(options?: CSharpRoslynNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createSwiftSyntaxNativeImporterAdapter(options?: SwiftSyntaxNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createTreeSitterNativeImporterAdapter(options?: TreeSitterNativeImporterAdapterOptions): NativeImporterAdapter;

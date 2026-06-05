@@ -439,6 +439,18 @@ export const NativeParserAstFormatProfiles = Object.freeze([
     supportsErrorRecovery: true,
     notes: ['Java compiler/parser ASTs expose package/import/type/member declarations and source ranges; classpath/module-path, bindings, annotation processors, generated sources, Lombok expansion, comments/trivia, and control-flow evidence remain host-owned.']
   }),
+  nativeParserAstFormatProfile('kotlin-psi', {
+    aliases: ['kotlin-compiler', 'kotlin-compiler-psi', 'intellij-psi', 'kt-psi', 'kotlin-ast'],
+    kind: 'compiler-ast',
+    languages: ['kotlin'],
+    parserAdapters: ['kotlin-compiler', 'kotlin-psi', 'intellij-psi'],
+    exactness: 'exact-parser-ast',
+    sourceRangeModel: 'text-range-line-column',
+    preservesTokens: true,
+    preservesTrivia: true,
+    supportsErrorRecovery: true,
+    notes: ['Kotlin PSI exposes source syntax and IntelliJ parser errors; Analysis API symbols, FIR/K2 types, expect/actual matching, compiler plugins, generated sources, scripts, and build variants remain host-owned evidence.']
+  }),
   nativeParserAstFormatProfile('roslyn-csharp', {
     aliases: ['roslyn', 'csharp-roslyn', 'c#-roslyn', 'microsoft-codeanalysis-csharp', 'csharp-syntax'],
     kind: 'compiler-ast',
@@ -2950,6 +2962,78 @@ export function createJavaAstNativeImporterAdapter(options = {}) {
         generated: input.options?.generated ?? options.generated ?? parsed?.generated,
         annotationProcessing: input.options?.annotationProcessing ?? options.annotationProcessing ?? parsed?.annotationProcessing,
         bindingEvidence: input.options?.bindingEvidence ?? options.bindingEvidence ?? parsed?.bindingEvidence,
+        positionResolver: input.options?.positionResolver ?? options.positionResolver,
+        lineMap: input.options?.lineMap ?? options.lineMap ?? parsed?.lineMap,
+        includeAnnotations: options.includeAnnotations ?? input.options?.includeAnnotations
+      });
+    }
+  };
+}
+
+export function createKotlinPsiNativeImporterAdapter(options = {}) {
+  return {
+    id: options.id ?? 'frontier.kotlin-psi-native-importer',
+    language: options.language ?? 'kotlin',
+    parser: options.parser ?? 'kotlin-psi',
+    version: options.version,
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    coverage: nativeImporterAdapterCoverage({
+      exactness: 'exact-parser-ast',
+      exactAst: true,
+      tokens: true,
+      trivia: true,
+      diagnostics: true,
+      sourceRanges: true,
+      generatedRanges: false,
+      semanticCoverage: declarationSemanticCoverage(),
+      notes: [
+        'Normalizes caller-owned Kotlin PSI/KtFile-shaped syntax trees into native AST nodes and declaration-level semantic index records.',
+        'Kotlin PSI imports do not resolve Analysis API symbols, FIR/K2 types, overloads, nullability flow, expect/actual matching, compiler-plugin generated declarations, KSP/KAPT output, scripts, build variants, or control flow by themselves; attach host evidence for those claims.'
+      ]
+    }, options.coverage),
+    supportedExtensions: options.supportedExtensions ?? ['.kt', '.kts'],
+    diagnostics: options.diagnostics,
+    parse(input) {
+      const parsed = input.options?.ast
+        ?? input.options?.nativeAst
+        ?? input.options?.ktFile
+        ?? input.options?.file
+        ?? input.options?.sourceFile
+        ?? input.options?.root
+        ?? options.ast
+        ?? options.ktFile
+        ?? options.file
+        ?? options.sourceFile
+        ?? options.root
+        ?? parseKotlinPsiSource(input, options);
+      const root = kotlinPsiRoot(parsed);
+      if (!root) {
+        return missingInjectedParserResult(input, {
+          parser: options.parser ?? 'kotlin-psi',
+          adapterId: options.id ?? 'frontier.kotlin-psi-native-importer',
+          message: 'createKotlinPsiNativeImporterAdapter requires an injected Kotlin PSI KtFile-shaped object, parserModule.parse function, parse function, or adapterOptions.ast.'
+        });
+      }
+      const parseDiagnostics = normalizeParserErrors(parsed?.errors ?? parsed?.diagnostics ?? parsed?.parseDiagnostics, input, {
+        parser: options.parser ?? 'kotlin-psi'
+      });
+      return createNativeImportFromKotlinPsi(root, input, {
+        parser: options.parser ?? 'kotlin-psi',
+        astFormat: 'kotlin-psi',
+        maxNodes: options.maxNodes,
+        diagnostics: parseDiagnostics,
+        kotlinVersion: options.kotlinVersion ?? input.options?.kotlinVersion ?? parsed?.kotlinVersion,
+        languageVersion: options.languageVersion ?? input.options?.languageVersion ?? parsed?.languageVersion,
+        apiVersion: options.apiVersion ?? input.options?.apiVersion ?? parsed?.apiVersion,
+        script: input.options?.script ?? options.script ?? parsed?.script ?? /\.kts$/i.test(input.sourcePath ?? ''),
+        generated: input.options?.generated ?? options.generated ?? parsed?.generated ?? kotlinGeneratedSourcePath(input.sourcePath),
+        analysisApiEvidence: input.options?.analysisApiEvidence ?? options.analysisApiEvidence ?? parsed?.analysisApiEvidence,
+        firEvidence: input.options?.firEvidence ?? options.firEvidence ?? parsed?.firEvidence,
+        compilerPluginEvidence: input.options?.compilerPluginEvidence ?? options.compilerPluginEvidence ?? parsed?.compilerPluginEvidence,
+        kspEvidence: input.options?.kspEvidence ?? options.kspEvidence ?? parsed?.kspEvidence,
+        kaptEvidence: input.options?.kaptEvidence ?? options.kaptEvidence ?? parsed?.kaptEvidence,
+        multiplatformEvidence: input.options?.multiplatformEvidence ?? options.multiplatformEvidence ?? parsed?.multiplatformEvidence,
+        buildVariantEvidence: input.options?.buildVariantEvidence ?? options.buildVariantEvidence ?? parsed?.buildVariantEvidence,
         positionResolver: input.options?.positionResolver ?? options.positionResolver,
         lineMap: input.options?.lineMap ?? options.lineMap ?? parsed?.lineMap,
         includeAnnotations: options.includeAnnotations ?? input.options?.includeAnnotations
@@ -7529,6 +7613,7 @@ function parserAstFormatIdForParser(parser) {
   if (text.includes('clang') || text.includes('libclang')) return 'clang-ast-json';
   if (text === 'go' || text.includes('go-parser') || text.includes('go-ast') || text.includes('go/parser') || text.includes('go/ast')) return 'go-ast';
   if (text === 'java' || text.includes('javac') || text.includes('jdt') || text.includes('javaparser') || text.includes('java-parser') || text.includes('java-ast')) return 'java-ast';
+  if (text === 'kotlin' || text === 'kt' || text.includes('kotlin-psi') || text.includes('kotlin-compiler') || text.includes('intellij-psi') || text.includes('kt-psi')) return 'kotlin-psi';
   if (text === 'csharp' || text === 'c#' || text === 'cs' || text.includes('roslyn') || text.includes('microsoft-codeanalysis-csharp') || text.includes('csharp-syntax')) return 'roslyn-csharp';
   if (text.includes('swift-syntax') || text.includes('swiftsyntax') || text.includes('swiftparser') || text.includes('swift-parser')) return 'swift-syntax';
   if (text.includes('tree-sitter') || text.includes('treesitter')) return 'tree-sitter';
@@ -8629,6 +8714,23 @@ function parseJavaAstSource(input, options) {
   return parse(input.sourceText, parserOptions);
 }
 
+function parseKotlinPsiSource(input, options) {
+  const parse = options.parse ?? options.parserModule?.parse ?? options.kotlinPsi?.parse ?? options.kotlinCompiler?.parse ?? options.intellijPsi?.parse;
+  if (typeof parse !== 'function') return undefined;
+  const parserOptions = {
+    sourcePath: input.sourcePath,
+    filename: input.sourcePath,
+    kotlinVersion: options.kotlinVersion ?? input.options?.kotlinVersion,
+    languageVersion: options.languageVersion ?? input.options?.languageVersion,
+    apiVersion: options.apiVersion ?? input.options?.apiVersion,
+    script: options.script ?? input.options?.script ?? /\.kts$/i.test(input.sourcePath ?? ''),
+    includeAnnotations: options.includeAnnotations ?? input.options?.includeAnnotations,
+    ...(options.parserOptions ?? {}),
+    ...(input.options?.parserOptions ?? {})
+  };
+  return parse(input.sourceText, parserOptions);
+}
+
 function parseCSharpRoslynSource(input, options) {
   const parse = options.parse ?? options.parserModule?.parse ?? options.roslyn?.parse ?? options.csharpRoslyn?.parse;
   if (typeof parse !== 'function') return undefined;
@@ -8883,6 +8985,53 @@ function createNativeImportFromJavaAst(root, input, options) {
       annotationProcessing: javaAnnotationProcessingSummary(options.annotationProcessing),
       bindingEvidence: javaBindingEvidenceSummary(options.bindingEvidence),
       generated: options.generated,
+      includeAnnotations: Boolean(options.includeAnnotations),
+      normalizedNodeCount: Object.keys(context.nodes).length,
+      declarationCount: context.declarations.length,
+      truncated: context.truncated
+    }
+  };
+}
+
+function createNativeImportFromKotlinPsi(root, input, options) {
+  const context = createAstNormalizationContext(input, options);
+  visitKotlinPsiNode(root, context, 'root');
+  if (context.truncated) {
+    context.losses.push(truncatedAstLoss(input, context, options));
+  }
+  if (options.generated && !context.losses.some((loss) => loss.kind === 'generatedCode')) {
+    context.losses.push(kotlinGeneratedCodeLoss(input, context.rootId, undefined, options));
+  }
+  if (options.script && !context.losses.some((loss) => loss.metadata?.script === true)) {
+    context.losses.push(kotlinScriptLoss(input, context.rootId, undefined, options));
+  }
+  const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  return {
+    rootId: context.rootId,
+    nodes: context.nodes,
+    semanticIndex: semantic.semanticIndex,
+    mappings: semantic.mappings,
+    losses: mergeNativeLosses(context.losses, options.diagnostics?.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, {
+      id: input.adapterId,
+      version: input.adapterVersion
+    }, input)) ?? []),
+    evidence: semantic.evidence,
+    diagnostics: options.diagnostics,
+    metadata: {
+      astFormat: options.astFormat,
+      parser: options.parser,
+      kotlinVersion: options.kotlinVersion,
+      languageVersion: options.languageVersion,
+      apiVersion: options.apiVersion,
+      script: Boolean(options.script),
+      generated: options.generated,
+      analysisApiEvidence: kotlinEvidenceSummary(options.analysisApiEvidence),
+      firEvidence: kotlinEvidenceSummary(options.firEvidence),
+      compilerPluginEvidence: kotlinEvidenceSummary(options.compilerPluginEvidence),
+      kspEvidence: kotlinEvidenceSummary(options.kspEvidence),
+      kaptEvidence: kotlinEvidenceSummary(options.kaptEvidence),
+      multiplatformEvidence: kotlinEvidenceSummary(options.multiplatformEvidence),
+      buildVariantEvidence: kotlinEvidenceSummary(options.buildVariantEvidence),
       includeAnnotations: Boolean(options.includeAnnotations),
       normalizedNodeCount: Object.keys(context.nodes).length,
       declarationCount: context.declarations.length,
@@ -12346,6 +12495,658 @@ function javaBindingEvidenceSummary(value) {
   if (Array.isArray(value.references)) summary.referenceCount = value.references.length;
   if (typeof value.solver === 'string') summary.solver = value.solver;
   return Object.keys(summary).length ? summary : { present: true };
+}
+
+function kotlinPsiRoot(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  if (isKotlinPsiNode(value)) return value;
+  if (isKotlinPsiNode(value.ast)) return value.ast;
+  if (isKotlinPsiNode(value.root)) return value.root;
+  if (isKotlinPsiNode(value.rootNode)) return value.rootNode;
+  if (isKotlinPsiNode(value.ktFile)) return value.ktFile;
+  if (isKotlinPsiNode(value.file)) return value.file;
+  if (isKotlinPsiNode(value.sourceFile)) return value.sourceFile;
+  if (Array.isArray(value.declarations) || Array.isArray(value.imports) || value.packageDirective) {
+    return { kind: 'KtFile', ...value };
+  }
+  return undefined;
+}
+
+function isKotlinPsiNode(value) {
+  return Boolean(value && typeof value === 'object' && typeof kotlinPsiKind(value) === 'string');
+}
+
+function kotlinPsiKind(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const declared = node.kind ?? node.nodeType ?? node.elementType ?? node.psiKind ?? node._type ?? node.type;
+  if (typeof declared === 'string') return normalizeKotlinPsiKind(declared);
+  if (Array.isArray(node.declarations) || Array.isArray(node.imports) || node.packageDirective) return 'KtFile';
+  if (node.fqName || node.packageFqName) return 'KtPackageDirective';
+  if (node.importedFqName || node.importedReference) return 'KtImportDirective';
+  if (node.classKind || node.primaryConstructor || node.superTypeListEntries) return 'KtClass';
+  if (node.funKeyword || node.valueParameters || node.bodyExpression) return 'KtNamedFunction';
+  if (node.valOrVarKeyword || node.delegateExpression || node.initializer) return 'KtProperty';
+  return undefined;
+}
+
+function normalizeKotlinPsiKind(kind) {
+  const text = String(kind)
+    .replace(/^org\.jetbrains\.kotlin\.psi\./, '')
+    .replace(/^KtNodeTypes\./, '')
+    .replace(/ElementType$/, '');
+  const compact = text.replace(/[_\s.-]+/g, '').toLowerCase();
+  const known = {
+    kotlinfile: 'KtFile',
+    ktfile: 'KtFile',
+    file: 'KtFile',
+    script: 'KtScript',
+    ktscript: 'KtScript',
+    packagedirective: 'KtPackageDirective',
+    ktpackagedirective: 'KtPackageDirective',
+    importdirective: 'KtImportDirective',
+    ktimportdirective: 'KtImportDirective',
+    class: 'KtClass',
+    ktclass: 'KtClass',
+    classorobject: 'KtClassOrObject',
+    ktclassorobject: 'KtClassOrObject',
+    objectdeclaration: 'KtObjectDeclaration',
+    ktobjectdeclaration: 'KtObjectDeclaration',
+    enumentry: 'KtEnumEntry',
+    ktenumentry: 'KtEnumEntry',
+    namedfunction: 'KtNamedFunction',
+    ktnamedfunction: 'KtNamedFunction',
+    function: 'KtNamedFunction',
+    property: 'KtProperty',
+    ktproperty: 'KtProperty',
+    typealias: 'KtTypeAlias',
+    kttypealias: 'KtTypeAlias',
+    parameter: 'KtParameter',
+    ktparameter: 'KtParameter',
+    primaryconstructor: 'KtPrimaryConstructor',
+    ktprimaryconstructor: 'KtPrimaryConstructor',
+    secondaryconstructor: 'KtSecondaryConstructor',
+    ktsecondaryconstructor: 'KtSecondaryConstructor',
+    classinitializer: 'KtClassInitializer',
+    ktclassinitializer: 'KtClassInitializer',
+    annotationentry: 'KtAnnotationEntry',
+    ktannotationentry: 'KtAnnotationEntry',
+    contracteffect: 'KtContractEffect',
+    ktcontracteffect: 'KtContractEffect',
+    contractdescription: 'KtContractDescription',
+    ktcontractdescription: 'KtContractDescription',
+    error: 'PsiErrorElement',
+    psierror: 'PsiErrorElement',
+    psierrorelement: 'PsiErrorElement'
+  };
+  if (known[compact]) return known[compact];
+  if (/^[A-Z0-9_]+$/.test(text)) return text.toLowerCase().split('_').map(upperFirst).join('');
+  return text;
+}
+
+function ignoredKotlinPsiField(key) {
+  return key === '_type'
+    || key === 'type'
+    || key === 'kind'
+    || key === 'nodeType'
+    || key === 'elementType'
+    || key === 'psiKind'
+    || key === 'parent'
+    || key === 'parentKind'
+    || key === 'parentField'
+    || key === 'textRange'
+    || key === 'range'
+    || key === 'span'
+    || key === 'location'
+    || key === 'name'
+    || key === 'nameIdentifier'
+    || key === 'identifier'
+    || key === 'fqName'
+    || key === 'packageFqName'
+    || key === 'analysisSymbol'
+    || key === 'symbol'
+    || key === 'typeInfo'
+    || key === 'bindingContext'
+    || key === 'fir'
+    || key === 'ir';
+}
+
+function visitKotlinPsiNode(node, context, propertyPath) {
+  if (!isKotlinPsiNode(node) || context.truncated) return undefined;
+  if (context.objectIds.has(node)) return context.objectIds.get(node);
+  if (context.counter >= context.maxNodes) {
+    context.truncated = true;
+    return undefined;
+  }
+  const kind = kotlinPsiKind(node);
+  const span = spanFromKotlinPsiNode(node, context.input, context.options);
+  const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
+  context.objectIds.set(node, id);
+  if (!context.rootId) context.rootId = id;
+  const children = [];
+  for (const [field, value] of kotlinPsiChildEntries(node, kind)) {
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        const childId = visitKotlinPsiNode(entry, context, `${propertyPath}.${field}[${index}]`);
+        if (childId) children.push(childId);
+      });
+    } else {
+      const childId = visitKotlinPsiNode(value, context, `${propertyPath}.${field}`);
+      if (childId) children.push(childId);
+    }
+  }
+  const declarations = kotlinPsiDeclarations(node, kind, id, context.input);
+  const declaration = declarations[0];
+  const nativeNode = {
+    id,
+    kind,
+    languageKind: `${context.input.language}.${kind}`,
+    span,
+    value: declaration?.name ?? kotlinPsiNodeValue(node),
+    fields: primitiveKotlinPsiFields(node, kind),
+    children,
+    metadata: {
+      astFormat: context.options.astFormat,
+      propertyPath,
+      positionKind: kotlinPsiPositionKind(node),
+      parser: context.options.parser
+    }
+  };
+  context.nodes[id] = nativeNode;
+  for (const entry of declarations) {
+    context.declarations.push({ ...entry, nativeNode });
+  }
+  if (kotlinPsiRecoveredKind(kind) || kotlinPsiProblemNode(node, kind)) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_kotlin_psi_recovered_node`,
+      severity: 'error',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'unsupportedSyntax',
+      message: 'Kotlin PSI reported an error or recovered syntax node; semantic import is partial until syntax errors are resolved.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat,
+        nodeKind: kind
+      }
+    });
+  }
+  if (kotlinExpectActualNode(node, kind)) {
+    context.losses.push(kotlinUnsupportedSemanticLoss(context.input, id, span, context.options, {
+      nodeKind: kind,
+      feature: 'expect-actual',
+      message: 'Kotlin expect/actual syntax was imported; matching platform declarations requires multiplatform build evidence.'
+    }));
+  }
+  if (kotlinCoroutineNode(node, kind)) {
+    context.losses.push(kotlinUnsupportedSemanticLoss(context.input, id, span, context.options, {
+      nodeKind: kind,
+      feature: 'coroutine',
+      message: 'Kotlin coroutine syntax was imported; suspend lowering, scheduling, and effect semantics require host compiler/runtime evidence.'
+    }));
+  }
+  if (kotlinContractNode(kind)) {
+    context.losses.push(kotlinUnsupportedSemanticLoss(context.input, id, span, context.options, {
+      nodeKind: kind,
+      feature: 'contract',
+      message: 'Kotlin contract syntax was imported; data-flow effects require Analysis API or compiler evidence.'
+    }));
+  }
+  if (kotlinCompilerPluginAnnotationNode(node, kind) && !context.options.compilerPluginEvidence) {
+    context.losses.push({
+      id: `loss_${idFragment(id)}_kotlin_compiler_plugin_semantics`,
+      severity: 'warning',
+      phase: 'parse',
+      sourceFormat: context.input.language,
+      kind: 'metaprogramming',
+      message: 'Kotlin compiler-plugin-style annotation was imported; generated declarations and transformed semantics require compiler plugin evidence.',
+      span,
+      nodeId: id,
+      metadata: {
+        parser: context.options.parser,
+        astFormat: context.options.astFormat,
+        nodeKind: kind,
+        annotations: kotlinPsiAnnotationNames(node)
+      }
+    });
+  }
+  if (kotlinGeneratedCodeMarker(node, kind)) {
+    context.losses.push(kotlinGeneratedCodeLoss(context.input, id, span, context.options, { nodeKind: kind }));
+  }
+  return id;
+}
+
+function primitiveKotlinPsiFields(node, kind) {
+  const fields = { kind };
+  const name = kotlinPsiDeclarationName(node, kind);
+  if (name) fields.name = name;
+  const importPath = kotlinPsiImportPath(node);
+  if (importPath) fields.importPath = importPath;
+  const packageName = kotlinPsiPackageName(node);
+  if (packageName) fields.packageName = packageName;
+  const type = kotlinPsiTypeName(node.typeReference ?? node.returnTypeRef ?? node.returnType ?? node.type);
+  if (type) fields.type = type;
+  const receiver = kotlinPsiTypeName(node.receiverTypeReference ?? node.receiverTypeRef);
+  if (receiver) fields.receiverType = receiver;
+  const modifiers = kotlinPsiModifiers(node);
+  if (modifiers.length) fields.modifiers = modifiers.join(',');
+  const annotations = kotlinPsiAnnotationNames(node);
+  if (annotations.length) fields.annotations = annotations.join(',');
+  if (node.generated === true || node.isGenerated === true) fields.generated = true;
+  if (node.isScript === true || kind === 'KtScript') fields.script = true;
+  if (Array.isArray(node.typeParameters ?? node.typeParameterList?.parameters)) fields.typeParameterCount = (node.typeParameters ?? node.typeParameterList?.parameters).length;
+  if (Array.isArray(node.valueParameters ?? node.valueParameterList?.parameters ?? node.parameters)) fields.parameterCount = (node.valueParameters ?? node.valueParameterList?.parameters ?? node.parameters).length;
+  if (Array.isArray(node.superTypeListEntries ?? node.superTypes)) fields.superTypeCount = (node.superTypeListEntries ?? node.superTypes).length;
+  return fields;
+}
+
+function spanFromKotlinPsiNode(node, input, options = {}) {
+  const direct = spanFromKotlinLineFields(node, input);
+  if (direct) return direct;
+  const range = node.sourceRange ?? node.range ?? node.span ?? node.textRange;
+  const fromRange = spanFromKotlinRange(range, input);
+  if (fromRange) return fromRange;
+  const start = kotlinPsiPosition(node.start ?? node.startOffset ?? range?.startOffset ?? range?.start, options);
+  const end = kotlinPsiPosition(node.end ?? node.endOffset ?? range?.endOffset ?? range?.end, options);
+  if (!start) return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: start.path ?? end?.path ?? input.sourcePath,
+    startLine: start.line,
+    startColumn: start.column,
+    endLine: end?.line,
+    endColumn: end?.column
+  };
+}
+
+function spanFromKotlinLineFields(node, input) {
+  const startLine = node.startLine ?? node.line ?? node.beginLine;
+  if (typeof startLine !== 'number') return undefined;
+  return {
+    sourceId: input.sourceHash,
+    path: node.path ?? node.filePath ?? node.file ?? input.sourcePath,
+    startLine,
+    startColumn: node.startColumn ?? node.column ?? node.beginColumn,
+    endLine: node.endLine,
+    endColumn: node.endColumn
+  };
+}
+
+function spanFromKotlinRange(range, input) {
+  if (!range || typeof range !== 'object') return undefined;
+  const start = range.start ?? range.startPosition ?? range.lowerBound ?? range.begin;
+  const end = range.end ?? range.endPosition ?? range.upperBound;
+  const line = start?.line ?? start?.Line;
+  if (typeof line !== 'number') return undefined;
+  const column = start.column ?? start.character ?? start.offset ?? start.Column;
+  const endLine = end?.line ?? end?.Line;
+  const endColumn = end?.column ?? end?.character ?? end?.offset ?? end?.Column;
+  return {
+    sourceId: input.sourceHash,
+    path: range.path ?? range.filePath ?? range.file ?? input.sourcePath,
+    startLine: line,
+    startColumn: typeof column === 'number' ? column : undefined,
+    endLine: typeof endLine === 'number' ? endLine : undefined,
+    endColumn: typeof endColumn === 'number' ? endColumn : undefined
+  };
+}
+
+function kotlinPsiPosition(value, options = {}) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'object') {
+    const position = value.position ?? value.location ?? value;
+    const line = position.line ?? position.Line;
+    const column = position.column ?? position.character ?? position.Column;
+    if (typeof line === 'number') {
+      return {
+        path: position.path ?? position.filePath ?? position.file,
+        line,
+        column: typeof column === 'number' ? column : undefined
+      };
+    }
+  }
+  const resolver = typeof options.positionResolver === 'function'
+    ? options.positionResolver
+    : typeof options.lineMap?.position === 'function'
+      ? options.lineMap.position.bind(options.lineMap)
+      : typeof options.lineMap?.getLineAndColumn === 'function'
+        ? options.lineMap.getLineAndColumn.bind(options.lineMap)
+        : undefined;
+  if (resolver) {
+    const resolved = resolver(value);
+    if (resolved !== value) return kotlinPsiPosition(resolved, options);
+  }
+  return undefined;
+}
+
+function kotlinPsiPositionKind(node) {
+  if (node.textRange || node.range) return 'text-range';
+  if (typeof node.startOffset === 'number') return 'offset';
+  if (typeof node.startLine === 'number' || typeof node.line === 'number') return 'line-column-fields';
+  return undefined;
+}
+
+function kotlinPsiDeclarations(node, kind, nativeNodeId, input) {
+  if (kind === 'KtPackageDirective') {
+    const name = kotlinPsiPackageName(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'namespace', 'definition')] : [];
+  }
+  if (kind === 'KtImportDirective') {
+    const name = kotlinPsiImportPath(node);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'module', 'import')] : [];
+  }
+  if (kotlinPsiTypeDeclarationKind(kind)) {
+    const name = kotlinPsiDeclarationName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, kotlinPsiTypeDeclarationSymbolKind(node, kind), 'definition')] : [];
+  }
+  if (kind === 'KtTypeAlias') {
+    const name = kotlinPsiDeclarationName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'type', 'definition')] : [];
+  }
+  if (kind === 'KtNamedFunction') {
+    const name = kotlinPsiDeclarationName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, node.parentKind && kotlinPsiTypeDeclarationKind(node.parentKind) ? 'method' : 'function', kotlinPsiHasBody(node) ? 'definition' : 'declaration')] : [];
+  }
+  if (kind === 'KtProperty') {
+    return kotlinPsiVariableNames(node).map((name) => declarationRecord(input, nativeNodeId, name, 'property', 'definition'));
+  }
+  if (kind === 'KtParameter' && node.parentKind === 'KtPrimaryConstructor') {
+    return kotlinPsiVariableNames(node).map((name) => declarationRecord(input, nativeNodeId, name, 'property', 'definition'));
+  }
+  if (kind === 'KtPrimaryConstructor' || kind === 'KtSecondaryConstructor') {
+    return [declarationRecord(input, nativeNodeId, kotlinPsiDeclarationName(node, kind) ?? 'constructor', 'method', 'definition')];
+  }
+  if (kind === 'KtEnumEntry') {
+    const name = kotlinPsiDeclarationName(node, kind);
+    return name ? [declarationRecord(input, nativeNodeId, name, 'enumMember', 'definition')] : [];
+  }
+  return [];
+}
+
+function kotlinPsiChildEntries(node, kind = kotlinPsiKind(node)) {
+  const fieldNames = Object.keys(node).filter((key) => !ignoredKotlinPsiField(key));
+  const entries = [];
+  for (const field of fieldNames) {
+    const value = node[field];
+    if (Array.isArray(value)) {
+      entries.push([field, value.map((entry) => kotlinPsiChildWithParent(entry, kind, field))]);
+      continue;
+    }
+    if (value && typeof value === 'object') {
+      entries.push([field, kotlinPsiChildWithParent(value, kind, field)]);
+    }
+  }
+  return entries.filter(([, value]) => Array.isArray(value)
+    ? value.some(isKotlinPsiNode)
+    : isKotlinPsiNode(value));
+}
+
+function kotlinPsiChildWithParent(entry, parentKind, parentField) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
+  if (!isKotlinPsiNode(entry)) return entry;
+  return { parentKind, parentField, ...entry };
+}
+
+function kotlinPsiNodeValue(node) {
+  return kotlinPsiDeclarationName(node, kotlinPsiKind(node))
+    ?? kotlinPsiImportPath(node)
+    ?? kotlinPsiPackageName(node)
+    ?? kotlinPsiTypeName(node.typeReference ?? node.returnTypeRef ?? node.type);
+}
+
+function kotlinPsiDeclarationName(node, kind = kotlinPsiKind(node)) {
+  if (!node || typeof node !== 'object') return undefined;
+  if (kind === 'KtPrimaryConstructor' || kind === 'KtSecondaryConstructor') return 'constructor';
+  if (kind === 'KtClassInitializer') return 'init';
+  if (kind === 'KtObjectDeclaration' && node.isCompanion === true && !node.name && !node.nameIdentifier) return 'companion object';
+  for (const key of ['nameIdentifier', 'identifier', 'name', 'simpleName', 'classId', 'fqName', 'id']) {
+    const name = kotlinPsiName(node[key]);
+    if (name) return name;
+  }
+  const variable = kotlinPsiVariableNames(node)[0];
+  if (variable) return variable;
+  return undefined;
+}
+
+function kotlinPsiName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.asString === 'string') return value.asString;
+  if (typeof value.identifier === 'string') return value.identifier;
+  if (typeof value.name === 'string') return value.name;
+  if (typeof value.text === 'string') return value.text;
+  if (typeof value.value === 'string') return value.value;
+  if (typeof value.fqName === 'string') return value.fqName;
+  if (value.shortName && value.shortName !== value) return kotlinPsiName(value.shortName);
+  if (value.name && value.name !== value) return kotlinPsiName(value.name);
+  if (value.identifier && value.identifier !== value) return kotlinPsiName(value.identifier);
+  return undefined;
+}
+
+function kotlinPsiImportPath(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const path = node.importedFqName ?? node.importedReference ?? node.importPath ?? node.path ?? node.name;
+  if (typeof path === 'string') return path;
+  if (path && typeof path === 'object') return kotlinPsiName(path.fqName ?? path.name ?? path);
+  return undefined;
+}
+
+function kotlinPsiPackageName(node) {
+  if (!node || typeof node !== 'object') return undefined;
+  const value = node.packageFqName ?? node.fqName ?? node.qualifiedName ?? node.packageName;
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') return kotlinPsiName(value);
+  return undefined;
+}
+
+function kotlinPsiVariableNames(node) {
+  const variables = node.variables ?? node.entries ?? node.declarations;
+  if (Array.isArray(variables)) return variables.map(kotlinPsiDeclarationName).filter(Boolean);
+  const name = kotlinPsiName(node.nameIdentifier ?? node.identifier ?? node.name);
+  return name ? [name] : [];
+}
+
+function kotlinPsiTypeName(value) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value.text === 'string') return value.text.trim();
+  if (typeof value.name === 'string') return value.name;
+  if (typeof value.fqName === 'string') return value.fqName;
+  if (value.typeElement) return kotlinPsiTypeName(value.typeElement);
+  if (value.typeReference) return kotlinPsiTypeName(value.typeReference);
+  if (value.referencedName) return kotlinPsiName(value.referencedName);
+  if (value.constructorReferenceExpression) return kotlinPsiTypeName(value.constructorReferenceExpression);
+  if (Array.isArray(value.typeArguments) || Array.isArray(value.arguments)) {
+    const base = kotlinPsiName(value.name ?? value.referencedName ?? value.constructorReferenceExpression);
+    const args = (value.typeArguments ?? value.arguments).map((entry) => kotlinPsiTypeName(entry.typeReference ?? entry)).filter(Boolean);
+    return base ? `${base}<${args.join(', ')}>` : undefined;
+  }
+  return kotlinPsiName(value);
+}
+
+function kotlinPsiModifiers(node) {
+  const raw = node.modifiers ?? node.modifierList?.modifiers ?? node.modifierList?.children;
+  const names = [];
+  if (Array.isArray(raw)) {
+    for (const entry of raw) {
+      const name = typeof entry === 'string' ? entry : kotlinPsiName(entry) ?? entry?.keyword ?? entry?.tokenType ?? entry?.text;
+      if (name) names.push(String(name).toLowerCase());
+    }
+  } else if (typeof raw === 'string') {
+    names.push(...raw.split(/\s+/).filter(Boolean).map((entry) => entry.toLowerCase()));
+  } else if (raw && typeof raw === 'object') {
+    for (const [key, enabled] of Object.entries(raw)) {
+      if (enabled === true) names.push(key.toLowerCase());
+    }
+  }
+  for (const key of ['suspend', 'expect', 'actual', 'inline', 'operator', 'infix', 'tailrec', 'external', 'override', 'data', 'sealed', 'value']) {
+    if (node[key] === true || node[`is${upperFirst(key)}`] === true) names.push(key);
+  }
+  return uniqueStrings(names.map((entry) => entry.replace(/keyword$/i, '').replace(/_keyword$/i, '').replace(/[_\s-]+/g, '').toLowerCase()).filter(Boolean));
+}
+
+function kotlinPsiAnnotationNames(node) {
+  const entries = node.annotationEntries ?? node.annotations ?? node.modifierList?.annotationEntries;
+  if (!entries) return [];
+  if (Array.isArray(entries)) {
+    return uniqueStrings(entries.map((entry) => typeof entry === 'string' ? entry : kotlinPsiName(entry.shortName ?? entry.calleeExpression ?? entry.typeReference ?? entry.name ?? entry)).filter(Boolean));
+  }
+  return [];
+}
+
+function kotlinPsiTypeDeclarationKind(kind) {
+  return kind === 'KtClass'
+    || kind === 'KtClassOrObject'
+    || kind === 'KtObjectDeclaration';
+}
+
+function kotlinPsiTypeDeclarationSymbolKind(node, kind) {
+  const classKind = String(node.classKind ?? node.kindKeyword ?? '').toLowerCase();
+  if (kind === 'KtObjectDeclaration') return 'class';
+  if (classKind.includes('interface')) return 'interface';
+  if (classKind.includes('enum')) return 'enum';
+  if (classKind.includes('annotation')) return 'type';
+  return 'class';
+}
+
+function kotlinPsiHasBody(node) {
+  return Boolean(node.bodyExpression || node.bodyBlockExpression || node.body || Array.isArray(node.statements));
+}
+
+function kotlinPsiRecoveredKind(kind) {
+  return kind === 'PsiErrorElement'
+    || kind === 'KtErrorElement'
+    || /Error|Recovery|Incomplete|Missing|Skipped/.test(String(kind));
+}
+
+function kotlinPsiProblemNode(node, kind) {
+  return Boolean(
+    node.hasError
+    || node.containsDiagnostics
+    || node.containsSkippedText
+    || node.isMissing
+    || kind === 'PsiErrorElement'
+    || kind === 'KtErrorElement'
+  );
+}
+
+function kotlinExpectActualNode(node) {
+  const modifiers = kotlinPsiModifiers(node);
+  return modifiers.includes('expect') || modifiers.includes('actual');
+}
+
+function kotlinCoroutineNode(node, kind) {
+  const modifiers = kotlinPsiModifiers(node);
+  return modifiers.includes('suspend')
+    || /Coroutine|Suspend/i.test(String(kind))
+    || node.isSuspend === true
+    || node.suspend === true;
+}
+
+function kotlinContractNode(kind) {
+  return /Contract/i.test(String(kind));
+}
+
+function kotlinCompilerPluginAnnotationNode(node) {
+  const names = kotlinPsiAnnotationNames(node);
+  return names.some((name) => /^(Composable|Serializable|Parcelize|Entity|Immutable|Stable|AutoService|AssistedInject|Hilt|Inject|Room|KSerializable)$/i.test(name.replace(/^.*\./, '')));
+}
+
+function kotlinGeneratedCodeMarker(node) {
+  if (node.generated || node.isGenerated) return true;
+  const path = String(node.filePath ?? node.path ?? node.sourcePath ?? '');
+  return kotlinGeneratedSourcePath(path);
+}
+
+function kotlinGeneratedSourcePath(path) {
+  return typeof path === 'string' && (/(\.g|\.generated)\.kts?$/i.test(path) || /[\/\\](build|generated|ksp|kapt)[\/\\]/i.test(path));
+}
+
+function kotlinGeneratedCodeLoss(input, nodeId, span, options = {}, metadata = {}) {
+  return {
+    id: `loss_${idFragment(nodeId ?? input.sourcePath ?? 'kotlin')}_kotlin_generated_code`,
+    severity: 'warning',
+    phase: 'parse',
+    sourceFormat: input.language,
+    kind: 'generatedCode',
+    message: 'Kotlin generated-source marker was imported; generated member provenance and source ownership require host evidence.',
+    span,
+    nodeId,
+    metadata: {
+      parser: options.parser,
+      astFormat: options.astFormat,
+      kspEvidence: kotlinEvidenceSummary(options.kspEvidence),
+      kaptEvidence: kotlinEvidenceSummary(options.kaptEvidence),
+      compilerPluginEvidence: kotlinEvidenceSummary(options.compilerPluginEvidence),
+      ...metadata
+    }
+  };
+}
+
+function kotlinScriptLoss(input, nodeId, span, options = {}) {
+  return {
+    id: `loss_${idFragment(nodeId ?? input.sourcePath ?? 'kotlin')}_kotlin_script_semantics`,
+    severity: 'warning',
+    phase: 'parse',
+    sourceFormat: input.language,
+    kind: 'unsupportedSemantic',
+    message: 'Kotlin script source was imported; script templates, implicit receivers, dependencies, and host execution environment require build/runtime evidence.',
+    span,
+    nodeId,
+    metadata: {
+      parser: options.parser,
+      astFormat: options.astFormat,
+      feature: 'script',
+      unsupportedSemanticKind: 'kotlin.scriptContext',
+      script: true,
+      buildVariantEvidence: kotlinEvidenceSummary(options.buildVariantEvidence)
+    }
+  };
+}
+
+function kotlinUnsupportedSemanticLoss(input, nodeId, span, options = {}, metadata = {}) {
+  return {
+    id: `loss_${idFragment(nodeId ?? input.sourcePath ?? 'kotlin')}_kotlin_${idFragment(metadata.feature ?? 'semantic')}`,
+    severity: 'warning',
+    phase: 'parse',
+    sourceFormat: input.language,
+    kind: 'unsupportedSemantic',
+    message: metadata.message ?? 'Kotlin semantic feature requires host compiler evidence.',
+    span,
+    nodeId,
+    metadata: {
+      parser: options.parser,
+      astFormat: options.astFormat,
+      unsupportedSemanticKind: metadata.unsupportedSemanticKind ?? `kotlin.${idFragment(metadata.feature ?? 'semantic')}`,
+      analysisApiEvidence: kotlinEvidenceSummary(options.analysisApiEvidence),
+      firEvidence: kotlinEvidenceSummary(options.firEvidence),
+      multiplatformEvidence: kotlinEvidenceSummary(options.multiplatformEvidence),
+      ...metadata
+    }
+  };
+}
+
+function kotlinEvidenceSummary(value) {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return { entryCount: value.length };
+  if (typeof value === 'string') return { value };
+  if (typeof value === 'object') {
+    const summary = {};
+    if (typeof value.hash === 'string') summary.hash = value.hash;
+    if (typeof value.solver === 'string') summary.solver = value.solver;
+    if (Array.isArray(value.entries)) summary.entryCount = value.entries.length;
+    if (Array.isArray(value.symbols)) summary.symbolCount = value.symbols.length;
+    if (Array.isArray(value.references)) summary.referenceCount = value.references.length;
+    if (Array.isArray(value.types)) summary.typeCount = value.types.length;
+    if (Array.isArray(value.diagnostics)) summary.diagnosticCount = value.diagnostics.length;
+    if (Array.isArray(value.plugins)) summary.pluginCount = value.plugins.length;
+    if (Array.isArray(value.generatedSources)) summary.generatedSourceCount = value.generatedSources.length;
+    if (Array.isArray(value.platforms)) summary.platformCount = value.platforms.length;
+    if (Array.isArray(value.variants)) summary.variantCount = value.variants.length;
+    return Object.keys(summary).length ? summary : { present: true };
+  }
+  return { present: true };
 }
 
 function csharpRoslynRoot(value) {
