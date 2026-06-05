@@ -786,6 +786,91 @@ export interface SemanticImportSidecarOptions {
 
 export type NativeSourceChangeKind = 'added' | 'removed' | 'modified' | 'unchanged';
 
+export interface NativeSourceChangeProjectionEndpoint {
+  readonly side: 'before' | 'after';
+  readonly importId?: string;
+  readonly sidecarId?: string;
+  readonly nativeSourceId?: string;
+  readonly nativeAstId?: string;
+  readonly semanticIndexId?: string;
+  readonly universalAstId?: string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly sourcePreservationId?: string;
+  readonly exactSourceAvailable: boolean;
+  readonly ownershipRegionId?: string;
+  readonly ownershipKey?: string;
+  readonly ownershipRegionKind?: NativeImportRegionTaxonomyKind;
+  readonly sourceSpan?: SourceSpan;
+  readonly sourceMapIds: readonly string[];
+  readonly sourceMapMappingIds: readonly string[];
+}
+
+export interface NativeSourceChangeProjectionSourceMapLink {
+  readonly id: string;
+  readonly side: 'before' | 'after';
+  readonly sourceMapId?: string;
+  readonly sourceMapMappingId?: string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly targetPath?: string;
+  readonly targetHash?: string;
+  readonly semanticSymbolId?: string;
+  readonly semanticOccurrenceId?: string;
+  readonly semanticNodeId?: string;
+  readonly nativeSourceId?: string;
+  readonly nativeAstNodeId?: string;
+  readonly precision?: string;
+  readonly sourceSpan?: SourceSpan;
+  readonly generatedSpan?: SourceMapMappingRecord['generatedSpan'];
+  readonly ownershipRegionId?: string;
+  readonly ownershipRegionKey?: string;
+  readonly ownershipRegionKind?: NativeImportRegionTaxonomyKind;
+}
+
+export interface NativeSourceChangeProjectionMetadata {
+  readonly schema: 'frontier.lang.changedRegionProjection.v1';
+  readonly id: string;
+  readonly reviewRequired: true;
+  readonly autoMergeClaim: false;
+  readonly changeKind: NativeSourceChangeKind;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly conflictKey: string;
+  readonly region: {
+    readonly id?: string;
+    readonly key?: string;
+    readonly kind?: NativeImportRegionTaxonomyKind;
+    readonly granularity?: string;
+    readonly precision?: string;
+    readonly sourceSpan?: SourceSpan;
+    readonly nativeAstNodeId?: string;
+    readonly symbolId?: string;
+    readonly symbolName?: string;
+    readonly symbolKind?: string;
+  };
+  readonly before?: NativeSourceChangeProjectionEndpoint;
+  readonly after?: NativeSourceChangeProjectionEndpoint;
+  readonly sourceMapLinks: readonly NativeSourceChangeProjectionSourceMapLink[];
+  readonly admission: {
+    readonly readiness: SemanticMergeReadiness;
+    readonly action: 'review-addition' | 'review-removal' | 'review-file' | 'review-port' | 'rerun-or-human-port' | string;
+    readonly reasons: readonly string[];
+    readonly conflictKeys: readonly string[];
+  };
+}
+
+export interface NativeSourceChangeProjectionSummary {
+  readonly schema: 'frontier.lang.changedRegionProjectionSummary.v1';
+  readonly total: number;
+  readonly withProjection: number;
+  readonly reviewRequired: number;
+  readonly autoMergeClaims: number;
+  readonly sourceMapLinks: number;
+  readonly byAction: Readonly<Record<string, number>>;
+  readonly byRegionKind: Readonly<Record<string, number>>;
+}
+
 export interface NativeSourceChangeSymbol {
   readonly changeKind: NativeSourceChangeKind;
   readonly key: string;
@@ -813,6 +898,9 @@ export interface NativeSourceChangeSymbol {
 export interface NativeSourceChangeRegion extends SemanticImportOwnershipRegion {
   readonly changeKind: NativeSourceChangeKind;
   readonly conflictKey: string;
+  readonly metadata?: SemanticImportOwnershipRegion['metadata'] & {
+    readonly changedRegionProjection?: NativeSourceChangeProjectionMetadata;
+  };
 }
 
 export interface NativeSourceChangeSummary {
@@ -875,7 +963,9 @@ export interface NativeSourceChangeSet {
   readonly semanticIndex?: SemanticIndexRecord;
   readonly losses: readonly NativeAstLossRecord[];
   readonly summary: NativeSourceChangeSummary;
-  readonly metadata?: Record<string, unknown>;
+  readonly metadata?: Record<string, unknown> & {
+    readonly changedRegionProjectionSummary?: NativeSourceChangeProjectionSummary;
+  };
 }
 
 export type NativeImporterAdapterExactness =

@@ -7,6 +7,7 @@ import {
   createProjectionTargetLossMatrix,
   createNativeSourcePreservation,
   createSemanticImportSidecar,
+  diffNativeSources,
   importExternalSemanticIndex,
   importNativeSource,
   projectNativeImportToSource,
@@ -165,6 +166,20 @@ const regionScanDurationMs = performance.now() - regionScanStart;
 const regionScanSymbols = regionScanImports.reduce((sum, entry) => sum + entry.imported.semanticIndex.symbols.length, 0);
 const regionScanOwnershipRegions = regionScanImports.reduce((sum, entry) => sum + entry.sidecar.ownershipRegions.length, 0);
 
+const changeProjectionStart = performance.now();
+const changeProjectionSets = [];
+for (let index = 0; index < 80; index += 1) {
+  changeProjectionSets.push(diffNativeSources({
+    language: 'javascript',
+    sourcePath: `src/change-projection-${index}.js`,
+    beforeSourceText: `export function changeProjection${index}() { return ${index}; }\n`,
+    afterSourceText: `export function changeProjection${index}() { return ${index + 1}; }\nexport const changeProjectionFlag${index} = true;\n`
+  }));
+}
+const changeProjectionDurationMs = performance.now() - changeProjectionStart;
+const changedRegionProjections = changeProjectionSets.reduce((sum, changeSet) => sum + changeSet.metadata.changedRegionProjectionSummary.withProjection, 0);
+const changedRegionProjectionSourceMapLinks = changeProjectionSets.reduce((sum, changeSet) => sum + changeSet.metadata.changedRegionProjectionSummary.sourceMapLinks, 0);
+
 const externalSemanticStart = performance.now();
 const externalSemanticImports = [];
 for (let index = 0; index < 100; index += 1) {
@@ -242,6 +257,10 @@ console.log(JSON.stringify({
   regionScanSymbols,
   regionScanOwnershipRegions,
   regionScanDurationMs: Number(regionScanDurationMs.toFixed(2)),
+  changeProjectionSets: changeProjectionSets.length,
+  changedRegionProjections,
+  changedRegionProjectionSourceMapLinks,
+  changeProjectionDurationMs: Number(changeProjectionDurationMs.toFixed(2)),
   externalSemanticImports: externalSemanticImports.length,
   externalSemanticSymbols,
   externalSemanticMappings,

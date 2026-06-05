@@ -229,10 +229,12 @@ const changeSet = diffNativeSources({
 
 console.log(changeSet.changedSymbols[0]?.changeKind); // "modified"
 console.log(changeSet.changedRegions[0]?.conflictKey); // semantic ownership key
+console.log(changeSet.changedRegions[0]?.metadata.changedRegionProjection.reviewRequired); // true
+console.log(changeSet.metadata.changedRegionProjectionSummary.autoMergeClaims); // 0
 console.log(changeSet.mergeCandidate.readiness); // merge-admission classification
 ```
 
-Use `diffNativeSourceImports` when the worker or runner already produced `importNativeSource` results. Body-only edits that the lightweight scanner cannot anchor to a symbol are still reported as file-level changed regions instead of being silently treated as safe.
+Use `diffNativeSourceImports` when the worker or runner already produced `importNativeSource` results. Changed regions include a `metadata.changedRegionProjection` envelope with before/after source hashes, source-map links, ownership keys, readiness, and `autoMergeClaim: false` so swarm admission tools can score or port patches without treating semantic metadata as proof. Body-only edits that the lightweight scanner cannot anchor to a symbol are still reported as file-level changed regions instead of being silently treated as safe.
 
 Compile native source imports through the same reader/IR/writer facade that swarms use for sidecar evidence. Same-language targets preserve exact source when hashes match; cross-language targets emit declaration stubs until a real adapter provides stronger evidence:
 

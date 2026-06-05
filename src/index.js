@@ -3158,6 +3158,25 @@ export function diffNativeSourceImports(input) {
   if (sourceChanged && changedSymbols.length === 0 && changedRegions.length === 0) {
     changedRegions = [fileLevelNativeChangeRegion({ language, sourcePath, beforeHash, afterHash, before, after })];
   }
+  const readiness = maxSemanticMergeReadiness(
+    maxSemanticMergeReadiness(nativeImportReadiness(before), nativeImportReadiness(after)),
+    sourceChanged && changedSymbols.length === 0 ? 'needs-review' : 'ready'
+  );
+  const reasons = nativeSourceChangeReasons({ before, after, beforeHash, afterHash, changedSymbols, changedRegions, readiness });
+  changedRegions = attachNativeChangeRegionProjectionMetadata(changedRegions, {
+    before,
+    after,
+    beforeSidecar,
+    afterSidecar,
+    changedSymbols,
+    language,
+    sourcePath,
+    beforeHash,
+    afterHash,
+    readiness,
+    reasons
+  });
+  const changedRegionProjectionSummary = summarizeNativeChangedRegionProjections(changedRegions);
   const evidence = [{
     id: input.evidenceId ?? `evidence_${idPart}_native_source_diff`,
     kind: 'import',
@@ -3172,14 +3191,10 @@ export function diffNativeSourceImports(input) {
       sourceChanged,
       addedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'added').length,
       removedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'removed').length,
-      modifiedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'modified').length
+      modifiedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'modified').length,
+      changedRegionProjectionSummary
     }
   }];
-  const readiness = maxSemanticMergeReadiness(
-    maxSemanticMergeReadiness(nativeImportReadiness(before), nativeImportReadiness(after)),
-    sourceChanged && changedSymbols.length === 0 ? 'needs-review' : 'ready'
-  );
-  const reasons = nativeSourceChangeReasons({ before, after, beforeHash, afterHash, changedSymbols, changedRegions, readiness });
   const conflictKeys = uniqueStrings([
     ...changedSymbols.map((symbol) => symbol.conflictKey),
     ...changedRegions.map((region) => region.conflictKey ?? region.key ?? region.id),
@@ -3230,7 +3245,8 @@ export function diffNativeSourceImports(input) {
       beforeImportId: before?.id,
       afterImportId: after?.id,
       sourceChanged,
-      changeSummary: nativeSourceChangeSummary(changedSymbols, changedRegions, sourceChanged)
+      changeSummary: nativeSourceChangeSummary(changedSymbols, changedRegions, sourceChanged),
+      changedRegionProjectionSummary
     }
   });
   return {
@@ -3259,6 +3275,7 @@ export function diffNativeSourceImports(input) {
       afterSidecarId: afterSidecar?.id,
       beforeImportContract: before?.metadata?.importResultContract,
       afterImportContract: after?.metadata?.importResultContract,
+      changedRegionProjectionSummary,
       ...input.metadata
     }
   };
@@ -3404,6 +3421,199 @@ function fileLevelNativeChangeRegion(input) {
   };
 }
 
+function attachNativeChangeRegionProjectionMetadata(regions, context) {
+  return (regions ?? []).map((region) => {
+    const projection = nativeChangedRegionProjectionMetadata(region, context);
+    return {
+      ...region,
+      metadata: {
+        ...(region.metadata ?? {}),
+        changedRegionProjection: projection
+      }
+    };
+  });
+}
+
+function nativeChangedRegionProjectionMetadata(region, context) {
+  const beforeRegion = findSemanticImportRegion(context.beforeSidecar, region);
+  const afterRegion = findSemanticImportRegion(context.afterSidecar, region);
+  const regionSymbols = (context.changedSymbols ?? []).filter((symbol) => nativeChangeSymbolTouchesRegion(symbol, region));
+  const sourceMapLinks = uniqueRecordsById([
+    ...nativeChangeProjectionSourceMapLinks(context.before, 'before', beforeRegion ?? region, regionSymbols),
+    ...nativeChangeProjectionSourceMapLinks(context.after, 'after', afterRegion ?? region, regionSymbols)
+  ]).slice(0, 24);
+  const action = nativeChangedRegionProjectionAction(region, context.readiness);
+  const conflictKeys = uniqueStrings([
+    region.conflictKey,
+    region.key ? `region:${region.key}` : undefined,
+    region.id ? `region:${region.id}` : undefined,
+    ...regionSymbols.map((symbol) => symbol.conflictKey)
+  ].filter(Boolean));
+  return {
+    schema: 'frontier.lang.changedRegionProjection.v1',
+    id: `changed_region_projection_${idFragment(region.conflictKey ?? region.key ?? region.id)}`,
+    reviewRequired: true,
+    autoMergeClaim: false,
+    changeKind: region.changeKind,
+    language: region.language ?? context.language,
+    sourcePath: region.sourcePath ?? context.sourcePath,
+    conflictKey: region.conflictKey,
+    region: {
+      id: region.id,
+      key: region.key,
+      kind: region.regionKind,
+      granularity: region.granularity,
+      precision: region.precision,
+      sourceSpan: region.sourceSpan,
+      nativeAstNodeId: region.nativeAstNodeId,
+      symbolId: region.symbolId,
+      symbolName: region.symbolName,
+      symbolKind: region.symbolKind
+    },
+    before: nativeChangeProjectionEndpoint(context.before, context.beforeSidecar, beforeRegion ?? (region.changeKind === 'added' ? undefined : region), 'before'),
+    after: nativeChangeProjectionEndpoint(context.after, context.afterSidecar, afterRegion ?? (region.changeKind === 'removed' ? undefined : region), 'after'),
+    sourceMapLinks,
+    admission: {
+      readiness: context.readiness,
+      action,
+      reasons: context.reasons ?? [],
+      conflictKeys
+    }
+  };
+}
+
+function findSemanticImportRegion(sidecar, region) {
+  return (sidecar?.ownershipRegions ?? []).find((candidate) => (
+    (region.id && candidate.id === region.id) ||
+    (region.key && candidate.key === region.key)
+  ));
+}
+
+function nativeChangeProjectionEndpoint(imported, sidecar, region, side) {
+  if (!imported && !region) return undefined;
+  const preservation = nativeImportSourcePreservationRecord(imported);
+  const sourceMaps = imported?.sourceMaps ?? imported?.universalAst?.sourceMaps ?? [];
+  const regionMappings = sourceMaps
+    .flatMap((sourceMap) => (sourceMap?.mappings ?? []).map((mapping) => ({ sourceMap, mapping })))
+    .filter(({ mapping }) => nativeChangeMappingTouchesRegion(mapping, region, []));
+  return {
+    side,
+    importId: imported?.id,
+    sidecarId: sidecar?.id,
+    nativeSourceId: imported?.nativeSource?.id,
+    nativeAstId: imported?.nativeAst?.id,
+    semanticIndexId: imported?.semanticIndex?.id,
+    universalAstId: imported?.universalAst?.id,
+    sourcePath: imported?.sourcePath ?? region?.sourcePath,
+    sourceHash: imported?.nativeSource?.sourceHash ?? imported?.nativeAst?.sourceHash ?? region?.sourceHash,
+    sourcePreservationId: preservation?.id,
+    exactSourceAvailable: preservation?.summary?.exactSourceAvailable === true,
+    ownershipRegionId: region?.id,
+    ownershipKey: region?.key,
+    ownershipRegionKind: region?.regionKind,
+    sourceSpan: region?.sourceSpan,
+    sourceMapIds: sourceMaps.map((sourceMap) => sourceMap?.id).filter(Boolean),
+    sourceMapMappingIds: regionMappings.map(({ mapping }) => mapping?.id).filter(Boolean)
+  };
+}
+
+function nativeChangeProjectionSourceMapLinks(imported, side, region, symbols) {
+  if (!imported) return [];
+  const sourceMaps = imported.sourceMaps ?? imported.universalAst?.sourceMaps ?? [];
+  const links = [];
+  for (const sourceMap of sourceMaps) {
+    for (const mapping of sourceMap?.mappings ?? []) {
+      if (!nativeChangeMappingTouchesRegion(mapping, region, symbols)) continue;
+      links.push({
+        id: `${side}:${sourceMap.id}:${mapping.id}`,
+        side,
+        sourceMapId: sourceMap.id,
+        sourceMapMappingId: mapping.id,
+        sourcePath: mapping.sourceSpan?.path ?? sourceMap.sourcePath ?? imported.sourcePath,
+        sourceHash: sourceMap.sourceHash ?? imported.nativeSource?.sourceHash ?? imported.nativeAst?.sourceHash,
+        targetPath: mapping.generatedSpan?.targetPath ?? sourceMap.targetPath,
+        targetHash: mapping.generatedSpan?.targetHash ?? sourceMap.targetHash,
+        semanticSymbolId: mapping.semanticSymbolId,
+        semanticOccurrenceId: mapping.semanticOccurrenceId,
+        semanticNodeId: mapping.semanticNodeId,
+        nativeSourceId: mapping.nativeSourceId,
+        nativeAstNodeId: mapping.nativeAstNodeId,
+        precision: mapping.precision,
+        sourceSpan: mapping.sourceSpan,
+        generatedSpan: mapping.generatedSpan,
+        ownershipRegionId: mapping.ownershipRegionId,
+        ownershipRegionKey: mapping.ownershipRegionKey,
+        ownershipRegionKind: mapping.ownershipRegionKind
+      });
+    }
+  }
+  return links;
+}
+
+function nativeChangeMappingTouchesRegion(mapping, region, symbols) {
+  if (!mapping || !region) return false;
+  const symbolIds = new Set((symbols ?? []).map((symbol) => symbol.id).filter(Boolean));
+  const occurrenceIds = new Set((symbols ?? []).map((symbol) => symbol.semanticOccurrenceId).filter(Boolean));
+  const mappingIds = new Set((symbols ?? []).map((symbol) => symbol.sourceMapMappingId).filter(Boolean));
+  if (mappingIds.has(mapping.id)) return true;
+  if (region.id && mapping.ownershipRegionId === region.id) return true;
+  if (region.key && mapping.ownershipRegionKey === region.key) return true;
+  if (region.nativeAstNodeId && mapping.nativeAstNodeId === region.nativeAstNodeId) return true;
+  if (symbolIds.has(mapping.semanticSymbolId)) return true;
+  if (occurrenceIds.has(mapping.semanticOccurrenceId)) return true;
+  if (region.granularity === 'file') {
+    return !region.sourcePath || sourceSpanPathMatches(mapping.sourceSpan, region.sourcePath);
+  }
+  return false;
+}
+
+function sourceSpanPathMatches(span, sourcePath) {
+  if (!span || !sourcePath) return false;
+  return span.path === sourcePath || span.sourceId === sourcePath;
+}
+
+function nativeChangeSymbolTouchesRegion(symbol, region) {
+  return Boolean(symbol && region && (
+    (region.id && symbol.ownershipRegionId === region.id) ||
+    (region.key && (
+      symbol.ownershipKey === region.key ||
+      symbol.beforeOwnershipKey === region.key ||
+      symbol.afterOwnershipKey === region.key
+    ))
+  ));
+}
+
+function nativeChangedRegionProjectionAction(region, readiness) {
+  if (readiness === 'blocked') return 'rerun-or-human-port';
+  if (region.changeKind === 'added') return 'review-addition';
+  if (region.changeKind === 'removed') return 'review-removal';
+  if (region.granularity === 'file') return 'review-file';
+  return 'review-port';
+}
+
+function nativeImportSourcePreservationRecord(imported) {
+  return imported?.metadata?.sourcePreservation
+    ?? imported?.nativeSource?.metadata?.sourcePreservation
+    ?? imported?.nativeAst?.metadata?.sourcePreservation
+    ?? imported?.universalAst?.metadata?.sourcePreservation;
+}
+
+function summarizeNativeChangedRegionProjections(regions) {
+  const projections = (regions ?? [])
+    .map((region) => region?.metadata?.changedRegionProjection)
+    .filter(Boolean);
+  return {
+    schema: 'frontier.lang.changedRegionProjectionSummary.v1',
+    total: regions?.length ?? 0,
+    withProjection: projections.length,
+    reviewRequired: projections.filter((projection) => projection.reviewRequired === true).length,
+    autoMergeClaims: projections.filter((projection) => projection.autoMergeClaim === true).length,
+    sourceMapLinks: projections.reduce((sum, projection) => sum + (projection.sourceMapLinks?.length ?? 0), 0),
+    byAction: countBy(projections.map((projection) => projection.admission?.action ?? 'unknown')),
+    byRegionKind: countBy(projections.map((projection) => projection.region?.kind ?? 'unknown'))
+  };
+}
+
 function nativeImportReadiness(imported) {
   return imported?.metadata?.semanticMergeReadiness
     ?? imported?.metadata?.nativeImportLossSummary?.semanticMergeReadiness
@@ -3467,9 +3677,29 @@ function nativeChangeSpans(changedSymbols, changedRegions, input) {
       symbolId: region.symbolId,
       span: region.sourceSpan,
       conflictKey: region.conflictKey ?? `region:${region.key ?? region.id}`,
-      metadata: { changeKind: region.changeKind, regionKind: region.regionKind, granularity: region.granularity }
+      metadata: {
+        changeKind: region.changeKind,
+        regionKind: region.regionKind,
+        granularity: region.granularity,
+        ...(region.metadata?.changedRegionProjection ? {
+          changedRegionProjection: nativeChangedRegionProjectionSpanMetadata(region.metadata.changedRegionProjection)
+        } : {})
+      }
     }));
   return uniqueRecordsById([...symbolSpans, ...regionSpans]);
+}
+
+function nativeChangedRegionProjectionSpanMetadata(projection) {
+  return {
+    schema: projection.schema,
+    id: projection.id,
+    reviewRequired: projection.reviewRequired,
+    autoMergeClaim: projection.autoMergeClaim,
+    beforeSourceHash: projection.before?.sourceHash,
+    afterSourceHash: projection.after?.sourceHash,
+    sourceMapLinks: projection.sourceMapLinks?.length ?? 0,
+    admission: projection.admission
+  };
 }
 
 function nativeSourceChangeSummary(changedSymbols, changedRegions, sourceChanged) {

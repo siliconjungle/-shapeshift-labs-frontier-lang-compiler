@@ -866,6 +866,19 @@ assert.equal(jsChangeSet.mergeCandidate.kind, 'frontier.lang.semanticMergeCandid
 assert.equal(jsChangeSet.mergeCandidate.patchId, jsChangeSet.patch.id);
 assert.equal(jsChangeSet.mergeCandidate.conflictKeys.some((key) => key.startsWith('region:source#src/change.js')), true);
 assert.equal(jsChangeSet.readiness, 'needs-review');
+const jsChangeProjection = jsChangeSet.changedRegions.find((region) => region.metadata?.changedRegionProjection?.sourceMapLinks?.length)?.metadata.changedRegionProjection;
+assert.equal(jsChangeProjection.schema, 'frontier.lang.changedRegionProjection.v1');
+assert.equal(jsChangeProjection.reviewRequired, true);
+assert.equal(jsChangeProjection.autoMergeClaim, false);
+assert.equal(jsChangeProjection.after.sourceHash, jsChangeSet.afterHash);
+assert.equal(jsChangeProjection.admission.readiness, jsChangeSet.readiness);
+assert.equal(jsChangeProjection.admission.action, 'review-port');
+assert.equal(jsChangeProjection.sourceMapLinks.some((link) => link.side === 'after' && link.sourceMapMappingId), true);
+assert.equal(jsChangeSet.mergeCandidate.metadata.changedRegionProjectionSummary.schema, 'frontier.lang.changedRegionProjectionSummary.v1');
+assert.equal(jsChangeSet.mergeCandidate.metadata.changedRegionProjectionSummary.withProjection, jsChangeSet.changedRegions.length);
+assert.equal(jsChangeSet.mergeCandidate.metadata.changedRegionProjectionSummary.autoMergeClaims, 0);
+assert.equal(jsChangeSet.metadata.changedRegionProjectionSummary.reviewRequired, jsChangeSet.changedRegions.length);
+assert.equal(jsChangeSet.mergeCandidate.nativeSpans.some((span) => span.metadata?.changedRegionProjection?.schema === 'frontier.lang.changedRegionProjection.v1'), true);
 const unchangedDeclarationChangeSet = diffNativeSourceImports({
   before: importNativeSource({
     language: 'javascript',
@@ -883,6 +896,9 @@ assert.equal(unchangedDeclarationChangeSet.summary.symbols, 0);
 assert.equal(unchangedDeclarationChangeSet.summary.regions, 1);
 assert.equal(unchangedDeclarationChangeSet.changedRegions[0].granularity, 'file');
 assert.equal(unchangedDeclarationChangeSet.reasons.some((reason) => reason.includes('file-level review')), true);
+assert.equal(unchangedDeclarationChangeSet.changedRegions[0].metadata.changedRegionProjection.admission.action, 'review-file');
+assert.equal(unchangedDeclarationChangeSet.changedRegions[0].metadata.changedRegionProjection.autoMergeClaim, false);
+assert.equal(unchangedDeclarationChangeSet.changedRegions[0].metadata.changedRegionProjection.sourceMapLinks.some((link) => link.side === 'before'), true);
 const preservedNativeSource = 'export function preservedNative() { return true; }\n';
 const preservedNativeImport = importNativeSource({
   language: 'javascript',

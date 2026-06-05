@@ -87,6 +87,10 @@ import type {
   NativeTargetProjectionResult,
   NativeProjectImportResult,
   NativeSourceChangeSet,
+  NativeSourceChangeProjectionEndpoint,
+  NativeSourceChangeProjectionMetadata,
+  NativeSourceChangeProjectionSourceMapLink,
+  NativeSourceChangeProjectionSummary,
   NativeSourceChangeSymbol,
   NativeSourceCompileOutputMode,
   NativeSourceCompileResult,
@@ -303,6 +307,14 @@ const changedSourceAgain: NativeSourceChangeSet = diffNativeSourceImports({
   after: changedSource.after
 });
 const changedSymbol: NativeSourceChangeSymbol | undefined = changedSource.changedSymbols[0];
+const changedRegionProjectionSummary: NativeSourceChangeProjectionSummary | undefined = changedSource.metadata?.changedRegionProjectionSummary;
+const changedRegionProjection: NativeSourceChangeProjectionMetadata | undefined = changedSource.changedRegions[0]?.metadata?.changedRegionProjection;
+const changedRegionProjectionEndpoint: NativeSourceChangeProjectionEndpoint | undefined = changedRegionProjection?.after;
+const changedRegionProjectionLink: NativeSourceChangeProjectionSourceMapLink | undefined = changedRegionProjection?.sourceMapLinks[0];
+if (changedRegionProjection) changedRegionProjection.autoMergeClaim satisfies false;
+if (changedRegionProjectionEndpoint) changedRegionProjectionEndpoint.exactSourceAvailable satisfies boolean;
+if (changedRegionProjectionLink) changedRegionProjectionLink.precision satisfies string | undefined;
+if (changedRegionProjectionSummary) changedRegionProjectionSummary.autoMergeClaims satisfies number;
 
 const estreeAdapter: NativeImporterAdapter = createEstreeNativeImporterAdapter();
 const babelAdapter: NativeImporterAdapter = createBabelNativeImporterAdapter();

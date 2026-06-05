@@ -6,6 +6,7 @@ import {
   createNativeImportCoverageMatrix,
   createProjectionTargetLossMatrix,
   createSemanticImportSidecar,
+  diffNativeSources,
   importExternalSemanticIndex,
   importNativeProject,
   importNativeSource,
@@ -149,6 +150,20 @@ for (let index = 0; index < 50; index += 1) {
   assert.ok(lightweight.mergeCandidates.length >= 1);
   assert.equal(lightweight.metadata.sourcePreservation.sourceHash, lightweight.nativeSource.sourceHash);
   assert.equal(lightweight.metadata.sourcePreservation.summary.exactSourceAvailable, true);
+  const lightweightChange = diffNativeSources({
+    language: index % 2 === 0 ? 'javascript' : 'python',
+    sourcePath: index % 2 === 0 ? `src/light-${index}.js` : `light-${index}.py`,
+    beforeSourceText: index % 2 === 0
+      ? `export function light${index}() { return true; }\n`
+      : `def light_${index}():\n    return True\n`,
+    afterSourceText: index % 2 === 0
+      ? `export function light${index}() { return false; }\n`
+      : `def light_${index}():\n    return False\n`
+  });
+  assert.ok(lightweightChange.changedRegions.length >= 1);
+  assert.equal(lightweightChange.metadata.changedRegionProjectionSummary.withProjection, lightweightChange.changedRegions.length);
+  assert.equal(lightweightChange.metadata.changedRegionProjectionSummary.autoMergeClaims, 0);
+  assert.equal(lightweightChange.changedRegions.every((region) => region.metadata.changedRegionProjection.reviewRequired === true), true);
   const sidecar = createSemanticImportSidecar(lightweight);
   assert.equal(sidecar.summary.emptySemanticIndex, false);
   assert.ok(sidecar.ownershipRegions.length >= 1);
