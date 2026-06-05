@@ -9,6 +9,7 @@ import {
   readUniversalAstJson,
   renderTargetAst,
   resolveCapabilityAdapters,
+  runNativeImporterAdapter,
   writeUniversalAstJson
 } from '../dist/index.js';
 
@@ -100,6 +101,65 @@ assert.equal(nativeImport.semanticIndex.symbols[0].id, 'symbol:addTodo');
 assert.equal(nativeImport.universalAst.semanticIndex.id, 'index_todo_js');
 assert.equal(nativeImport.patch.operations[0].op, 'upsertNode');
 assert.equal(nativeImport.evidence[0].status, 'passed');
+const adapterImport = await runNativeImporterAdapter({
+  id: 'fixture-estree-importer',
+  language: 'javascript',
+  parser: 'estree',
+  version: '1.0.0',
+  capabilities: ['nativeAst', 'diagnostics'],
+  supportedExtensions: ['js', '.mjs'],
+  diagnostics: [{ severity: 'info', code: 'adapter.ready', message: 'Fixture adapter is available.' }],
+  parse(input) {
+    assert.equal(input.adapterId, 'fixture-estree-importer');
+    assert.equal(input.language, 'javascript');
+    assert.equal(input.parser, 'estree');
+    assert.equal(input.parserVersion, '1.0.0');
+    assert.equal(input.sourceHash.startsWith('fnv1a32:'), true);
+    assert.equal(input.options.mode, 'smoke');
+    return {
+      rootId: 'adapter_program',
+      nodes: {
+        adapter_program: { id: 'adapter_program', kind: 'Program', languageKind: 'ESTree.Program', children: ['adapter_fn'] },
+        adapter_fn: { id: 'adapter_fn', kind: 'FunctionDeclaration', languageKind: 'ESTree.FunctionDeclaration', span: { path: input.sourcePath, startLine: 1, endLine: 1 } }
+      },
+      diagnostics: [{ severity: 'warning', code: 'adapter.opaqueBody', kind: 'opaqueNative', message: 'Function body retained as native AST.', span: { path: input.sourcePath, startLine: 1, endLine: 1 } }]
+    };
+  }
+}, {
+  sourcePath: 'src/adapter.js',
+  sourceText: 'export function fromAdapter() { return true; }\n',
+  adapterOptions: { mode: 'smoke' },
+  metadata: { requestId: 'adapter-smoke' }
+});
+assert.equal(adapterImport.kind, 'frontier.lang.importResult');
+assert.equal(adapterImport.adapter.id, 'fixture-estree-importer');
+assert.deepEqual(adapterImport.adapter.capabilities, ['nativeAst', 'diagnostics']);
+assert.deepEqual(adapterImport.adapter.supportedExtensions, ['.js', '.mjs']);
+assert.equal(adapterImport.nativeAst.parser, 'estree');
+assert.equal(adapterImport.nativeAst.parserVersion, '1.0.0');
+assert.equal(adapterImport.nativeAst.metadata.adapterId, 'fixture-estree-importer');
+assert.equal(adapterImport.metadata.adapterId, 'fixture-estree-importer');
+assert.equal(adapterImport.metadata.requestId, 'adapter-smoke');
+assert.equal(adapterImport.diagnostics.length, 2);
+assert.equal(adapterImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.opaqueBody'), true);
+assert.equal(adapterImport.losses.some((loss) => loss.metadata?.diagnosticCode === 'adapter.opaqueBody'), true);
+assert.equal(adapterImport.evidence.some((record) => record.id === 'evidence_fixture_estree_importer_native_importer_adapter' && record.status === 'passed'), true);
+const failedAdapterImport = await runNativeImporterAdapter({
+  id: 'throwing-typescript-importer',
+  language: 'typescript',
+  parser: 'typescript-compiler-api',
+  parse() {
+    throw new Error('fixture parser failure');
+  }
+}, {
+  sourcePath: 'src/broken.ts',
+  sourceText: 'export const = ;\n'
+});
+assert.equal(failedAdapterImport.kind, 'frontier.lang.importResult');
+assert.equal(failedAdapterImport.nativeAst.rootId, 'adapter_error_root');
+assert.equal(failedAdapterImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.parse.threw'), true);
+assert.equal(failedAdapterImport.losses.some((loss) => loss.severity === 'error'), true);
+assert.equal(failedAdapterImport.evidence.some((record) => record.id === 'evidence_throwing_typescript_importer_native_importer_adapter' && record.status === 'failed'), true);
 const scannedJsImport = importNativeSource({
   language: 'javascript',
   sourcePath: 'src/scanned.js',

@@ -135,6 +135,125 @@ export function resolveCapabilityAdapters(document, target = 'typescript', optio
     });
 }
 
+export async function runNativeImporterAdapter(adapter, input = {}) {
+  const summary = normalizeNativeImporterAdapter(adapter);
+  const language = input.language ?? summary.language;
+  const parser = input.parser ?? summary.parser;
+  const parserVersion = input.parserVersion ?? summary.version;
+  const sourceText = input.sourceText ?? '';
+  const sourceHash = input.sourceHash ?? hashSemanticValue(sourceText);
+  const parseInput = {
+    sourceText,
+    sourcePath: input.sourcePath,
+    sourceHash,
+    language,
+    parser,
+    parserVersion,
+    adapterId: summary.id,
+    adapterVersion: summary.version,
+    options: input.adapterOptions ?? {},
+    metadata: input.adapterMetadata ?? {}
+  };
+  let parsed;
+  let thrownDiagnostic;
+  try {
+    parsed = await adapter.parse(parseInput);
+  } catch (error) {
+    thrownDiagnostic = {
+      severity: 'error',
+      code: 'adapter.parse.threw',
+      phase: 'parse',
+      kind: 'unsupportedSyntax',
+      message: error instanceof Error ? error.message : String(error),
+      metadata: {
+        errorName: error instanceof Error ? error.name : undefined
+      }
+    };
+    parsed = {
+      rootId: 'adapter_error_root',
+      nodes: {
+        adapter_error_root: {
+          id: 'adapter_error_root',
+          kind: 'AdapterParseError',
+          languageKind: `${language}.adapterParseError`,
+          value: thrownDiagnostic.message,
+          metadata: { adapterId: summary.id, parser }
+        }
+      }
+    };
+  }
+  const parseResult = parsed ?? {};
+  const diagnostics = [
+    ...normalizeAdapterDiagnostics(summary.diagnostics, summary, parseInput, 'adapter'),
+    ...(thrownDiagnostic ? normalizeAdapterDiagnostics([thrownDiagnostic], summary, parseInput, 'throw') : []),
+    ...normalizeAdapterDiagnostics(parseResult.diagnostics, summary, parseInput, 'parse')
+  ];
+  const losses = mergeNativeLosses(
+    parseResult.losses,
+    diagnostics.map((diagnostic, index) => adapterDiagnosticToLoss(diagnostic, index, summary, parseInput))
+  );
+  const sourceEvidence = adapterDiagnosticsEvidence(summary, diagnostics, {
+    language,
+    parser,
+    parserVersion,
+    sourcePath: parseResult.sourcePath ?? input.sourcePath,
+    sourceHash: parseResult.sourceHash ?? sourceHash
+  });
+  const evidence = [...(parseResult.evidence ?? []), sourceEvidence];
+  const importInput = {
+    ...input,
+    ...parseResult,
+    language,
+    parser,
+    parserVersion,
+    sourceText,
+    sourcePath: parseResult.sourcePath ?? input.sourcePath,
+    sourceHash: parseResult.sourceHash ?? sourceHash,
+    losses,
+    evidence,
+    metadata: {
+      adapterId: summary.id,
+      adapterVersion: summary.version,
+      adapterCapabilities: summary.capabilities,
+      supportedExtensions: summary.supportedExtensions,
+      diagnostics: diagnostics.map(serializableDiagnostic),
+      ...input.metadata,
+      ...parseResult.metadata
+    },
+    nativeAstMetadata: {
+      adapterId: summary.id,
+      adapterVersion: summary.version,
+      parser,
+      ...input.nativeAstMetadata,
+      ...parseResult.nativeAstMetadata
+    },
+    nativeSourceMetadata: {
+      adapterId: summary.id,
+      adapterVersion: summary.version,
+      parser,
+      ...input.nativeSourceMetadata,
+      ...parseResult.nativeSourceMetadata
+    },
+    documentMetadata: {
+      nativeImporterAdapterId: summary.id,
+      nativeImporterAdapterVersion: summary.version,
+      ...input.documentMetadata,
+      ...parseResult.documentMetadata
+    },
+    universalAstMetadata: {
+      nativeImporterAdapterId: summary.id,
+      nativeImporterAdapterVersion: summary.version,
+      ...input.universalAstMetadata,
+      ...parseResult.universalAstMetadata
+    }
+  };
+  return {
+    ...importNativeSource(importInput),
+    adapter: summary,
+    diagnostics
+  };
+}
+
 export function importNativeSource(input) {
   const language = input.language ?? input.nativeAst?.language;
   if (!language) throw new Error('importNativeSource requires a language or nativeAst.language');
@@ -597,6 +716,147 @@ export function writeUniversalAstJson(envelope) {
 
 export function emitForTarget(document, target = 'typescript', options = {}) {
   return renderTargetAst(projectFrontierAst(document, target, options), target);
+}
+
+function normalizeNativeImporterAdapter(adapter) {
+  if (!adapter || typeof adapter !== 'object') {
+    throw new Error('Native importer adapter must be an object');
+  }
+  if (!adapter.id) throw new Error('Native importer adapter requires an id');
+  if (!adapter.language) throw new Error(`Native importer adapter ${adapter.id} requires a language`);
+  if (!adapter.parser) throw new Error(`Native importer adapter ${adapter.id} requires a parser`);
+  if (typeof adapter.parse !== 'function') throw new Error(`Native importer adapter ${adapter.id} requires a parse function`);
+  const summaryInput = {
+    id: String(adapter.id),
+    language: adapter.language,
+    parser: String(adapter.parser),
+    version: adapter.version === undefined ? undefined : String(adapter.version)
+  };
+  return Object.freeze({
+    ...summaryInput,
+    capabilities: normalizeStringList(adapter.capabilities),
+    supportedExtensions: normalizeStringList(adapter.supportedExtensions).map((extension) => extension.startsWith('.') ? extension.toLowerCase() : `.${extension.toLowerCase()}`),
+    diagnostics: normalizeAdapterDiagnostics(adapter.diagnostics, summaryInput, {
+      language: adapter.language,
+      parser: String(adapter.parser),
+      parserVersion: adapter.version === undefined ? undefined : String(adapter.version)
+    }, 'adapter')
+  });
+}
+
+function normalizeStringList(value) {
+  if (value === undefined || value === null) return [];
+  if (Array.isArray(value)) return value.map((item) => String(item)).filter(Boolean);
+  return [String(value)].filter(Boolean);
+}
+
+function normalizeAdapterDiagnostics(value, adapter, input, scope = 'diagnostic') {
+  if (value === undefined || value === null) return [];
+  const diagnostics = Array.isArray(value) ? value : [value];
+  return diagnostics.map((diagnostic, index) => {
+    const normalized = typeof diagnostic === 'string' ? { message: diagnostic } : diagnostic ?? {};
+    const severity = normalizeDiagnosticSeverity(normalized.severity);
+    return Object.freeze({
+      id: normalized.id ?? `diagnostic_${idFragment(adapter.id)}_${idFragment(scope)}_${index + 1}`,
+      severity,
+      code: normalized.code,
+      phase: normalized.phase ?? 'parse',
+      kind: normalized.kind,
+      message: String(normalized.message ?? `${adapter.id} reported a ${severity} diagnostic.`),
+      path: normalized.path ?? input.sourcePath,
+      span: normalized.span,
+      metadata: {
+        adapterId: adapter.id,
+        adapterVersion: adapter.version,
+        language: input.language ?? adapter.language,
+        parser: input.parser ?? adapter.parser,
+        parserVersion: input.parserVersion,
+        ...normalized.metadata
+      }
+    });
+  });
+}
+
+function normalizeDiagnosticSeverity(value) {
+  const severity = String(value ?? 'warning').toLowerCase();
+  if (severity === 'error') return 'error';
+  if (severity === 'info') return 'info';
+  return 'warning';
+}
+
+function adapterDiagnosticToLoss(diagnostic, index, adapter, input) {
+  const code = diagnostic.code ?? diagnostic.kind ?? diagnostic.severity;
+  return {
+    id: `loss_${idFragment(diagnostic.id ?? `${adapter.id}_${index}_${code}`)}`,
+    severity: diagnostic.severity,
+    phase: diagnostic.phase,
+    sourceFormat: input.language,
+    kind: diagnostic.kind ?? (diagnostic.severity === 'error' ? 'unsupportedSyntax' : 'opaqueNative'),
+    message: diagnostic.message,
+    span: diagnostic.span,
+    metadata: {
+      adapterId: adapter.id,
+      adapterVersion: adapter.version,
+      diagnosticId: diagnostic.id,
+      diagnosticCode: diagnostic.code,
+      parser: input.parser,
+      parserVersion: input.parserVersion,
+      path: diagnostic.path,
+      ...diagnostic.metadata
+    }
+  };
+}
+
+function mergeNativeLosses(primary = [], secondary = []) {
+  const seen = new Set();
+  const losses = [];
+  for (const loss of [...primary, ...secondary]) {
+    if (!loss) continue;
+    const id = loss.id ?? `loss_${losses.length + 1}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    losses.push(loss.id ? loss : { ...loss, id });
+  }
+  return losses;
+}
+
+function adapterDiagnosticsEvidence(adapter, diagnostics, input) {
+  const errors = diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length;
+  const warnings = diagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length;
+  return {
+    id: `evidence_${idFragment(adapter.id)}_native_importer_adapter`,
+    kind: 'import',
+    status: errors ? 'failed' : 'passed',
+    path: input.sourcePath,
+    summary: `Ran ${adapter.id} native importer for ${input.language} with ${diagnostics.length} diagnostic(s).`,
+    metadata: {
+      adapterId: adapter.id,
+      adapterVersion: adapter.version,
+      language: input.language,
+      parser: input.parser,
+      parserVersion: input.parserVersion,
+      sourceHash: input.sourceHash,
+      capabilities: adapter.capabilities,
+      supportedExtensions: adapter.supportedExtensions,
+      diagnostics: diagnostics.map(serializableDiagnostic),
+      errors,
+      warnings
+    }
+  };
+}
+
+function serializableDiagnostic(diagnostic) {
+  return {
+    id: diagnostic.id,
+    severity: diagnostic.severity,
+    code: diagnostic.code,
+    phase: diagnostic.phase,
+    kind: diagnostic.kind,
+    message: diagnostic.message,
+    path: diagnostic.path,
+    span: diagnostic.span,
+    metadata: diagnostic.metadata
+  };
 }
 
 function idFragment(value) {

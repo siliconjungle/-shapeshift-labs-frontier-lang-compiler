@@ -13,7 +13,8 @@ import type {
   NativeSourceNode,
   SemanticIndexRecord,
   SemanticNode,
-  SemanticPatchBundle
+  SemanticPatchBundle,
+  SourceSpan
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { Diagnostic } from '@shapeshift-labs/frontier-lang-checker';
 import type { EmitTypeScriptOptions, TypeScriptAstModule } from '@shapeshift-labs/frontier-lang-typescript';
@@ -68,6 +69,18 @@ export interface CapabilityResolution {
   readonly reason?: string;
 }
 
+export interface NativeImporterAdapterDiagnostic {
+  readonly id?: string;
+  readonly severity?: 'info' | 'warning' | 'error';
+  readonly code?: string;
+  readonly phase?: 'read' | 'parse' | 'map' | 'index' | 'import' | string;
+  readonly kind?: NativeAstLossRecord['kind'];
+  readonly message: string;
+  readonly path?: string;
+  readonly span?: SourceSpan;
+  readonly metadata?: Record<string, unknown>;
+}
+
 export interface ImportNativeSourceOptions {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage;
@@ -112,6 +125,58 @@ export type NativeSourceImportResult = LanguageImportResult & {
   readonly universalAst: FrontierUniversalAstEnvelope;
 };
 
+export interface NativeImporterAdapterParseInput {
+  readonly sourceText: string;
+  readonly sourcePath?: string;
+  readonly sourceHash: string;
+  readonly language: FrontierSourceLanguage;
+  readonly parser: string;
+  readonly parserVersion?: string;
+  readonly adapterId: string;
+  readonly adapterVersion?: string;
+  readonly options: Record<string, unknown>;
+  readonly metadata: Record<string, unknown>;
+}
+
+export interface NativeImporterAdapterParseResult extends Omit<ImportNativeSourceOptions, 'language' | 'parser' | 'parserVersion' | 'sourceText'> {
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+}
+
+export interface NativeImporterAdapter {
+  readonly id: string;
+  readonly language: FrontierSourceLanguage;
+  readonly parser: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly supportedExtensions?: readonly string[];
+  readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
+  readonly parse: (input: NativeImporterAdapterParseInput) => NativeImporterAdapterParseResult | Promise<NativeImporterAdapterParseResult>;
+}
+
+export interface NativeImporterAdapterSummary {
+  readonly id: string;
+  readonly language: FrontierSourceLanguage;
+  readonly parser: string;
+  readonly version?: string;
+  readonly capabilities: readonly string[];
+  readonly supportedExtensions: readonly string[];
+  readonly diagnostics: readonly NativeImporterAdapterDiagnostic[];
+}
+
+export interface RunNativeImporterAdapterOptions extends Omit<ImportNativeSourceOptions, 'language' | 'parser' | 'parserVersion' | 'sourceText'> {
+  readonly sourceText: string;
+  readonly language?: FrontierSourceLanguage;
+  readonly parser?: string;
+  readonly parserVersion?: string;
+  readonly adapterOptions?: Record<string, unknown>;
+  readonly adapterMetadata?: Record<string, unknown>;
+}
+
+export type NativeImporterAdapterImportResult = NativeSourceImportResult & {
+  readonly adapter: NativeImporterAdapterSummary;
+  readonly diagnostics: readonly NativeImporterAdapterDiagnostic[];
+};
+
 export declare const FrontierCompileTargets: readonly FrontierCompileTarget[];
 export declare function normalizeCompileTarget(target?: string): FrontierCompileTarget;
 export declare function compileFrontierSource(source: string, options?: FrontierCompileOptions): FrontierCompileResult;
@@ -119,6 +184,7 @@ export declare function compileFrontierDocument(document: FrontierLangDocument, 
 export declare function projectFrontierAst(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: FrontierCompileEmitOptions): FrontierTargetAst;
 export declare function renderTargetAst(ast: FrontierTargetAst, target?: FrontierCompileOptions['target']): string;
 export declare function resolveCapabilityAdapters(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: { readonly platform?: string }): readonly CapabilityResolution[];
+export declare function runNativeImporterAdapter(adapter: NativeImporterAdapter, input: RunNativeImporterAdapterOptions): Promise<NativeImporterAdapterImportResult>;
 export declare function importNativeSource(input: ImportNativeSourceOptions): NativeSourceImportResult;
 export declare function createUniversalAstFromDocument(document: FrontierLangDocument, input?: {
   readonly id?: string;
