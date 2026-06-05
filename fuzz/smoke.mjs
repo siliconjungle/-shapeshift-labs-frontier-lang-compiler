@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  compileNativeSource,
   compileFrontierSource,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
@@ -79,6 +80,19 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(projection.kind, 'frontier.lang.nativeSourceProjection');
   assert.equal(projection.mode, 'preserved-source');
   assert.ok(projection.sourceText.length > 0);
+  const nativeCompile = compileNativeSource(lightweight, {
+    target: index % 2 === 0 ? 'javascript' : 'python'
+  });
+  assert.equal(nativeCompile.kind, 'frontier.lang.nativeSourceCompileResult');
+  assert.equal(nativeCompile.outputMode, 'preserved-source');
+  assert.equal(nativeCompile.targetCoverage.supported, true);
+  assert.ok(nativeCompile.projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 1);
+  assert.ok(nativeCompile.output.length > 0);
+  const blockedNativeCompile = compileNativeSource(lightweight, {
+    target: index % 2 === 0 ? 'rust' : 'javascript'
+  });
+  assert.equal(blockedNativeCompile.readiness.readiness, 'blocked');
+  assert.equal(blockedNativeCompile.ok, false);
 }
 
 const project = await importNativeProject({

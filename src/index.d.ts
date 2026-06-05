@@ -1221,6 +1221,43 @@ export interface NativeSourceProjectionResult {
   readonly metadata: Record<string, unknown>;
 }
 
+export type NativeSourceCompileOutputMode = NativeSourceProjectionMode | 'target-stubs';
+
+export interface CompileNativeSourceOptions extends ProjectNativeImportToSourceOptions {
+  readonly target?: FrontierCompileTarget | string;
+  readonly adapters?: readonly NativeImporterAdapter[];
+  readonly languages?: readonly NativeImportLanguageProfile[];
+  readonly generatedAt?: number;
+  readonly emitOnBlocked?: boolean;
+  readonly projectionId?: string;
+  readonly projectionEvidenceId?: string;
+  readonly compileEvidenceId?: string;
+  readonly evidence?: readonly EvidenceRecord[];
+  readonly losses?: readonly NativeAstLossRecord[];
+}
+
+export interface NativeSourceCompileResult {
+  readonly kind: 'frontier.lang.nativeSourceCompileResult';
+  readonly version: 1;
+  readonly id: string;
+  readonly ok: boolean;
+  readonly target: FrontierCompileTarget | string;
+  readonly language: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly output: string;
+  readonly outputHash: string;
+  readonly outputMode: NativeSourceCompileOutputMode;
+  readonly importResult: NativeSourceImportResult;
+  readonly projection: NativeSourceProjectionResult;
+  readonly targetCoverage: ProjectionTargetCoverageEntry;
+  readonly projectionMatrix: ProjectionTargetLossMatrix;
+  readonly losses: readonly NativeAstLossRecord[];
+  readonly lossSummary: NativeImportLossSummary;
+  readonly readiness: NativeImportReadinessClassification;
+  readonly evidence: readonly EvidenceRecord[];
+  readonly metadata: Record<string, unknown>;
+}
+
 export type NativeImportRoundtripReadinessStatus =
   | 'exact'
   | 'preserved-source'
@@ -1286,6 +1323,7 @@ export declare const NativeImportLanguageProfiles: readonly NativeImportLanguage
 export declare function normalizeCompileTarget(target?: string): FrontierCompileTarget;
 export declare function compileFrontierSource(source: string, options?: FrontierCompileOptions): FrontierCompileResult;
 export declare function compileFrontierDocument(document: FrontierLangDocument, options?: FrontierCompileOptions): FrontierCompileResult;
+export declare function compileNativeSource(input: ImportNativeSourceOptions | NativeSourceImportResult, options?: CompileNativeSourceOptions): NativeSourceCompileResult;
 export declare function projectFrontierAst(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: FrontierCompileEmitOptions): FrontierTargetAst;
 export declare function renderTargetAst(ast: FrontierTargetAst, target?: FrontierCompileOptions['target']): string;
 export declare function renderTargetAstWithSourceMap(ast: FrontierTargetAst, target?: FrontierCompileOptions['target'], options?: FrontierCompileEmitOptions): FrontierTargetSourceMapResult;

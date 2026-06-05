@@ -35,6 +35,7 @@ import {
   runNativeImporterAdapter,
   classifyNativeImportRoundtripReadiness,
   classifyNativeImportReadiness,
+  compileNativeSource,
   summarizeNativeImportLosses,
   writeUniversalAstJson
 } from '../dist/index.js';
@@ -48,6 +49,7 @@ for (const requiredExport of [
   'createNativeImportResultContract',
   'createProjectionTargetLossMatrix',
   'classifyNativeImportRoundtripReadiness',
+  'compileNativeSource',
   'createSemanticImportSidecar',
   'diffNativeSourceImports',
   'diffNativeSources',
@@ -677,6 +679,34 @@ assert.equal(stubNativeProjection.lossSummary.highestSeverity, 'warning');
 assert.equal(stubNativeProjection.losses.some((loss) => loss.kind === 'targetProjectionLoss'), true);
 assert.equal(stubNativeProjection.lossSummary.categories.includes('targetProjectionLoss'), true);
 assert.equal(stubNativeProjection.readiness.readiness, 'needs-review');
+const sameLanguageNativeCompile = compileNativeSource(preservedNativeImport);
+assert.equal(sameLanguageNativeCompile.kind, 'frontier.lang.nativeSourceCompileResult');
+assert.equal(sameLanguageNativeCompile.target, 'javascript');
+assert.equal(sameLanguageNativeCompile.language, 'javascript');
+assert.equal(sameLanguageNativeCompile.ok, true);
+assert.equal(sameLanguageNativeCompile.outputMode, 'preserved-source');
+assert.equal(sameLanguageNativeCompile.output, preservedNativeSource);
+assert.equal(sameLanguageNativeCompile.projection.mode, 'preserved-source');
+assert.equal(sameLanguageNativeCompile.targetCoverage.supported, true);
+assert.equal(sameLanguageNativeCompile.projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 1, true);
+assert.equal(sameLanguageNativeCompile.projectionMatrix.summary.languages >= 1, true);
+assert.equal(sameLanguageNativeCompile.readiness.readiness, 'needs-review');
+assert.equal(sameLanguageNativeCompile.lossSummary.categories.includes('declarationsOnly'), true);
+const sameLanguageNativeCompileWithLosses = compileNativeSource(preservedNativeImport, { emitOnBlocked: true });
+assert.equal(sameLanguageNativeCompileWithLosses.ok, true);
+const rustNativeCompileBlocked = compileNativeSource(scannedJsImport, { target: 'rust' });
+assert.equal(rustNativeCompileBlocked.target, 'rust');
+assert.equal(rustNativeCompileBlocked.language, 'javascript');
+assert.equal(rustNativeCompileBlocked.ok, false);
+assert.equal(rustNativeCompileBlocked.outputMode, 'target-stubs');
+assert.equal(rustNativeCompileBlocked.projection.mode, 'native-source-stubs');
+assert.match(rustNativeCompileBlocked.output, /pub fn addTodo/);
+assert.match(rustNativeCompileBlocked.output, /pub struct TodoStore/);
+assert.equal(rustNativeCompileBlocked.targetCoverage.lossClass, 'missingAdapter');
+assert.equal(rustNativeCompileBlocked.losses.some((loss) => loss.severity === 'error' && loss.kind === 'targetProjectionLoss'), true);
+assert.equal(rustNativeCompileBlocked.readiness.readiness, 'blocked');
+const rustNativeCompileEmitted = compileNativeSource(scannedJsImport, { target: 'rust', emitOnBlocked: true });
+assert.equal(rustNativeCompileEmitted.ok, true);
 const staleNativeProjection = projectNativeImportToSource(preservedNativeImport, {
   sourceText: 'export function preservedNative() { return false; }\n'
 });

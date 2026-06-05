@@ -253,6 +253,116 @@ export function compileFrontierDocument(document, options = {}) {
   };
 }
 
+export function compileNativeSource(input, options = {}) {
+  const importResult = isNativeSourceImportResult(input) ? input : importNativeSource(input);
+  const sourceLanguage = nativeCompileSourceLanguage(importResult, input);
+  const target = nativeCompileTarget(input, importResult, options);
+  const sourceTarget = nativeLanguageCompileTarget(sourceLanguage);
+  const sameSourceTarget = sourceTarget === target;
+  const idPart = idFragment(options.id ?? importResult.id ?? importResult.sourcePath ?? sourceLanguage ?? target);
+  const id = options.id ?? `native_source_compile_${idPart}_${idFragment(target)}`;
+  const projection = projectNativeImportToSource(importResult, {
+    ...options,
+    id: options.projectionId ?? `${id}_projection`,
+    language: sameSourceTarget ? sourceLanguage : target,
+    preferPreservedSource: sameSourceTarget ? options.preferPreservedSource : false,
+    evidenceId: options.projectionEvidenceId ?? options.evidenceId,
+    metadata: {
+      sourceLanguage,
+      target,
+      nativeCompileResultId: id,
+      ...options.metadata
+    }
+  });
+  const projectionMatrix = createProjectionTargetLossMatrix({
+    imports: [importResult],
+    adapters: options.adapters,
+    languages: options.languages,
+    targets: [target],
+    generatedAt: options.generatedAt
+  });
+  const targetCoverage = nativeSourceCompileTargetCoverage(projectionMatrix, sourceLanguage, target);
+  const targetLosses = nativeSourceCompileTargetLosses({
+    importResult,
+    projection,
+    targetCoverage,
+    sourceLanguage,
+    target,
+    idPart
+  });
+  const outputMode = sameSourceTarget ? projection.mode : 'target-stubs';
+  const compileEvidence = nativeSourceCompileEvidence({
+    id: options.compileEvidenceId ?? `evidence_${idPart}_${idFragment(target)}_native_source_compile`,
+    importResult,
+    projection,
+    targetCoverage,
+    targetLosses,
+    sourceLanguage,
+    target,
+    outputMode
+  });
+  const evidence = uniqueByEvidenceId([
+    ...(importResult.evidence ?? []),
+    ...(projection.evidence ?? []),
+    compileEvidence,
+    ...(options.evidence ?? [])
+  ]);
+  const losses = uniqueByLossId([
+    ...(importResult.losses ?? []),
+    ...(projection.losses ?? []),
+    ...targetLosses,
+    ...(options.losses ?? [])
+  ]);
+  const lossSummary = summarizeNativeImportLosses(losses, {
+    evidence,
+    parser: importResult.nativeAst?.parser ?? importResult.nativeSource?.parser ?? options.parser,
+    scanKind: 'native-source-compile',
+    semanticStatus: importResult.metadata?.semanticStatus ?? options.semanticStatus
+  });
+  const readiness = classifyNativeImportReadiness(losses, {
+    evidence,
+    parser: importResult.nativeAst?.parser ?? importResult.nativeSource?.parser ?? options.parser,
+    scanKind: 'native-source-compile',
+    semanticStatus: importResult.metadata?.semanticStatus ?? options.semanticStatus
+  });
+  return {
+    kind: 'frontier.lang.nativeSourceCompileResult',
+    version: 1,
+    id,
+    ok: readiness.readiness !== 'blocked' || options.emitOnBlocked === true,
+    target,
+    language: sourceLanguage,
+    sourcePath: importResult.sourcePath ?? importResult.nativeSource?.sourcePath,
+    output: projection.sourceText,
+    outputHash: projection.outputHash,
+    outputMode,
+    importResult,
+    projection,
+    targetCoverage,
+    projectionMatrix,
+    losses,
+    lossSummary,
+    readiness,
+    evidence,
+    metadata: {
+      nativeImportId: importResult.id,
+      nativeSourceId: importResult.nativeSource?.id,
+      nativeAstId: importResult.nativeAst?.id ?? importResult.nativeSource?.ast?.id,
+      semanticIndexId: importResult.semanticIndex?.id ?? importResult.universalAst?.semanticIndex?.id,
+      universalAstId: importResult.universalAst?.id,
+      projectionId: projection.id,
+      projectionMode: projection.mode,
+      outputMode,
+      sourceTarget,
+      sameSourceTarget,
+      targetLossClass: targetCoverage.lossClass,
+      targetReadiness: targetCoverage.readiness,
+      targetSupported: targetCoverage.supported,
+      ...options.metadata
+    }
+  };
+}
+
 export function projectFrontierAst(document, target = 'typescript', options = {}) {
   const normalized = normalizeCompileTarget(target);
   const projector = projectors[normalized];
@@ -4073,6 +4183,159 @@ function nativeLanguageCompileTarget(language, aliases = []) {
   if (ids.includes('python')) return 'python';
   if (ids.includes('c')) return 'c';
   return undefined;
+}
+
+function isNativeSourceImportResult(input) {
+  return Boolean(input && typeof input === 'object' && input.kind === 'frontier.lang.importResult' && input.nativeSource && input.universalAst);
+}
+
+function nativeCompileSourceLanguage(importResult, input) {
+  return normalizeNativeLanguageId(
+    importResult.language
+      ?? importResult.nativeSource?.language
+      ?? importResult.nativeAst?.language
+      ?? importResult.nativeSource?.ast?.language
+      ?? input?.language
+  ) || String(importResult.language ?? input?.language ?? 'source');
+}
+
+function nativeCompileTarget(input, importResult, options) {
+  const targetInput = options.target
+    ?? compileTargetLanguage(input?.target)
+    ?? compileTargetLanguage(importResult.nativeSource?.target)
+    ?? nativeLanguageCompileTarget(nativeCompileSourceLanguage(importResult, input))
+    ?? 'typescript';
+  return normalizeProjectionMatrixTargets([targetInput])[0] ?? String(targetInput ?? 'typescript').toLowerCase();
+}
+
+function compileTargetLanguage(target) {
+  if (!target) return undefined;
+  if (typeof target === 'string') return target;
+  return target.language ?? target.emitLanguage ?? target.target ?? target.name;
+}
+
+function nativeSourceCompileTargetCoverage(matrix, language, target) {
+  const sourceLanguage = normalizeNativeLanguageId(language);
+  const entry = (matrix.languages ?? []).find((candidate) => {
+    const ids = [candidate.language, ...(candidate.aliases ?? [])].map(normalizeNativeLanguageId);
+    return ids.includes(sourceLanguage);
+  });
+  const coverage = entry?.targets?.find((candidate) => candidate.target === target);
+  if (coverage) return coverage;
+  return {
+    target,
+    lossClass: 'missingAdapter',
+    supported: false,
+    readiness: 'blocked',
+    lossKinds: ['targetProjectionLoss'],
+    categories: ['targetProjectionLoss'],
+    reason: `No native-to-${target} projection coverage is available for ${language}.`,
+    adapter: undefined,
+    notes: ['Inject a source-language parser and target projection adapter before treating this cross-language output as merge-ready.']
+  };
+}
+
+function nativeSourceCompileTargetLosses(input) {
+  const { importResult, projection, targetCoverage, sourceLanguage, target, idPart } = input;
+  if (!targetCoverage || targetCoverage.lossClass === 'exactSourceProjection') return [];
+  if (targetCoverage.lossClass === 'missingAdapter') {
+    return [nativeSourceCompileTargetLoss({
+      id: `loss_${idPart}_${idFragment(target)}_missing_projection_adapter`,
+      severity: 'error',
+      message: targetCoverage.reason,
+      importResult,
+      projection,
+      targetCoverage,
+      sourceLanguage,
+      target
+    })];
+  }
+  if (targetCoverage.lossClass === 'unsupportedTargetFeatures') {
+    return [nativeSourceCompileTargetLoss({
+      id: `loss_${idPart}_${idFragment(target)}_unsupported_target_features`,
+      severity: 'warning',
+      message: targetCoverage.reason,
+      importResult,
+      projection,
+      targetCoverage,
+      sourceLanguage,
+      target
+    })];
+  }
+  if (targetCoverage.lossClass === 'nativeSourceStubs') {
+    return [nativeSourceCompileTargetLoss({
+      id: `loss_${idPart}_${idFragment(target)}_target_stubs`,
+      severity: 'warning',
+      message: targetCoverage.reason,
+      importResult,
+      projection,
+      targetCoverage,
+      sourceLanguage,
+      target
+    })];
+  }
+  return [];
+}
+
+function nativeSourceCompileTargetLoss(input) {
+  const rootSpan = input.importResult.nativeAst?.nodes?.[input.importResult.nativeAst?.rootId]?.span
+    ?? input.importResult.nativeSource?.ast?.nodes?.[input.importResult.nativeSource?.ast?.rootId]?.span;
+  return {
+    id: input.id,
+    severity: input.severity,
+    phase: 'emit',
+    sourceFormat: input.sourceLanguage,
+    kind: 'targetProjectionLoss',
+    message: input.message,
+    span: rootSpan ?? {
+      sourceId: input.importResult.nativeSource?.sourceHash ?? input.importResult.sourceHash,
+      path: input.importResult.sourcePath ?? input.importResult.nativeSource?.sourcePath,
+      startLine: 1,
+      startColumn: 1
+    },
+    metadata: {
+      target: input.target,
+      sourceLanguage: input.sourceLanguage,
+      projectionId: input.projection.id,
+      projectionMode: input.projection.mode,
+      targetLossClass: input.targetCoverage.lossClass,
+      targetReadiness: input.targetCoverage.readiness,
+      targetSupported: input.targetCoverage.supported,
+      targetAdapter: input.targetCoverage.adapter,
+      targetLossKinds: input.targetCoverage.lossKinds,
+      lossCategory: 'targetProjectionLoss',
+      semanticMergeAdmission: semanticMergeAdmissionForSeverity(input.severity)
+    }
+  };
+}
+
+function nativeSourceCompileEvidence(input) {
+  const failed = input.targetLosses.some((loss) => loss.severity === 'error')
+    || input.projection.evidence?.some((record) => record.status === 'failed')
+    || input.targetCoverage.readiness === 'blocked';
+  return {
+    id: input.id,
+    kind: 'projection',
+    status: failed ? 'failed' : 'passed',
+    path: input.importResult.sourcePath ?? input.importResult.nativeSource?.sourcePath,
+    summary: failed
+      ? `Compiled ${input.sourceLanguage} native source to ${input.target} with blocked projection evidence.`
+      : `Compiled ${input.sourceLanguage} native source to ${input.target} as ${input.outputMode}.`,
+    metadata: {
+      importId: input.importResult.id,
+      projectionId: input.projection.id,
+      sourceLanguage: input.sourceLanguage,
+      target: input.target,
+      outputHash: input.projection.outputHash,
+      outputMode: input.outputMode,
+      projectionMode: input.projection.mode,
+      targetLossClass: input.targetCoverage.lossClass,
+      targetReadiness: input.targetCoverage.readiness,
+      targetSupported: input.targetCoverage.supported,
+      targetReason: input.targetCoverage.reason,
+      targetLossIds: input.targetLosses.map((loss) => loss.id)
+    }
+  };
 }
 
 function nativeProjectionTargetsForLanguage(language, aliases = []) {

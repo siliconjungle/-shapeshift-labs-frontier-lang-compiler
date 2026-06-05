@@ -166,6 +166,32 @@ console.log(changeSet.mergeCandidate.readiness); // merge-admission classificati
 
 Use `diffNativeSourceImports` when the worker or runner already produced `importNativeSource` results. Body-only edits that the lightweight scanner cannot anchor to a symbol are still reported as file-level changed regions instead of being silently treated as safe.
 
+Compile native source imports through the same reader/IR/writer facade that swarms use for sidecar evidence. Same-language targets preserve exact source when hashes match; cross-language targets emit declaration stubs until a real adapter provides stronger evidence:
+
+```js
+import { compileNativeSource } from '@shapeshift-labs/frontier-lang-compiler';
+
+const compiledJs = compileNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/runtime.js',
+  sourceText: 'export function step(frame) { return frame + 1; }\n'
+});
+
+console.log(compiledJs.outputMode); // "preserved-source"
+console.log(compiledJs.readiness.readiness); // scanner imports can still be "needs-review"
+
+const rustCandidate = compileNativeSource(compiledJs.importResult, {
+  target: 'rust',
+  emitOnBlocked: true
+});
+
+console.log(rustCandidate.outputMode); // "target-stubs"
+console.log(rustCandidate.targetCoverage.lossClass); // "missingAdapter" without a JS-to-Rust adapter
+console.log(rustCandidate.ok); // true only because emitOnBlocked requested code anyway
+```
+
+`compileNativeSource` returns the import result, projection, target loss matrix cell, combined losses, readiness, evidence, and output hash. Admission queues should treat `ok` as "code was emitted", not as merge approval; `readiness` and `targetCoverage` carry the merge signal.
+
 Project a native import back to source. Exact source is preserved when the import carries matching source-preservation evidence or when supplied text matches the import hash; otherwise the compiler emits declaration stubs with review-required loss evidence:
 
 ```js

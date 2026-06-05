@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import {
+  compileNativeSource,
   compileFrontierSource,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
@@ -92,6 +93,15 @@ const nativeProjections = nativeImportResults.map((imported) => projectNativeImp
 const projectionDurationMs = performance.now() - projectionStart;
 const projectionBytes = nativeProjections.reduce((sum, projection) => sum + projection.sourceText.length, 0);
 
+const nativeCompileStart = performance.now();
+const nativeCompiles = nativeImportResults.map((imported, index) => compileNativeSource(imported, {
+  target: index % 2 === 0 ? 'javascript' : 'rust',
+  emitOnBlocked: true
+}));
+const nativeCompileDurationMs = performance.now() - nativeCompileStart;
+const nativeCompileBytes = nativeCompiles.reduce((sum, result) => sum + result.output.length, 0);
+const nativeCompileBlocked = nativeCompiles.filter((result) => result.readiness.readiness === 'blocked').length;
+
 console.log(JSON.stringify({
   compiles: 250,
   bytes,
@@ -118,5 +128,9 @@ console.log(JSON.stringify({
   sidecarDurationMs: Number(sidecarDurationMs.toFixed(2)),
   nativeProjections: nativeProjections.length,
   projectionBytes,
-  projectionDurationMs: Number(projectionDurationMs.toFixed(2))
+  projectionDurationMs: Number(projectionDurationMs.toFixed(2)),
+  nativeCompiles: nativeCompiles.length,
+  nativeCompileBytes,
+  nativeCompileBlocked,
+  nativeCompileDurationMs: Number(nativeCompileDurationMs.toFixed(2))
 }));

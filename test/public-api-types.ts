@@ -10,6 +10,7 @@ import {
   ProjectionTargetLossClasses,
   classifyNativeImportReadiness,
   classifyNativeImportRoundtripReadiness,
+  compileNativeSource,
   compileFrontierDocument,
   compileFrontierSource,
   createBabelNativeImporterAdapter,
@@ -41,6 +42,7 @@ import {
 } from '../src/index.js';
 import type {
   CapabilityResolution,
+  CompileNativeSourceOptions,
   CreateNativeSourcePreservationOptions,
   FrontierCompileOptions,
   FrontierCompileResult,
@@ -70,6 +72,8 @@ import type {
   NativeProjectImportResult,
   NativeSourceChangeSet,
   NativeSourceChangeSymbol,
+  NativeSourceCompileOutputMode,
+  NativeSourceCompileResult,
   NativeSourceImportResult,
   NativeSourcePreservation,
   NativeSourceProjectionResult,
@@ -100,6 +104,7 @@ type ExpectedPublicRuntimeExport =
   | 'ProjectionTargetLossClasses'
   | 'classifyNativeImportReadiness'
   | 'classifyNativeImportRoundtripReadiness'
+  | 'compileNativeSource'
   | 'compileFrontierDocument'
   | 'compileFrontierSource'
   | 'createBabelNativeImporterAdapter'
@@ -188,6 +193,9 @@ const readinessBySeverity = NativeImportReadinessBySeverity[summary.highestSever
 
 const projectionOptions: ProjectNativeImportToSourceOptions = { preferPreservedSource: true };
 const projection: NativeSourceProjectionResult = projectNativeImportToSource(imported, projectionOptions);
+const nativeCompileOptions: CompileNativeSourceOptions = { target: 'javascript', emitOnBlocked: true };
+const nativeCompiled: NativeSourceCompileResult = compileNativeSource(imported, nativeCompileOptions);
+const nativeCompileMode: NativeSourceCompileOutputMode = nativeCompiled.outputMode;
 const sidecar: SemanticImportSidecar = createSemanticImportSidecar(imported, { targetPath: 'dist/api-types.js' });
 const regionTaxonomy: SemanticImportRegionTaxonomySummary = sidecar.regionTaxonomy;
 const contract: NativeImportResultContract = createNativeImportResultContract(imported, { sidecarId: sidecar.id });
