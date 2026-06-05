@@ -100,6 +100,35 @@ assert.equal(nativeImport.semanticIndex.symbols[0].id, 'symbol:addTodo');
 assert.equal(nativeImport.universalAst.semanticIndex.id, 'index_todo_js');
 assert.equal(nativeImport.patch.operations[0].op, 'upsertNode');
 assert.equal(nativeImport.evidence[0].status, 'passed');
+const scannedJsImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/scanned.js',
+  sourceText: 'import { nanoid } from "nanoid";\nexport function addTodo(title) { return { id: nanoid(), title }; }\nexport class TodoStore {}\n'
+});
+assert.equal(scannedJsImport.nativeAst.rootId, 'native_root');
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'addTodo'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TodoStore'), true);
+assert.equal(scannedJsImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+assert.equal(scannedJsImport.losses.some((loss) => loss.kind === 'opaqueNative'), true);
+const scannedPythonImport = importNativeSource({
+  language: 'python',
+  sourcePath: 'todo.py',
+  sourceText: 'import json\nclass TodoStore:\n    pass\ndef add_todo(title):\n    return title\n'
+});
+assert.equal(scannedPythonImport.semanticIndex.symbols.some((symbol) => symbol.name === 'add_todo'), true);
+const scannedRustImport = importNativeSource({
+  language: 'rust',
+  sourcePath: 'src/lib.rs',
+  sourceText: 'use std::sync::Arc;\npub struct Todo;\npub fn add_todo(title: String) {}\nmacro_rules! todo_macro { () => {} }\n'
+});
+assert.equal(scannedRustImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
+const scannedCImport = importNativeSource({
+  language: 'c',
+  sourcePath: 'todo.h',
+  sourceText: '#include <stdint.h>\n#define TODO_MAX 32\ntypedef struct Todo { int done; } Todo;\nvoid add_todo(void);\n'
+});
+assert.equal(scannedCImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TODO_MAX'), true);
+assert.equal(scannedCImport.losses.some((loss) => loss.kind === 'preprocessor'), true);
 const universalAst = createUniversalAstFromDocument(result.document, { id: 'uast_todo', evidence: nativeImport.evidence });
 const universalJson = writeUniversalAstJson(universalAst);
 assert.equal(readUniversalAstJson(universalJson).document.id, 'mod_todo');

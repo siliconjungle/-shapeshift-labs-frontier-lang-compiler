@@ -75,6 +75,7 @@ export interface ImportNativeSourceOptions {
   readonly parserVersion?: string;
   readonly sourcePath?: string;
   readonly sourceHash?: string;
+  readonly sourceText?: string;
   readonly symbol?: string;
   readonly name?: string;
   readonly nativeAst?: NativeAstRecord;
