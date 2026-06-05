@@ -140,6 +140,10 @@ export type NativeImportRegionTaxonomyKind =
   | 'call'
   | 'type'
   | 'effect'
+  | 'property'
+  | 'config'
+  | 'content'
+  | 'route'
   | 'generatedOutput'
   | string;
 

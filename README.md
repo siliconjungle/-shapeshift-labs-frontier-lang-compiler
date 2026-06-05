@@ -191,8 +191,28 @@ const imported = importNativeSource({
 const sidecar = createSemanticImportSidecar(imported);
 
 console.log(sidecar.summary.emptySemanticIndex); // false when symbols were found
-console.log(sidecar.ownershipRegions[0].key); // source#src/runtime.ts#class#Runtime
+console.log(sidecar.ownershipRegions[0].key); // source#src/runtime.ts#type#Runtime
 console.log(sidecar.patchHints[0].supportedOperations); // source-region patch operations
+```
+
+The built-in JavaScript/TypeScript lightweight scanner also emits review-required ownership regions for clear route/config/content/property shapes in exported objects and arrays:
+
+```js
+const importedConfig = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/routes.ts',
+  sourceText: `
+    export const appRoutes = [
+      { path: "/home", component: Home }
+    ];
+    export const siteContent = {
+      docs: { title: "Docs" }
+    };
+  `
+});
+
+const configSidecar = createSemanticImportSidecar(importedConfig);
+console.log(configSidecar.regionTaxonomy.presentKinds); // includes "route" and "content"
 ```
 
 Compare before/after native source imports from a worker patch and emit a semantic change set for admission scoring:

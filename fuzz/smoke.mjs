@@ -70,6 +70,48 @@ for (let index = 0; index < 40; index += 1) {
   assert.ok(['ready-with-losses', 'needs-review'].includes(external.readiness.readiness));
 }
 
+for (let index = 0; index < 30; index += 1) {
+  const imported = importNativeSource({
+    language: 'typescript',
+    sourcePath: `src/regions-${index}.ts`,
+    sourceText: `
+      export const appRoutes${index} = [
+        { path: "/${index}", component: Screen${index} },
+        { path: "/${index}/settings", component: Settings${index} }
+      ];
+      export const contentBlocks${index} = {
+        docs: { title: "Docs ${index}" },
+        legal: { title: "Legal ${index}" }
+      };
+      export const runtimeConfig${index} = {
+        limits: { count: ${index} },
+        resolve(id) { return id; }
+      };
+      export const helpers${index} = {
+        plain: ${index}
+      };
+    `
+  });
+  const sidecar = createSemanticImportSidecar(imported);
+  assert.ok(imported.semanticIndex.symbols.some((symbol) => symbol.metadata?.ownershipRegionKind === 'route'));
+  assert.ok(imported.semanticIndex.symbols.some((symbol) => symbol.metadata?.ownershipRegionKind === 'content'));
+  assert.ok(imported.semanticIndex.symbols.some((symbol) => symbol.metadata?.ownershipRegionKind === 'config'));
+  assert.ok(imported.semanticIndex.symbols.some((symbol) => symbol.metadata?.ownershipRegionKind === 'property'));
+  assert.ok(sidecar.regionTaxonomy.presentKinds.includes('route'));
+  assert.ok(sidecar.regionTaxonomy.presentKinds.includes('content'));
+  assert.ok(sidecar.regionTaxonomy.presentKinds.includes('config'));
+  assert.ok(sidecar.regionTaxonomy.presentKinds.includes('property'));
+}
+
+const falsePositiveRegionImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/region-false-positive.ts',
+  sourceText: '/*\nexport const fakeRoutes = [{ path: "/fake" }];\n*/\nconst template = `\nexport const fakeContent = { docs: {} };\n`;\nexport const realRoutes = [\n  { path: "/real", component: Real }\n];\n'
+});
+assert.equal(falsePositiveRegionImport.semanticIndex.symbols.some((symbol) => symbol.name.includes('fakeRoutes')), false);
+assert.equal(falsePositiveRegionImport.semanticIndex.symbols.some((symbol) => symbol.name.includes('fakeContent')), false);
+assert.equal(falsePositiveRegionImport.semanticIndex.symbols.some((symbol) => symbol.name === 'realRoutes./real'), true);
+
 const estreeAdapter = createEstreeNativeImporterAdapter();
 for (let index = 0; index < 50; index += 1) {
   const name = `fuzzImport${index}`;

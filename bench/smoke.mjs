@@ -135,6 +135,36 @@ const nativeTargetAdapterDurationMs = performance.now() - nativeTargetAdapterSta
 const nativeTargetAdapterBytes = nativeTargetAdapterCompiles.reduce((sum, result) => sum + result.output.length, 0);
 const nativeTargetAdapterSourceMaps = nativeTargetAdapterCompiles.reduce((sum, result) => sum + result.sourceMaps.length, 0);
 
+const regionScanStart = performance.now();
+const regionScanImports = [];
+for (let index = 0; index < 100; index += 1) {
+  const imported = importNativeSource({
+    language: 'typescript',
+    sourcePath: `src/regions-${index}.ts`,
+    sourceText: `
+      export const appRoutes${index} = [
+        { path: "/${index}", component: Screen${index} },
+        { path: "/${index}/settings", component: Settings${index} }
+      ];
+      export const contentBlocks${index} = {
+        docs: { title: "Docs ${index}" },
+        legal: { title: "Legal ${index}" }
+      };
+      export const runtimeConfig${index} = {
+        limits: { count: ${index} },
+        resolve(id) { return id; }
+      };
+      export const helpers${index} = {
+        plain: ${index}
+      };
+    `
+  });
+  regionScanImports.push({ imported, sidecar: createSemanticImportSidecar(imported) });
+}
+const regionScanDurationMs = performance.now() - regionScanStart;
+const regionScanSymbols = regionScanImports.reduce((sum, entry) => sum + entry.imported.semanticIndex.symbols.length, 0);
+const regionScanOwnershipRegions = regionScanImports.reduce((sum, entry) => sum + entry.sidecar.ownershipRegions.length, 0);
+
 const externalSemanticStart = performance.now();
 const externalSemanticImports = [];
 for (let index = 0; index < 100; index += 1) {
@@ -208,6 +238,10 @@ console.log(JSON.stringify({
   nativeTargetAdapterBytes,
   nativeTargetAdapterSourceMaps,
   nativeTargetAdapterDurationMs: Number(nativeTargetAdapterDurationMs.toFixed(2)),
+  regionScanImports: regionScanImports.length,
+  regionScanSymbols,
+  regionScanOwnershipRegions,
+  regionScanDurationMs: Number(regionScanDurationMs.toFixed(2)),
   externalSemanticImports: externalSemanticImports.length,
   externalSemanticSymbols,
   externalSemanticMappings,

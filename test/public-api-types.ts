@@ -166,6 +166,7 @@ const featureEvidenceRisk: NativeImportFeatureEvidenceRisk = 'high';
 const featureEvidencePolicy: NativeImportFeatureEvidencePolicy | undefined = getNativeImportFeatureEvidencePolicy('preprocessor');
 const featureEvidencePolicies: Readonly<Record<string, NativeImportFeatureEvidencePolicy>> = NativeImportFeatureEvidencePolicies;
 const regionKind: NativeImportRegionTaxonomyKind = NativeImportRegionTaxonomyKinds[0] ?? 'symbol';
+const routeRegionKind: NativeImportRegionTaxonomyKind = 'route';
 const roundtripStatus: NativeImportRoundtripReadinessStatus = NativeImportRoundtripReadinessStatuses[0] ?? 'source-preserved';
 const projectionLossClass: ProjectionTargetLossClass = ProjectionTargetLossClasses[0] ?? 'exactSourceProjection';
 const languageProfiles: readonly NativeImportLanguageProfile[] = NativeImportLanguageProfiles;

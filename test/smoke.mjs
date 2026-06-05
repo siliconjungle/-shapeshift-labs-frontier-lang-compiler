@@ -752,13 +752,20 @@ assert.equal(projectImport.universalAst.metadata.sourcePreservationSummary.total
 const scannedJsImport = importNativeSource({
   language: 'javascript',
   sourcePath: 'src/scanned.js',
-  sourceText: '// kept comment\nimport { nanoid } from "nanoid";\nexport function addTodo(title) { return { id: nanoid(), title }; }\nexport const TODO_LIMIT = 128;\nexport class TodoStore {\n  save(title) { return addTodo(title); }\n}\n'
+  sourceText: '// kept comment\nimport { nanoid } from "nanoid";\nexport function addTodo(title) { return { id: nanoid(), title }; }\nexport const TODO_LIMIT = 128;\nexport const appRoutes = [\n  { path: "/todos", component: TodoStore },\n  { path: "/settings", component: TodoStore }\n];\nexport const siteContent = {\n  docs: { title: "Docs" },\n  legal: { title: "Terms" },\n  formatTitle: (title) => title.trim()\n};\nexport const runtimeConfig = {\n  limits: { todos: TODO_LIMIT },\n  resolve(id) { return id; }\n};\nexport const helpers = {\n  plain: 1\n};\nexport class TodoStore {\n  save(title) { return addTodo(title); }\n}\n'
 });
 assert.equal(scannedJsImport.nativeAst.rootId, 'native_root');
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'addTodo'), true);
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TodoStore'), true);
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TODO_LIMIT'), true);
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TodoStore.save'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'appRoutes./todos' && symbol.kind === 'route'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'siteContent.docs'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'runtimeConfig.resolve' && symbol.kind === 'function'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'helpers.plain' && symbol.metadata.ownershipRegionKind === 'property'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.metadata.ownershipRegionKind === 'route'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.metadata.ownershipRegionKind === 'content'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.metadata.ownershipRegionKind === 'config'), true);
 assert.equal(scannedJsImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
 assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('addtodo')), true);
 assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.ownershipRegionId), true);
@@ -821,12 +828,25 @@ assert.ok(scannedJsSidecar.ownershipRegions.length >= 4);
 assert.equal(NativeImportRegionTaxonomyKinds.includes('import'), true);
 assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('import'), true);
 assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('body') || scannedJsSidecar.regionTaxonomy.presentKinds.includes('type'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('route'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('content'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('config'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('property'), true);
 assert.equal(scannedJsSidecar.summary.regionKinds >= 2, true);
 assert.equal(scannedJsSidecar.symbols.some((symbol) => symbol.name === 'TodoStore.save' && symbol.ownershipRegionId), true);
 assert.equal(scannedJsSidecar.symbols.some((symbol) => symbol.ownershipRegionKind), true);
 assert.equal(scannedJsSidecar.imports.some((entry) => entry.regionTaxonomy?.presentKinds?.length), true);
 assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.supportedOperations.includes('replace-import')), true);
 assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.sourcePath === 'src/scanned.js' && hint.projection.targetPath === 'dist/scanned.js'), true);
+const jsRegionFalsePositiveImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/false-positive.ts',
+  sourceText: '/*\nexport const fakeRoutes = [\n  { path: "/fake", component: Fake }\n];\n*/\nconst template = `\nexport const fakeContent = { docs: { title: "Fake" } };\n`;\nexport const realRoutes = [\n  { path: "/real", component: Real }\n];\n'
+});
+assert.equal(jsRegionFalsePositiveImport.semanticIndex.symbols.some((symbol) => symbol.name.includes('fakeRoutes')), false);
+assert.equal(jsRegionFalsePositiveImport.semanticIndex.symbols.some((symbol) => symbol.name.includes('fakeContent')), false);
+assert.equal(jsRegionFalsePositiveImport.semanticIndex.symbols.some((symbol) => symbol.name === 'realRoutes./real'), true);
+assert.equal(jsRegionFalsePositiveImport.sourceMaps[0].mappings.length, jsRegionFalsePositiveImport.semanticIndex.occurrences.length);
 const jsChangeSet = diffNativeSources({
   language: 'javascript',
   sourcePath: 'src/change.js',
