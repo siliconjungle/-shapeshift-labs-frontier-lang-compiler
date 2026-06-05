@@ -19,6 +19,7 @@ import {
   emitForTargetWithSourceMap,
   importNativeProject,
   importNativeSource,
+  NativeImportFeatureEvidencePolicies,
   NativeImportLanguageProfiles,
   NativeImportLossKinds,
   NativeImportRegionTaxonomyKinds,
@@ -37,6 +38,8 @@ import {
   classifyNativeImportRoundtripReadiness,
   classifyNativeImportReadiness,
   compileNativeSource,
+  getNativeImportFeatureEvidencePolicy,
+  summarizeNativeImportFeatureEvidence,
   summarizeNativeImportLosses,
   writeUniversalAstJson
 } from '../dist/index.js';
@@ -45,6 +48,7 @@ const publicRuntimeExports = Object.keys(compilerApi).sort();
 const publicDeclarationExports = publicValueExportsFromDeclaration(new URL('../dist/index.d.ts', import.meta.url));
 assert.deepEqual(publicRuntimeExports, publicDeclarationExports);
 for (const requiredExport of [
+  'NativeImportFeatureEvidencePolicies',
   'NativeImportRegionTaxonomyKinds',
   'ProjectionTargetLossClasses',
   'createNativeImportResultContract',
@@ -55,6 +59,7 @@ for (const requiredExport of [
   'diffNativeSourceImports',
   'diffNativeSources',
   'emitForTargetWithSourceMap',
+  'getNativeImportFeatureEvidencePolicy',
   'importNativeSource',
   'importNativeProject',
   'renderTargetAstWithSourceMap',
@@ -175,6 +180,56 @@ assert.equal(NativeImportLossKinds.includes('unverifiedNativeAst'), true);
 const nativeLossSummary = summarizeNativeImportLosses(nativeImport.losses, { evidence: nativeImport.evidence });
 assert.equal(nativeLossSummary.highestSeverity, 'warning');
 assert.equal(classifyNativeImportReadiness(nativeImport.losses).readiness, 'needs-review');
+assert.equal(NativeImportFeatureEvidencePolicies.preprocessor.kind, 'preprocessor');
+assert.equal(getNativeImportFeatureEvidencePolicy('conditionalCompilation').requiredEvidenceKeys.includes('activeBranches'), true);
+for (const policyKind of ['macroExpansion', 'macroHygiene', 'preprocessor', 'conditionalCompilation', 'generatedCode', 'dynamicDispatch', 'unsupportedSyntax']) {
+  assert.equal(Boolean(getNativeImportFeatureEvidencePolicy(policyKind)), true, `missing feature evidence policy ${policyKind}`);
+}
+const completeFeatureEvidenceLoss = {
+  id: 'loss_preprocessor_complete',
+  severity: 'warning',
+  kind: 'preprocessor',
+  message: 'Preprocessor evidence is attached.',
+  metadata: {
+    preprocessedOutputHash: 'fnv1a32:preprocessed',
+    definesHash: 'fnv1a32:defines',
+    includeGraphHash: 'fnv1a32:includes'
+  }
+};
+const completeFeatureEvidenceSummary = summarizeNativeImportFeatureEvidence([completeFeatureEvidenceLoss]);
+assert.equal(completeFeatureEvidenceSummary.total, 1);
+assert.equal(completeFeatureEvidenceSummary.missingRequiredEvidence.length, 0);
+assert.equal(completeFeatureEvidenceSummary.highestRisk, 'high');
+const missingFeatureEvidenceSummary = summarizeNativeImportFeatureEvidence([{
+  id: 'loss_preprocessor_missing',
+  severity: 'warning',
+  kind: 'preprocessor',
+  message: 'Preprocessor evidence is missing.'
+}]);
+assert.equal(missingFeatureEvidenceSummary.missingRequiredEvidence.some((entry) => entry.evidenceKey === 'preprocessedOutputHash'), true);
+assert.equal(missingFeatureEvidenceSummary.reasons.some((reason) => reason.includes('preprocessedOutputHash')), true);
+const featureEvidenceViaRecord = summarizeNativeImportFeatureEvidence([{
+  id: 'loss_generated_code',
+  severity: 'warning',
+  kind: 'generatedCode',
+  message: 'Generated code evidence is attached to evidence record.'
+}], {
+  evidence: [{
+    id: 'evidence_generated_code',
+    kind: 'native-import',
+    status: 'passed',
+    summary: 'Generated artifact evidence.',
+    metadata: {
+      generatedArtifactHash: 'fnv1a32:generated',
+      generatedRanges: [{ startLine: 1, endLine: 2 }]
+    }
+  }]
+});
+assert.equal(featureEvidenceViaRecord.issues[0].evidenceIds.includes('evidence_generated_code'), true);
+assert.equal(featureEvidenceViaRecord.missingRequiredEvidence.length, 0);
+const advisoryLossSummary = summarizeNativeImportLosses([completeFeatureEvidenceLoss]);
+assert.equal(advisoryLossSummary.featureEvidence.policyKinds.includes('preprocessor'), true);
+assert.equal(advisoryLossSummary.semanticMergeReadiness, 'needs-review');
 const adapterImport = await runNativeImporterAdapter({
   id: 'fixture-estree-importer',
   language: 'javascript',

@@ -76,6 +76,13 @@ const semanticMergeReadinessRank = Object.freeze({
   blocked: 3
 });
 
+const nativeFeatureEvidenceRiskRank = Object.freeze({
+  low: 0,
+  medium: 1,
+  high: 2,
+  critical: 3
+});
+
 export const NativeImportRoundtripReadinessStatuses = Object.freeze([
   'exact',
   'preserved-source',
@@ -134,6 +141,117 @@ export const NativeImportReadinessBySeverity = Object.freeze({
   info: 'ready-with-losses',
   warning: 'needs-review',
   error: 'blocked'
+});
+
+export const NativeImportFeatureEvidencePolicies = Object.freeze({
+  macroExpansion: nativeImportFeatureEvidencePolicy('macroExpansion', {
+    category: 'macroExpansion',
+    risk: 'high',
+    minimumReadiness: 'needs-review',
+    requiredEvidenceKeys: ['macroDefinitionsHash', 'expandedSourceHash'],
+    recommendedEvidenceKeys: ['expansionMapId', 'sourceMapId', 'macroCallSites'],
+    notes: ['Macro-expanded code must retain a link from generated output back to macro call sites before semantic merges can be trusted.']
+  }),
+  macroHygiene: nativeImportFeatureEvidencePolicy('macroHygiene', {
+    category: 'macroExpansion',
+    risk: 'critical',
+    minimumReadiness: 'needs-review',
+    missingEvidenceReadiness: 'blocked',
+    requiredEvidenceKeys: ['hygieneContextHash', 'bindingMapId'],
+    recommendedEvidenceKeys: ['expansionMapId', 'captureSetHash'],
+    notes: ['Hygiene-sensitive macros can change binding identity even when emitted text looks equivalent.']
+  }),
+  preprocessor: nativeImportFeatureEvidencePolicy('preprocessor', {
+    category: 'preprocessor',
+    risk: 'high',
+    minimumReadiness: 'needs-review',
+    requiredEvidenceKeys: ['preprocessedOutputHash', 'definesHash'],
+    recommendedEvidenceKeys: ['includeGraphHash', 'conditionalBranches', 'sourceMapId'],
+    notes: ['Preprocessor imports need the active defines/includes and preprocessed output hash to make replayable claims.']
+  }),
+  conditionalCompilation: nativeImportFeatureEvidencePolicy('conditionalCompilation', {
+    category: 'conditionalCompilation',
+    risk: 'high',
+    minimumReadiness: 'needs-review',
+    requiredEvidenceKeys: ['activeBranches', 'inactiveBranchesHash'],
+    recommendedEvidenceKeys: ['compileTarget', 'featureFlags', 'preprocessedOutputHash'],
+    notes: ['Conditional branches that were not active still affect portability and conflict review.']
+  }),
+  metaprogramming: nativeImportFeatureEvidencePolicy('metaprogramming', {
+    category: 'metaprogramming',
+    risk: 'critical',
+    minimumReadiness: 'needs-review',
+    missingEvidenceReadiness: 'blocked',
+    requiredEvidenceKeys: ['generatedArtifactHash', 'generatorIdentity'],
+    recommendedEvidenceKeys: ['generatorInputsHash', 'generatedRanges', 'replayCommand'],
+    notes: ['Generated or metaprogrammed declarations need replayable generator identity and input evidence.']
+  }),
+  reflection: nativeImportFeatureEvidencePolicy('reflection', {
+    category: 'reflection',
+    risk: 'high',
+    minimumReadiness: 'needs-review',
+    requiredEvidenceKeys: ['reflectionSurface', 'runtimeContract'],
+    recommendedEvidenceKeys: ['observedMembers', 'fixtureIds', 'runtimeVersion'],
+    notes: ['Reflection-heavy code needs a declared runtime contract because static AST evidence is incomplete.']
+  }),
+  dynamicRuntime: nativeImportFeatureEvidencePolicy('dynamicRuntime', {
+    category: 'reflection',
+    risk: 'high',
+    minimumReadiness: 'needs-review',
+    requiredEvidenceKeys: ['runtimeContract'],
+    recommendedEvidenceKeys: ['fixtureIds', 'observedEffects', 'runtimeVersion'],
+    notes: ['Dynamic runtime behavior should stay review-required until fixtures or traces describe the observed contract.']
+  }),
+  dynamicDispatch: nativeImportFeatureEvidencePolicy('dynamicDispatch', {
+    category: 'overloadTypeInference',
+    risk: 'medium',
+    minimumReadiness: 'needs-review',
+    requiredEvidenceKeys: ['dispatchTargets'],
+    recommendedEvidenceKeys: ['callGraphId', 'typeEvidenceId', 'fixtureIds'],
+    notes: ['Dynamic dispatch needs candidate target evidence before call graph or porting claims are merge-ready.']
+  }),
+  generatedCode: nativeImportFeatureEvidencePolicy('generatedCode', {
+    category: 'generatedCode',
+    risk: 'high',
+    minimumReadiness: 'needs-review',
+    requiredEvidenceKeys: ['generatedArtifactHash', 'generatedRanges'],
+    recommendedEvidenceKeys: ['generatorIdentity', 'generatorInputsHash', 'sourceMapId'],
+    notes: ['Generated code must preserve generated ranges and artifact hashes so workers can avoid editing derived output blindly.']
+  }),
+  overloadResolution: nativeImportFeatureEvidencePolicy('overloadResolution', {
+    category: 'overloadTypeInference',
+    risk: 'medium',
+    minimumReadiness: 'needs-review',
+    requiredEvidenceKeys: ['resolvedOverloads'],
+    recommendedEvidenceKeys: ['typeEvidenceId', 'compilerVersion', 'callSiteSpans'],
+    notes: ['Overload-sensitive imports should record compiler/type evidence for each call site.']
+  }),
+  typeInference: nativeImportFeatureEvidencePolicy('typeInference', {
+    category: 'overloadTypeInference',
+    risk: 'medium',
+    minimumReadiness: 'needs-review',
+    requiredEvidenceKeys: ['inferredTypesHash'],
+    recommendedEvidenceKeys: ['typeEvidenceId', 'compilerVersion', 'symbolTableHash'],
+    notes: ['Inferred types need a stable type-evidence hash before cross-language projection can claim fidelity.']
+  }),
+  unsupportedSyntax: nativeImportFeatureEvidencePolicy('unsupportedSyntax', {
+    category: 'unsupportedSyntax',
+    risk: 'high',
+    minimumReadiness: 'needs-review',
+    missingEvidenceReadiness: 'blocked',
+    requiredEvidenceKeys: ['unsupportedSyntaxKind', 'sourceSpan'],
+    recommendedEvidenceKeys: ['parserDiagnosticId', 'nativeAstNodeId', 'sourceSnippetHash'],
+    notes: ['Unsupported syntax must remain anchored to source spans and parser diagnostics for later adapter work.']
+  }),
+  unsupportedSemantic: nativeImportFeatureEvidencePolicy('unsupportedSemantic', {
+    category: 'unsupportedSyntax',
+    risk: 'high',
+    minimumReadiness: 'needs-review',
+    missingEvidenceReadiness: 'blocked',
+    requiredEvidenceKeys: ['unsupportedSemanticKind', 'semanticSymbolId'],
+    recommendedEvidenceKeys: ['semanticIndexId', 'sourceMapId', 'reason'],
+    notes: ['Unsupported semantics should name the affected symbol so merge tools can isolate the unsafe region.']
+  })
 });
 
 export const NativeImportRegionTaxonomyKinds = Object.freeze([
@@ -473,6 +591,70 @@ export function resolveCapabilityAdapters(document, target = 'typescript', optio
     });
 }
 
+export function getNativeImportFeatureEvidencePolicy(kind) {
+  const normalized = normalizeNativeLossKind({ kind }, 'warning');
+  return NativeImportFeatureEvidencePolicies[normalized] ?? NativeImportFeatureEvidencePolicies[String(kind ?? '')];
+}
+
+export function summarizeNativeImportFeatureEvidence(losses = [], options = {}) {
+  const normalizedLosses = normalizeNativeLossRecords(losses);
+  const evidence = options.evidence ?? [];
+  const issues = [];
+  const byKind = {};
+  const byRisk = {};
+  const policyKinds = [];
+  let highestRisk = 'low';
+  let semanticMergeReadiness = 'ready';
+
+  for (const loss of normalizedLosses) {
+    const policy = getNativeImportFeatureEvidencePolicy(loss.kind);
+    if (!policy) continue;
+    byKind[policy.kind] = (byKind[policy.kind] ?? 0) + 1;
+    byRisk[policy.risk] = (byRisk[policy.risk] ?? 0) + 1;
+    if ((nativeFeatureEvidenceRiskRank[policy.risk] ?? 0) > (nativeFeatureEvidenceRiskRank[highestRisk] ?? 0)) {
+      highestRisk = policy.risk;
+    }
+    policyKinds.push(policy.kind);
+    semanticMergeReadiness = maxSemanticMergeReadiness(semanticMergeReadiness, policy.minimumReadiness);
+    const missingRequiredEvidence = policy.requiredEvidenceKeys.filter((key) => !nativeImportFeatureEvidenceHasKey(loss, evidence, key));
+    const presentRequiredEvidence = policy.requiredEvidenceKeys.filter((key) => !missingRequiredEvidence.includes(key));
+    const presentRecommendedEvidence = policy.recommendedEvidenceKeys.filter((key) => nativeImportFeatureEvidenceHasKey(loss, evidence, key));
+    if (missingRequiredEvidence.length) {
+      semanticMergeReadiness = maxSemanticMergeReadiness(semanticMergeReadiness, policy.missingEvidenceReadiness);
+    }
+    issues.push({
+      lossId: loss.id,
+      kind: loss.kind,
+      policyKind: policy.kind,
+      risk: policy.risk,
+      category: policy.category,
+      readiness: missingRequiredEvidence.length ? policy.missingEvidenceReadiness : policy.minimumReadiness,
+      missingRequiredEvidence,
+      presentRequiredEvidence,
+      presentRecommendedEvidence,
+      evidenceIds: nativeImportFeatureEvidenceIds(loss, evidence, policy)
+    });
+  }
+
+  const missingRequiredEvidence = issues.flatMap((issue) => issue.missingRequiredEvidence.map((key) => ({
+    lossId: issue.lossId,
+    kind: issue.kind,
+    policyKind: issue.policyKind,
+    evidenceKey: key
+  })));
+  return {
+    total: issues.length,
+    policyKinds: uniqueStrings(policyKinds),
+    byKind,
+    byRisk,
+    highestRisk: issues.length ? highestRisk : 'low',
+    semanticMergeReadiness,
+    missingRequiredEvidence,
+    issues,
+    reasons: nativeImportFeatureEvidenceReasons(issues)
+  };
+}
+
 export function summarizeNativeImportLosses(losses = [], options = {}) {
   const normalizedLosses = normalizeNativeLossRecords(losses);
   const bySeverity = { info: 0, warning: 0, error: 0 };
@@ -512,6 +694,9 @@ export function summarizeNativeImportLosses(losses = [], options = {}) {
     reviewLossIds,
     informationalLossIds
   });
+  const featureEvidence = summarizeNativeImportFeatureEvidence(normalizedLosses, {
+    evidence: options.evidence
+  });
 
   return {
     total: normalizedLosses.length,
@@ -527,6 +712,7 @@ export function summarizeNativeImportLosses(losses = [], options = {}) {
     reviewLossIds,
     informationalLossIds,
     failedEvidenceIds,
+    featureEvidence,
     parser: options.parser,
     scanKind: options.scanKind,
     semanticStatus: options.semanticStatus
@@ -4110,6 +4296,61 @@ function nativeImportCategoryForLossKind(kind) {
   if (kind === 'sourceMapApproximation') return 'sourceMapApproximation';
   if (kind === 'targetProjectionLoss') return 'targetProjectionLoss';
   return String(kind ?? 'opaqueNative');
+}
+
+function nativeImportFeatureEvidencePolicy(kind, input = {}) {
+  return Object.freeze({
+    kind,
+    category: input.category ?? nativeImportCategoryForLossKind(kind),
+    risk: input.risk ?? 'medium',
+    minimumReadiness: normalizeSemanticMergeReadiness(input.minimumReadiness) ?? 'needs-review',
+    missingEvidenceReadiness: normalizeSemanticMergeReadiness(input.missingEvidenceReadiness) ?? 'needs-review',
+    requiredEvidenceKeys: Object.freeze(uniqueStrings(input.requiredEvidenceKeys ?? [])),
+    recommendedEvidenceKeys: Object.freeze(uniqueStrings(input.recommendedEvidenceKeys ?? [])),
+    notes: Object.freeze(uniqueStrings(input.notes ?? []))
+  });
+}
+
+function nativeImportFeatureEvidenceHasKey(loss, evidence, key) {
+  return nativeImportFeatureEvidenceValuePresent(nativeImportFeatureEvidenceValue(loss, key))
+    || (evidence ?? []).some((record) => nativeImportFeatureEvidenceValuePresent(nativeImportFeatureEvidenceValue(record, key)));
+}
+
+function nativeImportFeatureEvidenceValue(record, key) {
+  if (!record || !key) return undefined;
+  const candidates = [record, record.metadata].filter(Boolean);
+  for (const candidate of candidates) {
+    const direct = candidate[key];
+    if (direct !== undefined) return direct;
+    const dotted = String(key).split('.').reduce((current, part) => current?.[part], candidate);
+    if (dotted !== undefined) return dotted;
+  }
+  return undefined;
+}
+
+function nativeImportFeatureEvidenceValuePresent(value) {
+  if (value === undefined || value === null) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') return Object.keys(value).length > 0;
+  return true;
+}
+
+function nativeImportFeatureEvidenceIds(loss, evidence, policy) {
+  const keys = [...policy.requiredEvidenceKeys, ...policy.recommendedEvidenceKeys];
+  return uniqueStrings((evidence ?? [])
+    .filter((record) => keys.some((key) => nativeImportFeatureEvidenceValuePresent(nativeImportFeatureEvidenceValue(record, key))))
+    .map((record) => record.id)
+    .filter(Boolean)
+    .concat(loss.evidenceIds ?? []));
+}
+
+function nativeImportFeatureEvidenceReasons(issues) {
+  return uniqueStrings((issues ?? []).flatMap((issue) => {
+    const missing = issue.missingRequiredEvidence ?? [];
+    if (!missing.length) return [];
+    return [`${issue.kind} loss ${issue.lossId} is missing required evidence: ${missing.join(', ')}.`];
+  }));
 }
 
 function normalizeProjectionMatrixTargets(targets) {

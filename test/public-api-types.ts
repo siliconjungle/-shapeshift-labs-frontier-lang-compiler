@@ -3,6 +3,7 @@ import {
   FrontierCompileTargets,
   NativeImportLanguageProfiles,
   NativeImportLossKinds,
+  NativeImportFeatureEvidencePolicies,
   NativeImportReadinessBySeverity,
   NativeImportRegionTaxonomyKinds,
   NativeImportRoundtripReadinessStatuses,
@@ -27,6 +28,7 @@ import {
   diffNativeSources,
   emitForTarget,
   emitForTargetWithSourceMap,
+  getNativeImportFeatureEvidencePolicy,
   importNativeProject,
   importNativeSource,
   normalizeCompileTarget,
@@ -38,6 +40,7 @@ import {
   resolveCapabilityAdapters,
   runNativeImporterAdapter,
   runNativeTargetProjectionAdapter,
+  summarizeNativeImportFeatureEvidence,
   summarizeNativeImportLosses,
   writeUniversalAstJson
 } from '../src/index.js';
@@ -52,6 +55,10 @@ import type {
   FrontierTargetDocumentSourceMapResult,
   FrontierTargetSourceMapResult,
   NativeImportContractSource,
+  NativeImportFeatureEvidenceIssue,
+  NativeImportFeatureEvidencePolicy,
+  NativeImportFeatureEvidenceRisk,
+  NativeImportFeatureEvidenceSummary,
   NativeImportCoverageMatrix,
   NativeImportCoverageMatrixOptions,
   NativeImportKnownLossKind,
@@ -102,6 +109,7 @@ type ExpectedPublicRuntimeExport =
   | 'FrontierCompileTargets'
   | 'NativeImportLanguageProfiles'
   | 'NativeImportLossKinds'
+  | 'NativeImportFeatureEvidencePolicies'
   | 'NativeImportReadinessBySeverity'
   | 'NativeImportRegionTaxonomyKinds'
   | 'NativeImportRoundtripReadinessStatuses'
@@ -126,6 +134,7 @@ type ExpectedPublicRuntimeExport =
   | 'diffNativeSources'
   | 'emitForTarget'
   | 'emitForTargetWithSourceMap'
+  | 'getNativeImportFeatureEvidencePolicy'
   | 'importNativeProject'
   | 'importNativeSource'
   | 'normalizeCompileTarget'
@@ -137,6 +146,7 @@ type ExpectedPublicRuntimeExport =
   | 'resolveCapabilityAdapters'
   | 'runNativeImporterAdapter'
   | 'runNativeTargetProjectionAdapter'
+  | 'summarizeNativeImportFeatureEvidence'
   | 'summarizeNativeImportLosses'
   | 'writeUniversalAstJson';
 
@@ -146,6 +156,9 @@ const target: FrontierCompileTarget = normalizeCompileTarget('ts');
 const targets: readonly FrontierCompileTarget[] = FrontierCompileTargets;
 const taxonomyKind: NativeImportTaxonomyKind = NativeImportTaxonomyKinds[0] ?? 'sourcePreservation';
 const lossKind: NativeImportKnownLossKind = NativeImportLossKinds[0] ?? 'sourcePreservation';
+const featureEvidenceRisk: NativeImportFeatureEvidenceRisk = 'high';
+const featureEvidencePolicy: NativeImportFeatureEvidencePolicy | undefined = getNativeImportFeatureEvidencePolicy('preprocessor');
+const featureEvidencePolicies: Readonly<Record<string, NativeImportFeatureEvidencePolicy>> = NativeImportFeatureEvidencePolicies;
 const regionKind: NativeImportRegionTaxonomyKind = NativeImportRegionTaxonomyKinds[0] ?? 'symbol';
 const roundtripStatus: NativeImportRoundtripReadinessStatus = NativeImportRoundtripReadinessStatuses[0] ?? 'source-preserved';
 const projectionLossClass: ProjectionTargetLossClass = ProjectionTargetLossClasses[0] ?? 'exactSourceProjection';
@@ -191,6 +204,10 @@ const imported: NativeSourceImportResult = importNativeSource({
 });
 
 const summary: NativeImportLossSummary = summarizeNativeImportLosses(imported.losses, { evidence: imported.evidence });
+const featureEvidenceSummary: NativeImportFeatureEvidenceSummary = summarizeNativeImportFeatureEvidence(imported.losses, {
+  evidence: imported.evidence
+});
+const featureEvidenceIssue: NativeImportFeatureEvidenceIssue | undefined = featureEvidenceSummary.issues[0];
 const readiness: NativeImportReadinessClassification = classifyNativeImportReadiness(imported.losses, {
   evidence: imported.evidence
 });
@@ -334,6 +351,11 @@ const parsedUniversalAst = readUniversalAstJson(universalJson);
 void targets;
 void taxonomyKind;
 void lossKind;
+void featureEvidenceRisk;
+void featureEvidencePolicy;
+void featureEvidencePolicies;
+void featureEvidenceSummary;
+void featureEvidenceIssue;
 void regionKind;
 void roundtripStatus;
 void projectionLossClass;

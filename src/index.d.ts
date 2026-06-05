@@ -151,6 +151,49 @@ export interface NativeImportLossSummaryOptions {
   readonly semanticStatus?: string;
 }
 
+export type NativeImportFeatureEvidenceRisk = 'low' | 'medium' | 'high' | 'critical' | string;
+
+export interface NativeImportFeatureEvidencePolicy {
+  readonly kind: NativeImportKnownLossKind;
+  readonly category: NativeImportTaxonomyKind;
+  readonly risk: NativeImportFeatureEvidenceRisk;
+  readonly minimumReadiness: SemanticMergeReadiness;
+  readonly missingEvidenceReadiness: SemanticMergeReadiness;
+  readonly requiredEvidenceKeys: readonly string[];
+  readonly recommendedEvidenceKeys: readonly string[];
+  readonly notes: readonly string[];
+}
+
+export interface NativeImportFeatureEvidenceIssue {
+  readonly lossId: string;
+  readonly kind: NativeImportKnownLossKind;
+  readonly policyKind: NativeImportKnownLossKind;
+  readonly risk: NativeImportFeatureEvidenceRisk;
+  readonly category: NativeImportTaxonomyKind;
+  readonly readiness: SemanticMergeReadiness;
+  readonly missingRequiredEvidence: readonly string[];
+  readonly presentRequiredEvidence: readonly string[];
+  readonly presentRecommendedEvidence: readonly string[];
+  readonly evidenceIds: readonly string[];
+}
+
+export interface NativeImportFeatureEvidenceSummary {
+  readonly total: number;
+  readonly policyKinds: readonly NativeImportKnownLossKind[];
+  readonly byKind: Readonly<Record<string, number>>;
+  readonly byRisk: Readonly<Record<string, number>>;
+  readonly highestRisk: NativeImportFeatureEvidenceRisk;
+  readonly semanticMergeReadiness: SemanticMergeReadiness;
+  readonly missingRequiredEvidence: readonly {
+    readonly lossId: string;
+    readonly kind: NativeImportKnownLossKind;
+    readonly policyKind: NativeImportKnownLossKind;
+    readonly evidenceKey: string;
+  }[];
+  readonly issues: readonly NativeImportFeatureEvidenceIssue[];
+  readonly reasons: readonly string[];
+}
+
 export interface NativeImportLossSummary {
   readonly total: number;
   readonly hasLosses: boolean;
@@ -165,6 +208,7 @@ export interface NativeImportLossSummary {
   readonly reviewLossIds: readonly string[];
   readonly informationalLossIds: readonly string[];
   readonly failedEvidenceIds: readonly string[];
+  readonly featureEvidence: NativeImportFeatureEvidenceSummary;
   readonly parser?: string;
   readonly scanKind?: string;
   readonly semanticStatus?: string;
@@ -1428,6 +1472,7 @@ export declare const NativeImportLossKinds: readonly NativeImportKnownLossKind[]
 export declare const NativeImportRegionTaxonomyKinds: readonly NativeImportRegionTaxonomyKind[];
 export declare const ProjectionTargetLossClasses: readonly ProjectionTargetLossClass[];
 export declare const NativeImportReadinessBySeverity: Readonly<Record<NativeImportLossSummary['highestSeverity'], SemanticMergeReadiness>>;
+export declare const NativeImportFeatureEvidencePolicies: Readonly<Record<string, NativeImportFeatureEvidencePolicy>>;
 export declare const NativeImportLanguageProfiles: readonly NativeImportLanguageProfile[];
 export declare function normalizeCompileTarget(target?: string): FrontierCompileTarget;
 export declare function compileFrontierSource(source: string, options?: FrontierCompileOptions): FrontierCompileResult;
@@ -1438,6 +1483,8 @@ export declare function renderTargetAst(ast: FrontierTargetAst, target?: Frontie
 export declare function renderTargetAstWithSourceMap(ast: FrontierTargetAst, target?: FrontierCompileOptions['target'], options?: FrontierCompileEmitOptions): FrontierTargetSourceMapResult;
 export declare function emitForTargetWithSourceMap(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: FrontierCompileEmitOptions): FrontierTargetDocumentSourceMapResult;
 export declare function resolveCapabilityAdapters(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: { readonly platform?: string }): readonly CapabilityResolution[];
+export declare function getNativeImportFeatureEvidencePolicy(kind: NativeImportKnownLossKind | string): NativeImportFeatureEvidencePolicy | undefined;
+export declare function summarizeNativeImportFeatureEvidence(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportFeatureEvidenceSummary;
 export declare function summarizeNativeImportLosses(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportLossSummary;
 export declare function classifyNativeImportReadiness(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportReadinessClassification;
 export declare function classifyNativeImportRoundtripReadiness(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: NativeImportRoundtripReadinessOptions): NativeImportRoundtripReadinessClassification;

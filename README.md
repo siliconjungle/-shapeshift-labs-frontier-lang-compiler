@@ -64,6 +64,25 @@ console.log(readiness.readiness);
 
 The loss taxonomy separates broad scanner limits from specific round-trip risks such as conditional compilation, reflection, overload/type-inference gaps, comments/trivia preservation, source-map approximation, parser diagnostics, and target projection loss. These records are evidence labels for merge admission; they are not claims that the lightweight scanner expanded macros, evaluated inactive branches, resolved overloads, or ran a type checker.
 
+High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
+
+```js
+import {
+  getNativeImportFeatureEvidencePolicy,
+  summarizeNativeImportFeatureEvidence
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const policy = getNativeImportFeatureEvidencePolicy('preprocessor');
+console.log(policy.requiredEvidenceKeys); // ["preprocessedOutputHash", "definesHash"]
+
+const featureEvidence = summarizeNativeImportFeatureEvidence(imported.losses, {
+  evidence: imported.evidence
+});
+
+console.log(featureEvidence.highestRisk);
+console.log(featureEvidence.missingRequiredEvidence);
+```
+
 Ask the compiler what is actually covered before sending native imports into a merge queue:
 
 ```js

@@ -9,7 +9,8 @@ import {
   createSemanticImportSidecar,
   importNativeSource,
   projectNativeImportToSource,
-  runNativeImporterAdapter
+  runNativeImporterAdapter,
+  summarizeNativeImportFeatureEvidence
 } from '../dist/index.js';
 
 const source = `
@@ -88,6 +89,13 @@ const semanticSidecars = nativeImportResults.map((imported) => createSemanticImp
 const sidecarDurationMs = performance.now() - sidecarStart;
 const sidecarOwnershipRegions = semanticSidecars.reduce((sum, sidecar) => sum + sidecar.ownershipRegions.length, 0);
 
+const featureEvidenceStart = performance.now();
+const featureEvidenceSummaries = nativeImportResults.map((imported) => summarizeNativeImportFeatureEvidence(imported.losses, {
+  evidence: imported.evidence
+}));
+const featureEvidenceDurationMs = performance.now() - featureEvidenceStart;
+const featureEvidencePolicyMatches = featureEvidenceSummaries.reduce((sum, summary) => sum + summary.total, 0);
+
 const projectionStart = performance.now();
 const nativeProjections = nativeImportResults.map((imported) => projectNativeImportToSource(imported));
 const projectionDurationMs = performance.now() - projectionStart;
@@ -150,6 +158,8 @@ console.log(JSON.stringify({
   semanticSidecars: semanticSidecars.length,
   sidecarOwnershipRegions,
   sidecarDurationMs: Number(sidecarDurationMs.toFixed(2)),
+  featureEvidencePolicyMatches,
+  featureEvidenceDurationMs: Number(featureEvidenceDurationMs.toFixed(2)),
   nativeProjections: nativeProjections.length,
   projectionBytes,
   projectionDurationMs: Number(projectionDurationMs.toFixed(2)),

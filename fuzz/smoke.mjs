@@ -9,7 +9,8 @@ import {
   importNativeProject,
   importNativeSource,
   projectNativeImportToSource,
-  runNativeImporterAdapter
+  runNativeImporterAdapter,
+  summarizeNativeImportFeatureEvidence
 } from '../dist/index.js';
 
 const targets = ['typescript', 'javascript', 'rust', 'python', 'c'];
@@ -74,6 +75,10 @@ for (let index = 0; index < 50; index += 1) {
   assert.equal(sidecar.summary.emptySemanticIndex, false);
   assert.ok(sidecar.ownershipRegions.length >= 1);
   assert.ok(sidecar.patchHints.length >= 1);
+  const featureEvidence = summarizeNativeImportFeatureEvidence(lightweight.losses, {
+    evidence: lightweight.evidence
+  });
+  assert.equal(featureEvidence.total, 0);
   const projection = projectNativeImportToSource(lightweight, {
     ...(index % 4 === 0 ? { sourceText: lightweight.nativeSource.ast.metadata.sourceBytes ? (index % 2 === 0 ? `export function light${index}() { return true; }\n` : `def light_${index}():\n    return True\n`) : undefined } : {})
   });
