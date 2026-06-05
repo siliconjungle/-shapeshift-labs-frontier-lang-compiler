@@ -127,6 +127,17 @@ export const NativeImportReadinessBySeverity = Object.freeze({
   error: 'blocked'
 });
 
+export const NativeImportRegionTaxonomyKinds = Object.freeze([
+  'symbol',
+  'declaration',
+  'import',
+  'body',
+  'call',
+  'type',
+  'effect',
+  'generatedOutput'
+]);
+
 export const NativeImportLanguageProfiles = Object.freeze([
   nativeImportLanguageProfile('javascript', {
     aliases: ['js', 'mjs', 'cjs', 'jsx'],
@@ -583,6 +594,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
   const evidence = uniqueRecordsById(imports.flatMap((imported) => imported?.evidence ?? []));
   const mergeCandidates = imports.flatMap((imported) => imported?.mergeCandidates ?? []);
   const lossSummary = summarizeNativeImportLosses(losses, { evidence });
+  const regionTaxonomy = summarizeSemanticImportRegionTaxonomy(ownershipRegions);
   const readiness = mergeCandidates.reduce(
     (current, candidate) => maxSemanticMergeReadiness(current, candidate.readiness),
     lossSummary.semanticMergeReadiness
@@ -619,6 +631,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       blockingLossIds: lossSummary.blockingLossIds,
       reviewLossIds: lossSummary.reviewLossIds
     },
+    regionTaxonomy,
     evidence: {
       total: evidence.length,
       failed: evidence.filter((record) => record.status === 'failed').map((record) => record.id),
@@ -628,12 +641,90 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       imports: imports.length,
       symbols: symbols.length,
       ownershipRegions: ownershipRegions.length,
+      regionKinds: regionTaxonomy.presentKinds.length,
       sourceMapMappings: sourceMapMappings.length,
       readiness,
       emptySemanticIndex: symbols.length === 0
     },
     metadata: {
       note: 'Sidecar is source-addressable semantic evidence for merge admission; lightweight scanner regions remain review-required unless exact parser evidence upgrades readiness.',
+      ...options.metadata
+    }
+  };
+}
+
+export function createNativeImportResultContract(importResult, options = {}) {
+  if (!importResult || typeof importResult !== 'object') {
+    throw new Error('createNativeImportResultContract requires a native import result');
+  }
+  const imports = nativeImportEntries(importResult);
+  const evidence = uniqueByEvidenceId([
+    ...(importResult.evidence ?? []),
+    ...imports.flatMap((imported) => imported?.evidence ?? [])
+  ]);
+  const losses = uniqueByLossId([
+    ...(importResult.losses ?? []),
+    ...imports.flatMap((imported) => imported?.losses ?? imported?.nativeAst?.losses ?? [])
+  ]);
+  const sourceMaps = collectImportSourceMaps(importResult, imports);
+  const regionSummary = summarizeImportRegions(importResult, imports, options);
+  const sourceMapSummary = summarizeImportSourceMaps(sourceMaps);
+  const sourcePreservation = summarizeImportSourcePreservation(importResult, imports);
+  const adapterCoverage = summarizeImportAdapterCoverage(importResult, imports);
+  const primary = imports[0] ?? importResult;
+  const nativeSource = importResult.nativeSource ?? importResult.nativeSources?.[0] ?? primary?.nativeSource;
+  const nativeAst = importResult.nativeAst ?? nativeSource?.ast ?? primary?.nativeAst ?? primary?.nativeSource?.ast;
+  const semanticIndex = importResult.semanticIndex ?? importResult.universalAst?.semanticIndex ?? primary?.semanticIndex ?? primary?.universalAst?.semanticIndex;
+  const lossSummary = options.lossSummary ?? importResult.metadata?.nativeImportLossSummary ?? summarizeNativeImportLosses(losses, {
+    evidence,
+    parser: nativeAst?.parser,
+    scanKind: importResult.metadata?.scanKind,
+    semanticStatus: importResult.metadata?.semanticStatus ?? importResult.universalAst?.metadata?.semanticStatus
+  });
+  const mergeCandidates = [
+    ...(importResult.mergeCandidates ?? []),
+    ...imports.flatMap((imported) => imported?.mergeCandidates ?? [])
+  ];
+  const readiness = summarizeImportContractReadiness(importResult, mergeCandidates, lossSummary);
+  const defaultSidecarId = defaultSemanticImportSidecarId(importResult, imports);
+  return {
+    kind: 'frontier.lang.nativeImportResultContract',
+    version: 1,
+    importResultId: importResult.id,
+    language: importResult.language ?? (imports.length === 1 ? imports[0]?.language : 'mixed'),
+    sourcePath: importResult.sourcePath ?? primary?.sourcePath ?? nativeSource?.sourcePath ?? nativeAst?.sourcePath,
+    sourceHash: nativeSource?.sourceHash ?? nativeAst?.sourceHash,
+    sourceCount: imports.length,
+    sources: imports.map((imported, index) => compactImportContractSource(imported, index)),
+    ids: {
+      nativeSourceId: nativeSource?.id,
+      nativeAstId: nativeAst?.id,
+      semanticIndexId: semanticIndex?.id,
+      universalAstId: importResult.universalAst?.id ?? primary?.universalAst?.id,
+      patchId: importResult.patch?.id,
+      sourceMapIds: sourceMapSummary.ids,
+      semanticSidecarIds: uniqueStrings([
+        ...normalizeStringList(options.semanticSidecarIds ?? options.sidecarIds ?? options.sidecarId),
+        defaultSidecarId
+      ])
+    },
+    sourcePreservation,
+    adapterCoverage,
+    lossSummary,
+    regions: regionSummary,
+    sourceMaps: sourceMapSummary,
+    readiness,
+    evidence: {
+      total: evidence.length,
+      failed: evidence.filter((record) => record?.status === 'failed').map((record) => record.id).filter(Boolean),
+      ids: evidence.map((record) => record.id).filter(Boolean)
+    },
+    metadata: {
+      parser: nativeAst?.parser,
+      semanticStatus: importResult.metadata?.semanticStatus ?? importResult.universalAst?.metadata?.semanticStatus,
+      projectRoot: importResult.projectRoot,
+      defaultSemanticSidecarId: defaultSidecarId,
+      note: 'Contract summarizes import-result evidence for merge admission; it does not upgrade lightweight scans into exact semantic imports.',
       ...options.metadata
     }
   };
@@ -1311,7 +1402,8 @@ function createLightweightNativeImport(input) {
       metadata: {
         ...declaration.metadata,
         ownershipRegionId: ownershipRegion.id,
-        ownershipRegionKey: ownershipRegion.key
+        ownershipRegionKey: ownershipRegion.key,
+        ownershipRegionKind: ownershipRegion.regionKind
       }
     };
     if (declaration.symbolId) {
@@ -1327,7 +1419,8 @@ function createLightweightNativeImport(input) {
         definitionSpan: declaration.span,
         metadata: {
           ownershipRegionId: ownershipRegion.id,
-          ownershipRegionKey: ownershipRegion.key
+          ownershipRegionKey: ownershipRegion.key,
+          ownershipRegionKind: ownershipRegion.regionKind
         }
       });
       occurrences.push({
@@ -1354,6 +1447,15 @@ function createLightweightNativeImport(input) {
         predicate: 'semanticOwnershipRegion',
         subjectId: declaration.symbolId,
         value: ownershipRegion
+      }, {
+        id: `fact_${idFragment(declaration.nodeId)}_ownership_region_taxonomy`,
+        predicate: 'semanticOwnershipRegionTaxonomy',
+        subjectId: declaration.symbolId,
+        value: {
+          regionKind: ownershipRegion.regionKind,
+          granularity: ownershipRegion.granularity,
+          key: ownershipRegion.key
+        }
       });
       mappings.push({
         id: `map_${idFragment(declaration.nodeId)}`,
@@ -1364,6 +1466,8 @@ function createLightweightNativeImport(input) {
         evidenceIds: [evidenceId],
         lossIds: declaration.loss ? [declaration.loss.id] : [],
         ownershipRegionId: ownershipRegion.id,
+        ownershipRegionKey: ownershipRegion.key,
+        ownershipRegionKind: ownershipRegion.regionKind,
         precision: 'declaration'
       });
     }
@@ -2974,6 +3078,9 @@ function inferSourceMapMappings(input) {
           sourceSpan: occurrence.span ?? nativeNode?.span,
           evidenceIds,
           lossIds: lossIdsForNativeNode(input.losses ?? nativeAst?.losses ?? [], occurrence.nativeAstNodeId),
+          ownershipRegionId: symbol?.metadata?.ownershipRegionId,
+          ownershipRegionKey: symbol?.metadata?.ownershipRegionKey,
+          ownershipRegionKind: symbol?.metadata?.ownershipRegionKind,
           precision: occurrence.span || nativeNode?.span ? 'declaration' : 'unknown'
         };
       });
@@ -3043,6 +3150,9 @@ function normalizeSourceMapMappings(mappings, context) {
         target,
         evidenceIds: normalizeReferenceIds(mapping.evidenceIds, evidenceIds),
         lossIds: normalizeReferenceIds(mapping.lossIds, lossIdsForNativeNode(context.losses ?? nativeAst?.losses ?? [], nativeAstNodeId)),
+        ownershipRegionId: mapping.ownershipRegionId ?? symbol?.metadata?.ownershipRegionId,
+        ownershipRegionKey: mapping.ownershipRegionKey ?? symbol?.metadata?.ownershipRegionKey,
+        ownershipRegionKind: mapping.ownershipRegionKind ?? symbol?.metadata?.ownershipRegionKind,
         precision: normalizeSourceMapPrecision(mapping.precision, sourceSpan, generatedSpan)
       };
       return {
@@ -3385,9 +3495,12 @@ function semanticImportSidecarEntry(imported, index, options) {
       signatureHash: symbol.signatureHash,
       ownershipRegionId: region.id,
       ownershipKey: region.key,
+      ownershipRegionKind: region.regionKind,
       readiness: imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness ?? 'needs-review'
     });
   }
+  const ownershipRegions = uniqueRecordsById(regions);
+  const regionTaxonomy = summarizeSemanticImportRegionTaxonomy(ownershipRegions);
   return {
     id: imported?.id ?? `import_${index + 1}`,
     language: imported?.language,
@@ -3403,8 +3516,9 @@ function semanticImportSidecarEntry(imported, index, options) {
     sourceMapMappingCount: sourceMapMappings.length,
     readiness: imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness ?? 'needs-review',
     emptySemanticIndex: symbols.length === 0,
+    regionTaxonomy,
     symbols,
-    ownershipRegions: uniqueRecordsById(regions)
+    ownershipRegions
   };
 }
 
@@ -3412,15 +3526,17 @@ function semanticOwnershipRegionForSymbol(imported, symbol, mapping, nativeNode,
   const sourcePath = mapping?.sourceSpan?.path ?? symbol.definitionSpan?.path ?? nativeNode?.span?.path ?? imported?.sourcePath ?? imported?.nativeSource?.sourcePath ?? imported?.nativeAst?.sourcePath;
   const language = symbol.language ?? imported?.language ?? imported?.nativeAst?.language ?? imported?.nativeSource?.language;
   const sourceSpan = mapping?.sourceSpan ?? symbol.definitionSpan ?? nativeNode?.span;
+  const regionKind = semanticRegionKindForSymbol(symbol, mapping, nativeNode);
   const key = [
     options.regionPrefix ?? 'source',
     sourcePath ?? `${language}:memory`,
-    symbol.kind ?? 'symbol',
+    regionKind,
     symbol.name ?? symbol.id
   ].map((part) => String(part).replace(/\s+/g, ' ').trim()).join('#');
   return {
     id: `region_${idFragment(key)}`,
     key,
+    regionKind,
     granularity: 'symbol',
     language,
     sourcePath,
@@ -3431,7 +3547,10 @@ function semanticOwnershipRegionForSymbol(imported, symbol, mapping, nativeNode,
     nativeAstNodeId: symbol.nativeAstNodeId ?? nativeNode?.id,
     sourceSpan,
     precision: mapping?.precision ?? (sourceSpan ? 'declaration' : 'unknown'),
-    mergePolicy: 'single-writer-review-required'
+    mergePolicy: semanticRegionMergePolicy(regionKind),
+    metadata: {
+      semanticRegionTaxonomy: true
+    }
   };
 }
 
@@ -3439,10 +3558,12 @@ function semanticOwnershipRegionForDeclaration(input, declaration, documentId) {
   const name = declaration.name ?? declaration.importPath ?? declaration.nodeId ?? declaration.nativeNode?.id;
   const kind = declaration.symbolKind ?? declaration.kind ?? declaration.nativeNode?.kind ?? 'symbol';
   const sourcePath = declaration.span?.path ?? declaration.nativeNode?.span?.path ?? input.sourcePath ?? `${input.language}:memory`;
-  const key = ['source', sourcePath, kind, name].map((part) => String(part).replace(/\s+/g, ' ').trim()).join('#');
+  const regionKind = semanticRegionKindForDeclaration(declaration);
+  const key = ['source', sourcePath, regionKind, name].map((part) => String(part).replace(/\s+/g, ' ').trim()).join('#');
   return {
     id: `region_${idFragment(key)}`,
     key,
+    regionKind,
     granularity: 'symbol',
     language: input.language,
     documentId,
@@ -3454,7 +3575,10 @@ function semanticOwnershipRegionForDeclaration(input, declaration, documentId) {
     nativeAstNodeId: declaration.nodeId ?? declaration.nativeNode?.id,
     sourceSpan: declaration.span ?? declaration.nativeNode?.span,
     precision: declaration.span || declaration.nativeNode?.span ? 'declaration' : 'unknown',
-    mergePolicy: 'single-writer-review-required'
+    mergePolicy: semanticRegionMergePolicy(regionKind),
+    metadata: {
+      semanticRegionTaxonomy: true
+    }
   };
 }
 
@@ -3469,12 +3593,85 @@ function semanticPatchHintForRegion(region, readiness, options = {}) {
     sourceSpan: region.sourceSpan,
     readiness,
     precision: region.precision,
-    supportedOperations: ['replace-region', 'insert-before-region', 'insert-after-region'],
+    supportedOperations: semanticRegionSupportedOperations(region),
     projection: {
       sourceLanguage: region.language,
       targetPath: options.targetPath ?? region.sourcePath,
       requiresSourceMap: true
     }
+  };
+}
+
+function semanticRegionKindForDeclaration(declaration) {
+  if (declaration.role === 'import' || declaration.importPath) return 'import';
+  const kind = declaration.symbolKind ?? declaration.kind ?? declaration.nativeNode?.kind;
+  if (semanticKindIsType(kind)) return 'type';
+  if (semanticKindCanOwnBody(kind, declaration.span ?? declaration.nativeNode?.span)) return 'body';
+  return 'declaration';
+}
+
+function semanticRegionKindForSymbol(symbol, mapping, nativeNode) {
+  if (mapping?.generatedSpan || mapping?.generatedName || mapping?.target?.emitPath) return 'generatedOutput';
+  if (symbol?.metadata?.ownershipRegionKind) return normalizeNativeImportRegionKind(symbol.metadata.ownershipRegionKind);
+  if (String(symbol?.id ?? '').includes(':import:') || symbol?.metadata?.role === 'import') return 'import';
+  if (semanticKindIsType(symbol?.kind ?? nativeNode?.kind)) return 'type';
+  if (semanticKindCanOwnBody(symbol?.kind ?? nativeNode?.kind, nativeNode?.span ?? symbol?.definitionSpan)) return 'body';
+  return 'declaration';
+}
+
+function semanticKindIsType(kind) {
+  return ['type', 'class', 'interface', 'trait', 'protocol', 'struct', 'enum', 'record'].includes(String(kind ?? '').toLowerCase());
+}
+
+function semanticKindCanOwnBody(kind, span) {
+  const text = String(kind ?? '').toLowerCase();
+  if (/function|method|class|implementation|module|namespace|package|action|effect|capability/.test(text)) return true;
+  return typeof span?.startLine === 'number' && typeof span?.endLine === 'number' && span.endLine > span.startLine;
+}
+
+function semanticRegionMergePolicy(regionKind) {
+  if (regionKind === 'import') return 'module-edge-review-required';
+  if (regionKind === 'body') return 'implementation-single-writer-review-required';
+  if (regionKind === 'call') return 'callsite-overlap-review-required';
+  if (regionKind === 'type') return 'type-surface-review-required';
+  if (regionKind === 'effect') return 'effect-boundary-review-required';
+  if (regionKind === 'generatedOutput') return 'generated-output-source-map-review-required';
+  return 'single-writer-review-required';
+}
+
+function semanticRegionSupportedOperations(region) {
+  if (region.regionKind === 'import') return ['replace-import', 'insert-import-before', 'insert-import-after', 'replace-region'];
+  if (region.regionKind === 'body') return ['replace-body', 'insert-before-body', 'insert-after-body'];
+  if (region.regionKind === 'call') return ['replace-callsite', 'review-callsite'];
+  if (region.regionKind === 'type') return ['replace-type-declaration', 'merge-type-members', 'replace-region'];
+  if (region.regionKind === 'effect') return ['route-effect', 'replace-effect-boundary', 'review-effect-policy'];
+  if (region.regionKind === 'generatedOutput') return ['replace-generated-output', 'attach-generated-source-map', 'review-generator-input'];
+  return ['replace-region', 'insert-before-region', 'insert-after-region'];
+}
+
+function normalizeNativeImportRegionKind(value) {
+  const text = String(value ?? 'symbol').trim();
+  if (text === 'generated' || text === 'generated-output' || text === 'generated_output') return 'generatedOutput';
+  if (NativeImportRegionTaxonomyKinds.includes(text)) return text;
+  return text || 'symbol';
+}
+
+function summarizeSemanticImportRegionTaxonomy(regions) {
+  const byKind = {};
+  const keysByKind = {};
+  const keys = [];
+  for (const region of regions ?? []) {
+    const kind = normalizeNativeImportRegionKind(region.regionKind ?? region.granularity);
+    byKind[kind] = (byKind[kind] ?? 0) + 1;
+    keysByKind[kind] = [...(keysByKind[kind] ?? []), region.key].filter(Boolean);
+    if (region.key) keys.push(region.key);
+  }
+  return {
+    kinds: [...NativeImportRegionTaxonomyKinds],
+    presentKinds: uniqueStrings(Object.keys(byKind)),
+    byKind,
+    keys,
+    keysByKind
   };
 }
 
@@ -3590,13 +3787,30 @@ function withNativeImportReadiness(importResult, lossSummary) {
       }
     };
   });
-  return {
+  const semanticMergeReadiness = mergeCandidates[0]?.readiness ?? lossSummary.semanticMergeReadiness;
+  const contractInput = {
     ...importResult,
     mergeCandidates,
     metadata: {
       ...importResult.metadata,
       nativeImportLossSummary: lossSummary,
-      semanticMergeReadiness: mergeCandidates[0]?.readiness ?? lossSummary.semanticMergeReadiness,
+      semanticMergeReadiness
+    }
+  };
+  const importResultContract = createNativeImportResultContract(contractInput, { lossSummary });
+  return {
+    ...importResult,
+    mergeCandidates,
+    metadata: {
+      ...importResult.metadata,
+      importResultContract,
+      nativeImportLossSummary: lossSummary,
+      semanticMergeReadiness,
+      readinessReasons: importResultContract.readiness.reasons,
+      sourcePreservationSummary: importResultContract.sourcePreservation,
+      adapterCoverageSummary: importResultContract.adapterCoverage,
+      regionSummary: importResultContract.regions,
+      sourceMapSummary: importResultContract.sourceMaps,
       lossCategories: lossSummary.categories,
       lossSeverityCounts: lossSummary.bySeverity,
       lossKindCounts: lossSummary.byKind
@@ -3645,6 +3859,257 @@ function nativeImportRoundtripReasons(status, input) {
     ]);
   }
   return ['Native import roundtrip readiness requires review.'];
+}
+
+function collectImportSourceMaps(importResult, imports) {
+  return uniqueRecordsById([
+    ...(importResult?.sourceMaps ?? importResult?.universalAst?.sourceMaps ?? []),
+    ...imports.flatMap((imported) => imported?.sourceMaps ?? imported?.universalAst?.sourceMaps ?? [])
+  ]);
+}
+
+function summarizeImportSourceMaps(sourceMaps) {
+  const mappings = sourceMaps.flatMap((sourceMap) => sourceMap?.mappings ?? []);
+  return {
+    total: sourceMaps.length,
+    ids: sourceMaps.map((sourceMap) => sourceMap.id).filter(Boolean),
+    mappingCount: mappings.length,
+    sourcePaths: uniqueStrings([
+      ...sourceMaps.map((sourceMap) => sourceMap.sourcePath),
+      ...mappings.map((mapping) => mapping.sourceSpan?.path)
+    ].filter(Boolean)),
+    targetPaths: uniqueStrings([
+      ...sourceMaps.map((sourceMap) => sourceMap.targetPath ?? sourceMap.target?.emitPath),
+      ...mappings.map((mapping) => mapping.generatedSpan?.targetPath ?? mapping.target?.emitPath)
+    ].filter(Boolean)),
+    byPrecision: countBy(mappings.map((mapping) => mapping.precision ?? 'unknown')),
+    sourceRangeMappings: mappings.filter((mapping) => mapping.sourceSpan).length,
+    generatedRangeMappings: mappings.filter((mapping) => mapping.generatedSpan).length
+  };
+}
+
+function summarizeImportRegions(importResult, imports, options = {}) {
+  const entries = imports.map((imported, index) => semanticImportSidecarEntry(imported, index, options));
+  const regions = uniqueRecordsById(entries.flatMap((entry) => entry.ownershipRegions ?? []));
+  const taxonomy = summarizeSemanticImportRegionTaxonomy(regions);
+  return {
+    total: regions.length,
+    ids: regions.map((region) => region.id),
+    keys: regions.map((region) => region.key),
+    sourcePaths: uniqueStrings(regions.map((region) => region.sourcePath).filter(Boolean)),
+    byKind: taxonomy.byKind,
+    byGranularity: countBy(regions.map((region) => region.granularity ?? 'unknown')),
+    byPrecision: countBy(regions.map((region) => region.precision ?? 'unknown')),
+    byLanguage: countBy(regions.map((region) => region.language ?? importResult?.language ?? 'unknown')),
+    symbolIds: uniqueStrings(regions.map((region) => region.symbolId).filter(Boolean)),
+    taxonomy
+  };
+}
+
+function summarizeImportSourcePreservation(importResult, imports) {
+  const records = uniqueSourcePreservationRecords([
+    ...collectSourcePreservationFromImport(importResult),
+    ...imports.flatMap((imported) => collectSourcePreservationFromImport(imported))
+  ]);
+  const compactRecords = records.map(compactSourcePreservationRecord);
+  return {
+    total: compactRecords.length,
+    ids: compactRecords.map((record) => record.id).filter(Boolean),
+    sourcePaths: uniqueStrings(compactRecords.map((record) => record.sourcePath).filter(Boolean)),
+    sourceHashes: uniqueStrings(compactRecords.map((record) => record.sourceHash).filter(Boolean)),
+    exactSourceAvailable: compactRecords.filter((record) => record.exactSourceAvailable).length,
+    sourceBytes: compactRecords.reduce((sum, record) => sum + (record.sourceBytes ?? 0), 0),
+    lineCount: compactRecords.reduce((sum, record) => sum + (record.lineCount ?? 0), 0),
+    tokens: compactRecords.reduce((sum, record) => sum + (record.tokens ?? 0), 0),
+    trivia: compactRecords.reduce((sum, record) => sum + (record.trivia ?? 0), 0),
+    directives: compactRecords.reduce((sum, record) => sum + (record.directives ?? 0), 0),
+    comments: compactRecords.reduce((sum, record) => sum + (record.comments ?? 0), 0),
+    whitespace: compactRecords.reduce((sum, record) => sum + (record.whitespace ?? 0), 0),
+    truncated: compactRecords.some((record) => record.truncated),
+    records: compactRecords
+  };
+}
+
+function collectSourcePreservationFromImport(imported) {
+  const nativeAst = imported?.nativeAst ?? imported?.nativeSource?.ast;
+  return [
+    imported?.metadata?.sourcePreservation,
+    imported?.nativeSource?.metadata?.sourcePreservation,
+    nativeAst?.metadata?.sourcePreservation,
+    imported?.universalAst?.metadata?.sourcePreservation,
+    ...(imported?.nativeSources ?? []).map((nativeSource) => nativeSource?.metadata?.sourcePreservation ?? nativeSource?.ast?.metadata?.sourcePreservation)
+  ].filter(Boolean);
+}
+
+function uniqueSourcePreservationRecords(records) {
+  const seen = new Set();
+  const result = [];
+  for (const record of records) {
+    const key = record.id ?? `${record.sourcePath ?? 'source'}#${record.sourceHash ?? result.length}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(record);
+  }
+  return result;
+}
+
+function compactSourcePreservationRecord(record) {
+  return {
+    id: record.id,
+    language: record.language,
+    sourcePath: record.sourcePath,
+    sourceHash: record.sourceHash,
+    sourceBytes: record.sourceBytes,
+    lineCount: record.lineCount,
+    newline: record.newline,
+    encoding: record.encoding,
+    exactSourceAvailable: record.summary?.exactSourceAvailable === true,
+    tokens: record.summary?.tokens ?? record.tokens?.length ?? 0,
+    trivia: record.summary?.trivia ?? record.trivia?.length ?? 0,
+    directives: record.summary?.directives ?? record.directives?.length ?? 0,
+    comments: record.summary?.comments ?? 0,
+    whitespace: record.summary?.whitespace ?? 0,
+    truncated: record.summary?.truncated === true
+  };
+}
+
+function summarizeImportAdapterCoverage(importResult, imports) {
+  const records = uniqueAdapterCoverageRecords([
+    compactAdapterCoverageRecord(importResult),
+    ...imports.map((imported) => compactAdapterCoverageRecord(imported))
+  ].filter(Boolean));
+  const observed = records.reduce((totals, record) => {
+    for (const key of ['diagnostics', 'losses', 'nativeAstNodes', 'semanticSymbols', 'sourceMapMappings']) {
+      totals[key] += record.observed?.[key] ?? 0;
+    }
+    totals.sourceRanges = totals.sourceRanges || record.observed?.sourceRanges === true;
+    totals.generatedRanges = totals.generatedRanges || record.observed?.generatedRanges === true;
+    return totals;
+  }, {
+    diagnostics: 0,
+    losses: 0,
+    nativeAstNodes: 0,
+    semanticSymbols: 0,
+    sourceMapMappings: 0,
+    sourceRanges: false,
+    generatedRanges: false
+  });
+  return {
+    total: records.length,
+    adapterIds: uniqueStrings(records.map((record) => record.adapterId).filter(Boolean)),
+    parsers: uniqueStrings(records.map((record) => record.parser).filter(Boolean)),
+    exactness: uniqueStrings(records.map((record) => record.exactness).filter(Boolean)),
+    exactAst: records.filter((record) => record.exactAst).length,
+    tokens: records.filter((record) => record.tokens).length,
+    trivia: records.filter((record) => record.trivia).length,
+    diagnostics: records.filter((record) => record.diagnostics).length,
+    sourceRanges: records.filter((record) => record.sourceRanges).length,
+    generatedRanges: records.filter((record) => record.generatedRanges).length,
+    semanticCoverageLevels: uniqueStrings(records.map((record) => record.semanticCoverage?.level).filter(Boolean)),
+    observed,
+    records
+  };
+}
+
+function compactAdapterCoverageRecord(imported) {
+  const nativeAst = imported?.nativeAst ?? imported?.nativeSource?.ast;
+  const nativeSource = imported?.nativeSource;
+  const coverage = imported?.adapter?.coverage
+    ?? imported?.metadata?.adapterCoverage
+    ?? nativeAst?.metadata?.adapterCoverage
+    ?? nativeSource?.metadata?.adapterCoverage;
+  if (!coverage) return undefined;
+  return {
+    adapterId: imported?.adapter?.id ?? imported?.metadata?.adapterId ?? nativeAst?.metadata?.adapterId ?? nativeSource?.metadata?.adapterId,
+    adapterVersion: imported?.adapter?.version ?? imported?.metadata?.adapterVersion ?? nativeAst?.metadata?.adapterVersion ?? nativeSource?.metadata?.adapterVersion,
+    parser: imported?.adapter?.parser ?? nativeAst?.parser ?? nativeSource?.parser ?? imported?.metadata?.parser,
+    capabilities: uniqueStrings(imported?.adapter?.capabilities ?? imported?.metadata?.adapterCapabilities ?? []),
+    supportedExtensions: uniqueStrings(imported?.adapter?.supportedExtensions ?? imported?.metadata?.supportedExtensions ?? []),
+    exactness: coverage.exactness,
+    exactAst: Boolean(coverage.exactAst),
+    tokens: Boolean(coverage.tokens),
+    trivia: Boolean(coverage.trivia),
+    diagnostics: Boolean(coverage.diagnostics),
+    sourceRanges: Boolean(coverage.sourceRanges),
+    generatedRanges: Boolean(coverage.generatedRanges),
+    semanticCoverage: coverage.semanticCoverage,
+    observed: coverage.observed,
+    notes: uniqueStrings(coverage.notes ?? [])
+  };
+}
+
+function uniqueAdapterCoverageRecords(records) {
+  const seen = new Set();
+  const result = [];
+  for (const record of records) {
+    const key = [record.adapterId, record.adapterVersion, record.parser, record.exactness].join('#');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(record);
+  }
+  return result;
+}
+
+function compactImportContractSource(imported, index) {
+  const nativeAst = imported?.nativeAst ?? imported?.nativeSource?.ast;
+  const nativeSource = imported?.nativeSource;
+  const semanticIndex = imported?.semanticIndex ?? imported?.universalAst?.semanticIndex;
+  const sourceMaps = collectImportSourceMaps(imported, [imported].filter(Boolean));
+  return {
+    id: imported?.id ?? `import_${index + 1}`,
+    language: imported?.language ?? nativeSource?.language ?? nativeAst?.language,
+    sourcePath: imported?.sourcePath ?? nativeSource?.sourcePath ?? nativeAst?.sourcePath,
+    sourceHash: nativeSource?.sourceHash ?? nativeAst?.sourceHash,
+    parser: nativeAst?.parser ?? nativeSource?.parser,
+    nativeSourceId: nativeSource?.id,
+    nativeAstId: nativeAst?.id,
+    semanticIndexId: semanticIndex?.id,
+    universalAstId: imported?.universalAst?.id,
+    patchId: imported?.patch?.id,
+    sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id).filter(Boolean),
+    sourceMapMappings: sourceMaps.reduce((sum, sourceMap) => sum + (sourceMap.mappings?.length ?? 0), 0),
+    symbolCount: semanticIndex?.symbols?.length ?? 0,
+    lossCount: imported?.losses?.length ?? nativeAst?.losses?.length ?? 0,
+    evidenceCount: imported?.evidence?.length ?? 0,
+    readiness: imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness
+  };
+}
+
+function summarizeImportContractReadiness(importResult, mergeCandidates, lossSummary) {
+  const candidateReadiness = mergeCandidates.reduce(
+    (current, candidate) => maxSemanticMergeReadiness(current, candidate.readiness),
+    lossSummary.semanticMergeReadiness
+  );
+  const semanticMergeReadiness = maxSemanticMergeReadiness(
+    importResult?.metadata?.semanticMergeReadiness ?? lossSummary.semanticMergeReadiness,
+    candidateReadiness
+  );
+  return {
+    semanticMergeReadiness,
+    severityReadiness: lossSummary.semanticMergeReadiness,
+    reasons: uniqueStrings([
+      ...(lossSummary.readinessReasons ?? []),
+      ...mergeCandidates.flatMap((candidate) => candidate?.reasons ?? []),
+      ...normalizeStringList(importResult?.metadata?.readinessReasons)
+    ]),
+    failedEvidenceIds: lossSummary.failedEvidenceIds,
+    blockingLossIds: lossSummary.blockingLossIds,
+    reviewLossIds: lossSummary.reviewLossIds,
+    informationalLossIds: lossSummary.informationalLossIds
+  };
+}
+
+function defaultSemanticImportSidecarId(importResult, imports = []) {
+  return `semantic_import_${idFragment(importResult?.id ?? importResult?.projectRoot ?? imports[0]?.sourcePath ?? imports[0]?.language ?? 'source')}`;
+}
+
+function countBy(values) {
+  const counts = {};
+  for (const value of values ?? []) {
+    const key = String(value ?? 'unknown');
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return counts;
 }
 
 function maxSemanticMergeReadiness(left, right) {
@@ -4042,7 +4507,8 @@ function semanticIndexFromNativeDeclarations(declarations, input, options) {
     declaration.nativeNode.metadata = {
       ...declaration.nativeNode.metadata,
       ownershipRegionId: ownershipRegion.id,
-      ownershipRegionKey: ownershipRegion.key
+      ownershipRegionKey: ownershipRegion.key,
+      ownershipRegionKind: ownershipRegion.regionKind
     };
     symbols.push({
       id: symbolId,
@@ -4055,7 +4521,8 @@ function semanticIndexFromNativeDeclarations(declarations, input, options) {
       definitionSpan: declaration.nativeNode.span,
       metadata: {
         ownershipRegionId: ownershipRegion.id,
-        ownershipRegionKey: ownershipRegion.key
+        ownershipRegionKey: ownershipRegion.key,
+        ownershipRegionKind: ownershipRegion.regionKind
       }
     });
     occurrences.push({
@@ -4082,6 +4549,15 @@ function semanticIndexFromNativeDeclarations(declarations, input, options) {
       predicate: 'semanticOwnershipRegion',
       subjectId: symbolId,
       value: ownershipRegion
+    }, {
+      id: `fact_${idFragment(declaration.nativeNode.id)}_ownership_region_taxonomy`,
+      predicate: 'semanticOwnershipRegionTaxonomy',
+      subjectId: symbolId,
+      value: {
+        regionKind: ownershipRegion.regionKind,
+        granularity: ownershipRegion.granularity,
+        key: ownershipRegion.key
+      }
     });
     mappings.push({
       id: `map_${idFragment(declaration.nativeNode.id)}`,
@@ -4092,6 +4568,8 @@ function semanticIndexFromNativeDeclarations(declarations, input, options) {
       evidenceIds: [evidenceId],
       lossIds: [],
       ownershipRegionId: ownershipRegion.id,
+      ownershipRegionKey: ownershipRegion.key,
+      ownershipRegionKind: ownershipRegion.regionKind,
       precision: declaration.nativeNode.span ? 'declaration' : 'unknown'
     });
   }
@@ -4211,7 +4689,7 @@ function createNativeProjectImportResult(input, imports) {
       sourcePreservationSummary
     }
   });
-  return {
+  const projectResult = {
     kind: 'frontier.lang.projectImportResult',
     version: 1,
     id: input.id ?? `project_import_${idPart}`,
@@ -4233,6 +4711,21 @@ function createNativeProjectImportResult(input, imports) {
       nativeImportLossSummary,
       sourcePreservationSummary,
       ...input.metadata
+    }
+  };
+  const importResultContract = createNativeImportResultContract(projectResult, {
+    lossSummary: nativeImportLossSummary
+  });
+  return {
+    ...projectResult,
+    metadata: {
+      ...projectResult.metadata,
+      importResultContract,
+      semanticMergeReadiness: importResultContract.readiness.semanticMergeReadiness,
+      readinessReasons: importResultContract.readiness.reasons,
+      regionSummary: importResultContract.regions,
+      sourceMapSummary: importResultContract.sourceMaps,
+      adapterCoverageSummary: importResultContract.adapterCoverage
     }
   };
 }

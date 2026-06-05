@@ -118,6 +118,17 @@ export type NativeImportKnownLossKind =
   | 'targetProjectionLoss'
   | string;
 
+export type NativeImportRegionTaxonomyKind =
+  | 'symbol'
+  | 'declaration'
+  | 'import'
+  | 'body'
+  | 'call'
+  | 'type'
+  | 'effect'
+  | 'generatedOutput'
+  | string;
+
 export interface NativeImportLossSummaryOptions {
   readonly exactAst?: boolean;
   readonly evidence?: readonly EvidenceRecord[];
@@ -217,6 +228,167 @@ export interface NativeImportCoverageMatrixOptions {
   readonly generatedAt?: number;
 }
 
+export interface NativeImportContractSource {
+  readonly id: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly parser?: string;
+  readonly nativeSourceId?: string;
+  readonly nativeAstId?: string;
+  readonly semanticIndexId?: string;
+  readonly universalAstId?: string;
+  readonly patchId?: string;
+  readonly sourceMapIds: readonly string[];
+  readonly sourceMapMappings: number;
+  readonly symbolCount: number;
+  readonly lossCount: number;
+  readonly evidenceCount: number;
+  readonly readiness?: SemanticMergeReadiness;
+}
+
+export interface NativeImportSourcePreservationRecordSummary {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly sourceBytes?: number;
+  readonly lineCount?: number;
+  readonly newline?: string;
+  readonly encoding?: string;
+  readonly exactSourceAvailable: boolean;
+  readonly tokens: number;
+  readonly trivia: number;
+  readonly directives: number;
+  readonly comments: number;
+  readonly whitespace: number;
+  readonly truncated: boolean;
+}
+
+export interface NativeImportSourcePreservationContract {
+  readonly total: number;
+  readonly ids: readonly string[];
+  readonly sourcePaths: readonly string[];
+  readonly sourceHashes: readonly string[];
+  readonly exactSourceAvailable: number;
+  readonly sourceBytes: number;
+  readonly lineCount: number;
+  readonly tokens: number;
+  readonly trivia: number;
+  readonly directives: number;
+  readonly comments: number;
+  readonly whitespace: number;
+  readonly truncated: boolean;
+  readonly records: readonly NativeImportSourcePreservationRecordSummary[];
+}
+
+export interface NativeImportAdapterCoverageRecordSummary {
+  readonly adapterId?: string;
+  readonly adapterVersion?: string;
+  readonly parser?: string;
+  readonly capabilities: readonly string[];
+  readonly supportedExtensions: readonly string[];
+  readonly exactness?: NativeImporterAdapterExactness;
+  readonly exactAst: boolean;
+  readonly tokens: boolean;
+  readonly trivia: boolean;
+  readonly diagnostics: boolean;
+  readonly sourceRanges: boolean;
+  readonly generatedRanges: boolean;
+  readonly semanticCoverage?: NativeImporterAdapterSemanticCoverage;
+  readonly observed?: NativeImporterAdapterCoverageObserved;
+  readonly notes: readonly string[];
+}
+
+export interface NativeImportAdapterCoverageContract {
+  readonly total: number;
+  readonly adapterIds: readonly string[];
+  readonly parsers: readonly string[];
+  readonly exactness: readonly string[];
+  readonly exactAst: number;
+  readonly tokens: number;
+  readonly trivia: number;
+  readonly diagnostics: number;
+  readonly sourceRanges: number;
+  readonly generatedRanges: number;
+  readonly semanticCoverageLevels: readonly string[];
+  readonly observed: NativeImporterAdapterCoverageObserved;
+  readonly records: readonly NativeImportAdapterCoverageRecordSummary[];
+}
+
+export interface NativeImportRegionSummary {
+  readonly total: number;
+  readonly ids: readonly string[];
+  readonly keys: readonly string[];
+  readonly sourcePaths: readonly string[];
+  readonly byKind: Readonly<Record<string, number>>;
+  readonly byGranularity: Readonly<Record<string, number>>;
+  readonly byPrecision: Readonly<Record<string, number>>;
+  readonly byLanguage: Readonly<Record<string, number>>;
+  readonly symbolIds: readonly string[];
+  readonly taxonomy: SemanticImportRegionTaxonomySummary;
+}
+
+export interface NativeImportSourceMapSummary {
+  readonly total: number;
+  readonly ids: readonly string[];
+  readonly mappingCount: number;
+  readonly sourcePaths: readonly string[];
+  readonly targetPaths: readonly string[];
+  readonly byPrecision: Readonly<Record<string, number>>;
+  readonly sourceRangeMappings: number;
+  readonly generatedRangeMappings: number;
+}
+
+export interface NativeImportReadinessContract {
+  readonly semanticMergeReadiness: SemanticMergeReadiness;
+  readonly severityReadiness: SemanticMergeReadiness;
+  readonly reasons: readonly string[];
+  readonly failedEvidenceIds: readonly string[];
+  readonly blockingLossIds: readonly string[];
+  readonly reviewLossIds: readonly string[];
+  readonly informationalLossIds: readonly string[];
+}
+
+export interface NativeImportResultContract {
+  readonly kind: 'frontier.lang.nativeImportResultContract';
+  readonly version: 1;
+  readonly importResultId?: string;
+  readonly language?: FrontierSourceLanguage | 'mixed' | string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly sourceCount: number;
+  readonly sources: readonly NativeImportContractSource[];
+  readonly ids: {
+    readonly nativeSourceId?: string;
+    readonly nativeAstId?: string;
+    readonly semanticIndexId?: string;
+    readonly universalAstId?: string;
+    readonly patchId?: string;
+    readonly sourceMapIds: readonly string[];
+    readonly semanticSidecarIds: readonly string[];
+  };
+  readonly sourcePreservation: NativeImportSourcePreservationContract;
+  readonly adapterCoverage: NativeImportAdapterCoverageContract;
+  readonly lossSummary: NativeImportLossSummary;
+  readonly regions: NativeImportRegionSummary;
+  readonly sourceMaps: NativeImportSourceMapSummary;
+  readonly readiness: NativeImportReadinessContract;
+  readonly evidence: {
+    readonly total: number;
+    readonly failed: readonly string[];
+    readonly ids: readonly string[];
+  };
+  readonly metadata: Record<string, unknown>;
+}
+
+export interface NativeImportResultContractOptions extends SemanticImportSidecarOptions {
+  readonly lossSummary?: NativeImportLossSummary;
+  readonly semanticSidecarIds?: readonly string[] | string;
+  readonly sidecarIds?: readonly string[] | string;
+  readonly sidecarId?: string;
+}
+
 export type NativeSourceTokenKind =
   | 'identifier'
   | 'keyword'
@@ -296,8 +468,10 @@ export interface CreateNativeSourcePreservationOptions {
 export interface SemanticImportOwnershipRegion {
   readonly id: string;
   readonly key: string;
+  readonly regionKind?: NativeImportRegionTaxonomyKind;
   readonly granularity: 'symbol' | string;
   readonly language?: FrontierSourceLanguage | string;
+  readonly documentId?: string;
   readonly sourcePath?: string;
   readonly sourceHash?: string;
   readonly symbolId?: string;
@@ -307,6 +481,7 @@ export interface SemanticImportOwnershipRegion {
   readonly sourceSpan?: SourceSpan;
   readonly precision?: 'exact' | 'declaration' | 'line' | 'estimated' | 'unknown' | string;
   readonly mergePolicy?: string;
+  readonly metadata?: Record<string, unknown>;
 }
 
 export interface SemanticImportSidecarSymbol {
@@ -321,7 +496,16 @@ export interface SemanticImportSidecarSymbol {
   readonly signatureHash?: string;
   readonly ownershipRegionId: string;
   readonly ownershipKey: string;
+  readonly ownershipRegionKind?: NativeImportRegionTaxonomyKind;
   readonly readiness: SemanticMergeReadiness;
+}
+
+export interface SemanticImportRegionTaxonomySummary {
+  readonly kinds: readonly NativeImportRegionTaxonomyKind[];
+  readonly presentKinds: readonly NativeImportRegionTaxonomyKind[];
+  readonly byKind: Readonly<Record<string, number>>;
+  readonly keys: readonly string[];
+  readonly keysByKind: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface SemanticImportPatchHint {
@@ -357,6 +541,7 @@ export interface SemanticImportSidecarImportEntry {
   readonly sourceMapMappingCount: number;
   readonly readiness: SemanticMergeReadiness;
   readonly emptySemanticIndex: boolean;
+  readonly regionTaxonomy?: SemanticImportRegionTaxonomySummary;
 }
 
 export interface SemanticImportSidecar {
@@ -390,6 +575,7 @@ export interface SemanticImportSidecar {
     readonly blockingLossIds: readonly string[];
     readonly reviewLossIds: readonly string[];
   };
+  readonly regionTaxonomy: SemanticImportRegionTaxonomySummary;
   readonly evidence: {
     readonly total: number;
     readonly failed: readonly string[];
@@ -399,6 +585,7 @@ export interface SemanticImportSidecar {
     readonly imports: number;
     readonly symbols: number;
     readonly ownershipRegions: number;
+    readonly regionKinds: number;
     readonly sourceMapMappings: number;
     readonly readiness: SemanticMergeReadiness;
     readonly emptySemanticIndex: boolean;
@@ -784,6 +971,7 @@ export declare const FrontierCompileTargets: readonly FrontierCompileTarget[];
 export declare const NativeImportRoundtripReadinessStatuses: readonly NativeImportRoundtripReadinessStatus[];
 export declare const NativeImportTaxonomyKinds: readonly NativeImportTaxonomyKind[];
 export declare const NativeImportLossKinds: readonly NativeImportKnownLossKind[];
+export declare const NativeImportRegionTaxonomyKinds: readonly NativeImportRegionTaxonomyKind[];
 export declare const NativeImportReadinessBySeverity: Readonly<Record<NativeImportLossSummary['highestSeverity'], SemanticMergeReadiness>>;
 export declare const NativeImportLanguageProfiles: readonly NativeImportLanguageProfile[];
 export declare function normalizeCompileTarget(target?: string): FrontierCompileTarget;
@@ -798,6 +986,7 @@ export declare function classifyNativeImportRoundtripReadiness(importResult: Nat
 export declare function createNativeImportCoverageMatrix(options?: NativeImportCoverageMatrixOptions): NativeImportCoverageMatrix;
 export declare function createNativeSourcePreservation(options: CreateNativeSourcePreservationOptions): NativeSourcePreservation;
 export declare function createSemanticImportSidecar(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: SemanticImportSidecarOptions): SemanticImportSidecar;
+export declare function createNativeImportResultContract(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: NativeImportResultContractOptions): NativeImportResultContract;
 export declare function createEstreeNativeImporterAdapter(options?: JavaScriptNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createBabelNativeImporterAdapter(options?: JavaScriptNativeImporterAdapterOptions): NativeImporterAdapter;
 export declare function createTypeScriptCompilerNativeImporterAdapter(options?: TypeScriptCompilerNativeImporterAdapterOptions): NativeImporterAdapter;

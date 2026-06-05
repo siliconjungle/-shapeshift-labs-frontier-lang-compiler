@@ -4,6 +4,7 @@ import {
   createBabelNativeImporterAdapter,
   createEstreeNativeImporterAdapter,
   createNativeImportCoverageMatrix,
+  createNativeImportResultContract,
   createNativeSourcePreservation,
   createSemanticImportSidecar,
   createTreeSitterNativeImporterAdapter,
@@ -14,6 +15,7 @@ import {
   importNativeSource,
   NativeImportLanguageProfiles,
   NativeImportLossKinds,
+  NativeImportRegionTaxonomyKinds,
   NativeImportRoundtripReadinessStatuses,
   NativeImportTaxonomyKinds,
   normalizeCompileTarget,
@@ -458,6 +460,11 @@ assert.equal(projectImport.semanticIndex.symbols.some((symbol) => symbol.name ==
 assert.equal(projectImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
 assert.equal(projectImport.metadata.sourcePreservationSummary.total, 2);
 assert.equal(projectImport.metadata.sourcePreservationSummary.exactSourceAvailable, 2);
+assert.equal(projectImport.metadata.importResultContract.kind, 'frontier.lang.nativeImportResultContract');
+assert.equal(projectImport.metadata.importResultContract.sourceCount, 2);
+assert.equal(projectImport.metadata.importResultContract.sources.length, 2);
+assert.equal(projectImport.metadata.importResultContract.sourcePreservation.exactSourceAvailable, 2);
+assert.equal(projectImport.metadata.importResultContract.sourceMaps.total >= 2, true);
 assert.equal(projectImport.universalAst.metadata.sourcePreservationSummary.total, 2);
 const scannedJsImport = importNativeSource({
   language: 'javascript',
@@ -485,6 +492,14 @@ assert.equal(scannedJsImport.metadata.sourcePreservation.sourceText, scannedJsIm
 assert.equal(scannedJsImport.metadata.sourcePreservation.summary.comments >= 1, true);
 assert.equal(scannedJsImport.metadata.sourcePreservation.summary.directives >= 1, true);
 assert.equal(scannedJsImport.nativeAst.metadata.sourcePreservationSummary.exactSourceAvailable, true);
+assert.equal(scannedJsImport.metadata.importResultContract.kind, 'frontier.lang.nativeImportResultContract');
+assert.equal(scannedJsImport.metadata.importResultContract.sourceCount, 1);
+assert.equal(scannedJsImport.metadata.importResultContract.sourcePreservation.exactSourceAvailable, 1);
+assert.equal(scannedJsImport.metadata.importResultContract.regions.total >= 4, true);
+assert.equal(scannedJsImport.metadata.importResultContract.regions.taxonomy.presentKinds.includes('import'), true);
+assert.equal(scannedJsImport.metadata.importResultContract.sourceMaps.mappingCount >= 4, true);
+assert.equal(scannedJsImport.metadata.importResultContract.readiness.semanticMergeReadiness, 'needs-review');
+assert.equal(createNativeImportResultContract(scannedJsImport).ids.semanticSidecarIds.length, 1);
 const standalonePreservation = createNativeSourcePreservation({
   language: 'python',
   sourcePath: 'tools/preserve.py',
@@ -520,7 +535,14 @@ assert.equal(scannedJsSidecar.generatedAt, 123);
 assert.equal(scannedJsSidecar.summary.emptySemanticIndex, false);
 assert.ok(scannedJsSidecar.summary.symbols >= 4);
 assert.ok(scannedJsSidecar.ownershipRegions.length >= 4);
+assert.equal(NativeImportRegionTaxonomyKinds.includes('import'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('import'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('body') || scannedJsSidecar.regionTaxonomy.presentKinds.includes('type'), true);
+assert.equal(scannedJsSidecar.summary.regionKinds >= 2, true);
 assert.equal(scannedJsSidecar.symbols.some((symbol) => symbol.name === 'TodoStore.save' && symbol.ownershipRegionId), true);
+assert.equal(scannedJsSidecar.symbols.some((symbol) => symbol.ownershipRegionKind), true);
+assert.equal(scannedJsSidecar.imports.some((entry) => entry.regionTaxonomy?.presentKinds?.length), true);
+assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.supportedOperations.includes('replace-import')), true);
 assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.sourcePath === 'src/scanned.js' && hint.projection.targetPath === 'dist/scanned.js'), true);
 const preservedNativeSource = 'export function preservedNative() { return true; }\n';
 const preservedNativeImport = importNativeSource({
