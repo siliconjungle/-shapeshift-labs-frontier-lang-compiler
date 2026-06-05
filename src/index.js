@@ -67,6 +67,14 @@ const semanticMergeReadinessRank = Object.freeze({
   blocked: 3
 });
 
+export const NativeImportRoundtripReadinessStatuses = Object.freeze([
+  'exact',
+  'preserved-source',
+  'stub-only',
+  'blocked',
+  'needs-review'
+]);
+
 export const NativeImportTaxonomyKinds = Object.freeze([
   'exactAstImport',
   'declarationsOnly',
@@ -106,6 +114,7 @@ export const NativeImportLossKinds = Object.freeze([
   'parserDiagnostic',
   'unsupportedSyntax',
   'unsupportedSemantic',
+  'unverifiedNativeAst',
   'partialSemanticIndex',
   'sourceMapApproximation',
   'targetProjectionLoss'
@@ -324,6 +333,134 @@ export function classifyNativeImportReadiness(losses = [], options = {}) {
     readiness: summary.semanticMergeReadiness,
     reasons: summary.readinessReasons,
     summary
+  };
+}
+
+export function classifyNativeImportRoundtripReadiness(importResult, options = {}) {
+  if (!importResult || typeof importResult !== 'object') {
+    throw new Error('classifyNativeImportRoundtripReadiness requires a native import result');
+  }
+  const imports = nativeImportEntries(importResult);
+  const importLosses = uniqueByLossId([
+    ...(importResult.losses ?? []),
+    ...imports.flatMap((imported) => imported?.losses ?? [])
+  ]);
+  const importEvidence = uniqueByEvidenceId([
+    ...(importResult.evidence ?? []),
+    ...imports.flatMap((imported) => imported?.evidence ?? [])
+  ]);
+  const exactAst = imports.length > 0 && imports.every((imported) => nativeImportHasExactAstCoverage(imported));
+  const importReadiness = classifyNativeImportReadiness(importLosses, {
+    exactAst,
+    evidence: importEvidence,
+    parser: nativeImportRoundtripParser(importResult, imports),
+    scanKind: importResult.metadata?.nativeImportLossSummary?.scanKind,
+    semanticStatus: importResult.metadata?.semanticStatus ?? importResult.universalAst?.metadata?.semanticStatus
+  });
+  const projection = options.projection ?? projectNativeImportToSource(importResult, options);
+  const projectionReadiness = projection.readiness ?? classifyNativeImportReadiness(projection.losses ?? [], {
+    evidence: projection.evidence,
+    parser: projection.metadata?.nativeImportLossSummary?.parser,
+    scanKind: 'native-source-projection'
+  });
+  const universalAst = importResult.universalAst;
+  const universalAstIssues = universalAst
+    ? validateUniversalAstEnvelope(universalAst)
+    : ['missing-universal-ast'];
+  const universalAstNativeSources = universalAst?.nativeSources?.length ?? importResult.nativeSources?.length ?? (importResult.nativeSource ? 1 : 0);
+  const semanticIndex = importResult.semanticIndex ?? universalAst?.semanticIndex;
+  const semanticSymbols = semanticIndex?.symbols?.length ?? 0;
+  const sourceMaps = importResult.sourceMaps ?? universalAst?.sourceMaps ?? [];
+  const sourceMapMappings = sourceMaps.reduce((sum, sourceMap) => sum + (sourceMap?.mappings?.length ?? 0), 0);
+  const projectionMatchesSourceHash = Boolean(projection.sourceHash && projection.outputHash === projection.sourceHash);
+  const preservedSource = projection.mode === 'preserved-source';
+  const failedEvidenceIds = uniqueStrings([
+    ...importEvidence.filter((record) => record?.status === 'failed').map((record) => record.id),
+    ...(projection.evidence ?? []).filter((record) => record?.status === 'failed').map((record) => record.id)
+  ]);
+  const blockingReasons = [
+    ...(importReadiness.readiness === 'blocked' ? importReadiness.reasons : []),
+    ...(projectionReadiness.readiness === 'blocked' ? projectionReadiness.reasons : []),
+    ...(failedEvidenceIds.length ? [`Failed evidence prevents native roundtrip readiness: ${failedEvidenceIds.join(', ')}`] : []),
+    ...(universalAstIssues.length ? [`Universal AST validation failed: ${universalAstIssues.join('; ')}`] : [])
+  ];
+  const reviewReasons = [
+    ...(semanticSymbols === 0 ? ['Universal AST semantic index has no symbols for source projection review.'] : []),
+    ...(sourceMapMappings === 0 ? ['Universal AST has no native source-map mappings for roundtrip review.'] : []),
+    ...(preservedSource && !projectionMatchesSourceHash ? ['Projected source was preserved without a verified import source hash match.'] : []),
+    ...importReadiness.reasons.filter((reason) => importReadiness.readiness !== 'ready' || !exactAst),
+    ...projectionReadiness.reasons.filter((reason) => projectionReadiness.readiness !== 'ready')
+  ];
+  let status;
+  if (blockingReasons.length) {
+    status = 'blocked';
+  } else if (projection.mode === 'native-source-stubs') {
+    status = 'stub-only';
+  } else if (reviewReasons.some((reason) => reason.startsWith('Universal AST')) || (preservedSource && !projectionMatchesSourceHash)) {
+    status = 'needs-review';
+  } else if (exactAst && preservedSource && projectionMatchesSourceHash && projectionReadiness.readiness === 'ready') {
+    status = 'exact';
+  } else if (preservedSource && projectionMatchesSourceHash) {
+    status = 'preserved-source';
+  } else {
+    status = 'needs-review';
+  }
+  const reasons = nativeImportRoundtripReasons(status, {
+    blockingReasons,
+    reviewReasons,
+    projection,
+    importReadiness,
+    projectionReadiness
+  });
+  return {
+    kind: 'frontier.lang.nativeImportRoundtripReadiness',
+    version: 1,
+    status,
+    semanticMergeReadiness: maxSemanticMergeReadiness(importReadiness.readiness, projectionReadiness.readiness),
+    reasons,
+    importReadiness,
+    projectionReadiness,
+    projectionMode: projection.mode,
+    checks: {
+      nativeImport: {
+        imports: imports.length,
+        exactAst,
+        losses: importReadiness.summary.total,
+        readiness: importReadiness.readiness
+      },
+      universalAst: {
+        present: Boolean(universalAst),
+        valid: universalAstIssues.length === 0,
+        issues: universalAstIssues,
+        nativeSources: universalAstNativeSources,
+        semanticSymbols,
+        sourceMaps: sourceMaps.length,
+        sourceMapMappings
+      },
+      projectedSource: {
+        mode: projection.mode,
+        outputHash: projection.outputHash,
+        expectedSourceHash: projection.sourceHash,
+        sourceHashVerified: projectionMatchesSourceHash,
+        declarations: projection.declarations?.length ?? 0,
+        losses: projection.lossSummary?.total ?? projection.losses?.length ?? 0,
+        readiness: projectionReadiness.readiness
+      }
+    },
+    evidence: {
+      importEvidenceIds: importEvidence.map((record) => record.id).filter(Boolean),
+      projectionEvidenceIds: (projection.evidence ?? []).map((record) => record.id).filter(Boolean),
+      failedEvidenceIds
+    },
+    metadata: {
+      nativeImportId: importResult.id,
+      universalAstId: universalAst?.id,
+      projectionId: projection.id,
+      sourcePath: projection.sourcePath ?? importResult.sourcePath,
+      language: projection.language ?? importResult.language,
+      sourcePreservationId: projection.metadata?.sourcePreservationId,
+      ...options.metadata
+    }
   };
 }
 
@@ -917,7 +1054,17 @@ export function importNativeSource(input) {
   const frontierNodeIds = input.frontierNodeIds ?? input.semanticNodes?.map((node) => node.id) ?? [];
   const semanticNodes = input.semanticNodes ?? [];
   const semanticStatus = input.semanticStatus ?? (semanticNodes.length ? 'mapped' : 'native-only');
-  const losses = normalizeNativeLossRecords(input.losses ?? nativeAst.losses ?? lightweight?.losses ?? []);
+  const nativeAstExact = hasNativeExactAstEvidence(input, nativeAst, lightweight);
+  const baseLosses = normalizeNativeLossRecords(input.losses ?? nativeAst.losses ?? lightweight?.losses ?? []);
+  const losses = normalizeNativeLossRecords([
+    ...baseLosses,
+    ...unverifiedNativeAstLosses(input, nativeAst, {
+      importIdPart,
+      exactAst: nativeAstExact,
+      hasLosses: baseLosses.length > 0,
+      lightweight
+    })
+  ]);
   const nativeSource = nativeSourceNode({
     id: input.nativeSourceId ?? `native_source_${importIdPart}`,
     name: input.name ?? sourcePath?.split(/[\\/]/).filter(Boolean).at(-1) ?? `${language}NativeSource`,
@@ -978,7 +1125,7 @@ export function importNativeSource(input) {
     }
   }];
   const lossSummary = summarizeNativeImportLosses(losses, {
-    exactAst: Boolean(input.nativeAst || input.nodes),
+    exactAst: nativeAstExact,
     evidence: baseEvidence,
     parser: nativeAst.parser,
     scanKind: lightweight?.metadata?.scanKind,
@@ -3106,7 +3253,7 @@ function nativeImportCategoryForLossKind(kind) {
   if (kind === 'sourcePreservation' || kind === 'commentsTrivia' || kind === 'nonRoundTrippable') return 'sourcePreservation';
   if (kind === 'parserDiagnostic') return 'parserDiagnostics';
   if (kind === 'unsupportedSyntax' || kind === 'unsupportedSemantic') return 'unsupportedSyntax';
-  if (kind === 'partialSemanticIndex') return 'partialSemanticIndex';
+  if (kind === 'partialSemanticIndex' || kind === 'unverifiedNativeAst') return 'partialSemanticIndex';
   if (kind === 'sourceMapApproximation') return 'sourceMapApproximation';
   if (kind === 'targetProjectionLoss') return 'targetProjectionLoss';
   return String(kind ?? 'opaqueNative');
@@ -3392,6 +3539,36 @@ function attachNativeImportLossSummary(evidence, lossSummary) {
   }));
 }
 
+function hasNativeExactAstEvidence(input, nativeAst, lightweight) {
+  if (lightweight) return false;
+  if (!(input?.nativeAst || input?.nodes)) return false;
+  if (input.exactAst === true || input.metadata?.exactAst === true || input.nativeAstMetadata?.exactAst === true) return true;
+  const coverage = input.metadata?.adapterCoverage
+    ?? input.nativeAstMetadata?.adapterCoverage
+    ?? input.nativeSourceMetadata?.adapterCoverage
+    ?? nativeAst?.metadata?.adapterCoverage;
+  if (coverage?.exactAst !== true) return false;
+  const observedNodes = coverage.observed?.nativeAstNodes;
+  return observedNodes === undefined || observedNodes > 0;
+}
+
+function unverifiedNativeAstLosses(input, nativeAst, context) {
+  if (context.lightweight || context.exactAst || context.hasLosses) return [];
+  if (!(input?.nativeAst || input?.nodes)) return [];
+  return [{
+    id: `loss_${context.importIdPart}_unverified_native_ast`,
+    severity: 'warning',
+    kind: 'unverifiedNativeAst',
+    nodeId: nativeAst?.rootId,
+    message: 'Caller supplied native AST nodes without explicit exactAst or adapter coverage evidence.',
+    metadata: {
+      reason: 'missing-exact-ast-evidence',
+      nativeAstId: nativeAst?.id,
+      parser: nativeAst?.parser
+    }
+  }];
+}
+
 function withNativeImportReadiness(importResult, lossSummary) {
   const mergeCandidates = (importResult.mergeCandidates ?? []).map((candidate) => {
     const readiness = maxSemanticMergeReadiness(candidate.readiness, lossSummary.semanticMergeReadiness);
@@ -3425,6 +3602,49 @@ function withNativeImportReadiness(importResult, lossSummary) {
       lossKindCounts: lossSummary.byKind
     }
   };
+}
+
+function nativeImportEntries(importResult) {
+  if (Array.isArray(importResult?.imports)) return importResult.imports.filter(Boolean);
+  return [importResult].filter(Boolean);
+}
+
+function nativeImportHasExactAstCoverage(imported) {
+  if (imported?.metadata?.nativeImportLossSummary?.exactAst === true) return true;
+  if (imported?.adapter?.coverage?.exactAst === true && !(imported?.losses?.length)) return true;
+  return false;
+}
+
+function nativeImportRoundtripParser(importResult, imports) {
+  const parsers = uniqueStrings([
+    importResult.nativeAst?.parser,
+    importResult.nativeSource?.parser,
+    importResult.metadata?.parser,
+    ...imports.map((imported) => imported?.nativeAst?.parser ?? imported?.nativeSource?.parser ?? imported?.metadata?.parser)
+  ].filter(Boolean));
+  return parsers.length === 1 ? parsers[0] : parsers.length ? parsers.join(',') : undefined;
+}
+
+function nativeImportRoundtripReasons(status, input) {
+  if (status === 'blocked') return uniqueStrings(input.blockingReasons);
+  if (status === 'stub-only') {
+    return uniqueStrings([
+      `Native source projection emitted declaration stubs in ${input.projection.mode} mode.`,
+      ...input.projectionReadiness.reasons,
+      ...input.importReadiness.reasons.filter((reason) => input.importReadiness.readiness !== 'ready')
+    ]);
+  }
+  if (status === 'needs-review') return uniqueStrings(input.reviewReasons);
+  if (status === 'exact') {
+    return ['Exact native AST import and verified preserved source projection are available.'];
+  }
+  if (status === 'preserved-source') {
+    return uniqueStrings([
+      'Verified native source text is preserved for projection; semantic import evidence may still require review.',
+      ...input.importReadiness.reasons.filter((reason) => input.importReadiness.readiness !== 'ready')
+    ]);
+  }
+  return ['Native import roundtrip readiness requires review.'];
 }
 
 function maxSemanticMergeReadiness(left, right) {

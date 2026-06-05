@@ -112,6 +112,7 @@ export type NativeImportKnownLossKind =
   | 'parserDiagnostic'
   | 'unsupportedSyntax'
   | 'unsupportedSemantic'
+  | 'unverifiedNativeAst'
   | 'partialSemanticIndex'
   | 'sourceMapApproximation'
   | 'targetProjectionLoss'
@@ -511,6 +512,7 @@ export interface ImportNativeSourceOptions {
   readonly sourceMaps?: readonly SourceMapRecord[];
   readonly universalAstId?: string;
   readonly universalAstMetadata?: Record<string, unknown>;
+  readonly exactAst?: boolean;
   readonly metadata?: Record<string, unknown>;
 }
 
@@ -724,7 +726,62 @@ export interface NativeSourceProjectionResult {
   readonly metadata: Record<string, unknown>;
 }
 
+export type NativeImportRoundtripReadinessStatus =
+  | 'exact'
+  | 'preserved-source'
+  | 'stub-only'
+  | 'blocked'
+  | 'needs-review';
+
+export interface NativeImportRoundtripReadinessOptions extends ProjectNativeImportToSourceOptions {
+  readonly projection?: NativeSourceProjectionResult;
+}
+
+export interface NativeImportRoundtripReadinessClassification {
+  readonly kind: 'frontier.lang.nativeImportRoundtripReadiness';
+  readonly version: 1;
+  readonly status: NativeImportRoundtripReadinessStatus;
+  readonly semanticMergeReadiness: SemanticMergeReadiness;
+  readonly reasons: readonly string[];
+  readonly importReadiness: NativeImportReadinessClassification;
+  readonly projectionReadiness: NativeImportReadinessClassification;
+  readonly projectionMode: NativeSourceProjectionMode;
+  readonly checks: {
+    readonly nativeImport: {
+      readonly imports: number;
+      readonly exactAst: boolean;
+      readonly losses: number;
+      readonly readiness: SemanticMergeReadiness;
+    };
+    readonly universalAst: {
+      readonly present: boolean;
+      readonly valid: boolean;
+      readonly issues: readonly string[];
+      readonly nativeSources: number;
+      readonly semanticSymbols: number;
+      readonly sourceMaps: number;
+      readonly sourceMapMappings: number;
+    };
+    readonly projectedSource: {
+      readonly mode: NativeSourceProjectionMode;
+      readonly outputHash: string;
+      readonly expectedSourceHash?: string;
+      readonly sourceHashVerified: boolean;
+      readonly declarations: number;
+      readonly losses: number;
+      readonly readiness: SemanticMergeReadiness;
+    };
+  };
+  readonly evidence: {
+    readonly importEvidenceIds: readonly string[];
+    readonly projectionEvidenceIds: readonly string[];
+    readonly failedEvidenceIds: readonly string[];
+  };
+  readonly metadata: Record<string, unknown>;
+}
+
 export declare const FrontierCompileTargets: readonly FrontierCompileTarget[];
+export declare const NativeImportRoundtripReadinessStatuses: readonly NativeImportRoundtripReadinessStatus[];
 export declare const NativeImportTaxonomyKinds: readonly NativeImportTaxonomyKind[];
 export declare const NativeImportLossKinds: readonly NativeImportKnownLossKind[];
 export declare const NativeImportReadinessBySeverity: Readonly<Record<NativeImportLossSummary['highestSeverity'], SemanticMergeReadiness>>;
@@ -737,6 +794,7 @@ export declare function renderTargetAst(ast: FrontierTargetAst, target?: Frontie
 export declare function resolveCapabilityAdapters(document: FrontierLangDocument, target?: FrontierCompileOptions['target'], options?: { readonly platform?: string }): readonly CapabilityResolution[];
 export declare function summarizeNativeImportLosses(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportLossSummary;
 export declare function classifyNativeImportReadiness(losses?: readonly NativeAstLossRecord[], options?: NativeImportLossSummaryOptions): NativeImportReadinessClassification;
+export declare function classifyNativeImportRoundtripReadiness(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: NativeImportRoundtripReadinessOptions): NativeImportRoundtripReadinessClassification;
 export declare function createNativeImportCoverageMatrix(options?: NativeImportCoverageMatrixOptions): NativeImportCoverageMatrix;
 export declare function createNativeSourcePreservation(options: CreateNativeSourcePreservationOptions): NativeSourcePreservation;
 export declare function createSemanticImportSidecar(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: SemanticImportSidecarOptions): SemanticImportSidecar;
