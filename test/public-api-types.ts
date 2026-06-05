@@ -22,6 +22,8 @@ import {
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
   createUniversalAstFromDocument,
+  diffNativeSourceImports,
+  diffNativeSources,
   emitForTarget,
   emitForTargetWithSourceMap,
   importNativeProject,
@@ -66,6 +68,8 @@ import type {
   NativeImporterAdapterParseInput,
   NativeImporterAdapterParseResult,
   NativeProjectImportResult,
+  NativeSourceChangeSet,
+  NativeSourceChangeSymbol,
   NativeSourceImportResult,
   NativeSourcePreservation,
   NativeSourceProjectionResult,
@@ -108,6 +112,8 @@ type ExpectedPublicRuntimeExport =
   | 'createTreeSitterNativeImporterAdapter'
   | 'createTypeScriptCompilerNativeImporterAdapter'
   | 'createUniversalAstFromDocument'
+  | 'diffNativeSourceImports'
+  | 'diffNativeSources'
   | 'emitForTarget'
   | 'emitForTargetWithSourceMap'
   | 'importNativeProject'
@@ -193,6 +199,18 @@ const contractSource: NativeImportContractSource = contract.sources[0] ?? {
   lossCount: 0,
   evidenceCount: 0
 };
+
+const changedSource: NativeSourceChangeSet = diffNativeSources({
+  language: 'javascript',
+  sourcePath: 'src/api-types.js',
+  beforeSourceText: preservation.sourceText,
+  afterSourceText: '// kept\nexport function apiTypes() { return false; }\n'
+});
+const changedSourceAgain: NativeSourceChangeSet = diffNativeSourceImports({
+  before: imported,
+  after: changedSource.after
+});
+const changedSymbol: NativeSourceChangeSymbol | undefined = changedSource.changedSymbols[0];
 
 const estreeAdapter: NativeImporterAdapter = createEstreeNativeImporterAdapter();
 const babelAdapter: NativeImporterAdapter = createBabelNativeImporterAdapter();

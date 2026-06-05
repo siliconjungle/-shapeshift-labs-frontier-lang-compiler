@@ -147,6 +147,25 @@ console.log(sidecar.ownershipRegions[0].key); // source#src/runtime.ts#class#Run
 console.log(sidecar.patchHints[0].supportedOperations); // source-region patch operations
 ```
 
+Compare before/after native source imports from a worker patch and emit a semantic change set for admission scoring:
+
+```js
+import { diffNativeSources } from '@shapeshift-labs/frontier-lang-compiler';
+
+const changeSet = diffNativeSources({
+  language: 'javascript',
+  sourcePath: 'src/runtime.js',
+  beforeSourceText: 'export function step(frame) { return frame + 1; }\n',
+  afterSourceText: 'export function step(frame) { return frame + 2; }\n'
+});
+
+console.log(changeSet.changedSymbols[0]?.changeKind); // "modified"
+console.log(changeSet.changedRegions[0]?.conflictKey); // semantic ownership key
+console.log(changeSet.mergeCandidate.readiness); // merge-admission classification
+```
+
+Use `diffNativeSourceImports` when the worker or runner already produced `importNativeSource` results. Body-only edits that the lightweight scanner cannot anchor to a symbol are still reported as file-level changed regions instead of being silently treated as safe.
+
 Project a native import back to source. Exact source is preserved when the import carries matching source-preservation evidence or when supplied text matches the import hash; otherwise the compiler emits declaration stubs with review-required loss evidence:
 
 ```js

@@ -13,6 +13,8 @@ import {
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
   createUniversalAstFromDocument,
+  diffNativeSourceImports,
+  diffNativeSources,
   emitForTarget,
   emitForTargetWithSourceMap,
   importNativeProject,
@@ -47,6 +49,8 @@ for (const requiredExport of [
   'createProjectionTargetLossMatrix',
   'classifyNativeImportRoundtripReadiness',
   'createSemanticImportSidecar',
+  'diffNativeSourceImports',
+  'diffNativeSources',
   'emitForTargetWithSourceMap',
   'importNativeSource',
   'importNativeProject',
@@ -600,6 +604,42 @@ assert.equal(scannedJsSidecar.symbols.some((symbol) => symbol.ownershipRegionKin
 assert.equal(scannedJsSidecar.imports.some((entry) => entry.regionTaxonomy?.presentKinds?.length), true);
 assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.supportedOperations.includes('replace-import')), true);
 assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.sourcePath === 'src/scanned.js' && hint.projection.targetPath === 'dist/scanned.js'), true);
+const jsChangeSet = diffNativeSources({
+  language: 'javascript',
+  sourcePath: 'src/change.js',
+  beforeSourceText: 'import { nanoid } from "nanoid";\nexport function addTodo(title) { return { id: nanoid(), title }; }\n',
+  afterSourceText: 'import { nanoid } from "nanoid";\nexport function addTodo(title) { return { id: nanoid(), title, done: false }; }\nexport const TODO_LIMIT = 128;\n'
+});
+assert.equal(jsChangeSet.kind, 'frontier.lang.nativeSourceChangeSet');
+assert.equal(jsChangeSet.summary.sourceChanged, true);
+assert.equal(jsChangeSet.summary.modifiedSymbols >= 1, true);
+assert.equal(jsChangeSet.summary.addedSymbols, 1);
+assert.equal(jsChangeSet.changedSymbols.some((symbol) => symbol.name === 'addTodo' && symbol.changeKind === 'modified'), true);
+assert.equal(jsChangeSet.changedSymbols.some((symbol) => symbol.name === 'TODO_LIMIT' && symbol.changeKind === 'added'), true);
+assert.equal(jsChangeSet.changedRegions.length >= 2, true);
+assert.equal(jsChangeSet.patch.operations.some((operation) => operation.op === 'upsertNode'), true);
+assert.equal(jsChangeSet.patch.operations.some((operation) => operation.op === 'addEvidence'), true);
+assert.equal(jsChangeSet.mergeCandidate.kind, 'frontier.lang.semanticMergeCandidate');
+assert.equal(jsChangeSet.mergeCandidate.patchId, jsChangeSet.patch.id);
+assert.equal(jsChangeSet.mergeCandidate.conflictKeys.some((key) => key.startsWith('region:source#src/change.js')), true);
+assert.equal(jsChangeSet.readiness, 'needs-review');
+const unchangedDeclarationChangeSet = diffNativeSourceImports({
+  before: importNativeSource({
+    language: 'javascript',
+    sourcePath: 'src/body-only.js',
+    sourceText: 'export function bodyOnly(value) {\n  return value;\n}\n'
+  }),
+  after: importNativeSource({
+    language: 'javascript',
+    sourcePath: 'src/body-only.js',
+    sourceText: 'export function bodyOnly(value) {\n  return String(value);\n}\n'
+  })
+});
+assert.equal(unchangedDeclarationChangeSet.summary.sourceChanged, true);
+assert.equal(unchangedDeclarationChangeSet.summary.symbols, 0);
+assert.equal(unchangedDeclarationChangeSet.summary.regions, 1);
+assert.equal(unchangedDeclarationChangeSet.changedRegions[0].granularity, 'file');
+assert.equal(unchangedDeclarationChangeSet.reasons.some((reason) => reason.includes('file-level review')), true);
 const preservedNativeSource = 'export function preservedNative() { return true; }\n';
 const preservedNativeImport = importNativeSource({
   language: 'javascript',

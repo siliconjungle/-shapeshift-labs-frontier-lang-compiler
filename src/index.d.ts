@@ -730,6 +730,100 @@ export interface SemanticImportSidecarOptions {
   readonly metadata?: Record<string, unknown>;
 }
 
+export type NativeSourceChangeKind = 'added' | 'removed' | 'modified' | 'unchanged';
+
+export interface NativeSourceChangeSymbol {
+  readonly changeKind: NativeSourceChangeKind;
+  readonly key: string;
+  readonly id?: string;
+  readonly name?: string;
+  readonly kind?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly nativeAstNodeId?: string;
+  readonly semanticOccurrenceId?: string;
+  readonly sourceMapMappingId?: string;
+  readonly sourceSpan?: SourceSpan;
+  readonly beforeSignatureHash?: string;
+  readonly afterSignatureHash?: string;
+  readonly beforeSpanHash?: string;
+  readonly afterSpanHash?: string;
+  readonly beforeOwnershipKey?: string;
+  readonly afterOwnershipKey?: string;
+  readonly ownershipRegionId?: string;
+  readonly ownershipKey?: string;
+  readonly ownershipRegionKind?: NativeImportRegionTaxonomyKind;
+  readonly conflictKey: string;
+  readonly readiness: SemanticMergeReadiness;
+}
+
+export interface NativeSourceChangeRegion extends SemanticImportOwnershipRegion {
+  readonly changeKind: NativeSourceChangeKind;
+  readonly conflictKey: string;
+}
+
+export interface NativeSourceChangeSummary {
+  readonly sourceChanged: boolean;
+  readonly symbols: number;
+  readonly regions: number;
+  readonly addedSymbols: number;
+  readonly removedSymbols: number;
+  readonly modifiedSymbols: number;
+  readonly byRegionKind: Readonly<Record<string, number>>;
+  readonly byChangeKind: Readonly<Record<string, number>>;
+}
+
+export interface DiffNativeSourceImportsOptions {
+  readonly id?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly parser?: string;
+  readonly before?: NativeSourceImportResult | ImportNativeSourceOptions;
+  readonly after?: NativeSourceImportResult | ImportNativeSourceOptions;
+  readonly beforeSourceHash?: string;
+  readonly afterSourceHash?: string;
+  readonly generatedAt?: number;
+  readonly regionPrefix?: string;
+  readonly evidenceId?: string;
+  readonly evidenceStatus?: EvidenceRecord['status'];
+  readonly patchId?: string;
+  readonly mergeCandidateId?: string;
+  readonly author?: string;
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface DiffNativeSourcesOptions extends Omit<DiffNativeSourceImportsOptions, 'before' | 'after'> {
+  readonly before?: NativeSourceImportResult | ImportNativeSourceOptions;
+  readonly after?: NativeSourceImportResult | ImportNativeSourceOptions;
+  readonly beforeSourceText?: string;
+  readonly afterSourceText?: string;
+  readonly beforeMetadata?: Record<string, unknown>;
+  readonly afterMetadata?: Record<string, unknown>;
+}
+
+export interface NativeSourceChangeSet {
+  readonly kind: 'frontier.lang.nativeSourceChangeSet';
+  readonly version: 1;
+  readonly id: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly before?: NativeSourceImportResult;
+  readonly after?: NativeSourceImportResult;
+  readonly beforeHash?: string;
+  readonly afterHash?: string;
+  readonly changedSymbols: readonly NativeSourceChangeSymbol[];
+  readonly changedRegions: readonly NativeSourceChangeRegion[];
+  readonly patch: SemanticPatchBundle;
+  readonly mergeCandidate: SemanticMergeCandidateRecord;
+  readonly evidence: readonly EvidenceRecord[];
+  readonly readiness: SemanticMergeReadiness;
+  readonly reasons: readonly string[];
+  readonly sourceMaps: readonly SourceMapRecord[];
+  readonly semanticIndex?: SemanticIndexRecord;
+  readonly losses: readonly NativeAstLossRecord[];
+  readonly summary: NativeSourceChangeSummary;
+  readonly metadata?: Record<string, unknown>;
+}
+
 export type NativeImporterAdapterExactness =
   | 'exact-parser-ast'
   | 'parser-tree'
@@ -1212,6 +1306,8 @@ export declare function createTreeSitterNativeImporterAdapter(options?: TreeSitt
 export declare function runNativeImporterAdapter(adapter: NativeImporterAdapter, input: RunNativeImporterAdapterOptions): Promise<NativeImporterAdapterImportResult>;
 export declare function projectNativeImportToSource(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: ProjectNativeImportToSourceOptions): NativeSourceProjectionResult;
 export declare function importNativeSource(input: ImportNativeSourceOptions): NativeSourceImportResult;
+export declare function diffNativeSources(input: DiffNativeSourcesOptions): NativeSourceChangeSet;
+export declare function diffNativeSourceImports(input: DiffNativeSourceImportsOptions): NativeSourceChangeSet;
 export declare function importNativeProject(input: ImportNativeProjectOptions): Promise<NativeProjectImportResult>;
 export declare function createUniversalAstFromDocument(document: FrontierLangDocument, input?: {
   readonly id?: string;

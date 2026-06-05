@@ -4,6 +4,7 @@ import {
   createNativeAstRecord,
   createPatch,
   createSemanticIndexRecord,
+  createSemanticMergeCandidateRecord,
   createSourceMapRecord,
   createUniversalAstEnvelope,
   hashDocumentBase,
@@ -1414,6 +1415,410 @@ export function importNativeSource(input) {
     ...withNativeImportReadiness(importResult, lossSummary),
     nativeSource
   };
+}
+
+export function diffNativeSources(input) {
+  const language = input.language ?? input.before?.language ?? input.after?.language;
+  if (!language) throw new Error('diffNativeSources requires a language');
+  const sourcePath = input.sourcePath ?? input.before?.sourcePath ?? input.after?.sourcePath;
+  return diffNativeSourceImports({
+    ...input,
+    before: input.before ?? (input.beforeSourceText === undefined ? undefined : {
+      language,
+      sourcePath,
+      sourceText: input.beforeSourceText,
+      sourceHash: input.beforeSourceHash,
+      parser: input.parser,
+      metadata: input.beforeMetadata
+    }),
+    after: input.after ?? (input.afterSourceText === undefined ? undefined : {
+      language,
+      sourcePath,
+      sourceText: input.afterSourceText,
+      sourceHash: input.afterSourceHash,
+      parser: input.parser,
+      metadata: input.afterMetadata
+    })
+  });
+}
+
+export function diffNativeSourceImports(input) {
+  const before = normalizeNativeDiffImport(input.before, input, 'before');
+  const after = normalizeNativeDiffImport(input.after, input, 'after');
+  if (!before && !after) throw new Error('diffNativeSourceImports requires before or after native source input');
+  const language = input.language ?? after?.language ?? before?.language;
+  const sourcePath = input.sourcePath ?? after?.sourcePath ?? before?.sourcePath;
+  const beforeHash = before?.nativeSource?.sourceHash ?? before?.nativeAst?.sourceHash ?? before?.sourceHash;
+  const afterHash = after?.nativeSource?.sourceHash ?? after?.nativeAst?.sourceHash ?? after?.sourceHash;
+  const idPart = idFragment(input.id ?? sourcePath ?? language ?? 'native_source_change');
+  const beforeSidecar = before ? createSemanticImportSidecar(before, { id: `sidecar_before_${idPart}`, generatedAt: input.generatedAt, regionPrefix: input.regionPrefix }) : undefined;
+  const afterSidecar = after ? createSemanticImportSidecar(after, { id: `sidecar_after_${idPart}`, generatedAt: input.generatedAt, regionPrefix: input.regionPrefix }) : undefined;
+  const beforeSymbols = mapDiffSymbols(before, beforeSidecar);
+  const afterSymbols = mapDiffSymbols(after, afterSidecar);
+  const changedSymbols = diffNativeSymbols(beforeSymbols, afterSymbols);
+  let changedRegions = diffNativeOwnershipRegions(beforeSidecar, afterSidecar, changedSymbols);
+  const sourceChanged = Boolean(beforeHash && afterHash && beforeHash !== afterHash);
+  if (sourceChanged && changedSymbols.length === 0 && changedRegions.length === 0) {
+    changedRegions = [fileLevelNativeChangeRegion({ language, sourcePath, beforeHash, afterHash, before, after })];
+  }
+  const evidence = [{
+    id: input.evidenceId ?? `evidence_${idPart}_native_source_diff`,
+    kind: 'import',
+    status: input.evidenceStatus ?? 'passed',
+    path: sourcePath,
+    summary: `Compared ${language ?? 'native'} source imports: ${changedSymbols.length} changed symbol(s), ${changedRegions.length} changed region(s).`,
+    metadata: {
+      beforeImportId: before?.id,
+      afterImportId: after?.id,
+      beforeHash,
+      afterHash,
+      sourceChanged,
+      addedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'added').length,
+      removedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'removed').length,
+      modifiedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'modified').length
+    }
+  }];
+  const readiness = maxSemanticMergeReadiness(
+    maxSemanticMergeReadiness(nativeImportReadiness(before), nativeImportReadiness(after)),
+    sourceChanged && changedSymbols.length === 0 ? 'needs-review' : 'ready'
+  );
+  const reasons = nativeSourceChangeReasons({ before, after, beforeHash, afterHash, changedSymbols, changedRegions, readiness });
+  const conflictKeys = uniqueStrings([
+    ...changedSymbols.map((symbol) => symbol.conflictKey),
+    ...changedRegions.map((region) => region.conflictKey ?? region.key ?? region.id),
+    ...(sourcePath ? [`source:${sourcePath}`] : [])
+  ]);
+  const touches = changedRegions.map((region) => ({ id: region.id, access: 'write' }));
+  const operations = [
+    ...(after?.nativeSource ? [{ op: 'upsertNode', node: after.nativeSource, touches: touches.length ? touches : [{ id: after.nativeSource.id, access: 'evidence' }] }] : []),
+    ...(!after && before?.nativeSource ? [{ op: 'removeNode', id: before.nativeSource.id, touches: touches.length ? touches : [{ id: before.nativeSource.id, access: 'evidence' }] }] : []),
+    { op: 'addEvidence', evidence: evidence[0], touches }
+  ];
+  const patch = createPatch({
+    id: input.patchId ?? `patch_${idPart}_native_source_diff`,
+    baseHash: beforeHash,
+    targetHash: afterHash,
+    author: input.author ?? '@shapeshift-labs/frontier-lang-compiler/diffNativeSourceImports',
+    risk: readiness === 'blocked' ? 'high' : readiness === 'needs-review' ? 'medium' : 'low',
+    operations,
+    evidence,
+    metadata: {
+      sourceLanguage: language,
+      sourcePath,
+      beforeImportId: before?.id,
+      afterImportId: after?.id,
+      beforeHash,
+      afterHash,
+      changedSymbols: changedSymbols.length,
+      changedRegions: changedRegions.length
+    }
+  });
+  const mergeCandidate = createSemanticMergeCandidateRecord({
+    id: input.mergeCandidateId ?? `merge_candidate_${idPart}_native_source_diff`,
+    importResultId: after?.id ?? before?.id,
+    patchId: patch.id,
+    language,
+    sourcePath,
+    baseHash: beforeHash,
+    targetHash: afterHash,
+    touchedSymbols: changedSymbols.map(nativeChangeTouchedSymbol),
+    touchedSemanticNodes: [],
+    nativeSpans: nativeChangeSpans(changedSymbols, changedRegions, { language, sourcePath }),
+    conflictKeys,
+    readiness,
+    reasons,
+    evidence,
+    metadata: {
+      kind: 'native-source-change-set',
+      beforeImportId: before?.id,
+      afterImportId: after?.id,
+      sourceChanged,
+      changeSummary: nativeSourceChangeSummary(changedSymbols, changedRegions, sourceChanged)
+    }
+  });
+  return {
+    kind: 'frontier.lang.nativeSourceChangeSet',
+    version: 1,
+    id: input.id ?? `native_source_change_${idPart}`,
+    language,
+    sourcePath,
+    before,
+    after,
+    beforeHash,
+    afterHash,
+    changedSymbols,
+    changedRegions,
+    patch,
+    mergeCandidate,
+    evidence,
+    readiness,
+    reasons,
+    sourceMaps: uniqueRecordsById([...(before?.sourceMaps ?? []), ...(after?.sourceMaps ?? [])]),
+    semanticIndex: after?.semanticIndex ?? before?.semanticIndex,
+    losses: uniqueByLossId([...(before?.losses ?? []), ...(after?.losses ?? [])]),
+    summary: nativeSourceChangeSummary(changedSymbols, changedRegions, sourceChanged),
+    metadata: {
+      beforeSidecarId: beforeSidecar?.id,
+      afterSidecarId: afterSidecar?.id,
+      beforeImportContract: before?.metadata?.importResultContract,
+      afterImportContract: after?.metadata?.importResultContract,
+      ...input.metadata
+    }
+  };
+}
+
+function normalizeNativeDiffImport(value, input, side) {
+  if (!value) return undefined;
+  if (value.kind === 'frontier.lang.importResult' && value.nativeSource) return value;
+  return importNativeSource({
+    ...value,
+    language: value.language ?? input.language,
+    sourcePath: value.sourcePath ?? input.sourcePath,
+    parser: value.parser ?? input.parser,
+    metadata: {
+      ...(value.metadata ?? {}),
+      nativeSourceDiffSide: side
+    }
+  });
+}
+
+function mapDiffSymbols(imported, sidecar) {
+  const symbolsById = new Map((imported?.semanticIndex?.symbols ?? []).map((symbol) => [symbol.id, symbol]));
+  const mappingsBySymbolId = new Map((imported?.sourceMaps ?? [])
+    .flatMap((sourceMap) => sourceMap.mappings ?? [])
+    .filter((mapping) => mapping.semanticSymbolId)
+    .map((mapping) => [mapping.semanticSymbolId, mapping]));
+  const sourceText = nativeImportSourceText(imported);
+  const entries = sidecar?.symbols?.length
+    ? sidecar.symbols
+    : (imported?.semanticIndex?.symbols ?? []).map((symbol) => ({ id: symbol.id, name: symbol.name, kind: symbol.kind, sourceSpan: symbol.definitionSpan }));
+  const result = new Map();
+  for (const entry of entries) {
+    const symbol = symbolsById.get(entry.id) ?? {};
+    const mapping = mappingsBySymbolId.get(entry.id);
+    const sourceSpan = entry.sourceSpan ?? mapping?.sourceSpan ?? symbol.definitionSpan;
+    const key = nativeDiffSymbolKey(entry, imported);
+    result.set(key, {
+      key,
+      id: entry.id,
+      name: entry.name ?? symbol.name,
+      kind: entry.kind ?? symbol.kind,
+      language: entry.language ?? symbol.language ?? imported?.language,
+      nativeAstNodeId: entry.nativeAstNodeId ?? symbol.nativeAstNodeId ?? mapping?.nativeAstNodeId,
+      semanticOccurrenceId: entry.semanticOccurrenceId ?? mapping?.semanticOccurrenceId,
+      sourceMapMappingId: entry.sourceMapMappingId ?? mapping?.id,
+      sourceSpan,
+      signatureHash: entry.signatureHash ?? symbol.signatureHash,
+      ownershipRegionId: entry.ownershipRegionId ?? symbol.metadata?.ownershipRegionId ?? mapping?.ownershipRegionId,
+      ownershipKey: entry.ownershipKey ?? symbol.metadata?.ownershipRegionKey ?? mapping?.ownershipRegionKey,
+      ownershipRegionKind: entry.ownershipRegionKind ?? symbol.metadata?.ownershipRegionKind ?? mapping?.ownershipRegionKind,
+      spanHash: hashNativeSpanText(sourceText, sourceSpan),
+      sourcePath: sourceSpan?.path ?? imported?.sourcePath,
+      sourceHash: imported?.nativeSource?.sourceHash ?? imported?.nativeAst?.sourceHash,
+      readiness: entry.readiness ?? imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness ?? 'needs-review'
+    });
+  }
+  return result;
+}
+
+function diffNativeSymbols(beforeSymbols, afterSymbols) {
+  const keys = uniqueStrings([...beforeSymbols.keys(), ...afterSymbols.keys()]).sort();
+  const changed = [];
+  for (const key of keys) {
+    const before = beforeSymbols.get(key);
+    const after = afterSymbols.get(key);
+    const changeKind = !before ? 'added' : !after ? 'removed' : nativeDiffSymbolChanged(before, after) ? 'modified' : 'unchanged';
+    if (changeKind === 'unchanged') continue;
+    const current = after ?? before;
+    changed.push({
+      changeKind,
+      key,
+      id: current.id,
+      name: current.name,
+      kind: current.kind,
+      language: current.language,
+      nativeAstNodeId: current.nativeAstNodeId,
+      semanticOccurrenceId: current.semanticOccurrenceId,
+      sourceMapMappingId: current.sourceMapMappingId,
+      sourceSpan: current.sourceSpan,
+      beforeSignatureHash: before?.signatureHash,
+      afterSignatureHash: after?.signatureHash,
+      beforeSpanHash: before?.spanHash,
+      afterSpanHash: after?.spanHash,
+      beforeOwnershipKey: before?.ownershipKey,
+      afterOwnershipKey: after?.ownershipKey,
+      ownershipRegionId: current.ownershipRegionId,
+      ownershipKey: current.ownershipKey,
+      ownershipRegionKind: current.ownershipRegionKind,
+      conflictKey: current.ownershipKey ? `region:${current.ownershipKey}` : `symbol:${current.id ?? key}`,
+      readiness: maxSemanticMergeReadiness(before?.readiness ?? 'ready', after?.readiness ?? 'ready')
+    });
+  }
+  return changed;
+}
+
+function nativeDiffSymbolChanged(before, after) {
+  if ((before.signatureHash ?? '') !== (after.signatureHash ?? '')) return true;
+  if ((before.spanHash ?? '') !== (after.spanHash ?? '')) return true;
+  if ((before.ownershipKey ?? '') !== (after.ownershipKey ?? '')) return true;
+  if ((before.nativeAstNodeId ?? '') !== (after.nativeAstNodeId ?? '')) return true;
+  return false;
+}
+
+function diffNativeOwnershipRegions(beforeSidecar, afterSidecar, changedSymbols) {
+  const changedRegionIds = new Set(changedSymbols.map((symbol) => symbol.ownershipRegionId).filter(Boolean));
+  const changedRegionKeys = new Set([
+    ...changedSymbols.map((symbol) => symbol.beforeOwnershipKey).filter(Boolean),
+    ...changedSymbols.map((symbol) => symbol.afterOwnershipKey).filter(Boolean)
+  ]);
+  const regions = uniqueRecordsById([...(beforeSidecar?.ownershipRegions ?? []), ...(afterSidecar?.ownershipRegions ?? [])])
+    .filter((region) => changedRegionIds.has(region.id) || changedRegionKeys.has(region.key));
+  return regions.map((region) => ({
+    ...region,
+    changeKind: changedSymbols.some((symbol) => symbol.changeKind === 'added' && symbol.afterOwnershipKey === region.key)
+      ? 'added'
+      : changedSymbols.some((symbol) => symbol.changeKind === 'removed' && symbol.beforeOwnershipKey === region.key)
+        ? 'removed'
+        : 'modified',
+    conflictKey: region.key ? `region:${region.key}` : `region:${region.id}`
+  }));
+}
+
+function fileLevelNativeChangeRegion(input) {
+  const sourcePath = input.sourcePath ?? input.after?.sourcePath ?? input.before?.sourcePath;
+  const key = ['source', sourcePath ?? `${input.language}:memory`, 'file'].join('#');
+  return {
+    id: `region_${idFragment(key)}`,
+    key,
+    changeKind: 'modified',
+    regionKind: 'body',
+    granularity: 'file',
+    language: input.language,
+    sourcePath,
+    sourceHash: input.afterHash ?? input.beforeHash,
+    precision: 'unknown',
+    mergePolicy: 'file-level-review-required',
+    conflictKey: `region:${key}`,
+    metadata: {
+      reason: 'source-hash-changed-without-symbol-diff',
+      beforeHash: input.beforeHash,
+      afterHash: input.afterHash
+    }
+  };
+}
+
+function nativeImportReadiness(imported) {
+  return imported?.metadata?.semanticMergeReadiness
+    ?? imported?.metadata?.nativeImportLossSummary?.semanticMergeReadiness
+    ?? imported?.mergeCandidates?.[0]?.readiness
+    ?? 'ready';
+}
+
+function nativeSourceChangeReasons(input) {
+  if (!input.before) return ['Native source was added.'];
+  if (!input.after) return ['Native source was removed.'];
+  if (input.changedSymbols.length) {
+    return [`Native source changed ${input.changedSymbols.length} symbol(s) across ${input.changedRegions.length} ownership region(s).`];
+  }
+  if (input.beforeHash && input.afterHash && input.beforeHash !== input.afterHash) {
+    return ['Native source hash changed without declaration-level symbol changes; file-level review is required.'];
+  }
+  return ['Native source imports are semantically unchanged at available scanner precision.'];
+}
+
+function nativeChangeTouchedSymbol(symbol) {
+  return {
+    id: symbol.id ?? symbol.key,
+    name: symbol.name,
+    kind: symbol.kind,
+    nativeAstNodeId: symbol.nativeAstNodeId,
+    span: symbol.sourceSpan,
+    conflictKey: symbol.conflictKey,
+    metadata: {
+      changeKind: symbol.changeKind,
+      beforeSignatureHash: symbol.beforeSignatureHash,
+      afterSignatureHash: symbol.afterSignatureHash,
+      beforeSpanHash: symbol.beforeSpanHash,
+      afterSpanHash: symbol.afterSpanHash,
+      ownershipRegionId: symbol.ownershipRegionId,
+      ownershipRegionKind: symbol.ownershipRegionKind
+    }
+  };
+}
+
+function nativeChangeSpans(changedSymbols, changedRegions, input) {
+  const symbolSpans = changedSymbols
+    .filter((symbol) => symbol.sourceSpan)
+    .map((symbol) => ({
+      id: `native_span_${idFragment(symbol.id ?? symbol.key)}`,
+      sourceId: symbol.sourceSpan?.sourceId,
+      path: symbol.sourceSpan?.path ?? input.sourcePath,
+      language: symbol.language ?? input.language,
+      nativeAstNodeId: symbol.nativeAstNodeId,
+      symbolId: symbol.id,
+      span: symbol.sourceSpan,
+      conflictKey: symbol.conflictKey,
+      metadata: { changeKind: symbol.changeKind }
+    }));
+  const regionSpans = changedRegions
+    .filter((region) => region.sourceSpan || region.sourcePath)
+    .map((region) => ({
+      id: `native_span_${idFragment(region.id)}`,
+      path: region.sourceSpan?.path ?? region.sourcePath ?? input.sourcePath,
+      language: region.language ?? input.language,
+      nativeAstNodeId: region.nativeAstNodeId,
+      symbolId: region.symbolId,
+      span: region.sourceSpan,
+      conflictKey: region.conflictKey ?? `region:${region.key ?? region.id}`,
+      metadata: { changeKind: region.changeKind, regionKind: region.regionKind, granularity: region.granularity }
+    }));
+  return uniqueRecordsById([...symbolSpans, ...regionSpans]);
+}
+
+function nativeSourceChangeSummary(changedSymbols, changedRegions, sourceChanged) {
+  return {
+    sourceChanged,
+    symbols: changedSymbols.length,
+    regions: changedRegions.length,
+    addedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'added').length,
+    removedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'removed').length,
+    modifiedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'modified').length,
+    byRegionKind: countBy(changedRegions.map((region) => region.regionKind ?? 'unknown')),
+    byChangeKind: countBy([...changedSymbols.map((symbol) => symbol.changeKind), ...changedRegions.map((region) => region.changeKind)])
+  };
+}
+
+function nativeDiffSymbolKey(symbol, imported) {
+  return [
+    symbol.language ?? imported?.language,
+    symbol.kind ?? 'symbol',
+    symbol.name ?? symbol.id
+  ].map((part) => String(part ?? '').trim()).join(':');
+}
+
+function nativeImportSourceText(imported) {
+  return imported?.metadata?.sourcePreservation?.sourceText
+    ?? imported?.nativeSource?.metadata?.sourcePreservation?.sourceText
+    ?? imported?.nativeAst?.metadata?.sourcePreservation?.sourceText
+    ?? imported?.universalAst?.metadata?.sourcePreservation?.sourceText;
+}
+
+function hashNativeSpanText(sourceText, span) {
+  const text = sourceTextForSpan(sourceText, span);
+  return text === undefined ? undefined : hashSemanticValue(text);
+}
+
+function sourceTextForSpan(sourceText, span) {
+  if (typeof sourceText !== 'string' || !span) return undefined;
+  if (typeof span.start === 'number' && typeof span.end === 'number' && span.end >= span.start) {
+    return sourceText.slice(span.start, span.end);
+  }
+  if (typeof span.startLine === 'number') {
+    const lines = sourceText.split(/\r?\n/);
+    const endLine = typeof span.endLine === 'number' && span.endLine >= span.startLine ? span.endLine : span.startLine;
+    return lines.slice(span.startLine - 1, endLine).join('\n');
+  }
+  return undefined;
 }
 
 function createLightweightNativeImport(input) {
