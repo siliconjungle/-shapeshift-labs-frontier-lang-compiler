@@ -85,6 +85,14 @@ const requiredStaticPackages = [
   ['@shapeshift-labs/frontier-lang-python', 'python-ast', 'python'],
   ['@shapeshift-labs/frontier-lang-c', 'clang-ast-json', 'c']
 ];
+const publishedPlatformPackages = [
+  ['@shapeshift-labs/frontier-lang-java', 'java', 'java-ast', 'semanticdb'],
+  ['@shapeshift-labs/frontier-lang-kotlin', 'kotlin', 'kotlin-psi', 'semanticdb'],
+  ['@shapeshift-labs/frontier-lang-swift', 'swift', 'swift-syntax', 'sourcekit-lsp'],
+  ['@shapeshift-labs/frontier-lang-csharp', 'csharp', 'roslyn-csharp', 'lsp'],
+  ['@shapeshift-labs/frontier-lang-go', 'go', 'go-ast', 'lsp'],
+  ['@shapeshift-labs/frontier-lang-clang', 'c', 'clang-ast-json', 'lsp']
+];
 assert.equal(LanguageAdapterPackageContracts.length >= requiredStaticPackages.length + 6, true);
 for (const [packageName, parserFormat, target] of requiredStaticPackages) {
   const contract = getLanguageAdapterPackageContract(packageName);
@@ -108,14 +116,32 @@ for (const [packageName, parserFormat, target] of requiredStaticPackages) {
   assert.equal(contract.releaseReadiness.releaseReady, true);
   assert.equal(contract.runtime.importsAdapterPackage, false);
 }
+for (const [packageName, language, parserFormat, semanticFormat] of publishedPlatformPackages) {
+  const contract = getLanguageAdapterPackageContract(packageName);
+  assert.equal(contract.kind, 'frontier.lang.languageAdapterPackageContract');
+  assert.equal(contract.package.name, packageName);
+  assert.equal(contract.package.version, '0.1.3');
+  assert.equal(contract.sourceParser.language, language);
+  assert.equal(contract.sourceParser.format, parserFormat);
+  assert.equal(contract.sourceParser.supportedFormats.includes(parserFormat), true);
+  assert.equal(contract.targetProjection.supported, false);
+  assert.equal(contract.targetProjection.caveats.some((caveat) => caveat.includes('No target projection package')), true);
+  assert.equal(contract.semanticIndex.formats.includes('frontier-semantic-index'), true);
+  assert.equal(contract.semanticIndex.formats.includes(semanticFormat), true);
+  assert.equal(contract.proofEvidence.hostEvidenceRequired, true);
+  assert.equal(contract.releaseReadiness.releaseReady, true);
+  assert.equal(contract.releaseReadiness.versionSource, 'static-package-catalog');
+  assert.equal(contract.releaseReadiness.signals.some((signal) => signal.includes('Host parser')), true);
+  assert.equal(contract.runtime.importsAdapterPackage, false);
+}
 const javaPackageContract = getLanguageAdapterPackageContract({ language: 'java', packageClass: 'platform-importer' });
 assert.equal(javaPackageContract.package.name, '@shapeshift-labs/frontier-lang-java');
 assert.equal(javaPackageContract.sourceParser.format, 'java-ast');
 assert.equal(javaPackageContract.targetProjection.supported, false);
 assert.equal(javaPackageContract.semanticIndex.formats.includes('semanticdb'), true);
 assert.equal(javaPackageContract.proofEvidence.hostEvidenceRequired, true);
-assert.equal(javaPackageContract.releaseReadiness.releaseReady, false);
-assert.equal(javaPackageContract.releaseReadiness.versionSource, 'related-package-catalog-placeholder');
+assert.equal(javaPackageContract.releaseReadiness.releaseReady, true);
+assert.equal(javaPackageContract.releaseReadiness.versionSource, 'static-package-catalog');
 assert.equal(javaPackageContract.releaseReadiness.signals.some((signal) => signal.includes('Host parser')), true);
 assert.equal(javaPackageContract.runtime.importsAdapterPackage, false);
 const goPackageContract = getLanguageAdapterPackageContract({ packageName: '@shapeshift-labs/frontier-lang-go' });
@@ -123,7 +149,7 @@ assert.equal(goPackageContract.sourceParser.language, 'go');
 assert.equal(goPackageContract.sourceParser.format, 'go-ast');
 assert.equal(goPackageContract.sourceParser.supportedFormats.includes('go-ast'), true);
 assert.equal(goPackageContract.targetProjection.supported, false);
-assert.equal(goPackageContract.releaseReadiness.releaseReady, false);
+assert.equal(goPackageContract.releaseReadiness.releaseReady, true);
 const clangPackageContract = getLanguageAdapterPackageContract({ packageName: '@shapeshift-labs/frontier-lang-clang' });
 assert.equal(clangPackageContract.sourceParser.format, 'clang-ast-json');
 assert.equal(clangPackageContract.sourceParser.supportedLanguages.includes('c'), true);
@@ -132,12 +158,13 @@ assert.equal(clangPackageContract.proofEvidence.requiredEvidenceKeys.includes('c
 assert.equal(clangPackageContract.proofEvidence.requiredEvidenceKeys.includes('preprocessorrecordshash'), true);
 assert.equal(clangPackageContract.targetProjection.caveats.some((caveat) => caveat.includes('No target projection package')), true);
 assert.equal(queryLanguageAdapterPackageContracts({ packageClass: 'platform-importer' }).length >= 6, true);
-assert.equal(queryLanguageAdapterPackageContracts({ releaseReady: true }).length >= 5, true);
+assert.equal(queryLanguageAdapterPackageContracts({ releaseReady: true }).length >= 11, true);
 assert.equal(queryLanguageAdapterPackageContracts({ importsAdapterPackage: true }).length, 0);
 const packageSummary = summarizeLanguageAdapterPackageContracts();
 assert.equal(packageSummary.runtimeImportsAdapterPackages, 0);
 assert.equal(packageSummary.byPackageClass['target-projection'] >= 5, true);
 assert.equal(packageSummary.byPackageClass['platform-importer'] >= 6, true);
+assert.equal(packageSummary.byReleaseReadiness['ready-with-losses'] >= 11, true);
 assert.equal(packageSummary.parserFormats.includes('go-ast'), true);
 assert.equal(packageSummary.parserFormats.includes('clang-ast-json'), true);
 export const failedAdapterImport = await runNativeImporterAdapter({

@@ -24,12 +24,12 @@ const packageRows = [
   row('@shapeshift-labs/frontier-lang-rust', '0.2.6', 'rust', 'rust-syn', { target: 'rust', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'macroExpansionEvidence'] }),
   row('@shapeshift-labs/frontier-lang-python', '0.2.6', 'python', 'python-ast', { target: 'python', formats: ['python-ast', 'libcst'] }),
   row('@shapeshift-labs/frontier-lang-c', '0.2.6', 'c', 'clang-ast-json', { target: 'c', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'compileCommandsHash', 'preprocessorRecordsHash'] }),
-  platform('@shapeshift-labs/frontier-lang-java', '0.0.0', 'java', 'java-ast', ['semanticdb', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-kotlin', '0.0.0', 'kotlin', 'kotlin-psi', ['semanticdb', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-swift', '0.0.0', 'swift', 'swift-syntax', ['sourcekit-lsp', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-csharp', '0.0.0', 'csharp', 'roslyn-csharp', ['lsp']),
-  platform('@shapeshift-labs/frontier-lang-go', '0.0.0', 'go', 'go-ast', ['lsp']),
-  platform('@shapeshift-labs/frontier-lang-clang', '0.0.0', 'c', 'clang-ast-json', ['lsp'], {
+  platform('@shapeshift-labs/frontier-lang-java', '0.1.3', 'java', 'java-ast', ['semanticdb', 'lsp']),
+  platform('@shapeshift-labs/frontier-lang-kotlin', '0.1.3', 'kotlin', 'kotlin-psi', ['semanticdb', 'lsp']),
+  platform('@shapeshift-labs/frontier-lang-swift', '0.1.3', 'swift', 'swift-syntax', ['sourcekit-lsp', 'lsp']),
+  platform('@shapeshift-labs/frontier-lang-csharp', '0.1.3', 'csharp', 'roslyn-csharp', ['lsp']),
+  platform('@shapeshift-labs/frontier-lang-go', '0.1.3', 'go', 'go-ast', ['lsp']),
+  platform('@shapeshift-labs/frontier-lang-clang', '0.1.3', 'c', 'clang-ast-json', ['lsp'], {
     supportedLanguages: ['c', 'cpp'],
     proofKeys: ['parserAst', 'semanticIndex', 'compileCommandsHash', 'preprocessorRecordsHash']
   })
@@ -184,6 +184,7 @@ function row(packageName, packageVersion, language, parser, input = {}) {
 }
 
 function platform(packageName, packageVersion, language, parser, semanticFormats, input = {}) {
+  const published = packageVersion !== '0.0.0';
   return {
     packageName,
     packageVersion,
@@ -193,7 +194,12 @@ function platform(packageName, packageVersion, language, parser, semanticFormats
     supportedFormats: input.formats,
     packageClass: 'platform-importer',
     targetProjection: { targets: [], caveats: input.targetCaveats },
-    releaseReadiness: { status: 'needs-review', releaseReady: false, versionSource: 'related-package-catalog-placeholder', signals: input.signals },
+    releaseReadiness: {
+      status: published ? 'ready-with-losses' : 'needs-review',
+      releaseReady: published,
+      versionSource: published ? 'static-package-catalog' : 'related-package-catalog-placeholder',
+      signals: input.signals
+    },
     semanticIndex: { formats: ['frontier-semantic-index', ...semanticFormats], hostEvidenceRequired: true },
     proofEvidence: { hostEvidenceRequired: true, requiredEvidenceKeys: input.proofKeys ?? ['parserAst', 'semanticIndex', 'buildGraphEvidence'] },
     parserCaveats: input.parserCaveats
@@ -229,6 +235,9 @@ function normalizeReleaseStatus(value) {
 }
 
 function releaseReasons(packageClass, status) {
+  if (packageClass === 'platform-importer' && (status === 'ready' || status === 'ready-with-losses')) {
+    return ['Platform importer package is published with explicit host parser, build graph, and semantic-evidence boundaries.'];
+  }
   if (packageClass === 'platform-importer') return ['Platform importer contract is structural and requires host parser/build evidence before release.'];
   if (status === 'ready') return ['Package contract declares required parser, projection, semantic-index, and proof/evidence metadata.'];
   return ['Package contract is release-ready with explicit loss/evidence boundaries.'];
@@ -245,7 +254,11 @@ function releaseSignals(packageClass, status, releaseReady, packageVersion, vers
   const signals = ['Contract metadata is static and does not import the adapter package at runtime.'];
   if (source === 'package-json-dependency') signals.push('Package version must match this facade package.json dependency.');
   if (packageVersion === '0.0.0') signals.push('0.0.0 marks a structural placeholder until a standalone adapter package version is pinned.');
-  if (packageClass !== 'target-projection') signals.push('Host parser, build graph, and semantic evidence are required before release.');
+  if (packageClass !== 'target-projection') {
+    signals.push(releaseReady
+      ? 'Host parser, build graph, and semantic evidence remain required before semantic imports are high-confidence.'
+      : 'Host parser, build graph, and semantic evidence are required before release.');
+  }
   signals.push(releaseReady
     ? `Release status ${status} is ready for the facade with explicit loss boundaries.`
     : `Release status ${status} blocks package release without additional evidence.`);
