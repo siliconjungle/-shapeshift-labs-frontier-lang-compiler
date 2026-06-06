@@ -19,17 +19,17 @@ export const LanguageAdapterPackageReleaseReadinessStatuses = Object.freeze([
 ]);
 
 const packageRows = [
-  row('@shapeshift-labs/frontier-lang-typescript', '0.3.7', 'typescript', 'typescript-compiler-api', { target: 'typescript' }),
-  row('@shapeshift-labs/frontier-lang-javascript', '0.2.7', 'javascript', 'estree', { target: 'javascript', formats: ['estree', 'babel'] }),
-  row('@shapeshift-labs/frontier-lang-rust', '0.2.7', 'rust', 'rust-syn', { target: 'rust', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'macroExpansionEvidence'] }),
-  row('@shapeshift-labs/frontier-lang-python', '0.2.7', 'python', 'python-ast', { target: 'python', formats: ['python-ast', 'libcst'] }),
-  row('@shapeshift-labs/frontier-lang-c', '0.2.7', 'c', 'clang-ast-json', { target: 'c', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'compileCommandsHash', 'preprocessorRecordsHash'] }),
-  platform('@shapeshift-labs/frontier-lang-java', '0.1.4', 'java', 'java-ast', ['semanticdb', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-kotlin', '0.1.4', 'kotlin', 'kotlin-psi', ['semanticdb', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-swift', '0.1.4', 'swift', 'swift-syntax', ['sourcekit-lsp', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-csharp', '0.1.4', 'csharp', 'roslyn-csharp', ['lsp']),
-  platform('@shapeshift-labs/frontier-lang-go', '0.1.4', 'go', 'go-ast', ['lsp']),
-  platform('@shapeshift-labs/frontier-lang-clang', '0.1.4', 'c', 'clang-ast-json', ['lsp'], {
+  row('@shapeshift-labs/frontier-lang-typescript', '0.3.8', 'typescript', 'typescript-compiler-api', { target: 'typescript' }),
+  row('@shapeshift-labs/frontier-lang-javascript', '0.2.8', 'javascript', 'estree', { target: 'javascript', formats: ['estree', 'babel'] }),
+  row('@shapeshift-labs/frontier-lang-rust', '0.2.8', 'rust', 'rust-syn', { target: 'rust', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'macroExpansionEvidence'] }),
+  row('@shapeshift-labs/frontier-lang-python', '0.2.8', 'python', 'python-ast', { target: 'python', formats: ['python-ast', 'libcst'] }),
+  row('@shapeshift-labs/frontier-lang-c', '0.2.8', 'c', 'clang-ast-json', { target: 'c', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'compileCommandsHash', 'preprocessorRecordsHash'] }),
+  platform('@shapeshift-labs/frontier-lang-java', '0.1.5', 'java', 'java-ast', ['semanticdb', 'lsp']),
+  platform('@shapeshift-labs/frontier-lang-kotlin', '0.1.5', 'kotlin', 'kotlin-psi', ['semanticdb', 'lsp']),
+  platform('@shapeshift-labs/frontier-lang-swift', '0.1.5', 'swift', 'swift-syntax', ['sourcekit-lsp', 'lsp']),
+  platform('@shapeshift-labs/frontier-lang-csharp', '0.1.5', 'csharp', 'roslyn-csharp', ['lsp']),
+  platform('@shapeshift-labs/frontier-lang-go', '0.1.5', 'go', 'go-ast', ['lsp']),
+  platform('@shapeshift-labs/frontier-lang-clang', '0.1.5', 'c', 'clang-ast-json', ['lsp'], {
     supportedLanguages: ['c', 'cpp'],
     proofKeys: ['parserAst', 'semanticIndex', 'compileCommandsHash', 'preprocessorRecordsHash']
   })
