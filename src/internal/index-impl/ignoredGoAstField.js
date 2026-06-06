@@ -1,0 +1,23 @@
+export function ignoredGoAstField(key) {
+  return key === '_type'
+    || key === 'type'
+    || key === 'kind'
+    || key === 'nodeType'
+    || key === 'astKind'
+    || key === 'parent'
+    || key === 'Obj'
+    || key === 'object'
+    || key === 'Scope'
+    || key === 'scope'
+    || key === 'Unresolved'
+    || key === 'unresolved'
+    || key === 'FileStart'
+    || key === 'FileEnd'
+    || key === 'Package'
+    || key === 'Name'
+    || key === 'Path'
+    || key === 'Pos'
+    || key === 'End'
+    || key === 'pos'
+    || key === 'end';
+}

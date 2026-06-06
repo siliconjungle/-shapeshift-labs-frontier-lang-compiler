@@ -264,6 +264,71 @@ console.log(changeSet.mergeCandidate.readiness); // merge-admission classificati
 
 Use `diffNativeSourceImports` when the worker or runner already produced `importNativeSource` results. Changed regions include a `metadata.changedRegionProjection` envelope with before/after source hashes, source-map links, ownership keys, readiness, and `autoMergeClaim: false` so swarm admission tools can score or port patches without treating semantic metadata as proof. Body-only edits that the lightweight scanner cannot anchor to a symbol are still reported as file-level changed regions instead of being silently treated as safe.
 
+Bundle a native diff into a compact semantic patch record when a coordinator needs hashes, changed semantic regions, source-map links, proof/history/evidence IDs, and merge-admission status without loading whole source files:
+
+```js
+import {
+  createSemanticPatchBundleRecord,
+  diffNativeSources,
+  querySemanticPatchBundleRecords
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const changeSet = diffNativeSources({
+  language: 'javascript',
+  sourcePath: 'src/runtime.js',
+  beforeSourceText: 'export function step(frame) { return frame + 1; }\n',
+  afterSourceText: 'export function step(frame, delta) { return frame + delta; }\n'
+});
+
+const bundle = createSemanticPatchBundleRecord(changeSet, {
+  proofIds: ['proof_worker_replay'],
+  historyIds: ['history_worker_run'],
+  admission: { status: 'queued', readiness: changeSet.readiness }
+});
+
+console.log(bundle.changedRegions[0].key); // compact semantic region key
+console.log(bundle.sourceMapLinks[0].sourceMapMappingId); // source-map link, not source text
+console.log(bundle.admission.autoMergeClaim); // false
+console.log(querySemanticPatchBundleRecords([bundle], { sourcePath: 'src/runtime.js' }).length); // 1
+```
+
+Semantic patch bundle records keep compact refs and query indexes for base/target/source hashes, source paths, changed region keys, conflict keys, source-map IDs, evidence IDs, proof IDs, history IDs, readiness, and admission status. They intentionally omit `before`/`after` import payloads and source text; use the original diff result when a worker needs to re-read or re-project source.
+
+Store worker outputs as compact semantic history records when a coordinator needs to compare distributed changes without merging whole files:
+
+```js
+import {
+  createSemanticHistoryRecord,
+  querySemanticHistoryRecordOverlaps
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const left = createSemanticHistoryRecord({
+  id: 'worker_left',
+  baseHash: 'source_base_hash',
+  importId: 'import_left',
+  sourcePath: 'src/runtime.ts',
+  ownershipRegions: [{ key: 'source#src/runtime.ts#function#step', granularity: 'symbol' }],
+  semanticCandidates: [{ id: 'candidate_left', conflictKeys: ['source#src/runtime.ts#function#step'] }],
+  evidenceIds: ['evidence_left_test'],
+  proofIds: ['proof_left_replay'],
+  admission: { status: 'queued', readiness: 'needs-review' },
+  replayLinks: [{ id: 'replay_left', kind: 'patch', path: 'patches/left.json' }]
+});
+
+const right = createSemanticHistoryRecord({
+  id: 'worker_right',
+  baseHash: 'different_source_base_hash',
+  importId: 'import_right',
+  sourcePath: 'src/runtime.ts',
+  ownershipRegions: [{ key: 'source#src/runtime.ts#function#step', granularity: 'symbol' }],
+  semanticCandidates: [{ id: 'candidate_right', conflictKeys: ['source#src/runtime.ts#function#step'] }]
+});
+
+console.log(querySemanticHistoryRecordOverlaps([left, right])[0].conflict); // true
+```
+
+The record stores base/target hashes, source and import IDs, ownership-region keys, semantic candidate IDs and conflict keys, evidence/proof IDs, reviewer and admission status, plus replay links. Overlap queries compare those compact indexes directly, so centralized and distributed swarms can find shared regions, stale-base conflicts, and replay targets without loading source text.
+
 Extract a surgical semantic slice when a worker only needs one symbol, region, native AST node, or source path:
 
 ```js
@@ -330,6 +395,15 @@ console.log(rustCandidate.sourceMap.mappings[0]?.semanticSymbolId); // generated
 ```
 
 `compileNativeSource` returns the import result, projection, target loss matrix cell, combined losses, readiness, evidence, output hash, and generated-output source maps. Same-language preserved output uses exact source mappings when the hash matches; generated stubs use declaration-level spans; adapter output uses adapter-supplied maps when present and otherwise gets an estimated fallback. Admission queues should treat `ok` as "code was emitted", not as merge approval; `readiness`, `targetCoverage`, and source-map precision carry the merge signal.
+
+Native projections and compile results also carry a `frontier.lang.nativeRoundtripEvidence` record under `evidence[].metadata.roundtripEvidence` and `metadata.roundtripEvidence`. That payload records import readiness/loss counts, universal AST validation and source-map precision, projection mode/hash verification, target adapter identity, target coverage, output source-map precision, and blocking/review loss ids in one coordinator-sortable JSON shape:
+
+```js
+const roundtrip = rustCandidate.metadata.roundtripEvidence;
+console.log(roundtrip.status); // "blocked", "stub-only", "preserved-source", or "target-adapter"
+console.log(roundtrip.output.sourceMaps.precision); // "exact", "declaration", "estimated", or "none"
+console.log(roundtrip.losses.blockingLossIds);
+```
 
 Provide a target projection adapter when the host owns real native-to-target translation semantics:
 
@@ -475,6 +549,8 @@ console.log(imported.adapter.coverage.capabilityEvidence.observed.sourceRanges);
 console.log(imported.adapter.coverage.capabilityEvidence.gaps);
 console.log(imported.adapter.coverage.semanticCoverage.level);
 console.log(project.metadata.sourcePreservationSummary.total);
+console.log(project.metadata.projectAdmission.mergeScore.value); // sortable readiness score
+console.log(project.metadata.projectAdmission.mergeScore.components.targetProjectionCoverage.score);
 ```
 
 The built-in adapter factories are dependency-light wrappers for caller-owned parsers or ASTs:
@@ -495,6 +571,30 @@ The built-in adapter factories are dependency-light wrappers for caller-owned pa
 Adapter summaries include a structured `coverage` record so merge queues can distinguish exact parser AST imports from declaration scans. The record declares exactness, parser token/trivia support, diagnostics support, source-range and generated-range support, and semantic coverage. Built-in wrappers normalize native AST/CST nodes and declaration-level semantic indexes; they do not claim resolved references, types, control flow, generated ranges, or token/trivia fidelity unless the host adapter supplies that evidence.
 
 Coverage records also keep declared, observed, and effective capability evidence separate. `coverage.capabilityEvidence.gaps` highlights missing exact AST, token/trivia, parser diagnostics, source range, generated range, reference, type, and control-flow evidence for the current adapter/import. `observedOnly` means the import produced evidence the adapter did not declare, while `declaredOnly` means the adapter declared support that this run did not exercise.
+
+Project import admission records include `mergeScore`, a `frontier.lang.semanticMergeScore.v1` object with a 0-100 sortable value where higher is more admission-ready. The component scores combine semantic evidence density, source preservation, stale source hashes, changed ownership regions, proof/readiness evidence, and target projection coverage, so coordinators can sort imports while still seeing the specific evidence behind a low score.
+
+Release trains and semantic merge planners can inspect adapter package contracts without importing the adapter packages themselves:
+
+```js
+import {
+  getLanguageAdapterPackageContract,
+  queryLanguageAdapterPackageContracts
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const rust = getLanguageAdapterPackageContract('@shapeshift-labs/frontier-lang-rust');
+console.log(rust.sourceParser.format); // "rust-syn"
+console.log(rust.targetProjection.targets); // ["rust"]
+console.log(rust.releaseReadiness.releaseReady); // true
+
+const platformImporters = queryLanguageAdapterPackageContracts({
+  packageClass: 'platform-importer',
+  importsAdapterPackage: false
+});
+console.log(platformImporters.map((entry) => entry.package.name));
+```
+
+Each static contract exposes package name/version, version source, source parser languages/formats, parser caveats, target projection support/caveats, semantic-index formats, proof/evidence requirements, release readiness signals, and `runtime.importsAdapterPackage: false`. Standalone source-language importer packages such as Java, Kotlin, Swift, C#, Go, and Clang remain structural placeholders with `packageVersion: "0.0.0"` and `releaseReadiness.releaseReady: false` until a release train pins standalone package versions and host parser/build evidence.
 
 ## Related Packages
 

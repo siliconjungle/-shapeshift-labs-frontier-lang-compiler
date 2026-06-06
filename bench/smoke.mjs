@@ -1,379 +1,84 @@
-import { performance } from 'node:perf_hooks';
-import {
-  compileNativeSource,
-  compileFrontierSource,
-  createClangAstNativeImporterAdapter,
-  createCSharpRoslynNativeImporterAdapter,
-  createEstreeNativeImporterAdapter,
-  createGoAstNativeImporterAdapter,
-  createJavaAstNativeImporterAdapter,
-  createKotlinPsiNativeImporterAdapter,
-  createNativeImportCoverageMatrix,
-  createNativeParserAstFormatMatrix,
-  createNativeParserFeatureMatrix,
-  createProjectionTargetLossMatrix,
-  createUniversalCapabilityMatrix,
-  createNativeSourcePreservation,
-  createPythonAstNativeImporterAdapter,
-  createRustSynNativeImporterAdapter,
-  createSwiftSyntaxNativeImporterAdapter,
-  createSemanticImportSidecar,
-  createSemanticSlice,
-  diffNativeSources,
-  importExternalSemanticIndex,
-  importNativeSource,
-  projectNativeImportToSource,
-  queryNativeParserFeatureMatrix,
-  runNativeImporterAdapter,
-  summarizeNativeImportFeatureEvidence,
-  testSemanticSlice
-} from '../dist/index.js';
+import { measureFrontierCompile } from './compile-suite.mjs';
+import { collectNativeImports } from './native-import-suite.mjs';
+import { measureNativeMatrices } from './native-matrix-suite.mjs';
+import { measureNativeTransformations } from './native-transform-suite.mjs';
+import { measureSourceChangeSuites } from './source-change-suite.mjs';
 
-const source = `
-module Bench @id("mod_bench")
-type TodoInput @id("type_input") {
-  title: Text
-}
-entity Todo @id("ent_todo") {
-  title @id("field_title"): Text
-}
-action addTodo @id("action_add") {
-  input TodoInput
-  writes field_title
-  returns Patch
-}
-`;
-
-const targets = ['typescript', 'javascript', 'rust', 'python', 'c'];
-const start = performance.now();
-let bytes = 0;
-for (let index = 0; index < 250; index += 1) {
-  bytes += compileFrontierSource(source, { target: targets[index % targets.length] }).output.length;
-}
-const compileDurationMs = performance.now() - start;
-
-const importStart = performance.now();
-const estreeAdapter = createEstreeNativeImporterAdapter();
-const kotlinPsiAdapter = createKotlinPsiNativeImporterAdapter();
-let nativeSymbols = 0;
-const nativeImportResults = [];
-for (let index = 0; index < 150; index += 1) {
-  const imported = index % 2 === 0
-    ? importNativeSource({
-      language: 'javascript',
-      sourcePath: `src/bench-${index}.js`,
-      sourceText: `export function bench${index}() { return ${index}; }\n`
-    })
-    : await runNativeImporterAdapter(estreeAdapter, {
-      sourcePath: `src/bench-${index}.js`,
-      sourceText: `export function bench${index}() { return ${index}; }\n`,
-      adapterOptions: {
-        ast: {
-          type: 'Program',
-          loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 42 } },
-          body: [{
-            type: 'FunctionDeclaration',
-            id: { type: 'Identifier', name: `bench${index}` },
-            loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 42 } }
-          }]
-        }
-      }
-    });
-  nativeSymbols += imported.semanticIndex?.symbols?.length ?? 0;
-  nativeImportResults.push(imported);
-}
-for (let index = 0; index < 50; index += 1) {
-  const imported = await runNativeImporterAdapter(kotlinPsiAdapter, {
-    sourcePath: `src/bench-${index}.kt`,
-    sourceText: `package bench\nclass BenchKotlin${index}(val title: String) { fun render${index}() = title }\n`,
-    adapterOptions: {
-      ast: {
-        kind: 'KtFile',
-        packageDirective: { kind: 'KtPackageDirective', fqName: 'bench' },
-        declarations: [{
-          kind: 'KtClass',
-          name: `BenchKotlin${index}`,
-          declarations: [{
-            kind: 'KtPrimaryConstructor',
-            parameters: [{
-              kind: 'KtParameter',
-              name: 'title',
-              typeReference: { text: 'String' },
-              valOrVarKeyword: 'val'
-            }]
-          }, {
-            kind: 'KtNamedFunction',
-            name: `render${index}`,
-            bodyExpression: { kind: 'KtBlockExpression' }
-          }]
-        }]
-      }
-    }
-  });
-  nativeSymbols += imported.semanticIndex?.symbols?.length ?? 0;
-  nativeImportResults.push(imported);
-}
-const importDurationMs = performance.now() - importStart;
-
-const matrixStart = performance.now();
-const coverageMatrix = createNativeImportCoverageMatrix({ imports: nativeImportResults });
-const matrixDurationMs = performance.now() - matrixStart;
-
-const parserFormatMatrixStart = performance.now();
-const parserFormatMatrix = createNativeParserAstFormatMatrix({
-  imports: nativeImportResults,
-  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter(), createGoAstNativeImporterAdapter(), createJavaAstNativeImporterAdapter(), kotlinPsiAdapter, createCSharpRoslynNativeImporterAdapter(), createSwiftSyntaxNativeImporterAdapter()]
-});
-const parserFormatMatrixDurationMs = performance.now() - parserFormatMatrixStart;
-
-const parserFeatureMatrixStart = performance.now();
-const parserFeatureMatrix = createNativeParserFeatureMatrix({
-  imports: nativeImportResults,
-  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter(), createGoAstNativeImporterAdapter(), createJavaAstNativeImporterAdapter(), kotlinPsiAdapter, createCSharpRoslynNativeImporterAdapter(), createSwiftSyntaxNativeImporterAdapter()],
-  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
-});
-const parserFeatureQuery = queryNativeParserFeatureMatrix(parserFeatureMatrix, {
-  language: 'javascript',
-  parser: 'estree',
-  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
-});
-const parserFeatureMatrixDurationMs = performance.now() - parserFeatureMatrixStart;
-
-const projectionMatrixStart = performance.now();
-const projectionLossMatrix = createProjectionTargetLossMatrix({ imports: nativeImportResults });
-const projectionMatrixDurationMs = performance.now() - projectionMatrixStart;
-
-const universalMatrixStart = performance.now();
-const universalCapabilityMatrix = createUniversalCapabilityMatrix({
-  imports: nativeImportResults,
-  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter(), createGoAstNativeImporterAdapter(), createJavaAstNativeImporterAdapter(), kotlinPsiAdapter, createCSharpRoslynNativeImporterAdapter(), createSwiftSyntaxNativeImporterAdapter()],
-  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
-});
-const universalMatrixDurationMs = performance.now() - universalMatrixStart;
-
-const preservationStart = performance.now();
-const preservationRecords = nativeImportResults.map((imported) => imported.metadata.sourcePreservation ?? createNativeSourcePreservation({
-  language: imported.language,
-  sourcePath: imported.sourcePath,
-  sourceText: imported.metadata.sourcePreservation?.sourceText ?? ''
-}));
-const preservationDurationMs = performance.now() - preservationStart;
-const preservationTokens = preservationRecords.reduce((sum, record) => sum + record.tokens.length + record.trivia.length, 0);
-
-const sidecarStart = performance.now();
-const semanticSidecars = nativeImportResults.map((imported) => createSemanticImportSidecar(imported));
-const sidecarDurationMs = performance.now() - sidecarStart;
-const sidecarOwnershipRegions = semanticSidecars.reduce((sum, sidecar) => sum + sidecar.ownershipRegions.length, 0);
-
-const sliceStart = performance.now();
-const semanticSlices = nativeImportResults.slice(0, 100).map((imported, index) => {
-  const symbol = imported.semanticIndex?.symbols?.[0]?.name ?? imported.semanticIndex?.symbols?.[0]?.id;
-  return createSemanticSlice(imported, {
-    entryRefs: symbol ? [`symbol:${symbol}`] : [],
-    includeDependencies: index % 2 === 0,
-    focusedCommands: [`npm test -- semantic-slice-${index}`]
-  });
-});
-const sliceDurationMs = performance.now() - sliceStart;
-const sliceSourceMapLinks = semanticSlices.reduce((sum, slice) => sum + slice.sourceMapLinks.length, 0);
-const sliceConflictKeys = semanticSlices.reduce((sum, slice) => sum + slice.mergeAdmission.conflictKeys.length, 0);
-const sliceGateStart = performance.now();
-const semanticSliceGates = semanticSlices.map((slice) => testSemanticSlice(slice, { requireSourceMapLinks: false }));
-const sliceGateDurationMs = performance.now() - sliceGateStart;
-const sliceGateFailures = semanticSliceGates.filter((gate) => gate.status === 'failed').length;
-
-const featureEvidenceStart = performance.now();
-const featureEvidenceSummaries = nativeImportResults.map((imported) => summarizeNativeImportFeatureEvidence(imported.losses, {
-  evidence: imported.evidence
-}));
-const featureEvidenceDurationMs = performance.now() - featureEvidenceStart;
-const featureEvidencePolicyMatches = featureEvidenceSummaries.reduce((sum, summary) => sum + summary.total, 0);
-
-const projectionStart = performance.now();
-const nativeProjections = nativeImportResults.map((imported) => projectNativeImportToSource(imported));
-const projectionDurationMs = performance.now() - projectionStart;
-const projectionBytes = nativeProjections.reduce((sum, projection) => sum + projection.sourceText.length, 0);
-
-const nativeCompileStart = performance.now();
-const nativeCompiles = nativeImportResults.map((imported, index) => compileNativeSource(imported, {
-  target: index % 2 === 0 ? 'javascript' : 'rust',
-  emitOnBlocked: true
-}));
-const nativeCompileDurationMs = performance.now() - nativeCompileStart;
-const nativeCompileBytes = nativeCompiles.reduce((sum, result) => sum + result.output.length, 0);
-const nativeCompileSourceMaps = nativeCompiles.reduce((sum, result) => sum + result.sourceMaps.length, 0);
-const nativeCompileSourceMapMappings = nativeCompiles.reduce((sum, result) => sum + result.sourceMaps.reduce((mapSum, sourceMap) => mapSum + sourceMap.mappings.length, 0), 0);
-const nativeCompileBlocked = nativeCompiles.filter((result) => result.readiness.readiness === 'blocked').length;
-const nativeTargetAdapterStart = performance.now();
-const nativeTargetAdapterCompiles = nativeImportResults.slice(0, 25).map((imported, index) => {
-  const target = index % 2 === 0 ? 'rust' : 'python';
-  return compileNativeSource(imported, {
-    target,
-    targetAdapters: [{
-      id: `bench-target-adapter-${index}`,
-      sourceLanguage: imported.language,
-      target,
-      coverage: {
-        readiness: 'needs-review',
-        handledLossKinds: ['dynamicRuntime', 'dynamicDispatch', 'typeInference', 'overloadResolution']
-      },
-      project() {
-        return { output: `// bench target adapter ${index}\n`, readiness: 'needs-review' };
-      }
-    }]
-  });
-});
-const nativeTargetAdapterDurationMs = performance.now() - nativeTargetAdapterStart;
-const nativeTargetAdapterBytes = nativeTargetAdapterCompiles.reduce((sum, result) => sum + result.output.length, 0);
-const nativeTargetAdapterSourceMaps = nativeTargetAdapterCompiles.reduce((sum, result) => sum + result.sourceMaps.length, 0);
-
-const regionScanStart = performance.now();
-const regionScanImports = [];
-for (let index = 0; index < 100; index += 1) {
-  const imported = importNativeSource({
-    language: 'typescript',
-    sourcePath: `src/regions-${index}.ts`,
-    sourceText: `
-      export const appRoutes${index} = [
-        { path: "/${index}", component: Screen${index} },
-        { path: "/${index}/settings", component: Settings${index} }
-      ];
-      export const contentBlocks${index} = {
-        docs: { title: "Docs ${index}" },
-        legal: { title: "Legal ${index}" }
-      };
-      export const runtimeConfig${index} = {
-        limits: { count: ${index} },
-        resolve(id) { return id; }
-      };
-      export const helpers${index} = {
-        plain: ${index}
-      };
-    `
-  });
-  regionScanImports.push({ imported, sidecar: createSemanticImportSidecar(imported) });
-}
-const regionScanDurationMs = performance.now() - regionScanStart;
-const regionScanSymbols = regionScanImports.reduce((sum, entry) => sum + entry.imported.semanticIndex.symbols.length, 0);
-const regionScanOwnershipRegions = regionScanImports.reduce((sum, entry) => sum + entry.sidecar.ownershipRegions.length, 0);
-
-const changeProjectionStart = performance.now();
-const changeProjectionSets = [];
-for (let index = 0; index < 80; index += 1) {
-  changeProjectionSets.push(diffNativeSources({
-    language: 'javascript',
-    sourcePath: `src/change-projection-${index}.js`,
-    beforeSourceText: `export function changeProjection${index}() { return ${index}; }\n`,
-    afterSourceText: `export function changeProjection${index}() { return ${index + 1}; }\nexport const changeProjectionFlag${index} = true;\n`
-  }));
-}
-const changeProjectionDurationMs = performance.now() - changeProjectionStart;
-const changedRegionProjections = changeProjectionSets.reduce((sum, changeSet) => sum + changeSet.metadata.changedRegionProjectionSummary.withProjection, 0);
-const changedRegionProjectionSourceMapLinks = changeProjectionSets.reduce((sum, changeSet) => sum + changeSet.metadata.changedRegionProjectionSummary.sourceMapLinks, 0);
-
-const externalSemanticStart = performance.now();
-const externalSemanticImports = [];
-for (let index = 0; index < 100; index += 1) {
-  externalSemanticImports.push(importExternalSemanticIndex({
-    format: index % 2 === 0 ? 'scip' : 'lsp',
-    language: index % 2 === 0 ? 'typescript' : 'python',
-    payload: index % 2 === 0
-      ? {
-        metadata: { project_root: '/bench' },
-        documents: [{
-          relative_path: `src/external-${index}.ts`,
-          language: 'typescript',
-          occurrences: [{
-            symbol: `scip-typescript npm bench 1.0.0 src/external-${index}.ts/ external${index}().`,
-            range: [0, 16, 24],
-            symbol_roles: 1
-          }]
-        }]
-      }
-      : {
-        uri: `file:///bench/src/external-${index}.py`,
-        languageId: 'python',
-        documentSymbols: [{
-          name: `external_${index}`,
-          kind: 12,
-          range: { start: { line: 0, character: 0 }, end: { line: 1, character: 0 } }
-        }]
-      }
-  }));
-}
-const externalSemanticDurationMs = performance.now() - externalSemanticStart;
-const externalSemanticSymbols = externalSemanticImports.reduce((sum, imported) => sum + imported.semanticIndex.symbols.length, 0);
-const externalSemanticMappings = externalSemanticImports.reduce((sum, imported) => sum + imported.summary.sourceMapMappings, 0);
+const compileMetrics = measureFrontierCompile();
+const importMetrics = await collectNativeImports();
+const matrixMetrics = measureNativeMatrices(importMetrics.nativeImportResults, importMetrics.adapters);
+const transformMetrics = measureNativeTransformations(importMetrics.nativeImportResults);
+const sourceChangeMetrics = measureSourceChangeSuites();
 
 console.log(JSON.stringify({
   compiles: 250,
-  bytes,
-  compileDurationMs: Number(compileDurationMs.toFixed(2)),
-  nativeImports: nativeImportResults.length,
-  nativeSymbols,
-  nativeImportDurationMs: Number(importDurationMs.toFixed(2)),
-  coverageMatrixLanguages: coverageMatrix.summary.languages,
-  coverageMatrixImports: coverageMatrix.summary.imports,
-  adapterCoverageSummaries: coverageMatrix.summary.adapterCoverage.total,
-  adapterCoverageSourceRanges: coverageMatrix.summary.adapterCoverage.effective.sourceRanges ?? 0,
-  adapterCoverageTokenGaps: coverageMatrix.summary.adapterCoverage.gaps.tokens ?? 0,
-  adapterCoverageReferenceGaps: coverageMatrix.summary.adapterCoverage.gaps.references ?? 0,
-  coverageMatrixDurationMs: Number(matrixDurationMs.toFixed(2)),
-  parserFormatMatrixFormats: parserFormatMatrix.summary.formats,
-  parserFormatMatrixImports: parserFormatMatrix.summary.imports,
-  parserFormatMatrixNativeAstNodes: parserFormatMatrix.summary.nativeAstNodes,
-  parserFormatMatrixDurationMs: Number(parserFormatMatrixDurationMs.toFixed(2)),
-  parserFeatureMatrixParsers: parserFeatureMatrix.summary.parsers,
-  parserFeatureMatrixMergeReady: parserFeatureMatrix.summary.mergeReady,
-  parserFeatureMatrixSyntaxFull: parserFeatureMatrix.summary.byFeatureStatus.syntax?.full ?? 0,
-  parserFeatureQueryMergeReady: parserFeatureQuery.merge.mergeReady,
-  parserFeatureMatrixDurationMs: Number(parserFeatureMatrixDurationMs.toFixed(2)),
-  projectionMatrixLanguages: projectionLossMatrix.summary.languages,
-  projectionMatrixMissingAdapters: projectionLossMatrix.summary.missingAdapters,
-  projectionMatrixUnsupportedTargetFeatures: projectionLossMatrix.summary.unsupportedTargetFeatures,
-  projectionMatrixDurationMs: Number(projectionMatrixDurationMs.toFixed(2)),
-  universalMatrixLanguages: universalCapabilityMatrix.summary.languages,
-  universalMatrixImports: universalCapabilityMatrix.summary.imports,
-  universalMatrixBlockedLanguages: universalCapabilityMatrix.summary.blockedLanguages,
-  universalMatrixMissingAdapters: universalCapabilityMatrix.summary.missingAdapters,
-  universalMatrixDurationMs: Number(universalMatrixDurationMs.toFixed(2)),
-  sourcePreservationRecords: preservationRecords.length,
-  sourcePreservationTokens: preservationTokens,
-  sourcePreservationDurationMs: Number(preservationDurationMs.toFixed(2)),
-  semanticSidecars: semanticSidecars.length,
-  sidecarOwnershipRegions,
-  sidecarDurationMs: Number(sidecarDurationMs.toFixed(2)),
-  semanticSlices: semanticSlices.length,
-  sliceDurationMs: Number(sliceDurationMs.toFixed(2)),
-  sliceGateDurationMs: Number(sliceGateDurationMs.toFixed(2)),
-  sliceSourceMapLinks,
-  sliceConflictKeys,
-  sliceGateFailures,
-  featureEvidencePolicyMatches,
-  featureEvidenceDurationMs: Number(featureEvidenceDurationMs.toFixed(2)),
-  nativeProjections: nativeProjections.length,
-  projectionBytes,
-  projectionDurationMs: Number(projectionDurationMs.toFixed(2)),
-  nativeCompiles: nativeCompiles.length,
-  nativeCompileBytes,
-  nativeCompileSourceMaps,
-  nativeCompileSourceMapMappings,
-  nativeCompileBlocked,
-  nativeCompileDurationMs: Number(nativeCompileDurationMs.toFixed(2)),
-  nativeTargetAdapterCompiles: nativeTargetAdapterCompiles.length,
-  nativeTargetAdapterBytes,
-  nativeTargetAdapterSourceMaps,
-  nativeTargetAdapterDurationMs: Number(nativeTargetAdapterDurationMs.toFixed(2)),
-  regionScanImports: regionScanImports.length,
-  regionScanSymbols,
-  regionScanOwnershipRegions,
-  regionScanDurationMs: Number(regionScanDurationMs.toFixed(2)),
-  changeProjectionSets: changeProjectionSets.length,
-  changedRegionProjections,
-  changedRegionProjectionSourceMapLinks,
-  changeProjectionDurationMs: Number(changeProjectionDurationMs.toFixed(2)),
-  externalSemanticImports: externalSemanticImports.length,
-  externalSemanticSymbols,
-  externalSemanticMappings,
-  externalSemanticDurationMs: Number(externalSemanticDurationMs.toFixed(2))
+  bytes: compileMetrics.bytes,
+  compileDurationMs: Number(compileMetrics.compileDurationMs.toFixed(2)),
+  nativeImports: importMetrics.nativeImportResults.length,
+  nativeSymbols: importMetrics.nativeSymbols,
+  nativeImportDurationMs: Number(importMetrics.nativeImportDurationMs.toFixed(2)),
+  coverageMatrixLanguages: matrixMetrics.coverageMatrix.summary.languages,
+  coverageMatrixImports: matrixMetrics.coverageMatrix.summary.imports,
+  adapterCoverageSummaries: matrixMetrics.coverageMatrix.summary.adapterCoverage.total,
+  adapterCoverageSourceRanges: matrixMetrics.coverageMatrix.summary.adapterCoverage.effective.sourceRanges ?? 0,
+  adapterCoverageTokenGaps: matrixMetrics.coverageMatrix.summary.adapterCoverage.gaps.tokens ?? 0,
+  adapterCoverageReferenceGaps: matrixMetrics.coverageMatrix.summary.adapterCoverage.gaps.references ?? 0,
+  coverageMatrixDurationMs: Number(matrixMetrics.coverageMatrixDurationMs.toFixed(2)),
+  parserFormatMatrixFormats: matrixMetrics.parserFormatMatrix.summary.formats,
+  parserFormatMatrixImports: matrixMetrics.parserFormatMatrix.summary.imports,
+  parserFormatMatrixNativeAstNodes: matrixMetrics.parserFormatMatrix.summary.nativeAstNodes,
+  parserFormatMatrixDurationMs: Number(matrixMetrics.parserFormatMatrixDurationMs.toFixed(2)),
+  parserFeatureMatrixParsers: matrixMetrics.parserFeatureMatrix.summary.parsers,
+  parserFeatureMatrixMergeReady: matrixMetrics.parserFeatureMatrix.summary.mergeReady,
+  parserFeatureMatrixSyntaxFull: matrixMetrics.parserFeatureMatrix.summary.byFeatureStatus.syntax?.full ?? 0,
+  parserFeatureQueryMergeReady: matrixMetrics.parserFeatureQuery.merge.mergeReady,
+  parserFeatureMatrixDurationMs: Number(matrixMetrics.parserFeatureMatrixDurationMs.toFixed(2)),
+  projectionMatrixLanguages: matrixMetrics.projectionLossMatrix.summary.languages,
+  projectionMatrixMissingAdapters: matrixMetrics.projectionLossMatrix.summary.missingAdapters,
+  projectionMatrixUnsupportedTargetFeatures: matrixMetrics.projectionLossMatrix.summary.unsupportedTargetFeatures,
+  projectionMatrixDurationMs: Number(matrixMetrics.projectionMatrixDurationMs.toFixed(2)),
+  universalMatrixLanguages: matrixMetrics.universalCapabilityMatrix.summary.languages,
+  universalMatrixImports: matrixMetrics.universalCapabilityMatrix.summary.imports,
+  universalMatrixBlockedLanguages: matrixMetrics.universalCapabilityMatrix.summary.blockedLanguages,
+  universalMatrixMissingAdapters: matrixMetrics.universalCapabilityMatrix.summary.missingAdapters,
+  universalMatrixDurationMs: Number(matrixMetrics.universalMatrixDurationMs.toFixed(2)),
+  sourcePreservationRecords: transformMetrics.sourcePreservationRecords,
+  sourcePreservationTokens: transformMetrics.sourcePreservationTokens,
+  sourcePreservationDurationMs: Number(transformMetrics.sourcePreservationDurationMs.toFixed(2)),
+  semanticSidecars: transformMetrics.semanticSidecars,
+  sidecarOwnershipRegions: transformMetrics.sidecarOwnershipRegions,
+  sidecarDurationMs: Number(transformMetrics.sidecarDurationMs.toFixed(2)),
+  semanticSlices: transformMetrics.semanticSlices,
+  sliceDurationMs: Number(transformMetrics.sliceDurationMs.toFixed(2)),
+  sliceGateDurationMs: Number(transformMetrics.sliceGateDurationMs.toFixed(2)),
+  sliceSourceMapLinks: transformMetrics.sliceSourceMapLinks,
+  sliceConflictKeys: transformMetrics.sliceConflictKeys,
+  sliceGateFailures: transformMetrics.sliceGateFailures,
+  featureEvidencePolicyMatches: transformMetrics.featureEvidencePolicyMatches,
+  featureEvidenceDurationMs: Number(transformMetrics.featureEvidenceDurationMs.toFixed(2)),
+  nativeProjections: transformMetrics.nativeProjections,
+  projectionBytes: transformMetrics.projectionBytes,
+  projectionDurationMs: Number(transformMetrics.projectionDurationMs.toFixed(2)),
+  nativeCompiles: transformMetrics.nativeCompiles,
+  nativeCompileBytes: transformMetrics.nativeCompileBytes,
+  nativeCompileSourceMaps: transformMetrics.nativeCompileSourceMaps,
+  nativeCompileSourceMapMappings: transformMetrics.nativeCompileSourceMapMappings,
+  nativeCompileBlocked: transformMetrics.nativeCompileBlocked,
+  nativeCompileDurationMs: Number(transformMetrics.nativeCompileDurationMs.toFixed(2)),
+  nativeTargetAdapterCompiles: transformMetrics.nativeTargetAdapterCompiles,
+  nativeTargetAdapterBytes: transformMetrics.nativeTargetAdapterBytes,
+  nativeTargetAdapterSourceMaps: transformMetrics.nativeTargetAdapterSourceMaps,
+  nativeTargetAdapterDurationMs: Number(transformMetrics.nativeTargetAdapterDurationMs.toFixed(2)),
+  regionScanImports: sourceChangeMetrics.regionScanImports,
+  regionScanSymbols: sourceChangeMetrics.regionScanSymbols,
+  regionScanOwnershipRegions: sourceChangeMetrics.regionScanOwnershipRegions,
+  regionScanDurationMs: Number(sourceChangeMetrics.regionScanDurationMs.toFixed(2)),
+  changeProjectionSets: sourceChangeMetrics.changeProjectionSets,
+  changedRegionProjections: sourceChangeMetrics.changedRegionProjections,
+  changedRegionProjectionSourceMapLinks: sourceChangeMetrics.changedRegionProjectionSourceMapLinks,
+  changeProjectionDurationMs: Number(sourceChangeMetrics.changeProjectionDurationMs.toFixed(2)),
+  externalSemanticImports: sourceChangeMetrics.externalSemanticImports,
+  externalSemanticSymbols: sourceChangeMetrics.externalSemanticSymbols,
+  externalSemanticMappings: sourceChangeMetrics.externalSemanticMappings,
+  externalSemanticDurationMs: Number(sourceChangeMetrics.externalSemanticDurationMs.toFixed(2))
 }));

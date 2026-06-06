@@ -1,0 +1,19 @@
+export function ignoredClangAstField(key) {
+  return key === '_type'
+    || key === 'type'
+    || key === 'kind'
+    || key === 'nodeType'
+    || key === 'declKind'
+    || key === 'stmtKind'
+    || key === 'id'
+    || key === 'loc'
+    || key === 'range'
+    || key === 'name'
+    || key === 'displayName'
+    || key === 'qualifiedName'
+    || key === 'mangledName'
+    || key === 'parent'
+    || key === 'parentDeclContextId'
+    || key === 'previousDecl'
+    || key === 'referencedDecl';
+}

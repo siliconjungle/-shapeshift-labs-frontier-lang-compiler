@@ -1,0 +1,32 @@
+export function normalizeRustSynKind(kind) {
+  const text = String(kind);
+  const compact = text.replace(/^(?:syn::)?/, '').replace(/^Item::/, 'Item').replace(/^ImplItem::/, 'ImplItem').replace(/^TraitItem::/, 'TraitItem');
+  if (/^fn$/i.test(compact)) return 'ItemFn';
+  if (/^struct$/i.test(compact)) return 'ItemStruct';
+  if (/^enum$/i.test(compact)) return 'ItemEnum';
+  if (/^trait$/i.test(compact)) return 'ItemTrait';
+  if (/^impl$/i.test(compact)) return 'ItemImpl';
+  if (/^use$/i.test(compact)) return 'ItemUse';
+  if (/^mod$/i.test(compact)) return 'ItemMod';
+  if (/^type$/i.test(compact)) return 'ItemType';
+  if (/^const$/i.test(compact)) return 'ItemConst';
+  if (/^static$/i.test(compact)) return 'ItemStatic';
+  if (/^union$/i.test(compact)) return 'ItemUnion';
+  if (/^item_fn$/i.test(compact)) return 'ItemFn';
+  if (/^item_struct$/i.test(compact)) return 'ItemStruct';
+  if (/^item_enum$/i.test(compact)) return 'ItemEnum';
+  if (/^item_trait$/i.test(compact)) return 'ItemTrait';
+  if (/^item_impl$/i.test(compact)) return 'ItemImpl';
+  if (/^item_use$/i.test(compact)) return 'ItemUse';
+  if (/^item_mod$/i.test(compact)) return 'ItemMod';
+  if (/^item_type$/i.test(compact)) return 'ItemType';
+  if (/^item_const$/i.test(compact)) return 'ItemConst';
+  if (/^item_static$/i.test(compact)) return 'ItemStatic';
+  if (/^item_union$/i.test(compact)) return 'ItemUnion';
+  if (/^item_macro$/i.test(compact)) return 'ItemMacro';
+  if (/^macro$/i.test(compact)) return 'Macro';
+  if (/^impl_item_fn$/i.test(compact)) return 'ImplItemFn';
+  if (/^trait_item_fn$/i.test(compact)) return 'TraitItemFn';
+  if (/^foreign_item_fn$/i.test(compact)) return 'ForeignItemFn';
+  return compact;
+}

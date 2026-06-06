@@ -1,0 +1,78 @@
+import { assert } from './helpers.mjs';
+import { createNativeImportResultContract, createNativeSourcePreservation, importNativeSource } from './compiler-api.mjs';
+
+export const scannedJsImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/scanned.js',
+  sourceText: '// kept comment\nimport { nanoid } from "nanoid";\nexport function addTodo(title) { return { id: nanoid(), title }; }\nexport const TODO_LIMIT = 128;\nexport const appRoutes = [\n  { path: "/todos", component: TodoStore },\n  { path: "/settings", component: TodoStore }\n];\nexport const siteContent = {\n  docs: { title: "Docs" },\n  legal: { title: "Terms" },\n  formatTitle: (title) => title.trim()\n};\nexport const runtimeConfig = {\n  limits: { todos: TODO_LIMIT },\n  resolve(id) { return id; }\n};\nexport const helpers = {\n  plain: 1\n};\nexport class TodoStore {\n  save(title) { return addTodo(title); }\n}\n'
+});
+assert.equal(scannedJsImport.nativeAst.rootId, 'native_root');
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'addTodo'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TodoStore'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TODO_LIMIT'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TodoStore.save'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'appRoutes./todos' && symbol.kind === 'route'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'siteContent.docs'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'runtimeConfig.resolve' && symbol.kind === 'function'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'helpers.plain' && symbol.metadata.ownershipRegionKind === 'property'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.metadata.ownershipRegionKind === 'route'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.metadata.ownershipRegionKind === 'content'), true);
+assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.metadata.ownershipRegionKind === 'config'), true);
+assert.equal(scannedJsImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('addtodo')), true);
+assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.ownershipRegionId), true);
+assert.equal(scannedJsImport.losses.some((loss) => loss.kind === 'opaqueNative'), true);
+const scannedLossKinds = scannedJsImport.losses.map((loss) => loss.kind);
+assert.equal(scannedLossKinds.includes('declarationOnlyCoverage'), true);
+assert.equal(scannedLossKinds.includes('partialSemanticIndex'), true);
+assert.equal(scannedLossKinds.includes('sourceMapApproximation'), true);
+assert.equal(scannedLossKinds.includes('sourcePreservation'), true);
+assert.equal(scannedJsImport.mergeCandidates[0].readiness, 'needs-review');
+assert.equal(scannedJsImport.metadata.nativeImportLossSummary.categories.includes('sourcePreservation'), true);
+assert.equal(scannedJsImport.metadata.sourcePreservation.kind, 'frontier.lang.nativeSourcePreservation');
+assert.equal(scannedJsImport.metadata.sourcePreservation.sourceText, scannedJsImport.nativeSource.metadata.sourcePreservation.sourceText);
+assert.equal(scannedJsImport.metadata.sourcePreservation.summary.comments >= 1, true);
+assert.equal(scannedJsImport.metadata.sourcePreservation.summary.directives >= 1, true);
+assert.equal(scannedJsImport.metadata.kernelSourcePreservationSummary.total >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsImport.metadata.kernelSourcePreservationSummary.exact >= 1, true);
+assert.equal(scannedJsImport.metadata.kernelSourcePreservationRecords.some((record) => record.kind === 'frontier.lang.sourcePreservation'), true);
+assert.equal(scannedJsImport.metadata.kernelSourcePreservationRecords.some((record) => record.level === 'declaration' || record.level === 'estimated'), true);
+assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.preservation === 'declaration' || mapping.preservation === 'estimated'), true);
+assert.equal(scannedJsImport.nativeAst.metadata.sourcePreservationSummary.exactSourceAvailable, true);
+assert.equal(scannedJsImport.metadata.importResultContract.kind, 'frontier.lang.nativeImportResultContract');
+assert.equal(scannedJsImport.metadata.importResultContract.sourceCount, 1);
+assert.equal(scannedJsImport.metadata.importResultContract.sourcePreservation.exactSourceAvailable, 1);
+assert.equal(scannedJsImport.metadata.importResultContract.regions.total >= 4, true);
+assert.equal(scannedJsImport.metadata.importResultContract.regions.taxonomy.presentKinds.includes('import'), true);
+assert.equal(scannedJsImport.metadata.importResultContract.sourceMaps.mappingCount >= 4, true);
+assert.equal(scannedJsImport.metadata.importResultContract.readiness.semanticMergeReadiness, 'needs-review');
+assert.equal(createNativeImportResultContract(scannedJsImport).ids.semanticSidecarIds.length, 1);
+const standalonePreservation = createNativeSourcePreservation({
+  language: 'python',
+  sourcePath: 'tools/preserve.py',
+  sourceText: '# kept\nfrom sys import path\nvalue = 1\n'
+});
+assert.equal(standalonePreservation.summary.comments, 1);
+assert.equal(standalonePreservation.summary.directives, 1);
+assert.equal(standalonePreservation.sourceHash.startsWith('fnv1a32:'), true);
+const staleDeclaredPreservation = createNativeSourcePreservation({
+  language: 'javascript',
+  sourcePath: 'src/stale-declared.js',
+  sourceText: 'export const staleDeclared = true;\n',
+  sourceHash: 'fnv1a32:not_the_real_hash'
+});
+assert.notEqual(staleDeclaredPreservation.sourceHash, 'fnv1a32:not_the_real_hash');
+assert.equal(staleDeclaredPreservation.metadata.declaredSourceHash, 'fnv1a32:not_the_real_hash');
+assert.equal(staleDeclaredPreservation.metadata.sourceHashVerified, false);
+const compactPreservation = createNativeSourcePreservation({
+  language: 'javascript',
+  sourcePath: 'src/compact.js',
+  sourceText: '// compact\nimport x from "x";\nexport const y = x;\n',
+  includeTokens: false,
+  includeTrivia: false,
+  maxDirectives: 1
+});
+assert.equal(compactPreservation.tokens.length, 0);
+assert.equal(compactPreservation.trivia.length, 0);
+assert.equal(compactPreservation.directives.length, 1);
+assert.equal(compactPreservation.summary.truncated, true);

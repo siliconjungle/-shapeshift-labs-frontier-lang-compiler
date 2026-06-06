@@ -26,6 +26,16 @@ This note harvests sources for Frontier Lang's universal import goal: preserve s
   - Transfer: the Lossless Semantic Tree idea matches Frontier's direction: preserve formatting/comments while carrying semantic facts and repeatable recipes.
 - SwiftSyntax: https://github.com/swiftlang/swift-syntax
   - Transfer: Swift import should prefer syntax-preserving adapters and avoid pretending declaration scanners cover macros, result builders, or availability semantics.
+- SCIP Code Intelligence Protocol: https://github.com/scip-code/scip
+  - Transfer: semantic indexes are a practical bridge for many languages because they carry documents, symbols, occurrences, and relationships without requiring every worker to invoke a compiler. Frontier imports should accept SCIP-shaped sidecars directly and preserve source maps back to changed files.
+- Glean fact schemas: https://glean.software/docs/schema/basic/ and https://glean.software/docs/schema/changing/
+  - Transfer: a fact-store shape is useful for large codebases and evolving indexers because facts are predicate/key/value records with schema identity and compatibility rules. Frontier should import predicate facts into semantic-index facts and occurrences so swarms can query “who touched this semantic predicate/region?” instead of reading prose handoffs.
+- Mergiraf structured merge: https://mergiraf.org/architecture.html
+  - Transfer: tree-sitter parsing plus GumTree-style matching gives a generic fallback for syntax-aware merge admission, but Frontier needs richer symbol/evidence overlays to avoid treating formatting-preserving syntax merges as correctness proof.
+- Spork structured merge paper: https://arxiv.org/abs/2202.05329
+  - Transfer: structured merge can reduce text conflicts but formatting and runtime are practical risks. Frontier merge admission should score formatting/source-preservation loss and keep structured merge as an evidence layer rather than an unconditional auto-merge step.
+- diffTree / hybrid syntax trees: https://www.microsoft.com/en-us/research/wp-content/uploads/2015/02/paper-full.pdf
+  - Transfer: stable semantic/node identities across edits are central to continuous and offline merge. Frontier sidecars should prefer persistent symbol/region ids and source hashes over broad dirty-worktree checks.
 
 ## Current Local Outcomes
 
@@ -34,6 +44,7 @@ This note harvests sources for Frontier Lang's universal import goal: preserve s
 - Added `unverifiedNativeAst` so caller-provided AST blobs no longer become exact semantic evidence unless explicit `exactAst` or adapter coverage is present.
 - Added `NativeImportRegionTaxonomyKinds` and sidecar region taxonomy so merge admission can distinguish declaration, import, body, type, effect, call, and generated-output surfaces.
 - Added `createNativeImportResultContract` so swarms and CLI tools can consume one compact merge/admission summary instead of scraping nested import results.
+- Added Glean-style external semantic index import so predicate fact stores can produce Frontier semantic documents, symbols, occurrences, relations, source maps, and fact records instead of falling back to evidence-only payload hashes.
 
 ## Next Research To Implementation Links
 

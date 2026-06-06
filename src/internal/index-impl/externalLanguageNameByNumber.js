@@ -1,0 +1,23 @@
+export const externalLanguageNameByNumber = Object.freeze({
+  1: 'csharp',
+  2: 'swift',
+  3: 'dart',
+  4: 'kotlin',
+  5: 'scala',
+  6: 'java',
+  15: 'python',
+  16: 'ruby',
+  17: 'elixir',
+  18: 'erlang',
+  19: 'php',
+  22: 'javascript',
+  23: 'typescript',
+  33: 'go',
+  34: 'c',
+  35: 'cpp',
+  38: 'zig',
+  40: 'rust',
+  44: 'haskell',
+  54: 'r',
+  69: 'sql'
+});

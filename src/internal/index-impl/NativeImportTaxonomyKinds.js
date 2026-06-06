@@ -1,0 +1,19 @@
+export const NativeImportTaxonomyKinds = Object.freeze([
+  'exactAstImport',
+  'declarationsOnly',
+  'opaqueBodies',
+  'macroExpansion',
+  'preprocessor',
+  'conditionalCompilation',
+  'metaprogramming',
+  'reflection',
+  'generatedCode',
+  'overloadTypeInference',
+  'sourcePreservation',
+  'commentsTrivia',
+  'parserDiagnostics',
+  'unsupportedSyntax',
+  'partialSemanticIndex',
+  'sourceMapApproximation',
+  'targetProjectionLoss'
+]);

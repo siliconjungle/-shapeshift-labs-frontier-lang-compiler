@@ -1,157 +1,6 @@
 import * as compilerApi from '../src/index.js';
-import {
-  FrontierCompileTargets,
-  NativeImportLanguageProfiles,
-  NativeImportLossKinds,
-  NativeImportFeatureEvidencePolicies,
-  NativeImportReadinessBySeverity,
-  NativeImportRegionTaxonomyKinds,
-  NativeImportRoundtripReadinessStatuses,
-  NativeImportTaxonomyKinds,
-  NativeParserAstFormats,
-  NativeParserAstFormatProfiles,
-  NativeParserFeatureCategories,
-  NativeParserFeatureCoverageStatuses,
-  ProjectionTargetLossClasses,
-  queryNativeParserFeatureMatrix,
-  classifyNativeImportReadiness,
-  classifyNativeImportRoundtripReadiness,
-  compileNativeSource,
-  compileFrontierDocument,
-  compileFrontierSource,
-  createBabelNativeImporterAdapter,
-  createEstreeNativeImporterAdapter,
-  createNativeImportCoverageMatrix,
-  createNativeImportResultContract,
-  createNativeParserAstFormatMatrix,
-  createNativeParserFeatureMatrix,
-  createProjectionTargetLossMatrix,
-  createUniversalCapabilityMatrix,
-  createNativeSourcePreservation,
-  createCSharpRoslynNativeImporterAdapter,
-  createClangAstNativeImporterAdapter,
-  createGoAstNativeImporterAdapter,
-  createJavaAstNativeImporterAdapter,
-  createKotlinPsiNativeImporterAdapter,
-  createPythonAstNativeImporterAdapter,
-  createRustSynNativeImporterAdapter,
-  createSwiftSyntaxNativeImporterAdapter,
-  createSemanticImportSidecar,
-  createSemanticSlice,
-  createTreeSitterNativeImporterAdapter,
-  createTypeScriptCompilerNativeImporterAdapter,
-  createUniversalAstFromDocument,
-  diffNativeSourceImports,
-  diffNativeSources,
-  emitForTarget,
-  emitForTargetWithSourceMap,
-  ExternalSemanticIndexFormats,
-  getNativeImportFeatureEvidencePolicy,
-  getNativeParserAstFormatProfile,
-  importExternalSemanticIndex,
-  importNativeProject,
-  importNativeSource,
-  normalizeCompileTarget,
-  projectFrontierAst,
-  projectNativeImportToSource,
-  readSemanticSliceJson,
-  readUniversalAstJson,
-  renderTargetAst,
-  renderTargetAstWithSourceMap,
-  resolveCapabilityAdapters,
-  runNativeImporterAdapter,
-  runNativeTargetProjectionAdapter,
-  summarizeNativeImportFeatureEvidence,
-  summarizeNativeImportLosses,
-  testSemanticSlice,
-  writeSemanticSliceJson,
-  writeUniversalAstJson
-} from '../src/index.js';
-import type {
-  CapabilityResolution,
-  CompileNativeSourceOptions,
-  CreateNativeSourcePreservationOptions,
-  ExternalSemanticIndexFormat,
-  ExternalSemanticIndexImportResult,
-  FrontierCompileOptions,
-  FrontierCompileResult,
-  FrontierCompileTarget,
-  FrontierTargetAst,
-  FrontierTargetDocumentSourceMapResult,
-  FrontierTargetSourceMapResult,
-  NativeImportContractSource,
-  NativeImportFeatureEvidenceIssue,
-  NativeImportFeatureEvidencePolicy,
-  NativeImportFeatureEvidenceRisk,
-  NativeImportFeatureEvidenceSummary,
-  NativeImportCoverageMatrix,
-  NativeImportCoverageMatrixOptions,
-  NativeImportKnownLossKind,
-  NativeImportLanguageProfile,
-  NativeImportLossSummary,
-  NativeParserAstFormatMatrix,
-  NativeParserAstFormatMatrixOptions,
-  NativeParserAstFormatProfile,
-  NativeParserFeatureCategory,
-  NativeParserFeatureCoverageStatus,
-  NativeParserFeatureMatrix,
-  NativeParserFeatureMatrixOptions,
-  NativeParserFeatureMatrixQueryResult,
-  NativeImportReadinessClassification,
-  NativeImportRegionTaxonomyKind,
-  NativeImportResultContract,
-  NativeImportRoundtripReadinessClassification,
-  NativeImportRoundtripReadinessStatus,
-  NativeImportTaxonomyKind,
-  NativeImporterAdapter,
-  NativeImporterAdapterCoverageAggregate,
-  NativeImporterAdapterCoverageCapabilityEvidence,
-  NativeImporterAdapterDiagnostic,
-  NativeImporterAdapterImportResult,
-  NativeImporterAdapterParseInput,
-  NativeImporterAdapterParseResult,
-  NativeTargetProjectionAdapter,
-  NativeTargetProjectionAdapterInput,
-  NativeTargetProjectionAdapterResult,
-  NativeTargetProjectionResult,
-  NativeProjectImportResult,
-  NativeSourceChangeSet,
-  NativeSourceChangeProjectionEndpoint,
-  NativeSourceChangeProjectionMetadata,
-  NativeSourceChangeProjectionSourceMapLink,
-  NativeSourceChangeProjectionSummary,
-  NativeSourceChangeSymbol,
-  NativeSourceCompileOutputMode,
-  NativeSourceCompileResult,
-  NativeSourceImportResult,
-  NativeSourcePreservation,
-  NativeSourceProjectionResult,
-  ProjectNativeImportToSourceOptions,
-  ProjectionTargetLossClass,
-  ProjectionTargetLossMatrix,
-  ProjectionTargetLossMatrixOptions,
-  CreateSemanticSliceOptions,
-  SemanticSlice,
-  SemanticSliceInput,
-  SemanticSliceSourceFile,
-  SemanticSliceSourceMapLink,
-  SemanticSliceTestResult,
-  TestSemanticSliceOptions,
-  UniversalCapabilityMatrix,
-  UniversalCapabilityMatrixOptions,
-  ClangAstNativeImporterAdapterOptions,
-  CSharpRoslynNativeImporterAdapterOptions,
-  GoAstNativeImporterAdapterOptions,
-  JavaAstNativeImporterAdapterOptions,
-  KotlinPsiNativeImporterAdapterOptions,
-  RustSynNativeImporterAdapterOptions,
-  SwiftSyntaxNativeImporterAdapterOptions,
-  SemanticImportSidecar,
-  SemanticImportSidecarParadigmSemanticsSummary,
-  SemanticImportSidecarProofSpecSummary,
-  SemanticImportSidecarSourcePreservationRecord,
-  SemanticImportRegionTaxonomySummary
-} from '../src/index.js';
+import './public-api-native-fixtures.js';
+import './public-api-adapter-fixtures.js';
 
 type Expect<T extends true> = T;
 type Equal<A, B> =
@@ -174,8 +23,20 @@ type ExpectedPublicRuntimeExport =
   | 'NativeParserAstFormatProfiles'
   | 'NativeParserFeatureCategories'
   | 'NativeParserFeatureCoverageStatuses'
+  | 'ProjectionReadinessStatuses'
   | 'ProjectionTargetLossClasses'
+  | 'LanguageAdapterPackageContracts'
+  | 'LanguageAdapterPackageReleaseReadinessStatuses'
+  | 'SemanticMergeConflictClasses'
+  | 'SemanticPatchBundleAdmissionStatuses'
+  | 'SemanticHistoryAdmissionStatuses'
+  | 'SemanticHistoryConflictReasons'
+  | 'SemanticHistoryOverlapKinds'
+  | 'SemanticHistoryReviewerStatuses'
+  | 'UniversalDialectConstructKinds'
+  | 'UniversalDialectProjectionDispositions'
   | 'ExternalSemanticIndexFormats'
+  | 'attachUniversalDialectRegistry'
   | 'classifyNativeImportReadiness'
   | 'classifyNativeImportRoundtripReadiness'
   | 'compileNativeSource'
@@ -183,12 +44,21 @@ type ExpectedPublicRuntimeExport =
   | 'compileFrontierSource'
   | 'createBabelNativeImporterAdapter'
   | 'createEstreeNativeImporterAdapter'
+  | 'createLanguageAdapterPackageContract'
   | 'createNativeImportCoverageMatrix'
   | 'createNativeImportResultContract'
   | 'createNativeParserAstFormatMatrix'
   | 'createNativeParserFeatureMatrix'
+  | 'createNativeRoundtripEvidence'
+  | 'createProjectImportAdmissionRecord'
+  | 'createProjectionReadinessMatrix'
   | 'createProjectionTargetLossMatrix'
+  | 'createSemanticHistoryRecord'
+  | 'createSemanticPatchBundleRecord'
   | 'createUniversalCapabilityMatrix'
+  | 'createUniversalDialectRecord'
+  | 'createUniversalDialectRegistry'
+  | 'createUniversalExternRecord'
   | 'createNativeSourcePreservation'
   | 'createCSharpRoslynNativeImporterAdapter'
   | 'createClangAstNativeImporterAdapter'
@@ -207,9 +77,15 @@ type ExpectedPublicRuntimeExport =
   | 'diffNativeSources'
   | 'emitForTarget'
   | 'emitForTargetWithSourceMap'
+  | 'getLanguageAdapterPackageContract'
   | 'getNativeImportFeatureEvidencePolicy'
   | 'getNativeParserAstFormatProfile'
+  | 'queryLanguageAdapterPackageContracts'
   | 'queryNativeParserFeatureMatrix'
+  | 'queryProjectionReadinessMatrix'
+  | 'querySemanticHistoryRecordOverlaps'
+  | 'querySemanticPatchBundleRecords'
+  | 'querySemanticMergeConflictClasses'
   | 'importExternalSemanticIndex'
   | 'importNativeProject'
   | 'importNativeSource'
@@ -223,407 +99,38 @@ type ExpectedPublicRuntimeExport =
   | 'resolveCapabilityAdapters'
   | 'runNativeImporterAdapter'
   | 'runNativeTargetProjectionAdapter'
+  | 'semanticMergeConflictRiskScore'
+  | 'semanticHistoryRecordsConflict'
+  | 'semanticHistoryRecordsOverlap'
+  | 'sortSemanticMergeCandidatesByConflictRisk'
+  | 'summarizeLanguageAdapterPackageContracts'
+  | 'summarizeSemanticMergeConflicts'
   | 'summarizeNativeImportFeatureEvidence'
   | 'summarizeNativeImportLosses'
+  | 'summarizeUniversalDialectRegistry'
   | 'testSemanticSlice'
   | 'writeSemanticSliceJson'
   | 'writeUniversalAstJson';
 
 type PublicRuntimeExportsMatchDeclarations = Expect<Equal<keyof typeof compilerApi, ExpectedPublicRuntimeExport>>;
 
-const target: FrontierCompileTarget = normalizeCompileTarget('ts');
-const targets: readonly FrontierCompileTarget[] = FrontierCompileTargets;
-const taxonomyKind: NativeImportTaxonomyKind = NativeImportTaxonomyKinds[0] ?? 'sourcePreservation';
-const lossKind: NativeImportKnownLossKind = NativeImportLossKinds[0] ?? 'sourcePreservation';
-const featureEvidenceRisk: NativeImportFeatureEvidenceRisk = 'high';
-const featureEvidencePolicy: NativeImportFeatureEvidencePolicy | undefined = getNativeImportFeatureEvidencePolicy('preprocessor');
-const featureEvidencePolicies: Readonly<Record<string, NativeImportFeatureEvidencePolicy>> = NativeImportFeatureEvidencePolicies;
-const regionKind: NativeImportRegionTaxonomyKind = NativeImportRegionTaxonomyKinds[0] ?? 'symbol';
-const routeRegionKind: NativeImportRegionTaxonomyKind = 'route';
-const roundtripStatus: NativeImportRoundtripReadinessStatus = NativeImportRoundtripReadinessStatuses[0] ?? 'source-preserved';
-const projectionLossClass: ProjectionTargetLossClass = ProjectionTargetLossClasses[0] ?? 'exactSourceProjection';
-const languageProfiles: readonly NativeImportLanguageProfile[] = NativeImportLanguageProfiles;
-const parserAstFormats: readonly string[] = NativeParserAstFormats;
-const parserAstFormatProfiles: readonly NativeParserAstFormatProfile[] = NativeParserAstFormatProfiles;
-const pythonAstFormatProfile: NativeParserAstFormatProfile | undefined = getNativeParserAstFormatProfile('python_ast');
-const parserFeatureCategories: readonly NativeParserFeatureCategory[] = NativeParserFeatureCategories;
-const parserFeatureStatuses: readonly NativeParserFeatureCoverageStatus[] = NativeParserFeatureCoverageStatuses;
-const externalSemanticFormat: ExternalSemanticIndexFormat = ExternalSemanticIndexFormats[0] ?? 'scip';
-
-const source = `
-module ApiTypes @id("mod_api_types")
-type TodoInput @id("type_todo_input") {
-  title: Text
-}
-entity Todo @id("ent_todo") {
-  title @id("field_title"): Text
-}
-action addTodo @id("action_add") {
-  input TodoInput
-  writes field_title
-  returns Patch
-}
-`;
-
-const compileOptions: FrontierCompileOptions = { target, emitOnError: false };
-const compiled: FrontierCompileResult = compileFrontierSource(source, compileOptions);
-const compiledAgain: FrontierCompileResult = compileFrontierDocument(compiled.document, { target: 'javascript' });
-const emitted: string = emitForTarget(compiled.document, 'js');
-const mappedEmit: FrontierTargetDocumentSourceMapResult = emitForTargetWithSourceMap(compiled.document, 'js', { targetPath: 'api-types.js' });
-const projectedAst: FrontierTargetAst = projectFrontierAst(compiled.document, 'python');
-const rendered: string = renderTargetAst(projectedAst, 'python');
-const mappedRender: FrontierTargetSourceMapResult = renderTargetAstWithSourceMap(projectedAst, 'python', { targetPath: 'api-types.py' });
-const capabilityResolutions: readonly CapabilityResolution[] = resolveCapabilityAdapters(compiled.document, target);
-
-const preservationOptions: CreateNativeSourcePreservationOptions = {
-  language: 'javascript',
-  sourcePath: 'src/api-types.js',
-  sourceText: '// kept\nexport function apiTypes() { return true; }\n',
-  includeDirectives: true
-};
-const preservation: NativeSourcePreservation = createNativeSourcePreservation(preservationOptions);
-const imported: NativeSourceImportResult = importNativeSource({
-  language: 'javascript',
-  sourcePath: 'src/api-types.js',
-  sourceText: preservation.sourceText,
-  sourcePreservation: preservation
-});
-const externalSemanticImport: ExternalSemanticIndexImportResult = importExternalSemanticIndex({
-  format: externalSemanticFormat,
-  language: 'javascript',
-  payload: {
-    kind: 'frontier.lang.semanticIndex',
-    version: 1,
-    id: 'index_api_types_external',
-    documents: [{ id: 'doc_api_types_external', path: 'src/api-types.js', language: 'javascript' }],
-    symbols: [{ id: 'symbol:apiTypes', scheme: 'frontier', name: 'apiTypes', kind: 'function', language: 'javascript' }],
-    occurrences: [{ id: 'occ_api_types_external', documentId: 'doc_api_types_external', symbolId: 'symbol:apiTypes', role: 'definition', span: { path: 'src/api-types.js', startLine: 1, startColumn: 1 } }],
-    relations: [],
-    facts: []
-  }
-});
-externalSemanticImport.semanticIndex satisfies typeof externalSemanticImport.universalAst.semanticIndex;
-externalSemanticImport.summary.readiness satisfies ExternalSemanticIndexImportResult['readiness']['readiness'];
-
-const summary: NativeImportLossSummary = summarizeNativeImportLosses(imported.losses, { evidence: imported.evidence });
-const parserFeatureMatrixOptions: NativeParserFeatureMatrixOptions = {
-  imports: [imported],
-  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
-};
-const parserFeatureMatrix: NativeParserFeatureMatrix = createNativeParserFeatureMatrix(parserFeatureMatrixOptions);
-const parserFeatureQuery: NativeParserFeatureMatrixQueryResult = queryNativeParserFeatureMatrix(parserFeatureMatrix, {
-  language: 'javascript',
-  parser: imported.nativeAst?.parser ?? 'javascript.lightweight-declaration-scan',
-  requiredFeatures: parserFeatureCategories.slice(0, 2)
-});
-parserFeatureStatuses.includes(parserFeatureQuery.row?.features.syntax.status ?? 'missing');
-parserFeatureQuery.merge.mergeReady satisfies boolean;
-const featureEvidenceSummary: NativeImportFeatureEvidenceSummary = summarizeNativeImportFeatureEvidence(imported.losses, {
-  evidence: imported.evidence
-});
-const featureEvidenceIssue: NativeImportFeatureEvidenceIssue | undefined = featureEvidenceSummary.issues[0];
-const readiness: NativeImportReadinessClassification = classifyNativeImportReadiness(imported.losses, {
-  evidence: imported.evidence
-});
-const roundtripReadiness: NativeImportRoundtripReadinessClassification = classifyNativeImportRoundtripReadiness(imported);
-const readinessBySeverity = NativeImportReadinessBySeverity[summary.highestSeverity];
-
-const projectionOptions: ProjectNativeImportToSourceOptions = { preferPreservedSource: true };
-const projection: NativeSourceProjectionResult = projectNativeImportToSource(imported, projectionOptions);
-const targetProjectionAdapter: NativeTargetProjectionAdapter = {
-  id: 'fixture-target-projection-api-types',
-  sourceLanguage: 'javascript',
-  target: 'rust',
-  coverage: {
-    readiness: 'needs-review',
-    handledLossKinds: ['dynamicRuntime']
-  },
-  project(input: NativeTargetProjectionAdapterInput): NativeTargetProjectionAdapterResult {
-    return {
-      output: `// ${input.sourceLanguage} to ${input.target}\n`,
-      readiness: 'needs-review'
-    };
-  }
-};
-const nativeCompileOptions: CompileNativeSourceOptions = {
-  target: 'rust',
-  emitOnBlocked: true,
-  emitSourceMap: true,
-  sourceMapId: 'api-types-native-compile-map',
-  targetPath: 'dist/api-types.rs',
-  targetHash: 'fnv1a32:api-types-target',
-  targetAdapters: [targetProjectionAdapter],
-  targetAdapter: targetProjectionAdapter.id,
-  targetAdapterOptions: { mode: 'api-types' },
-  targetAdapterMetadata: { fixture: true }
-};
-const nativeCompiled: NativeSourceCompileResult = compileNativeSource(imported, nativeCompileOptions);
-const nativeCompileMode: NativeSourceCompileOutputMode = nativeCompiled.outputMode;
-const nativeCompileSourceMap: NativeSourceCompileResult['sourceMap'] = nativeCompiled.sourceMap;
-const nativeCompileSourceMaps: NativeSourceCompileResult['sourceMaps'] = nativeCompiled.sourceMaps;
-const targetProjection: NativeTargetProjectionResult | undefined = nativeCompiled.targetProjection;
-const directTargetProjection: NativeTargetProjectionResult = runNativeTargetProjectionAdapter(targetProjectionAdapter, {
-  importResult: imported,
-  sourceProjection: projection,
-  sourceLanguage: 'javascript',
-  target: 'rust',
-  options: {},
-  metadata: {}
-});
-const sidecar: SemanticImportSidecar = createSemanticImportSidecar(imported, { targetPath: 'dist/api-types.js' });
-const regionTaxonomy: SemanticImportRegionTaxonomySummary = sidecar.regionTaxonomy;
-const proofSpecSummary: SemanticImportSidecarProofSpecSummary = sidecar.proofSpec;
-const paradigmSummary: SemanticImportSidecarParadigmSemanticsSummary = sidecar.paradigmSemantics;
-const sourcePreservationRow: SemanticImportSidecarSourcePreservationRecord | undefined = sidecar.sourcePreservation.records[0];
-const sourcePreservationCount: number = sidecar.summary.sourcePreservationRecords + (sourcePreservationRow?.lossIds.length ?? 0) + proofSpecSummary.obligations + paradigmSummary.loweringRecords;
-void sourcePreservationCount;
-const sliceInput: SemanticSliceInput = imported;
-const sliceOptions: CreateSemanticSliceOptions = {
-  entryRefs: ['symbol:apiTypes'],
-  includeDependencies: true,
-  focusedCommands: ['npm test -- api-types'],
-  fixtureHints: ['api type fixture']
-};
-const semanticSlice: SemanticSlice = createSemanticSlice(sliceInput, sliceOptions);
-const semanticSliceLink: SemanticSliceSourceMapLink | undefined = semanticSlice.sourceMapLinks[0];
-const semanticSliceFile: SemanticSliceSourceFile | undefined = semanticSlice.sourceFiles[0];
-const semanticSliceTestOptions: TestSemanticSliceOptions = {
-  currentSources: {
-    'src/api-types.js': preservation.sourceText ?? ''
-  }
-};
-const semanticSliceTest: SemanticSliceTestResult = testSemanticSlice(semanticSlice, semanticSliceTestOptions);
-const semanticSliceJson: string = writeSemanticSliceJson(semanticSlice);
-const semanticSliceAgain: SemanticSlice = readSemanticSliceJson(semanticSliceJson);
-semanticSlice.mergeAdmission.autoMergeClaim satisfies false;
-semanticSliceTest.status satisfies SemanticSliceTestResult['status'];
-void semanticSliceLink;
-void semanticSliceFile;
-void semanticSliceAgain;
-const contract: NativeImportResultContract = createNativeImportResultContract(imported, { sidecarId: sidecar.id });
-const contractSource: NativeImportContractSource = contract.sources[0] ?? {
-  id: 'missing',
-  sourceMapIds: [],
-  sourceMapMappings: 0,
-  symbolCount: 0,
-  lossCount: 0,
-  evidenceCount: 0
-};
-
-const changedSource: NativeSourceChangeSet = diffNativeSources({
-  language: 'javascript',
-  sourcePath: 'src/api-types.js',
-  beforeSourceText: preservation.sourceText,
-  afterSourceText: '// kept\nexport function apiTypes() { return false; }\n'
-});
-const changedSourceAgain: NativeSourceChangeSet = diffNativeSourceImports({
-  before: imported,
-  after: changedSource.after
-});
-const changedSymbol: NativeSourceChangeSymbol | undefined = changedSource.changedSymbols[0];
-const changedRegionProjectionSummary: NativeSourceChangeProjectionSummary | undefined = changedSource.metadata?.changedRegionProjectionSummary;
-const changedRegionProjection: NativeSourceChangeProjectionMetadata | undefined = changedSource.changedRegions[0]?.metadata?.changedRegionProjection;
-const changedRegionProjectionEndpoint: NativeSourceChangeProjectionEndpoint | undefined = changedRegionProjection?.after;
-const changedRegionProjectionLink: NativeSourceChangeProjectionSourceMapLink | undefined = changedRegionProjection?.sourceMapLinks[0];
-if (changedRegionProjection) changedRegionProjection.autoMergeClaim satisfies false;
-if (changedRegionProjectionEndpoint) changedRegionProjectionEndpoint.exactSourceAvailable satisfies boolean;
-if (changedRegionProjectionLink) changedRegionProjectionLink.precision satisfies string | undefined;
-if (changedRegionProjectionSummary) changedRegionProjectionSummary.autoMergeClaims satisfies number;
-
-const estreeAdapter: NativeImporterAdapter = createEstreeNativeImporterAdapter();
-const babelAdapter: NativeImporterAdapter = createBabelNativeImporterAdapter();
-const tsAdapter: NativeImporterAdapter = createTypeScriptCompilerNativeImporterAdapter();
-const pythonAstAdapter: NativeImporterAdapter = createPythonAstNativeImporterAdapter();
-const rustSynAdapter: NativeImporterAdapter = createRustSynNativeImporterAdapter();
-const clangAstAdapter: NativeImporterAdapter = createClangAstNativeImporterAdapter();
-const goAstAdapter: NativeImporterAdapter = createGoAstNativeImporterAdapter();
-const javaAstAdapter: NativeImporterAdapter = createJavaAstNativeImporterAdapter();
-const kotlinPsiAdapter: NativeImporterAdapter = createKotlinPsiNativeImporterAdapter();
-const csharpRoslynAdapter: NativeImporterAdapter = createCSharpRoslynNativeImporterAdapter();
-const swiftSyntaxAdapter: NativeImporterAdapter = createSwiftSyntaxNativeImporterAdapter();
-const treeAdapter: NativeImporterAdapter = createTreeSitterNativeImporterAdapter({ language: 'javascript' });
-
-const adapterDiagnostic: NativeImporterAdapterDiagnostic = {
-  severity: 'warning',
-  code: 'fixture.warning',
-  kind: 'opaqueNative',
-  message: 'fixture diagnostic'
-};
-const parseResult: NativeImporterAdapterParseResult = {
-  rootId: 'root',
-  nodes: {
-    root: { id: 'root', kind: 'Program', languageKind: 'ESTree.Program' }
-  },
-  diagnostics: [adapterDiagnostic]
-};
-const parseInputHandler = (input: NativeImporterAdapterParseInput): NativeImporterAdapterParseResult => ({
-  ...parseResult,
-  sourcePath: input.sourcePath,
-  sourceHash: input.sourceHash
-});
-const fixtureAdapter: NativeImporterAdapter = {
-  id: 'fixture-public-api-types',
-  language: 'javascript',
-  parser: 'estree',
-  parse: parseInputHandler
-};
-const adapterImport: Promise<NativeImporterAdapterImportResult> = runNativeImporterAdapter(fixtureAdapter, {
-  sourcePath: 'src/adapter-api-types.js',
-  sourceText: 'export function adapterApiTypes() {}\n'
-});
-
-const coverageOptions: NativeImportCoverageMatrixOptions = {
-  generatedAt: 1,
-  imports: [imported],
-  adapters: [estreeAdapter, babelAdapter, tsAdapter, treeAdapter]
-};
-const coverage: NativeImportCoverageMatrix = createNativeImportCoverageMatrix(coverageOptions);
-const adapterCoverageAggregate: NativeImporterAdapterCoverageAggregate = coverage.summary.adapterCoverage;
-const adapterCapabilityEvidence: Promise<NativeImporterAdapterCoverageCapabilityEvidence | undefined> = adapterImport
-  .then((result) => result.adapter.coverage.capabilityEvidence);
-const parserFormatOptions: NativeParserAstFormatMatrixOptions = {
-  generatedAt: 4,
-  imports: [imported],
-  adapters: [estreeAdapter, babelAdapter, tsAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, kotlinPsiAdapter, csharpRoslynAdapter, swiftSyntaxAdapter, treeAdapter]
-};
-const parserFormatMatrix: NativeParserAstFormatMatrix = createNativeParserAstFormatMatrix(parserFormatOptions);
-const rustSynAdapterOptions: RustSynNativeImporterAdapterOptions = {
-  rustEdition: '2021',
-  ast: { kind: 'File', items: [] }
-};
-const clangAstAdapterOptions: ClangAstNativeImporterAdapterOptions = {
-  cStandard: 'c11',
-  compileFlags: ['-std=c11'],
-  preprocessorRecords: [{ kind: 'MacroDefinitionRecord', name: 'FEATURE' }],
-  includeGraph: { hash: 'fixture' },
-  ast: { kind: 'TranslationUnitDecl', inner: [] }
-};
-const goAstAdapterOptions: GoAstNativeImporterAdapterOptions = {
-  goVersion: '1.22',
-  packageName: 'todo',
-  buildTags: ['frontier'],
-  typeEvidence: { hash: 'fixture-go-types' },
-  ast: { kind: 'File', Name: { kind: 'Ident', Name: 'todo' }, Decls: [] }
-};
-const javaAstAdapterOptions: JavaAstNativeImporterAdapterOptions = {
-  javaVersion: '21',
-  sourceLevel: '21',
-  classPath: ['target/classes'],
-  modulePath: ['mods'],
-  bindingEvidence: { hash: 'fixture-java-bindings' },
-  annotationProcessing: { enabled: false, processors: [] },
-  ast: { kind: 'CompilationUnit', types: [] }
-};
-const kotlinPsiAdapterOptions: KotlinPsiNativeImporterAdapterOptions = {
-  kotlinVersion: '2.1',
-  languageVersion: '2.1',
-  apiVersion: '2.1',
-  analysisApiEvidence: { hash: 'fixture-kotlin-analysis-api' },
-  firEvidence: { hash: 'fixture-kotlin-fir' },
-  compilerPluginEvidence: { hash: 'fixture-kotlin-plugins', plugins: ['kotlinx.serialization'] },
-  kspEvidence: { hash: 'fixture-kotlin-ksp' },
-  kaptEvidence: { hash: 'fixture-kotlin-kapt' },
-  multiplatformEvidence: { hash: 'fixture-kotlin-mpp', targetPlatform: 'jvm' },
-  buildVariantEvidence: { hash: 'fixture-kotlin-build-variant', selectedVariant: 'debug' },
-  ast: { kind: 'KtFile', declarations: [] }
-};
-const csharpRoslynAdapterOptions: CSharpRoslynNativeImporterAdapterOptions = {
-  languageVersion: '12',
-  nullableContext: 'enabled',
-  projectReferences: { hash: 'fixture-csharp-projects', projects: ['Todo.csproj'] },
-  semanticModelEvidence: { solver: 'roslyn', hash: 'fixture-csharp-semantic-model' },
-  ast: { kind: 'CompilationUnit', members: [] }
-};
-const swiftSyntaxAdapterOptions: SwiftSyntaxNativeImporterAdapterOptions = {
-  swiftVersion: '6',
-  languageMode: 'swift-6',
-  sourceKitEvidence: { solver: 'sourcekit-lsp', hash: 'fixture-swift-sourcekit' },
-  macroExpansionEvidence: { hash: 'fixture-swift-macros', macros: ['Observable'] },
-  packageResolutionEvidence: { hash: 'fixture-swift-package', packages: ['DemoPackage'] },
-  ast: { kind: 'SourceFileSyntax', statements: [] }
-};
-const projectionLossOptions: ProjectionTargetLossMatrixOptions = {
-  generatedAt: 2,
-  imports: [imported],
-  adapters: [estreeAdapter],
-  targetAdapters: [targetProjectionAdapter],
-  targets: ['javascript', 'rust']
-};
-const projectionLossMatrix: ProjectionTargetLossMatrix = createProjectionTargetLossMatrix(projectionLossOptions);
-const universalCapabilityOptions: UniversalCapabilityMatrixOptions = {
-  generatedAt: 3,
-  imports: [imported],
-  adapters: [estreeAdapter],
-  targetAdapters: [targetProjectionAdapter],
-  targets: ['javascript', 'rust'],
-  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
-};
-const universalCapabilityMatrix: UniversalCapabilityMatrix = createUniversalCapabilityMatrix(universalCapabilityOptions);
-
-const projectImport: Promise<NativeProjectImportResult> = importNativeProject({
-  projectRoot: 'src',
-  sources: [{
-    language: 'javascript',
-    sourcePath: 'src/project-api-types.js',
-    sourceText: 'export function projectApiTypes() {}\n'
-  }]
-});
-
-const universalAst = createUniversalAstFromDocument(compiled.document, {
-  sourceMaps: imported.sourceMaps,
-  evidence: imported.evidence
-});
-const universalJson: string = writeUniversalAstJson(universalAst);
-const parsedUniversalAst = readUniversalAstJson(universalJson);
-
-void targets;
-void taxonomyKind;
-void lossKind;
-void featureEvidenceRisk;
-void featureEvidencePolicy;
-void featureEvidencePolicies;
-void featureEvidenceSummary;
-void featureEvidenceIssue;
-void regionKind;
-void roundtripStatus;
-void projectionLossClass;
-void languageProfiles;
-void parserAstFormats;
-void parserAstFormatProfiles;
-void pythonAstFormatProfile;
-void compiledAgain;
-void emitted;
-void mappedEmit;
-void rendered;
-void mappedRender;
-void capabilityResolutions;
-void readiness;
-void roundtripReadiness;
-void readinessBySeverity;
-void projection;
-void targetProjectionAdapter;
-void nativeCompiled;
-void nativeCompileMode;
-void nativeCompileSourceMap;
-void nativeCompileSourceMaps;
-void targetProjection;
-void directTargetProjection;
-void sidecar;
-void regionTaxonomy;
-void contractSource;
-void adapterImport;
-void coverage;
-void adapterCoverageAggregate;
-void adapterCapabilityEvidence;
-void parserFormatMatrix;
-void rustSynAdapterOptions;
-void clangAstAdapterOptions;
-void goAstAdapterOptions;
-void javaAstAdapterOptions;
-void csharpRoslynAdapterOptions;
-void swiftSyntaxAdapterOptions;
-void projectionLossMatrix;
-void universalCapabilityMatrix;
-void projectImport;
-void parsedUniversalAst;
 void (null as unknown as PublicRuntimeExportsMatchDeclarations);
+
+const semanticPatchBundle = compilerApi.createSemanticPatchBundleRecord({
+  language: 'javascript',
+  sourcePath: 'src/example.js',
+  baseHash: 'base_hash',
+  targetHash: 'target_hash',
+  changedRegions: [{ key: 'source#src/example.js#function#run', conflictKey: 'source#src/example.js#function#run' }],
+  evidenceIds: ['evidence_example'],
+  proofIds: ['proof_example'],
+  historyIds: ['history_example'],
+  admission: { status: 'queued', readiness: 'needs-review' }
+});
+const typedSemanticPatchBundle: compilerApi.SemanticPatchBundleRecord = semanticPatchBundle;
+const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecord[] = compilerApi.querySemanticPatchBundleRecords(
+  [typedSemanticPatchBundle],
+  { regionKey: 'source#src/example.js#function#run', evidenceId: 'evidence_example', admissionStatus: 'queued' }
+);
+
+void queriedSemanticPatchBundles;
