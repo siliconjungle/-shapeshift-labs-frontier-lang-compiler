@@ -5,6 +5,7 @@ import {
   createSemanticImportSidecar,
   createSemanticSlice,
   createSemanticSliceAdmissionRecord,
+  createUniversalConversionPlan,
   projectNativeImportToSource,
   summarizeNativeImportFeatureEvidence,
   testSemanticSlice
@@ -47,6 +48,13 @@ export function measureNativeTransformations(nativeImportResults) {
   }));
   const sliceAdmissionDurationMs = performance.now() - sliceAdmissionStart;
 
+  const conversionPlanStart = performance.now();
+  const conversionPlan = createUniversalConversionPlan({
+    imports: nativeImportResults.slice(0, 100),
+    targets: ['javascript', 'rust', 'python']
+  });
+  const conversionPlanDurationMs = performance.now() - conversionPlanStart;
+
   const featureEvidenceStart = performance.now();
   const featureEvidenceSummaries = nativeImportResults.map((imported) => summarizeNativeImportFeatureEvidence(imported.losses, {
     evidence: imported.evidence
@@ -77,6 +85,9 @@ export function measureNativeTransformations(nativeImportResults) {
     sliceGateFailures,
     sliceAdmissions: semanticSliceAdmissions.length,
     sliceAdmissionRejected: semanticSliceAdmissions.filter((admission) => admission.action === 'reject').length,
+    conversionPlanRoutes: conversionPlan.routes.length,
+    conversionPlanBlocked: conversionPlan.summary.blockedRoutes,
+    conversionPlanDurationMs,
     featureEvidencePolicyMatches,
     featureEvidenceDurationMs,
     nativeProjections: nativeProjections.length,

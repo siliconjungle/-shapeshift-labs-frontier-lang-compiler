@@ -26,3 +26,4 @@ await import('./smoke/roundtrip.mjs');
 await import('./smoke/scanned-languages.mjs');
 await import('./smoke/matrices-final.mjs');
 await import('./smoke/projection-readiness.mjs');
+await import('./smoke/universal-conversion-plan.mjs');

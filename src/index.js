@@ -29,6 +29,7 @@ export { createTreeSitterNativeImporterAdapter } from './internal/index-impl/cre
 export { createTypeScriptCompilerNativeImporterAdapter } from './internal/index-impl/createTypeScriptCompilerNativeImporterAdapter.js';
 export { createUniversalAstFromDocument } from './internal/index-impl/createUniversalAstFromDocument.js';
 export { createUniversalCapabilityMatrix } from './internal/index-impl/createUniversalCapabilityMatrix.js';
+export { createUniversalConversionPlan } from './internal/index-impl/createUniversalConversionPlan.js';
 export { attachUniversalDialectRegistry, createUniversalDialectRecord, createUniversalDialectRegistry, createUniversalExternRecord, summarizeUniversalDialectRegistry, UniversalDialectConstructKinds, UniversalDialectProjectionDispositions } from './universal-dialect-registry.js';
 export { diffNativeSourceImports } from './internal/index-impl/diffNativeSourceImports.js';
 export { diffNativeSources } from './internal/index-impl/diffNativeSources.js';
@@ -62,6 +63,7 @@ export { queryNativeParserFeatureMatrix } from './internal/index-impl/queryNativ
 export { queryProjectionReadinessMatrix } from './internal/index-impl/queryProjectionReadinessMatrix.js';
 export { createSemanticPatchBundleRecord, querySemanticPatchBundleRecords, SemanticPatchBundleAdmissionStatuses } from './internal/index-impl/semanticPatchBundleRecords.js';
 export { querySemanticMergeConflictClasses, SemanticMergeConflictClasses, semanticMergeConflictRiskScore, sortSemanticMergeCandidatesByConflictRisk, summarizeSemanticMergeConflicts } from './internal/index-impl/semanticMergeConflicts.js';
+export { queryUniversalConversionPlan } from './internal/index-impl/queryUniversalConversionPlan.js';
 export { createSemanticHistoryRecord, querySemanticHistoryRecordOverlaps, SemanticHistoryAdmissionStatuses, SemanticHistoryConflictReasons, SemanticHistoryOverlapKinds, SemanticHistoryReviewerStatuses, semanticHistoryRecordsConflict, semanticHistoryRecordsOverlap } from './internal/index-impl/semanticHistoryRecords.js';
 export { readSemanticSliceJson } from './internal/index-impl/readSemanticSliceJson.js';
 export { readUniversalAstJson } from './internal/index-impl/readUniversalAstJson.js';

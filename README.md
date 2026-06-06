@@ -129,6 +129,8 @@ import {
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
   createUniversalCapabilityMatrix,
+  createUniversalConversionPlan,
+  queryUniversalConversionPlan,
   importNativeSource
 } from '@shapeshift-labs/frontier-lang-compiler';
 
@@ -162,6 +164,20 @@ const pythonUniversal = universalMatrix.languages.find((entry) => entry.language
 
 console.log(pythonUniversal.readiness); // combined import/parser/projection readiness
 console.log(pythonUniversal.blockers); // missing evidence/adapters that prevent merge admission
+
+const conversionPlan = createUniversalConversionPlan({
+  imports: [imported],
+  targets: ['python', 'rust'],
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+});
+const pythonToRust = queryUniversalConversionPlan(conversionPlan, {
+  sourceLanguage: 'python',
+  target: 'rust'
+}).bestRoute;
+
+console.log(pythonToRust.mode); // "semantic-index-only", "target-adapter", "stub-only", etc.
+console.log(pythonToRust.missingEvidence); // adapter/proof/source-map gaps for swarm workers
+console.log(pythonToRust.mergeScore.value); // sortable merge-review score, not a proof
 ```
 
 The projection target matrix separates five runtime/API classes:
@@ -173,6 +189,8 @@ The projection target matrix separates five runtime/API classes:
 - `missingAdapter`: no native-to-target projection adapter is declared; preserve or stub the original source language instead, or inject host-owned parser/semantic adapter evidence.
 
 `createUniversalCapabilityMatrix` composes the import coverage, parser AST format, parser feature, and projection target matrices into a single language row per source language. It is the coordinator-facing view for universal-language work: it shows imports, symbols, source-map mappings, parser feature readiness, projection targets, missing adapters, unsupported target features, blockers, and review reasons without claiming lossless conversion where evidence is absent.
+
+`createUniversalConversionPlan` turns that capability evidence into coordinator tasks: preserve exact source, run a target adapter, emit stubs, attach semantic-index evidence, or block the route until missing parser/adapter/proof evidence exists. Every route carries `autoMergeClaim: false`, `semanticEquivalenceClaim: false`, missing evidence, task hints, and a `frontier.lang.semanticMergeScore.v1` score for swarm merge admission.
 
 Preserve exact native source text, token/trivia hashes, comments, whitespace, and source directives as evidence. This does not claim full semantic understanding; it keeps round-trip material available while exact parser adapters catch up:
 

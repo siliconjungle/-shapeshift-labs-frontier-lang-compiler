@@ -5,6 +5,7 @@ import {
   createNativeParserFeatureMatrix,
   createProjectionTargetLossMatrix,
   createSemanticImportSidecar,
+  createUniversalConversionPlan,
   createUniversalCapabilityMatrix,
   importNativeProject,
   queryNativeParserFeatureMatrix
@@ -78,6 +79,15 @@ export async function runProjectMatrixCases(adapters) {
   assert.equal(universalMatrix.matrices.projectionTargets.summary.languages, projectionMatrix.summary.languages);
   assert.ok(universalMatrix.summary.parserRows >= universalMatrix.summary.languages);
   assert.ok(universalMatrix.summary.blockers > 0);
+
+  const conversionPlan = createUniversalConversionPlan({
+    imports: project.imports,
+    adapters: adapterList,
+    targets: ['javascript', 'rust']
+  });
+  assert.equal(conversionPlan.summary.routes >= project.imports.length, true);
+  assert.equal(conversionPlan.summary.autoMergeClaims, 0);
+  assert.ok(conversionPlan.routes.some((route) => route.missingEvidence.includes('proof-or-replay-evidence')));
 
   const projectSidecar = createSemanticImportSidecar(project);
   assert.equal(projectSidecar.summary.imports, 2);
