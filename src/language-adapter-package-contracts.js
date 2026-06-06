@@ -24,12 +24,12 @@ const packageRows = [
   row('@shapeshift-labs/frontier-lang-rust', '0.2.6', 'rust', 'rust-syn', { target: 'rust', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'macroExpansionEvidence'] }),
   row('@shapeshift-labs/frontier-lang-python', '0.2.6', 'python', 'python-ast', { target: 'python', formats: ['python-ast', 'libcst'] }),
   row('@shapeshift-labs/frontier-lang-c', '0.2.6', 'c', 'clang-ast-json', { target: 'c', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'compileCommandsHash', 'preprocessorRecordsHash'] }),
-  platform('@shapeshift-labs/frontier-lang-java', '0.1.3', 'java', 'java-ast', ['semanticdb', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-kotlin', '0.1.3', 'kotlin', 'kotlin-psi', ['semanticdb', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-swift', '0.1.3', 'swift', 'swift-syntax', ['sourcekit-lsp', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-csharp', '0.1.3', 'csharp', 'roslyn-csharp', ['lsp']),
-  platform('@shapeshift-labs/frontier-lang-go', '0.1.3', 'go', 'go-ast', ['lsp']),
-  platform('@shapeshift-labs/frontier-lang-clang', '0.1.3', 'c', 'clang-ast-json', ['lsp'], {
+  platform('@shapeshift-labs/frontier-lang-java', '0.1.4', 'java', 'java-ast', ['semanticdb', 'lsp']),
+  platform('@shapeshift-labs/frontier-lang-kotlin', '0.1.4', 'kotlin', 'kotlin-psi', ['semanticdb', 'lsp']),
+  platform('@shapeshift-labs/frontier-lang-swift', '0.1.4', 'swift', 'swift-syntax', ['sourcekit-lsp', 'lsp']),
+  platform('@shapeshift-labs/frontier-lang-csharp', '0.1.4', 'csharp', 'roslyn-csharp', ['lsp']),
+  platform('@shapeshift-labs/frontier-lang-go', '0.1.4', 'go', 'go-ast', ['lsp']),
+  platform('@shapeshift-labs/frontier-lang-clang', '0.1.4', 'c', 'clang-ast-json', ['lsp'], {
     supportedLanguages: ['c', 'cpp'],
     proofKeys: ['parserAst', 'semanticIndex', 'compileCommandsHash', 'preprocessorRecordsHash']
   })

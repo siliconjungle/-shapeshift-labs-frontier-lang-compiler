@@ -120,7 +120,7 @@ for (const [packageName, language, parserFormat, semanticFormat] of publishedPla
   const contract = getLanguageAdapterPackageContract(packageName);
   assert.equal(contract.kind, 'frontier.lang.languageAdapterPackageContract');
   assert.equal(contract.package.name, packageName);
-  assert.equal(contract.package.version, '0.1.3');
+  assert.equal(contract.package.version, '0.1.4');
   assert.equal(contract.sourceParser.language, language);
   assert.equal(contract.sourceParser.format, parserFormat);
   assert.equal(contract.sourceParser.supportedFormats.includes(parserFormat), true);
