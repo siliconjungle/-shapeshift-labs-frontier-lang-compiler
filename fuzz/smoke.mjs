@@ -17,6 +17,7 @@ import {
   createRustSynNativeImporterAdapter,
   createSwiftSyntaxNativeImporterAdapter,
   createSemanticImportSidecar,
+  createSemanticSlice,
   diffNativeSources,
   importExternalSemanticIndex,
   importNativeProject,
@@ -24,7 +25,8 @@ import {
   projectNativeImportToSource,
   queryNativeParserFeatureMatrix,
   runNativeImporterAdapter,
-  summarizeNativeImportFeatureEvidence
+  summarizeNativeImportFeatureEvidence,
+  testSemanticSlice
 } from '../dist/index.js';
 
 const targets = ['typescript', 'javascript', 'rust', 'python', 'c'];
@@ -114,6 +116,25 @@ for (let index = 0; index < 30; index += 1) {
   assert.ok(sidecar.regionTaxonomy.presentKinds.includes('content'));
   assert.ok(sidecar.regionTaxonomy.presentKinds.includes('config'));
   assert.ok(sidecar.regionTaxonomy.presentKinds.includes('property'));
+}
+
+for (let index = 0; index < 30; index += 1) {
+  const sourceText = `export function sliceCase${index}(value) { return value + ${index}; }\nexport function helper${index}(value) { return value; }\n`;
+  const imported = importNativeSource({
+    language: index % 2 === 0 ? 'typescript' : 'javascript',
+    sourcePath: `src/slice-${index}.${index % 2 === 0 ? 'ts' : 'js'}`,
+    sourceText
+  });
+  const slice = createSemanticSlice(imported, {
+    entryRefs: [`symbol:sliceCase${index}`],
+    includeDependencies: index % 3 !== 0,
+    focusedCommands: [`npm test -- slice-${index}`]
+  });
+  assert.equal(slice.unresolvedEntryRefs.length, 0);
+  assert.ok(slice.symbols.some((symbol) => symbol.name === `sliceCase${index}`));
+  assert.ok(slice.sourceMapLinks.length >= 1);
+  const gate = testSemanticSlice(slice, { currentSources: { [imported.sourcePath]: sourceText } });
+  assert.equal(gate.status, 'passed');
 }
 
 const falsePositiveRegionImport = importNativeSource({

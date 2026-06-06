@@ -2,6 +2,16 @@
 
 Compiler facade for Frontier Lang. It composes the parser, checker, semantic kernel, and projection adapters for TypeScript, JavaScript, Rust, Python, and C.
 
+## Vision
+
+Frontier Lang and Frontier Swarm are two parts of the same system: a semantic programming substrate for agent teams.
+
+Frontier Lang is the universal code representation. It imports source from native languages into a replayable semantic graph: AST layers, symbols, ownership regions, source maps, effects, proof obligations, runtime assumptions, tests, traces, and merge history. It preserves exact native source where needed, imports parser/compiler facts where available, and projects semantic programs back out through target-language adapters.
+
+Frontier Swarm is the coordination layer for many agents working on that graph. It breaks large engineering goals into owned semantic regions, assigns workers isolated slices of context, collects machine-readable evidence, scores merge readiness, and lets the coordinator integrate patches without reading every worker transcript manually.
+
+The shared goal is semantic merging for code. A worker output should say what it changed, what semantic region it owns, what source hashes it depended on, what tests or traces prove the change, what assumptions it conflicts with, and whether it is ready to merge, needs porting, or is discovery-only.
+
 ```js
 import { compileFrontierSource } from '@shapeshift-labs/frontier-lang-compiler';
 
@@ -254,6 +264,44 @@ console.log(changeSet.mergeCandidate.readiness); // merge-admission classificati
 
 Use `diffNativeSourceImports` when the worker or runner already produced `importNativeSource` results. Changed regions include a `metadata.changedRegionProjection` envelope with before/after source hashes, source-map links, ownership keys, readiness, and `autoMergeClaim: false` so swarm admission tools can score or port patches without treating semantic metadata as proof. Body-only edits that the lightweight scanner cannot anchor to a symbol are still reported as file-level changed regions instead of being silently treated as safe.
 
+Extract a surgical semantic slice when a worker only needs one symbol, region, native AST node, or source path:
+
+```js
+import {
+  createSemanticSlice,
+  importNativeSource,
+  testSemanticSlice,
+  writeSemanticSliceJson
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const sourceText = 'export function parseExpression(input) { return input; }\n';
+const imported = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/parser.ts',
+  sourceText
+});
+
+const slice = createSemanticSlice(imported, {
+  entryRefs: ['symbol:parseExpression'],
+  includeDependencies: true,
+  focusedCommands: ['npm test -- parser-expression'],
+  fixtureHints: ['operator precedence corpus']
+});
+
+console.log(slice.kind); // "frontier.lang.semanticSlice"
+console.log(slice.mergeAdmission.conflictKeys); // semantic ownership keys
+console.log(slice.sourceFiles[0].sourceHash); // stale-check input for admission
+
+const gate = testSemanticSlice(slice, {
+  currentSources: { 'src/parser.ts': sourceText }
+});
+
+console.log(gate.status); // "passed", "needs-review", or "failed"
+console.log(writeSemanticSliceJson(slice)); // stable JSON for worker inputs
+```
+
+A semantic slice is the small unit a swarm can hand to a worker instead of copying a full repository. It carries the selected symbols, ownership regions, native nodes, relations, occurrences, source-map links, source spans, source excerpts, source hashes, focused verification commands, fixture hints, and merge-admission metadata. It does not claim the patch is correct; it makes the context and conflicts machine-readable so admission scoring can combine changed ownership, focused test status, stale/source-hash checks, evidence, and semantic risk in one sortable record.
+
 Compile native source imports through the same reader/IR/writer facade that swarms use for sidecar evidence. Same-language targets preserve exact source when hashes match; cross-language targets emit declaration stubs until a real adapter provides stronger evidence:
 
 ```js
@@ -496,7 +544,7 @@ The published Frontier package family is generated from one shared package catal
 - [`@shapeshift-labs/frontier-lang-csharp`](https://www.npmjs.com/package/@shapeshift-labs/frontier-lang-csharp): C# Roslyn source-language importer package for Frontier Lang semantic documents, including package-level metadata, Roslyn adapter helpers, native import results, and semantic sidecar generation for SyntaxTree/SyntaxNode-shaped ASTs.
 - [`@shapeshift-labs/frontier-lang-clang`](https://www.npmjs.com/package/@shapeshift-labs/frontier-lang-clang): Clang AST source-language importer package for Frontier Lang semantic documents, including package-level metadata, Clang AST JSON adapter helpers, native import results, and semantic sidecar generation for C/C++ translation units.
 - [`@shapeshift-labs/frontier-lang-cli`](https://www.npmjs.com/package/@shapeshift-labs/frontier-lang-cli): Command line interface for parsing, checking, hashing, and emitting Frontier Lang projects.
-- [`@shapeshift-labs/frontier-lang`](https://www.npmjs.com/package/@shapeshift-labs/frontier-lang): Umbrella package for Frontier Lang kernel, parser, checker, and projection adapters.
+- [`@shapeshift-labs/frontier-lang`](https://www.npmjs.com/package/@shapeshift-labs/frontier-lang): Umbrella package for Frontier Lang kernel, parser, checker, compiler facade, universal AST helpers, and projection adapters.
 - [`@shapeshift-labs/frontier-kv`](https://www.npmjs.com/package/@shapeshift-labs/frontier-kv): Serializable in-memory key/value state for Frontier apps, including TTL, versioned compare-and-set, batched patch mutations, scans, watchers, snapshots, JSONL event evidence, and replay verification.
 - [`@shapeshift-labs/frontier-kv-locks`](https://www.npmjs.com/package/@shapeshift-labs/frontier-kv-locks): Lease-style lock records on top of Frontier KV, including acquire, renew, release, fencing tokens, expiration, owner evidence, and replayable lock events.
 - [`@shapeshift-labs/frontier-kv-rate-limit`](https://www.npmjs.com/package/@shapeshift-labs/frontier-kv-rate-limit): Patch-native rate limit buckets for Frontier KV, including fixed windows, sliding windows, token buckets, deterministic refill, consume evidence, and reset records.

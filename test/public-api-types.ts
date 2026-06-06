@@ -37,6 +37,7 @@ import {
   createRustSynNativeImporterAdapter,
   createSwiftSyntaxNativeImporterAdapter,
   createSemanticImportSidecar,
+  createSemanticSlice,
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
   createUniversalAstFromDocument,
@@ -53,6 +54,7 @@ import {
   normalizeCompileTarget,
   projectFrontierAst,
   projectNativeImportToSource,
+  readSemanticSliceJson,
   readUniversalAstJson,
   renderTargetAst,
   renderTargetAstWithSourceMap,
@@ -61,6 +63,8 @@ import {
   runNativeTargetProjectionAdapter,
   summarizeNativeImportFeatureEvidence,
   summarizeNativeImportLosses,
+  testSemanticSlice,
+  writeSemanticSliceJson,
   writeUniversalAstJson
 } from '../src/index.js';
 import type {
@@ -126,6 +130,13 @@ import type {
   ProjectionTargetLossClass,
   ProjectionTargetLossMatrix,
   ProjectionTargetLossMatrixOptions,
+  CreateSemanticSliceOptions,
+  SemanticSlice,
+  SemanticSliceInput,
+  SemanticSliceSourceFile,
+  SemanticSliceSourceMapLink,
+  SemanticSliceTestResult,
+  TestSemanticSliceOptions,
   UniversalCapabilityMatrix,
   UniversalCapabilityMatrixOptions,
   ClangAstNativeImporterAdapterOptions,
@@ -188,6 +199,7 @@ type ExpectedPublicRuntimeExport =
   | 'createRustSynNativeImporterAdapter'
   | 'createSwiftSyntaxNativeImporterAdapter'
   | 'createSemanticImportSidecar'
+  | 'createSemanticSlice'
   | 'createTreeSitterNativeImporterAdapter'
   | 'createTypeScriptCompilerNativeImporterAdapter'
   | 'createUniversalAstFromDocument'
@@ -204,6 +216,7 @@ type ExpectedPublicRuntimeExport =
   | 'normalizeCompileTarget'
   | 'projectFrontierAst'
   | 'projectNativeImportToSource'
+  | 'readSemanticSliceJson'
   | 'readUniversalAstJson'
   | 'renderTargetAst'
   | 'renderTargetAstWithSourceMap'
@@ -212,6 +225,8 @@ type ExpectedPublicRuntimeExport =
   | 'runNativeTargetProjectionAdapter'
   | 'summarizeNativeImportFeatureEvidence'
   | 'summarizeNativeImportLosses'
+  | 'testSemanticSlice'
+  | 'writeSemanticSliceJson'
   | 'writeUniversalAstJson';
 
 type PublicRuntimeExportsMatchDeclarations = Expect<Equal<keyof typeof compilerApi, ExpectedPublicRuntimeExport>>;
@@ -362,6 +377,29 @@ const paradigmSummary: SemanticImportSidecarParadigmSemanticsSummary = sidecar.p
 const sourcePreservationRow: SemanticImportSidecarSourcePreservationRecord | undefined = sidecar.sourcePreservation.records[0];
 const sourcePreservationCount: number = sidecar.summary.sourcePreservationRecords + (sourcePreservationRow?.lossIds.length ?? 0) + proofSpecSummary.obligations + paradigmSummary.loweringRecords;
 void sourcePreservationCount;
+const sliceInput: SemanticSliceInput = imported;
+const sliceOptions: CreateSemanticSliceOptions = {
+  entryRefs: ['symbol:apiTypes'],
+  includeDependencies: true,
+  focusedCommands: ['npm test -- api-types'],
+  fixtureHints: ['api type fixture']
+};
+const semanticSlice: SemanticSlice = createSemanticSlice(sliceInput, sliceOptions);
+const semanticSliceLink: SemanticSliceSourceMapLink | undefined = semanticSlice.sourceMapLinks[0];
+const semanticSliceFile: SemanticSliceSourceFile | undefined = semanticSlice.sourceFiles[0];
+const semanticSliceTestOptions: TestSemanticSliceOptions = {
+  currentSources: {
+    'src/api-types.js': preservation.sourceText ?? ''
+  }
+};
+const semanticSliceTest: SemanticSliceTestResult = testSemanticSlice(semanticSlice, semanticSliceTestOptions);
+const semanticSliceJson: string = writeSemanticSliceJson(semanticSlice);
+const semanticSliceAgain: SemanticSlice = readSemanticSliceJson(semanticSliceJson);
+semanticSlice.mergeAdmission.autoMergeClaim satisfies false;
+semanticSliceTest.status satisfies SemanticSliceTestResult['status'];
+void semanticSliceLink;
+void semanticSliceFile;
+void semanticSliceAgain;
 const contract: NativeImportResultContract = createNativeImportResultContract(imported, { sidecarId: sidecar.id });
 const contractSource: NativeImportContractSource = contract.sources[0] ?? {
   id: 'missing',

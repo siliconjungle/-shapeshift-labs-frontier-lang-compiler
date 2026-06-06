@@ -22,6 +22,7 @@ import {
   createRustSynNativeImporterAdapter,
   createSwiftSyntaxNativeImporterAdapter,
   createSemanticImportSidecar,
+  createSemanticSlice,
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
   createUniversalAstFromDocument,
@@ -48,6 +49,7 @@ import {
   projectNativeImportToSource,
   projectFrontierAst,
   readUniversalAstJson,
+  readSemanticSliceJson,
   renderTargetAst,
   renderTargetAstWithSourceMap,
   resolveCapabilityAdapters,
@@ -61,6 +63,8 @@ import {
   queryNativeParserFeatureMatrix,
   summarizeNativeImportFeatureEvidence,
   summarizeNativeImportLosses,
+  testSemanticSlice,
+  writeSemanticSliceJson,
   writeUniversalAstJson
 } from '../dist/index.js';
 
@@ -91,12 +95,16 @@ for (const requiredExport of [
   'classifyNativeImportRoundtripReadiness',
   'compileNativeSource',
   'createSemanticImportSidecar',
+  'createSemanticSlice',
   'diffNativeSourceImports',
   'diffNativeSources',
   'emitForTargetWithSourceMap',
   'getNativeImportFeatureEvidencePolicy',
   'getNativeParserAstFormatProfile',
   'queryNativeParserFeatureMatrix',
+  'readSemanticSliceJson',
+  'testSemanticSlice',
+  'writeSemanticSliceJson',
   'ExternalSemanticIndexFormats',
   'importExternalSemanticIndex',
   'importNativeSource',
@@ -212,6 +220,44 @@ assert.equal(nativeImport.mergeCandidates.length, 1);
 assert.equal(nativeImport.mergeCandidates[0].kind, 'frontier.lang.semanticMergeCandidate');
 assert.equal(nativeImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
 assert.equal(nativeImport.mergeCandidates[0].metadata.nativeImportLossSummary.categories.includes('opaqueBodies'), true);
+const semanticSliceSource = `
+export function parseExpression(input) {
+  return parseTerm(input);
+}
+
+export function parseTerm(input) {
+  return input;
+}
+`;
+const semanticSliceImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/parser.ts',
+  sourceText: semanticSliceSource
+});
+const semanticSlice = createSemanticSlice(semanticSliceImport, {
+  entryRefs: ['symbol:parseExpression'],
+  includeDependencies: true,
+  focusedCommands: ['npm test -- parser-expression'],
+  fixtureHints: ['operator precedence corpus']
+});
+assert.equal(semanticSlice.kind, 'frontier.lang.semanticSlice');
+assert.equal(semanticSlice.entryRefs[0], 'symbol:parseExpression');
+assert.equal(semanticSlice.unresolvedEntryRefs.length, 0);
+assert.equal(semanticSlice.symbols.some((symbol) => symbol.name === 'parseExpression'), true);
+assert.equal(semanticSlice.sourceMapLinks.length >= 1, true);
+assert.equal(semanticSlice.sourceFiles.some((file) => file.path === 'src/parser.ts' && file.sourceHash === semanticSliceImport.nativeSource.sourceHash), true);
+assert.equal(semanticSlice.mergeAdmission.autoMergeClaim, false);
+assert.equal(semanticSlice.mergeAdmission.conflictKeys.some((key) => key.includes('parseexpression') || key.includes('parseExpression')), true);
+assert.equal(semanticSlice.verification.focusedCommands[0], 'npm test -- parser-expression');
+const semanticSliceGate = testSemanticSlice(semanticSlice, { currentSources: { 'src/parser.ts': semanticSliceSource } });
+assert.equal(semanticSliceGate.kind, 'frontier.lang.semanticSliceTestResult');
+assert.equal(semanticSliceGate.status, 'passed');
+assert.equal(semanticSliceGate.summary.sourceHashChecks, 1);
+const staleSemanticSliceGate = testSemanticSlice(semanticSlice, { currentSources: { 'src/parser.ts': semanticSliceSource + '\n// changed\n' } });
+assert.equal(staleSemanticSliceGate.status, 'failed');
+assert.equal(staleSemanticSliceGate.assertions.some((entry) => entry.id === 'sourceHash:src/parser.ts' && entry.status === 'failed'), true);
+const semanticSliceJson = writeSemanticSliceJson(semanticSlice);
+assert.equal(readSemanticSliceJson(semanticSliceJson).id, semanticSlice.id);
 for (const taxonomyKind of ['conditionalCompilation', 'reflection', 'overloadTypeInference', 'commentsTrivia', 'targetProjectionLoss']) {
   assert.equal(NativeImportTaxonomyKinds.includes(taxonomyKind), true);
 }

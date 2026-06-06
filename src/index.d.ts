@@ -1424,6 +1424,184 @@ export interface NativeSourceChangeSet {
   };
 }
 
+export type SemanticSliceInput =
+  | NativeSourceImportResult
+  | NativeProjectImportResult
+  | ImportNativeSourceOptions
+  | FrontierUniversalAstEnvelope
+  | SemanticImportSidecar
+  | {
+    readonly import?: NativeSourceImportResult | NativeProjectImportResult | ImportNativeSourceOptions;
+    readonly importResult?: NativeSourceImportResult | NativeProjectImportResult | ImportNativeSourceOptions;
+    readonly universalAst?: FrontierUniversalAstEnvelope;
+    readonly sidecar?: SemanticImportSidecar;
+    readonly source?: ImportNativeSourceOptions;
+  };
+
+export interface CreateSemanticSliceOptions {
+  readonly id?: string;
+  readonly generatedAt?: number;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly sourceText?: string;
+  readonly symbol?: string;
+  readonly region?: string;
+  readonly nativeNodeId?: string;
+  readonly entryRefs?: readonly string[] | string;
+  readonly semanticRefs?: readonly string[] | string;
+  readonly refs?: readonly string[] | string;
+  readonly includeDependencies?: boolean;
+  readonly maxDependencyDepth?: number;
+  readonly includeSourceText?: boolean;
+  readonly maxExcerptBytes?: number;
+  readonly focusedCommands?: readonly string[] | string;
+  readonly fixtureHints?: readonly string[] | string;
+  readonly regionPrefix?: string;
+  readonly evidenceId?: string;
+  readonly mergeCandidateId?: string;
+  readonly sidecar?: SemanticImportSidecar;
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface SemanticSliceSourceMapLink {
+  readonly id?: string;
+  readonly sourceMapId?: string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly targetPath?: string;
+  readonly targetHash?: string;
+  readonly semanticSymbolId?: string;
+  readonly semanticOccurrenceId?: string;
+  readonly semanticNodeId?: string;
+  readonly nativeSourceId?: string;
+  readonly nativeAstNodeId?: string;
+  readonly precision?: string;
+  readonly sourceSpan?: SourceSpan;
+  readonly generatedSpan?: SourceMapMappingRecord['generatedSpan'];
+  readonly ownershipRegionId?: string;
+  readonly ownershipRegionKey?: string;
+  readonly ownershipRegionKind?: NativeImportRegionTaxonomyKind;
+}
+
+export interface SemanticSliceSourceFile {
+  readonly path?: string;
+  readonly sourceHash?: string;
+  readonly spans: readonly SourceSpan[];
+  readonly spanCount: number;
+  readonly excerptCount: number;
+  readonly sourceTextAvailable: boolean;
+  readonly excerpts: readonly {
+    readonly span: SourceSpan;
+    readonly text: string;
+    readonly textHash: string;
+    readonly truncated: boolean;
+  }[];
+}
+
+export interface SemanticSliceExpectedAssertion {
+  readonly id: string;
+  readonly expected: boolean;
+}
+
+export interface SemanticSlice {
+  readonly kind: 'frontier.lang.semanticSlice';
+  readonly version: 1;
+  readonly id: string;
+  readonly generatedAt: number;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly importId?: string;
+  readonly universalAstId?: string;
+  readonly semanticIndexId?: string;
+  readonly sidecarId?: string;
+  readonly entryRefs: readonly string[];
+  readonly matchedEntryRefs: readonly string[];
+  readonly unresolvedEntryRefs: readonly string[];
+  readonly symbols: readonly (SemanticIndexRecord['symbols'][number] | SemanticImportSidecarSymbol)[];
+  readonly ownershipRegions: readonly SemanticImportOwnershipRegion[];
+  readonly nativeNodes: readonly NativeAstNode[];
+  readonly relations: readonly SemanticIndexRecord['relations'][number][];
+  readonly occurrences: readonly SemanticIndexRecord['occurrences'][number][];
+  readonly sourceMapLinks: readonly SemanticSliceSourceMapLink[];
+  readonly sourceSpans: readonly SourceSpan[];
+  readonly sourceFiles: readonly SemanticSliceSourceFile[];
+  readonly losses: readonly NativeAstLossRecord[];
+  readonly evidence: readonly EvidenceRecord[];
+  readonly mergeCandidate: SemanticMergeCandidateRecord;
+  readonly verification: {
+    readonly focusedCommands: readonly string[];
+    readonly fixtureHints: readonly string[];
+    readonly expectedAssertions: readonly SemanticSliceExpectedAssertion[];
+  };
+  readonly summary: {
+    readonly symbols: number;
+    readonly ownershipRegions: number;
+    readonly nativeNodes: number;
+    readonly relations: number;
+    readonly occurrences: number;
+    readonly sourceMapLinks: number;
+    readonly sourceFiles: number;
+    readonly losses: number;
+    readonly conflictKeys: number;
+    readonly readiness: SemanticMergeReadiness;
+    readonly unresolvedEntryRefs: number;
+    readonly sourceTextAvailable: boolean;
+  };
+  readonly mergeAdmission: {
+    readonly autoMergeClaim: false;
+    readonly reviewRequired: boolean;
+    readonly readiness: SemanticMergeReadiness;
+    readonly reasons: readonly string[];
+    readonly conflictKeys: readonly string[];
+    readonly ownershipKeys: readonly string[];
+    readonly sourceHashes: readonly { readonly path?: string; readonly sourceHash?: string }[];
+    readonly staleCheck: {
+      readonly mode: 'source-hash' | string;
+      readonly requiresCurrentSource: boolean;
+      readonly sourceFiles: number;
+    };
+  };
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface TestSemanticSliceOptions {
+  readonly id?: string;
+  readonly generatedAt?: number;
+  readonly requireSourceMapLinks?: boolean;
+  readonly currentSources?: Readonly<Record<string, string>> | ReadonlyMap<string, string>;
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface SemanticSliceTestAssertion {
+  readonly id: string;
+  readonly status: 'passed' | 'warning' | 'failed';
+  readonly summary: string;
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface SemanticSliceTestResult {
+  readonly kind: 'frontier.lang.semanticSliceTestResult';
+  readonly version: 1;
+  readonly id: string;
+  readonly generatedAt: number;
+  readonly sliceId?: string;
+  readonly status: 'passed' | 'needs-review' | 'failed';
+  readonly readiness: SemanticMergeReadiness;
+  readonly assertions: readonly SemanticSliceTestAssertion[];
+  readonly summary: {
+    readonly assertions: number;
+    readonly passed: number;
+    readonly warnings: number;
+    readonly failed: number;
+    readonly sourceHashChecks: number;
+    readonly symbols: number;
+    readonly ownershipRegions: number;
+    readonly sourceMapLinks: number;
+  };
+  readonly metadata?: Record<string, unknown>;
+}
+
 export type NativeImporterAdapterExactness =
   | 'exact-parser-ast'
   | 'parser-tree'
@@ -2371,6 +2549,10 @@ export declare function importExternalSemanticIndex(input: ImportExternalSemanti
 export declare function importNativeSource(input: ImportNativeSourceOptions): NativeSourceImportResult;
 export declare function diffNativeSources(input: DiffNativeSourcesOptions): NativeSourceChangeSet;
 export declare function diffNativeSourceImports(input: DiffNativeSourceImportsOptions): NativeSourceChangeSet;
+export declare function createSemanticSlice(input: SemanticSliceInput, options?: CreateSemanticSliceOptions): SemanticSlice;
+export declare function testSemanticSlice(slice: SemanticSlice, options?: TestSemanticSliceOptions): SemanticSliceTestResult;
+export declare function readSemanticSliceJson(source: string): SemanticSlice;
+export declare function writeSemanticSliceJson(slice: SemanticSlice): string;
 export declare function importNativeProject(input: ImportNativeProjectOptions): Promise<NativeProjectImportResult>;
 export declare function createUniversalAstFromDocument(document: FrontierLangDocument, input?: {
   readonly id?: string;

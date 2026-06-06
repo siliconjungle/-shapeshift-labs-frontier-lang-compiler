@@ -18,13 +18,15 @@ import {
   createRustSynNativeImporterAdapter,
   createSwiftSyntaxNativeImporterAdapter,
   createSemanticImportSidecar,
+  createSemanticSlice,
   diffNativeSources,
   importExternalSemanticIndex,
   importNativeSource,
   projectNativeImportToSource,
   queryNativeParserFeatureMatrix,
   runNativeImporterAdapter,
-  summarizeNativeImportFeatureEvidence
+  summarizeNativeImportFeatureEvidence,
+  testSemanticSlice
 } from '../dist/index.js';
 
 const source = `
@@ -162,6 +164,23 @@ const sidecarStart = performance.now();
 const semanticSidecars = nativeImportResults.map((imported) => createSemanticImportSidecar(imported));
 const sidecarDurationMs = performance.now() - sidecarStart;
 const sidecarOwnershipRegions = semanticSidecars.reduce((sum, sidecar) => sum + sidecar.ownershipRegions.length, 0);
+
+const sliceStart = performance.now();
+const semanticSlices = nativeImportResults.slice(0, 100).map((imported, index) => {
+  const symbol = imported.semanticIndex?.symbols?.[0]?.name ?? imported.semanticIndex?.symbols?.[0]?.id;
+  return createSemanticSlice(imported, {
+    entryRefs: symbol ? [`symbol:${symbol}`] : [],
+    includeDependencies: index % 2 === 0,
+    focusedCommands: [`npm test -- semantic-slice-${index}`]
+  });
+});
+const sliceDurationMs = performance.now() - sliceStart;
+const sliceSourceMapLinks = semanticSlices.reduce((sum, slice) => sum + slice.sourceMapLinks.length, 0);
+const sliceConflictKeys = semanticSlices.reduce((sum, slice) => sum + slice.mergeAdmission.conflictKeys.length, 0);
+const sliceGateStart = performance.now();
+const semanticSliceGates = semanticSlices.map((slice) => testSemanticSlice(slice, { requireSourceMapLinks: false }));
+const sliceGateDurationMs = performance.now() - sliceGateStart;
+const sliceGateFailures = semanticSliceGates.filter((gate) => gate.status === 'failed').length;
 
 const featureEvidenceStart = performance.now();
 const featureEvidenceSummaries = nativeImportResults.map((imported) => summarizeNativeImportFeatureEvidence(imported.losses, {
@@ -324,6 +343,12 @@ console.log(JSON.stringify({
   semanticSidecars: semanticSidecars.length,
   sidecarOwnershipRegions,
   sidecarDurationMs: Number(sidecarDurationMs.toFixed(2)),
+  semanticSlices: semanticSlices.length,
+  sliceDurationMs: Number(sliceDurationMs.toFixed(2)),
+  sliceGateDurationMs: Number(sliceGateDurationMs.toFixed(2)),
+  sliceSourceMapLinks,
+  sliceConflictKeys,
+  sliceGateFailures,
   featureEvidencePolicyMatches,
   featureEvidenceDurationMs: Number(featureEvidenceDurationMs.toFixed(2)),
   nativeProjections: nativeProjections.length,

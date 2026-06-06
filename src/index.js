@@ -4211,6 +4211,867 @@ export function diffNativeSourceImports(input) {
   };
 }
 
+export function createSemanticSlice(input, options = {}) {
+  const context = semanticSliceContext(input, options);
+  const sidecar = context.sidecar ?? (context.importResult ? createSemanticImportSidecar(context.importResult, {
+    generatedAt: options.generatedAt,
+    regionPrefix: options.regionPrefix
+  }) : undefined);
+  const records = semanticSliceRecords(context, sidecar);
+  const entryRefs = uniqueStrings([
+    ...readStringArray(options.entryRefs),
+    ...readStringArray(options.semanticRefs),
+    ...readStringArray(options.refs),
+    ...(options.symbol ? [`symbol:${options.symbol}`] : []),
+    ...(options.region ? [`region:${options.region}`] : []),
+    ...(options.nativeNodeId ? [`native:${options.nativeNodeId}`] : []),
+    ...(options.sourcePath ? [`path:${options.sourcePath}`] : [])
+  ]);
+  const selection = selectSemanticSliceRecords(records, {
+    entryRefs,
+    includeDependencies: options.includeDependencies !== false,
+    maxDependencyDepth: Number.isFinite(options.maxDependencyDepth) ? Math.max(0, Math.floor(options.maxDependencyDepth)) : 2
+  });
+  const sourceSpans = semanticSliceSourceSpans(selection);
+  const sourceFiles = semanticSliceSourceFiles(sourceSpans, context, options);
+  const sourceMapLinks = semanticSliceSourceMapLinks(selection);
+  const conflictKeys = uniqueStrings([
+    ...selection.regions.map((region) => region.conflictKey),
+    ...selection.regions.map((region) => region.key ? `region:${region.key}` : region.id ? `region:${region.id}` : undefined),
+    ...selection.symbols.map((symbol) => symbol.metadata?.ownershipRegionKey ? `region:${symbol.metadata.ownershipRegionKey}` : undefined),
+    ...selection.symbols.map((symbol) => symbol.id ? `symbol:${symbol.id}` : undefined),
+    ...sourceFiles.map((file) => file.path ? `source:${file.path}` : undefined)
+  ].filter(Boolean));
+  const unresolvedEntryRefs = entryRefs.filter((entryRef) => !selection.matchedEntryRefs.includes(entryRef));
+  const readiness = semanticSliceReadiness(context, selection, unresolvedEntryRefs);
+  const reasons = semanticSliceReasons(context, selection, unresolvedEntryRefs, readiness);
+  const idPart = idFragment(options.id ?? entryRefs.join('_') ?? context.sourcePath ?? context.language ?? context.importResult?.id ?? context.universalAst?.id ?? 'semantic_slice');
+  const evidence = [{
+    id: options.evidenceId ?? `evidence_${idPart}_semantic_slice`,
+    kind: 'semantic-slice',
+    status: readiness === 'blocked' ? 'failed' : 'passed',
+    path: context.sourcePath,
+    summary: `Created semantic slice with ${selection.symbols.length} symbol(s), ${selection.regions.length} ownership region(s), and ${sourceMapLinks.length} source-map link(s).`,
+    metadata: {
+      entryRefs,
+      unresolvedEntryRefs,
+      importId: context.importResult?.id,
+      universalAstId: context.universalAst?.id,
+      semanticIndexId: context.semanticIndex?.id,
+      sidecarId: sidecar?.id
+    }
+  }];
+  const mergeCandidate = createSemanticMergeCandidateRecord({
+    id: options.mergeCandidateId ?? `merge_candidate_${idPart}_semantic_slice`,
+    importResultId: context.importResult?.id,
+    language: context.language,
+    sourcePath: context.sourcePath,
+    touchedSymbols: selection.symbols.map(semanticSliceTouchedSymbol),
+    touchedSemanticNodes: [],
+    nativeSpans: sourceSpans,
+    conflictKeys,
+    readiness,
+    reasons,
+    evidence,
+    metadata: {
+      kind: 'semantic-slice',
+      sidecarId: sidecar?.id,
+      sourceMapLinks: sourceMapLinks.length,
+      nativeNodeIds: selection.nativeNodes.map((node) => node.id),
+      dependencyRelationIds: selection.relations.map((relation) => relation.id).filter(Boolean),
+      autoMergeClaim: false
+    }
+  });
+  return {
+    kind: 'frontier.lang.semanticSlice',
+    version: 1,
+    id: options.id ?? `semantic_slice_${idPart}`,
+    generatedAt: options.generatedAt ?? Date.now(),
+    language: context.language,
+    sourcePath: context.sourcePath,
+    importId: context.importResult?.id,
+    universalAstId: context.universalAst?.id,
+    semanticIndexId: context.semanticIndex?.id,
+    sidecarId: sidecar?.id,
+    entryRefs,
+    matchedEntryRefs: selection.matchedEntryRefs,
+    unresolvedEntryRefs,
+    symbols: selection.symbols,
+    ownershipRegions: selection.regions,
+    nativeNodes: selection.nativeNodes,
+    relations: selection.relations,
+    occurrences: selection.occurrences,
+    sourceMapLinks,
+    sourceSpans,
+    sourceFiles,
+    losses: selection.losses,
+    evidence,
+    mergeCandidate,
+    verification: {
+      focusedCommands: readStringArray(options.focusedCommands),
+      fixtureHints: readStringArray(options.fixtureHints),
+      expectedAssertions: semanticSliceExpectedAssertions(selection, unresolvedEntryRefs)
+    },
+    summary: {
+      symbols: selection.symbols.length,
+      ownershipRegions: selection.regions.length,
+      nativeNodes: selection.nativeNodes.length,
+      relations: selection.relations.length,
+      occurrences: selection.occurrences.length,
+      sourceMapLinks: sourceMapLinks.length,
+      sourceFiles: sourceFiles.length,
+      losses: selection.losses.length,
+      conflictKeys: conflictKeys.length,
+      readiness,
+      unresolvedEntryRefs: unresolvedEntryRefs.length,
+      sourceTextAvailable: sourceFiles.some((file) => file.excerptCount > 0)
+    },
+    mergeAdmission: {
+      autoMergeClaim: false,
+      reviewRequired: readiness !== 'ready',
+      readiness,
+      reasons,
+      conflictKeys,
+      ownershipKeys: uniqueStrings(selection.regions.map((region) => region.key).filter(Boolean)),
+      sourceHashes: sourceFiles.map((file) => ({ path: file.path, sourceHash: file.sourceHash })).filter((file) => file.path || file.sourceHash),
+      staleCheck: {
+        mode: 'source-hash',
+        requiresCurrentSource: sourceFiles.some((file) => file.sourceHash),
+        sourceFiles: sourceFiles.length
+      }
+    },
+    metadata: {
+      note: 'Semantic slices are focused source-addressable evidence for agent isolation and merge admission; they are not correctness proofs.',
+      ...options.metadata
+    }
+  };
+}
+
+export function testSemanticSlice(slice, options = {}) {
+  const assertions = [];
+  assertions.push(semanticSliceAssertion('kind', slice?.kind === 'frontier.lang.semanticSlice', 'Input is a Frontier semantic slice.'));
+  assertions.push(semanticSliceAssertion('entryRefsResolved', (slice?.unresolvedEntryRefs?.length ?? 0) === 0, 'All requested semantic entry refs resolved.', {
+    unresolvedEntryRefs: slice?.unresolvedEntryRefs ?? []
+  }));
+  assertions.push(semanticSliceAssertion('nonEmptySelection', (slice?.symbols?.length ?? 0) + (slice?.ownershipRegions?.length ?? 0) + (slice?.nativeNodes?.length ?? 0) > 0, 'Slice selected at least one symbol, ownership region, or native node.'));
+  assertions.push(semanticSliceAssertion('sourceMapLinks', options.requireSourceMapLinks === false || (slice?.sourceMapLinks?.length ?? 0) > 0, 'Slice has source-map links or the requirement was disabled.'));
+  assertions.push(semanticSliceAssertion('conflictKeys', (slice?.mergeAdmission?.conflictKeys?.length ?? 0) > 0, 'Slice exposes merge-admission conflict keys.'));
+  const sourceHashAssertions = semanticSliceSourceHashAssertions(slice, options.currentSources);
+  assertions.push(...sourceHashAssertions);
+  const failed = assertions.filter((assertion) => assertion.status === 'failed');
+  const warnings = assertions.filter((assertion) => assertion.status === 'warning');
+  const readiness = failed.length
+    ? 'blocked'
+    : maxSemanticMergeReadiness(slice?.mergeAdmission?.readiness ?? slice?.summary?.readiness ?? 'ready', warnings.length ? 'needs-review' : 'ready');
+  return {
+    kind: 'frontier.lang.semanticSliceTestResult',
+    version: 1,
+    id: options.id ?? `semantic_slice_test_${idFragment(slice?.id ?? 'slice')}`,
+    generatedAt: options.generatedAt ?? Date.now(),
+    sliceId: slice?.id,
+    status: failed.length ? 'failed' : warnings.length ? 'needs-review' : 'passed',
+    readiness,
+    assertions,
+    summary: {
+      assertions: assertions.length,
+      passed: assertions.filter((assertion) => assertion.status === 'passed').length,
+      warnings: warnings.length,
+      failed: failed.length,
+      sourceHashChecks: sourceHashAssertions.length,
+      symbols: slice?.summary?.symbols ?? slice?.symbols?.length ?? 0,
+      ownershipRegions: slice?.summary?.ownershipRegions ?? slice?.ownershipRegions?.length ?? 0,
+      sourceMapLinks: slice?.summary?.sourceMapLinks ?? slice?.sourceMapLinks?.length ?? 0
+    },
+    metadata: {
+      sliceReadiness: slice?.mergeAdmission?.readiness ?? slice?.summary?.readiness,
+      ...options.metadata
+    }
+  };
+}
+
+export function readSemanticSliceJson(source) {
+  const slice = JSON.parse(source);
+  if (slice?.kind !== 'frontier.lang.semanticSlice') {
+    throw new Error('Invalid Frontier semantic slice JSON: expected kind frontier.lang.semanticSlice');
+  }
+  return slice;
+}
+
+export function writeSemanticSliceJson(slice) {
+  if (slice?.kind !== 'frontier.lang.semanticSlice') {
+    throw new Error('Invalid Frontier semantic slice: expected kind frontier.lang.semanticSlice');
+  }
+  return stableUniversalAstJson(slice);
+}
+
+function semanticSliceContext(input, options = {}) {
+  const value = input?.importResult ?? input?.import ?? input?.source ?? input;
+  const imported = semanticSliceImportResult(value, options);
+  const universalAst = imported?.universalAst ?? (value?.kind === 'frontier.lang.universalAst' ? value : value?.universalAst);
+  const sidecar = value?.kind === 'frontier.lang.semanticImportSidecar' ? value : input?.sidecar ?? options.sidecar;
+  const nativeSource = imported?.nativeSource ?? universalAst?.nativeSources?.[0];
+  const nativeAst = imported?.nativeAst ?? nativeSource?.ast;
+  const semanticIndex = imported?.semanticIndex ?? universalAst?.semanticIndex;
+  const language = options.language ?? imported?.language ?? universalAst?.metadata?.sourceLanguage ?? nativeSource?.language ?? sidecar?.language;
+  const sourcePath = options.sourcePath ?? imported?.sourcePath ?? universalAst?.metadata?.sourcePath ?? nativeSource?.sourcePath ?? semanticIndex?.documents?.[0]?.path;
+  return {
+    importResult: imported,
+    universalAst,
+    sidecar,
+    nativeSource,
+    nativeAst,
+    semanticIndex,
+    language,
+    sourcePath,
+    sourceTexts: semanticSliceSourceTextMap(imported, universalAst, value, options),
+    sourceHashes: semanticSliceSourceHashMap(imported, universalAst, value, options)
+  };
+}
+
+function semanticSliceImportResult(value, options = {}) {
+  if (!value) return undefined;
+  if (value.kind === 'frontier.lang.importResult') return value;
+  if (value.kind === 'frontier.lang.universalAst') {
+    const nativeSource = value.nativeSources?.[0];
+    return {
+      kind: 'frontier.lang.importResult',
+      version: 1,
+      id: value.metadata?.nativeImportId ?? `import_${idFragment(value.id)}`,
+      language: value.metadata?.sourceLanguage ?? nativeSource?.language ?? options.language,
+      sourcePath: value.metadata?.sourcePath ?? nativeSource?.sourcePath ?? options.sourcePath,
+      document: value.document,
+      nativeSource,
+      nativeAst: nativeSource?.ast,
+      semanticIndex: value.semanticIndex,
+      universalAst: value,
+      sourceMaps: value.sourceMaps ?? [],
+      losses: value.losses ?? [],
+      evidence: value.evidence ?? [],
+      mergeCandidates: value.mergeCandidates ?? [],
+      metadata: value.metadata ?? {}
+    };
+  }
+  if (value.kind === 'frontier.lang.semanticImportSidecar') return undefined;
+  if (value.universalAst || value.semanticIndex || value.nativeSource || value.nativeAst) return value;
+  if (value.sourceText || value.nodes || value.nativeAst) return importNativeSource(value);
+  return undefined;
+}
+
+function semanticSliceRecords(context, sidecar) {
+  const imports = context.importResult ? nativeImportEntries(context.importResult) : [];
+  const universalAst = context.universalAst;
+  const semanticIndexes = [
+    context.semanticIndex,
+    universalAst?.semanticIndex,
+    ...imports.map((imported) => imported?.semanticIndex ?? imported?.universalAst?.semanticIndex)
+  ].filter(Boolean);
+  const sourceMaps = uniqueRecordsById([
+    ...(context.importResult?.sourceMaps ?? []),
+    ...(universalAst?.sourceMaps ?? []),
+    ...imports.flatMap((imported) => imported?.sourceMaps ?? imported?.universalAst?.sourceMaps ?? [])
+  ]);
+  const symbols = mergeSemanticSliceSymbols([
+    ...(sidecar?.symbols ?? []),
+    ...semanticIndexes.flatMap((index) => index.symbols ?? [])
+  ]);
+  const regions = uniqueSemanticSliceRegions([
+    ...(sidecar?.ownershipRegions ?? []),
+    ...symbols.map((symbol) => semanticSliceRegionFromSymbol(symbol, context)).filter(Boolean),
+    ...sourceMaps.flatMap((sourceMap) => (sourceMap.mappings ?? []).map((mapping) => semanticSliceRegionFromMapping(mapping, context)).filter(Boolean))
+  ]);
+  const nativeNodes = uniqueSemanticSliceNativeNodes([
+    ...imports.flatMap((imported) => nativeAstNodes(imported?.nativeAst ?? imported?.nativeSource?.ast)),
+    ...nativeAstNodes(context.nativeAst),
+    ...((universalAst?.nativeSources ?? []).flatMap((source) => nativeAstNodes(source?.ast)))
+  ]);
+  const mappings = sourceMaps.flatMap((sourceMap) => (sourceMap.mappings ?? []).map((mapping) => ({
+    ...mapping,
+    sourceMapId: mapping.sourceMapId ?? sourceMap.id,
+    sourceMapSourcePath: sourceMap.sourcePath,
+    sourceMapSourceHash: sourceMap.sourceHash,
+    sourceMapTargetPath: sourceMap.targetPath,
+    sourceMapTargetHash: sourceMap.targetHash
+  })));
+  const losses = uniqueByLossId([
+    ...(context.importResult?.losses ?? []),
+    ...(universalAst?.losses ?? []),
+    ...imports.flatMap((imported) => imported?.losses ?? imported?.nativeAst?.losses ?? [])
+  ]);
+  const evidence = uniqueByEvidenceId([
+    ...(context.importResult?.evidence ?? []),
+    ...(universalAst?.evidence ?? []),
+    ...imports.flatMap((imported) => imported?.evidence ?? [])
+  ]);
+  return {
+    symbols,
+    symbolById: new Map(symbols.map((symbol) => [symbol.id, symbol])),
+    regions,
+    nativeNodes,
+    nativeNodeById: new Map(nativeNodes.map((node) => [node.id, node])),
+    mappings,
+    sourceMaps,
+    relations: uniqueRecordsById(semanticIndexes.flatMap((index) => index.relations ?? [])),
+    occurrences: uniqueRecordsById(semanticIndexes.flatMap((index) => index.occurrences ?? [])),
+    losses,
+    evidence,
+    sidecar
+  };
+}
+
+function selectSemanticSliceRecords(records, options) {
+  const selectedSymbols = new Set();
+  const selectedRegions = new Set();
+  const selectedNativeNodes = new Set();
+  const selectedMappings = new Set();
+  const selectedRelations = new Set();
+  const selectedOccurrences = new Set();
+  const matchedEntryRefs = [];
+  const entryRefs = options.entryRefs ?? [];
+  if (entryRefs.length === 0) {
+    for (const symbol of records.symbols) selectedSymbols.add(symbol.id);
+    for (const region of records.regions) selectedRegions.add(region.id);
+    for (const node of records.nativeNodes) selectedNativeNodes.add(node.id);
+    for (const mapping of records.mappings) selectedMappings.add(mapping.id);
+  } else {
+    for (const ref of entryRefs) {
+      let matched = false;
+      for (const symbol of records.symbols) {
+        if (!semanticSliceSymbolMatchesRef(symbol, ref)) continue;
+        selectedSymbols.add(symbol.id);
+        matched = true;
+      }
+      for (const region of records.regions) {
+        if (!semanticSliceRegionMatchesRef(region, ref)) continue;
+        selectedRegions.add(region.id);
+        matched = true;
+      }
+      for (const node of records.nativeNodes) {
+        if (!semanticSliceNativeNodeMatchesRef(node, ref)) continue;
+        selectedNativeNodes.add(node.id);
+        matched = true;
+      }
+      for (const mapping of records.mappings) {
+        if (!semanticSliceMappingMatchesRef(mapping, ref)) continue;
+        selectedMappings.add(mapping.id);
+        matched = true;
+      }
+      if (matched) matchedEntryRefs.push(ref);
+    }
+  }
+  expandSemanticSliceSelection(records, {
+    selectedSymbols,
+    selectedRegions,
+    selectedNativeNodes,
+    selectedMappings,
+    selectedRelations,
+    selectedOccurrences,
+    includeDependencies: options.includeDependencies,
+    maxDependencyDepth: options.maxDependencyDepth
+  });
+  const symbols = records.symbols.filter((symbol) => selectedSymbols.has(symbol.id));
+  const regions = records.regions.filter((region) => selectedRegions.has(region.id));
+  const nativeNodes = records.nativeNodes.filter((node) => selectedNativeNodes.has(node.id));
+  const mappings = records.mappings.filter((mapping) => selectedMappings.has(mapping.id));
+  const relations = records.relations.filter((relation) => selectedRelations.has(relation.id));
+  const occurrences = records.occurrences.filter((occurrence) => selectedOccurrences.has(occurrence.id));
+  const selectedNodeIds = new Set(nativeNodes.map((node) => node.id));
+  const losses = records.losses.filter((loss) => !loss.nodeId || selectedNodeIds.has(loss.nodeId) || semanticSliceSpanTouchesSelection(loss.span, mappings, regions));
+  return {
+    matchedEntryRefs,
+    symbols,
+    regions,
+    nativeNodes,
+    mappings,
+    relations,
+    occurrences,
+    losses
+  };
+}
+
+function expandSemanticSliceSelection(records, selection) {
+  let changed = true;
+  let depth = 0;
+  const childToParent = semanticSliceNativeParentMap(records.nativeNodes);
+  while (changed && depth <= selection.maxDependencyDepth) {
+    changed = false;
+    for (const mapping of records.mappings) {
+      if (!semanticSliceMappingTouchesSets(mapping, selection)) continue;
+      changed = addSet(selection.selectedMappings, mapping.id) || changed;
+      if (mapping.semanticSymbolId) changed = addSet(selection.selectedSymbols, mapping.semanticSymbolId) || changed;
+      if (mapping.nativeAstNodeId) changed = addSet(selection.selectedNativeNodes, mapping.nativeAstNodeId) || changed;
+      if (mapping.ownershipRegionId) changed = addSet(selection.selectedRegions, mapping.ownershipRegionId) || changed;
+    }
+    for (const symbol of records.symbols) {
+      if (!semanticSliceSymbolTouchesSets(symbol, selection)) continue;
+      changed = addSet(selection.selectedSymbols, symbol.id) || changed;
+      if (symbol.nativeAstNodeId) changed = addSet(selection.selectedNativeNodes, symbol.nativeAstNodeId) || changed;
+      const regionId = symbol.ownershipRegionId ?? symbol.metadata?.ownershipRegionId;
+      if (regionId) changed = addSet(selection.selectedRegions, regionId) || changed;
+    }
+    for (const region of records.regions) {
+      if (!semanticSliceRegionTouchesSets(region, selection)) continue;
+      changed = addSet(selection.selectedRegions, region.id) || changed;
+      if (region.symbolId) changed = addSet(selection.selectedSymbols, region.symbolId) || changed;
+      if (region.nativeAstNodeId) changed = addSet(selection.selectedNativeNodes, region.nativeAstNodeId) || changed;
+    }
+    for (const occurrence of records.occurrences) {
+      if (!selection.selectedSymbols.has(occurrence.symbolId) && !selection.selectedNativeNodes.has(occurrence.nativeAstNodeId)) continue;
+      changed = addSet(selection.selectedOccurrences, occurrence.id) || changed;
+      if (occurrence.symbolId) changed = addSet(selection.selectedSymbols, occurrence.symbolId) || changed;
+      if (occurrence.nativeAstNodeId) changed = addSet(selection.selectedNativeNodes, occurrence.nativeAstNodeId) || changed;
+    }
+    if (selection.includeDependencies) {
+      for (const relation of records.relations) {
+        const touches = selection.selectedSymbols.has(relation.sourceId) || selection.selectedSymbols.has(relation.targetId);
+        if (!touches) continue;
+        changed = addSet(selection.selectedRelations, relation.id) || changed;
+        if (relation.sourceId && records.symbolById.has(relation.sourceId)) changed = addSet(selection.selectedSymbols, relation.sourceId) || changed;
+        if (relation.targetId && records.symbolById.has(relation.targetId)) changed = addSet(selection.selectedSymbols, relation.targetId) || changed;
+      }
+      for (const node of records.nativeNodes) {
+        if (!selection.selectedNativeNodes.has(node.id)) continue;
+        for (const child of node.children ?? []) changed = addSet(selection.selectedNativeNodes, child) || changed;
+        const parent = childToParent.get(node.id);
+        if (parent) changed = addSet(selection.selectedNativeNodes, parent) || changed;
+      }
+    }
+    depth += 1;
+  }
+}
+
+function semanticSliceSourceSpans(selection) {
+  return uniqueSemanticSliceSpans([
+    ...selection.symbols.map(semanticSliceSymbolSpan),
+    ...selection.regions.map((region) => region.sourceSpan),
+    ...selection.nativeNodes.map((node) => node.span ?? node.sourceSpan),
+    ...selection.mappings.map((mapping) => mapping.sourceSpan)
+  ].filter(Boolean));
+}
+
+function semanticSliceSourceFiles(spans, context, options = {}) {
+  const byPath = new Map();
+  const includeExcerpts = options.includeSourceText !== false;
+  const maxExcerptBytes = Number.isFinite(options.maxExcerptBytes) ? Math.max(0, Math.floor(options.maxExcerptBytes)) : 4000;
+  for (const span of spans) {
+    const path = span.path ?? span.sourceId ?? context.sourcePath ?? 'unknown';
+    const record = byPath.get(path) ?? {
+      path,
+      sourceHash: context.sourceHashes.get(path) ?? context.sourceHashes.get('') ?? span.sourceHash,
+      spans: [],
+      excerpts: []
+    };
+    record.spans.push(span);
+    const sourceText = context.sourceTexts.get(path) ?? context.sourceTexts.get('');
+    const excerpt = includeExcerpts ? sourceTextForSpan(sourceText, span) : undefined;
+    if (typeof excerpt === 'string') {
+      const clipped = excerpt.length > maxExcerptBytes ? excerpt.slice(0, maxExcerptBytes) : excerpt;
+      record.excerpts.push({
+        span,
+        text: clipped,
+        textHash: hashSemanticValue(excerpt),
+        truncated: clipped.length !== excerpt.length
+      });
+    }
+    byPath.set(path, record);
+  }
+  return [...byPath.values()].map((file) => ({
+    ...file,
+    spanCount: file.spans.length,
+    excerptCount: file.excerpts.length,
+    sourceTextAvailable: file.excerpts.length > 0
+  }));
+}
+
+function semanticSliceSourceMapLinks(selection) {
+  return selection.mappings.map((mapping) => ({
+    id: mapping.id,
+    sourceMapId: mapping.sourceMapId,
+    sourcePath: mapping.sourceSpan?.path ?? mapping.sourceMapSourcePath,
+    sourceHash: mapping.sourceMapSourceHash,
+    targetPath: mapping.generatedSpan?.targetPath ?? mapping.sourceMapTargetPath,
+    targetHash: mapping.generatedSpan?.targetHash ?? mapping.sourceMapTargetHash,
+    semanticSymbolId: mapping.semanticSymbolId,
+    semanticOccurrenceId: mapping.semanticOccurrenceId,
+    semanticNodeId: mapping.semanticNodeId,
+    nativeSourceId: mapping.nativeSourceId,
+    nativeAstNodeId: mapping.nativeAstNodeId,
+    precision: mapping.precision,
+    sourceSpan: mapping.sourceSpan,
+    generatedSpan: mapping.generatedSpan,
+    ownershipRegionId: mapping.ownershipRegionId,
+    ownershipRegionKey: mapping.ownershipRegionKey,
+    ownershipRegionKind: mapping.ownershipRegionKind
+  }));
+}
+
+function semanticSliceReadiness(context, selection, unresolvedEntryRefs) {
+  if (unresolvedEntryRefs.length) return 'blocked';
+  if (selection.symbols.length + selection.regions.length + selection.nativeNodes.length === 0) return 'blocked';
+  const lossReadiness = summarizeNativeImportLosses(selection.losses, { evidence: context.importResult?.evidence }).semanticMergeReadiness;
+  return [
+    context.importResult?.metadata?.semanticMergeReadiness,
+    context.importResult?.metadata?.nativeImportLossSummary?.semanticMergeReadiness,
+    context.sidecar?.summary?.readiness,
+    ...(context.importResult?.mergeCandidates ?? []).map((candidate) => candidate.readiness),
+    lossReadiness
+  ].reduce((current, value) => maxSemanticMergeReadiness(current, value ?? 'ready'), 'ready');
+}
+
+function semanticSliceReasons(context, selection, unresolvedEntryRefs, readiness) {
+  return uniqueStrings([
+    unresolvedEntryRefs.length ? `Unresolved semantic slice entry refs: ${unresolvedEntryRefs.join(', ')}` : undefined,
+    selection.symbols.length + selection.regions.length + selection.nativeNodes.length === 0 ? 'Semantic slice selected no reviewable records.' : undefined,
+    selection.mappings.length === 0 ? 'Semantic slice has no source-map links; source review may need file-level fallback.' : undefined,
+    selection.losses.length ? `Semantic slice carries ${selection.losses.length} native import loss record(s).` : undefined,
+    readiness !== 'ready' ? `Semantic slice readiness is ${readiness}.` : undefined,
+    context.importResult?.metadata?.nativeImportLossSummary?.semanticMergeReadiness === 'needs-review' ? 'Parent native import requires review.' : undefined
+  ].filter(Boolean));
+}
+
+function semanticSliceExpectedAssertions(selection, unresolvedEntryRefs) {
+  return [
+    { id: 'entryRefsResolved', expected: unresolvedEntryRefs.length === 0 },
+    { id: 'nonEmptySelection', expected: selection.symbols.length + selection.regions.length + selection.nativeNodes.length > 0 },
+    { id: 'sourceMapLinks', expected: selection.mappings.length > 0 },
+    { id: 'conflictKeys', expected: true }
+  ];
+}
+
+function semanticSliceTouchedSymbol(symbol) {
+  return {
+    id: symbol.id,
+    name: symbol.name,
+    kind: symbol.kind,
+    nativeAstNodeId: symbol.nativeAstNodeId,
+    span: semanticSliceSymbolSpan(symbol),
+    conflictKey: symbol.metadata?.ownershipRegionKey ? `region:${symbol.metadata.ownershipRegionKey}` : `symbol:${symbol.id}`,
+    metadata: {
+      ownershipRegionId: symbol.ownershipRegionId ?? symbol.metadata?.ownershipRegionId,
+      ownershipRegionKind: symbol.ownershipRegionKind ?? symbol.metadata?.ownershipRegionKind,
+      signatureHash: symbol.signatureHash
+    }
+  };
+}
+
+function semanticSliceAssertion(id, ok, summary, metadata = {}) {
+  return {
+    id,
+    status: ok ? 'passed' : 'failed',
+    summary,
+    metadata
+  };
+}
+
+function semanticSliceSourceHashAssertions(slice, currentSources) {
+  if (!currentSources) return [];
+  const assertions = [];
+  for (const file of slice?.sourceFiles ?? []) {
+    if (!file.sourceHash || !file.path) continue;
+    const currentSource = semanticSliceCurrentSource(currentSources, file.path);
+    if (typeof currentSource !== 'string') {
+      assertions.push({
+        id: `sourceHash:${file.path}`,
+        status: 'warning',
+        summary: `Current source text was not supplied for ${file.path}.`,
+        metadata: { path: file.path, expectedSourceHash: file.sourceHash }
+      });
+      continue;
+    }
+    const actualSourceHash = hashSemanticValue(currentSource);
+    assertions.push({
+      id: `sourceHash:${file.path}`,
+      status: actualSourceHash === file.sourceHash ? 'passed' : 'failed',
+      summary: actualSourceHash === file.sourceHash ? `Source hash matched for ${file.path}.` : `Source hash changed for ${file.path}.`,
+      metadata: { path: file.path, expectedSourceHash: file.sourceHash, actualSourceHash }
+    });
+  }
+  return assertions;
+}
+
+function semanticSliceCurrentSource(currentSources, path) {
+  if (currentSources instanceof Map) return currentSources.get(path);
+  return currentSources[path] ?? currentSources[`./${path}`];
+}
+
+function semanticSliceSourceTextMap(imported, universalAst, value, options) {
+  const entries = new Map();
+  const add = (path, sourceText) => {
+    if (typeof sourceText !== 'string') return;
+    entries.set(path ?? '', sourceText);
+  };
+  add(options.sourcePath, options.sourceText);
+  add(value?.sourcePath, value?.sourceText);
+  for (const item of [imported, ...(imported ? nativeImportEntries(imported) : [])]) {
+    add(item?.sourcePath, nativeImportSourceText(item));
+    add(item?.nativeSource?.sourcePath, item?.nativeSource?.metadata?.sourcePreservation?.sourceText);
+  }
+  for (const nativeSource of universalAst?.nativeSources ?? []) {
+    add(nativeSource?.sourcePath, nativeSource?.metadata?.sourcePreservation?.sourceText);
+    add(nativeSource?.sourcePath, nativeSource?.ast?.metadata?.sourcePreservation?.sourceText);
+  }
+  return entries;
+}
+
+function semanticSliceSourceHashMap(imported, universalAst, value, options) {
+  const entries = new Map();
+  const add = (path, sourceHash) => {
+    if (!sourceHash) return;
+    entries.set(path ?? '', sourceHash);
+  };
+  add(options.sourcePath, options.sourceHash);
+  add(value?.sourcePath, value?.sourceHash);
+  for (const item of [imported, ...(imported ? nativeImportEntries(imported) : [])]) {
+    add(item?.sourcePath, item?.nativeSource?.sourceHash ?? item?.nativeAst?.sourceHash ?? item?.sourceHash);
+  }
+  for (const nativeSource of universalAst?.nativeSources ?? []) {
+    add(nativeSource?.sourcePath, nativeSource?.sourceHash ?? nativeSource?.ast?.sourceHash);
+  }
+  for (const sourceMap of universalAst?.sourceMaps ?? []) add(sourceMap.sourcePath, sourceMap.sourceHash);
+  return entries;
+}
+
+function mergeSemanticSliceSymbols(symbols) {
+  const byId = new Map();
+  for (const symbol of symbols ?? []) {
+    if (!symbol?.id) continue;
+    const existing = byId.get(symbol.id);
+    byId.set(symbol.id, {
+      ...(existing ?? {}),
+      ...symbol,
+      metadata: {
+        ...(existing?.metadata ?? {}),
+        ...(symbol.metadata ?? {})
+      }
+    });
+  }
+  return [...byId.values()];
+}
+
+function uniqueSemanticSliceRegions(regions) {
+  const seen = new Set();
+  const result = [];
+  for (const region of regions ?? []) {
+    if (!region) continue;
+    const id = region.id ?? `region_${idFragment(region.key ?? region.sourcePath ?? region.symbolId ?? result.length)}`;
+    const key = region.key ?? id;
+    const dedupeKey = `${id}:${key}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    result.push({ ...region, id, key });
+  }
+  return result;
+}
+
+function uniqueSemanticSliceNativeNodes(nodes) {
+  const seen = new Set();
+  const result = [];
+  for (const node of nodes ?? []) {
+    const id = node?.id ?? node?.nodeId;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    result.push({ ...node, id });
+  }
+  return result;
+}
+
+function uniqueSemanticSliceSpans(spans) {
+  const seen = new Set();
+  const result = [];
+  for (const span of spans ?? []) {
+    if (!span) continue;
+    const key = [
+      span.path,
+      span.sourceId,
+      span.start,
+      span.end,
+      span.startLine,
+      span.startColumn,
+      span.endLine,
+      span.endColumn
+    ].join(':');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(span);
+  }
+  return result;
+}
+
+function nativeAstNodes(nativeAst) {
+  if (!nativeAst?.nodes) return [];
+  return Object.values(nativeAst.nodes);
+}
+
+function semanticSliceRegionFromSymbol(symbol, context) {
+  const regionId = symbol.ownershipRegionId ?? symbol.metadata?.ownershipRegionId;
+  const regionKey = symbol.ownershipKey ?? symbol.metadata?.ownershipRegionKey;
+  if (!regionId && !regionKey) return undefined;
+  return {
+    id: regionId,
+    key: regionKey,
+    regionKind: symbol.ownershipRegionKind ?? symbol.metadata?.ownershipRegionKind ?? symbol.kind,
+    granularity: 'symbol',
+    language: symbol.language ?? context.language,
+    sourcePath: semanticSliceSymbolSpan(symbol)?.path ?? context.sourcePath,
+    sourceSpan: semanticSliceSymbolSpan(symbol),
+    symbolId: symbol.id,
+    symbolName: symbol.name,
+    symbolKind: symbol.kind,
+    nativeAstNodeId: symbol.nativeAstNodeId,
+    precision: 'symbol',
+    mergePolicy: 'semantic-region-review'
+  };
+}
+
+function semanticSliceRegionFromMapping(mapping, context) {
+  if (!mapping.ownershipRegionId && !mapping.ownershipRegionKey) return undefined;
+  return {
+    id: mapping.ownershipRegionId,
+    key: mapping.ownershipRegionKey,
+    regionKind: mapping.ownershipRegionKind,
+    granularity: 'source-map',
+    language: context.language,
+    sourcePath: mapping.sourceSpan?.path ?? context.sourcePath,
+    sourceSpan: mapping.sourceSpan,
+    symbolId: mapping.semanticSymbolId,
+    nativeAstNodeId: mapping.nativeAstNodeId,
+    precision: mapping.precision,
+    mergePolicy: 'source-map-region-review'
+  };
+}
+
+function semanticSliceSymbolSpan(symbol) {
+  return symbol.sourceSpan ?? symbol.definitionSpan ?? symbol.span;
+}
+
+function semanticSliceSymbolMatchesRef(symbol, ref) {
+  const normalized = normalizeSemanticSliceRef(ref, 'symbol');
+  return [
+    symbol.id,
+    symbol.name,
+    symbol.displayName,
+    symbol.signature,
+    symbol.nativeAstNodeId,
+    symbol.metadata?.ownershipRegionId,
+    symbol.metadata?.ownershipRegionKey
+  ].filter(Boolean).some((value) => semanticSliceValueMatches(value, normalized));
+}
+
+function semanticSliceRegionMatchesRef(region, ref) {
+  const normalized = normalizeSemanticSliceRef(ref, 'region');
+  return [
+    region.id,
+    region.key,
+    region.symbolId,
+    region.symbolName,
+    region.nativeAstNodeId,
+    region.sourcePath
+  ].filter(Boolean).some((value) => semanticSliceValueMatches(value, normalized));
+}
+
+function semanticSliceNativeNodeMatchesRef(node, ref) {
+  const normalized = normalizeSemanticSliceRef(ref, 'native');
+  return [
+    node.id,
+    node.nodeId,
+    node.name,
+    node.symbolId,
+    node.kind,
+    node.languageKind
+  ].filter(Boolean).some((value) => semanticSliceValueMatches(value, normalized));
+}
+
+function semanticSliceMappingMatchesRef(mapping, ref) {
+  const pathRef = normalizeSemanticSliceRef(ref, 'path');
+  const normalized = normalizeSemanticSliceRef(ref, 'mapping');
+  return [
+    mapping.id,
+    mapping.semanticSymbolId,
+    mapping.semanticOccurrenceId,
+    mapping.semanticNodeId,
+    mapping.nativeAstNodeId,
+    mapping.ownershipRegionId,
+    mapping.ownershipRegionKey
+  ].filter(Boolean).some((value) => semanticSliceValueMatches(value, normalized))
+    || semanticSliceValueMatches(mapping.sourceSpan?.path ?? mapping.sourceMapSourcePath, pathRef);
+}
+
+function normalizeSemanticSliceRef(ref, prefix) {
+  const text = String(ref ?? '');
+  return text.startsWith(`${prefix}:`) ? text.slice(prefix.length + 1) : text;
+}
+
+function semanticSliceValueMatches(value, ref) {
+  if (!value || !ref) return false;
+  const left = String(value);
+  const right = String(ref);
+  return left === right || left.endsWith(`:${right}`) || left.includes(right);
+}
+
+function semanticSliceMappingTouchesSets(mapping, selection) {
+  return selection.selectedMappings.has(mapping.id)
+    || selection.selectedSymbols.has(mapping.semanticSymbolId)
+    || selection.selectedNativeNodes.has(mapping.nativeAstNodeId)
+    || selection.selectedRegions.has(mapping.ownershipRegionId)
+    || selection.selectedRegions.has(mapping.ownershipRegionKey);
+}
+
+function semanticSliceSymbolTouchesSets(symbol, selection) {
+  return selection.selectedSymbols.has(symbol.id)
+    || selection.selectedNativeNodes.has(symbol.nativeAstNodeId)
+    || selection.selectedRegions.has(symbol.ownershipRegionId)
+    || selection.selectedRegions.has(symbol.metadata?.ownershipRegionId)
+    || selection.selectedRegions.has(symbol.metadata?.ownershipRegionKey);
+}
+
+function semanticSliceRegionTouchesSets(region, selection) {
+  return selection.selectedRegions.has(region.id)
+    || selection.selectedRegions.has(region.key)
+    || selection.selectedSymbols.has(region.symbolId)
+    || selection.selectedNativeNodes.has(region.nativeAstNodeId);
+}
+
+function semanticSliceSpanTouchesSelection(span, mappings, regions) {
+  if (!span) return false;
+  return mappings.some((mapping) => mapping.sourceSpan === span || semanticSliceSpansOverlap(mapping.sourceSpan, span))
+    || regions.some((region) => semanticSliceSpansOverlap(region.sourceSpan, span));
+}
+
+function semanticSliceSpansOverlap(left, right) {
+  if (!left || !right) return false;
+  const leftPath = left.path ?? left.sourceId;
+  const rightPath = right.path ?? right.sourceId;
+  if (leftPath && rightPath && leftPath !== rightPath) return false;
+  if (typeof left.start === 'number' && typeof left.end === 'number' && typeof right.start === 'number' && typeof right.end === 'number') {
+    return left.start <= right.end && right.start <= left.end;
+  }
+  if (typeof left.startLine === 'number' && typeof right.startLine === 'number') {
+    const leftEnd = left.endLine ?? left.startLine;
+    const rightEnd = right.endLine ?? right.startLine;
+    return left.startLine <= rightEnd && right.startLine <= leftEnd;
+  }
+  return false;
+}
+
+function semanticSliceNativeParentMap(nativeNodes) {
+  const parents = new Map();
+  for (const node of nativeNodes ?? []) {
+    for (const child of node.children ?? []) parents.set(child, node.id);
+  }
+  return parents;
+}
+
+function addSet(set, value) {
+  if (!value || set.has(value)) return false;
+  set.add(value);
+  return true;
+}
+
+function readStringArray(value) {
+  if (value === undefined || value === null) return [];
+  if (Array.isArray(value)) return value.flatMap((entry) => readStringArray(entry));
+  return String(value).split(',').map((entry) => entry.trim()).filter(Boolean);
+}
+
 function normalizeNativeDiffImport(value, input, side) {
   if (!value) return undefined;
   if (value.kind === 'frontier.lang.importResult' && value.nativeSource) return value;
