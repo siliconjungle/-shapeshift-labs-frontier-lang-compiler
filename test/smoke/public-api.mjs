@@ -50,6 +50,7 @@ for (const requiredExport of [
   'compileNativeSource',
   'createSemanticImportSidecar',
   'createSemanticSlice',
+  'createSemanticSliceAdmissionRecord',
   'diffNativeSourceImports',
   'diffNativeSources',
   'emitForTargetWithSourceMap',

@@ -3,6 +3,7 @@ import { nativeImport } from './compile-core.mjs';
 import {
   classifyNativeImportReadiness,
   createSemanticSlice,
+  createSemanticSliceAdmissionRecord,
   ExternalSemanticIndexFormats,
   getNativeImportFeatureEvidencePolicy,
   importExternalSemanticIndex,
@@ -50,9 +51,33 @@ const semanticSliceGate = testSemanticSlice(semanticSlice, { currentSources: { '
 assert.equal(semanticSliceGate.kind, 'frontier.lang.semanticSliceTestResult');
 assert.equal(semanticSliceGate.status, 'passed');
 assert.equal(semanticSliceGate.summary.sourceHashChecks, 1);
+const semanticSliceAdmission = createSemanticSliceAdmissionRecord(semanticSlice, {
+  testResult: semanticSliceGate
+});
+assert.equal(semanticSliceAdmission.kind, 'frontier.lang.semanticSliceAdmission');
+assert.equal(semanticSliceAdmission.autoMergeClaim, false);
+assert.equal(semanticSliceAdmission.mergeScore.schema, 'frontier.lang.semanticMergeScore.v1');
+assert.equal(semanticSliceAdmission.mergeScore.value > 50, true);
+assert.equal(semanticSliceAdmission.mergeScore.sortKey > semanticSliceAdmission.mergeScore.value, true);
+assert.equal(semanticSliceAdmission.mergeScore.components.semanticSelection.status, 'strong');
+assert.equal(semanticSliceAdmission.mergeScore.components.sourceFreshness.score, 100);
+assert.equal(semanticSliceAdmission.counts.focusedCommands, 1);
+assert.equal(semanticSliceAdmission.counts.assertions, semanticSliceGate.summary.assertions);
+const directSemanticSliceAdmission = createSemanticSliceAdmissionRecord(semanticSlice, {
+  currentSources: { 'src/parser.ts': semanticSliceSource }
+});
+assert.equal(directSemanticSliceAdmission.testResult.status, 'passed');
+assert.equal(directSemanticSliceAdmission.mergeScore.components.sourceFreshness.score, 100);
 const staleSemanticSliceGate = testSemanticSlice(semanticSlice, { currentSources: { 'src/parser.ts': semanticSliceSource + '\n// changed\n' } });
 assert.equal(staleSemanticSliceGate.status, 'failed');
 assert.equal(staleSemanticSliceGate.assertions.some((entry) => entry.id === 'sourceHash:src/parser.ts' && entry.status === 'failed'), true);
+const staleSemanticSliceAdmission = createSemanticSliceAdmissionRecord(semanticSlice, {
+  testResult: staleSemanticSliceGate
+});
+assert.equal(staleSemanticSliceAdmission.action, 'reject');
+assert.equal(staleSemanticSliceAdmission.priority, 'blocker');
+assert.equal(staleSemanticSliceAdmission.mergeScore.components.sourceFreshness.score, 0);
+assert.equal(staleSemanticSliceAdmission.mergeScore.value < semanticSliceAdmission.mergeScore.value, true);
 const semanticSliceJson = writeSemanticSliceJson(semanticSlice);
 assert.equal(readSemanticSliceJson(semanticSliceJson).id, semanticSlice.id);
 for (const taxonomyKind of ['conditionalCompilation', 'reflection', 'overloadTypeInference', 'commentsTrivia', 'targetProjectionLoss']) {

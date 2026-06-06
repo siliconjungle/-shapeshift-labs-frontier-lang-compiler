@@ -333,6 +333,7 @@ Extract a surgical semantic slice when a worker only needs one symbol, region, n
 
 ```js
 import {
+  createSemanticSliceAdmissionRecord,
   createSemanticSlice,
   importNativeSource,
   testSemanticSlice,
@@ -362,10 +363,15 @@ const gate = testSemanticSlice(slice, {
 });
 
 console.log(gate.status); // "passed", "needs-review", or "failed"
+const admission = createSemanticSliceAdmissionRecord(slice, { testResult: gate });
+console.log(admission.mergeScore.value); // sortable 0-100 semantic merge score
+console.log(admission.autoMergeClaim); // always false
 console.log(writeSemanticSliceJson(slice)); // stable JSON for worker inputs
 ```
 
 A semantic slice is the small unit a swarm can hand to a worker instead of copying a full repository. It carries the selected symbols, ownership regions, native nodes, relations, occurrences, source-map links, source spans, source excerpts, source hashes, focused verification commands, fixture hints, and merge-admission metadata. It does not claim the patch is correct; it makes the context and conflicts machine-readable so admission scoring can combine changed ownership, focused test status, stale/source-hash checks, evidence, and semantic risk in one sortable record.
+
+Slice admission records add a compact `frontier.lang.semanticMergeScore.v1` score with semantic-selection, source-freshness, ownership-isolation, verification-evidence, and review-risk components. They are built for coordinator queues and dashboards: sort likely useful slices first, reject stale or empty slices early, and keep correctness proof separate from merge metadata.
 
 Compile native source imports through the same reader/IR/writer facade that swarms use for sidecar evidence. Same-language targets preserve exact source when hashes match; cross-language targets emit declaration stubs until a real adapter provides stronger evidence:
 

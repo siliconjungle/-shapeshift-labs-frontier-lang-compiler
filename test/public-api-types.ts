@@ -70,6 +70,7 @@ type ExpectedPublicRuntimeExport =
   | 'createSwiftSyntaxNativeImporterAdapter'
   | 'createSemanticImportSidecar'
   | 'createSemanticSlice'
+  | 'createSemanticSliceAdmissionRecord'
   | 'createTreeSitterNativeImporterAdapter'
   | 'createTypeScriptCompilerNativeImporterAdapter'
   | 'createUniversalAstFromDocument'

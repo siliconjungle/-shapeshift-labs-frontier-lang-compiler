@@ -17,6 +17,7 @@ export * from './declarations/semantic-patch-bundle.js';
 export * from './declarations/semantic-sidecar.js';
 export * from './declarations/native-diff.js';
 export * from './declarations/semantic-slice.js';
+export * from './declarations/semantic-slice-admission.js';
 export * from './declarations/adapter-coverage.js';
 export * from './declarations/import-adapter-core.js';
 export * from './declarations/import-adapter-options-native.js';

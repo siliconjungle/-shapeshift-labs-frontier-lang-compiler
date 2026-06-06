@@ -27,6 +27,7 @@ export {
   createSwiftSyntaxNativeImporterAdapter,
   createSemanticImportSidecar,
   createSemanticSlice,
+  createSemanticSliceAdmissionRecord,
   createTreeSitterNativeImporterAdapter,
   createTypeScriptCompilerNativeImporterAdapter,
   createUniversalAstFromDocument,

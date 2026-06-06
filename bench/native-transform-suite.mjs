@@ -4,6 +4,7 @@ import {
   createNativeSourcePreservation,
   createSemanticImportSidecar,
   createSemanticSlice,
+  createSemanticSliceAdmissionRecord,
   projectNativeImportToSource,
   summarizeNativeImportFeatureEvidence,
   testSemanticSlice
@@ -40,6 +41,11 @@ export function measureNativeTransformations(nativeImportResults) {
   const semanticSliceGates = semanticSlices.map((slice) => testSemanticSlice(slice, { requireSourceMapLinks: false }));
   const sliceGateDurationMs = performance.now() - sliceGateStart;
   const sliceGateFailures = semanticSliceGates.filter((gate) => gate.status === 'failed').length;
+  const sliceAdmissionStart = performance.now();
+  const semanticSliceAdmissions = semanticSlices.map((slice, index) => createSemanticSliceAdmissionRecord(slice, {
+    testResult: semanticSliceGates[index]
+  }));
+  const sliceAdmissionDurationMs = performance.now() - sliceAdmissionStart;
 
   const featureEvidenceStart = performance.now();
   const featureEvidenceSummaries = nativeImportResults.map((imported) => summarizeNativeImportFeatureEvidence(imported.losses, {
@@ -65,9 +71,12 @@ export function measureNativeTransformations(nativeImportResults) {
     semanticSlices: semanticSlices.length,
     sliceDurationMs,
     sliceGateDurationMs,
+    sliceAdmissionDurationMs,
     sliceSourceMapLinks,
     sliceConflictKeys,
     sliceGateFailures,
+    sliceAdmissions: semanticSliceAdmissions.length,
+    sliceAdmissionRejected: semanticSliceAdmissions.filter((admission) => admission.action === 'reject').length,
     featureEvidencePolicyMatches,
     featureEvidenceDurationMs,
     nativeProjections: nativeProjections.length,

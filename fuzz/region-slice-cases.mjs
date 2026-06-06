@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   createSemanticImportSidecar,
   createSemanticSlice,
+  createSemanticSliceAdmissionRecord,
   importNativeSource,
   testSemanticSlice
 } from '../dist/index.js';
@@ -65,6 +66,16 @@ function runSemanticSliceCases() {
     assert.ok(slice.sourceMapLinks.length >= 1);
     const gate = testSemanticSlice(slice, { currentSources: { [imported.sourcePath]: sourceText } });
     assert.equal(gate.status, 'passed');
+    const admission = createSemanticSliceAdmissionRecord(slice, { testResult: gate });
+    assert.equal(admission.kind, 'frontier.lang.semanticSliceAdmission');
+    assert.equal(admission.autoMergeClaim, false);
+    assert.equal(admission.mergeScore.higherIsBetter, true);
+    assert.equal(admission.mergeScore.components.sourceFreshness.score, 100);
+    const staleAdmission = createSemanticSliceAdmissionRecord(slice, {
+      currentSources: { [imported.sourcePath]: `${sourceText}\n// fuzz stale source\n` }
+    });
+    assert.equal(staleAdmission.action, 'reject');
+    assert.equal(staleAdmission.mergeScore.components.sourceFreshness.score, 0);
   }
 }
 
