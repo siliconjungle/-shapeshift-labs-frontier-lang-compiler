@@ -1894,6 +1894,11 @@ assert.equal(scannedJsImport.metadata.sourcePreservation.kind, 'frontier.lang.na
 assert.equal(scannedJsImport.metadata.sourcePreservation.sourceText, scannedJsImport.nativeSource.metadata.sourcePreservation.sourceText);
 assert.equal(scannedJsImport.metadata.sourcePreservation.summary.comments >= 1, true);
 assert.equal(scannedJsImport.metadata.sourcePreservation.summary.directives >= 1, true);
+assert.equal(scannedJsImport.metadata.kernelSourcePreservationSummary.total >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsImport.metadata.kernelSourcePreservationSummary.exact >= 1, true);
+assert.equal(scannedJsImport.metadata.kernelSourcePreservationRecords.some((record) => record.kind === 'frontier.lang.sourcePreservation'), true);
+assert.equal(scannedJsImport.metadata.kernelSourcePreservationRecords.some((record) => record.level === 'declaration' || record.level === 'estimated'), true);
+assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.preservation === 'declaration' || mapping.preservation === 'estimated'), true);
 assert.equal(scannedJsImport.nativeAst.metadata.sourcePreservationSummary.exactSourceAvailable, true);
 assert.equal(scannedJsImport.metadata.importResultContract.kind, 'frontier.lang.nativeImportResultContract');
 assert.equal(scannedJsImport.metadata.importResultContract.sourceCount, 1);
@@ -1949,6 +1954,12 @@ assert.equal(scannedJsSidecar.summary.regionKinds >= 2, true);
 assert.equal(scannedJsSidecar.symbols.some((symbol) => symbol.name === 'TodoStore.save' && symbol.ownershipRegionId), true);
 assert.equal(scannedJsSidecar.symbols.some((symbol) => symbol.ownershipRegionKind), true);
 assert.equal(scannedJsSidecar.imports.some((entry) => entry.regionTaxonomy?.presentKinds?.length), true);
+assert.equal(scannedJsSidecar.imports[0].sourcePreservationRecordCount >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsSidecar.imports[0].sourcePreservationLevels.includes('exact'), true);
+assert.equal(scannedJsSidecar.sourcePreservation.total >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsSidecar.sourcePreservation.exact >= 1, true);
+assert.equal((scannedJsSidecar.sourcePreservation.byLevel.declaration ?? 0) + (scannedJsSidecar.sourcePreservation.byLevel.estimated ?? 0) >= 1, true);
+assert.equal(scannedJsSidecar.summary.sourcePreservationRecords, scannedJsSidecar.sourcePreservation.total);
 assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.supportedOperations.includes('replace-import')), true);
 assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.sourcePath === 'src/scanned.js' && hint.projection.targetPath === 'dist/scanned.js'), true);
 const jsRegionFalsePositiveImport = importNativeSource({

@@ -18,6 +18,8 @@ import type {
   SemanticPatchBundle,
   SourceMapMappingRecord,
   SourceMapRecord,
+  SourcePreservationLevel,
+  SourcePreservationRecord,
   SourceSpan
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { Diagnostic } from '@shapeshift-labs/frontier-lang-checker';
@@ -959,9 +961,29 @@ export interface SemanticImportSidecarImportEntry {
   readonly symbolCount: number;
   readonly sourceMapCount: number;
   readonly sourceMapMappingCount: number;
+  readonly sourcePreservationRecordCount: number;
+  readonly sourcePreservationLevels: readonly SourcePreservationLevel[];
   readonly readiness: SemanticMergeReadiness;
   readonly emptySemanticIndex: boolean;
   readonly regionTaxonomy?: SemanticImportRegionTaxonomySummary;
+}
+
+export interface SemanticImportSidecarSourcePreservationRecord {
+  readonly id: string;
+  readonly level: SourcePreservationLevel;
+  readonly precision?: string;
+  readonly sourceMapId?: string;
+  readonly sourceMapMappingId?: string;
+  readonly semanticNodeId?: string;
+  readonly nativeSourceId?: string;
+  readonly nativeAstNodeId?: string;
+  readonly semanticSymbolId?: string;
+  readonly semanticOccurrenceId?: string;
+  readonly sourcePath?: string;
+  readonly generatedPath?: string;
+  readonly lossIds: readonly string[];
+  readonly evidenceIds: readonly string[];
+  readonly reasons: readonly string[];
 }
 
 export interface SemanticImportSidecar {
@@ -978,6 +1000,19 @@ export interface SemanticImportSidecar {
     readonly total: number;
     readonly mappings: number;
     readonly ids: readonly string[];
+  };
+  readonly sourcePreservation: {
+    readonly total: number;
+    readonly ids: readonly string[];
+    readonly byLevel: Readonly<Record<string, number>>;
+    readonly exact: number;
+    readonly declaration: number;
+    readonly estimated: number;
+    readonly blocked: number;
+    readonly sourcePaths: readonly string[];
+    readonly sourceMapIds: readonly string[];
+    readonly sourceMapMappingIds: readonly string[];
+    readonly records: readonly SemanticImportSidecarSourcePreservationRecord[];
   };
   readonly patchHints: readonly SemanticImportPatchHint[];
   readonly mergeCandidates: readonly {
@@ -1007,6 +1042,7 @@ export interface SemanticImportSidecar {
     readonly ownershipRegions: number;
     readonly regionKinds: number;
     readonly sourceMapMappings: number;
+    readonly sourcePreservationRecords: number;
     readonly readiness: SemanticMergeReadiness;
     readonly emptySemanticIndex: boolean;
   };
@@ -1392,10 +1428,14 @@ export interface ImportNativeSourceOptions {
   readonly metadata?: Record<string, unknown>;
 }
 
-export type NativeSourceImportResult = LanguageImportResult & {
+export type NativeSourceImportResult = Omit<LanguageImportResult, 'metadata'> & {
   readonly nativeSource: NativeSourceNode;
   readonly semanticIndex?: SemanticIndexRecord;
   readonly universalAst: FrontierUniversalAstEnvelope;
+  readonly metadata?: Record<string, unknown> & {
+    readonly sourcePreservationRecords?: readonly SourcePreservationRecord[];
+    readonly kernelSourcePreservationRecords?: readonly SourcePreservationRecord[];
+  };
 };
 
 export type ExternalSemanticIndexFormat =

@@ -6,7 +6,9 @@ import {
   createSemanticIndexRecord,
   createSemanticMergeCandidateRecord,
   createSourceMapRecord,
+  createSourcePreservationRecord,
   createUniversalAstEnvelope,
+  explainSourcePreservation,
   hashDocumentBase,
   hashSemanticValue,
   nativeSourceNode,
@@ -2562,6 +2564,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
   const mergeCandidates = imports.flatMap((imported) => imported?.mergeCandidates ?? []);
   const lossSummary = summarizeNativeImportLosses(losses, { evidence });
   const regionTaxonomy = summarizeSemanticImportRegionTaxonomy(ownershipRegions);
+  const sourcePreservation = summarizeKernelSourcePreservation(importResult, imports);
   const readiness = mergeCandidates.reduce(
     (current, candidate) => maxSemanticMergeReadiness(current, candidate.readiness),
     lossSummary.semanticMergeReadiness
@@ -2582,6 +2585,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       mappings: sourceMapMappings.length,
       ids: sourceMaps.map((sourceMap) => sourceMap.id).filter(Boolean)
     },
+    sourcePreservation,
     patchHints,
     mergeCandidates: mergeCandidates.map((candidate) => ({
       id: candidate.id,
@@ -2610,6 +2614,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       ownershipRegions: ownershipRegions.length,
       regionKinds: regionTaxonomy.presentKinds.length,
       sourceMapMappings: sourceMapMappings.length,
+      sourcePreservationRecords: sourcePreservation.total,
       readiness,
       emptySemanticIndex: symbols.length === 0
     },
@@ -3809,6 +3814,7 @@ export function importNativeSource(input) {
       nativeSource,
       evidence,
       losses,
+      sourcePreservation,
       target: input.target,
       targetPath,
       targetHash
@@ -3843,6 +3849,7 @@ export function importNativeSource(input) {
     semanticIndex,
     evidence,
     losses,
+    sourcePreservation,
     target: input.target,
     targetPath: inferredTargetPath,
     targetHash,
@@ -3850,6 +3857,20 @@ export function importNativeSource(input) {
     sourceHash,
     defaultSourceMapId: `source_map_${importIdPart}`
   });
+  const sourcePreservationRecords = createKernelSourcePreservationRecords({
+    idPart: importIdPart,
+    language,
+    sourcePath,
+    sourceHash,
+    sourcePreservation,
+    sourceMaps,
+    losses,
+    evidence,
+    nativeSource,
+    nativeAst,
+    semanticIndex
+  });
+  const kernelSourcePreservationSummary = summarizeKernelSourcePreservationRecords(sourcePreservationRecords);
   const resultSourceMapMappings = sourceMaps.flatMap((sourceMap) => sourceMap.mappings ?? []);
   const universalAst = createUniversalAstEnvelope({
     id: input.universalAstId ?? `universal_ast_${importIdPart}`,
@@ -3867,6 +3888,11 @@ export function importNativeSource(input) {
       ...(sourcePreservation ? {
         sourcePreservationId: sourcePreservation.id,
         sourcePreservation
+      } : {}),
+      ...(sourcePreservationRecords.length ? {
+        sourcePreservationRecords,
+        kernelSourcePreservationRecords: sourcePreservationRecords,
+        kernelSourcePreservationSummary
       } : {}),
       ...(declaredSourceHash && declaredSourceHash !== sourceHash ? {
         declaredSourceHash,
@@ -3894,6 +3920,10 @@ export function importNativeSource(input) {
       ...(sourcePreservation ? {
         sourcePreservationId: sourcePreservation.id,
         sourcePreservationSummary: sourcePreservation.summary
+      } : {}),
+      ...(sourcePreservationRecords.length ? {
+        kernelSourcePreservationRecordIds: sourcePreservationRecords.map((record) => record.id),
+        kernelSourcePreservationSummary
       } : {}),
       ...(declaredSourceHash && declaredSourceHash !== sourceHash ? {
         declaredSourceHash,
@@ -3924,6 +3954,11 @@ export function importNativeSource(input) {
       ...(sourcePreservation ? {
         sourcePreservationId: sourcePreservation.id,
         sourcePreservation
+      } : {}),
+      ...(sourcePreservationRecords.length ? {
+        sourcePreservationRecords,
+        kernelSourcePreservationRecords: sourcePreservationRecords,
+        kernelSourcePreservationSummary
       } : {}),
       ...(declaredSourceHash && declaredSourceHash !== sourceHash ? {
         declaredSourceHash,
@@ -6571,6 +6606,8 @@ function normalizeSourceMapMappings(mappings, context) {
       const sourceSpan = mapping.sourceSpan ?? occurrence?.span ?? nativeNode?.span;
       const target = mapping.target ?? mapping.generatedSpan?.target ?? context.target;
       const generatedSpan = normalizeGeneratedSpan(mapping.generatedSpan, target, context.targetPath, context.targetHash);
+      const mappingLossIds = normalizeReferenceIds(mapping.lossIds, lossIdsForNativeNode(context.losses ?? nativeAst?.losses ?? [], nativeAstNodeId));
+      const precision = normalizeSourceMapPrecision(mapping.precision, sourceSpan, generatedSpan);
       if (
         !nativeAstNodeId &&
         !mapping.semanticNodeId &&
@@ -6593,11 +6630,17 @@ function normalizeSourceMapMappings(mappings, context) {
         generatedSpan,
         target,
         evidenceIds: normalizeReferenceIds(mapping.evidenceIds, evidenceIds),
-        lossIds: normalizeReferenceIds(mapping.lossIds, lossIdsForNativeNode(context.losses ?? nativeAst?.losses ?? [], nativeAstNodeId)),
+        lossIds: mappingLossIds,
         ownershipRegionId: mapping.ownershipRegionId ?? symbol?.metadata?.ownershipRegionId,
         ownershipRegionKey: mapping.ownershipRegionKey ?? symbol?.metadata?.ownershipRegionKey,
         ownershipRegionKind: mapping.ownershipRegionKind ?? symbol?.metadata?.ownershipRegionKind,
-        precision: normalizeSourceMapPrecision(mapping.precision, sourceSpan, generatedSpan)
+        precision,
+        preservation: normalizeSourcePreservationLevel(mapping.preservation, {
+          precision,
+          lossIds: mappingLossIds,
+          losses: context.losses ?? nativeAst?.losses ?? [],
+          sourcePreservation: context.sourcePreservation
+        })
       };
       return {
         ...normalizedMapping,
@@ -6678,15 +6721,43 @@ function normalizeSourceMapPrecision(value, sourceSpan, generatedSpan) {
   const explicit = value === undefined || value === null ? '' : String(value).trim();
   if (explicit) {
     const normalized = explicit.toLowerCase();
-    if (normalized === 'exact' || normalized === 'declaration' || normalized === 'line' || normalized === 'estimated' || normalized === 'unknown') return normalized;
+    if (normalized === 'exact') {
+      return hasExactSpan(sourceSpan) && hasExactSpan(generatedSpan)
+        ? 'exact'
+        : inferSourceMapPrecisionFromSpans(sourceSpan, generatedSpan);
+    }
+    if (normalized === 'declaration' || normalized === 'line' || normalized === 'estimated' || normalized === 'unknown') return normalized;
     if (normalized === 'estimate' || normalized === 'approx' || normalized === 'approximate' || normalized === 'approximated') return 'estimated';
     return explicit;
   }
+  return inferSourceMapPrecisionFromSpans(sourceSpan, generatedSpan);
+}
+
+function inferSourceMapPrecisionFromSpans(sourceSpan, generatedSpan) {
   if (hasExactSpan(sourceSpan) && hasExactSpan(generatedSpan)) return 'exact';
   if (sourceSpan?.startLine && generatedSpan?.startLine) return 'line';
   if (sourceSpan?.startLine) return 'declaration';
   if (generatedSpan?.startLine) return 'line';
   return 'unknown';
+}
+
+function normalizeSourcePreservationLevel(value, context = {}) {
+  const explicit = value === undefined || value === null ? '' : String(value).trim();
+  if (explicit) {
+    const normalized = explicit.toLowerCase();
+    if (normalized === 'exact' || normalized === 'declaration' || normalized === 'estimated' || normalized === 'blocked') return normalized;
+    if (normalized === 'estimate' || normalized === 'approx' || normalized === 'approximate' || normalized === 'approximated' || normalized === 'line') return 'estimated';
+    return explicit;
+  }
+
+  const lossIds = new Set(context.lossIds ?? []);
+  const linkedLosses = (context.losses ?? []).filter((loss) => lossIds.has(loss.id));
+  if (linkedLosses.some((loss) => loss.severity === 'error')) return 'blocked';
+  if (context.precision === 'exact') return 'exact';
+  if (context.precision === 'declaration') return 'declaration';
+  if (context.precision === 'line' || context.precision === 'estimated' || context.precision === 'unknown') return 'estimated';
+  if (context.sourcePreservation?.summary?.exactSourceAvailable === true) return 'estimated';
+  return 'estimated';
 }
 
 function hasExactSpan(span) {
@@ -7402,6 +7473,12 @@ function nativeSourceCompilePreservedMappings(input) {
       ownershipRegionKey: mapping.ownershipRegionKey,
       ownershipRegionKind: mapping.ownershipRegionKind,
       precision: exact ? 'exact' : mapping.precision === 'exact' ? 'line' : mapping.precision ?? 'line',
+      preservation: exact ? 'exact' : normalizeSourcePreservationLevel(mapping.preservation, {
+        precision: mapping.precision === 'exact' ? 'line' : mapping.precision ?? 'line',
+        lossIds: mapping.lossIds,
+        losses: input.losses ?? [],
+        sourcePreservation: input.importResult.metadata?.sourcePreservation
+      }),
       metadata: {
         ...mapping.metadata,
         compileResultId: input.compileResultId,
@@ -7429,6 +7506,7 @@ function nativeSourceCompileDeclarationMappings(input) {
       ownershipRegionKey: declaration.metadata?.ownershipRegionKey,
       ownershipRegionKind: declaration.metadata?.ownershipRegionKind,
       precision: generated.exactName ? 'declaration' : 'estimated',
+      preservation: generated.exactName ? 'declaration' : 'estimated',
       metadata: {
         ...declaration.metadata,
         compileResultId: input.compileResultId,
@@ -7451,6 +7529,7 @@ function nativeSourceCompileFileMapping(input) {
     target: input.target,
     evidenceIds: (input.evidence ?? []).map((record) => record.id).filter(Boolean),
     precision: input.projection.mode === 'preserved-source' && input.outputHash === input.projection.sourceHash ? 'line' : 'estimated',
+    preservation: input.losses?.some((loss) => loss.severity === 'error') ? 'blocked' : 'estimated',
     metadata: {
       compileResultId: input.compileResultId,
       sourceMapOrigin: 'file-fallback'
@@ -8497,6 +8576,7 @@ function semanticImportSidecarEntry(imported, index, options) {
   const nativeAst = imported?.nativeAst ?? imported?.nativeSource?.ast;
   const sourceMaps = imported?.sourceMaps ?? imported?.universalAst?.sourceMaps ?? [];
   const sourceMapMappings = sourceMaps.flatMap((sourceMap) => sourceMap?.mappings ?? []);
+  const sourcePreservationRecords = collectKernelSourcePreservationFromImport(imported);
   const mappingsBySymbolId = new Map();
   for (const mapping of sourceMapMappings) {
     if (mapping.semanticSymbolId && !mappingsBySymbolId.has(mapping.semanticSymbolId)) {
@@ -8541,6 +8621,8 @@ function semanticImportSidecarEntry(imported, index, options) {
     symbolCount: symbols.length,
     sourceMapCount: sourceMaps.length,
     sourceMapMappingCount: sourceMapMappings.length,
+    sourcePreservationRecordCount: sourcePreservationRecords.length,
+    sourcePreservationLevels: uniqueStrings(sourcePreservationRecords.map((record) => record.level).filter(Boolean)),
     readiness: imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness ?? 'needs-review',
     emptySemanticIndex: symbols.length === 0,
     regionTaxonomy,
@@ -8932,6 +9014,127 @@ function summarizeImportRegions(importResult, imports, options = {}) {
     byLanguage: countBy(regions.map((region) => region.language ?? importResult?.language ?? 'unknown')),
     symbolIds: uniqueStrings(regions.map((region) => region.symbolId).filter(Boolean)),
     taxonomy
+  };
+}
+
+function createKernelSourcePreservationRecords(input) {
+  const records = [];
+  if (input.sourcePreservation) {
+    const exactSource = input.sourcePreservation.summary?.exactSourceAvailable === true &&
+      (!input.sourceHash || input.sourcePreservation.sourceHash === input.sourceHash);
+    const hashMismatch = input.sourceHash &&
+      input.sourcePreservation.sourceHash &&
+      input.sourcePreservation.sourceHash !== input.sourceHash;
+    records.push(createSourcePreservationRecord({
+      id: `source_preservation_${idFragment(input.idPart ?? input.sourcePath ?? input.language)}_file`,
+      level: hashMismatch ? 'blocked' : exactSource ? 'exact' : 'estimated',
+      precision: exactSource ? 'exact' : 'estimated',
+      nativeSourceId: input.nativeSource?.id,
+      nativeAstNodeId: input.nativeAst?.rootId,
+      sourceSpan: {
+        sourceId: input.sourceHash,
+        path: input.sourcePath,
+        startLine: 1,
+        startColumn: 1
+      },
+      lossIds: (input.losses ?? []).filter((loss) => loss.kind === 'sourcePreservation' || loss.sourceMapId).map((loss) => loss.id),
+      evidenceIds: (input.evidence ?? []).map((record) => record.id).filter(Boolean),
+      losses: input.losses ?? [],
+      evidence: input.evidence ?? [],
+      reasons: hashMismatch
+        ? [`Preserved source hash ${input.sourcePreservation.sourceHash} does not match import hash ${input.sourceHash}.`]
+        : exactSource
+          ? ['Exact native source text is preserved for source-level replay and semantic merge review.']
+          : ['Native source preservation metadata exists, but exact source text is unavailable or unverified.'],
+      metadata: {
+        compilerRecord: 'nativeSourcePreservation',
+        nativeSourcePreservationId: input.sourcePreservation.id,
+        sourceBytes: input.sourcePreservation.sourceBytes,
+        lineCount: input.sourcePreservation.lineCount,
+        tokens: input.sourcePreservation.summary?.tokens ?? 0,
+        trivia: input.sourcePreservation.summary?.trivia ?? 0,
+        directives: input.sourcePreservation.summary?.directives ?? 0,
+        comments: input.sourcePreservation.summary?.comments ?? 0,
+        whitespace: input.sourcePreservation.summary?.whitespace ?? 0,
+        truncated: input.sourcePreservation.summary?.truncated === true
+      }
+    }));
+  }
+
+  for (const sourceMap of input.sourceMaps ?? []) {
+    for (const mapping of sourceMap.mappings ?? []) {
+      records.push(explainSourcePreservation({
+        id: `source_preservation_${idFragment(sourceMap.id)}_${idFragment(mapping.id)}`,
+        sourceMap,
+        mapping,
+        level: mapping.preservation,
+        losses: input.losses ?? [],
+        evidence: uniqueRecordsById([...(input.evidence ?? []), ...(sourceMap.evidence ?? [])]),
+        metadata: {
+          compilerRecord: 'sourceMapMapping',
+          language: input.language,
+          semanticIndexId: input.semanticIndex?.id,
+          sourceMapId: sourceMap.id,
+          sourceMapMappingId: mapping.id
+        }
+      }));
+    }
+  }
+
+  return uniqueRecordsById(records);
+}
+
+function summarizeKernelSourcePreservationRecords(records) {
+  const compactRecords = records.map(compactKernelSourcePreservationRecord);
+  const byLevel = countBy(compactRecords.map((record) => record.level ?? 'unknown'));
+  return {
+    total: compactRecords.length,
+    ids: compactRecords.map((record) => record.id).filter(Boolean),
+    byLevel,
+    exact: byLevel.exact ?? 0,
+    declaration: byLevel.declaration ?? 0,
+    estimated: byLevel.estimated ?? 0,
+    blocked: byLevel.blocked ?? 0,
+    sourcePaths: uniqueStrings(compactRecords.map((record) => record.sourcePath).filter(Boolean)),
+    sourceMapIds: uniqueStrings(compactRecords.map((record) => record.sourceMapId).filter(Boolean)),
+    sourceMapMappingIds: uniqueStrings(compactRecords.map((record) => record.sourceMapMappingId).filter(Boolean)),
+    records: compactRecords
+  };
+}
+
+function collectKernelSourcePreservationFromImport(imported) {
+  return uniqueRecordsById([
+    ...(imported?.metadata?.kernelSourcePreservationRecords ?? []),
+    ...(imported?.metadata?.sourcePreservationRecords ?? []),
+    ...(imported?.universalAst?.metadata?.kernelSourcePreservationRecords ?? []),
+    ...(imported?.universalAst?.metadata?.sourcePreservationRecords ?? [])
+  ].filter((record) => record?.kind === 'frontier.lang.sourcePreservation'));
+}
+
+function summarizeKernelSourcePreservation(importResult, imports) {
+  return summarizeKernelSourcePreservationRecords(uniqueRecordsById([
+    ...collectKernelSourcePreservationFromImport(importResult),
+    ...imports.flatMap((imported) => collectKernelSourcePreservationFromImport(imported))
+  ]));
+}
+
+function compactKernelSourcePreservationRecord(record) {
+  return {
+    id: record.id,
+    level: record.level,
+    precision: record.precision,
+    sourceMapId: record.sourceMapId,
+    sourceMapMappingId: record.sourceMapMappingId,
+    semanticNodeId: record.semanticNodeId,
+    nativeSourceId: record.nativeSourceId,
+    nativeAstNodeId: record.nativeAstNodeId,
+    semanticSymbolId: record.semanticSymbolId,
+    semanticOccurrenceId: record.semanticOccurrenceId,
+    sourcePath: record.sourceSpan?.path,
+    generatedPath: record.generatedSpan?.path ?? record.generatedSpan?.targetPath,
+    lossIds: record.lossIds ?? [],
+    evidenceIds: record.evidenceIds ?? [],
+    reasons: record.reasons ?? []
   };
 }
 
