@@ -2566,6 +2566,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
   const regionTaxonomy = summarizeSemanticImportRegionTaxonomy(ownershipRegions);
   const sourcePreservation = summarizeKernelSourcePreservation(importResult, imports);
   const universalAstLayers = summarizeSemanticImportSidecarUniversalAstLayers(importEntries);
+  const proofSpec = summarizeSemanticImportSidecarProofSpec(importEntries);
   const readiness = mergeCandidates.reduce(
     (current, candidate) => maxSemanticMergeReadiness(current, candidate.readiness),
     lossSummary.semanticMergeReadiness
@@ -2588,6 +2589,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     },
     sourcePreservation,
     universalAstLayers,
+    proofSpec,
     patchHints,
     mergeCandidates: mergeCandidates.map((candidate) => ({
       id: candidate.id,
@@ -2619,6 +2621,9 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       sourcePreservationRecords: sourcePreservation.total,
       universalAstLayers: universalAstLayers.total,
       universalAstLayerNames: universalAstLayers.names,
+      proofSpecRecords: proofSpec.total,
+      proofSpecObligations: proofSpec.obligations,
+      proofSpecFailedObligations: proofSpec.failed,
       readiness,
       emptySemanticIndex: symbols.length === 0
     },
@@ -8582,6 +8587,7 @@ function semanticImportSidecarEntry(imported, index, options) {
   const sourceMapMappings = sourceMaps.flatMap((sourceMap) => sourceMap?.mappings ?? []);
   const sourcePreservationRecords = collectKernelSourcePreservationFromImport(imported);
   const universalAstLayers = summarizeUniversalAstLayers(imported?.universalAst);
+  const proofSpec = summarizeProofSpecLayer(imported?.universalAst?.proof ?? imported?.proof);
   const mappingsBySymbolId = new Map();
   for (const mapping of sourceMapMappings) {
     if (mapping.semanticSymbolId && !mappingsBySymbolId.has(mapping.semanticSymbolId)) {
@@ -8631,11 +8637,127 @@ function semanticImportSidecarEntry(imported, index, options) {
     universalAstLayerCount: universalAstLayers.total,
     universalAstLayerNames: universalAstLayers.names,
     universalAstLayerIds: universalAstLayers.ids,
+    proofSpec,
     readiness: imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness ?? 'needs-review',
     emptySemanticIndex: symbols.length === 0,
     regionTaxonomy,
     symbols,
     ownershipRegions
+  };
+}
+
+function summarizeSemanticImportSidecarProofSpec(importEntries) {
+  const byStatus = {};
+  const byContractKind = {};
+  const byArtifactKind = {};
+  const ids = [];
+  const contractKinds = [];
+  const artifactKinds = [];
+  const totals = {
+    total: 0,
+    contracts: 0,
+    refinements: 0,
+    invariants: 0,
+    termination: 0,
+    temporal: 0,
+    obligations: 0,
+    artifacts: 0,
+    assumptions: 0,
+    evidence: 0,
+    discharged: 0,
+    failed: 0,
+    open: 0,
+    unknown: 0,
+    stale: 0,
+    assumed: 0
+  };
+  for (const entry of importEntries) {
+    const proof = entry.proofSpec ?? summarizeProofSpecLayer();
+    ids.push(...(proof.ids ?? []));
+    contractKinds.push(...(proof.contractKinds ?? []));
+    artifactKinds.push(...(proof.artifactKinds ?? []));
+    for (const key of Object.keys(totals)) {
+      totals[key] += proof[key] ?? 0;
+    }
+    for (const [status, count] of Object.entries(proof.byStatus ?? {})) {
+      byStatus[status] = (byStatus[status] ?? 0) + count;
+    }
+    for (const [kind, count] of Object.entries(proof.byContractKind ?? {})) {
+      byContractKind[kind] = (byContractKind[kind] ?? 0) + count;
+    }
+    for (const [kind, count] of Object.entries(proof.byArtifactKind ?? {})) {
+      byArtifactKind[kind] = (byArtifactKind[kind] ?? 0) + count;
+    }
+  }
+  return {
+    ...totals,
+    ids: uniqueStrings(ids),
+    contractKinds: uniqueStrings(contractKinds),
+    artifactKinds: uniqueStrings(artifactKinds),
+    byStatus,
+    byContractKind,
+    byArtifactKind,
+    empty: totals.total === 0
+  };
+}
+
+function summarizeProofSpecLayer(proof = {}) {
+  const contracts = proof?.contracts ?? [];
+  const refinements = proof?.refinements ?? [];
+  const invariants = proof?.invariants ?? [];
+  const termination = proof?.termination ?? [];
+  const temporal = proof?.temporal ?? [];
+  const obligations = proof?.obligations ?? [];
+  const artifacts = proof?.artifacts ?? [];
+  const assumptions = proof?.assumptions ?? [];
+  const evidence = proof?.evidence ?? [];
+  const allContracts = [...contracts, ...refinements, ...invariants, ...termination, ...temporal];
+  const byStatus = {};
+  for (const obligation of obligations) {
+    const status = obligation?.status ?? 'unknown';
+    byStatus[status] = (byStatus[status] ?? 0) + 1;
+  }
+  const byContractKind = {};
+  for (const contract of allContracts) {
+    const kind = contract?.kind ?? 'unknown';
+    byContractKind[kind] = (byContractKind[kind] ?? 0) + 1;
+  }
+  const byArtifactKind = {};
+  for (const artifact of artifacts) {
+    const kind = artifact?.kind ?? 'unknown';
+    byArtifactKind[kind] = (byArtifactKind[kind] ?? 0) + 1;
+  }
+  const recordGroups = [allContracts, obligations, artifacts, assumptions];
+  const ids = uniqueStrings([
+    proof?.id,
+    ...recordGroups.flatMap((records) => records.map((record) => record?.id)),
+    ...evidence.map((record) => record?.id)
+  ].filter(Boolean));
+  const total = allContracts.length + obligations.length + artifacts.length + assumptions.length;
+  return {
+    total,
+    ids,
+    contracts: contracts.length,
+    refinements: refinements.length,
+    invariants: invariants.length,
+    termination: termination.length,
+    temporal: temporal.length,
+    obligations: obligations.length,
+    artifacts: artifacts.length,
+    assumptions: assumptions.length,
+    evidence: evidence.length,
+    discharged: byStatus.discharged ?? 0,
+    failed: byStatus.failed ?? 0,
+    open: byStatus.open ?? 0,
+    unknown: byStatus.unknown ?? 0,
+    stale: byStatus.stale ?? 0,
+    assumed: byStatus.assumed ?? 0,
+    contractKinds: uniqueStrings(allContracts.map((record) => record?.kind).filter(Boolean)),
+    artifactKinds: uniqueStrings(artifacts.map((record) => record?.kind).filter(Boolean)),
+    byStatus,
+    byContractKind,
+    byArtifactKind,
+    empty: total === 0
   };
 }
 

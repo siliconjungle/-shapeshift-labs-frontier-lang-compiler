@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createProofSpecLayer, createUniversalAstEnvelope } from '@shapeshift-labs/frontier-lang-kernel';
 import * as compilerApi from '../dist/index.js';
 import {
   compileFrontierSource,
@@ -1962,12 +1963,63 @@ assert.equal(scannedJsSidecar.imports[0].universalAstLayerCount > 0, true);
 assert.equal(scannedJsSidecar.imports[0].universalAstLayerNames.includes('semanticSymbols'), true);
 assert.equal(scannedJsSidecar.universalAstLayers.names.includes('projectionEvidence'), true);
 assert.equal(scannedJsSidecar.summary.universalAstLayers, scannedJsSidecar.universalAstLayers.total);
+assert.equal(scannedJsSidecar.proofSpec.empty, true);
+assert.equal(scannedJsSidecar.summary.proofSpecRecords, 0);
 assert.equal(scannedJsSidecar.sourcePreservation.total >= scannedJsImport.sourceMaps[0].mappings.length, true);
 assert.equal(scannedJsSidecar.sourcePreservation.exact >= 1, true);
 assert.equal((scannedJsSidecar.sourcePreservation.byLevel.declaration ?? 0) + (scannedJsSidecar.sourcePreservation.byLevel.estimated ?? 0) >= 1, true);
 assert.equal(scannedJsSidecar.summary.sourcePreservationRecords, scannedJsSidecar.sourcePreservation.total);
 assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.supportedOperations.includes('replace-import')), true);
 assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.sourcePath === 'src/scanned.js' && hint.projection.targetPath === 'dist/scanned.js'), true);
+const scannedProofEvidence = { id: 'proof_scanned_js', kind: 'proof', status: 'passed' };
+const scannedProofSpec = createProofSpecLayer({
+  id: 'proof_scanned_js_spec',
+  invariants: [{
+    id: 'contract_scanned_routes',
+    kind: 'invariant',
+    subjectKind: 'semanticSymbol',
+    subjectId: scannedJsImport.semanticIndex.symbols[0].id,
+    statement: 'Scanned routes preserve declared route ownership.',
+    evidenceIds: [scannedProofEvidence.id]
+  }],
+  obligations: [{
+    id: 'obligation_scanned_routes',
+    kind: 'invariant',
+    status: 'discharged',
+    subjectKind: 'semanticSymbol',
+    subjectId: scannedJsImport.semanticIndex.symbols[0].id,
+    contractIds: ['contract_scanned_routes'],
+    statement: 'Route ownership invariant holds for the scanned fixture.',
+    evidenceIds: [scannedProofEvidence.id]
+  }],
+  evidence: [scannedProofEvidence]
+});
+const scannedProofImport = {
+  ...scannedJsImport,
+  id: 'import_scanned_js_proof',
+  evidence: [...scannedJsImport.evidence, scannedProofEvidence],
+  universalAst: createUniversalAstEnvelope({
+    id: 'uast_scanned_js_proof',
+    document: scannedJsImport.document,
+    nativeSources: scannedJsImport.universalAst.nativeSources,
+    semanticIndex: scannedJsImport.semanticIndex,
+    sourceMaps: scannedJsImport.sourceMaps,
+    losses: scannedJsImport.losses,
+    evidence: [...scannedJsImport.evidence, scannedProofEvidence],
+    mergeCandidates: scannedJsImport.mergeCandidates,
+    proof: scannedProofSpec
+  })
+};
+const scannedProofSidecar = createSemanticImportSidecar(scannedProofImport, { generatedAt: 124 });
+assert.equal(scannedProofSidecar.proofSpec.empty, false);
+assert.equal(scannedProofSidecar.proofSpec.invariants, 1);
+assert.equal(scannedProofSidecar.proofSpec.obligations, 1);
+assert.equal(scannedProofSidecar.proofSpec.discharged, 1);
+assert.equal(scannedProofSidecar.proofSpec.contractKinds.includes('invariant'), true);
+assert.equal(scannedProofSidecar.imports[0].proofSpec.evidence, 1);
+assert.equal(scannedProofSidecar.summary.proofSpecRecords, scannedProofSidecar.proofSpec.total);
+assert.equal(scannedProofSidecar.summary.proofSpecObligations, 1);
+assert.equal(scannedProofSidecar.summary.proofSpecFailedObligations, 0);
 const jsRegionFalsePositiveImport = importNativeSource({
   language: 'typescript',
   sourcePath: 'src/false-positive.ts',

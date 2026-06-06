@@ -133,6 +133,7 @@ import type {
   RustSynNativeImporterAdapterOptions,
   SwiftSyntaxNativeImporterAdapterOptions,
   SemanticImportSidecar,
+  SemanticImportSidecarProofSpecSummary,
   SemanticImportSidecarSourcePreservationRecord,
   SemanticImportRegionTaxonomySummary
 } from '../src/index.js';
@@ -351,8 +352,9 @@ const directTargetProjection: NativeTargetProjectionResult = runNativeTargetProj
 });
 const sidecar: SemanticImportSidecar = createSemanticImportSidecar(imported, { targetPath: 'dist/api-types.js' });
 const regionTaxonomy: SemanticImportRegionTaxonomySummary = sidecar.regionTaxonomy;
+const proofSpecSummary: SemanticImportSidecarProofSpecSummary = sidecar.proofSpec;
 const sourcePreservationRow: SemanticImportSidecarSourcePreservationRecord | undefined = sidecar.sourcePreservation.records[0];
-const sourcePreservationCount: number = sidecar.summary.sourcePreservationRecords + (sourcePreservationRow?.lossIds.length ?? 0);
+const sourcePreservationCount: number = sidecar.summary.sourcePreservationRecords + (sourcePreservationRow?.lossIds.length ?? 0) + proofSpecSummary.obligations;
 void sourcePreservationCount;
 const contract: NativeImportResultContract = createNativeImportResultContract(imported, { sidecarId: sidecar.id });
 const contractSource: NativeImportContractSource = contract.sources[0] ?? {

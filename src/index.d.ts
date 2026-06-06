@@ -968,6 +968,7 @@ export interface SemanticImportSidecarImportEntry {
   readonly universalAstLayerCount: number;
   readonly universalAstLayerNames: readonly string[];
   readonly universalAstLayerIds: readonly string[];
+  readonly proofSpec: SemanticImportSidecarProofSpecSummary;
   readonly readiness: SemanticMergeReadiness;
   readonly emptySemanticIndex: boolean;
   readonly regionTaxonomy?: SemanticImportRegionTaxonomySummary;
@@ -996,6 +997,32 @@ export interface SemanticImportSidecarUniversalAstLayerSummary {
   readonly names: readonly string[];
   readonly ids: readonly string[];
   readonly byName: Readonly<Record<string, number>>;
+  readonly empty: boolean;
+}
+
+export interface SemanticImportSidecarProofSpecSummary {
+  readonly total: number;
+  readonly ids: readonly string[];
+  readonly contracts: number;
+  readonly refinements: number;
+  readonly invariants: number;
+  readonly termination: number;
+  readonly temporal: number;
+  readonly obligations: number;
+  readonly artifacts: number;
+  readonly assumptions: number;
+  readonly evidence: number;
+  readonly discharged: number;
+  readonly failed: number;
+  readonly open: number;
+  readonly unknown: number;
+  readonly stale: number;
+  readonly assumed: number;
+  readonly contractKinds: readonly string[];
+  readonly artifactKinds: readonly string[];
+  readonly byStatus: Readonly<Record<string, number>>;
+  readonly byContractKind: Readonly<Record<string, number>>;
+  readonly byArtifactKind: Readonly<Record<string, number>>;
   readonly empty: boolean;
 }
 
@@ -1028,6 +1055,7 @@ export interface SemanticImportSidecar {
     readonly records: readonly SemanticImportSidecarSourcePreservationRecord[];
   };
   readonly universalAstLayers: SemanticImportSidecarUniversalAstLayerSummary;
+  readonly proofSpec: SemanticImportSidecarProofSpecSummary;
   readonly patchHints: readonly SemanticImportPatchHint[];
   readonly mergeCandidates: readonly {
     readonly id?: string;
@@ -1059,6 +1087,9 @@ export interface SemanticImportSidecar {
     readonly sourcePreservationRecords: number;
     readonly universalAstLayers: number;
     readonly universalAstLayerNames: readonly string[];
+    readonly proofSpecRecords: number;
+    readonly proofSpecObligations: number;
+    readonly proofSpecFailedObligations: number;
     readonly readiness: SemanticMergeReadiness;
     readonly emptySemanticIndex: boolean;
   };

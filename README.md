@@ -197,6 +197,7 @@ const sidecar = createSemanticImportSidecar(imported);
 console.log(sidecar.summary.emptySemanticIndex); // false when symbols were found
 console.log(sidecar.ownershipRegions[0].key); // source#src/runtime.ts#type#Runtime
 console.log(sidecar.patchHints[0].supportedOperations); // source-region patch operations
+console.log(sidecar.proofSpec.obligations); // proof/spec obligations when the import carries a universal AST proof layer
 ```
 
 The built-in JavaScript/TypeScript lightweight scanner also emits review-required ownership regions for clear route/config/content/property shapes in exported objects and arrays:
