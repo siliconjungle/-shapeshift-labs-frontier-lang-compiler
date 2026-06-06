@@ -5,6 +5,7 @@ import {
   createSemanticImportSidecar,
   createSemanticSlice,
   createSemanticSliceAdmissionRecord,
+  createUniversalConversionArtifacts,
   createUniversalConversionPlan,
   projectNativeImportToSource,
   summarizeNativeImportFeatureEvidence,
@@ -54,6 +55,9 @@ export function measureNativeTransformations(nativeImportResults) {
     targets: ['javascript', 'rust', 'python']
   });
   const conversionPlanDurationMs = performance.now() - conversionPlanStart;
+  const conversionArtifactsStart = performance.now();
+  const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan);
+  const conversionArtifactsDurationMs = performance.now() - conversionArtifactsStart;
 
   const featureEvidenceStart = performance.now();
   const featureEvidenceSummaries = nativeImportResults.map((imported) => summarizeNativeImportFeatureEvidence(imported.losses, {
@@ -88,6 +92,10 @@ export function measureNativeTransformations(nativeImportResults) {
     conversionPlanRoutes: conversionPlan.routes.length,
     conversionPlanBlocked: conversionPlan.summary.blockedRoutes,
     conversionPlanDurationMs,
+    conversionArtifacts: conversionArtifacts.summary.routes,
+    conversionArtifactHistories: conversionArtifacts.summary.histories,
+    conversionArtifactPatchBundles: conversionArtifacts.summary.patchBundles,
+    conversionArtifactsDurationMs,
     featureEvidencePolicyMatches,
     featureEvidenceDurationMs,
     nativeProjections: nativeProjections.length,

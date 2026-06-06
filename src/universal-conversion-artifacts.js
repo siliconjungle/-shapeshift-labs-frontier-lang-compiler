@@ -1,0 +1,287 @@
+import { idFragment, uniqueStrings } from './native-import-utils.js';
+import { createUniversalConversionPlan } from './universal-conversion-plan.js';
+import { artifactIndex } from './universal-conversion-artifact-query.js';
+import { createSemanticHistoryRecord } from './internal/index-impl/semanticHistoryRecords.js';
+import { createSemanticPatchBundleRecord } from './internal/index-impl/semanticPatchBundleRecords.js';
+
+export { queryUniversalConversionArtifacts } from './universal-conversion-artifact-query.js';
+
+export function createUniversalConversionArtifacts(input = {}, options = {}) {
+  const generatedAt = options.generatedAt ?? input.generatedAt ?? Date.now();
+  const plan = input?.kind === 'frontier.lang.universalConversionPlan'
+    ? input
+    : input?.target && input?.sourceLanguage
+      ? undefined
+      : createUniversalConversionPlan(input);
+  const routes = selectRoutes(plan?.routes ?? (input?.target && input?.sourceLanguage ? [input] : []), options);
+  const routeArtifacts = routes.map((route) => createRouteArtifact(route, {
+    generatedAt,
+    planId: options.planId ?? plan?.id ?? route.mergeRefs?.planId,
+    metadata: options.metadata
+  }));
+  const historyRecords = routeArtifacts.map((artifact) => artifact.history);
+  const patchBundleRecords = routeArtifacts.map((artifact) => artifact.patchBundle);
+  const index = artifactIndex(routeArtifacts);
+  return {
+    kind: 'frontier.lang.universalConversionArtifacts',
+    version: 1,
+    schema: 'frontier.lang.universalConversionArtifacts.v1',
+    id: options.id ?? `universal_conversion_artifacts_${idFragment(index.routeIds.join('_') || plan?.id || 'routes')}`,
+    planId: plan?.id ?? options.planId,
+    generatedAt,
+    routeArtifacts,
+    historyRecords,
+    patchBundleRecords,
+    index,
+    summary: {
+      routes: routeArtifacts.length,
+      histories: historyRecords.length,
+      patchBundles: patchBundleRecords.length,
+      reviewRequired: routeArtifacts.filter((artifact) => artifact.reviewRequired).length,
+      blocked: routeArtifacts.filter((artifact) => artifact.admissionStatus === 'blocked').length,
+      autoMergeClaims: 0,
+      semanticEquivalenceClaims: 0
+    },
+    metadata: {
+      autoMergeClaim: false,
+      semanticEquivalenceClaim: false,
+      note: 'Materialized conversion artifacts are merge-review records. They preserve provenance and admission state but do not prove target semantic equivalence.',
+      ...options.metadata
+    }
+  };
+}
+
+function createRouteArtifact(route, options) {
+  const refs = route.mergeRefs ?? {};
+  const planId = options.planId ?? refs.planId;
+  const sources = normalizeSources(refs.sources, route);
+  const regions = routeRegions(route, refs, sources);
+  const sourceMapLinks = routeSourceMapLinks(route, refs, sources, regions);
+  const admissionStatus = routeAdmissionStatus(route);
+  const reasonCodes = routeReasonCodes(route);
+  const historyId = refs.historyIds?.[0] ?? `history_${route.id}`;
+  const patchBundleId = refs.patchBundleIds?.[0] ?? `semantic_patch_bundle_${route.id}`;
+  const history = createSemanticHistoryRecord({
+    id: historyId,
+    createdAt: options.generatedAt,
+    language: route.sourceLanguage,
+    sourcePath: sources[0]?.sourcePath,
+    sources,
+    ownershipRegions: regions,
+    semanticCandidates: routeSemanticCandidates(route, refs),
+    evidenceIds: refs.evidenceIds,
+    proofIds: refs.proofIds,
+    replayLinks: refs.replayLinks,
+    admission: {
+      status: admissionStatus,
+      readiness: route.readiness,
+      reasonCodes,
+      evidenceIds: refs.evidenceIds,
+      metadata: routeAdmissionMetadata(route, planId)
+    },
+    metadata: routeRecordMetadata(route, planId, options.metadata)
+  }, { id: historyId, createdAt: options.generatedAt });
+  const patchBundle = createSemanticPatchBundleRecord({
+    id: patchBundleId,
+    language: route.sourceLanguage,
+    sourcePath: sources[0]?.sourcePath,
+    sources,
+    changedRegions: regions,
+    sourceMapLinks,
+    evidenceIds: refs.evidenceIds,
+    proofIds: refs.proofIds,
+    historyIds: [history.id],
+    readiness: route.readiness,
+    conflictKeys: refs.conflictKeys,
+    admission: {
+      status: admissionStatus,
+      readiness: route.readiness,
+      reviewRequired: true,
+      reasonCodes,
+      conflictKeys: refs.conflictKeys,
+      evidenceIds: refs.evidenceIds,
+      metadata: routeAdmissionMetadata(route, planId)
+    },
+    metadata: routeRecordMetadata(route, planId, options.metadata)
+  }, { id: patchBundleId, createdAt: options.generatedAt });
+  const materialization = {
+    status: 'materialized',
+    plannedHistoryIds: refs.historyIds ?? [],
+    materializedHistoryIds: [history.id],
+    patchBundleIds: [patchBundle.id],
+    sourceMapLinkIds: patchBundle.index.sourceMapLinkIds,
+    evidenceIds: history.evidenceIds,
+    proofIds: history.proofIds,
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false
+  };
+  return {
+    kind: 'frontier.lang.universalConversionRouteArtifact',
+    version: 1,
+    schema: 'frontier.lang.universalConversionRouteArtifact.v1',
+    routeId: route.id,
+    planId,
+    sourceLanguage: route.sourceLanguage,
+    target: route.target,
+    mode: route.mode,
+    routeAction: route.routeAction,
+    priority: route.priority,
+    readiness: route.readiness,
+    admissionAction: route.admissionAction,
+    admissionStatus,
+    reviewRequired: true,
+    history,
+    patchBundle,
+    materialization,
+    mergeScore: route.mergeScore,
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    metadata: { ...routeRecordMetadata(route, planId, options.metadata), materialization }
+  };
+}
+
+function selectRoutes(routes, options) {
+  const selected = (routes ?? []).filter((route) => {
+    if (options.routeId && route.id !== options.routeId) return false;
+    if (options.sourceLanguage && route.sourceLanguage !== options.sourceLanguage) return false;
+    if (options.target && route.target !== options.target) return false;
+    if (options.mode && route.mode !== options.mode) return false;
+    if (options.readiness && route.readiness !== options.readiness) return false;
+    if (options.admissionAction && route.admissionAction !== options.admissionAction) return false;
+    return true;
+  });
+  return Number.isFinite(options.maxRoutes) ? selected.slice(0, Math.max(0, Number(options.maxRoutes))) : selected;
+}
+
+function normalizeSources(sources, route) {
+  return (sources?.length ? sources : [{}]).map((source, index) => ({
+    id: source.sourceId ?? source.id ?? `route_source_${idFragment(route.id)}_${index + 1}`,
+    importId: source.importId,
+    language: route.sourceLanguage,
+    sourcePath: source.sourcePath,
+    sourceHash: source.sourceHash,
+    baseHash: source.baseHash,
+    targetHash: source.targetHash,
+    metadata: {
+      routeId: route.id,
+      target: route.target,
+      mode: route.mode
+    }
+  }));
+}
+
+function routeRegions(route, refs, sources) {
+  const source = sources[0] ?? {};
+  const keys = refs.semanticOwnershipKeys?.length
+    ? refs.semanticOwnershipKeys
+    : [`conversion#${route.sourceLanguage ?? 'source'}#${route.target ?? 'target'}#${route.id}`];
+  return uniqueStrings(keys).map((key, index) => ({
+    id: `route_region_${idFragment(route.id)}_${index + 1}`,
+    key,
+    conflictKey: refs.conflictKeys?.[index] ?? refs.conflictKeys?.[0] ?? key,
+    changeKind: 'conversion-route',
+    regionKind: route.mode,
+    granularity: 'conversion-route',
+    precision: route.mode === 'preserve-source' ? 'exact-source' : 'semantic-route',
+    language: route.sourceLanguage,
+    sourcePath: source.sourcePath,
+    sourceHash: source.sourceHash,
+    sourceMapIds: refs.sourceMapIds,
+    sourceMapMappingIds: refs.sourceMapMappingIds,
+    admission: {
+      readiness: route.readiness,
+      action: route.admissionAction,
+      conflictKeys: refs.conflictKeys
+    },
+    metadata: {
+      routeId: route.id,
+      target: route.target,
+      mode: route.mode,
+      autoMergeClaim: false,
+      semanticEquivalenceClaim: false
+    }
+  }));
+}
+
+function routeSourceMapLinks(route, refs, sources, regions) {
+  const source = sources[0] ?? {};
+  const max = Math.max(refs.sourceMapIds?.length ?? 0, refs.sourceMapMappingIds?.length ?? 0);
+  return Array.from({ length: max }, (_, index) => ({
+    id: refs.sourceMapLinkIds?.[index] ?? `route_source_map_link_${idFragment(route.id)}_${index + 1}`,
+    sourceMapId: refs.sourceMapIds?.[index] ?? refs.sourceMapIds?.[0],
+    sourceMapMappingId: refs.sourceMapMappingIds?.[index],
+    sourcePath: source.sourcePath,
+    sourceHash: source.sourceHash,
+    targetPath: `${route.target}:${source.sourcePath ?? route.id}`,
+    precision: route.mode === 'preserve-source' ? 'exact-source' : 'semantic-route',
+    regionKey: regions[index % Math.max(1, regions.length)]?.key,
+    regionKind: route.mode
+  }));
+}
+
+function routeSemanticCandidates(route, refs) {
+  const ids = refs.mergeCandidateIds?.length ? refs.mergeCandidateIds : [`candidate_${route.id}`];
+  return uniqueStrings(ids).map((id) => ({
+    id,
+    sourcePath: refs.sources?.[0]?.sourcePath,
+    baseHash: refs.sources?.[0]?.baseHash,
+    targetHash: refs.sources?.[0]?.targetHash,
+    readiness: route.readiness,
+    conflictKeys: refs.conflictKeys ?? [],
+    ownershipKeys: refs.semanticOwnershipKeys ?? [],
+    evidenceIds: refs.evidenceIds ?? [],
+    proofIds: refs.proofIds ?? [],
+    replayIds: (refs.replayLinks ?? []).map((link) => link?.id).filter(Boolean),
+    metadata: {
+      routeId: route.id,
+      target: route.target,
+      mode: route.mode,
+      risk: route.mergeScore?.risk
+    }
+  }));
+}
+
+function routeAdmissionStatus(route) {
+  if (route.readiness === 'blocked' || route.admissionAction === 'reject') return 'blocked';
+  if (route.readiness === 'ready' && route.missingEvidence?.length === 0) return 'queued';
+  return 'needs-review';
+}
+
+function routeReasonCodes(route) {
+  return uniqueStrings([
+    `mode:${route.mode}`,
+    `action:${route.routeAction}`,
+    ...(route.missingEvidence ?? []).map((item) => `missing:${item}`),
+    ...(route.blockers ?? []).map((item) => `blocker:${item}`),
+    ...(route.review ?? []).map((item) => `review:${item}`)
+  ]);
+}
+
+function routeAdmissionMetadata(route, planId) {
+  return {
+    planId,
+    routeId: route.id,
+    routeAction: route.routeAction,
+    admissionAction: route.admissionAction,
+    priority: route.priority,
+    mergeScore: route.mergeScore,
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false
+  };
+}
+
+function routeRecordMetadata(route, planId, metadata) {
+  return {
+    planId,
+    routeId: route.id,
+    target: route.target,
+    mode: route.mode,
+    routeAction: route.routeAction,
+    missingEvidence: route.missingEvidence ?? [],
+    blockers: route.blockers ?? [],
+    review: route.review ?? [],
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    ...metadata
+  };
+}

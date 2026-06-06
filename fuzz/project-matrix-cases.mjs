@@ -5,6 +5,7 @@ import {
   createNativeParserFeatureMatrix,
   createProjectionTargetLossMatrix,
   createSemanticImportSidecar,
+  createUniversalConversionArtifacts,
   createUniversalConversionPlan,
   createUniversalCapabilityMatrix,
   importNativeProject,
@@ -88,6 +89,11 @@ export async function runProjectMatrixCases(adapters) {
   assert.equal(conversionPlan.summary.routes >= project.imports.length, true);
   assert.equal(conversionPlan.summary.autoMergeClaims, 0);
   assert.ok(conversionPlan.routes.some((route) => route.missingEvidence.includes('proof-or-replay-evidence')));
+  const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan);
+  assert.equal(conversionArtifacts.summary.routes, conversionPlan.routes.length);
+  assert.equal(conversionArtifacts.summary.autoMergeClaims, 0);
+  assert.ok(conversionArtifacts.historyRecords.every((record) => record.admission.status));
+  assert.ok(conversionArtifacts.patchBundleRecords.every((record) => record.admission.autoMergeClaim === false));
 
   const projectSidecar = createSemanticImportSidecar(project);
   assert.equal(projectSidecar.summary.imports, 2);

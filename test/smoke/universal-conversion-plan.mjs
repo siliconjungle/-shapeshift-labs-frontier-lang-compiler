@@ -1,7 +1,12 @@
 import { assert } from './helpers.mjs';
 import { scannedJsImport } from './scanned-js.mjs';
 import { scannedCImport } from './scanned-languages.mjs';
-import { createUniversalConversionPlan, queryUniversalConversionPlan } from './compiler-api.mjs';
+import {
+  createUniversalConversionArtifacts,
+  createUniversalConversionPlan,
+  queryUniversalConversionArtifacts,
+  queryUniversalConversionPlan
+} from './compiler-api.mjs';
 
 const jsRustAdapter = {
   id: 'fixture-js-rust-conversion-plan-adapter',
@@ -57,6 +62,28 @@ assert.equal(jsToJs.mergeRefs.semanticOwnershipKeys.length >= 1, true);
 assert.equal(jsToJs.mergeScore.schema, 'frontier.lang.semanticMergeScore.v1');
 assert.equal(jsToJs.mergeScore.components.projectionPath.status, 'strong');
 
+const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan, { generatedAt: 778 });
+assert.equal(conversionArtifacts.kind, 'frontier.lang.universalConversionArtifacts');
+assert.equal(conversionArtifacts.generatedAt, 778);
+assert.equal(conversionArtifacts.summary.routes, conversionPlan.routes.length);
+assert.equal(conversionArtifacts.summary.histories, conversionPlan.routes.length);
+assert.equal(conversionArtifacts.summary.patchBundles, conversionPlan.routes.length);
+assert.equal(conversionArtifacts.summary.autoMergeClaims, 0);
+assert.equal(conversionArtifacts.summary.semanticEquivalenceClaims, 0);
+
+const jsArtifact = queryUniversalConversionArtifacts(conversionArtifacts, { routeId: jsToJs.id })[0];
+assert.equal(jsArtifact.history.kind, 'frontier.lang.semanticHistoryRecord');
+assert.equal(jsArtifact.history.id, jsToJs.mergeRefs.historyIds[0]);
+assert.equal(jsArtifact.patchBundle.kind, 'frontier.lang.semanticPatchBundleRecord');
+assert.equal(jsArtifact.patchBundle.historyIds.includes(jsArtifact.history.id), true);
+assert.equal(jsArtifact.patchBundle.admission.autoMergeClaim, false);
+assert.equal(jsArtifact.materialization.status, 'materialized');
+assert.equal(jsArtifact.materialization.plannedHistoryIds.includes(jsToJs.mergeRefs.historyIds[0]), true);
+assert.equal(jsArtifact.materialization.materializedHistoryIds.includes(jsArtifact.history.id), true);
+assert.equal(jsArtifact.autoMergeClaim, false);
+assert.equal(jsArtifact.semanticEquivalenceClaim, false);
+assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, { sourcePath: scannedJsImport.sourcePath }).length >= 1, true);
+
 const jsToRust = queryUniversalConversionPlan(conversionPlan, {
   sourceLanguage: 'javascript',
   target: 'rust'
@@ -76,6 +103,15 @@ assert.equal(cToRust.routeAction, 'add-target-adapter');
 assert.equal(cToRust.missingEvidence.includes('target-adapter'), true);
 assert.equal(cToRust.tasks.some((task) => task.includes('target adapter')), true);
 assert.equal(cToRust.mergeScore.action, 'reject');
+
+const cArtifact = queryUniversalConversionArtifacts(conversionArtifacts, {
+  routeId: cToRust.id,
+  admissionStatus: 'blocked'
+})[0];
+assert.equal(cArtifact.mode, 'semantic-index-only');
+assert.equal(cArtifact.patchBundle.admission.status, 'blocked');
+assert.equal(cArtifact.history.admission.status, 'blocked');
+assert.equal(cArtifact.history.admission.reasonCodes.some((reason) => reason.includes('missing:target-adapter')), true);
 
 const blockedQuery = queryUniversalConversionPlan(conversionPlan, {
   sourceLanguage: 'fortran',
