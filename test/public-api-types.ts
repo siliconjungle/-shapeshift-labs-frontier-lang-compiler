@@ -26,6 +26,7 @@ import {
   createNativeParserAstFormatMatrix,
   createNativeParserFeatureMatrix,
   createProjectionTargetLossMatrix,
+  createUniversalCapabilityMatrix,
   createNativeSourcePreservation,
   createCSharpRoslynNativeImporterAdapter,
   createClangAstNativeImporterAdapter,
@@ -125,6 +126,8 @@ import type {
   ProjectionTargetLossClass,
   ProjectionTargetLossMatrix,
   ProjectionTargetLossMatrixOptions,
+  UniversalCapabilityMatrix,
+  UniversalCapabilityMatrixOptions,
   ClangAstNativeImporterAdapterOptions,
   CSharpRoslynNativeImporterAdapterOptions,
   GoAstNativeImporterAdapterOptions,
@@ -174,6 +177,7 @@ type ExpectedPublicRuntimeExport =
   | 'createNativeParserAstFormatMatrix'
   | 'createNativeParserFeatureMatrix'
   | 'createProjectionTargetLossMatrix'
+  | 'createUniversalCapabilityMatrix'
   | 'createNativeSourcePreservation'
   | 'createCSharpRoslynNativeImporterAdapter'
   | 'createClangAstNativeImporterAdapter'
@@ -508,6 +512,15 @@ const projectionLossOptions: ProjectionTargetLossMatrixOptions = {
   targets: ['javascript', 'rust']
 };
 const projectionLossMatrix: ProjectionTargetLossMatrix = createProjectionTargetLossMatrix(projectionLossOptions);
+const universalCapabilityOptions: UniversalCapabilityMatrixOptions = {
+  generatedAt: 3,
+  imports: [imported],
+  adapters: [estreeAdapter],
+  targetAdapters: [targetProjectionAdapter],
+  targets: ['javascript', 'rust'],
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+};
+const universalCapabilityMatrix: UniversalCapabilityMatrix = createUniversalCapabilityMatrix(universalCapabilityOptions);
 
 const projectImport: Promise<NativeProjectImportResult> = importNativeProject({
   projectRoot: 'src',
@@ -572,6 +585,7 @@ void javaAstAdapterOptions;
 void csharpRoslynAdapterOptions;
 void swiftSyntaxAdapterOptions;
 void projectionLossMatrix;
+void universalCapabilityMatrix;
 void projectImport;
 void parsedUniversalAst;
 void (null as unknown as PublicRuntimeExportsMatchDeclarations);

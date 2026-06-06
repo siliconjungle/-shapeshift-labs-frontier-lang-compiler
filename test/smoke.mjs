@@ -11,6 +11,7 @@ import {
   createNativeParserAstFormatMatrix,
   createNativeParserFeatureMatrix,
   createProjectionTargetLossMatrix,
+  createUniversalCapabilityMatrix,
   createNativeSourcePreservation,
   createCSharpRoslynNativeImporterAdapter,
   createClangAstNativeImporterAdapter,
@@ -86,6 +87,7 @@ for (const requiredExport of [
   'createPythonAstNativeImporterAdapter',
   'createRustSynNativeImporterAdapter',
   'createProjectionTargetLossMatrix',
+  'createUniversalCapabilityMatrix',
   'classifyNativeImportRoundtripReadiness',
   'compileNativeSource',
   'createSemanticImportSidecar',
@@ -2779,6 +2781,37 @@ assert.equal(cProjectionCoverage.targets.find((entry) => entry.target === 'c').l
 assert.equal(cProjectionCoverage.targets.find((entry) => entry.target === 'c').lossKinds.includes('preprocessor'), true);
 const rProjectionCoverage = projectionLossMatrix.languages.find((entry) => entry.language === 'r');
 assert.equal(rProjectionCoverage.targets.every((entry) => entry.lossClass === 'missingAdapter'), true);
+const universalCapabilityMatrix = createUniversalCapabilityMatrix({
+  generatedAt: 432,
+  imports: [
+    scannedJsImport,
+    scannedPythonImport,
+    scannedRustImport,
+    scannedCImport,
+    scannedRImport
+  ],
+  adapters: [
+    createEstreeNativeImporterAdapter(),
+    createPythonAstNativeImporterAdapter(),
+    createRustSynNativeImporterAdapter(),
+    createClangAstNativeImporterAdapter()
+  ],
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+});
+assert.equal(universalCapabilityMatrix.kind, 'frontier.lang.universalCapabilityMatrix');
+assert.equal(universalCapabilityMatrix.generatedAt, 432);
+assert.equal(universalCapabilityMatrix.summary.imports, 5);
+assert.equal(universalCapabilityMatrix.matrices.importCoverage.summary.imports, 5);
+assert.equal(universalCapabilityMatrix.matrices.projectionTargets.summary.languages, universalCapabilityMatrix.summary.languages);
+assert.ok(universalCapabilityMatrix.summary.parserRows >= universalCapabilityMatrix.summary.languages);
+assert.ok(universalCapabilityMatrix.summary.missingAdapters > 0);
+assert.ok(universalCapabilityMatrix.summary.blockedLanguages > 0);
+assert.deepEqual(universalCapabilityMatrix.metadata.requiredFeatures, ['syntax', 'semantic', 'sourcePreservation']);
+const jsUniversalCoverage = universalCapabilityMatrix.languages.find((entry) => entry.language === 'javascript');
+assert.equal(jsUniversalCoverage.imports.total, 1);
+assert.ok(jsUniversalCoverage.parser.parsers.includes('estree') || jsUniversalCoverage.parser.parsers.includes('babel'));
+assert.ok(jsUniversalCoverage.projection.targets.some((entry) => entry.target === 'rust' && entry.lossClass === 'missingAdapter'));
+assert.ok(jsUniversalCoverage.blockers.some((reason) => reason.includes('Missing native-to-target projection adapter')));
 const projectSidecar = createSemanticImportSidecar(projectImport, { generatedAt: 456 });
 assert.equal(projectSidecar.summary.imports, 2);
 assert.equal(projectSidecar.summary.emptySemanticIndex, false);

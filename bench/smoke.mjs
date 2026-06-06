@@ -12,6 +12,7 @@ import {
   createNativeParserAstFormatMatrix,
   createNativeParserFeatureMatrix,
   createProjectionTargetLossMatrix,
+  createUniversalCapabilityMatrix,
   createNativeSourcePreservation,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
@@ -139,6 +140,14 @@ const parserFeatureMatrixDurationMs = performance.now() - parserFeatureMatrixSta
 const projectionMatrixStart = performance.now();
 const projectionLossMatrix = createProjectionTargetLossMatrix({ imports: nativeImportResults });
 const projectionMatrixDurationMs = performance.now() - projectionMatrixStart;
+
+const universalMatrixStart = performance.now();
+const universalCapabilityMatrix = createUniversalCapabilityMatrix({
+  imports: nativeImportResults,
+  adapters: [estreeAdapter, createPythonAstNativeImporterAdapter(), createRustSynNativeImporterAdapter(), createClangAstNativeImporterAdapter(), createGoAstNativeImporterAdapter(), createJavaAstNativeImporterAdapter(), kotlinPsiAdapter, createCSharpRoslynNativeImporterAdapter(), createSwiftSyntaxNativeImporterAdapter()],
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+});
+const universalMatrixDurationMs = performance.now() - universalMatrixStart;
 
 const preservationStart = performance.now();
 const preservationRecords = nativeImportResults.map((imported) => imported.metadata.sourcePreservation ?? createNativeSourcePreservation({
@@ -304,6 +313,11 @@ console.log(JSON.stringify({
   projectionMatrixMissingAdapters: projectionLossMatrix.summary.missingAdapters,
   projectionMatrixUnsupportedTargetFeatures: projectionLossMatrix.summary.unsupportedTargetFeatures,
   projectionMatrixDurationMs: Number(projectionMatrixDurationMs.toFixed(2)),
+  universalMatrixLanguages: universalCapabilityMatrix.summary.languages,
+  universalMatrixImports: universalCapabilityMatrix.summary.imports,
+  universalMatrixBlockedLanguages: universalCapabilityMatrix.summary.blockedLanguages,
+  universalMatrixMissingAdapters: universalCapabilityMatrix.summary.missingAdapters,
+  universalMatrixDurationMs: Number(universalMatrixDurationMs.toFixed(2)),
   sourcePreservationRecords: preservationRecords.length,
   sourcePreservationTokens: preservationTokens,
   sourcePreservationDurationMs: Number(preservationDurationMs.toFixed(2)),

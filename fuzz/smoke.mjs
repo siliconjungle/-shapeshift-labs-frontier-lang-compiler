@@ -12,6 +12,7 @@ import {
   createNativeParserAstFormatMatrix,
   createNativeParserFeatureMatrix,
   createProjectionTargetLossMatrix,
+  createUniversalCapabilityMatrix,
   createPythonAstNativeImporterAdapter,
   createRustSynNativeImporterAdapter,
   createSwiftSyntaxNativeImporterAdapter,
@@ -519,6 +520,16 @@ const projectionMatrix = createProjectionTargetLossMatrix({ imports: project.imp
 assert.equal(projectionMatrix.summary.languages, matrix.summary.languages);
 assert.ok(projectionMatrix.summary.sourceProjectionByLossClass.exactSourceProjection >= 2);
 assert.ok(projectionMatrix.summary.byLossClass.missingAdapter > 0);
+const universalMatrix = createUniversalCapabilityMatrix({
+  imports: project.imports,
+  adapters: [estreeAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, kotlinPsiAdapter, csharpRoslynAdapter, swiftSyntaxAdapter],
+  requiredFeatures: ['syntax', 'semantic', 'sourcePreservation']
+});
+assert.equal(universalMatrix.summary.imports, project.imports.length);
+assert.equal(universalMatrix.matrices.importCoverage.summary.imports, matrix.summary.imports);
+assert.equal(universalMatrix.matrices.projectionTargets.summary.languages, projectionMatrix.summary.languages);
+assert.ok(universalMatrix.summary.parserRows >= universalMatrix.summary.languages);
+assert.ok(universalMatrix.summary.blockers > 0);
 const projectSidecar = createSemanticImportSidecar(project);
 assert.equal(projectSidecar.summary.imports, 2);
 assert.equal(projectSidecar.summary.emptySemanticIndex, false);

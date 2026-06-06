@@ -652,6 +652,101 @@ export interface ProjectionTargetLossMatrixOptions {
   readonly generatedAt?: number;
 }
 
+export interface UniversalCapabilityLanguageRow {
+  readonly language: FrontierSourceLanguage | string;
+  readonly aliases: readonly string[];
+  readonly extensions: readonly string[];
+  readonly readiness: SemanticMergeReadiness;
+  readonly imports: {
+    readonly total: number;
+    readonly readiness: SemanticMergeReadiness;
+    readonly symbols: number;
+    readonly sourceMaps: number;
+    readonly sourceMapMappings: number;
+    readonly losses: number;
+    readonly lossKinds: Readonly<Record<string, number>>;
+    readonly readinessReasons: readonly string[];
+  };
+  readonly parser: {
+    readonly readiness: SemanticMergeReadiness;
+    readonly rows: number;
+    readonly parsers: readonly string[];
+    readonly mergeReadyParsers: readonly string[];
+    readonly blockingFeatures: readonly NativeParserFeatureCategory[];
+    readonly reviewFeatures: readonly NativeParserFeatureCategory[];
+    readonly languageSummary?: NativeParserFeatureLanguageSummary;
+  };
+  readonly projection: {
+    readonly readiness: SemanticMergeReadiness;
+    readonly sourceProjection?: ProjectionTargetLanguageCoverage['sourceProjection'];
+    readonly targets: readonly ProjectionTargetCoverageEntry[];
+    readonly summary: ProjectionTargetLanguageCoverage['summary'];
+    readonly missingTargets: readonly (FrontierCompileTarget | string)[];
+    readonly unsupportedTargets: readonly (FrontierCompileTarget | string)[];
+  };
+  readonly evidence: {
+    readonly parserAdapters: number;
+    readonly adapterCoverageSummaries: number;
+    readonly adapterCoverageGaps: Readonly<Record<string, number>>;
+    readonly knownLossKinds: readonly NativeImportKnownLossKind[];
+    readonly sourceMapMappings: number;
+  };
+  readonly blockers: readonly string[];
+  readonly review: readonly string[];
+}
+
+export interface UniversalCapabilityMatrix {
+  readonly kind: 'frontier.lang.universalCapabilityMatrix';
+  readonly version: 1;
+  readonly generatedAt: number;
+  readonly languages: readonly UniversalCapabilityLanguageRow[];
+  readonly summary: {
+    readonly languages: number;
+    readonly imports: number;
+    readonly symbols: number;
+    readonly sourceMapMappings: number;
+    readonly losses: number;
+    readonly parserRows: number;
+    readonly parserMergeReady: number;
+    readonly targetEntries: number;
+    readonly missingAdapters: number;
+    readonly unsupportedTargetFeatures: number;
+    readonly exactSourceProjection: number;
+    readonly nativeSourceStubs: number;
+    readonly blockers: number;
+    readonly reviewReasons: number;
+    readonly readyLanguages: number;
+    readonly readyWithLossesLanguages: number;
+    readonly reviewLanguages: number;
+    readonly blockedLanguages: number;
+    readonly byReadiness: Readonly<Record<SemanticMergeReadiness, number>>;
+    readonly byImportReadiness: Readonly<Record<SemanticMergeReadiness, number>>;
+    readonly byParserReadiness: Readonly<Record<SemanticMergeReadiness, number>>;
+    readonly byProjectionReadiness: Readonly<Record<SemanticMergeReadiness, number>>;
+  };
+  readonly matrices: {
+    readonly importCoverage: NativeImportCoverageMatrix;
+    readonly parserFormats: NativeParserAstFormatMatrix;
+    readonly parserFeatures: NativeParserFeatureMatrix;
+    readonly projectionTargets: ProjectionTargetLossMatrix;
+  };
+  readonly metadata: {
+    readonly requiredFeatures: readonly NativeParserFeatureCategory[];
+    readonly minimumReadiness: SemanticMergeReadiness;
+    readonly compileTargets: readonly (FrontierCompileTarget | string)[];
+    readonly note: string;
+  };
+}
+
+export interface UniversalCapabilityMatrixOptions extends
+  NativeImportCoverageMatrixOptions,
+  NativeParserAstFormatMatrixOptions,
+  NativeParserFeatureMatrixOptions,
+  ProjectionTargetLossMatrixOptions {
+  readonly targetAdapters?: readonly NativeTargetProjectionAdapter[];
+  readonly targets?: readonly (FrontierCompileTarget | string)[];
+}
+
 export interface NativeImportContractSource {
   readonly id: string;
   readonly language?: FrontierSourceLanguage | string;
@@ -2253,6 +2348,7 @@ export declare function createNativeParserAstFormatMatrix(options?: NativeParser
 export declare function createNativeParserFeatureMatrix(options?: NativeParserFeatureMatrixOptions): NativeParserFeatureMatrix;
 export declare function queryNativeParserFeatureMatrix(matrixOrOptions?: NativeParserFeatureMatrix | NativeParserFeatureMatrixOptions, query?: NativeParserFeatureMatrixQuery): NativeParserFeatureMatrixQueryResult;
 export declare function createProjectionTargetLossMatrix(options?: ProjectionTargetLossMatrixOptions): ProjectionTargetLossMatrix;
+export declare function createUniversalCapabilityMatrix(options?: UniversalCapabilityMatrixOptions): UniversalCapabilityMatrix;
 export declare function createNativeSourcePreservation(options: CreateNativeSourcePreservationOptions): NativeSourcePreservation;
 export declare function createSemanticImportSidecar(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: SemanticImportSidecarOptions): SemanticImportSidecar;
 export declare function createNativeImportResultContract(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: NativeImportResultContractOptions): NativeImportResultContract;
