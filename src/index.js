@@ -2567,6 +2567,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
   const sourcePreservation = summarizeKernelSourcePreservation(importResult, imports);
   const universalAstLayers = summarizeSemanticImportSidecarUniversalAstLayers(importEntries);
   const proofSpec = summarizeSemanticImportSidecarProofSpec(importEntries);
+  const paradigmSemantics = summarizeSemanticImportSidecarParadigmSemantics(importEntries);
   const readiness = mergeCandidates.reduce(
     (current, candidate) => maxSemanticMergeReadiness(current, candidate.readiness),
     lossSummary.semanticMergeReadiness
@@ -2590,6 +2591,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     sourcePreservation,
     universalAstLayers,
     proofSpec,
+    paradigmSemantics,
     patchHints,
     mergeCandidates: mergeCandidates.map((candidate) => ({
       id: candidate.id,
@@ -2624,6 +2626,9 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       proofSpecRecords: proofSpec.total,
       proofSpecObligations: proofSpec.obligations,
       proofSpecFailedObligations: proofSpec.failed,
+      paradigmSemanticsRecords: paradigmSemantics.total,
+      paradigmSemanticsGroups: paradigmSemantics.groups.length,
+      paradigmSemanticsLoweringRecords: paradigmSemantics.loweringRecords,
       readiness,
       emptySemanticIndex: symbols.length === 0
     },
@@ -8588,6 +8593,7 @@ function semanticImportSidecarEntry(imported, index, options) {
   const sourcePreservationRecords = collectKernelSourcePreservationFromImport(imported);
   const universalAstLayers = summarizeUniversalAstLayers(imported?.universalAst);
   const proofSpec = summarizeProofSpecLayer(imported?.universalAst?.proof ?? imported?.proof);
+  const paradigmSemantics = summarizeParadigmSemanticsLayer(imported?.universalAst?.paradigmSemantics ?? imported?.paradigmSemantics);
   const mappingsBySymbolId = new Map();
   for (const mapping of sourceMapMappings) {
     if (mapping.semanticSymbolId && !mappingsBySymbolId.has(mapping.semanticSymbolId)) {
@@ -8638,6 +8644,7 @@ function semanticImportSidecarEntry(imported, index, options) {
     universalAstLayerNames: universalAstLayers.names,
     universalAstLayerIds: universalAstLayers.ids,
     proofSpec,
+    paradigmSemantics,
     readiness: imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness ?? 'needs-review',
     emptySemanticIndex: symbols.length === 0,
     regionTaxonomy,
@@ -8699,6 +8706,120 @@ function summarizeSemanticImportSidecarProofSpec(importEntries) {
     byArtifactKind,
     empty: totals.total === 0
   };
+}
+
+const ParadigmSemanticSummaryGroups = Object.freeze([
+  'bindingScopes',
+  'bindings',
+  'patterns',
+  'typeConstraints',
+  'evaluationModels',
+  'memoryLocations',
+  'effectRegions',
+  'controlRegions',
+  'logicPrograms',
+  'actorSystems',
+  'stackEffects',
+  'arrayShapes',
+  'numericKernels',
+  'dataflowNetworks',
+  'clockModels',
+  'objectModels',
+  'macroExpansions',
+  'reflectionBoundaries',
+  'loweringRecords'
+]);
+
+function summarizeSemanticImportSidecarParadigmSemantics(importEntries) {
+  const totals = emptyParadigmSemanticsSummary();
+  const ids = [];
+  const kinds = [];
+  const byGroup = {};
+  const byKind = {};
+  for (const entry of importEntries) {
+    const summary = entry.paradigmSemantics ?? summarizeParadigmSemanticsLayer();
+    ids.push(...(summary.ids ?? []));
+    kinds.push(...(summary.kinds ?? []));
+    totals.total += summary.total ?? 0;
+    totals.evidence += summary.evidence ?? 0;
+    for (const group of ParadigmSemanticSummaryGroups) {
+      totals[group] += summary[group] ?? 0;
+    }
+    for (const [group, count] of Object.entries(summary.byGroup ?? {})) {
+      byGroup[group] = (byGroup[group] ?? 0) + count;
+    }
+    for (const [kind, count] of Object.entries(summary.byKind ?? {})) {
+      byKind[kind] = (byKind[kind] ?? 0) + count;
+    }
+  }
+  return {
+    ...totals,
+    ids: uniqueStrings(ids),
+    groups: uniqueStrings(Object.keys(byGroup).filter((group) => byGroup[group] > 0)),
+    kinds: uniqueStrings(kinds),
+    byGroup,
+    byKind,
+    hasRuntimeSemantics: hasAnyParadigmCount(totals, ['evaluationModels', 'memoryLocations', 'effectRegions', 'controlRegions', 'actorSystems', 'clockModels']),
+    hasLogicSemantics: totals.logicPrograms > 0,
+    hasStackSemantics: totals.stackEffects > 0,
+    hasArraySemantics: totals.arrayShapes > 0 || totals.numericKernels > 0,
+    hasMacroOrReflection: totals.macroExpansions > 0 || totals.reflectionBoundaries > 0,
+    hasLowering: totals.loweringRecords > 0,
+    empty: totals.total === 0
+  };
+}
+
+function summarizeParadigmSemanticsLayer(paradigmSemantics = {}) {
+  const totals = emptyParadigmSemanticsSummary();
+  const ids = [];
+  const kinds = [];
+  const byGroup = {};
+  const byKind = {};
+  ids.push(paradigmSemantics?.id);
+  for (const group of ParadigmSemanticSummaryGroups) {
+    const records = paradigmSemantics?.[group] ?? [];
+    totals[group] = records.length;
+    totals.total += records.length;
+    if (records.length > 0) {
+      byGroup[group] = records.length;
+    }
+    for (const record of records) {
+      ids.push(record?.id);
+      if (record?.kind) {
+        kinds.push(record.kind);
+        byKind[record.kind] = (byKind[record.kind] ?? 0) + 1;
+      }
+    }
+  }
+  totals.evidence = (paradigmSemantics?.evidence ?? []).length;
+  ids.push(...(paradigmSemantics?.evidence ?? []).map((record) => record?.id));
+  return {
+    ...totals,
+    ids: uniqueStrings(ids.filter(Boolean)),
+    groups: uniqueStrings(Object.keys(byGroup)),
+    kinds: uniqueStrings(kinds),
+    byGroup,
+    byKind,
+    hasRuntimeSemantics: hasAnyParadigmCount(totals, ['evaluationModels', 'memoryLocations', 'effectRegions', 'controlRegions', 'actorSystems', 'clockModels']),
+    hasLogicSemantics: totals.logicPrograms > 0,
+    hasStackSemantics: totals.stackEffects > 0,
+    hasArraySemantics: totals.arrayShapes > 0 || totals.numericKernels > 0,
+    hasMacroOrReflection: totals.macroExpansions > 0 || totals.reflectionBoundaries > 0,
+    hasLowering: totals.loweringRecords > 0,
+    empty: totals.total === 0
+  };
+}
+
+function emptyParadigmSemanticsSummary() {
+  return {
+    total: 0,
+    evidence: 0,
+    ...Object.fromEntries(ParadigmSemanticSummaryGroups.map((group) => [group, 0]))
+  };
+}
+
+function hasAnyParadigmCount(summary, groups) {
+  return groups.some((group) => (summary[group] ?? 0) > 0);
 }
 
 function summarizeProofSpecLayer(proof = {}) {

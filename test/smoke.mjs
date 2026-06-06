@@ -2020,6 +2020,39 @@ assert.equal(scannedProofSidecar.imports[0].proofSpec.evidence, 1);
 assert.equal(scannedProofSidecar.summary.proofSpecRecords, scannedProofSidecar.proofSpec.total);
 assert.equal(scannedProofSidecar.summary.proofSpecObligations, 1);
 assert.equal(scannedProofSidecar.summary.proofSpecFailedObligations, 0);
+const scannedParadigmEvidence = { id: 'paradigm_scanned_js', kind: 'import', status: 'passed' };
+const scannedParadigmImport = {
+  ...scannedJsImport,
+  id: 'import_scanned_js_paradigm',
+  evidence: [...scannedJsImport.evidence, scannedParadigmEvidence],
+  universalAst: {
+    ...scannedJsImport.universalAst,
+    paradigmSemantics: {
+      kind: 'frontier.lang.paradigmSemantics',
+      version: 1,
+      id: 'paradigm_scanned_js_spec',
+      logicPrograms: [{ id: 'logic_scanned_route', kind: 'hornClause', predicate: 'route(R) :- exported(R)' }],
+      stackEffects: [{ id: 'stack_scanned_route', kind: 'concatenativeStackEffect', inputs: ['route'], outputs: ['valid?'] }],
+      arrayShapes: [{ id: 'array_scanned_routes', kind: 'rankedArray', rank: 1 }],
+      numericKernels: [{ id: 'kernel_route_count', kind: 'elementalKernel', arrayShapeId: 'array_scanned_routes' }],
+      macroExpansions: [{ id: 'macro_route_config', kind: 'sourceMacroBoundary' }],
+      reflectionBoundaries: [{ id: 'reflection_dynamic_import', kind: 'dynamicImportBoundary' }],
+      loweringRecords: [{ id: 'lower_route_logic_to_js', kind: 'frontierToTarget', sourceRecordId: 'logic_scanned_route' }],
+      evidence: [scannedParadigmEvidence]
+    }
+  }
+};
+const scannedParadigmSidecar = createSemanticImportSidecar(scannedParadigmImport, { generatedAt: 125 });
+assert.equal(scannedParadigmSidecar.paradigmSemantics.empty, false);
+assert.equal(scannedParadigmSidecar.paradigmSemantics.logicPrograms, 1);
+assert.equal(scannedParadigmSidecar.paradigmSemantics.stackEffects, 1);
+assert.equal(scannedParadigmSidecar.paradigmSemantics.hasStackSemantics, true);
+assert.equal(scannedParadigmSidecar.paradigmSemantics.hasArraySemantics, true);
+assert.equal(scannedParadigmSidecar.paradigmSemantics.hasMacroOrReflection, true);
+assert.equal(scannedParadigmSidecar.paradigmSemantics.hasLowering, true);
+assert.equal(scannedParadigmSidecar.imports[0].paradigmSemantics.loweringRecords, 1);
+assert.equal(scannedParadigmSidecar.summary.paradigmSemanticsRecords, scannedParadigmSidecar.paradigmSemantics.total);
+assert.equal(scannedParadigmSidecar.summary.paradigmSemanticsGroups >= 4, true);
 const jsRegionFalsePositiveImport = importNativeSource({
   language: 'typescript',
   sourcePath: 'src/false-positive.ts',

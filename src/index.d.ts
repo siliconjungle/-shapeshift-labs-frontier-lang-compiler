@@ -969,6 +969,7 @@ export interface SemanticImportSidecarImportEntry {
   readonly universalAstLayerNames: readonly string[];
   readonly universalAstLayerIds: readonly string[];
   readonly proofSpec: SemanticImportSidecarProofSpecSummary;
+  readonly paradigmSemantics: SemanticImportSidecarParadigmSemanticsSummary;
   readonly readiness: SemanticMergeReadiness;
   readonly emptySemanticIndex: boolean;
   readonly regionTaxonomy?: SemanticImportRegionTaxonomySummary;
@@ -1026,6 +1027,42 @@ export interface SemanticImportSidecarProofSpecSummary {
   readonly empty: boolean;
 }
 
+export interface SemanticImportSidecarParadigmSemanticsSummary {
+  readonly total: number;
+  readonly ids: readonly string[];
+  readonly groups: readonly string[];
+  readonly kinds: readonly string[];
+  readonly evidence: number;
+  readonly bindingScopes: number;
+  readonly bindings: number;
+  readonly patterns: number;
+  readonly typeConstraints: number;
+  readonly evaluationModels: number;
+  readonly memoryLocations: number;
+  readonly effectRegions: number;
+  readonly controlRegions: number;
+  readonly logicPrograms: number;
+  readonly actorSystems: number;
+  readonly stackEffects: number;
+  readonly arrayShapes: number;
+  readonly numericKernels: number;
+  readonly dataflowNetworks: number;
+  readonly clockModels: number;
+  readonly objectModels: number;
+  readonly macroExpansions: number;
+  readonly reflectionBoundaries: number;
+  readonly loweringRecords: number;
+  readonly byGroup: Readonly<Record<string, number>>;
+  readonly byKind: Readonly<Record<string, number>>;
+  readonly hasRuntimeSemantics: boolean;
+  readonly hasLogicSemantics: boolean;
+  readonly hasStackSemantics: boolean;
+  readonly hasArraySemantics: boolean;
+  readonly hasMacroOrReflection: boolean;
+  readonly hasLowering: boolean;
+  readonly empty: boolean;
+}
+
 export interface SemanticImportSidecar {
   readonly kind: 'frontier.lang.semanticImportSidecar';
   readonly version: 1;
@@ -1056,6 +1093,7 @@ export interface SemanticImportSidecar {
   };
   readonly universalAstLayers: SemanticImportSidecarUniversalAstLayerSummary;
   readonly proofSpec: SemanticImportSidecarProofSpecSummary;
+  readonly paradigmSemantics: SemanticImportSidecarParadigmSemanticsSummary;
   readonly patchHints: readonly SemanticImportPatchHint[];
   readonly mergeCandidates: readonly {
     readonly id?: string;
@@ -1090,6 +1128,9 @@ export interface SemanticImportSidecar {
     readonly proofSpecRecords: number;
     readonly proofSpecObligations: number;
     readonly proofSpecFailedObligations: number;
+    readonly paradigmSemanticsRecords: number;
+    readonly paradigmSemanticsGroups: number;
+    readonly paradigmSemanticsLoweringRecords: number;
     readonly readiness: SemanticMergeReadiness;
     readonly emptySemanticIndex: boolean;
   };
