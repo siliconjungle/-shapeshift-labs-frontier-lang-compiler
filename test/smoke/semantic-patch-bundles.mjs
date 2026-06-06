@@ -31,6 +31,7 @@ const bundle = createSemanticPatchBundleRecord(changeSet, {
   id: 'bundle_counter_patch',
   historyIds: [history.id],
   proofIds: history.proofIds,
+  semanticOperationIds: ['semantic_operation_counter_patch'],
   admission: { status: 'queued', readiness: changeSet.readiness }
 });
 
@@ -44,6 +45,8 @@ assert.equal(bundle.sourceMapLinks.length > 0, true);
 assert.equal(bundle.evidenceIds.includes('evidence_counter_native_diff'), true);
 assert.equal(bundle.proofIds.includes('proof_counter_patch_bundle_replay'), true);
 assert.equal(bundle.historyIds.includes('history_counter_patch_bundle'), true);
+assert.equal(bundle.semanticOperationIds.includes('semantic_operation_counter_patch'), true);
+assert.equal(bundle.index.semanticOperationIds.includes('semantic_operation_counter_patch'), true);
 assert.equal(bundle.admission.status, 'queued');
 assert.equal(bundle.admission.autoMergeClaim, false);
 assert.equal(bundle.summary.reviewRequired, true);
@@ -71,6 +74,7 @@ assert.equal(querySemanticPatchBundleRecords(records, { sourceMapLinkId }).lengt
 assert.equal(querySemanticPatchBundleRecords(records, { evidenceId: 'evidence_counter_native_diff' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords(records, { proofId: 'proof_counter_patch_bundle_replay' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords(records, { historyId: 'history_counter_patch_bundle' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords(records, { semanticOperationId: 'semantic_operation_counter_patch' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords(records, { readiness: changeSet.readiness }).length, 1);
 assert.equal(querySemanticPatchBundleRecords(records, { admissionStatus: 'queued' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords(records, { sourceHash: 'not_present' }).length, 0);

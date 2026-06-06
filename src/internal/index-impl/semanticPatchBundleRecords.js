@@ -27,6 +27,7 @@ export function createSemanticPatchBundleRecord(input={},options={}){
   const evidenceIds=uniqueStrings([...strings(options.evidenceIds),...strings(source.evidenceIds),...evidenceRecords.map((record)=>record?.id),...strings(mergeCandidate?.evidenceIds)]);
   const proofIds=uniqueStrings([...strings(options.proofIds),...strings(source.proofIds),...evidenceRecords.filter((record)=>record?.kind==='proof').map((record)=>record.id),...strings(mergeCandidate?.proofIds)]);
   const historyIds=uniqueStrings([...strings(options.historyIds),...strings(options.historyId),...strings(source.historyIds),...strings(source.historyId)]);
+  const semanticOperationIds=uniqueStrings([...strings(options.semanticOperationIds),...strings(options.semanticOperationId),...strings(source.semanticOperationIds),...strings(source.semanticOperationId),...strings(patch?.semanticOperationIds),...strings(mergeCandidate?.semanticOperationIds)]);
   const conflictKeys=uniqueStrings([
     ...strings(options.conflictKeys),
     ...strings(source.conflictKeys),
@@ -39,7 +40,7 @@ export function createSemanticPatchBundleRecord(input={},options={}){
     ??`semantic_patch_bundle_${idFragment(firstString(source.id,patchId,mergeCandidateId,source.sourcePath,source.language,'record'))}`;
   const language=options.language??source.language??mergeCandidate?.language??sources.find((item)=>item.language)?.language;
   const sourcePath=options.sourcePath??source.sourcePath??mergeCandidate?.sourcePath??sources.find((item)=>item.sourcePath)?.sourcePath;
-  const index=recordIndex({baseHash,targetHash,sources,changedRegions,sourceMapLinks,evidenceIds,proofIds,historyIds,patchId,mergeCandidateId,admission});
+  const index=recordIndex({baseHash,targetHash,sources,changedRegions,sourceMapLinks,evidenceIds,proofIds,historyIds,semanticOperationIds,patchId,mergeCandidateId,admission});
   return{
     kind:'frontier.lang.semanticPatchBundleRecord',
     version:1,
@@ -58,9 +59,10 @@ export function createSemanticPatchBundleRecord(input={},options={}){
     evidenceIds,
     proofIds,
     historyIds,
+    semanticOperationIds,
     admission,
     index,
-    summary:{changedRegions:changedRegions.length,sourceMapLinks:sourceMapLinks.length,evidenceIds:evidenceIds.length,proofIds:proofIds.length,historyIds:historyIds.length,reviewRequired:admission.reviewRequired,autoMergeClaim:admission.autoMergeClaim},
+    summary:{changedRegions:changedRegions.length,sourceMapLinks:sourceMapLinks.length,evidenceIds:evidenceIds.length,proofIds:proofIds.length,historyIds:historyIds.length,semanticOperations:semanticOperationIds.length,reviewRequired:admission.reviewRequired,autoMergeClaim:admission.autoMergeClaim},
     metadata:compactRecord({
       sourceChangeSetId:source.kind==='frontier.lang.nativeSourceChangeSet'?source.id:undefined,
       patchRisk:patch?.risk,
@@ -202,6 +204,7 @@ function recordIndex(parts){
     evidenceIds:parts.evidenceIds,
     proofIds:parts.proofIds,
     historyIds:parts.historyIds,
+    semanticOperationIds:uniqueStrings(parts.semanticOperationIds),
     patchIds:uniqueStrings([parts.patchId]),
     mergeCandidateIds:uniqueStrings([parts.mergeCandidateId]),
     readinesses:uniqueStrings([parts.admission.readiness,...parts.changedRegions.map((region)=>region.admission?.readiness)]),
@@ -210,7 +213,7 @@ function recordIndex(parts){
 }
 
 function matchesRecord(record,query){
-  const index=record.index??recordIndex({...record,baseHash:record.baseHash,targetHash:record.targetHash,sources:record.sources??[],changedRegions:record.changedRegions??[],sourceMapLinks:record.sourceMapLinks??[],evidenceIds:record.evidenceIds??[],proofIds:record.proofIds??[],historyIds:record.historyIds??[],patchId:record.patchId,mergeCandidateId:record.mergeCandidateId,admission:record.admission??{}});
+  const index=record.index??recordIndex({...record,baseHash:record.baseHash,targetHash:record.targetHash,sources:record.sources??[],changedRegions:record.changedRegions??[],sourceMapLinks:record.sourceMapLinks??[],evidenceIds:record.evidenceIds??[],proofIds:record.proofIds??[],historyIds:record.historyIds??[],semanticOperationIds:record.semanticOperationIds??[],patchId:record.patchId,mergeCandidateId:record.mergeCandidateId,admission:record.admission??{}});
   return matchAny(queryValues(query.id,query.ids),[record.id])
     &&matchAny(queryValues(query.patchId,query.patchIds),index.patchIds)
     &&matchAny(queryValues(query.mergeCandidateId,query.mergeCandidateIds),index.mergeCandidateIds)
@@ -227,6 +230,7 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.evidenceId,query.evidenceIds),index.evidenceIds)
     &&matchAny(queryValues(query.proofId,query.proofIds),index.proofIds)
     &&matchAny(queryValues(query.historyId,query.historyIds),index.historyIds)
+    &&matchAny(queryValues(query.semanticOperationId,query.semanticOperationIds),index.semanticOperationIds)
     &&matchAny(queryValues(query.readiness,query.readinesses),index.readinesses)
     &&matchAny(queryValues(query.admissionStatus,query.admissionStatuses),index.admissionStatuses);
 }

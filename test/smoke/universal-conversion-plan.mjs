@@ -68,6 +68,7 @@ assert.equal(conversionArtifacts.generatedAt, 778);
 assert.equal(conversionArtifacts.summary.routes, conversionPlan.routes.length);
 assert.equal(conversionArtifacts.summary.histories, conversionPlan.routes.length);
 assert.equal(conversionArtifacts.summary.patchBundles, conversionPlan.routes.length);
+assert.equal(conversionArtifacts.summary.semanticOperations, conversionPlan.routes.length);
 assert.equal(conversionArtifacts.summary.autoMergeClaims, 0);
 assert.equal(conversionArtifacts.summary.semanticEquivalenceClaims, 0);
 
@@ -77,12 +78,20 @@ assert.equal(jsArtifact.history.id, jsToJs.mergeRefs.historyIds[0]);
 assert.equal(jsArtifact.patchBundle.kind, 'frontier.lang.semanticPatchBundleRecord');
 assert.equal(jsArtifact.patchBundle.historyIds.includes(jsArtifact.history.id), true);
 assert.equal(jsArtifact.patchBundle.admission.autoMergeClaim, false);
+assert.equal(jsArtifact.semanticOperations.kind, 'frontier.lang.semanticOperationSet');
+assert.equal(jsArtifact.semanticOperations.operations[0].operationKind, 'sourcePreservation');
+assert.equal(jsArtifact.semanticOperations.operations[0].autoMergeClaim, false);
+assert.equal(jsArtifact.patchBundle.semanticOperationIds.includes(jsArtifact.semanticOperations.operations[0].id), true);
+assert.equal(jsArtifact.materialization.semanticOperationIds.includes(jsArtifact.semanticOperations.operations[0].id), true);
 assert.equal(jsArtifact.materialization.status, 'materialized');
 assert.equal(jsArtifact.materialization.plannedHistoryIds.includes(jsToJs.mergeRefs.historyIds[0]), true);
 assert.equal(jsArtifact.materialization.materializedHistoryIds.includes(jsArtifact.history.id), true);
 assert.equal(jsArtifact.autoMergeClaim, false);
 assert.equal(jsArtifact.semanticEquivalenceClaim, false);
 assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, { sourcePath: scannedJsImport.sourcePath }).length >= 1, true);
+assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, {
+  semanticOperationKind: 'sourcePreservation'
+}).some((artifact) => artifact.routeId === jsToJs.id), true);
 
 const jsToRust = queryUniversalConversionPlan(conversionPlan, {
   sourceLanguage: 'javascript',
@@ -111,6 +120,8 @@ const cArtifact = queryUniversalConversionArtifacts(conversionArtifacts, {
 assert.equal(cArtifact.mode, 'semantic-index-only');
 assert.equal(cArtifact.patchBundle.admission.status, 'blocked');
 assert.equal(cArtifact.history.admission.status, 'blocked');
+assert.equal(cArtifact.semanticOperations.operations[0].opaque, true);
+assert.equal(cArtifact.semanticOperations.operations[0].operationKind, 'merge');
 assert.equal(cArtifact.history.admission.reasonCodes.some((reason) => reason.includes('missing:target-adapter')), true);
 
 const blockedQuery = queryUniversalConversionPlan(conversionPlan, {

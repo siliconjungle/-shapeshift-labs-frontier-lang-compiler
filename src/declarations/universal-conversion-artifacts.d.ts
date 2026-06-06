@@ -1,5 +1,6 @@
 import type {
   FrontierSourceLanguage,
+  SemanticOperationSet,
   SemanticMergeReadiness
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { FrontierCompileTarget } from './compile.js';
@@ -25,6 +26,7 @@ export interface UniversalConversionArtifactMaterialization {
   readonly materializedHistoryIds: readonly string[];
   readonly patchBundleIds: readonly string[];
   readonly sourceMapLinkIds: readonly string[];
+  readonly semanticOperationIds: readonly string[];
   readonly evidenceIds: readonly string[];
   readonly proofIds: readonly string[];
   readonly autoMergeClaim: false;
@@ -48,6 +50,7 @@ export interface UniversalConversionRouteArtifact {
   readonly reviewRequired: true;
   readonly history: SemanticHistoryRecord;
   readonly patchBundle: SemanticPatchBundleRecord;
+  readonly semanticOperations: SemanticOperationSet;
   readonly materialization: UniversalConversionArtifactMaterialization;
   readonly mergeScore?: UniversalConversionMergeScore;
   readonly autoMergeClaim: false;
@@ -70,6 +73,8 @@ export interface UniversalConversionArtifactIndex {
   readonly conflictKeys: readonly string[];
   readonly evidenceIds: readonly string[];
   readonly proofIds: readonly string[];
+  readonly semanticOperationIds: readonly string[];
+  readonly semanticOperationKinds: readonly string[];
 }
 
 export interface UniversalConversionArtifacts {
@@ -87,6 +92,7 @@ export interface UniversalConversionArtifacts {
     readonly routes: number;
     readonly histories: number;
     readonly patchBundles: number;
+    readonly semanticOperations: number;
     readonly reviewRequired: number;
     readonly blocked: number;
     readonly autoMergeClaims: 0;
@@ -136,6 +142,8 @@ export interface UniversalConversionArtifactQuery {
   readonly conflictKey?: string | readonly string[];
   readonly evidenceId?: string | readonly string[];
   readonly proofId?: string | readonly string[];
+  readonly semanticOperationId?: string | readonly string[];
+  readonly semanticOperationKind?: string | readonly string[];
 }
 
 export declare function createUniversalConversionArtifacts(

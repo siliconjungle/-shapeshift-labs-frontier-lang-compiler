@@ -101,6 +101,7 @@ export interface SemanticPatchBundleRecordIndex {
   readonly evidenceIds: readonly string[];
   readonly proofIds: readonly string[];
   readonly historyIds: readonly string[];
+  readonly semanticOperationIds: readonly string[];
   readonly patchIds: readonly string[];
   readonly mergeCandidateIds: readonly string[];
   readonly readinesses: readonly string[];
@@ -125,6 +126,7 @@ export interface SemanticPatchBundleRecord {
   readonly evidenceIds: readonly string[];
   readonly proofIds: readonly string[];
   readonly historyIds: readonly string[];
+  readonly semanticOperationIds: readonly string[];
   readonly admission: SemanticPatchBundleAdmission;
   readonly index: SemanticPatchBundleRecordIndex;
   readonly summary: {
@@ -133,6 +135,7 @@ export interface SemanticPatchBundleRecord {
     readonly evidenceIds: number;
     readonly proofIds: number;
     readonly historyIds: number;
+    readonly semanticOperations: number;
     readonly reviewRequired: boolean;
     readonly autoMergeClaim: false;
   };
@@ -159,6 +162,8 @@ export interface CreateSemanticPatchBundleRecordOptions {
   readonly proofIds?: readonly string[] | string;
   readonly historyId?: string;
   readonly historyIds?: readonly string[] | string;
+  readonly semanticOperationId?: string;
+  readonly semanticOperationIds?: readonly string[] | string;
   readonly conflictKeys?: readonly string[] | string;
   readonly admission?: Partial<SemanticPatchBundleAdmission>;
   readonly metadata?: Record<string, unknown>;
@@ -199,6 +204,8 @@ export interface SemanticPatchBundleRecordQuery {
   readonly proofIds?: readonly string[];
   readonly historyId?: string | readonly string[];
   readonly historyIds?: readonly string[];
+  readonly semanticOperationId?: string | readonly string[];
+  readonly semanticOperationIds?: readonly string[];
   readonly readiness?: SemanticMergeReadiness | string | readonly string[];
   readonly readinesses?: readonly string[];
   readonly admissionStatus?: SemanticPatchBundleAdmissionStatus | readonly string[];

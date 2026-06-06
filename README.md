@@ -183,6 +183,8 @@ console.log(pythonToRust.mergeScore.value); // sortable merge-review score, not 
 const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan);
 console.log(conversionArtifacts.historyRecords[0].kind); // "frontier.lang.semanticHistoryRecord"
 console.log(conversionArtifacts.patchBundleRecords[0].admission.autoMergeClaim); // false
+console.log(conversionArtifacts.index.semanticOperationKinds); // sourcePreservation/projection/merge
+console.log(conversionArtifacts.routeArtifacts[0].semanticOperations.summary.conflictKeys);
 ```
 
 The projection target matrix separates five runtime/API classes:
@@ -197,7 +199,7 @@ The projection target matrix separates five runtime/API classes:
 
 `createUniversalConversionPlan` turns that capability evidence into coordinator tasks: preserve exact source, run a target adapter, emit stubs, attach semantic-index evidence, or block the route until missing parser/adapter/proof evidence exists. Every route carries `autoMergeClaim: false`, `semanticEquivalenceClaim: false`, missing evidence, task hints, and a `frontier.lang.semanticMergeScore.v1` score for swarm merge admission.
 
-`createUniversalConversionArtifacts` materializes those route refs into compact `SemanticHistoryRecord` and `SemanticPatchBundleRecord` artifacts that swarm collectors can index by route, history ID, patch-bundle ID, source path, ownership key, conflict key, evidence, proof, readiness, and admission status. It is still review evidence, not target-code proof: blocked and semantic-index-only routes stay blocked/needs-review, and every artifact keeps `autoMergeClaim: false` plus `semanticEquivalenceClaim: false`.
+`createUniversalConversionArtifacts` materializes those route refs into compact `SemanticHistoryRecord`, `SemanticPatchBundleRecord`, and semantic-operation artifacts that swarm collectors can index by route, history ID, patch-bundle ID, operation kind, source path, ownership key, conflict key, evidence, proof, readiness, and admission status. It is still review evidence, not target-code proof: blocked and semantic-index-only routes stay blocked/needs-review, and every artifact keeps `autoMergeClaim: false` plus `semanticEquivalenceClaim: false`.
 
 Preserve exact native source text, token/trivia hashes, comments, whitespace, and source directives as evidence. This does not claim full semantic understanding; it keeps round-trip material available while exact parser adapters catch up:
 

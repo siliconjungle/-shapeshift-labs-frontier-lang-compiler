@@ -22,7 +22,9 @@ export function artifactIndex(routeArtifacts) {
     ownershipKeys: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.index.ownershipKeys)),
     conflictKeys: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.index.conflictKeys)),
     evidenceIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.evidenceIds)),
-    proofIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.proofIds))
+    proofIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.proofIds)),
+    semanticOperationIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []).map((operation) => operation.id)),
+    semanticOperationKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []).map((operation) => operation.operationKind))
   };
 }
 
@@ -49,7 +51,9 @@ function matchesArtifact(record, query) {
     && match(query.ownershipKey, record.history.index.ownershipKeys)
     && match(query.conflictKey, record.history.index.conflictKeys)
     && match(query.evidenceId, record.history.evidenceIds)
-    && match(query.proofId, record.history.proofIds);
+    && match(query.proofId, record.history.proofIds)
+    && match(query.semanticOperationId, (record.semanticOperations?.operations ?? []).map((operation) => operation.id))
+    && match(query.semanticOperationKind, (record.semanticOperations?.operations ?? []).map((operation) => operation.operationKind));
 }
 
 function match(filter, values) {

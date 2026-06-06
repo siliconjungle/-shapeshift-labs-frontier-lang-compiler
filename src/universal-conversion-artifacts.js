@@ -1,6 +1,7 @@
 import { idFragment, uniqueStrings } from './native-import-utils.js';
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
 import { artifactIndex } from './universal-conversion-artifact-query.js';
+import { routeSemanticOperations } from './universal-conversion-route-operations.js';
 import { createSemanticHistoryRecord } from './internal/index-impl/semanticHistoryRecords.js';
 import { createSemanticPatchBundleRecord } from './internal/index-impl/semanticPatchBundleRecords.js';
 
@@ -37,6 +38,7 @@ export function createUniversalConversionArtifacts(input = {}, options = {}) {
       routes: routeArtifacts.length,
       histories: historyRecords.length,
       patchBundles: patchBundleRecords.length,
+      semanticOperations: routeArtifacts.reduce((sum, artifact) => sum + artifact.semanticOperations.operations.length, 0),
       reviewRequired: routeArtifacts.filter((artifact) => artifact.reviewRequired).length,
       blocked: routeArtifacts.filter((artifact) => artifact.admissionStatus === 'blocked').length,
       autoMergeClaims: 0,
@@ -57,6 +59,7 @@ function createRouteArtifact(route, options) {
   const sources = normalizeSources(refs.sources, route);
   const regions = routeRegions(route, refs, sources);
   const sourceMapLinks = routeSourceMapLinks(route, refs, sources, regions);
+  const semanticOperations = routeSemanticOperations(route, refs, sources, regions, sourceMapLinks);
   const admissionStatus = routeAdmissionStatus(route);
   const reasonCodes = routeReasonCodes(route);
   const historyId = refs.historyIds?.[0] ?? `history_${route.id}`;
@@ -88,6 +91,7 @@ function createRouteArtifact(route, options) {
     sources,
     changedRegions: regions,
     sourceMapLinks,
+    semanticOperationIds: semanticOperations.operations.map((operation) => operation.id),
     evidenceIds: refs.evidenceIds,
     proofIds: refs.proofIds,
     historyIds: [history.id],
@@ -110,6 +114,7 @@ function createRouteArtifact(route, options) {
     materializedHistoryIds: [history.id],
     patchBundleIds: [patchBundle.id],
     sourceMapLinkIds: patchBundle.index.sourceMapLinkIds,
+    semanticOperationIds: semanticOperations.operations.map((operation) => operation.id),
     evidenceIds: history.evidenceIds,
     proofIds: history.proofIds,
     autoMergeClaim: false,
@@ -132,6 +137,7 @@ function createRouteArtifact(route, options) {
     reviewRequired: true,
     history,
     patchBundle,
+    semanticOperations,
     materialization,
     mergeScore: route.mergeScore,
     autoMergeClaim: false,
