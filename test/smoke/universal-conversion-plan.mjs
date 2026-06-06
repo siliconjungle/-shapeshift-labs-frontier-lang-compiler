@@ -72,6 +72,13 @@ assert.equal(conversionArtifacts.summary.semanticOperations, conversionPlan.rout
 assert.equal(conversionArtifacts.summary.autoMergeClaims, 0);
 assert.equal(conversionArtifacts.summary.semanticEquivalenceClaims, 0);
 
+const directConversionArtifacts = createUniversalConversionArtifacts({
+  imports: [scannedJsImport],
+  targets: ['javascript']
+});
+assert.equal(directConversionArtifacts.kind, 'frontier.lang.universalConversionArtifacts');
+assert.equal(directConversionArtifacts.summary.semanticOperations, directConversionArtifacts.summary.routes);
+
 const jsArtifact = queryUniversalConversionArtifacts(conversionArtifacts, { routeId: jsToJs.id })[0];
 assert.equal(jsArtifact.history.kind, 'frontier.lang.semanticHistoryRecord');
 assert.equal(jsArtifact.history.id, jsToJs.mergeRefs.historyIds[0]);

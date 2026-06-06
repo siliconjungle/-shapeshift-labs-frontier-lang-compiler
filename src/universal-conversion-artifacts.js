@@ -9,11 +9,12 @@ export { queryUniversalConversionArtifacts } from './universal-conversion-artifa
 
 export function createUniversalConversionArtifacts(input = {}, options = {}) {
   const generatedAt = options.generatedAt ?? input.generatedAt ?? Date.now();
+  const context = options.context ?? {};
   const plan = input?.kind === 'frontier.lang.universalConversionPlan'
     ? input
     : input?.target && input?.sourceLanguage
       ? undefined
-      : createUniversalConversionPlan(input);
+      : createUniversalConversionPlan(input, context);
   const routes = selectRoutes(plan?.routes ?? (input?.target && input?.sourceLanguage ? [input] : []), options);
   const routeArtifacts = routes.map((route) => createRouteArtifact(route, {
     generatedAt,
