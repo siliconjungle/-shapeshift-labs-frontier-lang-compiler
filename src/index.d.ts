@@ -20,7 +20,9 @@ import type {
   SourceMapRecord,
   SourcePreservationLevel,
   SourcePreservationRecord,
-  SourceSpan
+  SourceSpan,
+  UniversalAstLayerMap,
+  UniversalAstLayerRecord
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { Diagnostic } from '@shapeshift-labs/frontier-lang-checker';
 import type { EmitTypeScriptOptions, TypeScriptAstModule, TypeScriptDocumentSourceMapResult, TypeScriptGeneratedSourceMapResult } from '@shapeshift-labs/frontier-lang-typescript';
@@ -963,6 +965,9 @@ export interface SemanticImportSidecarImportEntry {
   readonly sourceMapMappingCount: number;
   readonly sourcePreservationRecordCount: number;
   readonly sourcePreservationLevels: readonly SourcePreservationLevel[];
+  readonly universalAstLayerCount: number;
+  readonly universalAstLayerNames: readonly string[];
+  readonly universalAstLayerIds: readonly string[];
   readonly readiness: SemanticMergeReadiness;
   readonly emptySemanticIndex: boolean;
   readonly regionTaxonomy?: SemanticImportRegionTaxonomySummary;
@@ -984,6 +989,14 @@ export interface SemanticImportSidecarSourcePreservationRecord {
   readonly lossIds: readonly string[];
   readonly evidenceIds: readonly string[];
   readonly reasons: readonly string[];
+}
+
+export interface SemanticImportSidecarUniversalAstLayerSummary {
+  readonly total: number;
+  readonly names: readonly string[];
+  readonly ids: readonly string[];
+  readonly byName: Readonly<Record<string, number>>;
+  readonly empty: boolean;
 }
 
 export interface SemanticImportSidecar {
@@ -1014,6 +1027,7 @@ export interface SemanticImportSidecar {
     readonly sourceMapMappingIds: readonly string[];
     readonly records: readonly SemanticImportSidecarSourcePreservationRecord[];
   };
+  readonly universalAstLayers: SemanticImportSidecarUniversalAstLayerSummary;
   readonly patchHints: readonly SemanticImportPatchHint[];
   readonly mergeCandidates: readonly {
     readonly id?: string;
@@ -1043,6 +1057,8 @@ export interface SemanticImportSidecar {
     readonly regionKinds: number;
     readonly sourceMapMappings: number;
     readonly sourcePreservationRecords: number;
+    readonly universalAstLayers: number;
+    readonly universalAstLayerNames: readonly string[];
     readonly readiness: SemanticMergeReadiness;
     readonly emptySemanticIndex: boolean;
   };
@@ -2190,9 +2206,13 @@ export declare function diffNativeSourceImports(input: DiffNativeSourceImportsOp
 export declare function importNativeProject(input: ImportNativeProjectOptions): Promise<NativeProjectImportResult>;
 export declare function createUniversalAstFromDocument(document: FrontierLangDocument, input?: {
   readonly id?: string;
+  readonly nativeSources?: readonly NativeSourceNode[];
   readonly semanticIndex?: SemanticIndexRecord;
   readonly sourceMaps?: readonly SourceMapRecord[];
+  readonly losses?: readonly NativeAstLossRecord[];
   readonly evidence?: readonly EvidenceRecord[];
+  readonly mergeCandidates?: readonly SemanticMergeCandidateRecord[];
+  readonly layers?: UniversalAstLayerMap | readonly UniversalAstLayerRecord[];
   readonly metadata?: Record<string, unknown>;
 }): FrontierUniversalAstEnvelope;
 export declare function readUniversalAstJson(source: string): FrontierUniversalAstEnvelope;

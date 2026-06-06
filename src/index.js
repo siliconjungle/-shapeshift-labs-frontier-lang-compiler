@@ -2565,6 +2565,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
   const lossSummary = summarizeNativeImportLosses(losses, { evidence });
   const regionTaxonomy = summarizeSemanticImportRegionTaxonomy(ownershipRegions);
   const sourcePreservation = summarizeKernelSourcePreservation(importResult, imports);
+  const universalAstLayers = summarizeSemanticImportSidecarUniversalAstLayers(importEntries);
   const readiness = mergeCandidates.reduce(
     (current, candidate) => maxSemanticMergeReadiness(current, candidate.readiness),
     lossSummary.semanticMergeReadiness
@@ -2586,6 +2587,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       ids: sourceMaps.map((sourceMap) => sourceMap.id).filter(Boolean)
     },
     sourcePreservation,
+    universalAstLayers,
     patchHints,
     mergeCandidates: mergeCandidates.map((candidate) => ({
       id: candidate.id,
@@ -2615,6 +2617,8 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       regionKinds: regionTaxonomy.presentKinds.length,
       sourceMapMappings: sourceMapMappings.length,
       sourcePreservationRecords: sourcePreservation.total,
+      universalAstLayers: universalAstLayers.total,
+      universalAstLayerNames: universalAstLayers.names,
       readiness,
       emptySemanticIndex: symbols.length === 0
     },
@@ -8577,6 +8581,7 @@ function semanticImportSidecarEntry(imported, index, options) {
   const sourceMaps = imported?.sourceMaps ?? imported?.universalAst?.sourceMaps ?? [];
   const sourceMapMappings = sourceMaps.flatMap((sourceMap) => sourceMap?.mappings ?? []);
   const sourcePreservationRecords = collectKernelSourcePreservationFromImport(imported);
+  const universalAstLayers = summarizeUniversalAstLayers(imported?.universalAst);
   const mappingsBySymbolId = new Map();
   for (const mapping of sourceMapMappings) {
     if (mapping.semanticSymbolId && !mappingsBySymbolId.has(mapping.semanticSymbolId)) {
@@ -8623,12 +8628,61 @@ function semanticImportSidecarEntry(imported, index, options) {
     sourceMapMappingCount: sourceMapMappings.length,
     sourcePreservationRecordCount: sourcePreservationRecords.length,
     sourcePreservationLevels: uniqueStrings(sourcePreservationRecords.map((record) => record.level).filter(Boolean)),
+    universalAstLayerCount: universalAstLayers.total,
+    universalAstLayerNames: universalAstLayers.names,
+    universalAstLayerIds: universalAstLayers.ids,
     readiness: imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness ?? 'needs-review',
     emptySemanticIndex: symbols.length === 0,
     regionTaxonomy,
     symbols,
     ownershipRegions
   };
+}
+
+function summarizeSemanticImportSidecarUniversalAstLayers(importEntries) {
+  const names = [];
+  const ids = [];
+  const byName = {};
+  for (const entry of importEntries) {
+    names.push(...(entry.universalAstLayerNames ?? []));
+    ids.push(...(entry.universalAstLayerIds ?? []));
+    for (const name of entry.universalAstLayerNames ?? []) {
+      byName[name] = (byName[name] ?? 0) + 1;
+    }
+  }
+  const uniqueNames = uniqueStrings(names);
+  return {
+    total: ids.length,
+    names: uniqueNames,
+    ids: uniqueStrings(ids),
+    byName,
+    empty: ids.length === 0
+  };
+}
+
+function summarizeUniversalAstLayers(universalAst) {
+  const layers = collectUniversalAstLayerRecords(universalAst?.layers);
+  const names = uniqueStrings(layers.map((layer) => layer.layer).filter(Boolean));
+  const ids = uniqueStrings(layers.map((layer) => layer.id).filter(Boolean));
+  const byName = {};
+  for (const layer of layers) {
+    if (!layer?.layer) continue;
+    byName[layer.layer] = (byName[layer.layer] ?? 0) + 1;
+  }
+  return {
+    total: layers.length,
+    names,
+    ids,
+    byName,
+    empty: layers.length === 0
+  };
+}
+
+function collectUniversalAstLayerRecords(layers) {
+  if (!layers) return [];
+  if (Array.isArray(layers)) return layers.filter(Boolean);
+  if (typeof layers !== 'object') return [];
+  return Object.values(layers).flatMap((value) => Array.isArray(value) ? value : [value]).filter(Boolean);
 }
 
 function semanticOwnershipRegionForSymbol(imported, symbol, mapping, nativeNode, options = {}) {
@@ -9359,9 +9413,13 @@ export function createUniversalAstFromDocument(document, input = {}) {
   return createUniversalAstEnvelope({
     id: input.id ?? `universal_ast_${idFragment(document.id)}`,
     document,
+    nativeSources: input.nativeSources,
     semanticIndex: input.semanticIndex,
     sourceMaps: input.sourceMaps ?? [],
+    losses: input.losses,
     evidence: input.evidence ?? [],
+    mergeCandidates: input.mergeCandidates,
+    layers: input.layers,
     metadata: input.metadata
   });
 }
