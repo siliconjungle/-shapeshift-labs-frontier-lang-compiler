@@ -18,9 +18,13 @@ export function createSemanticImportSidecar(importResult, options = {}) {
   const proofSpec = summarizeSemanticImportSidecarProofSpec(importEntries);
   const paradigmSemantics = summarizeSemanticImportSidecarParadigmSemantics(importEntries);
   const dependencies = summarizeSemanticImportDependencies(imports);
+  const entryReadiness = importEntries.reduce(
+    (current, entry) => maxSemanticMergeReadiness(current, entry.readiness),
+    lossSummary.semanticMergeReadiness
+  );
   const readiness = mergeCandidates.reduce(
     (current, candidate) => maxSemanticMergeReadiness(current, candidate.readiness),
-    lossSummary.semanticMergeReadiness
+    entryReadiness
   );
   const patchHints = ownershipRegions.map((region) => semanticPatchHintForRegion(region, readiness, options));
   const quality = createSemanticImportSidecarQuality({

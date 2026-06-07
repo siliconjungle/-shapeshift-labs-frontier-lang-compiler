@@ -1,5 +1,5 @@
 import{idFragment}from'../../native-import-utils.js';
-import{nativeNodeId}from'./nativeNodeId.js';import{numberOrUndefined}from'./numberOrUndefined.js';import{shortNodeText}from'./shortNodeText.js';import{spanFromTreeSitterNode}from'./spanFromTreeSitterNode.js';import{treeSitterDeclaration}from'./treeSitterDeclaration.js';
+import{nativeNodeId}from'./nativeNodeId.js';import{numberOrUndefined}from'./numberOrUndefined.js';import{shortNodeText}from'./shortNodeText.js';import{spanFromTreeSitterNode}from'./spanFromTreeSitterNode.js';import{treeSitterDeclaration}from'./treeSitterDeclaration.js';import{treeSitterChildren,treeSitterNodeKind}from'./treeSitterNodeAccess.js';
 export function visitTreeSitterNode(node, context, propertyPath, depth = 0) {
   if (!node || typeof node !== 'object' || context.truncated) return undefined;
   if (context.objectIds.has(node)) return context.objectIds.get(node);
@@ -8,7 +8,7 @@ export function visitTreeSitterNode(node, context, propertyPath, depth = 0) {
     return undefined;
   }
   context.counter += 1;
-  const kind = String(node.type ?? node.kind ?? 'node');
+  const kind = treeSitterNodeKind(node);
   const span = spanFromTreeSitterNode(node, context.input);
   const id = nativeNodeId(context, kind, { start: { line: span?.startLine, column: span?.startColumn } }, propertyPath);
   context.objectIds.set(node, id);
@@ -80,32 +80,6 @@ export function visitTreeSitterNode(node, context, propertyPath, depth = 0) {
     });
   }
   return id;
-}
-
-function treeSitterChildren(node) {
-  const children = treeSitterArrayChildren(node, 'children');
-  if (children.length) return children;
-  const childCountChildren = treeSitterIndexedChildren(node, 'childCount', 'child');
-  if (childCountChildren.length) return childCountChildren;
-  const namedChildren = treeSitterArrayChildren(node, 'namedChildren');
-  if (namedChildren.length) return namedChildren;
-  return treeSitterIndexedChildren(node, 'namedChildCount', 'namedChild');
-}
-
-function treeSitterArrayChildren(node, field) {
-  const value = node[field];
-  return Array.isArray(value) ? value.filter((child) => child && typeof child === 'object') : [];
-}
-
-function treeSitterIndexedChildren(node, countField, childMethod) {
-  const count = Number(node[countField]);
-  if (!Number.isFinite(count) || count <= 0 || typeof node[childMethod] !== 'function') return [];
-  const children = [];
-  for (let index = 0; index < count; index += 1) {
-    const child = node[childMethod](index);
-    if (child && typeof child === 'object') children.push(child);
-  }
-  return children;
 }
 
 function treeSitterBoolean(node, ...fields) {

@@ -18,6 +18,7 @@ function semanticImportSidecarEntry(imported, index, options) {
   const proofSpec = summarizeProofSpecLayer(imported?.universalAst?.proof ?? imported?.proof);
   const paradigmSemantics = summarizeParadigmSemanticsLayer(imported?.universalAst?.paradigmSemantics ?? imported?.paradigmSemantics);
   const dependencies = summarizeSemanticImportDependencyRelations(semanticIndex?.relations ?? []);
+  const readiness = semanticImportEntryReadiness(imported);
   const mappingsBySymbolId = new Map();
   for (const mapping of sourceMapMappings) {
     if (mapping.semanticSymbolId && !mappingsBySymbolId.has(mapping.semanticSymbolId)) {
@@ -44,7 +45,7 @@ function semanticImportSidecarEntry(imported, index, options) {
       ownershipRegionId: region.id,
       ownershipKey: region.key,
       ownershipRegionKind: region.regionKind,
-      readiness: imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness ?? 'needs-review'
+      readiness
     });
   }
   const ownershipRegions = uniqueRecordsById(regions);
@@ -71,12 +72,22 @@ function semanticImportSidecarEntry(imported, index, options) {
     paradigmSemantics,
     dependencyRelationCount: dependencies.total,
     dependencyPredicates: dependencies.predicates,
-    readiness: imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness ?? 'needs-review',
+    readiness,
     emptySemanticIndex: symbols.length === 0,
     regionTaxonomy,
     symbols,
     ownershipRegions
   };
+}
+
+function semanticImportEntryReadiness(imported) {
+  const readiness = imported?.metadata?.semanticMergeReadiness
+    ?? imported?.metadata?.nativeImportLossSummary?.semanticMergeReadiness
+    ?? imported?.readiness?.semanticMergeReadiness
+    ?? imported?.readiness?.readiness
+    ?? (typeof imported?.readiness === 'string' ? imported.readiness : undefined)
+    ?? imported?.mergeCandidates?.[0]?.readiness;
+  return readiness ?? 'needs-review';
 }
 
 export { semanticImportSidecarEntry };

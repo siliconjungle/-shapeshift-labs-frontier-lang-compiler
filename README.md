@@ -19,6 +19,19 @@ const result = compileFrontierSource(source, { target: 'typescript' });
 if (result.ok) console.log(result.output);
 ```
 
+Run a small end-to-end demo after installing or building the package:
+
+```sh
+npm run build
+node examples/native-js-to-rust-demo.mjs
+```
+
+The demo prints JavaScript source, the Frontier universal AST/semantic-index summary,
+Rust declaration stubs, a host-adapter Rust projection, and a direct Frontier-source
+to Rust projection. Native JavaScript projection remains loss-aware: without a
+target adapter the compiler emits review-required stubs rather than claiming a
+lossless JS-to-Rust transpilation.
+
 Emit code with declaration-level source-map sidecars for semantic review and merge admission:
 
 ```js

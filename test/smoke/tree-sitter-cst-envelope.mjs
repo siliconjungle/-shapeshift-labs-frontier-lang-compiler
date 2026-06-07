@@ -20,8 +20,8 @@ function tsNode(type, startColumn, endColumn, options = {}) {
   };
 }
 
-const syntaxOnlySource = 'let x = 1;\n';
-const syntaxOnlyTree = tsNode('program', 0, syntaxOnlySource.length, {
+const declarationSource = 'let x = 1;\n';
+const declarationTree = tsNode('program', 0, declarationSource.length, {
   children: [
     tsNode('lexical_declaration', 0, 10, {
       children: [
@@ -39,16 +39,16 @@ const syntaxOnlyTree = tsNode('program', 0, syntaxOnlySource.length, {
   ]
 });
 
-const treeSitterSyntaxOnlyImport = await runNativeImporterAdapter(createTreeSitterNativeImporterAdapter({
+const treeSitterDeclarationImport = await runNativeImporterAdapter(createTreeSitterNativeImporterAdapter({
   language: 'javascript',
   parserName: 'tree-sitter-javascript',
-  tree: { rootNode: syntaxOnlyTree }
+  tree: { rootNode: declarationTree }
 }), {
-  sourcePath: 'src/tree-sitter-syntax-only.js',
-  sourceText: syntaxOnlySource
+  sourcePath: 'src/tree-sitter-declaration.js',
+  sourceText: declarationSource
 });
 
-const syntaxEvidence = treeSitterSyntaxOnlyImport.nativeAst.metadata.nativeSyntaxEvidence;
+const syntaxEvidence = treeSitterDeclarationImport.nativeAst.metadata.nativeSyntaxEvidence;
 assert.equal(syntaxEvidence.kind, 'frontier.lang.nativeSyntaxEvidence');
 assert.equal(syntaxEvidence.syntaxKind, 'tree-sitter-cst');
 assert.equal(syntaxEvidence.parser.name, 'tree-sitter-javascript');
@@ -57,14 +57,15 @@ assert.equal(syntaxEvidence.parser.status, 'ok');
 assert.equal(syntaxEvidence.losslessSource, true);
 assert.equal(syntaxEvidence.cst.totalNodes >= 8, true);
 assert.equal(syntaxEvidence.cst.anonymousNodes >= 3, true);
-assert.equal(syntaxEvidence.semantic.symbols, 0);
-assert.equal(syntaxEvidence.semantic.declarationSourceMapMappings, 0);
-assert.equal(syntaxEvidence.semantic.exactness, 'syntax-only');
-assert.equal(treeSitterSyntaxOnlyImport.semanticIndex.symbols.length, 0);
-assert.equal(treeSitterSyntaxOnlyImport.losses.some((loss) => loss.kind === 'partialSemanticIndex' && loss.metadata?.reason === 'tree-sitter-cst-syntax-only'), true);
-assert.equal(treeSitterSyntaxOnlyImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'needs-review');
-assert.equal(treeSitterSyntaxOnlyImport.adapter.coverage.observed.semanticSymbols, 0);
-assert.equal(treeSitterSyntaxOnlyImport.adapter.coverage.semanticCoverage.symbols, false);
+assert.equal(syntaxEvidence.semantic.symbols, 1);
+assert.equal(syntaxEvidence.semantic.declarationSourceMapMappings, 1);
+assert.equal(syntaxEvidence.semantic.exactness, 'declaration-linked');
+assert.equal(treeSitterDeclarationImport.semanticIndex.symbols[0].name, 'x');
+assert.equal(treeSitterDeclarationImport.semanticIndex.symbols[0].kind, 'variable');
+assert.equal(treeSitterDeclarationImport.losses.some((loss) => loss.kind === 'partialSemanticIndex' && loss.metadata?.reason === 'tree-sitter-cst-syntax-only'), false);
+assert.equal(treeSitterDeclarationImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
+assert.equal(treeSitterDeclarationImport.adapter.coverage.observed.semanticSymbols, 1);
+assert.equal(treeSitterDeclarationImport.adapter.coverage.semanticCoverage.symbols, true);
 
 const tolerantErrorSource = 'let = ;\n';
 const tolerantErrorTree = tsNode('program', 0, tolerantErrorSource.length, {

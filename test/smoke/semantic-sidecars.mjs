@@ -56,6 +56,25 @@ assert.equal(scannedJsSidecar.admission.counts.patchHints, scannedJsSidecar.patc
 assert.equal(['admit', 'review'].includes(scannedJsSidecar.admission.action), true);
 assert.equal(scannedJsSidecar.summary.patchHints, scannedJsSidecar.patchHints.length);
 assert.equal(scannedJsSidecar.summary.evidenceWarnings, 0);
+const nativeLossSummaryOnlyImport = {
+  ...scannedJsImport,
+  id: 'import_scanned_js_native_loss_summary_only',
+  losses: [],
+  mergeCandidates: [],
+  metadata: {
+    ...scannedJsImport.metadata,
+    semanticMergeReadiness: undefined,
+    nativeImportLossSummary: {
+      semanticMergeReadiness: 'blocked'
+    }
+  }
+};
+const nativeLossSummaryOnlySidecar = createSemanticImportSidecar(nativeLossSummaryOnlyImport, { generatedAt: 132 });
+assert.equal(nativeLossSummaryOnlySidecar.imports[0].readiness, 'blocked');
+assert.equal(nativeLossSummaryOnlySidecar.summary.readiness, 'blocked');
+assert.equal(nativeLossSummaryOnlySidecar.symbols.every((symbol) => symbol.readiness === 'blocked'), true);
+assert.equal(nativeLossSummaryOnlySidecar.patchHints.every((hint) => hint.readiness === 'blocked'), true);
+assert.equal(nativeLossSummaryOnlySidecar.admission.action, 'reject-blocked');
 const emptySemanticImport = {
   id: 'empty_import',
   language: 'javascript',
