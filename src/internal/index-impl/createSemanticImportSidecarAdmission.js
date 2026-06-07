@@ -14,13 +14,26 @@ function sidecarQualityWarning(code, message, action, sourcePaths) {
 
 export function createSemanticImportSidecarQuality(input) {
   const { importEntries, symbols, ownershipRegions, patchHints, proofSpec, evidence, readiness } = input;
+  const expected = input.expected === true;
   const sourcePaths = sidecarSourcePaths(importEntries);
   const importCount = importEntries.length;
   const warnings = [];
+  if (expected && importCount === 0) warnings.push(sidecarQualityWarning(
+    'expected-semantic-import-missing',
+    'Semantic import was expected but no import entries were selected.',
+    'check-semantic-import-include-globs-and-workspace-paths',
+    sourcePaths
+  ));
   if (importCount === 0) warnings.push(sidecarQualityWarning(
     'missing-imports',
     'Semantic sidecar has no import entries; run native import before merge admission.',
     'run-native-import',
+    sourcePaths
+  ));
+  if (expected && importCount > 0 && symbols.length === 0) warnings.push(sidecarQualityWarning(
+    'expected-semantic-import-empty',
+    'Semantic import was expected but selected imports produced zero semantic symbols.',
+    'rerun-importer-with-semantic-source-selection',
     sourcePaths
   ));
   if (importCount > 0 && symbols.length === 0) warnings.push(sidecarQualityWarning(
@@ -86,9 +99,21 @@ export function createSemanticImportSidecarQuality(input) {
   const emptyEvidenceWarnings = warnings.filter((warning) => (
     warning.code === 'empty-evidence' ||
     warning.code === 'empty-semantic-index' ||
+    warning.code === 'expected-semantic-import-empty' ||
+    warning.code === 'expected-semantic-import-missing' ||
     warning.code === 'missing-ownership-regions' ||
     warning.code === 'missing-patch-hints'
   ));
+  const expectedMissingReasonCodes = expected
+    ? emptyEvidenceWarnings.map((warning) => warning.code)
+    : [];
+  const expectedSatisfied = !expected || (
+    importCount > 0 &&
+    symbols.length > 0 &&
+    ownershipRegions.length > 0 &&
+    patchHints.length > 0 &&
+    evidence.length > 0
+  );
   const proofSummary = {
     total: proofSpec.total,
     obligations: proofSpec.obligations,
@@ -104,6 +129,9 @@ export function createSemanticImportSidecarQuality(input) {
   };
   return {
     schema: 'frontier.lang.semanticSidecarQuality.v1',
+    expected,
+    expectedSatisfied,
+    expectedMissingReasonCodes,
     selected: importCount > 0,
     eligible: importCount > 0 && emptyEvidenceWarnings.length === 0 && proofSpec.failed === 0 && readiness !== 'blocked',
     imported: importCount > 0,
@@ -122,6 +150,9 @@ export function createSemanticImportSidecarQuality(input) {
 export function createSemanticImportSidecarAdmission(quality, readiness) {
   return {
     schema: 'frontier.lang.semanticSidecarAdmission.v1',
+    expected: quality.expected,
+    expectedSatisfied: quality.expectedSatisfied,
+    expectedMissingReasonCodes: quality.expectedMissingReasonCodes,
     selected: quality.selected,
     eligible: quality.eligible,
     imported: quality.imported,

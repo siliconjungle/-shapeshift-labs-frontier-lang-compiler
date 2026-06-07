@@ -24,6 +24,9 @@ export interface SemanticImportSidecarProofAdmissionSummary {
 
 export interface SemanticImportSidecarQuality {
   readonly schema: 'frontier.lang.semanticSidecarQuality.v1';
+  readonly expected: boolean;
+  readonly expectedSatisfied: boolean;
+  readonly expectedMissingReasonCodes: readonly string[];
   readonly selected: boolean;
   readonly eligible: boolean;
   readonly imported: boolean;
@@ -40,6 +43,9 @@ export interface SemanticImportSidecarQuality {
 
 export interface SemanticImportSidecarAdmission {
   readonly schema: 'frontier.lang.semanticSidecarAdmission.v1';
+  readonly expected: boolean;
+  readonly expectedSatisfied: boolean;
+  readonly expectedMissingReasonCodes: readonly string[];
   readonly selected: boolean;
   readonly eligible: boolean;
   readonly imported: boolean;

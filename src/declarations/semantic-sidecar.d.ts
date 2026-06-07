@@ -304,8 +304,8 @@ export interface SemanticImportSidecar {
     readonly dependencyRelations: number; readonly dependencyPredicates: readonly string[];
     readonly patchHints: number;
     readonly evidenceWarnings: number;
-    readonly readiness: SemanticMergeReadiness;
-    readonly emptySemanticIndex: boolean;
+    readonly semanticImportExpected: boolean; readonly semanticImportExpectedSatisfied: boolean; readonly semanticImportExpectedMissingReasonCodes: readonly string[];
+    readonly readiness: SemanticMergeReadiness; readonly emptySemanticIndex: boolean;
   };
   readonly metadata?: Record<string, unknown>;
 }
@@ -314,6 +314,6 @@ export interface SemanticImportSidecarOptions {
   readonly id?: string;
   readonly generatedAt?: number;
   readonly regionPrefix?: string;
-  readonly targetPath?: string;
+  readonly targetPath?: string; readonly expected?: boolean; readonly semanticImportExpected?: boolean;
   readonly metadata?: Record<string, unknown>;
 }
