@@ -1,4 +1,4 @@
-import{idFragment,maxSemanticMergeReadiness,uniqueRecordsById}from'../../native-import-utils.js';import{summarizeSemanticImportDependencies}from'../../semantic-import-dependencies.js';import{summarizeSemanticImportSidecarParadigmSemantics,summarizeSemanticImportSidecarProofSpec,summarizeSemanticImportSidecarUniversalAstLayers}from'../../semantic-import-layers.js';import{semanticPatchHintForRegion,summarizeSemanticImportRegionTaxonomy}from'../../semantic-import-regions.js';import{semanticImportSidecarEntry}from'../../semantic-import-sidecar-entry.js';import{summarizeKernelSourcePreservation}from'../../semantic-import-source-preservation.js';
+import{idFragment,maxSemanticMergeReadiness,uniqueRecordsById}from'../../native-import-utils.js';import{summarizeSemanticImportDependencies}from'../../semantic-import-dependencies.js';import{createSemanticImportImpact}from'../../semantic-import-impact.js';import{summarizeSemanticImportSidecarParadigmSemantics,summarizeSemanticImportSidecarProofSpec,summarizeSemanticImportSidecarUniversalAstLayers}from'../../semantic-import-layers.js';import{semanticPatchHintForRegion,summarizeSemanticImportRegionTaxonomy}from'../../semantic-import-regions.js';import{semanticImportSidecarEntry}from'../../semantic-import-sidecar-entry.js';import{summarizeKernelSourcePreservation}from'../../semantic-import-source-preservation.js';
 import{createSemanticImportSidecarAdmission,createSemanticImportSidecarQuality}from'./createSemanticImportSidecarAdmission.js';
 import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';
 export function createSemanticImportSidecar(importResult, options = {}) {
@@ -38,6 +38,22 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     readiness
   });
   const admission = createSemanticImportSidecarAdmission(quality, readiness);
+  const semanticImpact = createSemanticImportImpact({
+    imports,
+    symbols,
+    ownershipRegions,
+    sourceMapMappings,
+    sourcePreservation,
+    dependencies,
+    patchHints,
+    proofSpec,
+    evidence: {
+      total: evidence.length,
+      failed: evidence.filter((record) => record.status === 'failed').map((record) => record.id),
+      ids: evidence.map((record) => record.id)
+    },
+    readiness
+  });
   return {
     kind: 'frontier.lang.semanticImportSidecar',
     version: 1,
@@ -58,6 +74,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     proofSpec,
     paradigmSemantics,
     dependencies,
+    semanticImpact,
     patchHints,
     quality,
     admission,
@@ -101,6 +118,9 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       paradigmSemanticsLoweringRecords: paradigmSemantics.loweringRecords,
       dependencyRelations: dependencies.total,
       dependencyPredicates: dependencies.predicates,
+      semanticImpactRecords: semanticImpact.summary.total,
+      semanticImpactHighRiskRecords: semanticImpact.summary.byRisk.high ?? 0,
+      semanticImpactRequiredVerificationSteps: semanticImpact.summary.requiredVerificationSteps,
       patchHints: patchHints.length,
       evidenceWarnings: quality.emptyEvidenceWarnings.length,
       semanticImportExpected: quality.expected,

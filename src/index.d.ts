@@ -16,6 +16,7 @@ export * from './declarations/semantic-sidecar-admission.js';
 export * from './declarations/semantic-merge-conflicts.js';
 export * from './declarations/semantic-history.js';
 export * from './declarations/semantic-patch-bundle.js';
+export * from './declarations/semantic-impact.js';
 export * from './declarations/semantic-sidecar.js';
 export * from './declarations/native-diff.js';
 export * from './declarations/semantic-slice.js';

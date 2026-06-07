@@ -72,6 +72,18 @@ export function createSemanticImportSidecarQuality(input) {
     'review-pending-proof-obligations',
     sourcePaths
   ));
+  if ((proofSpec.byReadinessStatus?.open ?? 0) > 0) warnings.push(sidecarQualityWarning(
+    'open-proof-obligations',
+    'Semantic sidecar has open proof obligations.',
+    'review-open-proof-obligations',
+    sourcePaths
+  ));
+  if (proofSpec.stale > 0) warnings.push(sidecarQualityWarning(
+    'stale-proof-obligations',
+    'Semantic sidecar has stale proof obligations.',
+    'rerun-stale-proof-obligations',
+    sourcePaths
+  ));
   if (proofSpec.assumed > 0) warnings.push(sidecarQualityWarning(
     'assumed-proof-obligations',
     'Semantic sidecar has assumed proof obligations.',
@@ -120,6 +132,7 @@ export function createSemanticImportSidecarQuality(input) {
     discharged: proofSpec.discharged,
     pending: proofSpec.pending,
     failed: proofSpec.failed,
+    stale: proofSpec.stale,
     assumed: proofSpec.assumed,
     externalToolRequired: proofSpec.externalToolRequired,
     open: proofSpec.open,
@@ -186,6 +199,6 @@ function sidecarAdmissionAction(quality, readiness) {
 }
 
 function sidecarProofReviewObligations(proofSummary) {
-  return (proofSummary.pending ?? 0) + (proofSummary.assumed ?? 0) +
+  return (proofSummary.open ?? 0) + (proofSummary.stale ?? 0) + (proofSummary.assumed ?? 0) +
     (proofSummary.externalToolRequired ?? 0) + (proofSummary.unknown ?? 0);
 }

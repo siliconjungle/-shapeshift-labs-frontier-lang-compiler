@@ -272,6 +272,7 @@ const sidecar = createSemanticImportSidecar(imported);
 console.log(sidecar.summary.emptySemanticIndex); // false when symbols were found
 console.log(sidecar.ownershipRegions[0].key); // source#src/runtime.ts#type#Runtime
 console.log(sidecar.patchHints[0].supportedOperations); // source-region patch operations
+console.log(sidecar.semanticImpact.records[0].verificationPlan); // dependency/source-map/proof checks for a region
 console.log(sidecar.proofSpec.obligations); // proof/spec obligations when the import carries a universal AST proof layer
 console.log(sidecar.paradigmSemantics.hasLowering); // true when source import preserved lowering/paradigm records
 ```

@@ -14,6 +14,7 @@ export interface SemanticImportSidecarProofAdmissionSummary {
   readonly discharged: number;
   readonly pending?: number;
   readonly failed: number;
+  readonly stale?: number;
   readonly assumed?: number;
   readonly externalToolRequired?: number;
   readonly open: number;

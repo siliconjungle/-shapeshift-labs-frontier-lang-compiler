@@ -15,7 +15,7 @@ assertSemanticImportFixture(scannedJsImport, {
   expectedSymbols: ['addTodo', 'TodoStore.save'],
   expectedRegionKinds: ['body', 'route', 'content', 'config', 'property'],
   expectedReadiness: 'needs-review',
-  expectedWarningCodes: ['external-tool-proof-obligations'],
+  expectedWarningCodes: ['external-tool-proof-obligations', 'open-proof-obligations'],
   expectEligible: true
 });
 assert.equal(scannedJsSidecar.kind, 'frontier.lang.semanticImportSidecar');
@@ -65,6 +65,14 @@ assert.equal(scannedJsSidecar.admission.counts.patchHints, scannedJsSidecar.patc
 assert.equal(['admit', 'review', 'review-proof-obligations'].includes(scannedJsSidecar.admission.action), true);
 assert.equal(scannedJsSidecar.summary.patchHints, scannedJsSidecar.patchHints.length);
 assert.equal(scannedJsSidecar.summary.evidenceWarnings, 0);
+assert.equal(scannedJsSidecar.semanticImpact.kind, 'frontier.lang.semanticImpact');
+assert.equal(scannedJsSidecar.semanticImpact.records.length, scannedJsSidecar.ownershipRegions.length);
+assert.equal(scannedJsSidecar.summary.semanticImpactRecords, scannedJsSidecar.semanticImpact.summary.total);
+assert.equal(scannedJsSidecar.semanticImpact.summary.patchHints, scannedJsSidecar.patchHints.length);
+assert.equal(scannedJsSidecar.semanticImpact.summary.dependencyRelations, scannedJsSidecar.dependencies.total);
+assert.equal(scannedJsSidecar.semanticImpact.summary.loweringRecords >= scannedJsSidecar.ownershipRegions.length, true);
+assert.equal(scannedJsSidecar.semanticImpact.summary.verificationPlans.includes('dependency-review'), true);
+assert.equal(scannedJsSidecar.semanticImpact.records.some((record) => record.dependencyRelationIds.length > 0 && record.conflictKeys.some((key) => key.startsWith('dependency:'))), true); assert.equal(scannedJsSidecar.semanticImpact.records.some((record) => record.sourceMapMappingIds.length > 0 && record.patchHintIds.length > 0), true); assert.equal(scannedJsSidecar.semanticImpact.records.every((record) => record.readiness === 'needs-review'), true); assert.equal(scannedJsSidecar.semanticImpact.records.every((record) => record.affectedSymbolIds.every((id) => scannedJsSidecar.symbols.some((symbol) => symbol.id === id))), true);
 const nativeLossSummaryOnlyImport = {
   ...scannedJsImport,
   id: 'import_scanned_js_native_loss_summary_only',
@@ -105,6 +113,7 @@ assert.equal(emptySemanticSidecar.quality.imported, true);
 assert.equal(emptySemanticSidecar.quality.eligible, false);
 assert.equal(emptySemanticSidecar.admission.action, 'reject-empty-evidence');
 assert.equal(emptySemanticSidecar.quality.emptyEvidenceWarnings.some((warning) => warning.code === 'empty-semantic-index'), true);
+assert.equal(emptySemanticSidecar.semanticImpact.records.length, 0); assert.equal(emptySemanticSidecar.summary.semanticImpactRecords, 0);
 const scannedProofEvidence = { id: 'proof_scanned_js', kind: 'proof', status: 'passed' };
 const scannedProofSpec = createProofSpecLayer({
   id: 'proof_scanned_js_spec',
@@ -157,6 +166,8 @@ assert.equal(scannedProofSidecar.summary.proofSpecFailedObligations, 0);
 assert.equal(scannedProofSidecar.quality.proofSummary.obligations, 1);
 assert.equal(scannedProofSidecar.admission.counts.proofObligations, 1);
 assert.equal(scannedProofSidecar.admission.proofSummary.autoMergeProof, false);
+assert.equal(scannedProofSidecar.semanticImpact.records.some((record) => record.proofObligationIds.includes('obligation_scanned_routes')), true);
+assert.equal(scannedProofSidecar.semanticImpact.summary.proofObligations >= 1, true);
 const checkerStatusProofSpec = createProofSpecLayer({
   id: 'proof_external_checker_statuses',
   obligations: [
@@ -165,8 +176,7 @@ const checkerStatusProofSpec = createProofSpecLayer({
     { id: 'alloy_counterexample', kind: 'modelCheck', status: 'counterexample' },
     { id: 'coq_admitted', kind: 'theorem', status: 'admitted' },
     { id: 'dafny_pending', kind: 'assertion', status: 'pending' },
-    { id: 'session_obsolete', kind: 'solverRun', status: 'obsolete' },
-    { id: 'solver_timeout', kind: 'solverRun', status: 'timeout' }
+    { id: 'session_obsolete', kind: 'solverRun', status: 'obsolete' }, { id: 'solver_timeout', kind: 'solverRun', status: 'timeout' }, { id: 'solver_open', kind: 'solverRun', status: 'open' }, { id: 'missing_status', kind: 'assertion' }
   ]
 });
 const checkerStatusSidecar = createSemanticImportSidecar({
@@ -178,17 +188,13 @@ const checkerStatusSidecar = createSemanticImportSidecar({
     proof: checkerStatusProofSpec
   })
 }, { generatedAt: 127 });
-assert.equal(checkerStatusSidecar.proofSpec.obligations, 7);
-assert.equal(checkerStatusSidecar.proofSpec.discharged, 2);
-assert.equal(checkerStatusSidecar.proofSpec.failed, 1);
-assert.equal(checkerStatusSidecar.proofSpec.pending, 1);
-assert.equal(checkerStatusSidecar.proofSpec.assumed, 1);
-assert.equal(checkerStatusSidecar.proofSpec.open, 1);
-assert.equal(checkerStatusSidecar.proofSpec.stale, 1);
-assert.equal(checkerStatusSidecar.proofSpec.unknown, 1);
+assert.equal(checkerStatusSidecar.proofSpec.obligations, 9);
+assert.equal(checkerStatusSidecar.proofSpec.discharged, 2); assert.equal(checkerStatusSidecar.proofSpec.failed, 1); assert.equal(checkerStatusSidecar.proofSpec.pending, 1);
+assert.equal(checkerStatusSidecar.proofSpec.assumed, 1); assert.equal(checkerStatusSidecar.proofSpec.open, 2); assert.equal(checkerStatusSidecar.proofSpec.stale, 1); assert.equal(checkerStatusSidecar.proofSpec.unknown, 2);
 assert.equal(checkerStatusSidecar.proofSpec.byStatus.valid, 1);
 assert.equal(checkerStatusSidecar.proofSpec.byReadinessStatus.discharged, 2);
 assert.equal(checkerStatusSidecar.admission.action, 'reject-failed-proof');
+assert.equal(checkerStatusSidecar.quality.warnings.some((warning) => warning.code === 'stale-proof-obligations'), true); assert.equal(checkerStatusSidecar.semanticImpact.summary.proofObligations, 9);
 const reviewProofSpec = createProofSpecLayer({
   id: 'proof_scanned_js_review_spec',
   obligations: ['pending', 'assumed', 'external-tool-required', 'unknown'].map((status) => ({

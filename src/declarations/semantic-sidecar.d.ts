@@ -26,6 +26,7 @@ import type {
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { SemanticImportSidecarAdmission, SemanticImportSidecarQuality } from './semantic-sidecar-admission.js';
 import type { SemanticMergeConflictClass, SemanticMergeConflictSummary } from './semantic-merge-conflicts.js';
+import type { SemanticImportImpactSummary } from './semantic-impact.js';
 import type { Diagnostic } from '@shapeshift-labs/frontier-lang-checker';
 import type { EmitTypeScriptOptions, TypeScriptAstModule, TypeScriptDocumentSourceMapResult, TypeScriptGeneratedSourceMapResult } from '@shapeshift-labs/frontier-lang-typescript';
 import type { EmitJavaScriptOptions, EmitJavaScriptWithSourceMapResult, JavaScriptAstModule, JavaScriptSourceMapResult } from '@shapeshift-labs/frontier-lang-javascript';
@@ -263,7 +264,7 @@ export interface SemanticImportSidecar {
   readonly universalAstLayers: SemanticImportSidecarUniversalAstLayerSummary;
   readonly proofSpec: SemanticImportSidecarProofSpecSummary;
   readonly paradigmSemantics: SemanticImportSidecarParadigmSemanticsSummary;
-  readonly dependencies: SemanticImportDependencySummary;
+  readonly dependencies: SemanticImportDependencySummary; readonly semanticImpact: SemanticImportImpactSummary;
   readonly patchHints: readonly SemanticImportPatchHint[];
   readonly quality: SemanticImportSidecarQuality;
   readonly admission: SemanticImportSidecarAdmission;
@@ -302,6 +303,7 @@ export interface SemanticImportSidecar {
     readonly paradigmSemanticsGroups: number;
     readonly paradigmSemanticsLoweringRecords: number;
     readonly dependencyRelations: number; readonly dependencyPredicates: readonly string[];
+    readonly semanticImpactRecords: number; readonly semanticImpactHighRiskRecords: number; readonly semanticImpactRequiredVerificationSteps: number;
     readonly patchHints: number;
     readonly evidenceWarnings: number;
     readonly semanticImportExpected: boolean; readonly semanticImportExpectedSatisfied: boolean; readonly semanticImportExpectedMissingReasonCodes: readonly string[];
@@ -310,10 +312,4 @@ export interface SemanticImportSidecar {
   readonly metadata?: Record<string, unknown>;
 }
 
-export interface SemanticImportSidecarOptions {
-  readonly id?: string;
-  readonly generatedAt?: number;
-  readonly regionPrefix?: string;
-  readonly targetPath?: string; readonly expected?: boolean; readonly semanticImportExpected?: boolean;
-  readonly metadata?: Record<string, unknown>;
-}
+export interface SemanticImportSidecarOptions { readonly id?: string; readonly generatedAt?: number; readonly regionPrefix?: string; readonly targetPath?: string; readonly expected?: boolean; readonly semanticImportExpected?: boolean; readonly metadata?: Record<string, unknown>; }

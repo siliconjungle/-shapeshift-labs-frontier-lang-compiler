@@ -6,6 +6,7 @@ import type {
   SourceSpan
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { NativeImportRegionTaxonomyKind, NativeImportTaxonomyKind } from './index.js';
+import type { SemanticImportImpactSummary } from './semantic-import-impact-types.js';
 import type { SemanticImportSidecarAdmission, SemanticImportSidecarQuality } from './semantic-import-sidecar-admission-types.js';
 import type { SemanticMergeConflictClass, SemanticMergeConflictSummary } from './declarations/semantic-merge-conflicts.js';
 
@@ -237,6 +238,7 @@ export interface SemanticImportSidecar {
   readonly proofSpec: SemanticImportSidecarProofSpecSummary;
   readonly paradigmSemantics: SemanticImportSidecarParadigmSemanticsSummary;
   readonly dependencies: SemanticImportDependencySummary;
+  readonly semanticImpact: SemanticImportImpactSummary;
   readonly patchHints: readonly SemanticImportPatchHint[];
   readonly quality: SemanticImportSidecarQuality;
   readonly admission: SemanticImportSidecarAdmission;
@@ -280,6 +282,9 @@ export interface SemanticImportSidecar {
     readonly paradigmSemanticsLoweringRecords: number;
     readonly dependencyRelations: number;
     readonly dependencyPredicates: readonly string[];
+    readonly semanticImpactRecords: number;
+    readonly semanticImpactHighRiskRecords: number;
+    readonly semanticImpactRequiredVerificationSteps: number;
     readonly patchHints: number;
     readonly evidenceWarnings: number;
     readonly readiness: SemanticMergeReadiness;
@@ -293,5 +298,7 @@ export interface SemanticImportSidecarOptions {
   readonly generatedAt?: number;
   readonly regionPrefix?: string;
   readonly targetPath?: string;
+  readonly expected?: boolean;
+  readonly semanticImportExpected?: boolean;
   readonly metadata?: Record<string, unknown>;
 }
