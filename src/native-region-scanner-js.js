@@ -38,8 +38,8 @@ function scanJavaScriptLike(input) {
       declarations.push(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, declarationLine.includes('{')));
     } else if ((match = trimmed.match(/^export\s+default\s+(?:async\s+)?function\*?\s*([A-Za-z_$][\w$]*)?\s*\(([^)]*)\)/))) {
       declarations.push(nativeDeclaration(input, number, 'ExportDefaultFunctionDeclaration', 'function', match[1] ?? 'default', { parameters: splitParameters(match[2]), exportDefault: true }, trimmed.includes('{')));
-    } else if ((match = declarationLine.match(/^(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/))) {
-      declarations.push(nativeDeclaration(input, number, 'ClassDeclaration', 'class', match[1], {}, declarationLine.includes('{')));
+    } else if ((match = declarationLine.match(/^(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/))) {
+      declarations.push(nativeDeclaration(input, number, declarationLine.startsWith('default ') ? 'ExportDefaultClassDeclaration' : 'ClassDeclaration', 'class', match[1], { exportDefault: declarationLine.startsWith('default ') || undefined }, declarationLine.includes('{')));
       if (declarationLine.includes('{') && !declarationLine.includes('}')) {
         currentClass = match[1];
         classDepth = 0;
@@ -196,6 +196,7 @@ function jsInitializerKind(line) {
   const initializer = String(line ?? '').split('=').slice(1).join('=').trim();
   if (!initializer) return 'unknown';
   if (/^(?:async\s+)?function\b/.test(initializer) || /=>/.test(initializer)) return 'function';
+  if (/^(?:React\.)?(?:forwardRef|memo|lazy|observer)\s*(?:<[^>]+>)?\s*\(/.test(initializer)) return 'function';
   if (initializer.startsWith('{')) return 'object';
   if (initializer.startsWith('[')) return 'array';
   if (/^new\s+/.test(initializer)) return 'instance';

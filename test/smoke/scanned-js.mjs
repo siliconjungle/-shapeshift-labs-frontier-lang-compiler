@@ -68,6 +68,19 @@ const scannedJsSidecar = createSemanticImportSidecar(scannedJsImport);
 assert.equal(scannedJsSidecar.dependencies.calls >= 2, true);
 assert.equal(scannedJsSidecar.summary.dependencyRelations >= scannedJsSidecar.dependencies.calls, true);
 assert.equal(scannedJsSidecar.imports[0].dependencyPredicates.includes('calls'), true);
+const scannedDefaultClassImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/default-class.tsx',
+  sourceText: 'export default class RuntimeHost { start() { return true; } }\n'
+});
+assert.equal(scannedDefaultClassImport.semanticIndex.symbols.some((symbol) => symbol.name === 'RuntimeHost' && symbol.kind === 'class'), true);
+assert.equal(scannedDefaultClassImport.sourceMaps[0].mappings.some((mapping) => mapping.ownershipRegionId), true);
+const scannedWrapperImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/wrapper.tsx',
+  sourceText: 'export const Button = React.forwardRef<HTMLButtonElement, Props>(function Button(props, ref) { return props.kind; });\n'
+});
+assert.equal(scannedWrapperImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Button' && symbol.kind === 'function'), true);
 const standalonePreservation = createNativeSourcePreservation({
   language: 'python',
   sourcePath: 'tools/preserve.py',
