@@ -26,6 +26,18 @@ npm run build
 node examples/native-js-to-rust-demo.mjs
 ```
 
+Run the interactive Frontier-style workbench with editable TypeScript and Rust panes:
+
+```sh
+npm run demo:ts-rust -- --port 4177
+```
+
+The workbench converts only when `Run` is pressed. TypeScript edits project through
+the Frontier semantic graph into Rust scaffolding; Rust edits project back through
+the graph into TypeScript scaffolding. The middle pane shows symbols, relations,
+source maps, readiness, losses, patch hints, and the explicit supported/review-only/
+unsupported bounds for the current direction.
+
 The demo prints JavaScript source, the Frontier universal AST/semantic-index summary,
 Rust declaration stubs, a host-adapter Rust projection, and a direct Frontier-source
 to Rust projection. Native JavaScript projection remains loss-aware: without a

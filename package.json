@@ -1,6 +1,6 @@
 {
   "name": "@shapeshift-labs/frontier-lang-compiler",
-  "version": "0.2.55",
+  "version": "0.2.56",
   "description": "Compiler facade for Frontier Lang source documents and language projection adapters.",
   "type": "module",
   "main": "./dist/index.js",
@@ -26,6 +26,10 @@
     "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit -p test/tsconfig.json",
     "fuzz": "npm run build && node fuzz/smoke.mjs",
     "bench": "npm run build && node bench/smoke.mjs",
+    "demo:ts-rust": "npm run build && node examples/js-frontier-rust-workbench.mjs --serve",
+    "demo:ts-rust:smoke": "npm run build && node examples/js-frontier-rust-workbench.mjs --smoke",
+    "demo:js-rust": "npm run demo:ts-rust",
+    "demo:js-rust:smoke": "npm run demo:ts-rust:smoke",
     "prepare": "npm run build",
     "prepack": "npm run lint && npm test",
     "pack:dry": "npm pack --dry-run",
