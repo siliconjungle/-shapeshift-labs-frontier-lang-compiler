@@ -22,6 +22,7 @@ function measureRegionScan() {
       language: 'typescript',
       sourcePath: `src/regions-${index}.ts`,
       sourceText: `
+      export function normalizeCount${index}(value) { return value; }
       export const appRoutes${index} = [
         { path: "/${index}", component: Screen${index} },
         { path: "/${index}/settings", component: Settings${index} }
@@ -31,7 +32,7 @@ function measureRegionScan() {
         legal: { title: "Legal ${index}" }
       };
       export const runtimeConfig${index} = {
-        limits: { count: ${index} },
+        limits: { count: normalizeCount${index}(${index}) },
         resolve(id) { return id; }
       };
       export const helpers${index} = {
@@ -45,6 +46,7 @@ function measureRegionScan() {
   return {
     regionScanImports: regionScanImports.length,
     regionScanSymbols: regionScanImports.reduce((sum, entry) => sum + entry.imported.semanticIndex.symbols.length, 0),
+    regionScanDependencyRelations: regionScanImports.reduce((sum, entry) => sum + entry.sidecar.dependencies.total, 0),
     regionScanOwnershipRegions: regionScanImports.reduce((sum, entry) => sum + entry.sidecar.ownershipRegions.length, 0),
     regionScanDurationMs
   };

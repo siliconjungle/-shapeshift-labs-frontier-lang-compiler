@@ -97,6 +97,7 @@ console.log(JSON.stringify({
   nativeTargetAdapterDurationMs: Number(transformMetrics.nativeTargetAdapterDurationMs.toFixed(2)),
   regionScanImports: sourceChangeMetrics.regionScanImports,
   regionScanSymbols: sourceChangeMetrics.regionScanSymbols,
+  regionScanDependencyRelations: sourceChangeMetrics.regionScanDependencyRelations,
   regionScanOwnershipRegions: sourceChangeMetrics.regionScanOwnershipRegions,
   regionScanDurationMs: Number(sourceChangeMetrics.regionScanDurationMs.toFixed(2)),
   changeProjectionSets: sourceChangeMetrics.changeProjectionSets,

@@ -90,6 +90,8 @@ export interface SemanticImportSidecarImportEntry {
   readonly universalAstLayerIds: readonly string[];
   readonly proofSpec: SemanticImportSidecarProofSpecSummary;
   readonly paradigmSemantics: SemanticImportSidecarParadigmSemanticsSummary;
+  readonly dependencyRelationCount: number;
+  readonly dependencyPredicates: readonly string[];
   readonly readiness: SemanticMergeReadiness;
   readonly emptySemanticIndex: boolean;
   readonly regionTaxonomy?: SemanticImportRegionTaxonomySummary;
@@ -186,6 +188,23 @@ export interface SemanticImportSidecarParadigmSemanticsSummary {
   readonly empty: boolean;
 }
 
+export interface SemanticImportDependencySummary {
+  readonly total: number;
+  readonly calls: number;
+  readonly uses: number;
+  readonly references: number;
+  readonly imports: number;
+  readonly extends: number;
+  readonly implements: number;
+  readonly includes: number;
+  readonly requires: number;
+  readonly byPredicate: Readonly<Record<string, number>>;
+  readonly predicates: readonly string[];
+  readonly ids: readonly string[];
+  readonly sourceSymbolIds: readonly string[];
+  readonly targetSymbolIds: readonly string[];
+}
+
 export interface SemanticImportSidecar {
   readonly kind: 'frontier.lang.semanticImportSidecar';
   readonly version: 1;
@@ -217,6 +236,7 @@ export interface SemanticImportSidecar {
   readonly universalAstLayers: SemanticImportSidecarUniversalAstLayerSummary;
   readonly proofSpec: SemanticImportSidecarProofSpecSummary;
   readonly paradigmSemantics: SemanticImportSidecarParadigmSemanticsSummary;
+  readonly dependencies: SemanticImportDependencySummary;
   readonly patchHints: readonly SemanticImportPatchHint[];
   readonly quality: SemanticImportSidecarQuality;
   readonly admission: SemanticImportSidecarAdmission;
@@ -258,6 +278,8 @@ export interface SemanticImportSidecar {
     readonly paradigmSemanticsRecords: number;
     readonly paradigmSemanticsGroups: number;
     readonly paradigmSemanticsLoweringRecords: number;
+    readonly dependencyRelations: number;
+    readonly dependencyPredicates: readonly string[];
     readonly patchHints: number;
     readonly evidenceWarnings: number;
     readonly readiness: SemanticMergeReadiness;

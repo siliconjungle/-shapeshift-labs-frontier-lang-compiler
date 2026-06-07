@@ -1,4 +1,5 @@
 import { uniqueRecordsById, uniqueStrings } from './native-import-utils.js';
+import { summarizeSemanticImportDependencyRelations } from './semantic-import-dependencies.js';
 import { semanticOwnershipRegionForSymbol, summarizeSemanticImportRegionTaxonomy } from './semantic-import-regions.js';
 import { collectKernelSourcePreservationFromImport } from './semantic-import-source-preservation.js';
 import {
@@ -16,6 +17,7 @@ function semanticImportSidecarEntry(imported, index, options) {
   const universalAstLayers = summarizeUniversalAstLayers(imported?.universalAst);
   const proofSpec = summarizeProofSpecLayer(imported?.universalAst?.proof ?? imported?.proof);
   const paradigmSemantics = summarizeParadigmSemanticsLayer(imported?.universalAst?.paradigmSemantics ?? imported?.paradigmSemantics);
+  const dependencies = summarizeSemanticImportDependencyRelations(semanticIndex?.relations ?? []);
   const mappingsBySymbolId = new Map();
   for (const mapping of sourceMapMappings) {
     if (mapping.semanticSymbolId && !mappingsBySymbolId.has(mapping.semanticSymbolId)) {
@@ -67,6 +69,8 @@ function semanticImportSidecarEntry(imported, index, options) {
     universalAstLayerIds: universalAstLayers.ids,
     proofSpec,
     paradigmSemantics,
+    dependencyRelationCount: dependencies.total,
+    dependencyPredicates: dependencies.predicates,
     readiness: imported?.metadata?.semanticMergeReadiness ?? imported?.mergeCandidates?.[0]?.readiness ?? 'needs-review',
     emptySemanticIndex: symbols.length === 0,
     regionTaxonomy,

@@ -1,5 +1,5 @@
 import { assert } from './helpers.mjs';
-import { createNativeImportResultContract, createNativeSourcePreservation, importNativeSource } from './compiler-api.mjs';
+import { createNativeImportResultContract, createNativeSourcePreservation, createSemanticImportSidecar, importNativeSource } from './compiler-api.mjs';
 
 export const scannedJsImport = importNativeSource({
   language: 'javascript',
@@ -19,6 +19,19 @@ assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.metad
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.metadata.ownershipRegionKind === 'content'), true);
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.metadata.ownershipRegionKind === 'config'), true);
 assert.equal(scannedJsImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+const scannedSymbolsById = new Map(scannedJsImport.semanticIndex.symbols.map((symbol) => [symbol.id, symbol]));
+assert.equal(scannedJsImport.semanticIndex.relations.some((relation) => relation.predicate === 'calls'
+  && scannedSymbolsById.get(relation.sourceId)?.name === 'addTodo'
+  && scannedSymbolsById.get(relation.targetId)?.name === 'nanoid'), true);
+assert.equal(scannedJsImport.semanticIndex.relations.some((relation) => relation.predicate === 'calls'
+  && scannedSymbolsById.get(relation.sourceId)?.name === 'TodoStore.save'
+  && scannedSymbolsById.get(relation.targetId)?.name === 'addTodo'), true);
+assert.equal(scannedJsImport.semanticIndex.relations.some((relation) => relation.predicate === 'uses'
+  && scannedSymbolsById.get(relation.sourceId)?.name === 'runtimeConfig'
+  && scannedSymbolsById.get(relation.targetId)?.name === 'TODO_LIMIT'), true);
+assert.equal(scannedJsImport.semanticIndex.occurrences.some((occurrence) => occurrence.role === 'reference'
+  && scannedSymbolsById.get(occurrence.symbolId)?.name === 'addTodo'), true);
+assert.equal(scannedJsImport.semanticIndex.metadata.dependencyRelations.calls >= 2, true);
 assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('addtodo')), true);
 assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.ownershipRegionId), true);
 assert.equal(scannedJsImport.losses.some((loss) => loss.kind === 'opaqueNative'), true);
@@ -47,6 +60,10 @@ assert.equal(scannedJsImport.metadata.importResultContract.regions.taxonomy.pres
 assert.equal(scannedJsImport.metadata.importResultContract.sourceMaps.mappingCount >= 4, true);
 assert.equal(scannedJsImport.metadata.importResultContract.readiness.semanticMergeReadiness, 'needs-review');
 assert.equal(createNativeImportResultContract(scannedJsImport).ids.semanticSidecarIds.length, 1);
+const scannedJsSidecar = createSemanticImportSidecar(scannedJsImport);
+assert.equal(scannedJsSidecar.dependencies.calls >= 2, true);
+assert.equal(scannedJsSidecar.summary.dependencyRelations >= scannedJsSidecar.dependencies.calls, true);
+assert.equal(scannedJsSidecar.imports[0].dependencyPredicates.includes('calls'), true);
 const standalonePreservation = createNativeSourcePreservation({
   language: 'python',
   sourcePath: 'tools/preserve.py',

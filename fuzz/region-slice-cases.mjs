@@ -50,7 +50,7 @@ function runRegionTaxonomyCases() {
 
 function runSemanticSliceCases() {
   for (let index = 0; index < 30; index += 1) {
-    const sourceText = `export function sliceCase${index}(value) { return value + ${index}; }\nexport function helper${index}(value) { return value; }\n`;
+    const sourceText = `export function sliceCase${index}(value) { return helper${index}(value) + ${index}; }\nexport function helper${index}(value) { return value; }\n`;
     const imported = importNativeSource({
       language: index % 2 === 0 ? 'typescript' : 'javascript',
       sourcePath: `src/slice-${index}.${index % 2 === 0 ? 'ts' : 'js'}`,
@@ -63,6 +63,10 @@ function runSemanticSliceCases() {
     });
     assert.equal(slice.unresolvedEntryRefs.length, 0);
     assert.ok(slice.symbols.some((symbol) => symbol.name === `sliceCase${index}`));
+    if (index % 3 !== 0) {
+      assert.ok(slice.symbols.some((symbol) => symbol.name === `helper${index}`));
+      assert.ok(slice.relations.some((relation) => relation.predicate === 'calls'));
+    }
     assert.ok(slice.sourceMapLinks.length >= 1);
     const gate = testSemanticSlice(slice, { currentSources: { [imported.sourcePath]: sourceText } });
     assert.equal(gate.status, 'passed');

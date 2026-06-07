@@ -1,4 +1,4 @@
-import{idFragment,maxSemanticMergeReadiness,uniqueRecordsById}from'../../native-import-utils.js';import{summarizeSemanticImportSidecarParadigmSemantics,summarizeSemanticImportSidecarProofSpec,summarizeSemanticImportSidecarUniversalAstLayers}from'../../semantic-import-layers.js';import{semanticPatchHintForRegion,summarizeSemanticImportRegionTaxonomy}from'../../semantic-import-regions.js';import{semanticImportSidecarEntry}from'../../semantic-import-sidecar-entry.js';import{summarizeKernelSourcePreservation}from'../../semantic-import-source-preservation.js';
+import{idFragment,maxSemanticMergeReadiness,uniqueRecordsById}from'../../native-import-utils.js';import{summarizeSemanticImportDependencies}from'../../semantic-import-dependencies.js';import{summarizeSemanticImportSidecarParadigmSemantics,summarizeSemanticImportSidecarProofSpec,summarizeSemanticImportSidecarUniversalAstLayers}from'../../semantic-import-layers.js';import{semanticPatchHintForRegion,summarizeSemanticImportRegionTaxonomy}from'../../semantic-import-regions.js';import{semanticImportSidecarEntry}from'../../semantic-import-sidecar-entry.js';import{summarizeKernelSourcePreservation}from'../../semantic-import-source-preservation.js';
 import{createSemanticImportSidecarAdmission,createSemanticImportSidecarQuality}from'./createSemanticImportSidecarAdmission.js';
 import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';
 export function createSemanticImportSidecar(importResult, options = {}) {
@@ -17,6 +17,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
   const universalAstLayers = summarizeSemanticImportSidecarUniversalAstLayers(importEntries);
   const proofSpec = summarizeSemanticImportSidecarProofSpec(importEntries);
   const paradigmSemantics = summarizeSemanticImportSidecarParadigmSemantics(importEntries);
+  const dependencies = summarizeSemanticImportDependencies(imports);
   const readiness = mergeCandidates.reduce(
     (current, candidate) => maxSemanticMergeReadiness(current, candidate.readiness),
     lossSummary.semanticMergeReadiness
@@ -51,6 +52,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     universalAstLayers,
     proofSpec,
     paradigmSemantics,
+    dependencies,
     patchHints,
     quality,
     admission,
@@ -92,6 +94,8 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       paradigmSemanticsRecords: paradigmSemantics.total,
       paradigmSemanticsGroups: paradigmSemantics.groups.length,
       paradigmSemanticsLoweringRecords: paradigmSemantics.loweringRecords,
+      dependencyRelations: dependencies.total,
+      dependencyPredicates: dependencies.predicates,
       patchHints: patchHints.length,
       evidenceWarnings: quality.emptyEvidenceWarnings.length,
       readiness,

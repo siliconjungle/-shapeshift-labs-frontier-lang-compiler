@@ -1,4 +1,4 @@
-import{idFragment}from'../../native-import-utils.js';import{lightweightCoverageLosses,scanNativeDeclarations}from'../../native-region-scanner.js';import{semanticOwnershipRegionForDeclaration}from'../../semantic-import-regions.js';import{createSemanticIndexRecord,hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
+import{idFragment}from'../../native-import-utils.js';import{lightweightDependencyRelations}from'../../lightweight-dependency-relations.js';import{lightweightCoverageLosses,scanNativeDeclarations}from'../../native-region-scanner.js';import{semanticOwnershipRegionForDeclaration}from'../../semantic-import-regions.js';import{createSemanticIndexRecord,hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
 export function createLightweightNativeImport(input) {
   const parser = input.parser ?? `${input.language}.lightweight-declaration-scan`;
   const rootId = 'native_root';
@@ -20,6 +20,7 @@ export function createLightweightNativeImport(input) {
   const facts = [];
   const mappings = [];
   const evidenceId = `evidence_${idFragment(input.sourcePath ?? input.language)}_lightweight_scan`;
+  const dependencies = lightweightDependencyRelations(input, declarations, documentId);
 
   for (const declaration of declarations) {
     const ownershipRegion = semanticOwnershipRegionForDeclaration(input, declaration, documentId);
@@ -105,6 +106,9 @@ export function createLightweightNativeImport(input) {
     }
     if (declaration.loss) losses.push(declaration.loss);
   }
+  occurrences.push(...dependencies.occurrences);
+  relations.push(...dependencies.relations);
+  facts.push(...dependencies.facts);
   losses.push(...lightweightCoverageLosses(input, declarations, input.sourcePreservation));
 
   const semanticIndex = createSemanticIndexRecord({
@@ -124,12 +128,13 @@ export function createLightweightNativeImport(input) {
       kind: 'import',
       status: 'passed',
       path: input.sourcePath,
-      summary: `Lightweight declaration scan found ${symbols.length} symbol(s).`,
-      metadata: { parser }
+      summary: `Lightweight declaration scan found ${symbols.length} symbol(s) and ${dependencies.summary.total} dependency edge(s).`,
+      metadata: { parser, dependencyRelations: dependencies.summary.total }
     }],
     metadata: {
       parser,
       coverage: 'declarations-only',
+      dependencyRelations: dependencies.summary,
       unsupported: ['full expression AST', 'type checking', 'control flow', 'comments and formatting preservation']
     }
   });
@@ -145,6 +150,8 @@ export function createLightweightNativeImport(input) {
       parser,
       scanKind: 'lightweight-declaration-scan',
       declarationCount: declarations.length,
+      dependencyRelationCount: dependencies.summary.total,
+      dependencyOccurrenceCount: dependencies.occurrences.length,
       ...(input.sourcePreservation ? {
         sourcePreservationId: input.sourcePreservation.id,
         sourcePreservationSummary: input.sourcePreservation.summary
