@@ -1,6 +1,8 @@
 import { idFragment, uniqueStrings } from './native-import-utils.js';
+import { universalConversionArtifactSummary } from './universal-conversion-artifact-summary.js';
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
 import { artifactIndex } from './universal-conversion-artifact-query.js';
+import { createUniversalConversionAdmissionRecord } from './universal-conversion-admission-record.js';
 import { routeSemanticOperations } from './universal-conversion-route-operations.js';
 import { createSemanticHistoryRecord } from './internal/index-impl/semanticHistoryRecords.js';
 import { createSemanticPatchBundleRecord } from './internal/index-impl/semanticPatchBundleRecords.js';
@@ -23,6 +25,7 @@ export function createUniversalConversionArtifacts(input = {}, options = {}) {
   }));
   const historyRecords = routeArtifacts.map((artifact) => artifact.history);
   const patchBundleRecords = routeArtifacts.map((artifact) => artifact.patchBundle);
+  const admissionRecords = routeArtifacts.map((artifact) => artifact.admissionRecord);
   const index = artifactIndex(routeArtifacts);
   return {
     kind: 'frontier.lang.universalConversionArtifacts',
@@ -34,17 +37,13 @@ export function createUniversalConversionArtifacts(input = {}, options = {}) {
     routeArtifacts,
     historyRecords,
     patchBundleRecords,
+    admissionRecords,
     index,
-    summary: {
-      routes: routeArtifacts.length,
-      histories: historyRecords.length,
-      patchBundles: patchBundleRecords.length,
-      semanticOperations: routeArtifacts.reduce((sum, artifact) => sum + artifact.semanticOperations.operations.length, 0),
-      reviewRequired: routeArtifacts.filter((artifact) => artifact.reviewRequired).length,
-      blocked: routeArtifacts.filter((artifact) => artifact.admissionStatus === 'blocked').length,
-      autoMergeClaims: 0,
-      semanticEquivalenceClaims: 0
-    },
+    summary: universalConversionArtifactSummary(routeArtifacts, {
+      historyRecords,
+      patchBundleRecords,
+      admissionRecords
+    }),
     metadata: {
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
@@ -121,6 +120,16 @@ function createRouteArtifact(route, options) {
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   };
+  const admissionRecord = createUniversalConversionAdmissionRecord({
+    route,
+    planId,
+    admissionStatus,
+    reasonCodes,
+    history,
+    patchBundle,
+    semanticOperations,
+    materialization
+  });
   return {
     kind: 'frontier.lang.universalConversionRouteArtifact',
     version: 1,
@@ -138,9 +147,11 @@ function createRouteArtifact(route, options) {
     reviewRequired: true,
     history,
     patchBundle,
+    admissionRecord,
     semanticOperations,
     materialization,
     mergeScore: route.mergeScore,
+    admissionBucket: admissionRecord.admissionBucket,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
     metadata: { ...routeRecordMetadata(route, planId, options.metadata), materialization }

@@ -139,3 +139,44 @@ const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecor
 );
 
 void queriedSemanticPatchBundles;
+
+const conversionArtifacts = compilerApi.createUniversalConversionArtifacts({
+  id: 'type-admission-route',
+  sourceLanguage: 'javascript',
+  target: 'javascript',
+  mode: 'preserve-source',
+  routeAction: 'preserve-source',
+  priority: 'normal',
+  readiness: 'ready',
+  admissionAction: 'admit',
+  missingEvidence: [],
+  blockers: [],
+  review: [],
+  mergeScore: {
+    schema: 'frontier.lang.semanticMergeScore.v1',
+    version: 1,
+    value: 90,
+    uncappedValue: 90,
+    sortKey: 3290,
+    higherIsBetter: true,
+    readiness: 'ready',
+    risk: 'low',
+    action: 'admit',
+    components: {},
+    penalties: []
+  },
+  mergeRefs: {
+    sources: [{ sourcePath: 'src/type-admission.js', sourceHash: 'type_hash' }],
+    semanticOwnershipKeys: ['types.admission'],
+    conflictKeys: ['types.admission']
+  }
+} as unknown as compilerApi.UniversalConversionRoute);
+const typedAdmission: compilerApi.UniversalConversionAdmissionRecord = conversionArtifacts.admissionRecords[0];
+const typedAdmissionQuery: readonly compilerApi.UniversalConversionRouteArtifact[] =
+  compilerApi.queryUniversalConversionArtifacts(conversionArtifacts, {
+    admissionBucket: typedAdmission.admissionBucket,
+    admissionRecordId: typedAdmission.id,
+    risk: typedAdmission.risk
+  });
+
+void typedAdmissionQuery;

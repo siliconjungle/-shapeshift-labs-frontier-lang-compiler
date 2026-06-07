@@ -12,11 +12,14 @@ export function artifactIndex(routeArtifacts) {
     routeIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.routeId)),
     historyIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.history.id)),
     patchBundleIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.patchBundle.id)),
+    admissionRecordIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.admissionRecord.id)),
     languages: uniqueStrings(routeArtifacts.map((artifact) => artifact.sourceLanguage)),
     targets: uniqueStrings(routeArtifacts.map((artifact) => artifact.target)),
     modes: uniqueStrings(routeArtifacts.map((artifact) => artifact.mode)),
     readinesses: uniqueStrings(routeArtifacts.map((artifact) => artifact.readiness)),
     admissionStatuses: uniqueStrings(routeArtifacts.map((artifact) => artifact.admissionStatus)),
+    admissionBuckets: uniqueStrings(routeArtifacts.map((artifact) => artifact.admissionRecord.admissionBucket)),
+    admissionRisks: uniqueStrings(routeArtifacts.map((artifact) => artifact.admissionRecord.risk)),
     sourcePaths: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.index.sourcePaths)),
     sourceHashes: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.index.sourceHashes)),
     ownershipKeys: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.index.ownershipKeys)),
@@ -39,6 +42,7 @@ function matchesArtifact(record, query) {
   return match(query.routeId, [record.routeId])
     && match(query.historyId, [record.history.id])
     && match(query.patchBundleId, [record.patchBundle.id])
+    && match(query.admissionRecordId, [record.admissionRecord.id])
     && match(query.sourceLanguage, [record.sourceLanguage])
     && match(query.target, [record.target])
     && match(query.mode, [record.mode])
@@ -46,6 +50,8 @@ function matchesArtifact(record, query) {
     && match(query.priority, [record.priority])
     && match(query.readiness, [record.readiness])
     && match(query.admissionStatus, [record.admissionStatus])
+    && match(query.admissionBucket, [record.admissionRecord.admissionBucket])
+    && match(query.risk, [record.admissionRecord.risk])
     && match(query.sourcePath, record.history.index.sourcePaths)
     && match(query.sourceHash, record.history.index.sourceHashes)
     && match(query.ownershipKey, record.history.index.ownershipKeys)

@@ -91,8 +91,13 @@ export async function runProjectMatrixCases(adapters) {
   assert.ok(conversionPlan.routes.some((route) => route.missingEvidence.includes('proof-or-replay-evidence')));
   const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan);
   assert.equal(conversionArtifacts.summary.routes, conversionPlan.routes.length);
+  assert.equal(conversionArtifacts.summary.admissionRecords, conversionPlan.routes.length);
+  assert.equal(conversionArtifacts.summary.admissionBlocked, conversionArtifacts.admissionRecords.filter((record) => record.admissionBucket === 'blocked').length);
+  assert.equal(conversionArtifacts.summary.reasonCodes, conversionArtifacts.admissionRecords.reduce((sum, record) => sum + record.reasons.length, 0));
   assert.equal(conversionArtifacts.summary.autoMergeClaims, 0);
   assert.ok(conversionArtifacts.historyRecords.every((record) => record.admission.status));
+  assert.ok(conversionArtifacts.admissionRecords.every((record) => record.reviewRequired === true));
+  assert.ok(conversionArtifacts.admissionRecords.every((record) => record.autoMergeClaim === false));
   assert.ok(conversionArtifacts.patchBundleRecords.every((record) => record.admission.autoMergeClaim === false));
 
   const projectSidecar = createSemanticImportSidecar(project);

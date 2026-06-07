@@ -68,7 +68,12 @@ assert.equal(conversionArtifacts.generatedAt, 778);
 assert.equal(conversionArtifacts.summary.routes, conversionPlan.routes.length);
 assert.equal(conversionArtifacts.summary.histories, conversionPlan.routes.length);
 assert.equal(conversionArtifacts.summary.patchBundles, conversionPlan.routes.length);
+assert.equal(conversionArtifacts.summary.admissionRecords, conversionPlan.routes.length);
 assert.equal(conversionArtifacts.summary.semanticOperations, conversionPlan.routes.length);
+assert.equal(conversionArtifacts.summary.blocked >= 1, true);
+assert.equal(conversionArtifacts.summary.admissionBlocked >= 1, true);
+assert.equal(conversionArtifacts.summary.highRisk >= 1, true);
+assert.equal(conversionArtifacts.summary.reasonCodes >= conversionArtifacts.summary.routes, true);
 assert.equal(conversionArtifacts.summary.autoMergeClaims, 0);
 assert.equal(conversionArtifacts.summary.semanticEquivalenceClaims, 0);
 
@@ -85,6 +90,12 @@ assert.equal(jsArtifact.history.id, jsToJs.mergeRefs.historyIds[0]);
 assert.equal(jsArtifact.patchBundle.kind, 'frontier.lang.semanticPatchBundleRecord');
 assert.equal(jsArtifact.patchBundle.historyIds.includes(jsArtifact.history.id), true);
 assert.equal(jsArtifact.patchBundle.admission.autoMergeClaim, false);
+assert.equal(jsArtifact.admissionRecord.kind, 'frontier.lang.universalConversionAdmissionRecord');
+assert.equal(jsArtifact.admissionRecord.admissionBucket, 'blocked');
+assert.equal(jsArtifact.admissionRecord.ids.historyId, jsArtifact.history.id);
+assert.equal(jsArtifact.admissionRecord.ids.patchBundleId, jsArtifact.patchBundle.id);
+assert.equal(jsArtifact.admissionRecord.semanticOperations.total, jsArtifact.semanticOperations.operations.length);
+assert.equal(jsArtifact.admissionRecord.autoMergeClaim, false);
 assert.equal(jsArtifact.semanticOperations.kind, 'frontier.lang.semanticOperationSet');
 assert.equal(jsArtifact.semanticOperations.operations[0].operationKind, 'sourcePreservation');
 assert.equal(jsArtifact.semanticOperations.operations[0].autoMergeClaim, false);
@@ -99,6 +110,47 @@ assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, { sourcePath
 assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, {
   semanticOperationKind: 'sourcePreservation'
 }).some((artifact) => artifact.routeId === jsToJs.id), true);
+assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, {
+  admissionBucket: 'blocked'
+}).some((artifact) => artifact.routeId === jsToJs.id), true);
+assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, {
+  admissionRecordId: jsArtifact.admissionRecord.id,
+  risk: 'high'
+})[0].routeId, jsToJs.id);
+
+const directReadyArtifact = createUniversalConversionArtifacts({
+  id: 'manual-ready-route',
+  sourceLanguage: 'javascript',
+  target: 'javascript',
+  mode: 'preserve-source',
+  routeAction: 'preserve-source',
+  priority: 'high',
+  readiness: 'ready',
+  admissionAction: 'admit',
+  missingEvidence: [],
+  blockers: [],
+  review: [],
+  mergeScore: {
+    schema: 'frontier.lang.semanticMergeScore.v1',
+    version: 1,
+    value: 92,
+    uncappedValue: 92,
+    sortKey: 3292,
+    higherIsBetter: true,
+    readiness: 'ready',
+    risk: 'low',
+    action: 'admit',
+    components: {},
+    penalties: []
+  },
+  mergeRefs: {
+    sources: [{ sourcePath: 'src/manual-ready.js', sourceHash: 'hash-ready' }],
+    semanticOwnershipKeys: ['content.manualReady'],
+    conflictKeys: ['content.manualReady']
+  }
+});
+assert.equal(directReadyArtifact.summary.mergeReady, 1);
+assert.equal(directReadyArtifact.admissionRecords[0].admissionBucket, 'merge-ready');
 
 const jsToRust = queryUniversalConversionPlan(conversionPlan, {
   sourceLanguage: 'javascript',
@@ -127,6 +179,9 @@ const cArtifact = queryUniversalConversionArtifacts(conversionArtifacts, {
 assert.equal(cArtifact.mode, 'semantic-index-only');
 assert.equal(cArtifact.patchBundle.admission.status, 'blocked');
 assert.equal(cArtifact.history.admission.status, 'blocked');
+assert.equal(cArtifact.admissionBucket, 'blocked');
+assert.equal(cArtifact.admissionRecord.admissionBucket, 'blocked');
+assert.equal(cArtifact.admissionRecord.risk, 'high');
 assert.equal(cArtifact.semanticOperations.operations[0].opaque, true);
 assert.equal(cArtifact.semanticOperations.operations[0].operationKind, 'merge');
 assert.equal(cArtifact.history.admission.reasonCodes.some((reason) => reason.includes('missing:target-adapter')), true);
