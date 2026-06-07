@@ -2,6 +2,9 @@ export function workbenchStyles() {
   return `
 :root {
   color-scheme: dark;
+  --topbar-height: 58px;
+  --status-height: 46px;
+  --chrome-height: calc(var(--topbar-height) + var(--status-height));
   --bg: #08090a;
   --panel: #111417;
   --panel-2: #171b20;
@@ -29,9 +32,8 @@ body {
 }
 
 .appShell {
-  min-height: 100vh;
-  display: grid;
-  grid-template-rows: 58px 46px minmax(0, 1fr);
+  height: 100vh;
+  overflow: hidden;
 }
 
 .topbar, .statusStrip, .paneHeader {
@@ -41,6 +43,10 @@ body {
 }
 
 .topbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 20;
+  height: var(--topbar-height);
   justify-content: space-between;
   padding: 0 14px;
   background: #0c0e10;
@@ -84,6 +90,10 @@ body {
 .iconButton:hover, .segmented button:hover, .modeGroup button:hover, .runButton:hover { background: var(--panel-3); }
 
 .statusStrip {
+  position: fixed;
+  inset: var(--topbar-height) 0 auto 0;
+  z-index: 19;
+  height: var(--status-height);
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   background: #0f1214;
@@ -102,17 +112,22 @@ body {
 .statusStrip strong { font-size: 13px; font-weight: 650; }
 
 .workspace {
+  position: fixed;
+  inset: var(--chrome-height) 0 0 0;
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(270px, 0.95fr) minmax(330px, 1.1fr) minmax(300px, 1fr);
+  overflow: hidden;
 }
 .pane {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-rows: 44px minmax(0, 1fr);
   border-right: 1px solid var(--line);
   background: var(--panel);
+  overflow: hidden;
 }
 .pane:last-child { border-right: 0; }
 .pane.isSource .paneHeader { box-shadow: inset 0 -2px 0 var(--green); }
@@ -128,6 +143,7 @@ textarea, .codeBlock {
   width: 100%;
   height: 100%;
   min-height: 0;
+  max-height: 100%;
   margin: 0;
   border: 0;
   resize: none;
@@ -139,13 +155,23 @@ textarea, .codeBlock {
   line-height: 1.48;
   padding: 14px;
   overflow: auto;
+  overscroll-behavior: contain;
   white-space: pre;
 }
 
 .graphView {
+  grid-row: 2;
+  grid-column: 1;
   min-height: 0;
+  max-height: 100%;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 12px;
+}
+#frontierJson {
+  grid-row: 2;
+  grid-column: 1;
+  min-width: 0;
 }
 .graphGrid {
   display: grid;
@@ -230,12 +256,28 @@ textarea, .codeBlock {
 .segmented button[aria-pressed="true"] { background: #213127; color: var(--green); }
 
 @media (max-width: 980px) {
-  body { overflow: auto; }
-  .appShell { min-height: 100vh; grid-template-rows: auto auto auto; }
-  .workspace { grid-template-columns: 1fr; }
-  .pane { min-height: 360px; border-right: 0; border-bottom: 1px solid var(--line); }
+  :root {
+    --topbar-height: 96px;
+    --status-height: 88px;
+  }
+  body { overflow: hidden; }
+  .topbar {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    overflow: hidden;
+  }
+  .pane {
+    height: 100%;
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
   .statusStrip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .topbar { align-items: flex-start; gap: 10px; padding: 10px 14px; }
   .topActions { flex-wrap: wrap; justify-content: flex-end; }
   .boundsGrid { grid-template-columns: 1fr; }
 }
