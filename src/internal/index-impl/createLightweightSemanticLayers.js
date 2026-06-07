@@ -48,7 +48,7 @@ export function createLightweightSemanticLayers(input) {
     })),
     evaluationModels: [evaluationModel(input, evidenceIds)],
     effectRegions: effectRegions(input, evidenceIds),
-    loweringRecords: mappings.slice(0, 40).map((mapping) => ({
+    loweringRecords: mappings.map((mapping) => ({
       id: `lowering_${mapping.id}`,
       kind: 'nativeSourceToFrontierSemanticIndex',
       sourceMapId: mapping.sourceMapId,

@@ -109,6 +109,18 @@ export function createLightweightNativeImport(input) {
   occurrences.push(...dependencies.occurrences);
   relations.push(...dependencies.relations);
   facts.push(...dependencies.facts);
+  for (const occurrence of dependencies.occurrences) {
+    mappings.push({
+      id: `map_${idFragment(occurrence.id)}`,
+      nativeAstNodeId: occurrence.nativeAstNodeId,
+      semanticSymbolId: occurrence.symbolId,
+      semanticOccurrenceId: occurrence.id,
+      sourceSpan: occurrence.span,
+      evidenceIds: [evidenceId],
+      lossIds: [],
+      precision: 'line'
+    });
+  }
   losses.push(...lightweightCoverageLosses(input, declarations, input.sourcePreservation));
 
   const semanticIndex = createSemanticIndexRecord({

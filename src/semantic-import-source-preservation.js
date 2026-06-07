@@ -46,9 +46,9 @@ function createKernelSourcePreservationRecords(input) {
   }
 
   for (const sourceMap of input.sourceMaps ?? []) {
-    for (const mapping of sourceMap.mappings ?? []) {
+    for (const [index, mapping] of (sourceMap.mappings ?? []).entries()) {
       records.push(explainSourcePreservation({
-        id: `source_preservation_${idFragment(sourceMap.id)}_${idFragment(mapping.id)}`,
+        id: `source_preservation_${idFragment(sourceMap.id)}_${index + 1}_${idFragment(mapping.id)}`,
         sourceMap,
         mapping,
         level: mapping.preservation,

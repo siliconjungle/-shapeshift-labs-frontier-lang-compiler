@@ -4,17 +4,19 @@ import { importNativeSource } from './compiler-api.mjs';
 export const scannedPythonImport = importNativeSource({
   language: 'python',
   sourcePath: 'todo.py',
-  sourceText: 'import json\nclass TodoStore:\n    pass\ndef add_todo(title):\n    return title\n'
+  sourceText: 'import json\nclass TodoStore:\n    pass\ndef add_todo(title):\n    return json.dumps(title)\n'
 });
 assert.equal(scannedPythonImport.semanticIndex.symbols.some((symbol) => symbol.name === 'add_todo'), true);
 assert.equal(scannedPythonImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('add_todo')), true);
+assert.equal(scannedPythonImport.semanticIndex.relations.some((relation) => relation.predicate === 'uses'), true);
 export const scannedRustImport = importNativeSource({
   language: 'rust',
   sourcePath: 'src/lib.rs',
-  sourceText: 'use std::sync::Arc;\npub struct Todo;\npub fn add_todo(title: String) {}\nmacro_rules! todo_macro { () => {} }\n'
+  sourceText: 'use std::sync::Arc;\npub struct Todo;\npub fn add_todo(title: String) { Arc::new(title); }\nmacro_rules! todo_macro { () => {} }\n'
 });
 assert.equal(scannedRustImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
 assert.equal(scannedRustImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('todo')), true);
+assert.equal(scannedRustImport.semanticIndex.relations.some((relation) => relation.predicate === 'uses'), true);
 export const scannedCImport = importNativeSource({
   language: 'c',
   sourcePath: 'todo.h',
@@ -32,10 +34,11 @@ assert.equal(scannedJavaImport.semanticIndex.symbols.some((symbol) => symbol.nam
 const scannedGoImport = importNativeSource({
   language: 'go',
   sourcePath: 'todo.go',
-  sourceText: 'package todo\nimport (\n  tasklog "example.com/project/log"\n)\ntype TodoId = string\ntype Todo struct {}\ntype Store struct {}\nfunc AddTodo(title string) {}\nfunc (store *Store) Save[T any](title string) error { return nil }\n'
+  sourceText: 'package todo\nimport (\n  tasklog "example.com/project/log"\n)\ntype TodoId = string\ntype Todo struct {}\ntype Store struct {}\nfunc AddTodo(title string) {}\nfunc (store *Store) Save[T any](title string) error { AddTodo(title); return nil }\n'
 });
 assert.equal(scannedGoImport.semanticIndex.symbols.some((symbol) => symbol.name === 'AddTodo'), true);
 assert.equal(scannedGoImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+assert.equal(scannedGoImport.semanticIndex.relations.some((relation) => relation.predicate === 'calls'), true);
 assert.equal(symbolByName(scannedGoImport, 'TodoId').kind, 'type');
 assert.equal(symbolByName(scannedGoImport, 'Store.Save').kind, 'method');
 const scannedGoReceiverNode = nativeNodeForSymbol(scannedGoImport, 'Store.Save');
