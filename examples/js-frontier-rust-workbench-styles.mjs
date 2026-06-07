@@ -25,6 +25,7 @@ export function workbenchStyles() {
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
+  width: 100%;
   background: var(--bg);
   color: var(--text);
   font-family: var(--ui);
@@ -33,6 +34,7 @@ body {
 
 .appShell {
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -97,23 +99,37 @@ body {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   background: #0f1214;
+  overflow: hidden;
 }
 .statusStrip div {
   min-width: 0;
+  min-height: 0;
   padding: 8px 14px;
   border-right: 1px solid var(--line);
+  overflow: hidden;
 }
 .label {
   display: block;
   color: var(--faint);
   font-size: 10px;
+  line-height: 1.1;
   text-transform: uppercase;
 }
-.statusStrip strong { font-size: 13px; font-weight: 650; }
+.statusStrip strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.2;
+}
 
 .workspace {
   position: fixed;
   inset: var(--chrome-height) 0 0 0;
+  height: calc(100vh - var(--chrome-height));
+  height: calc(100dvh - var(--chrome-height));
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(270px, 0.95fr) minmax(330px, 1.1fr) minmax(300px, 1fr);
@@ -131,6 +147,20 @@ body {
 }
 .pane:last-child { border-right: 0; }
 .pane.isSource .paneHeader { box-shadow: inset 0 -2px 0 var(--green); }
+.paneBody {
+  grid-row: 2;
+  grid-column: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.editorBody {
+  overflow: hidden;
+}
 .paneHeader {
   justify-content: space-between;
   padding: 0 12px;
@@ -140,6 +170,7 @@ body {
 .paneHeader span { color: var(--muted); font-size: 12px; font-family: var(--mono); }
 
 textarea, .codeBlock {
+  display: block;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -160,18 +191,10 @@ textarea, .codeBlock {
 }
 
 .graphView {
-  grid-row: 2;
-  grid-column: 1;
-  min-height: 0;
-  max-height: 100%;
-  overflow: auto;
-  overscroll-behavior: contain;
   padding: 12px;
 }
-#frontierJson {
-  grid-row: 2;
-  grid-column: 1;
-  min-width: 0;
+#graphView[hidden], #frontierJson[hidden] {
+  display: none;
 }
 .graphGrid {
   display: grid;

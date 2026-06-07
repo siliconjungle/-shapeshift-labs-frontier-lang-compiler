@@ -51,6 +51,10 @@ assert.equal(scannedJsImport.metadata.kernelSourcePreservationSummary.exact >= 1
 assert.equal(scannedJsImport.metadata.kernelSourcePreservationRecords.some((record) => record.kind === 'frontier.lang.sourcePreservation'), true);
 assert.equal(scannedJsImport.metadata.kernelSourcePreservationRecords.some((record) => record.level === 'declaration' || record.level === 'estimated'), true);
 assert.equal(scannedJsImport.sourceMaps[0].mappings.some((mapping) => mapping.preservation === 'declaration' || mapping.preservation === 'estimated'), true);
+assert.equal(scannedJsImport.universalAst.proof.obligations.some((obligation) => obligation.status === 'open'), true);
+assert.equal(scannedJsImport.universalAst.proof.obligations.some((obligation) => obligation.status === 'external-tool-required'), true);
+assert.equal(scannedJsImport.universalAst.paradigmSemantics.bindings.length >= scannedJsImport.semanticIndex.symbols.length, true);
+assert.equal(scannedJsImport.universalAst.paradigmSemantics.loweringRecords.length >= scannedJsImport.sourceMaps[0].mappings.length, true);
 assert.equal(scannedJsImport.nativeAst.metadata.sourcePreservationSummary.exactSourceAvailable, true);
 assert.equal(scannedJsImport.metadata.importResultContract.kind, 'frontier.lang.nativeImportResultContract');
 assert.equal(scannedJsImport.metadata.importResultContract.sourceCount, 1);

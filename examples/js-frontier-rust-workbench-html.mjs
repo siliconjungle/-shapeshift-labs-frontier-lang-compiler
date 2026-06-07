@@ -41,7 +41,9 @@ export function renderWorkbenchHtml(initialState) {
           <h2>TypeScript</h2>
           <span id="typescriptStatus">source</span>
         </div>
-        <textarea id="typescriptInput" spellcheck="false" aria-label="TypeScript source"></textarea>
+        <div class="paneBody editorBody">
+          <textarea id="typescriptInput" spellcheck="false" aria-label="TypeScript source"></textarea>
+        </div>
       </section>
 
       <section class="pane graphPane" data-view-panel="frontier">
@@ -52,8 +54,8 @@ export function renderWorkbenchHtml(initialState) {
             <button data-frontier-tab="json" aria-pressed="false">JSON</button>
           </div>
         </div>
-        <div id="graphView" class="graphView"></div>
-        <pre id="frontierJson" class="codeBlock" hidden></pre>
+        <div id="graphView" class="paneBody graphView"></div>
+        <pre id="frontierJson" class="paneBody codeBlock" hidden></pre>
       </section>
 
       <section class="pane outputPane" data-view-panel="rust">
@@ -61,7 +63,9 @@ export function renderWorkbenchHtml(initialState) {
           <h2>Rust</h2>
           <span id="rustStatus">target</span>
         </div>
-        <textarea id="rustInput" spellcheck="false" aria-label="Rust source"></textarea>
+        <div class="paneBody editorBody">
+          <textarea id="rustInput" spellcheck="false" aria-label="Rust source"></textarea>
+        </div>
       </section>
     </section>
   </main>

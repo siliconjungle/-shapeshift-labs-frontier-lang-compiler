@@ -24,7 +24,26 @@ export function createNativeRoundtripEvidence(importResult,options={}) {
   const outputMode=options.outputMode??options.targetProjection?.outputMode??projection?.mode;
   const sourceHashVerified=Boolean(projection?.sourceHash&&projection?.outputHash===projection.sourceHash)||projection?.metadata?.sourceHashVerified===true;
   const status=semanticMerge==='blocked'?'blocked':outputMode==='target-adapter'?'target-adapter':projection?.mode==='native-source-stubs'||outputMode==='target-stubs'?'stub-only':sourceHashVerified?'preserved-source':'needs-review';
+  const universalSourceMapEvidence=summarizeSourceMaps(universalSourceMaps);
   const sourceMapEvidence=summarizeSourceMaps(hasOutputSourceMaps?outputSourceMaps:universalSourceMaps);
+  const sourceLanguage=projection?.language??importResult.language;
+  const target=options.target??options.targetCoverage?.target??options.targetProjection?.target;
+  const audit=createRoundtripAudit({
+    status,
+    semanticMerge,
+    sourceLanguage,
+    target,
+    sameLanguage:Boolean(sourceLanguage&&target&&String(sourceLanguage)===String(target)),
+    outputMode,
+    projectionMode:projection?.mode,
+    sourceHashVerified,
+    hasOutputSourceMaps,
+    sourceMapEvidence,
+    universalSourceMapEvidence,
+    targetProjection:options.targetProjection,
+    targetCoverage:options.targetCoverage,
+    lossSummary
+  });
   const metadata={
     schema:'frontier.lang.nativeRoundtripEvidence',
     version:1,
@@ -33,8 +52,9 @@ export function createNativeRoundtripEvidence(importResult,options={}) {
       semanticMergeReadiness:semanticMerge,
       reviewRequired:semanticMerge!=='ready',
       sourcePath:projection?.sourcePath??importResult.sourcePath,
-      language:projection?.language??importResult.language,
-      target:options.target??options.targetCoverage?.target??options.targetProjection?.target,
+      language:sourceLanguage,
+      target,
+      audit,
       import:{
         id:importResult.id,
         readiness:importReadiness,
@@ -49,7 +69,7 @@ export function createNativeRoundtripEvidence(importResult,options={}) {
         issues:universalIssues,
         nativeSources:universalAst?.nativeSources?.length??importResult.nativeSources?.length??(importResult.nativeSource?1:0),
         semanticSymbols:(importResult.semanticIndex??universalAst?.semanticIndex)?.symbols?.length??0,
-        sourceMaps:summarizeSourceMaps(universalSourceMaps)
+        sourceMaps:universalSourceMapEvidence
       },
       projection:{
         id:projection?.id,
@@ -115,3 +135,55 @@ function summarizeSourceMaps(sourceMaps){
 }
 function normalizePrecision(value){const precision=String(value??'unknown');return Object.prototype.hasOwnProperty.call(precisionRank,precision)?precision:'unknown';}
 function worstPrecision(precisions){if(!precisions.length)return'none';return precisions.reduce((worst,next)=>precisionRank[next]>precisionRank[worst]?next:worst,'exact');}
+function createRoundtripAudit(input){
+  const disposition=roundtripAuditDisposition(input);
+  return{
+    schema:'frontier.lang.nativeRoundtripAuditSignal',
+    version:1,
+    disposition,
+    claim:roundtripAuditClaim(disposition),
+    sourceLanguage:input.sourceLanguage,
+    target:input.target,
+    sameLanguage:input.sameLanguage,
+    outputMode:input.outputMode,
+    projectionMode:input.projectionMode,
+    sourceHashVerified:input.sourceHashVerified,
+    outputSourceMapPrecision:input.sourceMapEvidence.precision,
+    universalSourceMapPrecision:input.universalSourceMapEvidence.precision,
+    targetProjectionAdapterId:input.targetProjection?.adapter?.id,
+    targetCoverageLossClass:input.targetCoverage?.lossClass,
+    reviewRequired:input.semanticMerge!=='ready',
+    semanticMergeReadiness:input.semanticMerge,
+    semanticEquivalenceClaim:false,
+    autoMergeClaim:false,
+    blockingLossCount:input.lossSummary.blockingLossIds.length,
+    reviewLossCount:input.lossSummary.reviewLossIds.length,
+    reasonCodes:uniqueStrings([
+      `status:${input.status}`,
+      `semantic:${input.semanticMerge}`,
+      `output:${input.outputMode??'unknown'}`,
+      `projection:${input.projectionMode??'unknown'}`,
+      input.sourceHashVerified?'source-hash:verified':'source-hash:unverified',
+      `output-source-map:${input.sourceMapEvidence.precision}`,
+      `universal-source-map:${input.universalSourceMapEvidence.precision}`,
+      input.targetCoverage?.lossClass?`target-loss:${input.targetCoverage.lossClass}`:undefined,
+      input.targetProjection?.adapter?.id?`target-adapter:${input.targetProjection.adapter.id}`:undefined,
+      input.lossSummary.blockingLossIds.length?'losses:blocking':undefined,
+      input.lossSummary.reviewLossIds.length?'losses:review':undefined
+    ])
+  };
+}
+function roundtripAuditDisposition(input){
+  if(input.outputMode==='target-adapter')return'adapter-projected';
+  if(input.projectionMode==='native-source-stubs'||input.outputMode==='target-stubs')return'stub-only';
+  if(input.sourceHashVerified&&input.outputMode==='preserved-source'&&input.hasOutputSourceMaps&&input.sourceMapEvidence.precision==='exact')return'reversible';
+  if(input.sourceHashVerified||input.projectionMode==='preserved-source')return'preserved-source';
+  return'review-required';
+}
+function roundtripAuditClaim(disposition){
+  if(disposition==='reversible')return'source-text-reversible';
+  if(disposition==='preserved-source')return'source-preserved';
+  if(disposition==='stub-only')return'declaration-stubs-only';
+  if(disposition==='adapter-projected')return'host-adapter-projected';
+  return'review-required';
+}

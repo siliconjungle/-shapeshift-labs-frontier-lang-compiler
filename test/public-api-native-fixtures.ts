@@ -105,7 +105,11 @@ const projection: NativeSourceProjectionResult = projectNativeImportToSource(imp
 const roundtripEvidence: NativeRoundtripEvidenceRecord = createNativeRoundtripEvidence(imported, { projection });
 const roundtripEvidenceMetadata: NativeRoundtripEvidenceMetadata = roundtripEvidence.metadata.roundtripEvidence;
 const roundtripSourceMapEvidence: NativeRoundtripSourceMapEvidence = roundtripEvidenceMetadata.universalAst.sourceMaps;
+const roundtripAuditSignal: NativeRoundtripEvidenceMetadata['audit'] = roundtripEvidenceMetadata.audit;
 roundtripSourceMapEvidence.precision satisfies string;
+roundtripAuditSignal.disposition satisfies string;
+roundtripAuditSignal.semanticEquivalenceClaim satisfies false;
+roundtripAuditSignal.autoMergeClaim satisfies false;
 const targetProjectionAdapter: NativeTargetProjectionAdapter = {
   id: 'fixture-target-projection-api-types',
   sourceLanguage: 'javascript',

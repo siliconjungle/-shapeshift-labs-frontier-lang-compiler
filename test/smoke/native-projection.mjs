@@ -35,6 +35,10 @@ assert.equal(preservedNativeProjection.readiness.readiness, 'ready');
 assert.equal(preservedNativeProjection.metadata.sourceHashVerified, true);
 assert.equal(preservedNativeProjection.metadata.nativeImportLossSummary.highestSeverity, 'warning');
 assert.equal(preservedNativeProjection.metadata.roundtripEvidence.status, 'preserved-source');
+assert.equal(preservedNativeProjection.metadata.roundtripEvidence.audit.disposition, 'preserved-source');
+assert.equal(preservedNativeProjection.metadata.roundtripEvidence.audit.claim, 'source-preserved');
+assert.equal(preservedNativeProjection.metadata.roundtripEvidence.audit.semanticEquivalenceClaim, false);
+assert.equal(preservedNativeProjection.metadata.roundtripEvidence.audit.autoMergeClaim, false);
 assert.equal(preservedNativeProjection.metadata.roundtripEvidence.projection.sourceHashVerified, true);
 assert.equal(preservedNativeProjection.evidence.some((entry) => entry.metadata?.schema === 'frontier.lang.nativeRoundtripEvidence'), true);
 const autoPreservedScannedProjection = projectNativeImportToSource(scannedJsImport);
@@ -51,6 +55,9 @@ assert.equal(stubNativeProjection.lossSummary.categories.includes('targetProject
 assert.equal(stubNativeProjection.readiness.readiness, 'needs-review');
 const directStubRoundtripEvidence = createNativeRoundtripEvidence(scannedJsImport, { projection: stubNativeProjection });
 assert.equal(directStubRoundtripEvidence.metadata.roundtripEvidence.status, 'stub-only');
+assert.equal(directStubRoundtripEvidence.metadata.roundtripEvidence.audit.disposition, 'stub-only');
+assert.equal(directStubRoundtripEvidence.metadata.roundtripEvidence.audit.claim, 'declaration-stubs-only');
+assert.equal(directStubRoundtripEvidence.metadata.roundtripEvidence.audit.semanticEquivalenceClaim, false);
 assert.equal(directStubRoundtripEvidence.metadata.roundtripEvidence.projection.lossCount >= 1, true);
 const sameLanguageNativeCompile = compileNativeSource(preservedNativeImport, {
   sourceMapId: 'smoke-preserved-compile-map',
@@ -78,6 +85,11 @@ assert.equal(sameLanguageNativeCompile.sourceMap.mappings.some((mapping) => mapp
 assert.equal(sameLanguageNativeCompile.sourceMap.mappings.some((mapping) => mapping.generatedSpan?.targetPath === 'dist/preserved-native.js'), true);
 assert.equal(sameLanguageNativeCompile.metadata.sourceMapIds.includes('smoke-preserved-compile-map'), true);
 assert.equal(sameLanguageNativeCompile.metadata.roundtripEvidence.status, 'preserved-source');
+assert.equal(sameLanguageNativeCompile.metadata.roundtripEvidence.audit.disposition, 'reversible');
+assert.equal(sameLanguageNativeCompile.metadata.roundtripEvidence.audit.claim, 'source-text-reversible');
+assert.equal(sameLanguageNativeCompile.metadata.roundtripEvidence.audit.sameLanguage, true);
+assert.equal(sameLanguageNativeCompile.metadata.roundtripEvidence.audit.outputSourceMapPrecision, 'exact');
+assert.equal(sameLanguageNativeCompile.metadata.roundtripEvidence.audit.semanticEquivalenceClaim, false);
 assert.equal(sameLanguageNativeCompile.metadata.roundtripEvidence.output.sourceMaps.precision, 'exact');
 assert.equal(sameLanguageNativeCompile.metadata.roundtripEvidence.output.sourceMaps.byPrecision.exact >= 1, true);
 assert.equal(roundtripEvidenceRecord(sameLanguageNativeCompile).status, 'passed');
@@ -98,6 +110,10 @@ assert.equal(rustNativeCompileBlocked.targetCoverage.lossClass, 'missingAdapter'
 assert.equal(rustNativeCompileBlocked.losses.some((loss) => loss.severity === 'error' && loss.kind === 'targetProjectionLoss'), true);
 assert.equal(rustNativeCompileBlocked.readiness.readiness, 'blocked');
 assert.equal(rustNativeCompileBlocked.metadata.roundtripEvidence.status, 'blocked');
+assert.equal(rustNativeCompileBlocked.metadata.roundtripEvidence.audit.disposition, 'stub-only');
+assert.equal(rustNativeCompileBlocked.metadata.roundtripEvidence.audit.semanticMergeReadiness, 'blocked');
+assert.equal(rustNativeCompileBlocked.metadata.roundtripEvidence.audit.reasonCodes.includes('losses:blocking'), true);
+assert.equal(rustNativeCompileBlocked.metadata.roundtripEvidence.audit.semanticEquivalenceClaim, false);
 assert.equal(rustNativeCompileBlocked.metadata.roundtripEvidence.output.mode, 'target-stubs');
 assert.equal(rustNativeCompileBlocked.metadata.roundtripEvidence.output.targetCoverageLossClass, 'missingAdapter');
 assert.equal(roundtripEvidenceRecord(rustNativeCompileBlocked).status, 'failed');
@@ -188,6 +204,11 @@ assert.equal(rustNativeCompileWithAdapter.sourceMap.kind, 'frontier.lang.sourceM
 assert.equal(rustNativeCompileWithAdapter.sourceMap.mappings.some((mapping) => mapping.metadata?.sourceMapOrigin === 'target-adapter-fallback'), true);
 assert.equal(rustNativeCompileWithAdapter.sourceMap.targetHash, rustNativeCompileWithAdapter.outputHash);
 assert.equal(rustNativeCompileWithAdapter.metadata.roundtripEvidence.status, 'target-adapter');
+assert.equal(rustNativeCompileWithAdapter.metadata.roundtripEvidence.audit.disposition, 'adapter-projected');
+assert.equal(rustNativeCompileWithAdapter.metadata.roundtripEvidence.audit.claim, 'host-adapter-projected');
+assert.equal(rustNativeCompileWithAdapter.metadata.roundtripEvidence.audit.targetProjectionAdapterId, 'fixture-js-to-rust-target-adapter');
+assert.equal(rustNativeCompileWithAdapter.metadata.roundtripEvidence.audit.autoMergeClaim, false);
+assert.equal(rustNativeCompileWithAdapter.metadata.roundtripEvidence.audit.semanticEquivalenceClaim, false);
 assert.equal(rustNativeCompileWithAdapter.metadata.roundtripEvidence.output.mode, 'target-adapter');
 assert.equal(rustNativeCompileWithAdapter.metadata.roundtripEvidence.output.targetProjectionAdapterId, 'fixture-js-to-rust-target-adapter');
 assert.equal(rustNativeCompileWithAdapter.metadata.roundtripEvidence.output.sourceMaps.byOrigin['target-adapter-fallback'] >= 1, true);

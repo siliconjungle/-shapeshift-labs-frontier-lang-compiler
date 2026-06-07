@@ -1,5 +1,6 @@
 import{commonGeneratedTargetPath,idFragment}from'../../native-import-utils.js';import{inferSourceMapMappings,normalizeSourceMapMappings,normalizeSourceMaps}from'../../native-source-maps.js';import{createKernelSourcePreservationRecords,summarizeKernelSourcePreservationRecords}from'../../semantic-import-source-preservation.js';import{createDocument,createImportResult,createNativeAstRecord,createPatch,createSourceMapRecord,createUniversalAstEnvelope,hashSemanticValue,nativeSourceNode}from'@shapeshift-labs/frontier-lang-kernel';
 import{attachInputUniversalDialectRegistry}from'../../universal-dialect-registry.js';
+import{createLightweightSemanticLayers}from'./createLightweightSemanticLayers.js';
 import{attachNativeImportLossSummary}from'./attachNativeImportLossSummary.js';import{createLightweightNativeImport}from'./createLightweightNativeImport.js';import{createNativeSourcePreservation}from'./createNativeSourcePreservation.js';import{hasNativeExactAstEvidence}from'./hasNativeExactAstEvidence.js';import{normalizeNativeLossRecords}from'./normalizeNativeLossRecords.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';import{unverifiedNativeAstLosses}from'./unverifiedNativeAstLosses.js';import{withNativeImportReadiness}from'./withNativeImportReadiness.js';
 export function importNativeSource(input) {
   const language = input.language ?? input.nativeAst?.language;
@@ -216,6 +217,7 @@ export function importNativeSource(input) {
   });
   const kernelSourcePreservationSummary = summarizeKernelSourcePreservationRecords(sourcePreservationRecords);
   const resultSourceMapMappings = sourceMaps.flatMap((sourceMap) => sourceMap.mappings ?? []);
+  const semanticLayers=input.semanticLayers??createLightweightSemanticLayers({importIdPart,language,sourcePath,sourceHash,nativeSource,nativeAst,semanticIndex,sourceMaps,losses,evidence,sourcePreservationRecords});
   let universalAst = createUniversalAstEnvelope({
     id: input.universalAstId ?? `universal_ast_${importIdPart}`,
     document,
@@ -224,6 +226,7 @@ export function importNativeSource(input) {
     sourceMaps,
     losses,
     evidence,
+    proof:input.proof??input.universalAstProof??semanticLayers.proof,paradigmSemantics:input.paradigmSemantics??input.universalAstParadigmSemantics??semanticLayers.paradigmSemantics,
     metadata: {
       sourceLanguage: language,
       sourcePath,

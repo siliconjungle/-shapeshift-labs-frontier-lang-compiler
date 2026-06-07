@@ -107,6 +107,20 @@ export type NativeRoundtripEvidenceStatus = NativeImportRoundtripReadinessStatus
 
 export type NativeRoundtripSourceMapPrecision = SourceMapMappingRecord['precision'] | 'line' | 'declaration' | 'estimated' | 'unknown' | 'none' | string;
 
+export type NativeRoundtripAuditDisposition =
+  | 'reversible'
+  | 'preserved-source'
+  | 'stub-only'
+  | 'adapter-projected'
+  | 'review-required';
+
+export type NativeRoundtripAuditClaim =
+  | 'source-text-reversible'
+  | 'source-preserved'
+  | 'declaration-stubs-only'
+  | 'host-adapter-projected'
+  | 'review-required';
+
 export interface NativeRoundtripSourceMapEvidence {
   readonly total: number;
   readonly ids: readonly string[];
@@ -120,6 +134,30 @@ export interface NativeRoundtripSourceMapEvidence {
   readonly targetPaths: readonly string[];
 }
 
+export interface NativeRoundtripAuditSignal {
+  readonly schema: 'frontier.lang.nativeRoundtripAuditSignal';
+  readonly version: 1;
+  readonly disposition: NativeRoundtripAuditDisposition;
+  readonly claim: NativeRoundtripAuditClaim;
+  readonly sourceLanguage?: FrontierSourceLanguage | string;
+  readonly target?: CompileTarget | string;
+  readonly sameLanguage: boolean;
+  readonly outputMode?: NativeSourceCompileOutputMode;
+  readonly projectionMode?: NativeSourceProjectionMode;
+  readonly sourceHashVerified: boolean;
+  readonly outputSourceMapPrecision: NativeRoundtripSourceMapPrecision;
+  readonly universalSourceMapPrecision: NativeRoundtripSourceMapPrecision;
+  readonly targetProjectionAdapterId?: string;
+  readonly targetCoverageLossClass?: ProjectionTargetLossClass | string;
+  readonly reviewRequired: boolean;
+  readonly semanticMergeReadiness: SemanticMergeReadiness;
+  readonly semanticEquivalenceClaim: false;
+  readonly autoMergeClaim: false;
+  readonly blockingLossCount: number;
+  readonly reviewLossCount: number;
+  readonly reasonCodes: readonly string[];
+}
+
 export interface NativeRoundtripEvidenceMetadata {
   readonly status: NativeRoundtripEvidenceStatus;
   readonly semanticMergeReadiness: SemanticMergeReadiness;
@@ -127,6 +165,7 @@ export interface NativeRoundtripEvidenceMetadata {
   readonly sourcePath?: string;
   readonly language?: FrontierSourceLanguage | string;
   readonly target?: CompileTarget | string;
+  readonly audit: NativeRoundtripAuditSignal;
   readonly import: {
     readonly id?: string;
     readonly readiness: SemanticMergeReadiness;

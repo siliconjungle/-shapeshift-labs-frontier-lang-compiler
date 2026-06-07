@@ -14,7 +14,9 @@ assertSemanticImportFixture(scannedJsImport, {
   sidecar: scannedJsSidecar,
   expectedSymbols: ['addTodo', 'TodoStore.save'],
   expectedRegionKinds: ['body', 'route', 'content', 'config', 'property'],
-  expectedReadiness: 'needs-review'
+  expectedReadiness: 'needs-review',
+  expectedWarningCodes: ['external-tool-proof-obligations'],
+  expectEligible: true
 });
 assert.equal(scannedJsSidecar.kind, 'frontier.lang.semanticImportSidecar');
 assert.equal(scannedJsSidecar.generatedAt, 123);
@@ -40,8 +42,15 @@ assert.equal(scannedJsSidecar.imports[0].universalAstLayerCount > 0, true);
 assert.equal(scannedJsSidecar.imports[0].universalAstLayerNames.includes('semanticSymbols'), true);
 assert.equal(scannedJsSidecar.universalAstLayers.names.includes('projectionEvidence'), true);
 assert.equal(scannedJsSidecar.summary.universalAstLayers, scannedJsSidecar.universalAstLayers.total);
-assert.equal(scannedJsSidecar.proofSpec.empty, true);
-assert.equal(scannedJsSidecar.summary.proofSpecRecords, 0);
+assert.equal(scannedJsSidecar.proofSpec.empty, false);
+assert.equal(scannedJsSidecar.proofSpec.obligations >= 2, true);
+assert.equal(scannedJsSidecar.proofSpec.open >= 1, true);
+assert.equal(scannedJsSidecar.proofSpec.externalToolRequired >= 1, true);
+assert.equal(scannedJsSidecar.summary.proofSpecRecords, scannedJsSidecar.proofSpec.total);
+assert.equal(scannedJsSidecar.paradigmSemantics.empty, false);
+assert.equal(scannedJsSidecar.paradigmSemantics.bindings >= scannedJsImport.semanticIndex.symbols.length, true);
+assert.equal(scannedJsSidecar.paradigmSemantics.loweringRecords >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsSidecar.paradigmSemantics.hasLowering, true);
 assert.equal(scannedJsSidecar.sourcePreservation.total >= scannedJsImport.sourceMaps[0].mappings.length, true);
 assert.equal(scannedJsSidecar.sourcePreservation.exact >= 1, true);
 assert.equal((scannedJsSidecar.sourcePreservation.byLevel.declaration ?? 0) + (scannedJsSidecar.sourcePreservation.byLevel.estimated ?? 0) >= 1, true);
@@ -53,7 +62,7 @@ assert.equal(scannedJsSidecar.quality.eligible, true);
 assert.equal(scannedJsSidecar.quality.emptyEvidenceWarnings.length, 0);
 assert.equal(scannedJsSidecar.quality.symbolCount, scannedJsSidecar.summary.symbols);
 assert.equal(scannedJsSidecar.admission.counts.patchHints, scannedJsSidecar.patchHints.length);
-assert.equal(['admit', 'review'].includes(scannedJsSidecar.admission.action), true);
+assert.equal(['admit', 'review', 'review-proof-obligations'].includes(scannedJsSidecar.admission.action), true);
 assert.equal(scannedJsSidecar.summary.patchHints, scannedJsSidecar.patchHints.length);
 assert.equal(scannedJsSidecar.summary.evidenceWarnings, 0);
 const nativeLossSummaryOnlyImport = {

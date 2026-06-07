@@ -455,14 +455,19 @@ console.log(rustCandidate.sourceMap.mappings[0]?.semanticSymbolId); // generated
 
 `compileNativeSource` returns the import result, projection, target loss matrix cell, combined losses, readiness, evidence, output hash, and generated-output source maps. Same-language preserved output uses exact source mappings when the hash matches; generated stubs use declaration-level spans; adapter output uses adapter-supplied maps when present and otherwise gets an estimated fallback. Admission queues should treat `ok` as "code was emitted", not as merge approval; `readiness`, `targetCoverage`, and source-map precision carry the merge signal.
 
-Native projections and compile results also carry a `frontier.lang.nativeRoundtripEvidence` record under `evidence[].metadata.roundtripEvidence` and `metadata.roundtripEvidence`. That payload records import readiness/loss counts, universal AST validation and source-map precision, projection mode/hash verification, target adapter identity, target coverage, output source-map precision, and blocking/review loss ids in one coordinator-sortable JSON shape:
+Native projections and compile results also carry a `frontier.lang.nativeRoundtripEvidence` record under `evidence[].metadata.roundtripEvidence` and `metadata.roundtripEvidence`. That payload records import readiness/loss counts, universal AST validation and source-map precision, projection mode/hash verification, target adapter identity, target coverage, output source-map precision, blocking/review loss ids, and a compact audit signal in one coordinator-sortable JSON shape:
 
 ```js
 const roundtrip = rustCandidate.metadata.roundtripEvidence;
 console.log(roundtrip.status); // "blocked", "stub-only", "preserved-source", or "target-adapter"
+console.log(roundtrip.audit.disposition); // "reversible", "preserved-source", "stub-only", or "adapter-projected"
+console.log(roundtrip.audit.claim); // bounded evidence label, not a semantic equivalence proof
+console.log(roundtrip.audit.semanticEquivalenceClaim); // false
 console.log(roundtrip.output.sourceMaps.precision); // "exact", "declaration", "estimated", or "none"
 console.log(roundtrip.losses.blockingLossIds);
 ```
+
+`roundtrip.audit` separates what was emitted from whether it can be merged: hash-verified same-language output with exact generated source maps is marked `reversible`, preserved source without generated exact maps stays `preserved-source`, generated declarations are `stub-only`, and host-owned target adapters are `adapter-projected`. Blocked and needs-review readiness still flow through `status`, `semanticMergeReadiness`, `reviewRequired`, loss ids, and source-map precision; the audit signal always keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
 Provide a target projection adapter when the host owns real native-to-target translation semantics:
 
