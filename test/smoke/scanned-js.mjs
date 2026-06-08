@@ -68,6 +68,21 @@ const scannedJsSidecar = createSemanticImportSidecar(scannedJsImport);
 assert.equal(scannedJsSidecar.dependencies.calls >= 2, true);
 assert.equal(scannedJsSidecar.summary.dependencyRelations >= scannedJsSidecar.dependencies.calls, true);
 assert.equal(scannedJsSidecar.imports[0].dependencyPredicates.includes('calls'), true);
+const scannedEffectImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/effects.ts',
+  sourceText: 'export async function loadTodo(api, state) {\n  if (!state.ready) state.ready = true;\n  const res = await fetch(api);\n  state.items.push(await res.json());\n  return state.items;\n}\n'
+});
+const scannedEffectFacts = scannedEffectImport.semanticIndex.facts;
+assert.equal(scannedEffectFacts.some((fact) => fact.predicate === 'controlFlow' && fact.value.kind === 'branch'), true);
+assert.equal(scannedEffectFacts.some((fact) => fact.predicate === 'effect' && fact.value.kind === 'network'), true);
+assert.equal(scannedEffectFacts.some((fact) => fact.predicate === 'mutation' && fact.value.kind === 'assignment'), true);
+assert.equal(scannedEffectFacts.some((fact) => fact.predicate === 'mutation' && fact.value.kind === 'mutating-call'), true);
+assert.equal(scannedEffectImport.semanticIndex.metadata.dependencyRelations.controlFlow >= 2, true);
+assert.equal(scannedEffectImport.nativeAst.metadata.semanticFactSummary.effects >= 2, true);
+const scannedEffectSidecar = createSemanticImportSidecar(scannedEffectImport);
+assert.equal(scannedEffectSidecar.imports[0].semanticFactPredicates.includes('controlFlow'), true);
+assert.equal(scannedEffectSidecar.imports[0].semanticFactSummary.effect >= 2, true);
 const scannedDefaultClassImport = importNativeSource({
   language: 'typescript',
   sourcePath: 'src/default-class.tsx',

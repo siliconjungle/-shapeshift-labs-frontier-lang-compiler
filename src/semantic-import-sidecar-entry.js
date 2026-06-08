@@ -11,6 +11,7 @@ import {
 function semanticImportSidecarEntry(imported, index, options) {
   const semanticIndex = imported?.semanticIndex ?? imported?.universalAst?.semanticIndex;
   const nativeAst = imported?.nativeAst ?? imported?.nativeSource?.ast;
+  const semanticFacts = semanticIndex?.facts ?? [];
   const sourceMaps = imported?.sourceMaps ?? imported?.universalAst?.sourceMaps ?? [];
   const sourceMapMappings = sourceMaps.flatMap((sourceMap) => sourceMap?.mappings ?? []);
   const sourcePreservationRecords = collectKernelSourcePreservationFromImport(imported);
@@ -18,6 +19,7 @@ function semanticImportSidecarEntry(imported, index, options) {
   const proofSpec = summarizeProofSpecLayer(imported?.universalAst?.proof ?? imported?.proof);
   const paradigmSemantics = summarizeParadigmSemanticsLayer(imported?.universalAst?.paradigmSemantics ?? imported?.paradigmSemantics);
   const dependencies = summarizeSemanticImportDependencyRelations(semanticIndex?.relations ?? []);
+  const factSummary = summarizeSemanticFacts(semanticFacts);
   const readiness = semanticImportEntryReadiness(imported);
   const mappingsBySymbolId = new Map();
   for (const mapping of sourceMapMappings) {
@@ -72,6 +74,9 @@ function semanticImportSidecarEntry(imported, index, options) {
     paradigmSemantics,
     dependencyRelationCount: dependencies.total,
     dependencyPredicates: dependencies.predicates,
+    semanticFactCount: semanticFacts.length,
+    semanticFactPredicates: factSummary.predicates,
+    semanticFactSummary: factSummary.byPredicate,
     readiness,
     emptySemanticIndex: symbols.length === 0,
     regionTaxonomy,
@@ -88,6 +93,16 @@ function semanticImportEntryReadiness(imported) {
     ?? (typeof imported?.readiness === 'string' ? imported.readiness : undefined)
     ?? imported?.mergeCandidates?.[0]?.readiness;
   return readiness ?? 'needs-review';
+}
+
+function summarizeSemanticFacts(facts) {
+  const byPredicate = {};
+  for (const fact of facts ?? []) {
+    const predicate = String(fact?.predicate ?? '').trim();
+    if (!predicate) continue;
+    byPredicate[predicate] = (byPredicate[predicate] ?? 0) + 1;
+  }
+  return { byPredicate, predicates: Object.keys(byPredicate).sort() };
 }
 
 export { semanticImportSidecarEntry };

@@ -11,6 +11,7 @@ export function observeNativeImporterSemanticEvidence(semanticIndex = {}) {
     ...relations.filter((relation) => semanticPredicateMatches(relation?.predicate, ['controlflow', 'cfg', 'flow'])),
     ...facts.filter((fact) => semanticPredicateMatches(fact?.predicate, ['controlflow', 'cfg', 'flow']))
   ];
+  const effectRecords = facts.filter((fact) => semanticPredicateMatches(fact?.predicate, ['effect', 'mutation', 'sideeffect']));
   return {
     declarations: occurrences.filter((occurrence) => occurrence?.role === 'definition' || occurrence?.role === 'declaration').length,
     references: occurrences.filter((occurrence) => {
@@ -18,6 +19,7 @@ export function observeNativeImporterSemanticEvidence(semanticIndex = {}) {
       return role && role !== 'definition' && role !== 'declaration';
     }).length + referenceRelations.length,
     types: typeFacts.length + typedSymbols.length,
-    controlFlow: controlFlowRecords.length
+    controlFlow: controlFlowRecords.length,
+    effects: effectRecords.length
   };
 }

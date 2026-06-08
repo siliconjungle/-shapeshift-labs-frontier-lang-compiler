@@ -140,14 +140,18 @@ export function createLightweightNativeImport(input) {
       kind: 'import',
       status: 'passed',
       path: input.sourcePath,
-      summary: `Lightweight declaration scan found ${symbols.length} symbol(s) and ${dependencies.summary.total} dependency edge(s).`,
-      metadata: { parser, dependencyRelations: dependencies.summary.total }
+      summary: `Lightweight declaration scan found ${symbols.length} symbol(s), ${dependencies.summary.total} dependency edge(s), and ${dependencies.summary.controlFlow + dependencies.summary.effects + dependencies.summary.mutations} semantic fact(s).`,
+      metadata: { parser, dependencyRelations: dependencies.summary.total, semanticFacts: {
+        controlFlow: dependencies.summary.controlFlow,
+        effects: dependencies.summary.effects,
+        mutations: dependencies.summary.mutations
+      } }
     }],
     metadata: {
       parser,
       coverage: 'declarations-only',
       dependencyRelations: dependencies.summary,
-      unsupported: ['full expression AST', 'type checking', 'control flow', 'comments and formatting preservation']
+      unsupported: ['full expression AST', 'type checking', 'full control-flow graph', 'comments and formatting preservation']
     }
   });
 
@@ -164,6 +168,12 @@ export function createLightweightNativeImport(input) {
       declarationCount: declarations.length,
       dependencyRelationCount: dependencies.summary.total,
       dependencyOccurrenceCount: dependencies.occurrences.length,
+      semanticFactCount: dependencies.summary.controlFlow + dependencies.summary.effects + dependencies.summary.mutations,
+      semanticFactSummary: {
+        controlFlow: dependencies.summary.controlFlow,
+        effects: dependencies.summary.effects,
+        mutations: dependencies.summary.mutations
+      },
       ...(input.sourcePreservation ? {
         sourcePreservationId: input.sourcePreservation.id,
         sourcePreservationSummary: input.sourcePreservation.summary
