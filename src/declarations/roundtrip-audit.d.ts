@@ -1,3 +1,12 @@
+import type {
+  CompileTarget,
+  FrontierSourceLanguage,
+  SemanticMergeReadiness,
+  SourceMapMappingRecord
+} from '@shapeshift-labs/frontier-lang-kernel';
+import type { ProjectionTargetLossClass } from './projection-coverage.js';
+import type { NativeSourceCompileOutputMode, NativeSourceProjectionMode } from './native-project.js';
+
 export type NativeRoundtripSourceMapPrecision = SourceMapMappingRecord['precision'] | 'line' | 'declaration' | 'estimated' | 'unknown' | 'none' | string;
 
 export type NativeRoundtripAuditDisposition =

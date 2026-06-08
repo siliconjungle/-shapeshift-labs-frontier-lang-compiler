@@ -89,16 +89,6 @@ export declare function createNativeParserFeatureMatrix(options?: NativeParserFe
 export declare function queryNativeParserFeatureMatrix(matrixOrOptions?: NativeParserFeatureMatrix | NativeParserFeatureMatrixOptions, query?: NativeParserFeatureMatrixQuery): NativeParserFeatureMatrixQueryResult;
 export declare function createProjectionTargetLossMatrix(options?: ProjectionTargetLossMatrixOptions): ProjectionTargetLossMatrix;
 export declare function createUniversalCapabilityMatrix(options?: UniversalCapabilityMatrixOptions): UniversalCapabilityMatrix;
-export declare function createUniversalConversionArtifacts(input?: CreateUniversalConversionArtifactsInput, options?: CreateUniversalConversionArtifactsOptions): UniversalConversionArtifacts;
-export declare function createUniversalConversionPlan(options?: UniversalConversionPlanOptions): UniversalConversionPlan;
-export declare function queryUniversalConversionArtifacts(
-  records: UniversalConversionArtifacts | UniversalConversionRouteArtifact | readonly (UniversalConversionArtifacts | UniversalConversionRouteArtifact)[],
-  query?: UniversalConversionArtifactQuery
-): readonly UniversalConversionRouteArtifact[];
-export declare function queryUniversalConversionPlan(
-  planOrOptions?: UniversalConversionPlan | UniversalConversionPlanOptions,
-  query?: UniversalConversionPlanQuery
-): UniversalConversionPlanQueryResult;
 export declare function createNativeSourcePreservation(options: CreateNativeSourcePreservationOptions): NativeSourcePreservation;
 export declare function createSemanticImportSidecar(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: SemanticImportSidecarOptions): SemanticImportSidecar;
 export declare function createNativeImportResultContract(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: NativeImportResultContractOptions): NativeImportResultContract;
@@ -122,7 +112,6 @@ export declare function importNativeSource(input: ImportNativeSourceOptions): Na
 export declare function diffNativeSources(input: DiffNativeSourcesOptions): NativeSourceChangeSet;
 export declare function diffNativeSourceImports(input: DiffNativeSourceImportsOptions): NativeSourceChangeSet;
 export declare function createSemanticSlice(input: SemanticSliceInput, options?: CreateSemanticSliceOptions): SemanticSlice;
-export declare function createSemanticSliceAdmissionRecord(slice: SemanticSlice, options?: CreateSemanticSliceAdmissionRecordOptions): SemanticSliceAdmissionRecord;
 export declare function testSemanticSlice(slice: SemanticSlice, options?: TestSemanticSliceOptions): SemanticSliceTestResult;
 export declare function readSemanticSliceJson(source: string): SemanticSlice;
 export declare function writeSemanticSliceJson(slice: SemanticSlice): string;
