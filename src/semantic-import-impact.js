@@ -1,5 +1,6 @@
 import { countBy, idFragment, maxSemanticMergeReadiness, uniqueRecordsById, uniqueStrings } from './native-import-utils.js';
 import { semanticDependencyPredicateKey } from './semantic-import-dependencies.js';
+import { semanticImpactMergeSignal, summarizeSemanticImpactMergeSignals } from './semantic-import-merge-signal.js';
 
 function createSemanticImportImpact(input) {
   const relations = collectDependencyRelations(input.imports, input.dependencies);
@@ -60,7 +61,7 @@ function semanticImpactRecord(input) {
     relationCount: input.relations.length,
     verificationPlan
   });
-  return {
+  const record = {
     id: `impact_${idFragment(input.region.id ?? input.region.key)}`,
     kind: 'ownership-region-impact',
     ownershipRegionId: input.region.id,
@@ -93,6 +94,7 @@ function semanticImpactRecord(input) {
     risk,
     confidence: semanticImpactConfidence(input.region, input.sourceMapMappings, input.sourcePreservationRecords)
   };
+  return { ...record, mergeSignal: semanticImpactMergeSignal(record) };
 }
 
 function collectDependencyRelations(imports, dependencies) {
@@ -299,7 +301,8 @@ function summarizeSemanticImpactRecords(records) {
     loweringRecords: uniqueStrings(records.flatMap((record) => record.loweringRecordIds)).length,
     evidenceIds: uniqueStrings(records.flatMap((record) => record.evidenceIds)).length,
     verificationPlans: uniqueStrings(verificationPlans),
-    requiredVerificationSteps: records.flatMap((record) => record.verificationPlan).filter((step) => step.required).length
+    requiredVerificationSteps: records.flatMap((record) => record.verificationPlan).filter((step) => step.required).length,
+    ...summarizeSemanticImpactMergeSignals(records)
   };
 }
 

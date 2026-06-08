@@ -1,5 +1,5 @@
 import{nativeLanguageCompileTarget}from'../../coverage-matrix-profiles.js';import{idFragment,uniqueByEvidenceId,uniqueByLossId}from'../../native-import-utils.js';
-import{classifyNativeImportReadiness}from'./classifyNativeImportReadiness.js';import{createNativeRoundtripEvidence}from'./createNativeRoundtripEvidence.js';import{createProjectionTargetLossMatrix}from'./createProjectionTargetLossMatrix.js';import{importNativeSource}from'./importNativeSource.js';import{isNativeSourceImportResult}from'./isNativeSourceImportResult.js';import{nativeCompileSourceLanguage}from'./nativeCompileSourceLanguage.js';import{nativeCompileTarget}from'./nativeCompileTarget.js';import{nativeSourceCompileEvidence}from'./nativeSourceCompileEvidence.js';import{nativeSourceCompileSourceMaps}from'./nativeSourceCompileSourceMaps.js';import{nativeSourceCompileTargetCoverage}from'./nativeSourceCompileTargetCoverage.js';import{nativeSourceCompileTargetLosses}from'./nativeSourceCompileTargetLosses.js';import{projectNativeImportToSource}from'./projectNativeImportToSource.js';import{resolveNativeTargetProjectionAdapter}from'./resolveNativeTargetProjectionAdapter.js';import{runNativeTargetProjectionAdapter}from'./runNativeTargetProjectionAdapter.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';
+import{classifyNativeImportReadiness}from'./classifyNativeImportReadiness.js';import{createNativeRoundtripEvidence}from'./createNativeRoundtripEvidence.js';import{createProjectionTargetLossMatrix}from'./createProjectionTargetLossMatrix.js';import{importNativeSource}from'./importNativeSource.js';import{isNativeSourceImportResult}from'./isNativeSourceImportResult.js';import{nativeCompileSourceLanguage}from'./nativeCompileSourceLanguage.js';import{nativeCompileTarget}from'./nativeCompileTarget.js';import{nativeProjectionReview}from'./nativeProjectionReview.js';import{nativeSourceCompileEvidence}from'./nativeSourceCompileEvidence.js';import{nativeSourceCompileSourceMaps}from'./nativeSourceCompileSourceMaps.js';import{nativeSourceCompileTargetCoverage}from'./nativeSourceCompileTargetCoverage.js';import{nativeSourceCompileTargetLosses}from'./nativeSourceCompileTargetLosses.js';import{projectNativeImportToSource}from'./projectNativeImportToSource.js';import{resolveNativeTargetProjectionAdapter}from'./resolveNativeTargetProjectionAdapter.js';import{runNativeTargetProjectionAdapter}from'./runNativeTargetProjectionAdapter.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';
 export function compileNativeSource(input, options = {}) {
   const importResult = isNativeSourceImportResult(input) ? input : importNativeSource(input);
   const sourceLanguage = nativeCompileSourceLanguage(importResult, input);
@@ -124,6 +124,17 @@ export function compileNativeSource(input, options = {}) {
       compileResultId: id
     });
   const sourceMap = sourceMaps[0];
+  const projectionReview = nativeProjectionReview({
+    mode: projection.mode, outputMode, language: projection.language, sourceLanguage, target,
+    sourcePath: importResult.sourcePath ?? importResult.nativeSource?.sourcePath,
+    exactSourceAvailable: projection.metadata?.exactSourceAvailable === true,
+    sourceTextAvailable: projection.metadata?.sourceTextAvailable === true,
+    sourceHashVerified: projection.metadata?.sourceHashVerified === true,
+    declarationCount: projection.declarations.length, sourceMapCount: sourceMaps.length,
+    losses, targetLosses, readiness: readiness.readiness, targetCoverage, targetProjection
+  });
+  compileEvidence.metadata.projectionReview = projectionReview;
+  for (const record of sourceMaps) record.metadata = { ...(record.metadata ?? {}), projectionReview };
   const roundtripEvidence = createNativeRoundtripEvidence(importResult, {
     id: `evidence_${idPart}_${idFragment(target)}_native_roundtrip`,
     projection,
@@ -179,6 +190,7 @@ export function compileNativeSource(input, options = {}) {
       targetLossClass: targetCoverage.lossClass,
       targetReadiness: targetCoverage.readiness,
       targetSupported: targetCoverage.supported,
+      projectionReview,
       ...options.metadata,
       roundtripEvidence: roundtripEvidence.metadata.roundtripEvidence
     }

@@ -3,11 +3,26 @@ import type { NativeImportRegionTaxonomyKind } from './index.js';
 
 export type SemanticImportImpactRisk = 'low' | 'medium' | 'high' | string;
 export type SemanticImportImpactConfidence = 'source-exact' | 'source-addressed' | 'estimated-source-region' | 'review-required' | string;
+export type SemanticImportMergeSignalStatus = 'strong' | 'partial' | 'weak' | 'blocked' | string;
 
 export interface SemanticImportImpactVerificationStep {
   readonly kind: 'dependency-review' | 'source-map-review' | 'reject-or-reprove' | 'proof-review' | 'patch-admission' | 'evidence-review' | string;
   readonly reason: string;
   readonly required: boolean;
+}
+
+export interface SemanticImportMergeSignal {
+  readonly status: SemanticImportMergeSignalStatus;
+  readonly score: number;
+  readonly missing: readonly string[];
+  readonly reviewRequired: boolean;
+  readonly queryKeys: readonly string[];
+}
+
+export interface SemanticImportMergeSignalScoreSummary {
+  readonly min: number;
+  readonly max: number;
+  readonly average: number;
 }
 
 export interface SemanticImportImpactRecord {
@@ -39,6 +54,7 @@ export interface SemanticImportImpactRecord {
   readonly readiness: SemanticMergeReadiness;
   readonly risk: SemanticImportImpactRisk;
   readonly confidence: SemanticImportImpactConfidence;
+  readonly mergeSignal: SemanticImportMergeSignal;
 }
 
 export interface SemanticImportImpactSummary {
@@ -63,5 +79,10 @@ export interface SemanticImportImpactSummary {
     readonly evidenceIds: number;
     readonly verificationPlans: readonly string[];
     readonly requiredVerificationSteps: number;
+    readonly byMergeSignal: Readonly<Record<string, number>>;
+    readonly weakMergeSignals: number;
+    readonly reviewRequiredMergeSignals: number;
+    readonly mergeSignalQueryKeys: readonly string[];
+    readonly mergeSignalScores: SemanticImportMergeSignalScoreSummary;
   };
 }

@@ -19,6 +19,7 @@ await import('./smoke/project-admission.mjs');
 await import('./smoke/tree-sitter-cst-envelope.mjs');
 await import('./smoke/scanned-js.mjs');
 await import('./smoke/semantic-sidecars.mjs');
+await import('./smoke/semantic-impact-merge-signals.mjs');
 await import('./smoke/semantic-sidecar-expected.mjs');
 await import('./smoke/semantic-merge-candidates.mjs');
 await import('./smoke/semantic-merge-conflicts.mjs');

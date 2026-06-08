@@ -1,5 +1,5 @@
 import{hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
-import{classifyNativeImportReadiness}from'./classifyNativeImportReadiness.js';import{createNativeRoundtripEvidence}from'./createNativeRoundtripEvidence.js';import{nativeImportProjectionContext}from'./nativeImportProjectionContext.js';import{nativeProjectionDeclarations}from'./nativeProjectionDeclarations.js';import{nativeProjectionSourceCandidate}from'./nativeProjectionSourceCandidate.js';import{nativeProjectionStubLosses}from'./nativeProjectionStubLosses.js';import{renderNativeProjectionStubs}from'./renderNativeProjectionStubs.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';
+import{classifyNativeImportReadiness}from'./classifyNativeImportReadiness.js';import{createNativeRoundtripEvidence}from'./createNativeRoundtripEvidence.js';import{nativeImportProjectionContext}from'./nativeImportProjectionContext.js';import{nativeProjectionDeclarations}from'./nativeProjectionDeclarations.js';import{nativeProjectionReview}from'./nativeProjectionReview.js';import{nativeProjectionSourceCandidate}from'./nativeProjectionSourceCandidate.js';import{nativeProjectionStubLosses}from'./nativeProjectionStubLosses.js';import{renderNativeProjectionStubs}from'./renderNativeProjectionStubs.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';
 export function projectNativeImportToSource(importResult, options = {}) {
   if (!importResult || typeof importResult !== 'object') {
     throw new Error('projectNativeImportToSource requires a native import result');
@@ -49,6 +49,14 @@ export function projectNativeImportToSource(importResult, options = {}) {
     parser: context.parser,
     semanticStatus: context.semanticStatus
   });
+  const projectionReview = nativeProjectionReview({
+    mode, language: context.language, sourcePath: context.sourcePath,
+    exactSourceAvailable: candidateSource?.exact === true,
+    sourceTextAvailable: typeof candidateSource?.sourceText === 'string',
+    sourceHashVerified: candidateSource?.hashVerified ?? false,
+    declarationCount: declarations.length, losses, readiness: readiness.readiness
+  });
+  evidence[0].metadata.projectionReview = projectionReview;
   const result = {
     kind: 'frontier.lang.nativeSourceProjection',
     version: 1,
@@ -75,6 +83,7 @@ export function projectNativeImportToSource(importResult, options = {}) {
       sourcePreservationId: candidateSource?.sourcePreservationId,
       sourceHashVerified: candidateSource?.hashVerified ?? false,
       nativeImportLossSummary,
+      projectionReview,
       ...options.metadata
     }
   };
