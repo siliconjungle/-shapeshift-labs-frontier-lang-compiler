@@ -81,6 +81,27 @@ const scannedWrapperImport = importNativeSource({
   sourceText: 'export const Button = React.forwardRef<HTMLButtonElement, Props>(function Button(props, ref) { return props.kind; });\n'
 });
 assert.equal(scannedWrapperImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Button' && symbol.kind === 'function'), true);
+const scannedWrappedRouteImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/wrapped-routes.js',
+  sourceText: 'export const appRoutes = defineRoutes([\n  { path: "/todos", component: TodoStore }\n]);\n'
+});
+assert.equal(scannedWrappedRouteImport.semanticIndex.symbols.some((symbol) => symbol.name === 'appRoutes./todos' && symbol.kind === 'route'), true);
+const scannedDefaultConfigImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/default-config.ts',
+  sourceText: 'export default defineConfig({\n  docs: { title: "Docs" },\n  resolve(id) { return id; }\n});\n'
+});
+assert.equal(scannedDefaultConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default' && symbol.metadata.ownershipRegionKind === 'config'), true);
+assert.equal(scannedDefaultConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default.docs' && symbol.metadata.ownershipRegionKind === 'content'), true);
+assert.equal(scannedDefaultConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default.resolve' && symbol.kind === 'function'), true);
+const scannedCommonJsConfigImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/commonjs-config.js',
+  sourceText: 'module.exports = {\n  routes: [{ path: "/", component: Home }],\n  runtimeConfig: { enabled: true }\n};\n'
+});
+assert.equal(scannedCommonJsConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'module.exports.routes' && symbol.metadata.ownershipRegionKind === 'route'), true);
+assert.equal(scannedCommonJsConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'module.exports.runtimeConfig' && symbol.metadata.ownershipRegionKind === 'config'), true);
 const standalonePreservation = createNativeSourcePreservation({
   language: 'python',
   sourcePath: 'tools/preserve.py',

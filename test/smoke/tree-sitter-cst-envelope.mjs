@@ -5,7 +5,7 @@ import {
 } from './compiler-api.mjs';
 
 function tsNode(type, startColumn, endColumn, options = {}) {
-  return {
+  const node = {
     type,
     text: options.text,
     isNamed: options.isNamed ?? true,
@@ -18,6 +18,9 @@ function tsNode(type, startColumn, endColumn, options = {}) {
     endPosition: { row: 0, column: endColumn },
     children: options.children ?? []
   };
+  if (options.fieldName) node.fieldName = options.fieldName;
+  if (options.fields) node.childForFieldName = (field) => options.fields[field];
+  return node;
 }
 
 const declarationSource = 'let x = 1;\n';
@@ -66,6 +69,89 @@ assert.equal(treeSitterDeclarationImport.losses.some((loss) => loss.kind === 'pa
 assert.equal(treeSitterDeclarationImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'ready');
 assert.equal(treeSitterDeclarationImport.adapter.coverage.observed.semanticSymbols, 1);
 assert.equal(treeSitterDeclarationImport.adapter.coverage.semanticCoverage.symbols, true);
+
+const jsDeclarationSource = 'import dep from "pkg"; const answer = () => 42; function add() {} class Store { save() {} }\n';
+const jsDeclarationTree = tsNode('program', 0, jsDeclarationSource.length, {
+  children: [
+    tsNode('import_statement', 0, 22, {
+      children: [
+        tsNode('import', 0, 6, { isNamed: false, text: 'import' }),
+        tsNode('import_clause', 7, 10, {
+          text: 'dep',
+          children: [tsNode('identifier', 7, 10, { text: 'dep' })]
+        }),
+        tsNode('from', 11, 15, { isNamed: false, text: 'from' }),
+        tsNode('string', 16, 21, { text: '"pkg"', fieldName: 'source' }),
+        tsNode(';', 21, 22, { isNamed: false, text: ';' })
+      ]
+    }),
+    tsNode('lexical_declaration', 23, 47, {
+      children: [
+        tsNode('const', 23, 28, { isNamed: false, text: 'const' }),
+        tsNode('variable_declarator', 29, 46, {
+          children: [
+            tsNode('identifier', 29, 35, { text: 'answer', fieldName: 'name' }),
+            tsNode('=', 36, 37, { isNamed: false, text: '=' }),
+            tsNode('arrow_function', 38, 46, { fieldName: 'value' })
+          ]
+        }),
+        tsNode(';', 46, 47, { isNamed: false, text: ';' })
+      ]
+    }),
+    tsNode('function_declaration', 48, 65, {
+      children: [
+        tsNode('function', 48, 56, { isNamed: false, text: 'function' }),
+        tsNode('identifier', 57, 60, { text: 'add', fieldName: 'name' }),
+        tsNode('formal_parameters', 60, 62, { text: '()' }),
+        tsNode('statement_block', 63, 65, { text: '{}' })
+      ]
+    }),
+    tsNode('class_declaration', 66, 91, {
+      children: [
+        tsNode('class', 66, 71, { isNamed: false, text: 'class' }),
+        tsNode('identifier', 72, 77, { text: 'Store', fieldName: 'name' }),
+        tsNode('class_body', 78, 91, {
+          children: [
+            tsNode('{', 78, 79, { isNamed: false, text: '{' }),
+            tsNode('method_definition', 80, 89, {
+              children: [
+                tsNode('property_identifier', 80, 84, { text: 'save', fieldName: 'name' }),
+                tsNode('formal_parameters', 84, 86, { text: '()' }),
+                tsNode('statement_block', 87, 89, { text: '{}' })
+              ]
+            }),
+            tsNode('}', 90, 91, { isNamed: false, text: '}' })
+          ]
+        })
+      ]
+    })
+  ]
+});
+
+const treeSitterJsDeclarationImport = await runNativeImporterAdapter(createTreeSitterNativeImporterAdapter({
+  language: 'javascript',
+  parserName: 'tree-sitter-javascript',
+  tree: { rootNode: jsDeclarationTree }
+}), {
+  sourcePath: 'src/tree-sitter-js-declarations.js',
+  sourceText: jsDeclarationSource
+});
+
+const jsDeclarationEvidence = treeSitterJsDeclarationImport.nativeAst.metadata.nativeSyntaxEvidence;
+const jsDeclarationSymbols = treeSitterJsDeclarationImport.semanticIndex.symbols;
+const jsDeclarationMappings = treeSitterJsDeclarationImport.sourceMaps.flatMap((sourceMap) => sourceMap.mappings ?? []);
+assert.equal(jsDeclarationEvidence.semantic.symbols, 5);
+assert.equal(jsDeclarationEvidence.semantic.declarationSourceMapMappings, 5);
+assert.equal(jsDeclarationEvidence.semantic.exactness, 'declaration-linked');
+assert.equal(jsDeclarationSymbols.some((symbol) => symbol.name === 'pkg' && symbol.kind === 'module'), true);
+assert.equal(jsDeclarationSymbols.some((symbol) => symbol.name === 'dep'), false);
+assert.equal(jsDeclarationSymbols.some((symbol) => symbol.name === 'answer' && symbol.kind === 'function'), true);
+assert.equal(jsDeclarationSymbols.some((symbol) => symbol.name === 'add' && symbol.kind === 'function'), true);
+assert.equal(jsDeclarationSymbols.some((symbol) => symbol.name === 'Store' && symbol.kind === 'class'), true);
+assert.equal(jsDeclarationSymbols.some((symbol) => symbol.name === 'save' && symbol.kind === 'method'), true);
+assert.equal(jsDeclarationMappings.some((mapping) => mapping.semanticSymbolId.includes('answer') && mapping.ownershipRegionId), true);
+assert.equal(treeSitterJsDeclarationImport.losses.some((loss) => loss.metadata?.reason === 'tree-sitter-cst-syntax-only'), false);
+assert.equal(treeSitterJsDeclarationImport.adapter.coverage.observed.semanticSymbols, 5);
 
 const tolerantErrorSource = 'let = ;\n';
 const tolerantErrorTree = tsNode('program', 0, tolerantErrorSource.length, {
