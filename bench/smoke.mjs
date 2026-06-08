@@ -3,12 +3,14 @@ import { collectNativeImports } from './native-import-suite.mjs';
 import { measureNativeMatrices } from './native-matrix-suite.mjs';
 import { measureNativeTransformations } from './native-transform-suite.mjs';
 import { measureSourceChangeSuites } from './source-change-suite.mjs';
+import { measureUniversalFixtureSuite } from './universal-fixture-suite.mjs';
 
 const compileMetrics = measureFrontierCompile();
 const importMetrics = await collectNativeImports();
 const matrixMetrics = measureNativeMatrices(importMetrics.nativeImportResults, importMetrics.adapters);
 const transformMetrics = measureNativeTransformations(importMetrics.nativeImportResults);
 const sourceChangeMetrics = measureSourceChangeSuites();
+const universalFixtureMetrics = measureUniversalFixtureSuite(importMetrics.adapters);
 
 console.log(JSON.stringify({
   compiles: 250,
@@ -107,5 +109,17 @@ console.log(JSON.stringify({
   externalSemanticImports: sourceChangeMetrics.externalSemanticImports,
   externalSemanticSymbols: sourceChangeMetrics.externalSemanticSymbols,
   externalSemanticMappings: sourceChangeMetrics.externalSemanticMappings,
-  externalSemanticDurationMs: Number(sourceChangeMetrics.externalSemanticDurationMs.toFixed(2))
+  externalSemanticDurationMs: Number(sourceChangeMetrics.externalSemanticDurationMs.toFixed(2)),
+  universalFixtureImports: universalFixtureMetrics.imports,
+  universalFixtureLanguages: universalFixtureMetrics.languages,
+  universalFixtureRoutes: universalFixtureMetrics.routes,
+  universalFixtureTargetAdapterRoutes: universalFixtureMetrics.targetAdapterRoutes,
+  universalFixtureSemanticIndexOnlyRoutes: universalFixtureMetrics.semanticIndexOnlyRoutes,
+  universalFixtureRouteScoreMin: universalFixtureMetrics.routeScoreMin,
+  universalFixtureRouteScoreMax: universalFixtureMetrics.routeScoreMax,
+  universalFixtureLossSummaries: universalFixtureMetrics.lossSummaries,
+  universalFixtureLossCategories: universalFixtureMetrics.lossCategories,
+  universalFixtureCandidateRecords: universalFixtureMetrics.candidateRecords,
+  universalFixtureBestCandidateSortKey: universalFixtureMetrics.bestCandidateSortKey,
+  universalFixtureDurationMs: Number(universalFixtureMetrics.durationMs.toFixed(2))
 }));

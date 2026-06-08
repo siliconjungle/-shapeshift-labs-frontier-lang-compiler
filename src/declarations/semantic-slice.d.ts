@@ -63,6 +63,19 @@ export type SemanticSliceInput =
     readonly source?: ImportNativeSourceOptions;
   };
 
+export interface SemanticSliceSourceHashExpectation {
+  readonly path?: string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly hash?: string;
+  readonly expected?: string;
+}
+
+export type SemanticSliceSourceHashExpectations =
+  | Readonly<Record<string, string>>
+  | ReadonlyMap<string, string>
+  | readonly (SemanticSliceSourceHashExpectation | readonly [string | undefined, string])[];
+
 export interface CreateSemanticSliceOptions {
   readonly id?: string;
   readonly generatedAt?: number;
@@ -73,6 +86,14 @@ export interface CreateSemanticSliceOptions {
   readonly symbol?: string;
   readonly region?: string;
   readonly nativeNodeId?: string;
+  readonly expectedSymbols?: readonly string[] | string;
+  readonly expectedSymbolRefs?: readonly string[] | string;
+  readonly expectedRegions?: readonly string[] | string;
+  readonly expectedRegionRefs?: readonly string[] | string;
+  readonly expectedSourceHashes?: SemanticSliceSourceHashExpectations;
+  readonly expectedSymbolCount?: number;
+  readonly expectedRegionCount?: number;
+  readonly expectedSourceFileCount?: number;
   readonly entryRefs?: readonly string[] | string;
   readonly semanticRefs?: readonly string[] | string;
   readonly refs?: readonly string[] | string;
@@ -126,7 +147,12 @@ export interface SemanticSliceSourceFile {
 
 export interface SemanticSliceExpectedAssertion {
   readonly id: string;
-  readonly expected: boolean;
+  readonly category?: 'symbol' | 'region' | 'sourceHash' | 'summaryCount' | string;
+  readonly ref?: string;
+  readonly path?: string;
+  readonly key?: string;
+  readonly expected: unknown;
+  readonly actual?: unknown;
 }
 
 export interface SemanticSlice {
@@ -195,6 +221,14 @@ export interface TestSemanticSliceOptions {
   readonly generatedAt?: number;
   readonly requireSourceMapLinks?: boolean;
   readonly currentSources?: Readonly<Record<string, string>> | ReadonlyMap<string, string>;
+  readonly expectedSymbols?: readonly string[] | string;
+  readonly expectedSymbolRefs?: readonly string[] | string;
+  readonly expectedRegions?: readonly string[] | string;
+  readonly expectedRegionRefs?: readonly string[] | string;
+  readonly expectedSourceHashes?: SemanticSliceSourceHashExpectations;
+  readonly expectedSymbolCount?: number;
+  readonly expectedRegionCount?: number;
+  readonly expectedSourceFileCount?: number;
   readonly metadata?: Record<string, unknown>;
 }
 
@@ -220,6 +254,7 @@ export interface SemanticSliceTestResult {
     readonly warnings: number;
     readonly failed: number;
     readonly sourceHashChecks: number;
+    readonly expectedAssertions: number;
     readonly symbols: number;
     readonly ownershipRegions: number;
     readonly sourceMapLinks: number;

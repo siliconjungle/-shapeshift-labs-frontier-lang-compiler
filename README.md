@@ -439,6 +439,8 @@ const imported = importNativeSource({
 const slice = createSemanticSlice(imported, {
   entryRefs: ['symbol:parseExpression'],
   includeDependencies: true,
+  expectedSymbols: ['parseExpression'],
+  expectedSourceHashes: { 'src/parser.ts': imported.nativeSource.sourceHash },
   focusedCommands: ['npm test -- parser-expression'],
   fixtureHints: ['operator precedence corpus']
 });
@@ -448,17 +450,19 @@ console.log(slice.mergeAdmission.conflictKeys); // semantic ownership keys
 console.log(slice.sourceFiles[0].sourceHash); // stale-check input for admission
 
 const gate = testSemanticSlice(slice, {
-  currentSources: { 'src/parser.ts': sourceText }
+  currentSources: { 'src/parser.ts': sourceText },
+  expectedRegions: [slice.ownershipRegions[0].key]
 });
 
 console.log(gate.status); // "passed", "needs-review", or "failed"
 const admission = createSemanticSliceAdmissionRecord(slice, { testResult: gate });
 console.log(admission.mergeScore.value); // sortable 0-100 semantic merge score
+console.log(admission.selectedSurface.sourceHashes); // compact selected-surface evidence
 console.log(admission.autoMergeClaim); // always false
 console.log(writeSemanticSliceJson(slice)); // stable JSON for worker inputs
 ```
 
-A semantic slice is the small unit a swarm can hand to a worker instead of copying a full repository. It carries the selected symbols, ownership regions, native nodes, relations, occurrences, source-map links, source spans, source excerpts, source hashes, focused verification commands, fixture hints, and merge-admission metadata. It does not claim the patch is correct; it makes the context and conflicts machine-readable so admission scoring can combine changed ownership, focused test status, stale/source-hash checks, evidence, and semantic risk in one sortable record.
+A semantic slice is the small unit a swarm can hand to a worker instead of copying a full repository. It carries the selected symbols, ownership regions, native nodes, relations, occurrences, source-map links, source spans, source excerpts, source hashes, focused verification commands, fixture hints, and merge-admission metadata. Slice tests can assert exact selected symbols, regions, source-file hashes, and expected counts; admission records also include a compact `selectedSurface` plus `semantic-slice-selected-surface` evidence with hashes and spans but no whole-repository source copy. It does not claim the patch is correct; it makes the context and conflicts machine-readable so admission scoring can combine changed ownership, focused test status, stale/source-hash checks, evidence, and semantic risk in one sortable record.
 
 Slice admission records add a compact `frontier.lang.semanticMergeScore.v1` score with semantic-selection, source-freshness, ownership-isolation, verification-evidence, and review-risk components. They are built for coordinator queues and dashboards: sort likely useful slices first, reject stale or empty slices early, and keep correctness proof separate from merge metadata.
 

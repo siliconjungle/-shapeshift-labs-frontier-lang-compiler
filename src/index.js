@@ -32,6 +32,7 @@ export { createUniversalCapabilityMatrix } from './internal/index-impl/createUni
 export { createUniversalConversionArtifacts } from './internal/index-impl/createUniversalConversionArtifacts.js';
 export { queryUniversalConversionArtifacts } from './universal-conversion-artifacts.js';
 export { createUniversalConversionPlan } from './internal/index-impl/createUniversalConversionPlan.js';
+export { createUniversalRuntimeCapabilityMatrix, queryUniversalRuntimeCapabilityMatrix, UniversalRuntimeCapabilityKinds, UniversalRuntimeHostProfiles } from './universal-runtime-capabilities.js';
 export { attachUniversalDialectRegistry, createUniversalDialectRecord, createUniversalDialectRegistry, createUniversalExternRecord, summarizeUniversalDialectRegistry, UniversalDialectConstructKinds, UniversalDialectProjectionDispositions } from './universal-dialect-registry.js';
 export { diffNativeSourceImports } from './internal/index-impl/diffNativeSourceImports.js';
 export { diffNativeSources } from './internal/index-impl/diffNativeSources.js';

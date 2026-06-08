@@ -100,7 +100,17 @@ async function convertFromTypescript() {
       sourceHash: payload.result.sourceHash,
       symbolCount: payload.result.summary.symbols,
       readiness: payload.result.summary.readiness,
-      projections: Object.keys(projections)
+      projections: Object.keys(projections),
+      semanticMergeReadiness: payload.result.routeExplanation?.semanticMerge?.readiness,
+      missingEvidence: payload.result.routeExplanation?.semanticMerge?.missingEvidence ?? [],
+      routeExplanation: (payload.result.routeExplanation?.routes ?? []).map((route) => ({
+        target: route.target,
+        mode: route.mode,
+        routeAction: route.routeAction,
+        readiness: route.readiness,
+        admissionAction: route.semanticMerge?.admissionAction,
+        missingEvidence: route.missingEvidence
+      }))
     });
   } catch (error) {
     state.result = errorResult(error);
@@ -155,15 +165,21 @@ function projectionSummaryText(projection) {
 function graphHtml(result) {
   const summary = result.summary || {};
   const frontier = result.frontier || {};
+  const routeExplanation = result.routeExplanation || {};
+  const semanticMerge = routeExplanation.semanticMerge || {};
   const symbols = frontier.symbols || [];
   const relations = frontier.relations || [];
+  const missingEvidence = semanticMerge.missingEvidence || [];
   return [
     '<div class="chipRow">',
     chip(summary.readiness, readinessClass(summary.readiness)),
+    chip('merge ' + (semanticMerge.readiness || 'unknown'), readinessClass(semanticMerge.readiness)),
+    chip(String(missingEvidence.length) + ' missing evidence', missingEvidence.length ? 'review' : 'ready'),
     chip(String(summary.losses || 0) + ' losses', 'review'),
     chip(String(summary.patchHints || 0) + ' patch hints', 'ready'),
     chip(projectionTargets(result), 'review'),
     '</div>',
+    routeExplanationHtml(routeExplanation),
     '<div class="sectionTitle">Symbols</div>',
     '<div class="graphGrid">',
     ...symbols.map((symbol) => nodeCard(symbol)),
@@ -180,6 +196,47 @@ function graphHtml(result) {
 function projectionTargets(result) {
   const targets = Object.keys(projectionSet(result));
   return (result.sourceLanguage || '-') + ' -> ' + (targets.length ? targets.join('/') : '-');
+}
+
+function routeExplanationHtml(explanation) {
+  const routes = explanation.routes || [];
+  if (!routes.length) return '';
+  const semanticMerge = explanation.semanticMerge || {};
+  return [
+    '<div class="sectionTitle">Route Explanation</div>',
+    '<section class="routeSummary">',
+    '<strong>' + escapeHtml('Semantic merge: ' + (semanticMerge.readiness || 'unknown')) + '</strong>',
+    '<span>' + escapeHtml((semanticMerge.admissionAction || 'prioritize') + ' / score ' + String(semanticMerge.score ?? 0)) + '</span>',
+    '</section>',
+    '<div class="routeGrid">',
+    ...routes.map((route) => routeCard(route)),
+    '</div>'
+  ].join('');
+}
+
+function routeCard(route) {
+  const semanticMerge = route.semanticMerge || {};
+  const missing = route.missingEvidenceDetails || [];
+  return '<article class="routeCard">' +
+    '<div class="routeCardHeader">' +
+    '<strong>' + escapeHtml((route.sourceLanguage || '-') + ' -> ' + (route.target || '-')) + '</strong>' +
+    chip(semanticMerge.readiness || route.readiness, readinessClass(semanticMerge.readiness || route.readiness)) +
+    '</div>' +
+    '<p>' + escapeHtml(route.explanation || '') + '</p>' +
+    '<dl class="routeFacts">' +
+    factHtml('Mode', route.mode) +
+    factHtml('Action', route.routeAction) +
+    factHtml('Adapter', route.adapter || 'none') +
+    factHtml('Admission', semanticMerge.admissionAction || 'prioritize') +
+    '</dl>' +
+    '<div class="missingEvidenceList">' +
+    missing.map((gap) => '<span title="' + escapeHtml(gap.summary) + '">' + escapeHtml(gap.label) + '</span>').join('') +
+    '</div>' +
+    '</article>';
+}
+
+function factHtml(label, value) {
+  return '<div><dt>' + escapeHtml(label) + '</dt><dd>' + escapeHtml(value || '-') + '</dd></div>';
 }
 
 function nodeCard(symbol) {

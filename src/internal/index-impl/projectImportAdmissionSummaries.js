@@ -1,8 +1,10 @@
 import{countBy,maxSemanticMergeReadiness,uniqueRecordsById,uniqueStrings}from'../../native-import-utils.js';
 import{createSemanticMergeCandidateAdmissionRecord,querySemanticMergeCandidateAdmissionOverlaps,sortSemanticMergeCandidateAdmissionRecords}from'./semanticMergeCandidateRecords.js';
+import{compactAdmissionSource,importLosses,sourceLossClasses,summarizeImportPreservation,summarizeParserEvidence}from'./projectImportAdmissionImportEvidence.js';
+import{sourceMissingEvidence,sourceMissingTasks,sourceSemanticMergeScore}from'./projectImportAdmissionTasks.js';
+import{candidateRisk,maxPreservationQuality,maxRisk,normalizeRisk}from'./projectImportAdmissionRanks.js';
 
-const riskRank=Object.freeze({low:0,medium:1,unknown:2,high:3});
-const preservationRank=Object.freeze({exact:0,lossy:1,missing:2,stale:3,empty:4});
+export{admissionLanguages}from'./projectImportAdmissionLanguageSummaries.js';
 
 export function projectAdmissionImports(imports,sourceRows,mergeCandidates){
   return imports.map((imported,index)=>{
@@ -18,47 +20,57 @@ export function projectAdmissionImports(imports,sourceRows,mergeCandidates){
       relations:semanticIndex?.relations?.length??0,
       facts:semanticIndex?.facts?.length??0
     };
+    const readiness=source.readiness??imported?.metadata?.semanticMergeReadiness??candidates[0]?.readiness??'ready';
+    const emptySemanticEvidence=Object.values(semanticCounts).reduce((sum,value)=>sum+value,0)===0;
+    const sourcePreservation=summarizeImportPreservation(imported,source);
+    const losses=importLosses(imported);
+    const lossClasses=sourceLossClasses(imported,losses);
+    const parserEvidence=summarizeParserEvidence(imported,source,losses);
+    const missingEvidence=sourceMissingEvidence({
+      imported,
+      source,
+      losses,
+      semanticCounts,
+      emptySemanticEvidence,
+      sourcePreservation,
+      parserEvidence
+    });
+    const nextMissingTasks=sourceMissingTasks({
+      source,
+      readiness,
+      semanticCounts,
+      emptySemanticEvidence,
+      sourcePreservation,
+      parserEvidence,
+      lossClasses,
+      losses,
+      missingEvidence,
+      candidates
+    });
     return {
       id:source.id??imported?.id,
       language:source.language??imported?.language??'unknown',
       sourcePath,
       sourceHash:source.sourceHash,
-      readiness:source.readiness??imported?.metadata?.semanticMergeReadiness??candidates[0]?.readiness??'ready',
+      readiness,
       semanticCounts,
-      emptySemanticEvidence:Object.values(semanticCounts).reduce((sum,value)=>sum+value,0)===0,
-      sourcePreservation:summarizeImportPreservation(imported,source),
+      emptySemanticEvidence,
+      parserEvidence,
+      lossClasses,
+      missingEvidence,
+      nextMissingTasks,
+      semanticMergeScore:sourceSemanticMergeScore({
+        readiness,
+        emptySemanticEvidence,
+        sourcePreservation,
+        parserEvidence,
+        missingEvidence,
+        candidates
+      }),
+      sourcePreservation,
       mergeCandidates:candidates
     };
   });
-}
-
-export function admissionLanguages(importSummaries){
-  const grouped=new Map();
-  for(const entry of importSummaries){
-    const key=entry.language??'unknown';
-    if(!grouped.has(key)) grouped.set(key,emptyLanguageRow(key));
-    const row=grouped.get(key);
-    row.sourceCount+=1;
-    row.sourcePaths.push(entry.sourcePath);
-    row.readiness=maxSemanticMergeReadiness(row.readiness,entry.readiness);
-    row.semanticSymbols+=entry.semanticCounts.symbols;
-    if(entry.emptySemanticEvidence) row.emptySemanticEvidenceSources+=1;
-    row.sourcePreservationQuality=maxPreservationQuality(row.sourcePreservationQuality,entry.sourcePreservation.quality);
-    if(entry.sourcePreservation.stale&&entry.sourcePath) row.staleSourcePaths.push(entry.sourcePath);
-    row.mergeCandidates+=entry.mergeCandidates.length;
-    row.highestRisk=maxRisk(row.highestRisk,entry.mergeCandidates.reduce((current,candidate)=>maxRisk(current,candidateRisk(candidate)),'low'));
-  }
-  const rows=[...grouped.values()].map((row)=>({
-    ...row,
-    sourcePaths:uniqueStrings(row.sourcePaths.filter(Boolean)),
-    staleSourcePaths:uniqueStrings(row.staleSourcePaths.filter(Boolean))
-  })).sort((left,right)=>left.language.localeCompare(right.language));
-  return {
-    total:rows.length,
-    byReadiness:countBy(rows.map((row)=>row.readiness)),
-    bySourcePreservationQuality:countBy(rows.map((row)=>row.sourcePreservationQuality)),
-    rows
-  };
 }
 
 export function admissionSemanticEvidence(projectResult,imports,importSummaries){
@@ -197,81 +209,4 @@ export function admissionMergeCandidates(projectResult,imports,mergeCandidates,l
     records,
     patchRisk:normalizeRisk(projectResult?.patch?.risk)
   };
-}
-
-export function candidateRisk(candidate,patch){
-  return normalizeRisk(candidate?.risk)??normalizeRisk(patch?.risk)??readinessRisk(candidate?.readiness);
-}
-
-export function maxRisk(left,right){
-  return riskRank[left]>=riskRank[right]?left:right;
-}
-
-export function maxPreservationQuality(left,right){
-  return preservationRank[left]>=preservationRank[right]?left:right;
-}
-
-function compactAdmissionSource(imported,index){
-  const semanticIndex=imported?.semanticIndex??imported?.universalAst?.semanticIndex;
-  const nativeAst=imported?.nativeAst??imported?.nativeSource?.ast;
-  const sourceMaps=imported?.sourceMaps??imported?.universalAst?.sourceMaps??[];
-  return {
-    id:imported?.id??`import_${index+1}`,
-    language:imported?.language??imported?.nativeSource?.language??nativeAst?.language,
-    sourcePath:imported?.sourcePath??imported?.nativeSource?.sourcePath??nativeAst?.sourcePath,
-    sourceHash:imported?.nativeSource?.sourceHash??nativeAst?.sourceHash,
-    parser:nativeAst?.parser??imported?.nativeSource?.parser,
-    sourceMapIds:sourceMaps.map((sourceMap)=>sourceMap.id).filter(Boolean),
-    sourceMapMappings:sourceMaps.reduce((sum,sourceMap)=>sum+(sourceMap.mappings?.length??0),0),
-    symbolCount:semanticIndex?.symbols?.length??0,
-    lossCount:imported?.losses?.length??nativeAst?.losses?.length??0,
-    evidenceCount:imported?.evidence?.length??0,
-    readiness:imported?.metadata?.semanticMergeReadiness??imported?.mergeCandidates?.[0]?.readiness
-  };
-}
-
-function summarizeImportPreservation(imported,source){
-  const nativeAst=imported?.nativeAst??imported?.nativeSource?.ast;
-  const record=imported?.metadata?.sourcePreservation
-    ??imported?.nativeSource?.metadata?.sourcePreservation
-    ??nativeAst?.metadata?.sourcePreservation
-    ??imported?.universalAst?.metadata?.sourcePreservation;
-  const sourceHash=source?.sourceHash??imported?.nativeSource?.sourceHash??nativeAst?.sourceHash;
-  const sourcePreservationLosses=(imported?.losses??nativeAst?.losses??[]).filter((loss)=>loss.kind==='sourcePreservation');
-  const stale=imported?.metadata?.sourceHashVerified===false
-    ||imported?.nativeSource?.metadata?.sourceHashVerified===false
-    ||nativeAst?.metadata?.sourceHashVerified===false
-    ||record?.metadata?.sourceHashVerified===false
-    ||Boolean(record?.sourceHash&&sourceHash&&record.sourceHash!==sourceHash);
-  const missing=!record;
-  const truncated=record?.summary?.truncated===true;
-  const exactSourceAvailable=record?.summary?.exactSourceAvailable===true;
-  const quality=stale?'stale':missing?'missing':truncated||!exactSourceAvailable||sourcePreservationLosses.length?'lossy':'exact';
-  return {quality,missing,stale,truncated,exactSourceAvailable,lossCount:sourcePreservationLosses.length,id:record?.id};
-}
-
-function emptyLanguageRow(language){
-  return {
-    language,
-    sourceCount:0,
-    sourcePaths:[],
-    readiness:'ready',
-    semanticSymbols:0,
-    emptySemanticEvidenceSources:0,
-    sourcePreservationQuality:'exact',
-    staleSourcePaths:[],
-    mergeCandidates:0,
-    highestRisk:'low'
-  };
-}
-
-function readinessRisk(readiness){
-  if(readiness==='blocked') return 'high';
-  if(readiness==='needs-review'||readiness==='ready-with-losses') return 'medium';
-  return 'low';
-}
-
-function normalizeRisk(value){
-  const risk=String(value??'').toLowerCase();
-  return Object.prototype.hasOwnProperty.call(riskRank,risk)?risk:undefined;
 }

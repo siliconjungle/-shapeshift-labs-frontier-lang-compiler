@@ -7,111 +7,32 @@ import type {
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { SemanticImportOwnershipRegion } from './semantic-sidecar.js';
 
-export type SemanticHistoryAdmissionStatus = 'proposed' | 'queued' | 'admitted' | 'needs-review' | 'blocked' | 'rejected' | string;
-export type SemanticHistoryReviewerStatus = 'unreviewed' | 'approved' | 'changes-requested' | 'reviewed' | 'rejected' | string;
-export type SemanticHistoryReplayLinkKind = 'patch' | 'slice' | 'sidecar' | 'run' | 'proof' | 'source' | 'command' | 'url' | 'replay' | string;
-export type SemanticHistoryOverlapKind = 'ownership' | 'conflict-key' | 'source' | 'source-path' | 'import' | 'semantic-candidate' | 'evidence' | 'proof' | 'replay' | 'base-hash' | 'target-hash';
-export type SemanticHistoryConflictReason = 'ownership-overlap' | 'semantic-conflict-key-overlap' | 'base-hash-mismatch' | 'target-hash-mismatch' | 'admission-blocked' | 'reviewer-rejected' | 'source-path-overlap' | string;
-
-export interface SemanticHistorySourceRef {
-  readonly id?: string;
-  readonly importId?: string;
-  readonly language?: FrontierSourceLanguage | string;
-  readonly sourcePath?: string;
-  readonly sourceHash?: string;
-  readonly baseHash?: string;
-  readonly targetHash?: string;
-  readonly metadata?: Record<string, unknown>;
-}
-
-export interface SemanticHistoryOwnershipRegionRef {
-  readonly id?: string;
-  readonly key: string;
-  readonly regionKind?: string;
-  readonly granularity?: string;
-  readonly language?: FrontierSourceLanguage | string;
-  readonly sourcePath?: string;
-  readonly sourceHash?: string;
-  readonly symbolId?: string;
-  readonly symbolName?: string;
-  readonly sourceSpan?: SourceSpan;
-  readonly metadata?: Record<string, unknown>;
-}
-
-export interface SemanticHistoryCandidateRef {
-  readonly id: string;
-  readonly importResultId?: string;
-  readonly patchId?: string;
-  readonly sourcePath?: string;
-  readonly baseHash?: string;
-  readonly targetHash?: string;
-  readonly readiness?: SemanticMergeReadiness | string;
-  readonly conflictKeys: readonly string[];
-  readonly ownershipKeys: readonly string[];
-  readonly evidenceIds: readonly string[];
-  readonly proofIds: readonly string[];
-  readonly replayIds: readonly string[];
-  readonly metadata?: Record<string, unknown>;
-}
-
-export interface SemanticHistoryReviewerState {
-  readonly status: SemanticHistoryReviewerStatus;
-  readonly reviewerId?: string;
-  readonly reviewedAt?: number | string;
-  readonly evidenceIds?: readonly string[];
-  readonly metadata?: Record<string, unknown>;
-}
-
-export interface SemanticHistoryAdmissionState {
-  readonly status: SemanticHistoryAdmissionStatus;
-  readonly readiness: SemanticMergeReadiness | string;
-  readonly admittedAt?: number | string;
-  readonly reviewerId?: string;
-  readonly reasonCodes?: readonly string[];
-  readonly evidenceIds?: readonly string[];
-  readonly metadata?: Record<string, unknown>;
-}
-
-export interface SemanticHistoryReplayLink {
-  readonly id: string;
-  readonly kind: SemanticHistoryReplayLinkKind;
-  readonly href?: string;
-  readonly path?: string;
-  readonly command?: string;
-  readonly hash?: string;
-  readonly targetId?: string;
-  readonly metadata?: Record<string, unknown>;
-}
-
-export interface SemanticHistoryRecordIndex {
-  readonly baseHashes: readonly string[];
-  readonly targetHashes: readonly string[];
-  readonly sourceIds: readonly string[];
-  readonly importIds: readonly string[];
-  readonly sourcePaths: readonly string[];
-  readonly sourceHashes: readonly string[];
-  readonly ownershipKeys: readonly string[];
-  readonly semanticCandidateIds: readonly string[];
-  readonly conflictKeys: readonly string[];
-  readonly evidenceIds: readonly string[];
-  readonly proofIds: readonly string[];
-  readonly replayIds: readonly string[];
-}
-
+import type { SemanticHistoryAdmissionStatus, SemanticHistoryReviewerStatus, SemanticHistoryReplayLinkKind, SemanticHistoryOverlapKind, SemanticHistoryConflictReason, SemanticHistoryClaimKind, SemanticHistoryClaimStatus, SemanticHistoryProofAttemptStatus, SemanticHistoryMergeDecisionStatus, SemanticHistoryActorRef, SemanticHistoryRecordSourceRef, SemanticHistorySourceRef, SemanticHistoryOwnershipRegionRef, SemanticHistoryCandidateRef, SemanticHistoryClaimRecord, SemanticHistoryImportedParserEvidenceRecord, SemanticHistoryProofAttemptRecord, SemanticHistoryPatchAncestryRecord, SemanticHistoryMergeDecisionRecord, SemanticHistoryClaimInput, SemanticHistoryImportedParserEvidenceInput, SemanticHistoryProofAttemptInput, SemanticHistoryPatchAncestryInput, SemanticHistoryMergeDecisionInput, SemanticHistoryReviewerState, SemanticHistoryAdmissionState, SemanticHistoryReplayLink, SemanticHistoryRecordIndex } from './semantic-history-records.js';
+export type { SemanticHistoryAdmissionStatus, SemanticHistoryReviewerStatus, SemanticHistoryReplayLinkKind, SemanticHistoryOverlapKind, SemanticHistoryConflictReason, SemanticHistoryClaimKind, SemanticHistoryClaimStatus, SemanticHistoryProofAttemptStatus, SemanticHistoryMergeDecisionStatus, SemanticHistoryActorRef, SemanticHistoryRecordSourceRef, SemanticHistorySourceRef, SemanticHistoryOwnershipRegionRef, SemanticHistoryCandidateRef, SemanticHistoryClaimRecord, SemanticHistoryImportedParserEvidenceRecord, SemanticHistoryProofAttemptRecord, SemanticHistoryPatchAncestryRecord, SemanticHistoryMergeDecisionRecord, SemanticHistoryClaimInput, SemanticHistoryImportedParserEvidenceInput, SemanticHistoryProofAttemptInput, SemanticHistoryPatchAncestryInput, SemanticHistoryMergeDecisionInput, SemanticHistoryReviewerState, SemanticHistoryAdmissionState, SemanticHistoryReplayLink, SemanticHistoryRecordIndex } from './semantic-history-records.js';
 export interface SemanticHistoryRecord {
   readonly kind: 'frontier.lang.semanticHistoryRecord';
   readonly version: 1;
   readonly id: string;
+  readonly stableId: string;
+  readonly hash: string;
   readonly createdAt: number | string;
   readonly baseHash?: string;
   readonly targetHash?: string;
   readonly language?: FrontierSourceLanguage | string;
   readonly sourcePath?: string;
+  readonly actor?: SemanticHistoryActorRef;
+  readonly recordSource?: SemanticHistoryRecordSourceRef;
   readonly sourceIds: readonly string[];
   readonly importIds: readonly string[];
   readonly sources: readonly SemanticHistorySourceRef[];
   readonly ownershipRegions: readonly SemanticHistoryOwnershipRegionRef[];
   readonly semanticCandidates: readonly SemanticHistoryCandidateRef[];
+  readonly acceptedFacts: readonly SemanticHistoryClaimRecord[];
+  readonly rejectedTheories: readonly SemanticHistoryClaimRecord[];
+  readonly importedParserEvidence: readonly SemanticHistoryImportedParserEvidenceRecord[];
+  readonly proofAttempts: readonly SemanticHistoryProofAttemptRecord[];
+  readonly patchAncestry: readonly SemanticHistoryPatchAncestryRecord[];
+  readonly mergeDecisions: readonly SemanticHistoryMergeDecisionRecord[];
   readonly evidenceIds: readonly string[];
   readonly proofIds: readonly string[];
   readonly reviewer: SemanticHistoryReviewerState;
@@ -124,6 +45,18 @@ export interface SemanticHistoryRecord {
 export interface CreateSemanticHistoryRecordInput {
   readonly id?: string;
   readonly createdAt?: number | string;
+  readonly actor?: SemanticHistoryActorRef | string;
+  readonly actorId?: string;
+  readonly actorKind?: string;
+  readonly actorRole?: string;
+  readonly recordSource?: SemanticHistoryRecordSourceRef | string;
+  readonly historySource?: SemanticHistoryRecordSourceRef | string;
+  readonly recordSourceId?: string;
+  readonly historySourceId?: string;
+  readonly runId?: string;
+  readonly jobId?: string;
+  readonly lane?: string;
+  readonly taskId?: string;
   readonly baseHash?: string;
   readonly targetHash?: string;
   readonly beforeHash?: string;
@@ -140,6 +73,21 @@ export interface CreateSemanticHistoryRecordInput {
   readonly sourceRefs?: readonly SemanticHistorySourceRef[] | SemanticHistorySourceRef;
   readonly ownershipRegions?: readonly (SemanticHistoryOwnershipRegionRef | SemanticImportOwnershipRegion)[] | SemanticHistoryOwnershipRegionRef | SemanticImportOwnershipRegion;
   readonly semanticCandidates?: readonly (Partial<SemanticHistoryCandidateRef> | SemanticMergeCandidateRecord)[] | Partial<SemanticHistoryCandidateRef> | SemanticMergeCandidateRecord;
+  readonly semanticClaims?: readonly SemanticHistoryClaimInput[] | SemanticHistoryClaimInput;
+  readonly claims?: readonly SemanticHistoryClaimInput[] | SemanticHistoryClaimInput;
+  readonly acceptedFacts?: readonly SemanticHistoryClaimInput[] | SemanticHistoryClaimInput;
+  readonly acceptedSemanticClaims?: readonly SemanticHistoryClaimInput[] | SemanticHistoryClaimInput;
+  readonly rejectedTheories?: readonly SemanticHistoryClaimInput[] | SemanticHistoryClaimInput;
+  readonly rejectedSemanticClaims?: readonly SemanticHistoryClaimInput[] | SemanticHistoryClaimInput;
+  readonly importedParserEvidence?: readonly SemanticHistoryImportedParserEvidenceInput[] | SemanticHistoryImportedParserEvidenceInput;
+  readonly parserEvidence?: readonly SemanticHistoryImportedParserEvidenceInput[] | SemanticHistoryImportedParserEvidenceInput;
+  readonly proofAttempts?: readonly SemanticHistoryProofAttemptInput[] | SemanticHistoryProofAttemptInput;
+  readonly proofs?: readonly SemanticHistoryProofAttemptInput[] | SemanticHistoryProofAttemptInput;
+  readonly patchAncestry?: readonly SemanticHistoryPatchAncestryInput[] | SemanticHistoryPatchAncestryInput;
+  readonly patchAncestors?: readonly SemanticHistoryPatchAncestryInput[] | SemanticHistoryPatchAncestryInput;
+  readonly ancestry?: readonly SemanticHistoryPatchAncestryInput[] | SemanticHistoryPatchAncestryInput;
+  readonly mergeDecisions?: readonly SemanticHistoryMergeDecisionInput[] | SemanticHistoryMergeDecisionInput;
+  readonly decisions?: readonly SemanticHistoryMergeDecisionInput[] | SemanticHistoryMergeDecisionInput;
   readonly mergeCandidates?: readonly SemanticMergeCandidateRecord[] | SemanticMergeCandidateRecord;
   readonly evidence?: readonly EvidenceRecord[];
   readonly evidenceIds?: readonly string[] | string;
@@ -158,9 +106,14 @@ export interface CreateSemanticHistoryRecordInput {
 
 export interface SemanticHistoryOverlapQueryOptions {
   readonly includeSourcePaths?: boolean;
+  readonly includeClaims?: boolean;
   readonly includeEvidence?: boolean;
   readonly includeProofs?: boolean;
   readonly includeReplay?: boolean;
+  readonly includePatches?: boolean;
+  readonly includeMergeDecisions?: boolean;
+  readonly includeActors?: boolean;
+  readonly includeRecordSources?: boolean;
   readonly includeBaseHashes?: boolean;
   readonly includeTargetHashes?: boolean;
   readonly conflictOnSourcePath?: boolean;
@@ -182,7 +135,7 @@ export declare const SemanticHistoryAdmissionStatuses: readonly SemanticHistoryA
 export declare const SemanticHistoryReviewerStatuses: readonly SemanticHistoryReviewerStatus[];
 export declare const SemanticHistoryOverlapKinds: readonly SemanticHistoryOverlapKind[];
 export declare const SemanticHistoryConflictReasons: readonly SemanticHistoryConflictReason[];
-export declare function createSemanticHistoryRecord(input?: CreateSemanticHistoryRecordInput, options?: { readonly id?: string; readonly createdAt?: number | string }): SemanticHistoryRecord;
+export declare function createSemanticHistoryRecord(input?: CreateSemanticHistoryRecordInput, options?: { readonly id?: string; readonly createdAt?: number | string; readonly actor?: SemanticHistoryActorRef | string; readonly actorId?: string; readonly actorKind?: string; readonly actorRole?: string; readonly recordSource?: SemanticHistoryRecordSourceRef | string; readonly historySource?: SemanticHistoryRecordSourceRef | string; readonly recordSourceId?: string; readonly historySourceId?: string; readonly runId?: string; readonly jobId?: string; readonly lane?: string; readonly taskId?: string }): SemanticHistoryRecord;
 export declare function querySemanticHistoryRecordOverlaps(records: SemanticHistoryRecord | readonly SemanticHistoryRecord[], options?: SemanticHistoryOverlapQueryOptions): readonly SemanticHistoryOverlapRecord[];
 export declare function semanticHistoryRecordsOverlap(left: SemanticHistoryRecord, right: SemanticHistoryRecord, options?: SemanticHistoryOverlapQueryOptions): boolean;
 export declare function semanticHistoryRecordsConflict(left: SemanticHistoryRecord, right: SemanticHistoryRecord, options?: SemanticHistoryOverlapQueryOptions): boolean;

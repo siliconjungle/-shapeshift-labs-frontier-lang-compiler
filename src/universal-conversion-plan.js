@@ -10,6 +10,10 @@ import {
 } from './coverage-matrix-profiles.js';
 import { createUniversalCapabilityMatrix } from './universal-capability-matrix.js';
 import {
+  createUniversalRuntimeCapabilityMatrix,
+  runtimeRouteForConversion
+} from './universal-runtime-capabilities.js';
+import {
   conversionMergeRefs,
   importsForConversionLanguage
 } from './universal-conversion-plan-merge-refs.js';
@@ -17,6 +21,7 @@ import {
   conversionMergeScore,
   conversionScoreComponents
 } from './universal-conversion-plan-scoring.js';
+import { conversionPlanSummary } from './universal-conversion-plan-summary.js';
 
 export function createUniversalConversionPlan(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
@@ -25,12 +30,21 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
     ? input.universalCapabilityMatrix
     : createUniversalCapabilityMatrix({ ...input, generatedAt }, context);
   const targets = conversionTargets(input, matrix, context);
+  const runtimeMatrix = input.universalRuntimeCapabilityMatrix?.kind === 'frontier.lang.universalRuntimeCapabilityMatrix'
+    ? input.universalRuntimeCapabilityMatrix
+    : createUniversalRuntimeCapabilityMatrix({
+      ...input,
+      generatedAt,
+      sourceLanguages: matrix.languages,
+      targets
+    }, context);
   const evidence = input.evidence ?? [];
   const routes = (matrix.languages ?? []).flatMap((language) => targets.map((target) => conversionRoute(language, target, {
     evidence,
     generatedAt,
     imports: input.imports ?? [],
-    matrix
+    matrix,
+    runtimeMatrix
   }, id)));
   return {
     kind: 'frontier.lang.universalConversionPlan',
@@ -41,6 +55,7 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
     summary: conversionPlanSummary(routes),
     matrices: {
       universalCapability: matrix,
+      runtimeCapabilities: runtimeMatrix,
       projectionReadiness: matrix.matrices?.projectionReadiness,
       projectionTargets: matrix.matrices?.projectionTargets
     },
@@ -90,6 +105,8 @@ function conversionRoute(language, target, input, planId) {
   const sourceTarget = nativeLanguageCompileTarget(language.language, language.aliases) ?? normalizeNativeLanguageId(language.language);
   const targetCell = (language.projection?.targets ?? []).find((entry) => entry.target === target);
   const readinessCell = projectionReadinessCell(input.matrix, language, target);
+  const runtimeRoute = runtimeRouteForConversion(input.runtimeMatrix, language, target);
+  const runtime = conversionRuntime(runtimeRoute);
   const mode = conversionMode(language, target, sourceTarget, targetCell);
   const blockers = conversionBlockers(language, targetCell, mode);
   const review = conversionReviewReasons(language, targetCell, mode);
@@ -115,6 +132,8 @@ function conversionRoute(language, target, input, planId) {
     adapterKind: targetCell?.adapterKind,
     sourceProjection: language.projection?.sourceProjection,
     projectionReadiness: readinessCell,
+    runtime,
+    runtimeAdapterRequirements: runtime.adapterRequirements,
     evidence: conversionEvidence(language, targetCell),
     missingEvidence: conversionMissingEvidence(language, targetCell, mode),
     blockers,
@@ -170,6 +189,32 @@ function conversionReviewReasons(language, targetCell, mode) {
     ...(mode === 'semantic-index-only' ? ['Route has semantic index evidence but no target code projection adapter.'] : []),
     ...(mode === 'target-adapter' ? ['Host target adapter evidence must be reviewed before accepting emitted target code.'] : [])
   ]);
+}
+
+function conversionRuntime(runtimeRoute) {
+  if (!runtimeRoute) {
+    return {
+      requiredCapabilities: [],
+      satisfiedCapabilities: [],
+      adapterRequirements: [],
+      missingCapabilities: [],
+      readiness: 'ready',
+      blockers: [],
+      review: []
+    };
+  }
+  return {
+    routeId: runtimeRoute.id,
+    source: runtimeRoute.source,
+    target: runtimeRoute.target,
+    requiredCapabilities: runtimeRoute.requiredCapabilities,
+    satisfiedCapabilities: runtimeRoute.satisfiedCapabilities,
+    adapterRequirements: runtimeRoute.adapterRequirements,
+    missingCapabilities: runtimeRoute.missingCapabilities,
+    readiness: runtimeRoute.readiness,
+    blockers: runtimeRoute.blockers,
+    review: runtimeRoute.review
+  };
 }
 
 function projectionReadinessCell(matrix, language, target) {
@@ -237,43 +282,4 @@ function conversionTasks(language, target, mode, blockers, review) {
     ...(mode === 'target-adapter' ? [`run and verify ${language.language} to ${target} target adapter`] : []),
     ...(blockers.length || review.length ? [`collect proof, replay, or oracle evidence for ${language.language} to ${target}`] : [])
   ]);
-}
-
-function conversionPlanSummary(routes) {
-  const summary = {
-    routes: routes.length,
-    byMode: {},
-    byReadiness: {},
-    byAdmissionAction: {},
-    readyRoutes: 0,
-    reviewRoutes: 0,
-    blockedRoutes: 0,
-    preserveSourceRoutes: 0,
-    targetAdapterRoutes: 0,
-    stubOnlyRoutes: 0,
-    semanticIndexOnlyRoutes: 0,
-    missingEvidence: 0,
-    blockers: 0,
-    reviewReasons: 0,
-    autoMergeClaims: 0,
-    semanticEquivalenceClaims: 0
-  };
-  for (const route of routes) {
-    summary.byMode[route.mode] = (summary.byMode[route.mode] ?? 0) + 1;
-    summary.byReadiness[route.readiness] = (summary.byReadiness[route.readiness] ?? 0) + 1;
-    summary.byAdmissionAction[route.admissionAction] = (summary.byAdmissionAction[route.admissionAction] ?? 0) + 1;
-    if (route.readiness === 'ready') summary.readyRoutes += 1;
-    if (route.readiness === 'needs-review' || route.readiness === 'ready-with-losses') summary.reviewRoutes += 1;
-    if (route.readiness === 'blocked') summary.blockedRoutes += 1;
-    if (route.mode === 'preserve-source') summary.preserveSourceRoutes += 1;
-    if (route.mode === 'target-adapter') summary.targetAdapterRoutes += 1;
-    if (route.mode === 'stub-only') summary.stubOnlyRoutes += 1;
-    if (route.mode === 'semantic-index-only') summary.semanticIndexOnlyRoutes += 1;
-    summary.missingEvidence += route.missingEvidence.length;
-    summary.blockers += route.blockers.length;
-    summary.reviewReasons += route.review.length;
-    if (route.autoMergeClaim) summary.autoMergeClaims += 1;
-    if (route.semanticEquivalenceClaim) summary.semanticEquivalenceClaims += 1;
-  }
-  return summary;
 }

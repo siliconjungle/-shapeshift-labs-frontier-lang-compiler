@@ -10,6 +10,7 @@ import {
   normalizeNativeLanguageId,
   uniqueStrings
 } from './native-import-utils.js';
+import { packageRows } from './language-adapter-package-rows.js';
 
 export const LanguageAdapterPackageReleaseReadinessStatuses = Object.freeze([
   'ready',
@@ -17,23 +18,6 @@ export const LanguageAdapterPackageReleaseReadinessStatuses = Object.freeze([
   'needs-review',
   'blocked'
 ]);
-
-const packageRows = [
-  row('@shapeshift-labs/frontier-lang-typescript', '0.3.8', 'typescript', 'typescript-compiler-api', { target: 'typescript' }),
-  row('@shapeshift-labs/frontier-lang-javascript', '0.2.8', 'javascript', 'estree', { target: 'javascript', formats: ['estree', 'babel'] }),
-  row('@shapeshift-labs/frontier-lang-rust', '0.2.8', 'rust', 'rust-syn', { target: 'rust', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'macroExpansionEvidence'] }),
-  row('@shapeshift-labs/frontier-lang-python', '0.2.8', 'python', 'python-ast', { target: 'python', formats: ['python-ast', 'libcst'] }),
-  row('@shapeshift-labs/frontier-lang-c', '0.2.8', 'c', 'clang-ast-json', { target: 'c', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'compileCommandsHash', 'preprocessorRecordsHash'] }),
-  platform('@shapeshift-labs/frontier-lang-java', '0.1.8', 'java', 'java-ast', ['semanticdb', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-kotlin', '0.1.8', 'kotlin', 'kotlin-psi', ['semanticdb', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-swift', '0.1.8', 'swift', 'swift-syntax', ['sourcekit-lsp', 'lsp']),
-  platform('@shapeshift-labs/frontier-lang-csharp', '0.1.8', 'csharp', 'roslyn-csharp', ['lsp']),
-  platform('@shapeshift-labs/frontier-lang-go', '0.1.8', 'go', 'go-ast', ['lsp']),
-  platform('@shapeshift-labs/frontier-lang-clang', '0.1.8', 'c', 'clang-ast-json', ['lsp'], {
-    supportedLanguages: ['c', 'cpp'],
-    proofKeys: ['parserAst', 'semanticIndex', 'compileCommandsHash', 'preprocessorRecordsHash']
-  })
-];
 
 export const LanguageAdapterPackageContracts = Object.freeze(packageRows.map(createLanguageAdapterPackageContract));
 
@@ -131,7 +115,7 @@ export function getLanguageAdapterPackageContract(ref, contracts = LanguageAdapt
     contract.packageName === text ||
     contract.package.name === text ||
     contract.package.adapterId === text ||
-    contract.sourceParser.language === normalized
+    (normalized && contractSupportsLanguage(contract, normalized))
   );
 }
 
@@ -142,7 +126,7 @@ export function queryLanguageAdapterPackageContracts(query = {}, contracts = Lan
   return (contracts ?? []).filter((contract) =>
     (!query.packageName || contract.packageName === query.packageName) &&
     (!query.packageClass || contract.package.packageClass === query.packageClass) &&
-    (!language || contract.sourceParser.language === language) &&
+    contractSupportsLanguage(contract, language) &&
     (!target || contract.targetProjection.targets.includes(target)) &&
     (!semanticFormat || contract.semanticIndex.formats.map((format) => format.toLowerCase()).includes(semanticFormat)) &&
     (query.releaseReady === undefined || contract.releaseReadiness.releaseReady === query.releaseReady) &&
@@ -166,44 +150,6 @@ export function summarizeLanguageAdapterPackageContracts(contracts = LanguageAda
     byPackageClass: countContracts(list, (contract) => contract.package.packageClass),
     byReleaseReadiness: countContracts(list, (contract) => contract.releaseReadiness.status)
   });
-}
-
-function row(packageName, packageVersion, language, parser, input = {}) {
-  return {
-    packageName,
-    packageVersion,
-    language,
-    parser,
-    supportedFormats: input.formats,
-    target: input.target,
-    packageClass: 'target-projection',
-    releaseReadiness: { status: 'ready-with-losses', releaseReady: true, versionSource: 'package-json-dependency' },
-    semanticIndex: { formats: ['frontier-semantic-index', 'scip', 'lsif', 'lsp'], hostEvidenceRequired: false },
-    proofKeys: input.proofKeys
-  };
-}
-
-function platform(packageName, packageVersion, language, parser, semanticFormats, input = {}) {
-  const published = packageVersion !== '0.0.0';
-  return {
-    packageName,
-    packageVersion,
-    language,
-    parser,
-    supportedLanguages: input.supportedLanguages,
-    supportedFormats: input.formats,
-    packageClass: 'platform-importer',
-    targetProjection: { targets: [], caveats: input.targetCaveats },
-    releaseReadiness: {
-      status: published ? 'ready-with-losses' : 'needs-review',
-      releaseReady: published,
-      versionSource: published ? 'static-package-catalog' : 'related-package-catalog-placeholder',
-      signals: input.signals
-    },
-    semanticIndex: { formats: ['frontier-semantic-index', ...semanticFormats], hostEvidenceRequired: true },
-    proofEvidence: { hostEvidenceRequired: true, requiredEvidenceKeys: input.proofKeys ?? ['parserAst', 'semanticIndex', 'buildGraphEvidence'] },
-    parserCaveats: input.parserCaveats
-  };
 }
 
 function projectionRows(input, language) {
@@ -272,6 +218,15 @@ function targetProjectionCaveats(targetRows, packageClass) {
   const caveats = ['Target projection support is a package-contract claim; semantic equivalence still depends on parser, source-map, and proof evidence.'];
   if (packageClass !== 'target-projection') caveats.push('Platform importer contracts do not ship target projection adapters from this facade.');
   return caveats;
+}
+
+function contractSupportsLanguage(contract, language) {
+  if (!language) return true;
+  const languageIds = [
+    contract.sourceParser?.language,
+    ...(contract.sourceParser?.supportedLanguages ?? [])
+  ].map(normalizeNativeLanguageId).filter(Boolean);
+  return languageIds.includes(language);
 }
 
 function adapterFamily(language, parser) {

@@ -1,5 +1,6 @@
-import{idFragment,maxSemanticMergeReadiness,uniqueStrings}from'../../native-import-utils.js';
+import{idFragment,maxSemanticMergeReadiness,uniqueByEvidenceId,uniqueStrings}from'../../native-import-utils.js';
 import{testSemanticSlice}from'./testSemanticSlice.js';
+import{semanticSliceAdmissionSelectedSurface,semanticSliceSelectedSurfaceEvidence}from'./semanticSliceAdmissionSurface.js';
 
 const readinessScore=Object.freeze({ready:100,'ready-with-losses':78,'needs-review':48,blocked:0});
 const readinessRank=Object.freeze({ready:3,'ready-with-losses':2,'needs-review':1,blocked:0});
@@ -19,6 +20,12 @@ export function createSemanticSliceAdmissionRecord(slice,options={}){
   const value=mergeScoreValue(components,readiness);
   const action=admissionAction(slice,readiness,components,testResult);
   const risk=admissionRisk(readiness,components,testResult);
+  const selectedSurface=semanticSliceAdmissionSelectedSurface(slice);
+  const evidence=uniqueByEvidenceId([
+    ...(slice?.evidence??[]),
+    ...(options.evidence??[]),
+    semanticSliceSelectedSurfaceEvidence(slice,selectedSurface,testResult,readiness,action)
+  ]);
   return{
     kind:'frontier.lang.semanticSliceAdmission',
     version:1,
@@ -61,6 +68,8 @@ export function createSemanticSliceAdmissionRecord(slice,options={}){
     conflictKeys:uniqueStrings(slice?.mergeAdmission?.conflictKeys??[]),
     ownershipKeys:uniqueStrings(slice?.mergeAdmission?.ownershipKeys??[]),
     sourceHashes:slice?.mergeAdmission?.sourceHashes??[],
+    selectedSurface,
+    evidence,
     testResult,
     reasons:uniqueStrings([
       ...(slice?.mergeAdmission?.reasons??[]),

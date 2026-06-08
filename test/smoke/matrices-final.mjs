@@ -18,6 +18,7 @@ import {
   createGoAstNativeImporterAdapter,
   createJavaAstNativeImporterAdapter,
   createKotlinPsiNativeImporterAdapter,
+  createSemanticMergeCandidateAdmissionRecord,
   createNativeImportCoverageMatrix,
   createNativeParserAstFormatMatrix,
   createNativeParserFeatureMatrix,
@@ -30,7 +31,11 @@ import {
   createTypeScriptCompilerNativeImporterAdapter,
   createUniversalAstFromDocument,
   createUniversalCapabilityMatrix,
+  createUniversalConversionArtifacts,
+  createUniversalConversionPlan,
   getNativeParserAstFormatProfile,
+  classifyNativeImportReadiness,
+  diffNativeSources,
   NativeImportLanguageProfiles,
   NativeParserAstFormatProfiles,
   NativeParserAstFormats,
@@ -38,7 +43,10 @@ import {
   NativeParserFeatureCoverageStatuses,
   ProjectionTargetLossClasses,
   queryNativeParserFeatureMatrix,
+  queryUniversalConversionPlan,
   readUniversalAstJson,
+  sortSemanticMergeCandidateAdmissionRecords,
+  summarizeNativeImportLosses,
   writeUniversalAstJson
 } from './compiler-api.mjs';
 

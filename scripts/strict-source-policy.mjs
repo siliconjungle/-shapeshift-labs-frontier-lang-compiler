@@ -5,7 +5,27 @@ import { execFileSync } from 'node:child_process';
 
 const root = process.cwd();
 const policyPath = path.join(root, 'frontier.source-policy.json');
-const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8')).sourcePolicy;
+const defaultSourcePolicy = {
+  sourceExtensions: ['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx'],
+  excludedSegments: ['node_modules', 'dist', 'build', 'coverage', 'results', 'reports', 'agent-runs', 'agent-worktrees', '.cache', '.next', '.turbo', 'out'],
+  allowedLocalImportExtensions: ['.js', '.mjs', '.cjs', '.json', '.node', '.ts', '.tsx', '.jsx'],
+  localImportExtensions: 'source',
+  maxLinesPerFile: 320,
+  maxCharsPerFile: 24000,
+  maxFrontierComponentsPerFile: 1,
+  allowedOversizedFiles: {}
+};
+const configuredSourcePolicy = fs.existsSync(policyPath)
+  ? JSON.parse(fs.readFileSync(policyPath, 'utf8')).sourcePolicy
+  : {};
+const policy = {
+  ...defaultSourcePolicy,
+  ...configuredSourcePolicy,
+  allowedOversizedFiles: {
+    ...defaultSourcePolicy.allowedOversizedFiles,
+    ...(configuredSourcePolicy.allowedOversizedFiles ?? {})
+  }
+};
 const sourceExtensions = new Set(policy.sourceExtensions ?? ['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx']);
 const excludedSegments = new Set(policy.excludedSegments ?? ['node_modules', 'dist', 'build', 'coverage', 'results', 'reports', 'agent-runs', 'agent-worktrees', '.cache', '.next', '.turbo', 'out']);
 const localImportExtensions = new Set(policy.allowedLocalImportExtensions ?? ['.js', '.mjs', '.cjs', '.json', '.node', '.ts', '.tsx', '.jsx']);

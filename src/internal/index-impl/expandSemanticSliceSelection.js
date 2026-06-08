@@ -41,7 +41,6 @@ export function expandSemanticSliceSelection(records, selection) {
       }
       for (const node of records.nativeNodes) {
         if (!selection.selectedNativeNodes.has(node.id)) continue;
-        for (const child of node.children ?? []) changed = addSet(selection.selectedNativeNodes, child) || changed;
         const parent = childToParent.get(node.id);
         if (parent) changed = addSet(selection.selectedNativeNodes, parent) || changed;
       }

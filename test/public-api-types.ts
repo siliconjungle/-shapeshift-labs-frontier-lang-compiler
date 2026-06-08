@@ -36,6 +36,8 @@ type ExpectedPublicRuntimeExport =
   | 'SemanticHistoryReviewerStatuses'
   | 'UniversalDialectConstructKinds'
   | 'UniversalDialectProjectionDispositions'
+  | 'UniversalRuntimeCapabilityKinds'
+  | 'UniversalRuntimeHostProfiles'
   | 'ExternalSemanticIndexFormats'
   | 'attachUniversalDialectRegistry'
   | 'classifyNativeImportReadiness'
@@ -60,6 +62,7 @@ type ExpectedPublicRuntimeExport =
   | 'createUniversalCapabilityMatrix'
   | 'createUniversalConversionArtifacts'
   | 'createUniversalConversionPlan'
+  | 'createUniversalRuntimeCapabilityMatrix'
   | 'createUniversalDialectRecord'
   | 'createUniversalDialectRegistry'
   | 'createUniversalExternRecord'
@@ -95,6 +98,7 @@ type ExpectedPublicRuntimeExport =
   | 'querySemanticMergeConflictClasses'
   | 'queryUniversalConversionArtifacts'
   | 'queryUniversalConversionPlan'
+  | 'queryUniversalRuntimeCapabilityMatrix'
   | 'importExternalSemanticIndex'
   | 'importNativeProject'
   | 'importNativeSource'
@@ -124,8 +128,14 @@ type ExpectedPublicRuntimeExport =
   | 'writeUniversalAstJson';
 
 type PublicRuntimeExportsMatchDeclarations = Expect<Equal<keyof typeof compilerApi, ExpectedPublicRuntimeExport>>;
+type RoundtripRouteAuditBuckets = Expect<Equal<keyof compilerApi.NativeRoundtripRoutePathsAudit, 'reversible' | 'preservedSource' | 'stubOnly' | 'adapterProjected'>>;
+type RoundtripSemanticEquivalenceClaimStaysFalse = Expect<Equal<compilerApi.NativeRoundtripSemanticEquivalenceAudit['claimed'], false>>;
+type RoundtripRouteSourceMapPrecisionIsTyped = compilerApi.NativeRoundtripRouteSourceMapsAudit['output']['precision'];
 
 void (null as unknown as PublicRuntimeExportsMatchDeclarations);
+void (null as unknown as RoundtripRouteAuditBuckets);
+void (null as unknown as RoundtripSemanticEquivalenceClaimStaysFalse);
+void (null as unknown as RoundtripRouteSourceMapPrecisionIsTyped);
 
 const semanticPatchBundle = compilerApi.createSemanticPatchBundleRecord({
   language: 'javascript',
@@ -213,4 +223,37 @@ const typedAdmissionQuery: readonly compilerApi.UniversalConversionRouteArtifact
     risk: typedAdmission.risk
   });
 
+const typedSliceOptions: compilerApi.CreateSemanticSliceOptions = {
+  expectedSymbols: ['typedSymbol'],
+  expectedRegions: ['typedRegion'],
+  expectedSourceHashes: { 'src/typed.ts': 'fnv1a32:typed' },
+  expectedSymbolCount: 1,
+  expectedRegionCount: 1,
+  expectedSourceFileCount: 1
+};
+const typedSliceTestOptions: compilerApi.TestSemanticSliceOptions = {
+  expectedSymbolRefs: ['typedSymbol'],
+  expectedRegionRefs: ['typedRegion'],
+  expectedSourceHashes: new Map<string, string>([['src/typed.ts', 'fnv1a32:typed']])
+};
+const typedSelectedSurface: compilerApi.SemanticSliceAdmissionSelectedSurface = {
+  entryRefs: ['symbol:typedSymbol'],
+  matchedEntryRefs: ['symbol:typedSymbol'],
+  unresolvedEntryRefs: [],
+  symbols: [{ id: 'typedSymbol', name: 'typedSymbol' }],
+  ownershipRegions: [{ id: 'typedRegion', key: 'region:typedRegion' }],
+  nativeNodes: [],
+  relations: [],
+  occurrences: [],
+  sourceMapLinks: [],
+  sourceSpans: [],
+  sourceFiles: [{ path: 'src/typed.ts', sourceHash: 'fnv1a32:typed', spanCount: 1, excerptCount: 0, sourceTextAvailable: false }],
+  sourceHashes: [{ path: 'src/typed.ts', sourceHash: 'fnv1a32:typed' }],
+  conflictKeys: ['symbol:typedSymbol'],
+  ownershipKeys: ['region:typedRegion']
+};
+
 void typedAdmissionQuery;
+void typedSliceOptions;
+void typedSliceTestOptions;
+void typedSelectedSurface;

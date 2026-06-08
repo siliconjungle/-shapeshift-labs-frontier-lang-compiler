@@ -105,59 +105,8 @@ export interface NativeImportRoundtripReadinessClassification {
 
 export type NativeRoundtripEvidenceStatus = NativeImportRoundtripReadinessStatus | 'target-adapter';
 
-export type NativeRoundtripSourceMapPrecision = SourceMapMappingRecord['precision'] | 'line' | 'declaration' | 'estimated' | 'unknown' | 'none' | string;
-
-export type NativeRoundtripAuditDisposition =
-  | 'reversible'
-  | 'preserved-source'
-  | 'stub-only'
-  | 'adapter-projected'
-  | 'review-required';
-
-export type NativeRoundtripAuditClaim =
-  | 'source-text-reversible'
-  | 'source-preserved'
-  | 'declaration-stubs-only'
-  | 'host-adapter-projected'
-  | 'review-required';
-
-export interface NativeRoundtripSourceMapEvidence {
-  readonly total: number;
-  readonly ids: readonly string[];
-  readonly mappings: number;
-  readonly precision: NativeRoundtripSourceMapPrecision;
-  readonly byPrecision: Readonly<Record<string, number>>;
-  readonly byOrigin: Readonly<Record<string, number>>;
-  readonly withSourceSpan: number;
-  readonly withGeneratedSpan: number;
-  readonly withSemanticSymbol: number;
-  readonly targetPaths: readonly string[];
-}
-
-export interface NativeRoundtripAuditSignal {
-  readonly schema: 'frontier.lang.nativeRoundtripAuditSignal';
-  readonly version: 1;
-  readonly disposition: NativeRoundtripAuditDisposition;
-  readonly claim: NativeRoundtripAuditClaim;
-  readonly sourceLanguage?: FrontierSourceLanguage | string;
-  readonly target?: CompileTarget | string;
-  readonly sameLanguage: boolean;
-  readonly outputMode?: NativeSourceCompileOutputMode;
-  readonly projectionMode?: NativeSourceProjectionMode;
-  readonly sourceHashVerified: boolean;
-  readonly outputSourceMapPrecision: NativeRoundtripSourceMapPrecision;
-  readonly universalSourceMapPrecision: NativeRoundtripSourceMapPrecision;
-  readonly targetProjectionAdapterId?: string;
-  readonly targetCoverageLossClass?: ProjectionTargetLossClass | string;
-  readonly reviewRequired: boolean;
-  readonly semanticMergeReadiness: SemanticMergeReadiness;
-  readonly semanticEquivalenceClaim: false;
-  readonly autoMergeClaim: false;
-  readonly blockingLossCount: number;
-  readonly reviewLossCount: number;
-  readonly reasonCodes: readonly string[];
-}
-
+import type { NativeRoundtripSourceMapPrecision, NativeRoundtripAuditDisposition, NativeRoundtripAuditClaim, NativeRoundtripSourceMapEvidence, NativeRoundtripRoutePathSignal, NativeRoundtripRoutePathsAudit, NativeRoundtripSourcePreservationAudit, NativeRoundtripGeneratedStubsAudit, NativeRoundtripAdapterProjectionAudit, NativeRoundtripRouteSourceMapsAudit, NativeRoundtripHashChecksAudit, NativeRoundtripCommentsTriviaAudit, NativeRoundtripTargetCoverageAudit, NativeRoundtripSemanticEquivalenceAudit, NativeRoundtripAuditSignal } from './roundtrip-audit.js';
+export type { NativeRoundtripSourceMapPrecision, NativeRoundtripAuditDisposition, NativeRoundtripAuditClaim, NativeRoundtripSourceMapEvidence, NativeRoundtripRoutePathSignal, NativeRoundtripRoutePathsAudit, NativeRoundtripSourcePreservationAudit, NativeRoundtripGeneratedStubsAudit, NativeRoundtripAdapterProjectionAudit, NativeRoundtripRouteSourceMapsAudit, NativeRoundtripHashChecksAudit, NativeRoundtripCommentsTriviaAudit, NativeRoundtripTargetCoverageAudit, NativeRoundtripSemanticEquivalenceAudit, NativeRoundtripAuditSignal } from './roundtrip-audit.js';
 export interface NativeRoundtripEvidenceMetadata {
   readonly status: NativeRoundtripEvidenceStatus;
   readonly semanticMergeReadiness: SemanticMergeReadiness;

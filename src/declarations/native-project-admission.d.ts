@@ -9,6 +9,107 @@ export type NativeProjectImportAdmissionPriority = 'low' | 'normal' | 'high' | '
 export type NativeProjectImportAdmissionRisk = 'low' | 'medium' | 'high' | 'unknown';
 export type NativeProjectSourcePreservationQuality = 'exact' | 'lossy' | 'missing' | 'stale' | 'empty';
 
+export interface NativeProjectAdmissionParserEvidence {
+  readonly parser?: string;
+  readonly astFormat?: string;
+  readonly exactness?: string;
+  readonly semanticCoverageLevel?: string;
+  readonly exactAst: boolean;
+  readonly tokens: boolean;
+  readonly trivia: boolean;
+  readonly diagnostics: boolean;
+  readonly diagnosticCount: number;
+  readonly sourceRanges: boolean;
+  readonly generatedRanges: boolean;
+  readonly evidenceRecords: number;
+  readonly missing: boolean;
+}
+
+export interface NativeProjectAdmissionParserEvidenceSummary {
+  readonly parsers: readonly string[];
+  readonly byParser: Readonly<Record<string, number>>;
+  readonly byExactness: Readonly<Record<string, number>>;
+  readonly semanticCoverageLevels: readonly string[];
+  readonly exactAstSources: number;
+  readonly tokenSources: number;
+  readonly triviaSources: number;
+  readonly sourceRangeSources: number;
+  readonly generatedRangeSources: number;
+  readonly diagnosticsSources: number;
+  readonly missingParserSources: number;
+  readonly evidenceRecords: number;
+}
+
+export interface NativeProjectAdmissionSemanticMergeScoreSummary {
+  readonly sourceCount: number;
+  readonly min: number;
+  readonly max: number;
+  readonly average: number;
+  readonly sortKey: number;
+  readonly lowestSourcePaths: readonly string[];
+}
+
+export interface NativeProjectAdmissionMissingEvidenceHint {
+  readonly evidenceKey?: string;
+  readonly task: string;
+  readonly count: number;
+  readonly sourcePaths: readonly string[];
+  readonly languages: readonly string[];
+  readonly lossIds: readonly string[];
+  readonly lossKinds: readonly string[];
+  readonly lossClasses: readonly string[];
+  readonly readiness: SemanticMergeReadiness;
+}
+
+export interface NativeProjectAdmissionTaskHint {
+  readonly id?: string;
+  readonly task: string;
+  readonly reason?: string;
+  readonly priority: NativeProjectImportAdmissionPriority;
+  readonly readiness: SemanticMergeReadiness;
+  readonly count: number;
+  readonly sourcePaths: readonly string[];
+  readonly languages: readonly string[];
+  readonly lossClasses: readonly string[];
+  readonly evidenceKeys: readonly string[];
+}
+
+export interface NativeProjectAdmissionSourceSummary {
+  readonly id?: string;
+  readonly language: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly readiness: SemanticMergeReadiness;
+  readonly parser?: string;
+  readonly parserEvidence: NativeProjectAdmissionParserEvidence;
+  readonly semanticCounts: {
+    readonly symbols: number;
+    readonly occurrences: number;
+    readonly relations: number;
+    readonly facts: number;
+  };
+  readonly semanticSymbols: number;
+  readonly emptySemanticEvidence: boolean;
+  readonly sourcePreservationQuality: NativeProjectSourcePreservationQuality;
+  readonly lossClasses: readonly string[];
+  readonly semanticMergeScore: number;
+  readonly missingEvidence: readonly NativeProjectAdmissionMissingEvidenceHint[];
+  readonly nextMissingTask?: NativeProjectAdmissionTaskHint;
+  readonly nextMissingTasks: readonly NativeProjectAdmissionTaskHint[];
+}
+
+export interface NativeProjectAdmissionLanguageReadinessSummary {
+  readonly language: FrontierSourceLanguage | string;
+  readonly readiness: SemanticMergeReadiness;
+  readonly sourceCount: number;
+  readonly sourcePaths: readonly string[];
+  readonly byLossClass: Readonly<Record<string, number>>;
+  readonly parserEvidence: NativeProjectAdmissionParserEvidenceSummary;
+  readonly semanticMergeScore: NativeProjectAdmissionSemanticMergeScoreSummary;
+  readonly topMissingEvidence: readonly NativeProjectAdmissionMissingEvidenceHint[];
+  readonly nextMissingTasks: readonly NativeProjectAdmissionTaskHint[];
+}
+
 export interface NativeProjectAdmissionLanguageSummary {
   readonly language: FrontierSourceLanguage | string;
   readonly sourceCount: number;
@@ -20,12 +121,26 @@ export interface NativeProjectAdmissionLanguageSummary {
   readonly staleSourcePaths: readonly string[];
   readonly mergeCandidates: number;
   readonly highestRisk: NativeProjectImportAdmissionRisk;
+  readonly byReadiness: Readonly<Record<string, number>>;
+  readonly byLossClass: Readonly<Record<string, number>>;
+  readonly parserEvidence: NativeProjectAdmissionParserEvidenceSummary;
+  readonly semanticMergeScore: NativeProjectAdmissionSemanticMergeScoreSummary;
+  readonly topMissingEvidence: readonly NativeProjectAdmissionMissingEvidenceHint[];
+  readonly nextMissingTasks: readonly NativeProjectAdmissionTaskHint[];
 }
 
 export interface NativeProjectAdmissionLanguages {
   readonly total: number;
   readonly byReadiness: Readonly<Record<string, number>>;
+  readonly bySourceReadiness: Readonly<Record<string, number>>;
+  readonly byLossClass: Readonly<Record<string, number>>;
   readonly bySourcePreservationQuality: Readonly<Record<string, number>>;
+  readonly parserEvidence: NativeProjectAdmissionParserEvidenceSummary;
+  readonly semanticMergeScore: NativeProjectAdmissionSemanticMergeScoreSummary;
+  readonly topMissingEvidence: readonly NativeProjectAdmissionMissingEvidenceHint[];
+  readonly nextMissingTasks: readonly NativeProjectAdmissionTaskHint[];
+  readonly sourceRows: readonly NativeProjectAdmissionSourceSummary[];
+  readonly readinessRows: readonly NativeProjectAdmissionLanguageReadinessSummary[];
   readonly rows: readonly NativeProjectAdmissionLanguageSummary[];
 }
 

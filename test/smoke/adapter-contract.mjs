@@ -100,6 +100,23 @@ const publishedPlatformPackages = [
   ['@shapeshift-labs/frontier-lang-go', '0.1.8', 'go', 'go-ast', 'lsp'],
   ['@shapeshift-labs/frontier-lang-clang', '0.1.8', 'c', 'clang-ast-json', 'lsp']
 ];
+const plannedPlatformPackages = [
+  { packageName: '@shapeshift-labs/frontier-lang-lisp', language: 'lisp', queryLanguage: 'scheme', parserFormat: 'tree-sitter', semanticFormat: 'lsp', supportedLanguage: 'scheme', caveat: 'macro' },
+  { packageName: '@shapeshift-labs/frontier-lang-haskell', language: 'haskell', parserFormat: 'ghc-api', semanticFormat: 'lsp', caveat: 'template haskell' },
+  { packageName: '@shapeshift-labs/frontier-lang-erlang', language: 'erlang', parserFormat: 'erl-parse', semanticFormat: 'lsp', caveat: 'parse transforms' },
+  { packageName: '@shapeshift-labs/frontier-lang-elixir', language: 'elixir', parserFormat: 'elixir-quoted', semanticFormat: 'lsp', caveat: 'macro expansion' },
+  { packageName: '@shapeshift-labs/frontier-lang-ruby', language: 'ruby', parserFormat: 'prism', semanticFormat: 'lsp', caveat: 'metaprogramming' },
+  { packageName: '@shapeshift-labs/frontier-lang-php', language: 'php', parserFormat: 'php-parser', semanticFormat: 'lsp', caveat: 'composer' },
+  { packageName: '@shapeshift-labs/frontier-lang-lua', language: 'lua', parserFormat: 'luaparse', semanticFormat: 'lsp', caveat: 'metatables' },
+  { packageName: '@shapeshift-labs/frontier-lang-r', language: 'r', parserFormat: 'r-parser', semanticFormat: 'lsp', caveat: 'non-standard evaluation' },
+  { packageName: '@shapeshift-labs/frontier-lang-julia', language: 'julia', parserFormat: 'julia-syntax', semanticFormat: 'lsp', caveat: 'multiple dispatch' },
+  { packageName: '@shapeshift-labs/frontier-lang-zig', language: 'zig', parserFormat: 'zig-ast', semanticFormat: 'lsp', caveat: 'comptime' },
+  { packageName: '@shapeshift-labs/frontier-lang-ocaml', language: 'ocaml', parserFormat: 'ocaml-parsetree', semanticFormat: 'lsp', caveat: 'ppx' },
+  { packageName: '@shapeshift-labs/frontier-lang-scala', language: 'scala', parserFormat: 'scalameta', semanticFormat: 'semanticdb', caveat: 'semanticdb' },
+  { packageName: '@shapeshift-labs/frontier-lang-dart', language: 'dart', parserFormat: 'dart-analyzer', semanticFormat: 'lsp', caveat: 'null-safety' },
+  { packageName: '@shapeshift-labs/frontier-lang-sql', language: 'sql', queryLanguage: 'postgres', parserFormat: 'sqlparser', semanticFormat: 'lsp', supportedLanguage: 'postgres', caveat: 'dialect selection' },
+  { packageName: '@shapeshift-labs/frontier-lang-shader', language: 'shader', queryLanguage: 'glsl', parserFormat: 'tree-sitter', semanticFormat: 'spirv-reflect', supportedLanguage: 'glsl', caveat: 'reflection data' }
+];
 assert.equal(LanguageAdapterPackageContracts.length >= requiredStaticPackages.length + 6, true);
 for (const [packageName, parserFormat, target] of requiredStaticPackages) {
   const contract = getLanguageAdapterPackageContract(packageName);
@@ -141,6 +158,29 @@ for (const [packageName, packageVersion, language, parserFormat, semanticFormat]
   assert.equal(contract.releaseReadiness.signals.some((signal) => signal.includes('Host parser')), true);
   assert.equal(contract.runtime.importsAdapterPackage, false);
 }
+assert.equal(plannedPlatformPackages.length >= 5, true);
+for (const planned of plannedPlatformPackages) {
+  const contract = getLanguageAdapterPackageContract({ language: planned.queryLanguage ?? planned.language, packageClass: 'platform-importer' });
+  assert.equal(contract.kind, 'frontier.lang.languageAdapterPackageContract');
+  assert.equal(contract.package.name, planned.packageName);
+  assert.equal(contract.package.version, '0.0.0');
+  assert.equal(contract.sourceParser.language, planned.language);
+  assert.equal(contract.sourceParser.format, planned.parserFormat);
+  assert.equal(contract.sourceParser.supportedLanguages.includes(planned.supportedLanguage ?? planned.language), true);
+  assert.equal(contract.sourceParser.caveats.some((caveat) => caveat.toLowerCase().includes(planned.caveat)), true);
+  assert.equal(contract.targetProjection.supported, false);
+  assert.equal(contract.targetProjection.caveats.some((caveat) => caveat.includes('No target projection package')), true);
+  assert.equal(contract.semanticIndex.formats.includes('frontier-semantic-index'), true);
+  assert.equal(contract.semanticIndex.formats.includes(planned.semanticFormat), true);
+  assert.equal(contract.proofEvidence.hostEvidenceRequired, true);
+  assert.equal(contract.proofEvidence.requiredEvidenceKeys.includes('sourcepreservationevidence'), true);
+  assert.equal(contract.releaseReadiness.status, 'needs-review');
+  assert.equal(contract.releaseReadiness.releaseReady, false);
+  assert.equal(contract.releaseReadiness.versionSource, 'related-package-catalog-placeholder');
+  assert.equal(contract.releaseReadiness.blockers.length > 0, true);
+  assert.equal(contract.releaseReadiness.signals.some((signal) => signal.includes('0.0.0')), true);
+  assert.equal(contract.runtime.importsAdapterPackage, false);
+}
 const javaPackageContract = getLanguageAdapterPackageContract({ language: 'java', packageClass: 'platform-importer' });
 assert.equal(javaPackageContract.package.name, '@shapeshift-labs/frontier-lang-java');
 assert.equal(javaPackageContract.sourceParser.format, 'java-ast');
@@ -172,8 +212,12 @@ assert.equal(packageSummary.runtimeImportsAdapterPackages, 0);
 assert.equal(packageSummary.byPackageClass['target-projection'] >= 5, true);
 assert.equal(packageSummary.byPackageClass['platform-importer'] >= 6, true);
 assert.equal(packageSummary.byReleaseReadiness['ready-with-losses'] >= 11, true);
+assert.equal(packageSummary.byReleaseReadiness['needs-review'] >= plannedPlatformPackages.length, true);
 assert.equal(packageSummary.parserFormats.includes('go-ast'), true);
 assert.equal(packageSummary.parserFormats.includes('clang-ast-json'), true);
+assert.equal(packageSummary.parserFormats.includes('scalameta'), true);
+assert.equal(queryLanguageAdapterPackageContracts({ language: 'scheme', packageClass: 'platform-importer' })[0].package.name, '@shapeshift-labs/frontier-lang-lisp');
+assert.equal(queryLanguageAdapterPackageContracts({ language: 'glsl', packageClass: 'platform-importer' })[0].package.name, '@shapeshift-labs/frontier-lang-shader');
 export const failedAdapterImport = await runNativeImporterAdapter({
   id: 'throwing-typescript-importer',
   language: 'typescript',

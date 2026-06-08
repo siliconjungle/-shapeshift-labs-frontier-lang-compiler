@@ -1,3 +1,5 @@
+import { workbenchRouteStyles } from './js-frontier-rust-workbench-route-styles.mjs';
+
 export function workbenchStyles() {
   return `
 :root {
@@ -223,44 +225,7 @@ textarea[readonly] {
   font-size: 11px;
   text-transform: uppercase;
 }
-.edgeList {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.edgeList li {
-  border-left: 2px solid var(--blue);
-  background: rgba(109, 180, 232, .08);
-  padding: 6px 8px;
-  color: var(--muted);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-.boundsGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-.boundCard {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #12171a;
-  padding: 10px;
-}
-.boundCard strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-.boundCard ul {
-  margin: 0;
-  padding-left: 16px;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.45;
-}
+${workbenchRouteStyles()}
 .segmented { display: flex; gap: 0; }
 .segmented button {
   width: 58px;

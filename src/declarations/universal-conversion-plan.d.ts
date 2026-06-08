@@ -9,6 +9,13 @@ import type { NativeParserFeatureCategory } from './native-parser-features.js';
 import type { ProjectionSourceProjectionCoverage, ProjectionTargetCoverageEntry } from './projection-coverage.js';
 import type { ProjectionReadinessTargetCell } from './projection-readiness.js';
 import type { UniversalCapabilityMatrix, UniversalCapabilityMatrixOptions } from './universal-capability.js';
+import type {
+  UniversalRuntimeAdapterRequirement,
+  UniversalRuntimeCapabilityKind,
+  UniversalRuntimeCapabilityMatrix,
+  UniversalRuntimeCapabilityRoute,
+  UniversalRuntimeHostProfile
+} from './universal-runtime-capabilities.js';
 
 export type UniversalConversionRouteMode =
   | 'preserve-source'
@@ -76,6 +83,19 @@ export interface UniversalConversionRouteEvidence {
   readonly targetLossKinds: readonly NativeImportKnownLossKind[];
 }
 
+export interface UniversalConversionRouteRuntime {
+  readonly routeId?: string;
+  readonly source?: UniversalRuntimeCapabilityRoute['source'];
+  readonly target?: UniversalRuntimeCapabilityRoute['target'];
+  readonly requiredCapabilities: readonly UniversalRuntimeCapabilityKind[];
+  readonly satisfiedCapabilities: readonly UniversalRuntimeCapabilityKind[];
+  readonly adapterRequirements: readonly UniversalRuntimeAdapterRequirement[];
+  readonly missingCapabilities: readonly UniversalRuntimeCapabilityKind[];
+  readonly readiness: SemanticMergeReadiness;
+  readonly blockers: readonly string[];
+  readonly review: readonly string[];
+}
+
 export interface UniversalConversionRouteMergeRefs {
   readonly planId: string;
   readonly routeId: string;
@@ -122,6 +142,8 @@ export interface UniversalConversionRoute {
     readonly stubs: ProjectionSourceProjectionCoverage;
   };
   readonly projectionReadiness?: ProjectionReadinessTargetCell;
+  readonly runtime: UniversalConversionRouteRuntime;
+  readonly runtimeAdapterRequirements: readonly UniversalRuntimeAdapterRequirement[];
   readonly evidence: UniversalConversionRouteEvidence;
   readonly missingEvidence: readonly string[];
   readonly blockers: readonly string[];
@@ -153,6 +175,8 @@ export interface UniversalConversionPlan {
     readonly stubOnlyRoutes: number;
     readonly semanticIndexOnlyRoutes: number;
     readonly missingEvidence: number;
+    readonly runtimeAdapterRequirements: number;
+    readonly runtimeRoutesWithAdapters: number;
     readonly blockers: number;
     readonly reviewReasons: number;
     readonly autoMergeClaims: 0;
@@ -160,6 +184,7 @@ export interface UniversalConversionPlan {
   };
   readonly matrices: {
     readonly universalCapability: UniversalCapabilityMatrix;
+    readonly runtimeCapabilities: UniversalRuntimeCapabilityMatrix;
     readonly projectionReadiness?: UniversalCapabilityMatrix['matrices']['projectionReadiness'];
     readonly projectionTargets?: UniversalCapabilityMatrix['matrices']['projectionTargets'];
   };
@@ -175,6 +200,40 @@ export interface UniversalConversionPlan {
 export interface UniversalConversionPlanOptions extends UniversalCapabilityMatrixOptions {
   readonly id?: string;
   readonly universalCapabilityMatrix?: UniversalCapabilityMatrix;
+  readonly universalRuntimeCapabilityMatrix?: UniversalRuntimeCapabilityMatrix;
+  readonly hostProfiles?: readonly UniversalRuntimeHostProfile[];
+  readonly runtimeHosts?: readonly UniversalRuntimeHostProfile[];
+  readonly sourceHosts?: readonly (string | UniversalRuntimeHostProfile)[] | Readonly<Record<string, string | UniversalRuntimeHostProfile>>;
+  readonly sourceRuntimeHosts?: readonly (string | UniversalRuntimeHostProfile)[] | Readonly<Record<string, string | UniversalRuntimeHostProfile>>;
+  readonly targetHosts?: readonly (string | UniversalRuntimeHostProfile)[] | Readonly<Record<string, string | UniversalRuntimeHostProfile>>;
+  readonly targetRuntimeHosts?: readonly (string | UniversalRuntimeHostProfile)[] | Readonly<Record<string, string | UniversalRuntimeHostProfile>>;
+  readonly sourceRuntime?: string;
+  readonly targetRuntime?: string;
+  readonly sourceRuntimes?: Readonly<Record<string, string>>;
+  readonly targetRuntimes?: Readonly<Record<string, string>>;
+  readonly runtimeRequirements?: readonly (
+    | UniversalRuntimeCapabilityKind
+    | {
+      readonly capability?: UniversalRuntimeCapabilityKind;
+      readonly kind?: UniversalRuntimeCapabilityKind;
+      readonly capabilities?: readonly UniversalRuntimeCapabilityKind[];
+      readonly requiredCapabilities?: readonly UniversalRuntimeCapabilityKind[];
+      readonly sourceLanguage?: FrontierSourceLanguage | string;
+      readonly language?: FrontierSourceLanguage | string;
+      readonly sourceRuntime?: string;
+      readonly runtime?: string;
+      readonly sourceHost?: string | UniversalRuntimeHostProfile;
+      readonly sourceRuntimeHost?: string | UniversalRuntimeHostProfile;
+      readonly target?: FrontierCompileTarget | string;
+      readonly targetRuntime?: string;
+      readonly targetHost?: string | UniversalRuntimeHostProfile;
+      readonly targetRuntimeHost?: string | UniversalRuntimeHostProfile;
+      readonly reason?: string;
+      readonly evidenceIds?: readonly string[];
+    }
+  )[];
+  readonly requiredRuntimeCapabilities?: UniversalConversionPlanOptions['runtimeRequirements'];
+  readonly effects?: UniversalConversionPlanOptions['runtimeRequirements'];
   readonly evidence?: readonly EvidenceRecord[];
 }
 

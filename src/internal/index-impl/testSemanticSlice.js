@@ -1,5 +1,5 @@
 import{idFragment,maxSemanticMergeReadiness}from'../../native-import-utils.js';
-import{semanticSliceAssertion}from'./semanticSliceAssertion.js';import{semanticSliceSourceHashAssertions}from'./semanticSliceSourceHashAssertions.js';
+import{semanticSliceAssertion}from'./semanticSliceAssertion.js';import{semanticSliceExpectationAssertions}from'./semanticSliceExpectationAssertions.js';import{semanticSliceSourceHashAssertions}from'./semanticSliceSourceHashAssertions.js';
 export function testSemanticSlice(slice, options = {}) {
   const assertions = [];
   assertions.push(semanticSliceAssertion('kind', slice?.kind === 'frontier.lang.semanticSlice', 'Input is a Frontier semantic slice.'));
@@ -11,6 +11,8 @@ export function testSemanticSlice(slice, options = {}) {
   assertions.push(semanticSliceAssertion('conflictKeys', (slice?.mergeAdmission?.conflictKeys?.length ?? 0) > 0, 'Slice exposes merge-admission conflict keys.'));
   const sourceHashAssertions = semanticSliceSourceHashAssertions(slice, options.currentSources);
   assertions.push(...sourceHashAssertions);
+  const expectationAssertions = semanticSliceExpectationAssertions(slice, options);
+  assertions.push(...expectationAssertions);
   const failed = assertions.filter((assertion) => assertion.status === 'failed');
   const warnings = assertions.filter((assertion) => assertion.status === 'warning');
   const readiness = failed.length
@@ -31,6 +33,7 @@ export function testSemanticSlice(slice, options = {}) {
       warnings: warnings.length,
       failed: failed.length,
       sourceHashChecks: sourceHashAssertions.length,
+      expectedAssertions: expectationAssertions.length,
       symbols: slice?.summary?.symbols ?? slice?.symbols?.length ?? 0,
       ownershipRegions: slice?.summary?.ownershipRegions ?? slice?.ownershipRegions?.length ?? 0,
       sourceMapLinks: slice?.summary?.sourceMapLinks ?? slice?.sourceMapLinks?.length ?? 0

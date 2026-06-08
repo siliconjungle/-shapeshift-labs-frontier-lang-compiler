@@ -8,6 +8,7 @@ export * from './declarations/projection-readiness.js';
 export * from './declarations/universal-capability.js';
 export * from './declarations/universal-conversion-artifacts.js';
 export * from './declarations/universal-conversion-plan.js';
+export * from './declarations/universal-runtime-capabilities.js';
 export * from './declarations/universal-dialects.js';
 export * from './declarations/language-adapter-package-contracts.js';
 export * from './declarations/native-import-contracts.js';

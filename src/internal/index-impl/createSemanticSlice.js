@@ -100,7 +100,7 @@ export function createSemanticSlice(input, options = {}) {
     verification: {
       focusedCommands: readStringArray(options.focusedCommands),
       fixtureHints: readStringArray(options.fixtureHints),
-      expectedAssertions: semanticSliceExpectedAssertions(selection, unresolvedEntryRefs)
+      expectedAssertions: semanticSliceExpectedAssertions(selection, unresolvedEntryRefs, options)
     },
     summary: {
       symbols: selection.symbols.length,

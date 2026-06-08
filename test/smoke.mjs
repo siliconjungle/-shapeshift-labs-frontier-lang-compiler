@@ -3,6 +3,7 @@
 await import('./smoke/public-api.mjs');
 await import('./smoke/compile-core.mjs');
 await import('./smoke/semantic-index.mjs');
+await import('./smoke/semantic-slice-surgical.mjs');
 await import('./smoke/external-semantic-index-formats.mjs');
 await import('./smoke/glean-semantic-index.mjs');
 await import('./smoke/universal-dialects.mjs');
@@ -28,5 +29,6 @@ await import('./smoke-workbench.mjs');
 await import('./smoke/roundtrip.mjs');
 await import('./smoke/scanned-languages.mjs');
 await import('./smoke/matrices-final.mjs');
+await import('./smoke/matrices-universal-fixtures.mjs');
 await import('./smoke/projection-readiness.mjs');
 await import('./smoke/universal-conversion-plan.mjs');

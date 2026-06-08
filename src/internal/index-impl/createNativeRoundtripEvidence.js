@@ -1,6 +1,7 @@
 import{validateUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';
 import{countBy,idFragment,maxSemanticMergeReadiness,uniqueStrings}from'../../native-import-utils.js';
 import{nativeImportEntries}from'./nativeImportEntries.js';import{nativeImportHasExactAstCoverage}from'./nativeImportHasExactAstCoverage.js';
+import{createRoundtripAudit}from'./nativeRoundtripAudit.js';
 const precisionRank=Object.freeze({exact:0,line:1,declaration:2,estimated:3,unknown:4,none:5});
 export function createNativeRoundtripEvidence(importResult,options={}) {
   if(!importResult||typeof importResult!=='object') throw new Error('createNativeRoundtripEvidence requires a native import result');
@@ -28,6 +29,8 @@ export function createNativeRoundtripEvidence(importResult,options={}) {
   const sourceMapEvidence=summarizeSourceMaps(hasOutputSourceMaps?outputSourceMaps:universalSourceMaps);
   const sourceLanguage=projection?.language??importResult.language;
   const target=options.target??options.targetCoverage?.target??options.targetProjection?.target;
+  const sourcePreservation=summarizeSourcePreservation(importResult,universalSourceMaps);
+  const hashChecks=summarizeHashChecks({importResult,projection,targetProjection:options.targetProjection,sourceHashVerified});
   const audit=createRoundtripAudit({
     status,
     semanticMerge,
@@ -35,6 +38,7 @@ export function createNativeRoundtripEvidence(importResult,options={}) {
     target,
     sameLanguage:Boolean(sourceLanguage&&target&&String(sourceLanguage)===String(target)),
     outputMode,
+    projection,
     projectionMode:projection?.mode,
     sourceHashVerified,
     hasOutputSourceMaps,
@@ -42,7 +46,9 @@ export function createNativeRoundtripEvidence(importResult,options={}) {
     universalSourceMapEvidence,
     targetProjection:options.targetProjection,
     targetCoverage:options.targetCoverage,
-    lossSummary
+    lossSummary,
+    sourcePreservation,
+    hashChecks
   });
   const metadata={
     schema:'frontier.lang.nativeRoundtripEvidence',
@@ -135,55 +141,54 @@ function summarizeSourceMaps(sourceMaps){
 }
 function normalizePrecision(value){const precision=String(value??'unknown');return Object.prototype.hasOwnProperty.call(precisionRank,precision)?precision:'unknown';}
 function worstPrecision(precisions){if(!precisions.length)return'none';return precisions.reduce((worst,next)=>precisionRank[next]>precisionRank[worst]?next:worst,'exact');}
-function createRoundtripAudit(input){
-  const disposition=roundtripAuditDisposition(input);
+function summarizeSourcePreservation(importResult,sourceMaps){
+  const preservation=importResult.metadata?.sourcePreservation??importResult.nativeSource?.metadata?.sourcePreservation??importResult.nativeAst?.metadata?.sourcePreservation??importResult.universalAst?.metadata?.sourcePreservation;
+  const summary=preservation?.summary??importResult.metadata?.sourcePreservationSummary??importResult.nativeSource?.metadata?.sourcePreservationSummary??importResult.nativeAst?.metadata?.sourcePreservationSummary??importResult.universalAst?.metadata?.sourcePreservationSummary??{};
+  const kernelSummary=importResult.metadata?.kernelSourcePreservationSummary??importResult.universalAst?.metadata?.kernelSourcePreservationSummary??{};
+  const records=asArray(importResult.metadata?.kernelSourcePreservationRecords??importResult.metadata?.sourcePreservationRecords??importResult.universalAst?.metadata?.kernelSourcePreservationRecords??importResult.universalAst?.metadata?.sourcePreservationRecords);
+  const mappings=(sourceMaps??[]).flatMap((sourceMap)=>sourceMap?.mappings??[]);
   return{
-    schema:'frontier.lang.nativeRoundtripAuditSignal',
-    version:1,
-    disposition,
-    claim:roundtripAuditClaim(disposition),
-    sourceLanguage:input.sourceLanguage,
-    target:input.target,
-    sameLanguage:input.sameLanguage,
-    outputMode:input.outputMode,
-    projectionMode:input.projectionMode,
-    sourceHashVerified:input.sourceHashVerified,
-    outputSourceMapPrecision:input.sourceMapEvidence.precision,
-    universalSourceMapPrecision:input.universalSourceMapEvidence.precision,
-    targetProjectionAdapterId:input.targetProjection?.adapter?.id,
-    targetCoverageLossClass:input.targetCoverage?.lossClass,
-    reviewRequired:input.semanticMerge!=='ready',
-    semanticMergeReadiness:input.semanticMerge,
-    semanticEquivalenceClaim:false,
-    autoMergeClaim:false,
-    blockingLossCount:input.lossSummary.blockingLossIds.length,
-    reviewLossCount:input.lossSummary.reviewLossIds.length,
-    reasonCodes:uniqueStrings([
-      `status:${input.status}`,
-      `semantic:${input.semanticMerge}`,
-      `output:${input.outputMode??'unknown'}`,
-      `projection:${input.projectionMode??'unknown'}`,
-      input.sourceHashVerified?'source-hash:verified':'source-hash:unverified',
-      `output-source-map:${input.sourceMapEvidence.precision}`,
-      `universal-source-map:${input.universalSourceMapEvidence.precision}`,
-      input.targetCoverage?.lossClass?`target-loss:${input.targetCoverage.lossClass}`:undefined,
-      input.targetProjection?.adapter?.id?`target-adapter:${input.targetProjection.adapter.id}`:undefined,
-      input.lossSummary.blockingLossIds.length?'losses:blocking':undefined,
-      input.lossSummary.reviewLossIds.length?'losses:review':undefined
-    ])
+    id:preservation?.id??importResult.metadata?.sourcePreservationId??importResult.nativeSource?.metadata?.sourcePreservationId??importResult.universalAst?.metadata?.sourcePreservationId,
+    exactSourceAvailable:Boolean(summary.exactSourceAvailable??preservation?.summary?.exactSourceAvailable??preservation?.sourceText),
+    sourceTextAvailable:typeof preservation?.sourceText==='string',
+    recordCount:numeric(kernelSummary.total,records.length||(preservation?1:0)),
+    byLevel:kernelSummary.byLevel??countBy(records.map((record)=>record?.level??'unknown')),
+    exactRecords:numeric(kernelSummary.exact),
+    declarationRecords:numeric(kernelSummary.declaration),
+    estimatedRecords:numeric(kernelSummary.estimated),
+    blockedRecords:numeric(kernelSummary.blocked),
+    sourcePaths:uniqueStrings([...(asArray(kernelSummary.sourcePaths)),preservation?.sourcePath,importResult.sourcePath]),
+    sourceMapIds:uniqueStrings([...(asArray(kernelSummary.sourceMapIds)),...(sourceMaps??[]).map((sourceMap)=>sourceMap?.id)]),
+    mappingPreservation:countBy(mappings.map((mapping)=>mapping?.preservation??'unknown')),
+    comments:numeric(summary.comments),
+    trivia:numeric(summary.trivia),
+    directives:numeric(summary.directives),
+    tokens:numeric(summary.tokens),
+    whitespace:numeric(summary.whitespace),
+    truncated:Boolean(summary.truncated)
   };
 }
-function roundtripAuditDisposition(input){
-  if(input.outputMode==='target-adapter')return'adapter-projected';
-  if(input.projectionMode==='native-source-stubs'||input.outputMode==='target-stubs')return'stub-only';
-  if(input.sourceHashVerified&&input.outputMode==='preserved-source'&&input.hasOutputSourceMaps&&input.sourceMapEvidence.precision==='exact')return'reversible';
-  if(input.sourceHashVerified||input.projectionMode==='preserved-source')return'preserved-source';
-  return'review-required';
+function summarizeHashChecks(input){
+  const importResult=input.importResult;
+  const sourceHash=importResult.nativeSource?.sourceHash??importResult.nativeAst?.sourceHash??importResult.sourceHash;
+  const declaredSourceHash=importResult.metadata?.declaredSourceHash??importResult.nativeSource?.metadata?.declaredSourceHash??importResult.nativeAst?.metadata?.declaredSourceHash;
+  const expectedSourceHash=input.projection?.sourceHash??sourceHash;
+  const projectionOutputHash=input.projection?.outputHash;
+  const targetOutputHash=input.targetProjection?.outputHash;
+  const outputHash=targetOutputHash??projectionOutputHash;
+  return{
+    sourceHashPresent:Boolean(sourceHash),
+    declaredSourceHashPresent:Boolean(declaredSourceHash),
+    declaredSourceHashVerified:declaredSourceHash?declaredSourceHash===sourceHash&&importResult.metadata?.sourceHashVerified!==false:undefined,
+    expectedSourceHashPresent:Boolean(expectedSourceHash),
+    outputHashPresent:Boolean(outputHash),
+    projectionOutputHashPresent:Boolean(projectionOutputHash),
+    targetOutputHashPresent:Boolean(targetOutputHash),
+    sourceHashVerified:input.sourceHashVerified,
+    projectionOutputMatchesSourceHash:Boolean(projectionOutputHash&&expectedSourceHash&&projectionOutputHash===expectedSourceHash),
+    targetOutputMatchesSourceHash:Boolean(targetOutputHash&&expectedSourceHash&&targetOutputHash===expectedSourceHash),
+    outputMatchesSourceHash:Boolean(outputHash&&expectedSourceHash&&outputHash===expectedSourceHash)
+  };
 }
-function roundtripAuditClaim(disposition){
-  if(disposition==='reversible')return'source-text-reversible';
-  if(disposition==='preserved-source')return'source-preserved';
-  if(disposition==='stub-only')return'declaration-stubs-only';
-  if(disposition==='adapter-projected')return'host-adapter-projected';
-  return'review-required';
-}
+function asArray(value){return Array.isArray(value)?value:[];}
+function numeric(value,fallback=0){const number=Number(value);return Number.isFinite(number)?number:fallback;}
