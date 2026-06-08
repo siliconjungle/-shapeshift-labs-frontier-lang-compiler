@@ -71,7 +71,7 @@ export async function runNativeImporterAdapter(adapter, input = {}) {
     sourcePath: parseResult.sourcePath ?? input.sourcePath,
     sourceHash: parseResult.sourceHash ?? sourceHash
   });
-  const evidence = [...(parseResult.evidence ?? []), sourceEvidence];
+  const evidence = [...(input.evidence ?? []), ...(parseResult.evidence ?? []), sourceEvidence];
   const importInput = {
     ...input,
     ...parseResult,

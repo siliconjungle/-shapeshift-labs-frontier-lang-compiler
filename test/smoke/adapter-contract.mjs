@@ -36,7 +36,13 @@ const adapterImport = await runNativeImporterAdapter({
   sourcePath: 'src/adapter.js',
   sourceText: 'export function fromAdapter() { return true; }\n',
   adapterOptions: { mode: 'smoke' },
-  metadata: { requestId: 'adapter-smoke' }
+  metadata: { requestId: 'adapter-smoke' },
+  evidence: [{
+    id: 'caller_fixture_semantic_evidence',
+    kind: 'host-semantic-evidence',
+    status: 'passed',
+    metadata: { source: 'smoke' }
+  }]
 });
 assert.equal(adapterImport.kind, 'frontier.lang.importResult');
 assert.equal(adapterImport.adapter.id, 'fixture-estree-importer');
@@ -75,6 +81,7 @@ assert.equal(adapterImport.metadata.requestId, 'adapter-smoke');
 assert.equal(adapterImport.diagnostics.length, 2);
 assert.equal(adapterImport.diagnostics.some((diagnostic) => diagnostic.code === 'adapter.opaqueBody'), true);
 assert.equal(adapterImport.losses.some((loss) => loss.metadata?.diagnosticCode === 'adapter.opaqueBody'), true);
+assert.equal(adapterImport.evidence.some((record) => record.id === 'caller_fixture_semantic_evidence'), true);
 assert.equal(adapterImport.evidence.some((record) => record.id === 'evidence_fixture_estree_importer_native_importer_adapter' && record.status === 'passed'), true);
 assert.equal(adapterImport.evidence.find((record) => record.id === 'evidence_fixture_estree_importer_native_importer_adapter').metadata.coverage.sourceRanges, true);
 const packageJson = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8'));
@@ -86,12 +93,12 @@ const requiredStaticPackages = [
   ['@shapeshift-labs/frontier-lang-c', 'clang-ast-json', 'c']
 ];
 const publishedPlatformPackages = [
-  ['@shapeshift-labs/frontier-lang-java', 'java', 'java-ast', 'semanticdb'],
-  ['@shapeshift-labs/frontier-lang-kotlin', 'kotlin', 'kotlin-psi', 'semanticdb'],
-  ['@shapeshift-labs/frontier-lang-swift', 'swift', 'swift-syntax', 'sourcekit-lsp'],
-  ['@shapeshift-labs/frontier-lang-csharp', 'csharp', 'roslyn-csharp', 'lsp'],
-  ['@shapeshift-labs/frontier-lang-go', 'go', 'go-ast', 'lsp'],
-  ['@shapeshift-labs/frontier-lang-clang', 'c', 'clang-ast-json', 'lsp']
+  ['@shapeshift-labs/frontier-lang-java', '0.1.8', 'java', 'java-ast', 'semanticdb'],
+  ['@shapeshift-labs/frontier-lang-kotlin', '0.1.8', 'kotlin', 'kotlin-psi', 'semanticdb'],
+  ['@shapeshift-labs/frontier-lang-swift', '0.1.8', 'swift', 'swift-syntax', 'sourcekit-lsp'],
+  ['@shapeshift-labs/frontier-lang-csharp', '0.1.8', 'csharp', 'roslyn-csharp', 'lsp'],
+  ['@shapeshift-labs/frontier-lang-go', '0.1.8', 'go', 'go-ast', 'lsp'],
+  ['@shapeshift-labs/frontier-lang-clang', '0.1.8', 'c', 'clang-ast-json', 'lsp']
 ];
 assert.equal(LanguageAdapterPackageContracts.length >= requiredStaticPackages.length + 6, true);
 for (const [packageName, parserFormat, target] of requiredStaticPackages) {
@@ -116,11 +123,11 @@ for (const [packageName, parserFormat, target] of requiredStaticPackages) {
   assert.equal(contract.releaseReadiness.releaseReady, true);
   assert.equal(contract.runtime.importsAdapterPackage, false);
 }
-for (const [packageName, language, parserFormat, semanticFormat] of publishedPlatformPackages) {
+for (const [packageName, packageVersion, language, parserFormat, semanticFormat] of publishedPlatformPackages) {
   const contract = getLanguageAdapterPackageContract(packageName);
   assert.equal(contract.kind, 'frontier.lang.languageAdapterPackageContract');
   assert.equal(contract.package.name, packageName);
-  assert.equal(contract.package.version, '0.1.6');
+  assert.equal(contract.package.version, packageVersion);
   assert.equal(contract.sourceParser.language, language);
   assert.equal(contract.sourceParser.format, parserFormat);
   assert.equal(contract.sourceParser.supportedFormats.includes(parserFormat), true);
