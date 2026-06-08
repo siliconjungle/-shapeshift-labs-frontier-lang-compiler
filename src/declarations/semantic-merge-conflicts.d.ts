@@ -3,6 +3,11 @@ import type {
   SemanticMergeCandidateRecord,
   SemanticMergeReadiness
 } from '@shapeshift-labs/frontier-lang-kernel';
+import type {
+  SemanticMergeCandidateAdmissionRecord,
+  SemanticMergeCandidateChangedRegion,
+  SemanticMergeCandidateProjectionRisk
+} from './semantic-merge-candidates.js';
 
 export type SemanticMergeConflictClass =
   | 'same-symbol-edit'
@@ -45,6 +50,13 @@ export interface SemanticMergeConflictSummary {
 }
 
 export type SemanticMergeCandidateWithConflicts = SemanticMergeCandidateRecord & {
+  readonly changedSemanticRegions?: readonly SemanticMergeCandidateChangedRegion[];
+  readonly sourceHashes?: SemanticMergeCandidateAdmissionRecord['sourceHashes'];
+  readonly evidenceIds?: readonly string[];
+  readonly proofIds?: readonly string[];
+  readonly projectionRisk?: SemanticMergeCandidateProjectionRisk;
+  readonly readinessSortKey?: number;
+  readonly mergeAdmission?: SemanticMergeCandidateAdmissionRecord;
   readonly conflictClasses?: readonly SemanticMergeConflictClassRecord[];
   readonly conflictSummary?: SemanticMergeConflictSummary;
   readonly metadata?: SemanticMergeCandidateRecord['metadata'] & {

@@ -7,6 +7,7 @@ export function externalSemanticBase(context, metadata = {}) {
     occurrences: [],
     relations: [],
     facts: [],
+    ownershipRegions: [],
     evidence: [externalSemanticEvidence(context, 'passed', `Imported ${context.format} semantic index payload.`)],
     losses: [externalSemanticCoverageLoss(context)],
     semanticStatus: 'external-semantic-index',

@@ -64,6 +64,7 @@ export { projectNativeImportToSource } from './internal/index-impl/projectNative
 export { queryNativeParserFeatureMatrix } from './internal/index-impl/queryNativeParserFeatureMatrix.js';
 export { queryProjectionReadinessMatrix } from './internal/index-impl/queryProjectionReadinessMatrix.js';
 export { createSemanticPatchBundleRecord, querySemanticPatchBundleRecords, SemanticPatchBundleAdmissionStatuses } from './internal/index-impl/semanticPatchBundleRecords.js';
+export { createSemanticMergeCandidateAdmissionRecord, decorateSemanticMergeCandidateForAdmission, querySemanticMergeCandidateAdmissionOverlaps, SemanticMergeCandidateProjectionRisks, semanticMergeCandidateReadinessSortKey, sortSemanticMergeCandidateAdmissionRecords } from './internal/index-impl/semanticMergeCandidateRecords.js';
 export { querySemanticMergeConflictClasses, SemanticMergeConflictClasses, semanticMergeConflictRiskScore, sortSemanticMergeCandidatesByConflictRisk, summarizeSemanticMergeConflicts } from './internal/index-impl/semanticMergeConflicts.js';
 export { queryUniversalConversionPlan } from './internal/index-impl/queryUniversalConversionPlan.js';
 export { createSemanticHistoryRecord, querySemanticHistoryRecordOverlaps, SemanticHistoryAdmissionStatuses, SemanticHistoryConflictReasons, SemanticHistoryOverlapKinds, SemanticHistoryReviewerStatuses, semanticHistoryRecordsConflict, semanticHistoryRecordsOverlap } from './internal/index-impl/semanticHistoryRecords.js';

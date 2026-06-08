@@ -1,5 +1,6 @@
 import{idFragment,maxSemanticMergeReadiness,uniqueByLossId,uniqueRecordsById,uniqueStrings}from'../../native-import-utils.js';import{createPatch,createSemanticMergeCandidateRecord}from'@shapeshift-labs/frontier-lang-kernel';
 import{attachNativeChangeRegionProjectionMetadata}from'./attachNativeChangeRegionProjectionMetadata.js';import{classifyNativeSourceMergeConflicts}from'./semanticMergeConflicts.js';import{createSemanticImportSidecar}from'./createSemanticImportSidecar.js';import{diffNativeOwnershipRegions}from'./diffNativeOwnershipRegions.js';import{diffNativeSymbols}from'./diffNativeSymbols.js';import{fileLevelNativeChangeRegion}from'./fileLevelNativeChangeRegion.js';import{mapDiffSymbols}from'./mapDiffSymbols.js';import{nativeChangeSpans}from'./nativeChangeSpans.js';import{nativeChangeTouchedSymbol}from'./nativeChangeTouchedSymbol.js';import{nativeImportReadiness}from'./nativeImportReadiness.js';import{nativeSourceChangeReasons}from'./nativeSourceChangeReasons.js';import{nativeSourceChangeSummary}from'./nativeSourceChangeSummary.js';import{normalizeNativeDiffImport}from'./normalizeNativeDiffImport.js';import{summarizeNativeChangedRegionProjections}from'./summarizeNativeChangedRegionProjections.js';
+import{decorateSemanticMergeCandidateForAdmission}from'./semanticMergeCandidateRecords.js';
 export function diffNativeSourceImports(input) {
   const before = normalizeNativeDiffImport(input.before, input, 'before');
   const after = normalizeNativeDiffImport(input.after, input, 'after');
@@ -104,7 +105,7 @@ export function diffNativeSourceImports(input) {
       semanticMergeConflictSummary: mergeConflictProfile.conflictSummary
     }
   });
-  const mergeCandidate = createSemanticMergeCandidateRecord({
+  const mergeCandidate = decorateSemanticMergeCandidateForAdmission(createSemanticMergeCandidateRecord({
     id: input.mergeCandidateId ?? `merge_candidate_${idPart}_native_source_diff`,
     importResultId: after?.id ?? before?.id,
     patchId: patch.id,
@@ -131,7 +132,7 @@ export function diffNativeSourceImports(input) {
       conflictClasses: mergeConflictProfile.conflictClasses,
       conflictSummary: mergeConflictProfile.conflictSummary
     }
-  });
+  }),{changedRegions,evidence,patch,baseHash:beforeHash,targetHash:afterHash,metadata:{source:'diffNativeSourceImports'}});
   return {
     kind: 'frontier.lang.nativeSourceChangeSet',
     version: 1,

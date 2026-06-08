@@ -11,6 +11,14 @@ const ignoredIdentifiers = new Set([
 
 export function dependencyIdentifiers(input, declaration, line) {
   const identifiers = new Set();
+  if (declaration.role === 'import' && declaration.fields?.moduleOnly && Array.isArray(declaration.fields.importBindings) && declaration.fields.importBindings.length > 0) {
+    return [];
+  }
+  if (declaration.role === 'import' && declaration.fields?.localName) {
+    addIdentifier(identifiers, declaration.fields.localName);
+    addIdentifier(identifiers, declaration.fields.importedName);
+    return [...identifiers];
+  }
   addIdentifier(identifiers, declaration.name);
   for (const part of splitIdentifierPath(declaration.name)) addIdentifier(identifiers, part);
   for (const field of ['methodName', 'propertyName', 'owner']) addIdentifier(identifiers, declaration.fields?.[field]);

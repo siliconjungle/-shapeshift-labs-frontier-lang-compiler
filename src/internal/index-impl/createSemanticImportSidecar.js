@@ -84,6 +84,12 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       reasons: candidate.reasons ?? [],
       conflictClasses: (candidate.conflictClasses ?? candidate.metadata?.conflictClasses ?? []).map((record) => record.class).filter(Boolean),
       conflictSummary: candidate.conflictSummary ?? candidate.metadata?.conflictSummary,
+      changedSemanticRegions: candidate.changedSemanticRegions?.length ?? candidate.mergeAdmission?.changedSemanticRegions?.length ?? 0,
+      sourceHashes: candidate.sourceHashes ?? candidate.mergeAdmission?.sourceHashes,
+      evidenceIds: candidate.evidenceIds ?? candidate.mergeAdmission?.evidenceIds ?? [],
+      projectionRisk: candidate.projectionRisk ?? candidate.mergeAdmission?.projectionRisk,
+      readinessSortKey: candidate.readinessSortKey ?? candidate.mergeAdmission?.readinessSortKey,
+      overlapSummary: candidate.mergeAdmission?.overlapSummary,
       risk: candidate.risk,
       operationCount: candidate.operations?.length ?? candidate.patch?.operations?.length ?? 0
     })),

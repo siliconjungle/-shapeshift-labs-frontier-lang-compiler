@@ -2,8 +2,8 @@ export function workbenchClientScript() {
   return `
 const initial = JSON.parse(document.getElementById('initial-state').textContent);
 const state = {
-  sources: { ...initial.sources },
-  sourceLanguage: initial.sourceLanguage || 'typescript',
+  sources: { typescript: initial.sources?.typescript || '' },
+  sourceLanguage: 'typescript',
   result: initial.result,
   activeTab: 'graph',
   pending: false
@@ -11,68 +11,64 @@ const state = {
 
 window.frontierLangWorkbench = {
   kind: 'frontier.framework.demo.langWorkbench',
-  version: 1,
+  version: 2,
   state,
   feature: {
-    id: 'frontier-lang-ts-rust-workbench',
+    id: 'frontier-lang-ts-rust-python-workbench',
     package: '@shapeshift-labs/frontier-lang-compiler',
     route: '/examples/js-frontier-rust-workbench',
-    panels: ['source', 'frontier', 'rust']
+    panels: ['typescript', 'frontier', 'rust', 'python'],
+    conversions: ['typescript->rust', 'typescript->python']
   },
   evidence: []
 };
 
 const typescriptInput = document.getElementById('typescriptInput');
-const rustInput = document.getElementById('rustInput');
+const rustOutput = document.getElementById('rustOutput');
+const pythonOutput = document.getElementById('pythonOutput');
 const frontierJson = document.getElementById('frontierJson');
 const graphView = document.getElementById('graphView');
 const readinessValue = document.getElementById('readinessValue');
 const symbolValue = document.getElementById('symbolValue');
 const mappingValue = document.getElementById('mappingValue');
-const modeValue = document.getElementById('modeValue');
+const rustValue = document.getElementById('rustValue');
+const pythonValue = document.getElementById('pythonValue');
 const typescriptStatus = document.getElementById('typescriptStatus');
 const rustStatus = document.getElementById('rustStatus');
+const pythonStatus = document.getElementById('pythonStatus');
 
-let updatingEditors = false;
 typescriptInput.value = state.sources.typescript;
-rustInput.value = state.sources.rust;
 render();
 
 typescriptInput.addEventListener('input', () => {
-  if (updatingEditors) return;
   state.sources.typescript = typescriptInput.value;
-  state.sourceLanguage = 'typescript';
-  renderEditorModes();
 });
 
-rustInput.addEventListener('input', () => {
-  if (updatingEditors) return;
-  state.sources.rust = rustInput.value;
-  state.sourceLanguage = 'rust';
-  renderEditorModes();
+document.getElementById('convertForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  await convertFromTypescript();
 });
 
-document.getElementById('runButton').addEventListener('click', async () => {
-  await convertFrom(state.sourceLanguage);
-});
-
-document.getElementById('resetButton').addEventListener('click', async () => {
-  state.sources = { ...initial.sources };
+document.getElementById('resetButton').addEventListener('click', () => {
+  state.sources = { typescript: initial.sources?.typescript || '' };
   state.sourceLanguage = 'typescript';
   state.result = initial.result;
   render();
 });
 
 document.getElementById('copyButton').addEventListener('click', async () => {
-  await navigator.clipboard.writeText(projectedSourceText());
+  try {
+    if (!navigator.clipboard) throw new Error('clipboard unavailable');
+    await navigator.clipboard.writeText(projectedSourceText());
+  } catch (error) {
+    window.frontierLangWorkbench.evidence.push({
+      at: Date.now(),
+      kind: 'clipboard',
+      status: 'failed',
+      message: String(error.message || error)
+    });
+  }
 });
-
-for (const button of document.querySelectorAll('[data-source-mode]')) {
-  button.addEventListener('click', () => {
-    state.sourceLanguage = button.dataset.sourceMode;
-    renderEditorModes();
-  });
-}
 
 for (const button of document.querySelectorAll('[data-frontier-tab]')) {
   button.addEventListener('click', () => {
@@ -84,26 +80,27 @@ for (const button of document.querySelectorAll('[data-frontier-tab]')) {
   });
 }
 
-async function convertFrom(sourceLanguage) {
-  state.sourceLanguage = sourceLanguage;
-  state.sources[sourceLanguage] = sourceLanguage === 'rust' ? rustInput.value : typescriptInput.value;
+async function convertFromTypescript() {
+  state.sourceLanguage = 'typescript';
+  state.sources.typescript = typescriptInput.value;
   setPending(true);
   try {
     const response = await fetch('/api/convert', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ source: state.sources[sourceLanguage], sourceLanguage })
+      body: JSON.stringify({ source: state.sources.typescript, sourceLanguage: 'typescript' })
     });
     const payload = await response.json();
     if (!response.ok || !payload.ok) throw new Error(payload.error || 'conversion failed');
     state.result = payload.result;
-    state.sources[payload.result.projection.targetLanguage] = payload.result.projection.output;
+    const projections = projectionSet(payload.result);
     window.frontierLangWorkbench.evidence.push({
       at: Date.now(),
       kind: 'conversion',
       sourceHash: payload.result.sourceHash,
       symbolCount: payload.result.summary.symbols,
-      readiness: payload.result.summary.readiness
+      readiness: payload.result.summary.readiness,
+      projections: Object.keys(projections)
     });
   } catch (error) {
     state.result = errorResult(error);
@@ -116,35 +113,43 @@ async function convertFrom(sourceLanguage) {
 function render() {
   const result = state.result || {};
   const summary = result.summary || {};
+  const projections = projectionSet(result);
   readinessValue.textContent = summary.readiness || 'error';
   readinessValue.style.color = readinessColor(summary.readiness);
   symbolValue.textContent = String(summary.symbols ?? 0);
   mappingValue.textContent = String(summary.sourceMapMappings ?? 0);
-  modeValue.textContent = result.projection?.mode || '-';
-  typescriptStatus.textContent = languageStatus('typescript', result);
-  rustStatus.textContent = languageStatus('rust', result);
-  renderEditorModes();
-  frontierJson.textContent = JSON.stringify(result.frontier, null, 2);
+  rustValue.textContent = projectionStatus(projections.rust);
+  pythonValue.textContent = projectionStatus(projections.python);
+  typescriptStatus.textContent = result.sourceHash || 'source';
+  rustStatus.textContent = projectionSummaryText(projections.rust);
+  pythonStatus.textContent = projectionSummaryText(projections.python);
+  typescriptInput.value = state.sources.typescript || '';
+  rustOutput.value = projections.rust?.output || '';
+  pythonOutput.value = projections.python?.output || '';
+  document.querySelector('[data-view-panel="source"]').classList.add('isSource');
+  frontierJson.textContent = JSON.stringify(result.frontier || {}, null, 2);
   frontierJson.hidden = state.activeTab !== 'json';
   graphView.hidden = state.activeTab !== 'graph';
   if (!graphView.hidden) graphView.innerHTML = graphHtml(result);
 }
 
-function renderEditorModes() {
-  updatingEditors = true;
-  typescriptInput.value = state.sources.typescript || '';
-  rustInput.value = state.sources.rust || '';
-  updatingEditors = false;
-  document.querySelector('[data-view-panel="source"]').classList.toggle('isSource', state.sourceLanguage === 'typescript');
-  document.querySelector('[data-view-panel="rust"]').classList.toggle('isSource', state.sourceLanguage === 'rust');
-  for (const button of document.querySelectorAll('[data-source-mode]')) {
-    button.setAttribute('aria-pressed', String(button.dataset.sourceMode === state.sourceLanguage));
+function projectionSet(result) {
+  if (result.projections) return result.projections;
+  const projections = {};
+  if (result.projection) {
+    projections[result.projection.targetLanguage || result.projection.target || 'rust'] = result.projection;
   }
+  return projections;
 }
 
-function languageStatus(language, result) {
-  if (state.sourceLanguage === language) return result.sourceHash || 'source';
-  return (result.projection?.targetLanguage === language ? result.projection.readiness : 'projection') || 'projection';
+function projectionStatus(projection) {
+  if (!projection) return 'missing';
+  return projection.ok ? projection.readiness || 'ready' : 'blocked';
+}
+
+function projectionSummaryText(projection) {
+  if (!projection) return 'missing';
+  return (projection.mode || '-') + ' / ' + String(projection.sourceMapMappings ?? 0) + ' maps';
 }
 
 function graphHtml(result) {
@@ -157,7 +162,7 @@ function graphHtml(result) {
     chip(summary.readiness, readinessClass(summary.readiness)),
     chip(String(summary.losses || 0) + ' losses', 'review'),
     chip(String(summary.patchHints || 0) + ' patch hints', 'ready'),
-    chip((result.sourceLanguage || '-') + ' -> ' + (result.projection?.targetLanguage || '-'), 'review'),
+    chip(projectionTargets(result), 'review'),
     '</div>',
     '<div class="sectionTitle">Symbols</div>',
     '<div class="graphGrid">',
@@ -172,10 +177,15 @@ function graphHtml(result) {
   ].join('');
 }
 
+function projectionTargets(result) {
+  const targets = Object.keys(projectionSet(result));
+  return (result.sourceLanguage || '-') + ' -> ' + (targets.length ? targets.join('/') : '-');
+}
+
 function nodeCard(symbol) {
   return '<article class="nodeCard" data-graph-node="' + escapeHtml(symbol.id || symbol.name) + '">' +
     '<strong>' + escapeHtml(symbol.name) + '</strong>' +
-    '<span>' + escapeHtml(symbol.kind || 'symbol') + ' · ' + escapeHtml(symbol.region || 'region') + '</span>' +
+    '<span>' + escapeHtml(symbol.kind || 'symbol') + ' - ' + escapeHtml(symbol.region || 'region') + '</span>' +
     '</article>';
 }
 
@@ -199,13 +209,22 @@ function errorResult(error) {
   return {
     summary: { readiness: 'blocked', symbols: 0, sourceMapMappings: 0, losses: 1, patchHints: 0 },
     frontier: { symbols: [], relations: [], error: String(error.message || error) },
-    projection: { output: String(error.stack || error), readiness: 'blocked', mode: 'error' }
+    projections: {
+      rust: { output: String(error.stack || error), readiness: 'blocked', mode: 'error', ok: false },
+      python: { output: String(error.stack || error), readiness: 'blocked', mode: 'error', ok: false }
+    }
   };
 }
 
 function projectedSourceText() {
-  const target = state.result?.projection?.targetLanguage;
-  return target ? state.sources[target] || '' : '';
+  const projections = projectionSet(state.result || {});
+  return [
+    '// Rust projection',
+    projections.rust?.output || '',
+    '',
+    '# Python projection',
+    projections.python?.output || ''
+  ].join('\\n');
 }
 
 function boundsHtml(bounds) {

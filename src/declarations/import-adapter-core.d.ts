@@ -154,6 +154,8 @@ export interface ExternalSemanticIndexImportSummary {
   readonly occurrences: number;
   readonly relations: number;
   readonly facts: number;
+  readonly ownershipRegions: number;
+  readonly ownershipRegionKinds: readonly string[];
   readonly sourceMapMappings: number;
   readonly losses: number;
   readonly readiness: SemanticMergeReadiness;
@@ -170,6 +172,7 @@ export interface ExternalSemanticIndexImportResult {
   readonly semanticIndex: SemanticIndexRecord;
   readonly universalAst: FrontierUniversalAstEnvelope;
   readonly sourceMaps: readonly SourceMapRecord[];
+  readonly ownershipRegions: readonly SemanticImportOwnershipRegion[];
   readonly losses: readonly NativeAstLossRecord[];
   readonly evidence: readonly EvidenceRecord[];
   readonly readiness: NativeImportReadinessClassification;

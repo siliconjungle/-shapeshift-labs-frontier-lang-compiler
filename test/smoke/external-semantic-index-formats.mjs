@@ -27,6 +27,37 @@ assert.equal(scipExternalSymbolsImport.format, 'scip');
 assert.equal(scipExternalSymbol.metadata.external, true);
 assert.equal(scipExternalSymbolsImport.semanticIndex.facts.some((fact) => fact.predicate === 'signature' && fact.subjectId === scipExternalSymbol.id), true);
 assert.equal(scipExternalSymbolsImport.semanticIndex.occurrences[0].symbolId, scipExternalSymbol.id);
+const minimalScipOwnershipImport = importExternalSemanticIndex({
+  format: 'sourcegraph-scip',
+  language: 'typescript',
+  sourceHash: 'min-source-hash',
+  payload: {
+    documents: [{
+      relative_path: 'src/min.ts',
+      language: 'typescript',
+      symbols: [{
+        symbol: 'scip-typescript npm min 1.0.0 src/min.ts/ save().',
+        display_name: 'save',
+        kind: 17
+      }],
+      occurrences: [{
+        symbol: 'scip-typescript npm min 1.0.0 src/min.ts/ save().',
+        range: [0, 16, 20],
+        symbol_roles: 1
+      }]
+    }]
+  }
+});
+const minimalScipRegion = minimalScipOwnershipImport.ownershipRegions.find((region) => region.symbolName === 'save');
+assert.equal(minimalScipOwnershipImport.format, 'scip');
+assert.ok(minimalScipRegion, 'expected SCIP import to expose an ownership region');
+assert.equal(minimalScipRegion.regionKind, 'body');
+assert.equal(minimalScipRegion.sourcePath, 'src/min.ts');
+assert.equal(minimalScipRegion.sourceHash, 'min-source-hash');
+assert.equal(minimalScipOwnershipImport.summary.ownershipRegions, 1);
+assert.equal(minimalScipOwnershipImport.summary.ownershipRegionKinds.includes('body'), true);
+assert.equal(minimalScipOwnershipImport.semanticIndex.facts.some((fact) => fact.predicate === 'semanticOwnershipRegion' && fact.value.id === minimalScipRegion.id), true);
+assert.equal(minimalScipOwnershipImport.sourceMaps[0].mappings[0].ownershipRegionId, minimalScipRegion.id);
 const lspMissingSeverityImport = importExternalSemanticIndex({
   format: 'lsp',
   payload: {

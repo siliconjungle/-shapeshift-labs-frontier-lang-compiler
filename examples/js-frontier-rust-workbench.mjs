@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import http from 'node:http';
 import { compileNativeSource, createSemanticImportSidecar, importNativeSource, writeUniversalAstJson } from '../dist/index.js';
+import {
+  createTsToPythonWorkbenchAdapter,
+  createTsToRustWorkbenchAdapter
+} from './js-frontier-rust-workbench-adapters.mjs';
 import { conversionBounds } from './js-frontier-rust-workbench-bounds.mjs';
 import { renderWorkbenchHtml } from './js-frontier-rust-workbench-html.mjs';
 import { workbenchClientScript } from './js-frontier-rust-workbench-client.mjs';
@@ -24,21 +28,41 @@ export class TodoStore {
   }
 }
 `;
-const sampleRustSource = `// Generated from Frontier semantic graph evidence.
-pub fn add_todo() {
-    // port body from preserved TypeScript source
-}
-
-pub struct TodoStore;
-`;
 
 if (args.smoke) {
   const result = convertSource(sampleSource, { sourceLanguage: 'typescript' });
   assert(result.summary.symbols >= 2, 'expected semantic symbols');
-  assert(result.projection.output.includes('pub'), 'expected Rust projection');
-  const reverse = convertSource(result.projection.output, { sourceLanguage: 'rust' });
-  assert(reverse.projection.output.includes('export'), 'expected TypeScript projection');
-  console.log(JSON.stringify({ ok: true, summary: result.summary }, null, 2));
+  assert(result.frontier.universalAst.valid, 'expected valid universal AST summary');
+  assert(result.projections.rust.output.includes('pub'), 'expected Rust projection');
+  assert(result.projections.python.output.includes('def add_todo'), 'expected Python projection');
+  const html = renderWorkbenchHtml({
+    sourceLanguage: 'typescript',
+    sources: { typescript: sampleSource },
+    result
+  });
+  const client = workbenchClientScript();
+  const styles = workbenchStyles();
+  assert(html.includes('id="convertForm"'), 'expected submit form');
+  assert(html.includes('id="typescriptInput"'), 'expected TypeScript input pane');
+  assert(html.includes('id="frontierJson"'), 'expected Frontier graph JSON pane');
+  assert(html.includes('id="rustOutput"'), 'expected Rust output pane');
+  assert(html.includes('id="pythonOutput"'), 'expected Python output pane');
+  assert(client.includes("addEventListener('submit'"), 'expected submit-based conversion listener');
+  assert(styles.includes('grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr) minmax(280px, 1fr) minmax(280px, 1fr);'), 'expected four-pane desktop scaffold');
+  assert(styles.includes('overflow: auto'), 'expected scrollable pane bodies');
+  console.log(JSON.stringify({
+    ok: true,
+    summary: result.summary,
+    projections: {
+      rust: { ok: result.projections.rust.ok, readiness: result.projections.rust.readiness },
+      python: { ok: result.projections.python.ok, readiness: result.projections.python.readiness }
+    },
+    layout: {
+      submitBased: true,
+      panes: ['typescript', 'frontier', 'rust', 'python'],
+      independentScrollRegions: 4
+    }
+  }, null, 2));
 } else {
   const server = http.createServer(routeRequest);
   server.listen(port, '127.0.0.1', () => {
@@ -51,7 +75,7 @@ async function routeRequest(request, response) {
     if (request.method === 'GET' && request.url === '/') {
       return send(response, 200, renderWorkbenchHtml({
         sourceLanguage: 'typescript',
-        sources: { typescript: sampleSource, rust: sampleRustSource },
+        sources: { typescript: sampleSource },
         result: convertSource(sampleSource, { sourceLanguage: 'typescript' })
       }), 'text/html; charset=utf-8');
     }
@@ -66,7 +90,7 @@ async function routeRequest(request, response) {
       return sendJson(response, 200, {
         ok: true,
         result: convertSource(String(body.source ?? ''), {
-          sourceLanguage: body.sourceLanguage ?? 'typescript'
+          sourceLanguage: 'typescript'
         })
       });
     }
@@ -78,19 +102,23 @@ async function routeRequest(request, response) {
 
 function convertSource(source, options = {}) {
   const sourceLanguage = normalizeSourceLanguage(options.sourceLanguage);
-  const target = sourceLanguage === 'rust' ? 'typescript' : 'rust';
+  const targets = ['rust', 'python'];
   const imported = importNativeSource({
     language: sourceLanguage,
     sourcePath: `workbench/input.${sourceExtension(sourceLanguage)}`,
     sourceText: source
   });
-  const projection = compileNativeSource(imported, {
-    target,
-    targetPath: `workbench/output.${targetExtension(target)}`,
-    targetAdapters: [createTsToRustWorkbenchAdapter(), createRustToTsWorkbenchAdapter()],
-    emitOnBlocked: true
-  });
-  const sidecar = createSemanticImportSidecar(imported, { generatedAt: 0, targetPath: projection.sourceMap?.targetPath });
+  const targetAdapters = [createTsToRustWorkbenchAdapter(), createTsToPythonWorkbenchAdapter()];
+  const projections = Object.fromEntries(targets.map((target) => {
+    const projection = compileNativeSource(imported, {
+      target,
+      targetPath: `workbench/output.${targetExtension(target)}`,
+      targetAdapters,
+      emitOnBlocked: true
+    });
+    return [target, projectionSummary(projection, { sourceLanguage, target })];
+  }));
+  const sidecar = createSemanticImportSidecar(imported, { generatedAt: 0, targetPath: projections.rust?.targetPath });
   return {
     sourceHash: imported.nativeSource.sourceHash,
     sourceLanguage,
@@ -115,94 +143,24 @@ function convertSource(source, options = {}) {
         ownershipKey: hint.ownershipKey
       }))
     },
-    bounds: conversionBounds(sourceLanguage, target),
-    projection: {
-      target,
-      targetLanguage: target,
-      sourceLanguage,
-      mode: projection.outputMode,
-      readiness: projection.readiness.readiness,
-      ok: projection.ok,
-      output: projection.output,
-      sourceMapMappings: projection.sourceMap?.mappings.length ?? 0
-    }
+    bounds: conversionBounds(sourceLanguage, targets.join('/')),
+    projection: projections.rust,
+    projections
   };
 }
 
-function createTsToRustWorkbenchAdapter() {
+function projectionSummary(projection, { sourceLanguage, target }) {
   return {
-    id: 'frontier-lang-workbench-ts-to-rust',
-    sourceLanguage: 'typescript',
-    target: 'rust',
-    version: '0.0.0-demo',
-    capabilities: ['semantic-symbol-scaffold'],
-    coverage: {
-      readiness: 'ready',
-      handledLossKinds: ['opaqueNative', 'declarationOnlyCoverage', 'partialSemanticIndex', 'sourceMapApproximation', 'sourcePreservation'],
-      notes: ['Workbench adapter lowers TypeScript semantic symbols to Rust scaffolding and leaves bodies explicit.']
-    },
-    project(input) {
-      return {
-        output: rustFromSymbols(input.importResult.semanticIndex?.symbols ?? []),
-        readiness: 'ready',
-        evidence: [{
-          id: 'evidence_workbench_js_to_rust',
-          kind: 'projection',
-          status: 'passed',
-          summary: 'Workbench adapter projected TypeScript semantic symbols to Rust scaffolding.'
-        }]
-      };
-    }
+    target,
+    targetLanguage: target,
+    sourceLanguage,
+    targetPath: projection.sourceMap?.targetPath,
+    mode: projection.outputMode,
+    readiness: projection.readiness.readiness,
+    ok: projection.ok,
+    output: projection.output,
+    sourceMapMappings: projection.sourceMap?.mappings.length ?? 0
   };
-}
-
-function createRustToTsWorkbenchAdapter() {
-  return {
-    id: 'frontier-lang-workbench-rust-to-ts',
-    sourceLanguage: 'rust',
-    target: 'typescript',
-    version: '0.0.0-demo',
-    capabilities: ['semantic-symbol-scaffold'],
-    coverage: {
-      readiness: 'ready',
-      handledLossKinds: ['opaqueNative', 'macroExpansion', 'declarationOnlyCoverage', 'partialSemanticIndex', 'sourceMapApproximation', 'sourcePreservation'],
-      notes: ['Workbench adapter lowers Rust semantic symbols to TypeScript scaffolding and leaves bodies explicit.']
-    },
-    project(input) {
-      return {
-        output: tsFromSymbols(input.importResult.semanticIndex?.symbols ?? []),
-        readiness: 'ready',
-        evidence: [{
-          id: 'evidence_workbench_rust_to_ts',
-          kind: 'projection',
-          status: 'passed',
-          summary: 'Workbench adapter projected Rust semantic symbols to TypeScript scaffolding.'
-        }]
-      };
-    }
-  };
-}
-
-function rustFromSymbols(symbols) {
-  const lines = ['// Generated from Frontier semantic graph evidence.'];
-  for (const symbol of symbols) {
-    if (symbol.kind === 'class') lines.push('', `pub struct ${safeTypeName(symbol.name)};`);
-    if (symbol.kind === 'function' || symbol.kind === 'method') {
-      lines.push('', `pub fn ${safeRustName(symbol.name)}() {`, '    // port body from preserved TypeScript source', '}');
-    }
-  }
-  return `${lines.join('\n').trim()}\n`;
-}
-
-function tsFromSymbols(symbols) {
-  const lines = ['// Generated from Frontier semantic graph evidence.'];
-  for (const symbol of symbols) {
-    if (symbol.kind === 'type' || symbol.kind === 'class') lines.push('', `export class ${safeTypeName(symbol.name)} {}`);
-    if (symbol.kind === 'function' || symbol.kind === 'method') {
-      lines.push('', `export function ${safeJsName(symbol.name)}(...args: unknown[]) {`, "  throw new Error('port body from preserved Rust source');", '}');
-    }
-  }
-  return `${lines.join('\n').trim()}\n`;
 }
 
 function universalAstSummary(imported) {
@@ -250,29 +208,17 @@ function lossSummary(loss) {
 }
 
 function normalizeSourceLanguage(language) {
-  return String(language || 'typescript').toLowerCase() === 'rust' ? 'rust' : 'typescript';
+  return 'typescript';
 }
 
 function targetExtension(target) {
-  return target === 'rust' ? 'rs' : 'ts';
+  if (target === 'rust') return 'rs';
+  if (target === 'python') return 'py';
+  return 'txt';
 }
 
 function sourceExtension(language) {
-  return language === 'rust' ? 'rs' : 'ts';
-}
-
-function safeTypeName(name) {
-  const clean = String(name).replace(/[^A-Za-z0-9_]/g, '');
-  return clean && /^[A-Z]/.test(clean) ? clean : `Frontier${clean || 'Type'}`;
-}
-
-function safeRustName(name) {
-  return String(name).replace(/\./g, '_').replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/[^A-Za-z0-9_]/g, '_').toLowerCase();
-}
-
-function safeJsName(name) {
-  const clean = String(name).replace(/[^A-Za-z0-9_$]/g, '_');
-  return /^[A-Za-z_$]/.test(clean) ? clean : `frontier_${clean}`;
+  return 'ts';
 }
 
 function sendJson(response, status, value) {

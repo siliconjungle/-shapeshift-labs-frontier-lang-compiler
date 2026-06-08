@@ -18,6 +18,7 @@ export function importExternalSemanticIndex(input) {
     metadata: input?.metadata ?? {}
   };
   const normalized = normalizeExternalSemanticIndexPayload(payload, context);
+  const ownershipRegions = normalized.ownershipRegions ?? [];
   const evidence = attachNativeImportLossSummary(
     uniqueByEvidenceId([...(normalized.evidence ?? []), ...(input?.evidence ?? [])]),
     summarizeNativeImportLosses(normalized.losses ?? [], {
@@ -116,6 +117,7 @@ export function importExternalSemanticIndex(input) {
     semanticIndex,
     universalAst,
     sourceMaps,
+    ownershipRegions,
     losses,
     evidence,
     readiness,
@@ -125,6 +127,8 @@ export function importExternalSemanticIndex(input) {
       occurrences: semanticIndex.occurrences.length,
       relations: semanticIndex.relations.length,
       facts: semanticIndex.facts.length,
+      ownershipRegions: ownershipRegions.length,
+      ownershipRegionKinds: [...new Set(ownershipRegions.map((region) => region.regionKind).filter(Boolean))],
       sourceMapMappings: sourceMaps.reduce((sum, sourceMap) => sum + (sourceMap.mappings?.length ?? 0), 0),
       losses: losses.length,
       readiness: readiness.readiness

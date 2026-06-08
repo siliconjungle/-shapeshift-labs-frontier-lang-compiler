@@ -3,6 +3,7 @@ import {
   nativeDeclaration,
   splitParameters
 } from './native-region-scanner-core.js';
+import { jsImportDeclarations } from './native-region-scanner-js-imports.js';
 
 function jsCommentOnlyLine(trimmed) {
   return trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*');
@@ -247,6 +248,7 @@ export {
   jsDeclarationScanLine,
   jsExportedContainerDeclaration,
   jsInitializerKind,
+  jsImportDeclarations,
   jsObjectPropertyDeclaration,
   jsObjectRegionContext,
   jsRegionKindForDeclarationName,

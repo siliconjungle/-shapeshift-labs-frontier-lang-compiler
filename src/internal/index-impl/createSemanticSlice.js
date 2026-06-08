@@ -1,5 +1,6 @@
 import{idFragment,uniqueStrings}from'../../native-import-utils.js';import{createSemanticMergeCandidateRecord}from'@shapeshift-labs/frontier-lang-kernel';
 import{createSemanticImportSidecar}from'./createSemanticImportSidecar.js';import{nativeNodeId}from'./nativeNodeId.js';import{readStringArray}from'./readStringArray.js';import{selectSemanticSliceRecords}from'./selectSemanticSliceRecords.js';import{semanticSliceContext}from'./semanticSliceContext.js';import{semanticSliceExpectedAssertions}from'./semanticSliceExpectedAssertions.js';import{semanticSliceReadiness}from'./semanticSliceReadiness.js';import{semanticSliceReasons}from'./semanticSliceReasons.js';import{semanticSliceRecords}from'./semanticSliceRecords.js';import{semanticSliceSourceFiles}from'./semanticSliceSourceFiles.js';import{semanticSliceSourceMapLinks}from'./semanticSliceSourceMapLinks.js';import{semanticSliceSourceSpans}from'./semanticSliceSourceSpans.js';import{semanticSliceTouchedSymbol}from'./semanticSliceTouchedSymbol.js';
+import{decorateSemanticMergeCandidateForAdmission}from'./semanticMergeCandidateRecords.js';
 export function createSemanticSlice(input, options = {}) {
   const context = semanticSliceContext(input, options);
   const sidecar = context.sidecar ?? (context.importResult ? createSemanticImportSidecar(context.importResult, {
@@ -50,7 +51,7 @@ export function createSemanticSlice(input, options = {}) {
       sidecarId: sidecar?.id
     }
   }];
-  const mergeCandidate = createSemanticMergeCandidateRecord({
+  const mergeCandidate = decorateSemanticMergeCandidateForAdmission(createSemanticMergeCandidateRecord({
     id: options.mergeCandidateId ?? `merge_candidate_${idPart}_semantic_slice`,
     importResultId: context.importResult?.id,
     language: context.language,
@@ -70,7 +71,7 @@ export function createSemanticSlice(input, options = {}) {
       dependencyRelationIds: selection.relations.map((relation) => relation.id).filter(Boolean),
       autoMergeClaim: false
     }
-  });
+  }),{evidence,sourceHash:sourceFiles[0]?.sourceHash,metadata:{source:'createSemanticSlice'}});
   return {
     kind: 'frontier.lang.semanticSlice',
     version: 1,

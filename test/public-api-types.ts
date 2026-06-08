@@ -28,6 +28,7 @@ type ExpectedPublicRuntimeExport =
   | 'LanguageAdapterPackageContracts'
   | 'LanguageAdapterPackageReleaseReadinessStatuses'
   | 'SemanticMergeConflictClasses'
+  | 'SemanticMergeCandidateProjectionRisks'
   | 'SemanticPatchBundleAdmissionStatuses'
   | 'SemanticHistoryAdmissionStatuses'
   | 'SemanticHistoryConflictReasons'
@@ -54,6 +55,7 @@ type ExpectedPublicRuntimeExport =
   | 'createProjectionReadinessMatrix'
   | 'createProjectionTargetLossMatrix'
   | 'createSemanticHistoryRecord'
+  | 'createSemanticMergeCandidateAdmissionRecord'
   | 'createSemanticPatchBundleRecord'
   | 'createUniversalCapabilityMatrix'
   | 'createUniversalConversionArtifacts'
@@ -62,6 +64,7 @@ type ExpectedPublicRuntimeExport =
   | 'createUniversalDialectRegistry'
   | 'createUniversalExternRecord'
   | 'createNativeSourcePreservation'
+  | 'decorateSemanticMergeCandidateForAdmission'
   | 'createCSharpRoslynNativeImporterAdapter'
   | 'createClangAstNativeImporterAdapter'
   | 'createGoAstNativeImporterAdapter'
@@ -87,6 +90,7 @@ type ExpectedPublicRuntimeExport =
   | 'queryNativeParserFeatureMatrix'
   | 'queryProjectionReadinessMatrix'
   | 'querySemanticHistoryRecordOverlaps'
+  | 'querySemanticMergeCandidateAdmissionOverlaps'
   | 'querySemanticPatchBundleRecords'
   | 'querySemanticMergeConflictClasses'
   | 'queryUniversalConversionArtifacts'
@@ -104,9 +108,11 @@ type ExpectedPublicRuntimeExport =
   | 'resolveCapabilityAdapters'
   | 'runNativeImporterAdapter'
   | 'runNativeTargetProjectionAdapter'
+  | 'semanticMergeCandidateReadinessSortKey'
   | 'semanticMergeConflictRiskScore'
   | 'semanticHistoryRecordsConflict'
   | 'semanticHistoryRecordsOverlap'
+  | 'sortSemanticMergeCandidateAdmissionRecords'
   | 'sortSemanticMergeCandidatesByConflictRisk'
   | 'summarizeLanguageAdapterPackageContracts'
   | 'summarizeSemanticMergeConflicts'
@@ -139,6 +145,34 @@ const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecor
 );
 
 void queriedSemanticPatchBundles;
+
+const semanticMergeAdmission = compilerApi.createSemanticMergeCandidateAdmissionRecord({
+  id: 'typed_candidate',
+  language: 'javascript',
+  sourcePath: 'src/example.js',
+  baseHash: 'base_hash',
+  targetHash: 'target_hash',
+  readiness: 'needs-review',
+  changedSemanticRegions: [{
+    id: 'typed_region',
+    key: 'source#src/example.js#function#run',
+    conflictKey: 'source#src/example.js#function#run',
+    sourceSpan: { startLine: 1, startColumn: 1, endLine: 1, endColumn: 20 }
+  }],
+  evidenceIds: ['evidence_example']
+});
+const typedSemanticMergeAdmission: compilerApi.SemanticMergeCandidateAdmissionRecord = semanticMergeAdmission;
+const sortedSemanticMergeAdmissions: readonly compilerApi.SemanticMergeCandidateAdmissionRecord[] = compilerApi.sortSemanticMergeCandidateAdmissionRecords([
+  typedSemanticMergeAdmission
+]);
+const semanticMergeAdmissionOverlaps: readonly compilerApi.SemanticMergeCandidateOverlapRecord[] = compilerApi.querySemanticMergeCandidateAdmissionOverlaps([
+  typedSemanticMergeAdmission
+]);
+const semanticMergeAdmissionSortKey: number = compilerApi.semanticMergeCandidateReadinessSortKey(typedSemanticMergeAdmission);
+
+void sortedSemanticMergeAdmissions;
+void semanticMergeAdmissionOverlaps;
+void semanticMergeAdmissionSortKey;
 
 const conversionArtifacts = compilerApi.createUniversalConversionArtifacts({
   id: 'type-admission-route',

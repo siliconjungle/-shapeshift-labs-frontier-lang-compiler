@@ -69,8 +69,8 @@ body {
 .brand h1 { margin: 0; font-size: 15px; line-height: 1.1; letter-spacing: 0; }
 .brand p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
 
-.topActions { display: flex; align-items: center; gap: 8px; }
-.iconButton, .segmented button, .modeGroup button, .runButton {
+.topActions { display: flex; align-items: center; gap: 8px; margin: 0; }
+.iconButton, .segmented button, .runButton {
   height: 32px;
   border: 1px solid var(--line);
   background: var(--panel-2);
@@ -79,17 +79,7 @@ body {
 }
 .iconButton { width: 34px; font-size: 16px; cursor: pointer; }
 .runButton { min-width: 64px; padding: 0 14px; cursor: pointer; color: var(--green); }
-.modeGroup { display: flex; }
-.modeGroup button {
-  width: 84px;
-  border-radius: 0;
-  font-size: 12px;
-  cursor: pointer;
-}
-.modeGroup button:first-child { border-radius: 7px 0 0 7px; }
-.modeGroup button:last-child { border-radius: 0 7px 7px 0; border-left: 0; }
-.modeGroup button[aria-pressed="true"] { background: #213127; color: var(--green); }
-.iconButton:hover, .segmented button:hover, .modeGroup button:hover, .runButton:hover { background: var(--panel-3); }
+.iconButton:hover, .segmented button:hover, .runButton:hover { background: var(--panel-3); }
 
 .statusStrip {
   position: fixed;
@@ -97,7 +87,7 @@ body {
   z-index: 19;
   height: var(--status-height);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   background: #0f1214;
   overflow: hidden;
 }
@@ -132,7 +122,7 @@ body {
   height: calc(100dvh - var(--chrome-height));
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(270px, 0.95fr) minmax(330px, 1.1fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr) minmax(280px, 1fr) minmax(280px, 1fr);
   overflow: hidden;
 }
 .pane {
@@ -188,6 +178,9 @@ textarea, .codeBlock {
   overflow: auto;
   overscroll-behavior: contain;
   white-space: pre;
+}
+textarea[readonly] {
+  cursor: default;
 }
 
 .graphView {
@@ -291,7 +284,7 @@ textarea, .codeBlock {
   }
   .workspace {
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(4, minmax(0, 1fr));
     overflow: hidden;
   }
   .pane {

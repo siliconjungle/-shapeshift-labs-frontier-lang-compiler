@@ -25,6 +25,7 @@ import type {
   UniversalAstLayerRecord
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { SemanticImportSidecarAdmission, SemanticImportSidecarQuality } from './semantic-sidecar-admission.js';
+import type { SemanticMergeCandidateAdmissionRecord, SemanticMergeCandidateProjectionRisk } from './semantic-merge-candidates.js';
 import type { SemanticMergeConflictClass, SemanticMergeConflictSummary } from './semantic-merge-conflicts.js';
 import type { SemanticImportImpactSummary } from './semantic-impact.js';
 import type { Diagnostic } from '@shapeshift-labs/frontier-lang-checker';
@@ -274,6 +275,12 @@ export interface SemanticImportSidecar {
     readonly reasons: readonly string[];
     readonly conflictClasses?: readonly SemanticMergeConflictClass[];
     readonly conflictSummary?: SemanticMergeConflictSummary;
+    readonly changedSemanticRegions?: number;
+    readonly sourceHashes?: SemanticMergeCandidateAdmissionRecord['sourceHashes'];
+    readonly evidenceIds?: readonly string[];
+    readonly projectionRisk?: SemanticMergeCandidateProjectionRisk;
+    readonly readinessSortKey?: number;
+    readonly overlapSummary?: SemanticMergeCandidateAdmissionRecord['overlapSummary'];
     readonly risk?: string;
     readonly operationCount: number;
   }[];
@@ -309,7 +316,5 @@ export interface SemanticImportSidecar {
     readonly semanticImportExpected: boolean; readonly semanticImportExpectedSatisfied: boolean; readonly semanticImportExpectedMissingReasonCodes: readonly string[];
     readonly readiness: SemanticMergeReadiness; readonly emptySemanticIndex: boolean;
   };
-  readonly metadata?: Record<string, unknown>;
-}
-
+  readonly metadata?: Record<string, unknown>; }
 export interface SemanticImportSidecarOptions { readonly id?: string; readonly generatedAt?: number; readonly regionPrefix?: string; readonly targetPath?: string; readonly expected?: boolean; readonly semanticImportExpected?: boolean; readonly metadata?: Record<string, unknown>; }

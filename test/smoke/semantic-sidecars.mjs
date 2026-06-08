@@ -306,10 +306,13 @@ const unchangedDeclarationChangeSet = diffNativeSourceImports({
   })
 });
 assert.equal(unchangedDeclarationChangeSet.summary.sourceChanged, true);
-assert.equal(unchangedDeclarationChangeSet.summary.symbols, 0);
+assert.equal(unchangedDeclarationChangeSet.summary.symbols, 1);
 assert.equal(unchangedDeclarationChangeSet.summary.regions, 1);
-assert.equal(unchangedDeclarationChangeSet.changedRegions[0].granularity, 'file');
-assert.equal(unchangedDeclarationChangeSet.reasons.some((reason) => reason.includes('file-level review')), true);
-assert.equal(unchangedDeclarationChangeSet.changedRegions[0].metadata.changedRegionProjection.admission.action, 'review-file');
+assert.equal(unchangedDeclarationChangeSet.summary.modifiedSymbols, 1);
+assert.equal(unchangedDeclarationChangeSet.changedSymbols.some((symbol) => symbol.name === 'bodyOnly' && symbol.changeKind === 'modified' && symbol.sourceSpan.endLine === 3), true);
+assert.equal(unchangedDeclarationChangeSet.changedRegions[0].granularity, 'symbol');
+assert.equal(unchangedDeclarationChangeSet.changedRegions[0].regionKind, 'body');
+assert.equal(unchangedDeclarationChangeSet.reasons.some((reason) => reason.includes('1 symbol(s)')), true);
+assert.equal(unchangedDeclarationChangeSet.changedRegions[0].metadata.changedRegionProjection.admission.action, 'review-port');
 assert.equal(unchangedDeclarationChangeSet.changedRegions[0].metadata.changedRegionProjection.autoMergeClaim, false);
 assert.equal(unchangedDeclarationChangeSet.changedRegions[0].metadata.changedRegionProjection.sourceMapLinks.some((link) => link.side === 'before'), true);

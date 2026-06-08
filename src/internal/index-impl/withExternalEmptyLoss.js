@@ -26,6 +26,7 @@ export function withExternalEmptyLoss(result, context) {
   result.occurrences = uniqueRecordsById(result.occurrences);
   result.relations = uniqueRecordsById(result.relations);
   result.facts = uniqueRecordsById(result.facts);
+  result.ownershipRegions = uniqueRecordsById(result.ownershipRegions);
   result.losses = uniqueByLossId(result.losses);
   result.evidence = uniqueByEvidenceId(result.evidence);
   return result;

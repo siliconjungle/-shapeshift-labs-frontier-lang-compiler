@@ -1,4 +1,5 @@
 import{countBy,maxSemanticMergeReadiness,uniqueRecordsById,uniqueStrings}from'../../native-import-utils.js';
+import{createSemanticMergeCandidateAdmissionRecord,querySemanticMergeCandidateAdmissionOverlaps,sortSemanticMergeCandidateAdmissionRecords}from'./semanticMergeCandidateRecords.js';
 
 const riskRank=Object.freeze({low:0,medium:1,unknown:2,high:3});
 const preservationRank=Object.freeze({exact:0,lossy:1,missing:2,stale:3,empty:4});
@@ -155,21 +156,45 @@ export function admissionMergeCandidates(projectResult,imports,mergeCandidates,l
     projectResult?.patch,
     ...imports.map((imported)=>imported?.patch)
   ].filter((patch)=>patch?.id).map((patch)=>[patch.id,patch]));
-  const risks=mergeCandidates.map((candidate)=>candidateRisk(candidate,patchById.get(candidate.patchId)));
+  const records=sortSemanticMergeCandidateAdmissionRecords(mergeCandidates.map((candidate)=>createSemanticMergeCandidateAdmissionRecord(candidate,{patch:patchById.get(candidate.patchId)})));
+  const recordByCandidateId=new Map(records.map((record)=>[record.candidateId,record]));
+  const overlaps=querySemanticMergeCandidateAdmissionOverlaps(records);
+  const risks=mergeCandidates.map((candidate)=>{
+    const record=recordByCandidateId.get(candidate.id);
+    return maxRisk(candidateRisk(candidate,patchById.get(candidate.patchId)),record?.projectionRisk??'low');
+  });
   const readiness=mergeCandidates.reduce(
-    (current,candidate)=>maxSemanticMergeReadiness(current,candidate.readiness),
+    (current,candidate)=>maxSemanticMergeReadiness(current,recordByCandidateId.get(candidate.id)?.readiness??candidate.readiness),
     lossSummary?.semanticMergeReadiness??'ready'
   );
+  const overlapCandidateIds=uniqueStrings(overlaps.flatMap((overlap)=>overlap.candidateIds??[]));
   return {
     total:mergeCandidates.length,
     readiness,
     highestRisk:risks.reduce(maxRisk,'low'),
+    projectionRisk:records.reduce((current,record)=>maxRisk(current,record.projectionRisk??'unknown'),'low'),
     byRisk:countBy(risks),
-    byReadiness:countBy(mergeCandidates.map((candidate)=>candidate.readiness??'needs-review')),
+    byReadiness:countBy(records.map((record)=>record.readiness??'needs-review')),
+    byProjectionRisk:countBy(records.map((record)=>record.projectionRisk??'unknown')),
     highRiskCandidateIds:mergeCandidates.filter((candidate,index)=>risks[index]==='high').map((candidate)=>candidate.id).filter(Boolean),
-    reviewCandidateIds:mergeCandidates.filter((candidate)=>candidate.readiness==='needs-review').map((candidate)=>candidate.id).filter(Boolean),
-    blockedCandidateIds:mergeCandidates.filter((candidate)=>candidate.readiness==='blocked').map((candidate)=>candidate.id).filter(Boolean),
-    conflictKeys:uniqueStrings(mergeCandidates.flatMap((candidate)=>candidate.conflictKeys??[])),
+    reviewCandidateIds:records.filter((record)=>record.readiness==='needs-review'||record.admission.reviewRequired).map((record)=>record.candidateId).filter(Boolean),
+    blockedCandidateIds:records.filter((record)=>record.readiness==='blocked'||record.admission.action==='block').map((record)=>record.candidateId).filter(Boolean),
+    highProjectionRiskCandidateIds:records.filter((record)=>record.projectionRisk==='high').map((record)=>record.candidateId).filter(Boolean),
+    conflictKeys:uniqueStrings(records.flatMap((record)=>record.conflictKeys??[])),
+    readinessOrderCandidateIds:records.map((record)=>record.candidateId).filter(Boolean),
+    changedSemanticRegions:{
+      total:records.reduce((sum,record)=>sum+record.changedSemanticRegions.length,0),
+      byKind:countBy(records.flatMap((record)=>record.changedSemanticRegions.map((region)=>region.regionKind??'unknown'))),
+      conflictKeys:uniqueStrings(records.flatMap((record)=>record.changedSemanticRegions.map((region)=>region.conflictKey)))
+    },
+    overlaps:{
+      total:overlaps.length,
+      candidateIds:overlapCandidateIds,
+      conflictKeys:uniqueStrings(overlaps.flatMap((overlap)=>overlap.conflictKeys??[])),
+      sourcePaths:uniqueStrings(overlaps.map((overlap)=>overlap.sourcePath).filter(Boolean)),
+      pairs:overlaps
+    },
+    records,
     patchRisk:normalizeRisk(projectResult?.patch?.risk)
   };
 }

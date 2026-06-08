@@ -36,17 +36,19 @@ npm run build
 node examples/native-js-to-rust-demo.mjs
 ```
 
-Run the interactive Frontier-style workbench with editable TypeScript and Rust panes:
+Run the interactive Frontier-style workbench with a submitted TypeScript source pane,
+Frontier graph/JSON pane, and independent Rust/Python projection panes:
 
 ```sh
 npm run demo:ts-rust -- --port 4177
 ```
 
 The workbench converts only when `Run` is pressed. TypeScript edits project through
-the Frontier semantic graph into Rust scaffolding; Rust edits project back through
-the graph into TypeScript scaffolding. The middle pane shows symbols, relations,
-source maps, readiness, losses, patch hints, and the explicit supported/review-only/
-unsupported bounds for the current direction.
+the Frontier semantic graph into Rust and Python scaffolding. The middle pane shows
+symbols, relations, source maps, readiness, losses, patch hints, and the explicit
+supported/review-only/unsupported bounds for the projection. Run
+`npm run demo:ts-rust:smoke` to verify the conversion output and layout scaffold
+without starting the server.
 
 The demo prints JavaScript source, the Frontier universal AST/semantic-index summary,
 Rust declaration stubs, a host-adapter Rust projection, and a direct Frontier-source
@@ -117,11 +119,12 @@ const importedIndex = importExternalSemanticIndex({
 });
 
 console.log(importedIndex.semanticIndex.symbols.length);
+console.log(importedIndex.ownershipRegions[0]?.key);
 console.log(importedIndex.summary.sourceMapMappings);
 console.log(importedIndex.readiness.readiness); // "ready-with-losses" or review-required
 ```
 
-External semantic-index imports create Frontier `SemanticIndexRecord`, `SourceMapRecord`, evidence, losses, ownership facts, and a universal AST envelope. They are a bridge from existing language servers/indexers into semantic merge tooling; they do not claim full parser AST coverage, macro expansion, type checking, comments/trivia preservation, or lossless cross-language code generation by themselves.
+External semantic-index imports create Frontier `SemanticIndexRecord`, `SourceMapRecord`, evidence, losses, ownership facts, first-class `ownershipRegions`, and a universal AST envelope. They are a bridge from existing language servers/indexers into semantic merge tooling; they do not claim full parser AST coverage, macro expansion, type checking, comments/trivia preservation, or lossless cross-language code generation by themselves.
 
 Native imports include source maps, semantic merge candidates, and a loss summary for admission queues and dashboards. Informational losses produce `ready-with-losses`, warning losses produce `needs-review`, and error losses or failed import evidence produce `blocked`:
 
@@ -136,6 +139,28 @@ console.log(readiness.readiness);
 ```
 
 The loss taxonomy separates broad scanner limits from specific round-trip risks such as conditional compilation, reflection, overload/type-inference gaps, comments/trivia preservation, source-map approximation, parser diagnostics, and target projection loss. These records are evidence labels for merge admission; they are not claims that the lightweight scanner expanded macros, evaluated inactive branches, resolved overloads, or ran a type checker.
+
+Semantic merge candidates also expose compiler-normalized admission records for coordinator queues:
+
+```js
+import {
+  createSemanticMergeCandidateAdmissionRecord,
+  querySemanticMergeCandidateAdmissionOverlaps,
+  sortSemanticMergeCandidateAdmissionRecords
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const record = createSemanticMergeCandidateAdmissionRecord(changeSet);
+
+console.log(record.changedSemanticRegions);
+console.log(record.sourceHashes.baseHash, record.sourceHashes.targetHash);
+console.log(record.conflictKeys, record.evidenceIds);
+console.log(record.projectionRisk, record.readiness, record.readinessSortKey);
+
+const queue = sortSemanticMergeCandidateAdmissionRecords([record, otherRecord]);
+const overlaps = querySemanticMergeCandidateAdmissionOverlaps(queue);
+```
+
+These candidate records are compact merge-admission evidence. They preserve changed semantic regions, source/base/target hashes, conflict keys, evidence IDs, projection risk, readiness, and overlap pairs so swarm coordinators can sort likely-ready candidates first and detect conflicting regions before patch review.
 
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 

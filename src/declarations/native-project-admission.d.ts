@@ -2,6 +2,7 @@ import type { FrontierSourceLanguage, SemanticMergeReadiness } from '@shapeshift
 import type { NativeImportLossSummary } from './native-import-losses.js';
 import type { NativeImportResultContract } from './native-import-contracts.js';
 import type { NativeProjectImportResult } from './native-project.js';
+import type { SemanticMergeCandidateAdmissionRecord, SemanticMergeCandidateOverlapRecord, SemanticMergeCandidateProjectionRisk } from './semantic-merge-candidates.js';
 
 export type NativeProjectImportAdmissionAction = 'admit' | 'prioritize' | 'reject';
 export type NativeProjectImportAdmissionPriority = 'low' | 'normal' | 'high' | 'critical' | 'blocker';
@@ -78,10 +79,27 @@ export interface NativeProjectAdmissionMergeCandidates {
   readonly highestRisk: NativeProjectImportAdmissionRisk;
   readonly byRisk: Readonly<Record<string, number>>;
   readonly byReadiness: Readonly<Record<string, number>>;
+  readonly byProjectionRisk: Readonly<Record<string, number>>;
   readonly highRiskCandidateIds: readonly string[];
   readonly reviewCandidateIds: readonly string[];
   readonly blockedCandidateIds: readonly string[];
+  readonly highProjectionRiskCandidateIds: readonly string[];
   readonly conflictKeys: readonly string[];
+  readonly readinessOrderCandidateIds: readonly string[];
+  readonly changedSemanticRegions: {
+    readonly total: number;
+    readonly byKind: Readonly<Record<string, number>>;
+    readonly conflictKeys: readonly string[];
+  };
+  readonly overlaps: {
+    readonly total: number;
+    readonly candidateIds: readonly string[];
+    readonly conflictKeys: readonly string[];
+    readonly sourcePaths: readonly string[];
+    readonly pairs: readonly SemanticMergeCandidateOverlapRecord[];
+  };
+  readonly records: readonly SemanticMergeCandidateAdmissionRecord[];
+  readonly projectionRisk?: SemanticMergeCandidateProjectionRisk;
   readonly patchRisk?: NativeProjectImportAdmissionRisk;
 }
 

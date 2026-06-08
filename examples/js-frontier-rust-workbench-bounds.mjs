@@ -1,4 +1,5 @@
 export function conversionBounds(sourceLanguage, targetLanguage) {
+  const targetDisplay = String(targetLanguage).replace('/', ' and ');
   return {
     sourceLanguage,
     targetLanguage,
@@ -10,13 +11,13 @@ export function conversionBounds(sourceLanguage, targetLanguage) {
     ],
     reviewRequired: [
       'Function bodies are preserved as source evidence and emitted as TODO scaffolds.',
-      'Types are declaration evidence, not a full Rust trait/lifetime/ownership proof.',
+      `Types are declaration evidence, not a full ${targetDisplay} runtime or ownership proof.`,
       'Runtime APIs such as fetch, timers, storage, DOM, Node, and npm crates need adapters.',
       'Round trips are useful for review, but not automatic semantic equivalence proofs.'
     ],
     unsupportedToday: [
-      'Behavior-preserving transpilation of arbitrary TypeScript or Rust.',
-      'Full generic constraints, overload resolution, conditional types, macros, and borrow checking.',
+      'Behavior-preserving transpilation of arbitrary TypeScript into Rust or Python.',
+      'Full generic constraints, overload resolution, conditional types, macros, and ownership inference.',
       'Async control-flow lowering, exception/error model conversion, and memory ownership synthesis.',
       'Perfect comments/trivia formatting in projected target code without richer parser evidence.'
     ]

@@ -4,7 +4,7 @@ export function renderWorkbenchHtml(initialState) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Frontier Lang TypeScript to Rust Workbench</title>
+  <title>Frontier Lang TypeScript Projection Workbench</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -14,25 +14,22 @@ export function renderWorkbenchHtml(initialState) {
         <span class="brandMark">F</span>
         <div>
           <h1>Frontier Lang Workbench</h1>
-          <p>TypeScript -> Frontier graph -> Rust</p>
+          <p>TypeScript -> Frontier graph -> Rust + Python</p>
         </div>
       </div>
-      <div class="topActions">
-        <div class="modeGroup" role="group" aria-label="Source language">
-          <button data-source-mode="typescript" aria-pressed="true">TS source</button>
-          <button data-source-mode="rust" aria-pressed="false">Rust source</button>
-        </div>
-        <button class="runButton" id="runButton">Run</button>
-        <button class="iconButton" id="resetButton" title="Reset source" aria-label="Reset source">↺</button>
-        <button class="iconButton" id="copyButton" title="Copy projection" aria-label="Copy projection">⧉</button>
-      </div>
+      <form class="topActions" id="convertForm">
+        <button class="runButton" id="runButton" type="submit">Run</button>
+        <button class="iconButton" id="resetButton" type="button" title="Reset source" aria-label="Reset source">↺</button>
+        <button class="iconButton" id="copyButton" type="button" title="Copy projections" aria-label="Copy projections">⧉</button>
+      </form>
     </header>
 
     <section class="statusStrip" data-view-panel="status">
       <div><span class="label">Readiness</span><strong id="readinessValue">-</strong></div>
       <div><span class="label">Symbols</span><strong id="symbolValue">-</strong></div>
       <div><span class="label">Mappings</span><strong id="mappingValue">-</strong></div>
-      <div><span class="label">Mode</span><strong id="modeValue">-</strong></div>
+      <div><span class="label">Rust</span><strong id="rustValue">-</strong></div>
+      <div><span class="label">Python</span><strong id="pythonValue">-</strong></div>
     </section>
 
     <section class="workspace">
@@ -64,7 +61,17 @@ export function renderWorkbenchHtml(initialState) {
           <span id="rustStatus">target</span>
         </div>
         <div class="paneBody editorBody">
-          <textarea id="rustInput" spellcheck="false" aria-label="Rust source"></textarea>
+          <textarea id="rustOutput" spellcheck="false" aria-label="Rust projection" readonly></textarea>
+        </div>
+      </section>
+
+      <section class="pane outputPane" data-view-panel="python">
+        <div class="paneHeader">
+          <h2>Python</h2>
+          <span id="pythonStatus">target</span>
+        </div>
+        <div class="paneBody editorBody">
+          <textarea id="pythonOutput" spellcheck="false" aria-label="Python projection" readonly></textarea>
         </div>
       </section>
     </section>

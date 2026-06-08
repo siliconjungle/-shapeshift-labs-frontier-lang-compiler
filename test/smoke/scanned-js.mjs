@@ -102,6 +102,38 @@ const scannedCommonJsConfigImport = importNativeSource({
 });
 assert.equal(scannedCommonJsConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'module.exports.routes' && symbol.metadata.ownershipRegionKind === 'route'), true);
 assert.equal(scannedCommonJsConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'module.exports.runtimeConfig' && symbol.metadata.ownershipRegionKind === 'config'), true);
+const scannedRichTsImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/rich.tsx',
+  sourceText: 'import React, { useMemo as memoize, type ReactNode } from "react";\nimport * as pathTools from "./path-tools.js";\nexport { Widget as ExportedWidget } from "./widgets.js";\nconst localTool = require("./local-tool");\nexport const LIMIT: number = 3;\nexport function formatTitle<T extends string>(title: T): string {\n  return memoize(() => localTool.clean(title), [title]);\n}\nexport class TodoPanel extends React.Component<{ title: ReactNode }> {\n  render(): ReactNode {\n    return formatTitle(this.props.title as string);\n  }\n}\nexport const makeTodo = (title: string): Todo => ({\n  title: pathTools.normalize(title),\n  limit: LIMIT\n});\n'
+});
+const richSymbolsById = new Map(scannedRichTsImport.semanticIndex.symbols.map((symbol) => [symbol.id, symbol]));
+const richSymbolNames = new Set(scannedRichTsImport.semanticIndex.symbols.map((symbol) => symbol.name));
+for (const expectedName of ['React', 'memoize', 'ReactNode', 'pathTools', 'ExportedWidget', 'localTool', 'LIMIT', 'formatTitle', 'TodoPanel', 'TodoPanel.render', 'makeTodo']) {
+  assert.equal(richSymbolNames.has(expectedName), true);
+}
+assert.equal(scannedRichTsImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'
+  && richSymbolsById.get(relation.targetId)?.name === 'memoize'), true);
+assert.equal(scannedRichTsImport.semanticIndex.relations.some((relation) => relation.predicate === 'calls'
+  && richSymbolsById.get(relation.sourceId)?.name === 'formatTitle'
+  && richSymbolsById.get(relation.targetId)?.name === 'memoize'), true);
+assert.equal(scannedRichTsImport.semanticIndex.relations.some((relation) => relation.predicate === 'calls'
+  && richSymbolsById.get(relation.sourceId)?.name === 'TodoPanel.render'
+  && richSymbolsById.get(relation.targetId)?.name === 'formatTitle'), true);
+assert.equal(scannedRichTsImport.semanticIndex.relations.some((relation) => relation.predicate === 'uses'
+  && richSymbolsById.get(relation.sourceId)?.name === 'makeTodo'
+  && richSymbolsById.get(relation.targetId)?.name === 'LIMIT'), true);
+const formatTitleSymbol = scannedRichTsImport.semanticIndex.symbols.find((symbol) => symbol.name === 'formatTitle');
+assert.equal(formatTitleSymbol.definitionSpan.startLine, 6);
+assert.equal(formatTitleSymbol.definitionSpan.endLine, 8);
+assert.equal(typeof formatTitleSymbol.definitionSpan.endColumn, 'number');
+assert.equal(scannedRichTsImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId === formatTitleSymbol.id && mapping.sourceSpan.endLine === 8), true);
+const richSidecar = createSemanticImportSidecar(scannedRichTsImport, { generatedAt: 134, targetPath: 'dist/rich.js' });
+assert.equal(richSidecar.summary.emptySemanticIndex, false);
+assert.equal(richSidecar.summary.symbols >= 10, true);
+assert.equal(richSidecar.ownershipRegions.some((region) => region.symbolName === 'TodoPanel.render' && region.regionKind === 'body'), true);
+assert.equal(richSidecar.ownershipRegions.some((region) => region.symbolName === 'memoize' && region.regionKind === 'import'), true);
+assert.equal(richSidecar.patchHints.some((hint) => hint.ownershipKey.includes('formatTitle') && hint.sourceSpan.endLine === 8), true);
 const standalonePreservation = createNativeSourcePreservation({
   language: 'python',
   sourcePath: 'tools/preserve.py',

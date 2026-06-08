@@ -9,7 +9,7 @@ function nativeDeclaration(input, lineNumber, languageKind, symbolKind, name, fi
     name,
     symbolKind,
     symbolId: `symbol:${input.language}:${idFragment(name)}`,
-    span: spanForLine(input, lineNumber),
+    span: options.span ?? spanForLine(input, lineNumber),
     fields,
     metadata: { scan: 'lightweight-declaration', hasBody, ...options.metadata },
     ...(options.regionKind ? { regionKind: options.regionKind } : {}),
@@ -18,8 +18,8 @@ function nativeDeclaration(input, lineNumber, languageKind, symbolKind, name, fi
   };
 }
 
-function nativeImportDeclaration(input, lineNumber, importPath, languageKind, symbolKind) {
-  const name = String(importPath);
+function nativeImportDeclaration(input, lineNumber, importPath, languageKind, symbolKind, options = {}) {
+  const name = String(options.name ?? importPath);
   const nodeId = `native_${idFragment(languageKind)}_${lineNumber}_${idFragment(name)}`;
   return {
     nodeId,
@@ -27,13 +27,42 @@ function nativeImportDeclaration(input, lineNumber, importPath, languageKind, sy
     languageKind: `${input.language}.${languageKind}`,
     name,
     symbolKind,
-    symbolId: `symbol:${input.language}:import:${idFragment(name)}`,
-    role: 'import',
-    importPath: name,
-    span: spanForLine(input, lineNumber),
-    fields: { importPath: name },
-    metadata: { scan: 'lightweight-import' }
+    symbolId: options.symbolId ?? `symbol:${input.language}:import:${idFragment(name)}`,
+    role: options.role ?? 'import',
+    importPath: String(importPath),
+    span: options.span ?? spanForLine(input, lineNumber),
+    fields: { importPath: String(importPath), ...options.fields },
+    metadata: { scan: 'lightweight-import', ...options.metadata },
+    ...(options.regionKind ? { regionKind: options.regionKind } : {})
   };
+}
+
+function nativeImportBindingDeclaration(input, lineNumber, importPath, binding, options = {}) {
+  const localName = String(binding.localName ?? binding.name ?? importPath);
+  const importedName = binding.importedName ?? localName;
+  const importKind = binding.importKind ?? 'named';
+  return nativeImportDeclaration(input, lineNumber, importPath, options.languageKind ?? 'ImportBinding', binding.symbolKind ?? 'import', {
+    name: localName,
+    symbolId: options.symbolId ?? `symbol:${input.language}:import:${idFragment(`${importPath}:${localName}`)}`,
+    span: options.span,
+    fields: {
+      localName,
+      importedName,
+      importKind,
+      importPath: String(importPath),
+      ...(binding.exportedName ? { exportedName: binding.exportedName } : {}),
+      ...(binding.typeOnly ? { typeOnly: true } : {})
+    },
+    metadata: {
+      scan: 'lightweight-import-binding',
+      localName,
+      importedName,
+      importKind,
+      ...(binding.exportedName ? { exportedName: binding.exportedName } : {}),
+      ...(binding.typeOnly ? { typeOnly: true } : {}),
+      ...options.metadata
+    }
+  });
 }
 
 function nativeMacroLoss(input, lineNumber, source, kind, name = idFragment(source).slice(0, 40)) {
@@ -133,12 +162,14 @@ function sourceLines(sourceText) {
 }
 
 function spanForLine(input, lineNumber) {
+  const line = sourceLines(input.sourceText)[lineNumber - 1]?.line ?? '';
   return {
     sourceId: input.sourceHash,
     path: input.sourcePath,
     startLine: lineNumber,
     endLine: lineNumber,
-    startColumn: 1
+    startColumn: 1,
+    endColumn: line.length + 1
   };
 }
 
@@ -172,6 +203,7 @@ export {
   lightweightCoverageLosses,
   nativeDeclaration,
   nativeImportDeclaration,
+  nativeImportBindingDeclaration,
   nativeMacroLoss,
   sourceLines,
   splitParameters,
