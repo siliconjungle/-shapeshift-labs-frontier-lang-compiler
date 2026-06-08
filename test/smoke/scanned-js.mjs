@@ -134,6 +134,26 @@ assert.equal(richSidecar.summary.symbols >= 10, true);
 assert.equal(richSidecar.ownershipRegions.some((region) => region.symbolName === 'TodoPanel.render' && region.regionKind === 'body'), true);
 assert.equal(richSidecar.ownershipRegions.some((region) => region.symbolName === 'memoize' && region.regionKind === 'import'), true);
 assert.equal(richSidecar.patchHints.some((hint) => hint.ownershipKey.includes('formatTitle') && hint.sourceSpan.endLine === 8), true);
+const destructuredRequireImport = importNativeSource({ language: 'typescript', sourcePath: 'src/destructured-require.ts', sourceText: 'const { readFile, writeFile: writeFileAsync } = require("node:fs/promises");\n' });
+const destructuredRequireSidecar = createSemanticImportSidecar(destructuredRequireImport);
+assert.equal(destructuredRequireSidecar.summary.emptySemanticIndex, false);
+assert.equal(destructuredRequireSidecar.symbols.some((symbol) => symbol.name === 'readFile'), true);
+assert.equal(destructuredRequireSidecar.ownershipRegions.some((region) => region.symbolName === 'writeFileAsync' && region.regionKind === 'import'), true);
+const scannedTypeShapeImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/type-shape.ts',
+  sourceText: 'export interface RuntimeConfig<T> {\n  readonly limit: number;\n  resolve(id: string): T;\n}\nexport type RouteTable<T> = {\n  routes: Array<{ path: string; component: T }>;\n  load?: (path: string) => Promise<T>;\n};\n'
+});
+const typeShapeNames = new Set(scannedTypeShapeImport.semanticIndex.symbols.map((symbol) => symbol.name));
+for (const expectedName of ['RuntimeConfig', 'RuntimeConfig.limit', 'RuntimeConfig.resolve', 'RouteTable', 'RouteTable.routes', 'RouteTable.load']) {
+  assert.equal(typeShapeNames.has(expectedName), true);
+}
+assert.equal(scannedTypeShapeImport.semanticIndex.symbols.some((symbol) => symbol.name === 'RuntimeConfig.resolve' && symbol.kind === 'method'), true);
+assert.equal(scannedTypeShapeImport.semanticIndex.symbols.some((symbol) => symbol.name === 'RouteTable.load' && symbol.kind === 'function'), true);
+const typeShapeSidecar = createSemanticImportSidecar(scannedTypeShapeImport, { generatedAt: 135, targetPath: 'dist/type-shape.js' });
+assert.equal(typeShapeSidecar.regionTaxonomy.presentKinds.includes('type'), true);
+assert.equal(typeShapeSidecar.ownershipRegions.some((region) => region.symbolName === 'RuntimeConfig.resolve'), true);
+assert.equal(typeShapeSidecar.patchHints.some((hint) => hint.ownershipKey.includes('RouteTable.load')), true);
 const standalonePreservation = createNativeSourcePreservation({
   language: 'python',
   sourcePath: 'tools/preserve.py',

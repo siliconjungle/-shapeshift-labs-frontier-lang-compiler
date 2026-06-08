@@ -33,6 +33,7 @@ function scanJavaScriptLike(input) {
   let currentClass;
   let classDepth = 0;
   let currentObject;
+  let currentType;
   const lexicalState = { inBlockComment: false, inTemplateString: false };
   for (const { line, number } of lines) {
     const scanLine = jsDeclarationScanLine(line, lexicalState);
@@ -40,6 +41,9 @@ function scanJavaScriptLike(input) {
     if (!trimmed || jsCommentOnlyLine(trimmed)) continue;
     const declarationLine = trimmed.replace(/^(?:export\s+)?(?:declare\s+)?/, '');
     let match;
+    if (currentType && number !== currentType.startLine) {
+      pushDeclaration(jsTypeMemberDeclaration(input, number, declarationLine, currentType));
+    }
     if (currentObject) {
       const routeRecord = jsRouteRecordDeclaration(input, number, trimmed, currentObject);
       if (routeRecord) {
@@ -66,13 +70,18 @@ function scanJavaScriptLike(input) {
         classDepth = 0;
       }
     } else if ((match = declarationLine.match(/^interface\s+([A-Za-z_$][\w$]*)/))) {
-      pushDeclaration(nativeDeclaration(input, number, 'InterfaceDeclaration', 'interface', match[1], {}, declarationLine.includes('{')));
+      const regionKind = 'type';
+      pushDeclaration(nativeDeclaration(input, number, 'InterfaceDeclaration', 'interface', match[1], {}, declarationLine.includes('{'), { regionKind }));
+      currentType = jsTypeRegionContext(match[1], declarationLine, number, regionKind, 'interface');
     } else if ((match = declarationLine.match(/^(?:const\s+)?enum\s+([A-Za-z_$][\w$]*)/))) {
       pushDeclaration(nativeDeclaration(input, number, 'EnumDeclaration', 'type', match[1], {}, declarationLine.includes('{')));
     } else if ((match = declarationLine.match(/^(?:namespace|module)\s+([A-Za-z_$][\w$.]*)/))) {
       pushDeclaration(nativeDeclaration(input, number, 'ModuleDeclaration', 'module', match[1], {}, declarationLine.includes('{')));
-    } else if ((match = declarationLine.match(/^type\s+([A-Za-z_$][\w$]*)\s*=/))) {
-      pushDeclaration(nativeDeclaration(input, number, 'TypeAliasDeclaration', 'type', match[1], {}, false));
+    } else if ((match = declarationLine.match(/^type\s+([A-Za-z_$][\w$]*)(?:\s*<[^=]+>)?\s*=/))) {
+      const regionKind = 'type';
+      const hasTypeBody = declarationLine.includes('{');
+      pushDeclaration(nativeDeclaration(input, number, 'TypeAliasDeclaration', 'type', match[1], {}, hasTypeBody, { regionKind }));
+      currentType = jsTypeRegionContext(match[1], declarationLine, number, regionKind, 'type');
     } else if ((match = declarationLine.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::\s*[^=]+)?=\s*(?:async\s*)?(?:<[^=]+>\s*)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*(?::\s*[^=]+)?=>/))) {
       pushDeclaration(nativeDeclaration(input, number, 'VariableFunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2] ?? match[3]) }, true));
     } else if ((match = declarationLine.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\b/))) {
@@ -112,6 +121,10 @@ function scanJavaScriptLike(input) {
         currentClass = undefined;
         classDepth = 0;
       }
+    }
+    if (currentType) {
+      if (number !== currentType.startLine) currentType.depth += jsStructureDelta(trimmed).value;
+      if (currentType.depth <= 0) currentType = undefined;
     }
     if (currentObject) {
       if (number !== currentObject.startLine) currentObject.depth += jsContainerDelta(trimmed);
@@ -177,6 +190,53 @@ function jsStructureDelta(source) {
     }
   }
   return { value, opened };
+}
+
+function jsTypeRegionContext(name, declarationLine, lineNumber, regionKind, typeKind) {
+  const depth = jsStructureDelta(declarationLine).value;
+  if (depth <= 0) return undefined;
+  return {
+    name,
+    typeKind,
+    regionKind,
+    depth,
+    startLine: lineNumber
+  };
+}
+
+function jsTypeMemberDeclaration(input, lineNumber, declarationLine, context) {
+  const text = String(declarationLine ?? '').trim();
+  if (!text || /^[}\])]/.test(text) || text.startsWith('//')) return undefined;
+  let match = text.match(/^(?:readonly\s+)?(['"]?)([A-Za-z_$][\w$-]*)\1\??\s*(?:<[^({;]+>)?\s*\(([^)]*)\)\s*(?::\s*([^;,]+))?[;,]?$/);
+  if (match && !jsControlKeyword(match[2])) {
+    return nativeDeclaration(input, lineNumber, 'TypeMethodSignature', 'method', `${context.name}.${match[2]}`, {
+      owner: context.name,
+      propertyName: match[2],
+      parameters: splitParameters(match[3]),
+      returnType: match[4]?.trim(),
+      typeKind: context.typeKind
+    }, false, {
+      regionKind: jsTypeMemberRegionKind(context, match[2], text),
+      metadata: { owner: context.name, propertyName: match[2], typeKind: context.typeKind }
+    });
+  }
+  match = text.match(/^(?:readonly\s+)?(['"]?)([A-Za-z_$][\w$-]*)\1\??\s*:\s*(.+?)[;,]?$/);
+  if (!match || jsControlKeyword(match[2])) return undefined;
+  const valueType = match[3].trim();
+  const functionLike = /=>/.test(valueType) || /^\([^)]*\)\s*=>/.test(valueType);
+  return nativeDeclaration(input, lineNumber, functionLike ? 'TypeFunctionPropertySignature' : 'TypePropertySignature', functionLike ? 'function' : 'property', `${context.name}.${match[2]}`, {
+    owner: context.name,
+    propertyName: match[2],
+    valueType,
+    typeKind: context.typeKind
+  }, false, {
+    regionKind: jsTypeMemberRegionKind(context, match[2], text),
+    metadata: { owner: context.name, propertyName: match[2], typeKind: context.typeKind }
+  });
+}
+
+function jsTypeMemberRegionKind(context, propertyName, source) {
+  return jsRegionKindForDeclarationName(propertyName, source) ?? (context.regionKind === 'type' ? 'property' : context.regionKind) ?? 'property';
 }
 
 function jsInlineClassMemberDeclarations(input, lineNumber, declarationLine, className) {

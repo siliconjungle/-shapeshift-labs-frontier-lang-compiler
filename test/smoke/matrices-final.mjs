@@ -294,8 +294,20 @@ const projectSidecar = createSemanticImportSidecar(projectImport, { generatedAt:
 assert.equal(projectSidecar.summary.imports, 2);
 assert.equal(projectSidecar.summary.emptySemanticIndex, false);
 assert.equal(projectSidecar.imports.some((entry) => entry.emptySemanticIndex === false), true);
-const universalAst = createUniversalAstFromDocument(result.document, { id: 'uast_todo', evidence: nativeImport.evidence });
+const universalAst = createUniversalAstFromDocument(result.document, {
+  id: 'uast_todo',
+  evidence: nativeImport.evidence,
+  semanticOperations: { id: 'ops_todo', operations: [{ id: 'op_todo', operationKind: 'merge', name: 'todoMerge' }] },
+  proof: { id: 'proof_todo', obligations: [{ id: 'obligation_todo', kind: 'merge', status: 'open', statement: 'Review todo merge semantic operation.' }] },
+  paradigmSemantics: { id: 'paradigm_todo', logicPrograms: [{ id: 'logic_todo', kind: 'hornClause' }] },
+  replayLinks: [{ id: 'replay_todo', path: 'replays/todo.json' }]
+});
 assert.equal(universalAst.layers.mergeEvidence.evidenceIds.length > 0, true);
+assert.equal(universalAst.semanticOperations.operations[0].id, 'op_todo');
+assert.equal(universalAst.layers.semanticOperations.records[0].semanticOperationSetId, 'ops_todo');
+assert.equal(universalAst.proof.obligations[0].id, 'obligation_todo');
+assert.equal(universalAst.layers.proofSpec.records[0].proofSpecId, 'proof_todo');
+assert.equal(universalAst.replayLinks[0].id, 'replay_todo');
 const universalJson = writeUniversalAstJson(universalAst);
 assert.equal(readUniversalAstJson(universalJson).document.id, 'mod_todo');
 assert.match(compileFrontierSource(source, { target: 'rust' }).output, /pub struct Todo/);

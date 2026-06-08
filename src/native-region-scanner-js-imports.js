@@ -30,6 +30,14 @@ export function jsImportDeclarations(input, lineNumber, trimmed) {
         : [];
     return jsImportModuleDeclarations(input, lineNumber, importPath, 'ExportFromDeclaration', bindings, { typeOnly, reexport: true, exportStar: Boolean(exportMatch[2]) });
   }
+  const destructuredRequireMatch = trimmed.match(/^(?:const|let|var)\s+\{([^}]+)\}\s*=\s*(?:await\s+)?(require|import)\s*\(\s*(['"])([^'"]+)\3\s*\)/);
+  if (destructuredRequireMatch) {
+    const importKind = destructuredRequireMatch[2] === 'import' ? 'dynamic-import-binding' : 'commonjs-require';
+    const bindings = jsDestructuredImportBindings(destructuredRequireMatch[1], importKind);
+    if (bindings.length) {
+      return jsImportModuleDeclarations(input, lineNumber, destructuredRequireMatch[4], 'DestructuredRequireDeclaration', bindings, { destructured: true });
+    }
+  }
   const requireMatch = trimmed.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?(?:require|import)\s*\(\s*(['"])([^'"]+)\2\s*\)/);
   if (requireMatch) return jsImportModuleDeclarations(input, lineNumber, requireMatch[3], 'CommonJsRequireDeclaration', [{
     localName: requireMatch[1],
@@ -37,6 +45,23 @@ export function jsImportDeclarations(input, lineNumber, trimmed) {
     importKind: trimmed.includes('import') ? 'dynamic-import-binding' : 'commonjs-require'
   }]);
   return [];
+}
+
+function jsDestructuredImportBindings(raw, importKind) {
+  return String(raw ?? '')
+    .split(',')
+    .map((part) => {
+      const text = part.trim();
+      if (!text || text.startsWith('...')) return undefined;
+      const match = text.match(/^([A-Za-z_$][\w$]*|\*)\s*(?::\s*([A-Za-z_$][\w$]*))?$/);
+      if (!match) return undefined;
+      return {
+        localName: match[2] ?? match[1],
+        importedName: match[1],
+        importKind
+      };
+    })
+    .filter(Boolean);
 }
 
 function jsImportModuleDeclarations(input, lineNumber, importPath, languageKind, bindings = [], metadata = {}) {
@@ -55,7 +80,8 @@ function jsImportModuleDeclarations(input, lineNumber, importPath, languageKind,
         ...(metadata.typeOnly ? { typeOnly: true } : {}),
         ...(metadata.sideEffectOnly ? { sideEffectOnly: true } : {}),
         ...(metadata.reexport ? { reexport: true } : {}),
-        ...(metadata.exportStar ? { exportStar: true } : {})
+        ...(metadata.exportStar ? { exportStar: true } : {}),
+        ...(metadata.destructured ? { destructured: true } : {})
       },
       metadata: {
         moduleOnly: true,
