@@ -2,6 +2,16 @@
 
 Compiler facade for Frontier Lang. It composes the parser, checker, semantic kernel, and projection adapters for TypeScript, JavaScript, Rust, Python, and C.
 
+## Benchmarks
+
+Run the package-local benchmark with:
+
+```sh
+npm run bench
+```
+
+These are Frontier-only package measurements for @shapeshift-labs/frontier-lang-compiler. They exercise the package's own parser, checker, compiler, projection, CLI, fuzz, or semantic-kernel surface without making competitor comparison claims.
+
 ## Vision
 
 Frontier Lang and Frontier Swarm are two parts of the same system: a semantic programming substrate for agent teams.
@@ -847,13 +857,3 @@ Package source repositories:
 - [`siliconjungle/-shapeshift-labs-frontier-realtime-server`](https://github.com/siliconjungle/-shapeshift-labs-frontier-realtime-server)
 - [`siliconjungle/-shapeshift-labs-frontier-realtime-websocket`](https://github.com/siliconjungle/-shapeshift-labs-frontier-realtime-websocket)
 - [`siliconjungle/-shapeshift-labs-frontier-game`](https://github.com/siliconjungle/-shapeshift-labs-frontier-game)
-
-## Benchmarks
-
-Run the package-local benchmark with:
-
-```sh
-npm run bench
-```
-
-These are Frontier-only package measurements for @shapeshift-labs/frontier-lang-compiler. They exercise the package's own parser, checker, compiler, projection, CLI, fuzz, or semantic-kernel surface without making competitor comparison claims.
