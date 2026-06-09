@@ -108,6 +108,8 @@ type ExpectedPublicRuntimeExport =
   | 'queryUniversalRuntimeCapabilityMatrix'
   | 'resolveSemanticLineage'
   | 'resolveSemanticLineageBatch'
+  | 'resolveSemanticHistoryRecordLineage'
+  | 'resolveSemanticHistoryRecordsLineage'
   | 'importExternalSemanticIndex'
   | 'importNativeProject'
   | 'importNativeSource'

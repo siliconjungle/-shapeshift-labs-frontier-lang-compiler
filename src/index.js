@@ -73,6 +73,7 @@ export { queryUniversalConversionPlan } from './internal/index-impl/queryUnivers
 export { createSemanticAnchor, createSemanticLineageEvent, createSemanticLineageMap, querySemanticLineageEvents, SemanticLineageEventKinds } from './internal/index-impl/semanticLineageRecords.js';
 export { resolveSemanticLineage, resolveSemanticLineageBatch, SemanticLineageResolutionStatuses } from './internal/index-impl/semanticLineageResolutionRecords.js';
 export { createSemanticHistoryRecord, querySemanticHistoryRecordOverlaps, SemanticHistoryAdmissionStatuses, SemanticHistoryConflictReasons, SemanticHistoryOverlapKinds, SemanticHistoryReviewerStatuses, semanticHistoryRecordsConflict, semanticHistoryRecordsOverlap } from './internal/index-impl/semanticHistoryRecords.js';
+export { resolveSemanticHistoryRecordLineage, resolveSemanticHistoryRecordsLineage } from './internal/index-impl/semanticHistoryLineageResolution.js';
 export { readSemanticSliceJson } from './internal/index-impl/readSemanticSliceJson.js';
 export { readUniversalAstJson } from './internal/index-impl/readUniversalAstJson.js';
 export { renderTargetAst } from './internal/index-impl/renderTargetAst.js';

@@ -6,7 +6,7 @@ import type {
   SourceSpan
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { SemanticImportOwnershipRegion } from './semantic-sidecar.js';
-import type { CreateSemanticLineageEventInput, SemanticLineageEvent } from './semantic-lineage.js';
+import type { CreateSemanticLineageEventInput, SemanticAnchor, SemanticLineageEvent, SemanticLineageMap, SemanticLineageResolution } from './semantic-lineage.js';
 
 import type { SemanticHistoryAdmissionStatus, SemanticHistoryReviewerStatus, SemanticHistoryReplayLinkKind, SemanticHistoryOverlapKind, SemanticHistoryConflictReason, SemanticHistoryClaimKind, SemanticHistoryClaimStatus, SemanticHistoryProofAttemptStatus, SemanticHistoryMergeDecisionStatus, SemanticHistoryActorRef, SemanticHistoryRecordSourceRef, SemanticHistorySourceRef, SemanticHistoryOwnershipRegionRef, SemanticHistoryCandidateRef, SemanticHistoryClaimRecord, SemanticHistoryImportedParserEvidenceRecord, SemanticHistoryProofAttemptRecord, SemanticHistoryPatchAncestryRecord, SemanticHistoryMergeDecisionRecord, SemanticHistoryClaimInput, SemanticHistoryImportedParserEvidenceInput, SemanticHistoryProofAttemptInput, SemanticHistoryPatchAncestryInput, SemanticHistoryMergeDecisionInput, SemanticHistoryReviewerState, SemanticHistoryAdmissionState, SemanticHistoryReplayLink, SemanticHistoryRecordIndex } from './semantic-history-records.js';
 export type { SemanticHistoryAdmissionStatus, SemanticHistoryReviewerStatus, SemanticHistoryReplayLinkKind, SemanticHistoryOverlapKind, SemanticHistoryConflictReason, SemanticHistoryClaimKind, SemanticHistoryClaimStatus, SemanticHistoryProofAttemptStatus, SemanticHistoryMergeDecisionStatus, SemanticHistoryActorRef, SemanticHistoryRecordSourceRef, SemanticHistorySourceRef, SemanticHistoryOwnershipRegionRef, SemanticHistoryCandidateRef, SemanticHistoryClaimRecord, SemanticHistoryImportedParserEvidenceRecord, SemanticHistoryProofAttemptRecord, SemanticHistoryPatchAncestryRecord, SemanticHistoryMergeDecisionRecord, SemanticHistoryClaimInput, SemanticHistoryImportedParserEvidenceInput, SemanticHistoryProofAttemptInput, SemanticHistoryPatchAncestryInput, SemanticHistoryMergeDecisionInput, SemanticHistoryReviewerState, SemanticHistoryAdmissionState, SemanticHistoryReplayLink, SemanticHistoryRecordIndex } from './semantic-history-records.js';
@@ -138,6 +138,51 @@ export interface SemanticHistoryOverlapRecord {
   readonly reviewer: { readonly left?: SemanticHistoryReviewerStatus; readonly right?: SemanticHistoryReviewerStatus };
 }
 
+export type SemanticHistoryLineageAnchorSetKind = 'active' | 'candidate' | 'inactive' | 'deleted' | 'unresolved' | 'blocked';
+
+export interface SemanticHistoryLineageAnchorRecord extends Pick<SemanticAnchor, 'key' | 'id' | 'kind' | 'language' | 'sourcePath' | 'symbolId' | 'symbolName'> {
+  readonly status: string;
+  readonly resolutionId: string;
+  readonly reasonCodes: readonly string[];
+}
+
+export type SemanticHistoryLineageAnchorInventory = Readonly<Record<SemanticHistoryLineageAnchorSetKind, readonly SemanticHistoryLineageAnchorRecord[]>>;
+
+export interface SemanticHistoryRecordLineageResolution {
+  readonly kind: 'frontier.lang.semanticHistoryRecordLineageResolution';
+  readonly version: 1;
+  readonly id: string;
+  readonly stableId: string;
+  readonly hash: string;
+  readonly sourceRecordId?: string;
+  readonly sourceRecordStableId?: string;
+  readonly sourceRecordHash?: string;
+  readonly generatedAt: number | string;
+  readonly resolutions: readonly SemanticLineageResolution[];
+  readonly anchorInventory: SemanticHistoryLineageAnchorInventory;
+  readonly resolvedRecord: SemanticHistoryRecord;
+  readonly summary: Record<string, unknown> & {
+    readonly anchorCount: number;
+    readonly currentAnchorKeys: readonly string[];
+    readonly ownershipKeys: readonly string[];
+    readonly conflictKeys: readonly string[];
+    readonly activeAnchorKeys: readonly string[];
+    readonly candidateAnchorKeys: readonly string[];
+    readonly inactiveAnchorKeys: readonly string[];
+    readonly deletedAnchorKeys: readonly string[];
+    readonly unresolvedAnchorKeys: readonly string[];
+    readonly blockedAnchorKeys: readonly string[];
+    readonly reasonCodes: readonly string[];
+  };
+  readonly admission: {
+    readonly readiness: SemanticMergeReadiness | string;
+    readonly reviewRequired: boolean;
+    readonly autoMergeClaim: false;
+    readonly semanticEquivalenceClaim: false;
+  };
+  readonly metadata?: Record<string, unknown>;
+}
+
 export declare const SemanticHistoryAdmissionStatuses: readonly SemanticHistoryAdmissionStatus[];
 export declare const SemanticHistoryReviewerStatuses: readonly SemanticHistoryReviewerStatus[];
 export declare const SemanticHistoryOverlapKinds: readonly SemanticHistoryOverlapKind[];
@@ -146,3 +191,5 @@ export declare function createSemanticHistoryRecord(input?: CreateSemanticHistor
 export declare function querySemanticHistoryRecordOverlaps(records: SemanticHistoryRecord | readonly SemanticHistoryRecord[], options?: SemanticHistoryOverlapQueryOptions): readonly SemanticHistoryOverlapRecord[];
 export declare function semanticHistoryRecordsOverlap(left: SemanticHistoryRecord, right: SemanticHistoryRecord, options?: SemanticHistoryOverlapQueryOptions): boolean;
 export declare function semanticHistoryRecordsConflict(left: SemanticHistoryRecord, right: SemanticHistoryRecord, options?: SemanticHistoryOverlapQueryOptions): boolean;
+export declare function resolveSemanticHistoryRecordLineage(record: SemanticHistoryRecord, eventsOrMap?: SemanticLineageMap | readonly CreateSemanticLineageEventInput[], options?: { readonly id?: string; readonly generatedAt?: number | string; readonly maxDepth?: number; readonly keepDeletedAnchors?: boolean; readonly keepCandidateAnchors?: boolean; readonly keepBlockedAnchors?: boolean; readonly keepUnresolvedAnchors?: boolean; readonly metadata?: Record<string, unknown> }): SemanticHistoryRecordLineageResolution;
+export declare function resolveSemanticHistoryRecordsLineage(records: readonly SemanticHistoryRecord[] | SemanticHistoryRecord, eventsOrMap?: SemanticLineageMap | readonly CreateSemanticLineageEventInput[], options?: { readonly generatedAt?: number | string; readonly maxDepth?: number; readonly keepDeletedAnchors?: boolean; readonly keepCandidateAnchors?: boolean; readonly keepBlockedAnchors?: boolean; readonly keepUnresolvedAnchors?: boolean; readonly metadata?: Record<string, unknown> }): readonly SemanticHistoryRecordLineageResolution[];

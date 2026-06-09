@@ -91,6 +91,8 @@ export {
   querySemanticLineageEvents,
   resolveSemanticLineage,
   resolveSemanticLineageBatch,
+  resolveSemanticHistoryRecordLineage,
+  resolveSemanticHistoryRecordsLineage,
   querySemanticMergeCandidateAdmissionOverlaps,
   querySemanticPatchBundleRecords,
   querySemanticMergeConflictClasses,

@@ -71,6 +71,8 @@ for (const requiredExport of [
 	  'queryProjectionReadinessMatrix',
 	  'querySemanticHistoryRecordOverlaps',
 	  'querySemanticLineageEvents',
+	  'resolveSemanticHistoryRecordLineage',
+	  'resolveSemanticHistoryRecordsLineage',
 	  'querySemanticMergeCandidateAdmissionOverlaps',
 	  'querySemanticPatchBundleRecords',
   'querySemanticMergeConflictClasses',
