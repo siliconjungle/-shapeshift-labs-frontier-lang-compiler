@@ -90,6 +90,7 @@ for (const requiredExport of [
   'writeSemanticSliceJson',
   'ExternalSemanticIndexFormats',
   'importExternalSemanticIndex',
+  'inferSemanticLineageEvents',
   'importNativeSource',
   'importNativeProject',
   'renderTargetAstWithSourceMap',

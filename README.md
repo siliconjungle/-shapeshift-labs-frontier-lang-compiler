@@ -487,6 +487,38 @@ console.log(resolution.currentAnchors[0].key); // current semantic anchor
 console.log(resolution.traversedEventIds); // compact history path
 ```
 
+Infer conservative lineage events from two native imports when a file was moved,
+a parser reports a rename, or an anchor disappeared:
+
+```js
+import {
+  importNativeSource,
+  inferSemanticLineageEvents
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const before = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/runtime.ts',
+  sourceText: 'export function step(value) { return value + 1; }\n'
+});
+const after = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/runtime-core.ts',
+  sourceText: 'export function step(value) { return value + 1; }\n'
+});
+
+const inference = inferSemanticLineageEvents({ before, after });
+
+console.log(inference.summary.moved); // 1
+console.log(inference.events[0].metadata.autoMergeClaim); // false
+console.log(inference.lineageMap.byAnchorKey); // old/current anchor index
+```
+
+The inference API is intentionally conservative. Ambiguous matches are reported
+as blocked, additions are kept separate from recreated lineage, and inferred
+events always require review; richer parser adapters can improve confidence by
+supplying stable signature hashes and source-map spans.
+
 Resolver output is merge-admission evidence: it helps a swarm compare old worker bundles against current semantic anchors after code moved, split, or was deleted. It is not proof that the projected code is correct or semantically equivalent; admission still needs tests, source evidence, review status, and conflict scoring.
 
 Extract a surgical semantic slice when a worker only needs one symbol, region, native AST node, or source path:

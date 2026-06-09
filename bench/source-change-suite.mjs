@@ -4,6 +4,7 @@ import {
   createSemanticImportSidecar,
   createSemanticLineageEvent,
   diffNativeSources,
+  inferSemanticLineageEvents,
   importExternalSemanticIndex,
   importNativeSource
 } from '../dist/index.js';
@@ -12,6 +13,7 @@ export function measureSourceChangeSuites() {
   return {
     ...measureRegionScan(),
     ...measureChangeProjection(),
+    ...measureSemanticLineageInference(),
     ...measureBidirectionalTargetChanges(),
     ...measureExternalSemanticImports()
   };
@@ -72,6 +74,34 @@ function measureChangeProjection() {
     changedRegionProjections: changeProjectionSets.reduce((sum, changeSet) => sum + changeSet.metadata.changedRegionProjectionSummary.withProjection, 0),
     changedRegionProjectionSourceMapLinks: changeProjectionSets.reduce((sum, changeSet) => sum + changeSet.metadata.changedRegionProjectionSummary.sourceMapLinks, 0),
     changeProjectionDurationMs
+  };
+}
+
+function measureSemanticLineageInference() {
+  const start = performance.now();
+  const inferences = [];
+  for (let index = 0; index < 80; index += 1) {
+    inferences.push(inferSemanticLineageEvents({
+      id: `bench_semantic_lineage_inference_${index}`,
+      before: {
+        language: 'typescript',
+        sourcePath: `src/lineage-before-${index}.ts`,
+        sourceText: `export function lineageBench${index}(value) { return value + ${index}; }\n`
+      },
+      after: {
+        language: 'typescript',
+        sourcePath: index % 5 === 0 ? `src/lineage-before-${index}.ts` : `src/lineage-after-${index}.ts`,
+        sourceText: index % 6 === 0
+          ? `export const lineageBenchDeleted${index} = true;\n`
+          : `export function lineageBench${index}(value) { return value + ${index}; }\n`
+      }
+    }));
+  }
+  return {
+    semanticLineageInferences: inferences.length,
+    semanticLineageEvents: inferences.reduce((sum, inference) => sum + inference.events.length, 0),
+    semanticLineageDeleted: inferences.reduce((sum, inference) => sum + inference.summary.deleted, 0),
+    semanticLineageInferenceDurationMs: performance.now() - start
   };
 }
 

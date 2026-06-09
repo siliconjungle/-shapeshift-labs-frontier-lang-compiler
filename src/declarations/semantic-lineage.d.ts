@@ -1,4 +1,6 @@
 import type { FrontierSourceLanguage, SourceSpan } from '@shapeshift-labs/frontier-lang-kernel';
+import type { EvidenceRecord, SemanticMergeReadiness } from '@shapeshift-labs/frontier-lang-kernel';
+import type { ImportNativeSourceOptions, NativeSourceImportResult } from './import-adapter-core.js';
 
 export type SemanticLineageEventKind = 'unchanged' | 'moved' | 'renamed' | 'split' | 'merged' | 'deleted' | 'recreated' | 'unknown' | string;
 export type SemanticLineageResolutionStatus = 'unchanged' | 'resolved' | 'ambiguous' | 'deleted' | 'recreated' | 'cycle' | 'max-depth' | 'not-found' | string;
@@ -183,11 +185,105 @@ export interface SemanticLineageQuery {
   readonly evidenceId?: string | readonly string[];
 }
 
+export interface SemanticLineageInferredAnchorSummary {
+  readonly key?: string;
+  readonly id?: string;
+  readonly name?: string;
+  readonly kind?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly sourceSpan?: SourceSpan;
+  readonly signatureHash?: string;
+  readonly bodyHash?: string;
+  readonly ownershipRegionKind?: string;
+}
+
+export interface SemanticLineageAmbiguousCandidate {
+  readonly after: SemanticLineageInferredAnchorSummary;
+  readonly confidence: number;
+  readonly reasons: readonly string[];
+}
+
+export interface SemanticLineageAmbiguousMatch {
+  readonly before: SemanticLineageInferredAnchorSummary;
+  readonly candidates: readonly SemanticLineageAmbiguousCandidate[];
+  readonly reasonCodes: readonly string[];
+}
+
+export interface SemanticLineageInferenceResult {
+  readonly kind: 'frontier.lang.semanticLineageInference';
+  readonly version: 1;
+  readonly id: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly beforeImportId?: string;
+  readonly afterImportId?: string;
+  readonly beforeHash?: string;
+  readonly afterHash?: string;
+  readonly events: readonly SemanticLineageEvent[];
+  readonly lineageMap: SemanticLineageMap;
+  readonly evidence: readonly EvidenceRecord[];
+  readonly unmatched: {
+    readonly removed: readonly SemanticLineageInferredAnchorSummary[];
+    readonly added: readonly SemanticLineageInferredAnchorSummary[];
+    readonly ambiguous: readonly SemanticLineageAmbiguousMatch[];
+  };
+  readonly summary: {
+    readonly beforeSymbols: number;
+    readonly afterSymbols: number;
+    readonly unchangedAnchors: number;
+    readonly inferredEvents: number;
+    readonly moved: number;
+    readonly renamed: number;
+    readonly deleted: number;
+    readonly ambiguous: number;
+    readonly unmatchedAdded: number;
+    readonly minConfidence: number;
+    readonly ambiguityMargin: number;
+  };
+  readonly readiness: SemanticMergeReadiness;
+  readonly reasons: readonly string[];
+  readonly metadata: {
+    readonly autoMergeClaim: false;
+    readonly semanticEquivalenceClaim: false;
+    readonly reviewRequired: true;
+    readonly [key: string]: unknown;
+  };
+}
+
+export interface InferSemanticLineageEventsOptions {
+  readonly id?: string;
+  readonly before?: NativeSourceImportResult | ImportNativeSourceOptions;
+  readonly after?: NativeSourceImportResult | ImportNativeSourceOptions;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly parser?: string;
+  readonly generatedAt?: number | string;
+  readonly regionPrefix?: string;
+  readonly evidenceId?: string;
+  readonly lineageMapId?: string;
+  readonly minConfidence?: number;
+  readonly ambiguityMargin?: number;
+  readonly includeDeleted?: boolean;
+  readonly deletedConfidence?: number;
+  readonly readiness?: SemanticMergeReadiness;
+  readonly actor?: SemanticLineageActor | string;
+  readonly actorId?: string;
+  readonly actorRole?: string;
+  readonly operationId?: string;
+  readonly deps?: readonly string[] | string;
+  readonly heads?: readonly string[] | string;
+  readonly stateVector?: Record<string, number>;
+  readonly metadata?: Record<string, unknown>;
+}
+
 export declare const SemanticLineageEventKinds: readonly SemanticLineageEventKind[];
 export declare const SemanticLineageResolutionStatuses: readonly SemanticLineageResolutionStatus[];
 export declare function createSemanticAnchor(input?: SemanticAnchor | string, defaults?: Partial<SemanticAnchor>): SemanticAnchor | undefined;
 export declare function createSemanticLineageEvent(input?: CreateSemanticLineageEventInput, options?: { readonly id?: string; readonly createdAt?: number | string; readonly actor?: SemanticLineageActor | string; readonly actorId?: string; readonly actorRole?: string }): SemanticLineageEvent;
 export declare function createSemanticLineageMap(events?: readonly (SemanticLineageEvent | CreateSemanticLineageEventInput)[], options?: { readonly id?: string; readonly generatedAt?: number | string }): SemanticLineageMap;
+export declare function inferSemanticLineageEvents(input?: InferSemanticLineageEventsOptions, options?: { readonly metadata?: Record<string, unknown>; readonly deletedConfidence?: number }): SemanticLineageInferenceResult;
 export declare function querySemanticLineageEvents(events: SemanticLineageEvent | readonly SemanticLineageEvent[], query?: SemanticLineageQuery): readonly SemanticLineageEvent[];
 export declare function resolveSemanticLineage(eventsOrMap?: SemanticLineageMap | readonly (SemanticLineageEvent | CreateSemanticLineageEventInput)[], query?: SemanticLineageResolutionQuery | SemanticAnchor | string, options?: { readonly id?: string; readonly generatedAt?: number | string; readonly maxDepth?: number; readonly metadata?: Record<string, unknown> }): SemanticLineageResolution;
 export declare function resolveSemanticLineageBatch(eventsOrMap?: SemanticLineageMap | readonly (SemanticLineageEvent | CreateSemanticLineageEventInput)[], queries?: readonly (SemanticLineageResolutionQuery | SemanticAnchor | string)[], options?: { readonly generatedAt?: number | string; readonly maxDepth?: number; readonly metadata?: Record<string, unknown> }): readonly SemanticLineageResolution[];

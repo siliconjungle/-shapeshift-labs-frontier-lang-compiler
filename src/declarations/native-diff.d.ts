@@ -40,6 +40,7 @@ import type { UniversalCapabilityLanguageRow, UniversalCapabilityMatrix, Univers
 import type { NativeImportContractSource, NativeImportSourcePreservationRecordSummary, NativeImportSourcePreservationContract, NativeImportAdapterCoverageRecordSummary, NativeImportAdapterCoverageContract, NativeImportRegionSummary, NativeImportSourceMapSummary, NativeImportReadinessContract, NativeImportResultContract, NativeImportResultContractOptions } from './native-import-contracts.js';
 import type { NativeSourceTokenKind, NativeSourcePreservedToken, NativeSourcePreservedDirective, NativeSourcePreservation, CreateNativeSourcePreservationOptions } from './source-preservation.js';
 import type { SemanticImportOwnershipRegion, SemanticImportSidecarSymbol, SemanticImportRegionTaxonomySummary, SemanticImportPatchHint, SemanticImportSidecarImportEntry, SemanticImportSidecarSourcePreservationRecord, SemanticImportSidecarUniversalAstLayerSummary, SemanticImportSidecarProofSpecSummary, SemanticImportSidecarParadigmSemanticsSummary, SemanticImportSidecar, SemanticImportSidecarOptions } from './semantic-sidecar.js';
+import type { SemanticLineageInferenceResult } from './semantic-lineage.js';
 import type { SemanticMergeCandidateWithConflicts, SemanticMergeConflictSummary } from './semantic-merge-conflicts.js';
 import type { SemanticSliceInput, CreateSemanticSliceOptions, SemanticSliceSourceMapLink, SemanticSliceSourceFile, SemanticSliceExpectedAssertion, SemanticSlice, TestSemanticSliceOptions, SemanticSliceTestAssertion, SemanticSliceTestResult } from './semantic-slice.js';
 import type { NativeImporterAdapterExactness, NativeImporterAdapterSemanticCoverage, NativeImporterAdapterCoverageSnapshot, NativeImporterAdapterCoverageObserved, NativeImporterAdapterCoverageCapabilityRow, NativeImporterAdapterCoverageCapabilityEvidence, NativeImporterAdapterCoverageSummary, NativeImporterAdapterCoverageInput } from './adapter-coverage.js';
@@ -227,6 +228,7 @@ export interface NativeSourceChangeSet {
   readonly patch: SemanticPatchBundle;
   readonly mergeCandidate: SemanticMergeCandidateWithConflicts;
   readonly evidence: readonly EvidenceRecord[];
+  readonly lineageInference?: SemanticLineageInferenceResult;
   readonly readiness: SemanticMergeReadiness;
   readonly reasons: readonly string[];
   readonly sourceMaps: readonly SourceMapRecord[];
@@ -236,5 +238,6 @@ export interface NativeSourceChangeSet {
   readonly metadata?: Record<string, unknown> & {
     readonly changedRegionProjectionSummary?: NativeSourceChangeProjectionSummary;
     readonly semanticMergeConflictSummary?: SemanticMergeConflictSummary;
+    readonly semanticLineageInferenceSummary?: SemanticLineageInferenceResult['summary'];
   };
 }

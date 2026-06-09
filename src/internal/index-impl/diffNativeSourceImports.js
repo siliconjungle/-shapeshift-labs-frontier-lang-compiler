@@ -1,5 +1,6 @@
 import{idFragment,maxSemanticMergeReadiness,uniqueByLossId,uniqueRecordsById,uniqueStrings}from'../../native-import-utils.js';import{createPatch,createSemanticMergeCandidateRecord}from'@shapeshift-labs/frontier-lang-kernel';
 import{attachNativeChangeRegionProjectionMetadata}from'./attachNativeChangeRegionProjectionMetadata.js';import{classifyNativeSourceMergeConflicts}from'./semanticMergeConflicts.js';import{createSemanticImportSidecar}from'./createSemanticImportSidecar.js';import{diffNativeOwnershipRegions}from'./diffNativeOwnershipRegions.js';import{diffNativeSymbols}from'./diffNativeSymbols.js';import{fileLevelNativeChangeRegion}from'./fileLevelNativeChangeRegion.js';import{mapDiffSymbols}from'./mapDiffSymbols.js';import{nativeChangeSpans}from'./nativeChangeSpans.js';import{nativeChangeTouchedSymbol}from'./nativeChangeTouchedSymbol.js';import{nativeImportReadiness}from'./nativeImportReadiness.js';import{nativeSourceChangeReasons}from'./nativeSourceChangeReasons.js';import{nativeSourceChangeSummary}from'./nativeSourceChangeSummary.js';import{normalizeNativeDiffImport}from'./normalizeNativeDiffImport.js';import{summarizeNativeChangedRegionProjections}from'./summarizeNativeChangedRegionProjections.js';
+import{inferSemanticLineageEvents}from'./inferSemanticLineageEvents.js';
 import{decorateSemanticMergeCandidateForAdmission}from'./semanticMergeCandidateRecords.js';
 export function diffNativeSourceImports(input) {
   const before = normalizeNativeDiffImport(input.before, input, 'before');
@@ -39,6 +40,17 @@ export function diffNativeSourceImports(input) {
     reasons
   });
   const changedRegionProjectionSummary = summarizeNativeChangedRegionProjections(changedRegions);
+  const lineageInference = inferSemanticLineageEvents({
+    before,
+    after,
+    id: `${idPart}_native_source_diff`,
+    language,
+    sourcePath,
+    generatedAt: input.generatedAt,
+    regionPrefix: input.regionPrefix,
+    evidenceId: `evidence_${idPart}_semantic_lineage_inference`,
+    metadata: { source: 'diffNativeSourceImports' }
+  });
   const evidence = [{
     id: input.evidenceId ?? `evidence_${idPart}_native_source_diff`,
     kind: 'import',
@@ -54,7 +66,8 @@ export function diffNativeSourceImports(input) {
       addedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'added').length,
       removedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'removed').length,
       modifiedSymbols: changedSymbols.filter((symbol) => symbol.changeKind === 'modified').length,
-      changedRegionProjectionSummary
+      changedRegionProjectionSummary,
+      semanticLineageInferenceSummary: lineageInference.summary
     }
   }];
   const conflictKeys = uniqueStrings([
@@ -148,6 +161,7 @@ export function diffNativeSourceImports(input) {
     patch,
     mergeCandidate,
     evidence,
+    lineageInference,
     readiness,
     reasons,
     sourceMaps: uniqueRecordsById([...(before?.sourceMaps ?? []), ...(after?.sourceMaps ?? [])]),
@@ -160,6 +174,7 @@ export function diffNativeSourceImports(input) {
       beforeImportContract: before?.metadata?.importResultContract,
       afterImportContract: after?.metadata?.importResultContract,
       changedRegionProjectionSummary,
+      semanticLineageInferenceSummary: lineageInference.summary,
       semanticMergeConflictSummary: mergeConflictProfile.conflictSummary,
       ...input.metadata
     }

@@ -46,6 +46,7 @@ export { getNativeParserAstFormatProfile } from './internal/index-impl/getNative
 export { importExternalSemanticIndex } from './internal/index-impl/importExternalSemanticIndex.js';
 export { importNativeProject } from './internal/index-impl/importNativeProject.js';
 export { importNativeSource } from './internal/index-impl/importNativeSource.js';
+export { inferSemanticLineageEvents } from './internal/index-impl/inferSemanticLineageEvents.js';
 export { createLanguageAdapterPackageContract, getLanguageAdapterPackageContract, LanguageAdapterPackageContracts, LanguageAdapterPackageReleaseReadinessStatuses, queryLanguageAdapterPackageContracts, summarizeLanguageAdapterPackageContracts } from './language-adapter-package-contracts.js';
 export { NativeImportFeatureEvidencePolicies } from './internal/index-impl/NativeImportFeatureEvidencePolicies.js';
 export { NativeImportLanguageProfiles } from './coverage-matrix-profiles.js';

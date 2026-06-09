@@ -111,6 +111,7 @@ type ExpectedPublicRuntimeExport =
   | 'importExternalSemanticIndex'
   | 'importNativeProject'
   | 'importNativeSource'
+  | 'inferSemanticLineageEvents'
   | 'normalizeCompileTarget'
   | 'projectFrontierAst'
   | 'projectNativeImportToSource'
@@ -198,17 +199,23 @@ const semanticLineage = compilerApi.createSemanticLineageEvent({
   evidenceIds: ['evidence_lineage']
 });
 const typedSemanticLineage: compilerApi.SemanticLineageEvent = semanticLineage;
-const semanticLineageMap: compilerApi.SemanticLineageMap = compilerApi.createSemanticLineageMap([
-  typedSemanticLineage
-]);
+const semanticLineageMap: compilerApi.SemanticLineageMap = compilerApi.createSemanticLineageMap([typedSemanticLineage]);
 const queriedSemanticLineage: readonly compilerApi.SemanticLineageEvent[] = compilerApi.querySemanticLineageEvents(
   semanticLineageMap.events,
   { operationId: 'typed-agent:1' }
 );
 const semanticAnchor: compilerApi.SemanticAnchor | undefined = compilerApi.createSemanticAnchor('source#src/example.js#function#run');
+const inferredSemanticLineage: compilerApi.SemanticLineageInferenceResult = compilerApi.inferSemanticLineageEvents({
+  before: { language: 'typescript', sourcePath: 'src/example.ts', sourceText: 'export function run() { return 1; }\n' },
+  after: { language: 'typescript', sourcePath: 'src/runtime.ts', sourceText: 'export function run() { return 1; }\n' }
+});
+const inferredSemanticLineageOptions: compilerApi.InferSemanticLineageEventsOptions = {
+  before: { language: 'typescript', sourcePath: 'src/example.ts', sourceText: 'export const value = 1;\n' },
+  after: { language: 'typescript', sourcePath: 'src/example.ts', sourceText: 'export const value = 2;\n' },
+  minConfidence: 0.5
+};
 
-void queriedSemanticLineage;
-void semanticAnchor;
+void queriedSemanticLineage; void semanticAnchor; void inferredSemanticLineage; void inferredSemanticLineageOptions;
 
 const semanticMergeAdmission = compilerApi.createSemanticMergeCandidateAdmissionRecord({
   id: 'typed_candidate',
@@ -226,17 +233,13 @@ const semanticMergeAdmission = compilerApi.createSemanticMergeCandidateAdmission
   evidenceIds: ['evidence_example']
 });
 const typedSemanticMergeAdmission: compilerApi.SemanticMergeCandidateAdmissionRecord = semanticMergeAdmission;
-const sortedSemanticMergeAdmissions: readonly compilerApi.SemanticMergeCandidateAdmissionRecord[] = compilerApi.sortSemanticMergeCandidateAdmissionRecords([
-  typedSemanticMergeAdmission
-]);
-const semanticMergeAdmissionOverlaps: readonly compilerApi.SemanticMergeCandidateOverlapRecord[] = compilerApi.querySemanticMergeCandidateAdmissionOverlaps([
-  typedSemanticMergeAdmission
-]);
+const sortedSemanticMergeAdmissions: readonly compilerApi.SemanticMergeCandidateAdmissionRecord[] =
+  compilerApi.sortSemanticMergeCandidateAdmissionRecords([typedSemanticMergeAdmission]);
+const semanticMergeAdmissionOverlaps: readonly compilerApi.SemanticMergeCandidateOverlapRecord[] =
+  compilerApi.querySemanticMergeCandidateAdmissionOverlaps([typedSemanticMergeAdmission]);
 const semanticMergeAdmissionSortKey: number = compilerApi.semanticMergeCandidateReadinessSortKey(typedSemanticMergeAdmission);
 
-void sortedSemanticMergeAdmissions;
-void semanticMergeAdmissionOverlaps;
-void semanticMergeAdmissionSortKey;
+void sortedSemanticMergeAdmissions; void semanticMergeAdmissionOverlaps; void semanticMergeAdmissionSortKey;
 
 const conversionArtifacts = compilerApi.createUniversalConversionArtifacts({
   id: 'type-admission-route',
@@ -307,7 +310,4 @@ const typedSelectedSurface: compilerApi.SemanticSliceAdmissionSelectedSurface = 
   ownershipKeys: ['region:typedRegion']
 };
 
-void typedAdmissionQuery;
-void typedSliceOptions;
-void typedSliceTestOptions;
-void typedSelectedSurface;
+void typedAdmissionQuery; void typedSliceOptions; void typedSliceTestOptions; void typedSelectedSurface;

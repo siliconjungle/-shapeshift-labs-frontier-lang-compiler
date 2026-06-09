@@ -54,6 +54,7 @@ export {
   importExternalSemanticIndex,
   importNativeProject,
   importNativeSource,
+  inferSemanticLineageEvents,
   LanguageAdapterPackageContracts,
   LanguageAdapterPackageReleaseReadinessStatuses,
   NativeImportFeatureEvidencePolicies,

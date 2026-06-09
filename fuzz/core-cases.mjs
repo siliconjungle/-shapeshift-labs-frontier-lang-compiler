@@ -4,6 +4,7 @@ import {
   createBidirectionalTargetChangeRecord,
   createSemanticLineageEvent,
   createSemanticLineageMap,
+  inferSemanticLineageEvents,
   importNativeSource,
   resolveSemanticLineage
 } from '../dist/index.js';
@@ -98,5 +99,30 @@ action updateItem @id("action_${index}") {
     assert.equal(record.metadata.semanticEquivalenceClaim, false);
     assert.ok(['needs-review', 'blocked'].includes(record.readiness));
     assert.equal(record.sourcePatchBundle.admission.autoMergeClaim, false);
+  }
+  for (let index = 0; index < 40; index += 1) {
+    const name = `lineageFuzz${index}`;
+    const beforePath = `src/lineage-before-${index}.ts`;
+    const afterPath = index % 4 === 0 ? beforePath : `src/lineage-after-${index}.ts`;
+    const afterSourceText = index % 7 === 0
+      ? `export const lineageReplacement${index} = true;\n`
+      : `export function ${name}(value: number) { return value + ${index}; }\n`;
+    const inference = inferSemanticLineageEvents({
+      id: `fuzz_lineage_inference_${index}`,
+      before: {
+        language: 'typescript',
+        sourcePath: beforePath,
+        sourceText: `export function ${name}(value: number) { return value + ${index}; }\n`
+      },
+      after: {
+        language: 'typescript',
+        sourcePath: afterPath,
+        sourceText: afterSourceText
+      }
+    });
+    assert.equal(inference.metadata.autoMergeClaim, false);
+    assert.equal(inference.metadata.semanticEquivalenceClaim, false);
+    assert.ok(['ready', 'needs-review', 'blocked'].includes(inference.readiness));
+    assert.ok(inference.events.length <= inference.summary.beforeSymbols + inference.summary.afterSymbols);
   }
 }
