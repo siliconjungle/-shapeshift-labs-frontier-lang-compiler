@@ -353,6 +353,27 @@ console.log(changeSet.mergeCandidate.readiness); // merge-admission classificati
 
 Use `diffNativeSourceImports` when the worker or runner already produced `importNativeSource` results. Changed regions include a `metadata.changedRegionProjection` envelope with before/after source hashes, source-map links, ownership keys, readiness, and `autoMergeClaim: false` so swarm admission tools can score or port patches without treating semantic metadata as proof. Body-only edits that the lightweight scanner cannot anchor to a symbol are still reported as file-level changed regions instead of being silently treated as safe.
 
+Build a three-way semantic edit script when a coordinator has base, worker, and current-head source text. This is the first deterministic bridge from semantic sidecars to automatic merge admission:
+
+```js
+import { createSemanticEditScript } from '@shapeshift-labs/frontier-lang-compiler';
+
+const script = createSemanticEditScript({
+  language: 'typescript',
+  sourcePath: 'src/runtime.ts',
+  baseSourceText: 'export function step(v) { return v + 1; }\n',
+  workerSourceText: 'export function step(v) { return v + 2; }\n',
+  headSourceText: 'export function step(v) { return v + 1; }\n'
+});
+
+console.log(script.operations[0].kind); // "replaceBody"
+console.log(script.operations[0].status); // "portable"
+console.log(script.admission.status); // "auto-merge-candidate"
+console.log(script.admission.autoMergeClaim); // false
+```
+
+If the current head already changed the same semantic anchor, the script reports `conflict`; if the anchor moved or was renamed, it reports `needs-port` with a `reanchor` target; if no current head is supplied, it reports a review-only candidate. The script is intentionally an edit/admission record, not a proof of semantic equivalence.
+
 Bundle a native diff into a compact semantic patch record when a coordinator needs hashes, changed semantic regions, source-map links, proof/history/evidence IDs, and merge-admission status without loading whole source files:
 
 ```js
