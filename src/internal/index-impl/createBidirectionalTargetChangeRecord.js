@@ -1,5 +1,6 @@
 import {
   idFragment,
+  uniqueRecordsById,
   uniqueStrings
 } from '../../native-import-utils.js';
 import { createSemanticImportSidecar } from './createSemanticImportSidecar.js';
@@ -45,6 +46,14 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
   }) : undefined;
   const sourceAnchors = sourceSidecar ? anchorsFromSourceSidecar(sourceSidecar, source) : [];
   const mappings = array(input.sourceAnchorMappings ?? input.anchorMappings);
+  const sourceMaps = uniqueRecordsById([
+    ...array(input.sourceMaps),
+    ...array(input.projectionSourceMaps),
+    ...array(input.targetSourceMaps),
+    ...array(input.targetProjectionSourceMaps),
+    ...array(input.targetCompileResult?.sourceMaps),
+    input.targetCompileResult?.sourceMap
+  ]);
   const lineage = input.lineage ?? input.lineageEvents ?? input.lineageMap ?? [];
   const sourceAnchorMatches = targetChangeSet.changedRegions.map((region, index) => matchTargetRegion({
     id,
@@ -53,6 +62,7 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     source,
     sourceAnchors,
     mappings,
+    sourceMaps,
     lineage
   }));
   const readiness = classifyBidirectionalReadiness(targetChangeSet, source, sourceAnchorMatches);
@@ -86,7 +96,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       projectionOnly: true,
       targetChangeSetId: targetChangeSet.id,
       targetPatchId: targetChangeSet.patch?.id,
-      targetMergeCandidateId: targetChangeSet.mergeCandidate?.id
+      targetMergeCandidateId: targetChangeSet.mergeCandidate?.id,
+      sourceMapBackprojection: summarizeSourceMapBackprojection(sourceAnchorMatches)
     }
   }, {
     id: input.sourcePatchBundleId ?? `semantic_patch_bundle_${idFragment(id)}_source_port`,
@@ -127,6 +138,7 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       bidirectionalTargetChangeId: id,
       sourcePatchBundleId: sourcePatchBundle.id,
       targetChangeSetId: targetChangeSet.id,
+      sourceMapBackprojection: summarizeSourceMapBackprojection(sourceAnchorMatches),
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     }
@@ -153,7 +165,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       ambiguousMatches: sourceAnchorMatches.filter((match) => match.status === 'ambiguous').length,
       unmatchedTargetRegions: sourceAnchorMatches.filter((match) => match.status === 'unmatched').length,
       deletedSourceAnchors: sourceAnchorMatches.filter((match) => match.status === 'deleted').length,
-      sourceChangedRegions: sourceChangedRegions.length
+      sourceChangedRegions: sourceChangedRegions.length,
+      sourceMapBackedMatches: sourceAnchorMatches.filter((match) => match.sourceMapLinks.length > 0).length
     },
     metadata: {
       autoMergeClaim: false,
@@ -161,6 +174,16 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       reviewRequired: true,
       ...input.metadata
     }
+  };
+}
+
+function summarizeSourceMapBackprojection(matches) {
+  const links = matches.flatMap((match) => match.sourceMapLinks ?? []);
+  return {
+    sourceMapBackedMatches: matches.filter((match) => (match.sourceMapLinks ?? []).length > 0).length,
+    sourceMapLinks: links.length,
+    sourceMapIds: uniqueStrings(links.map((link) => link.sourceMapId)),
+    sourceMapMappingIds: uniqueStrings(links.map((link) => link.sourceMapMappingId))
   };
 }
 

@@ -64,8 +64,11 @@ action updateItem @id("action_${index}") {
     sourcePath: 'src/fuzz-bidirectional.ts',
     sourceText: 'export function run(value: number): number { return value + 1; }\n'
   });
+  const sourceSymbol = source.semanticIndex.symbols.find((symbol) => symbol.name === 'run');
+  const sourceMapping = source.sourceMaps[0].mappings.find((mapping) => mapping.semanticSymbolId === sourceSymbol.id);
   for (let index = 0; index < 30; index += 1) {
     const targetName = index % 3 === 0 ? 'missingRun' : 'run';
+    const targetPath = `src/fuzz-${index}.rs`;
     const lineage = index % 3 === 1
       ? [
         createSemanticLineageEvent({
@@ -82,23 +85,25 @@ action updateItem @id("action_${index}") {
       id: `fuzz_bidirectional_${index}`,
       source,
       targetLanguage: 'rust',
-      targetPath: `src/fuzz-${index}.rs`,
+      targetPath,
       baseTarget: {
         language: 'rust',
-        sourcePath: `src/fuzz-${index}.rs`,
+        sourcePath: targetPath,
         sourceText: `pub fn ${targetName}(value: i32) -> i32 { value + ${index} }\n`
       },
       editedTarget: {
         language: 'rust',
-        sourcePath: `src/fuzz-${index}.rs`,
+        sourcePath: targetPath,
         sourceText: `pub fn ${targetName}(value: i32) -> i32 { value + ${index + 1} }\n`
       },
+      ...(index % 4 === 0 ? { sourceMaps: [fuzzRustSourceMap(source, sourceSymbol, sourceMapping, targetPath, targetName, index)] } : {}),
       lineage
     });
     assert.equal(record.metadata.autoMergeClaim, false);
     assert.equal(record.metadata.semanticEquivalenceClaim, false);
     assert.ok(['needs-review', 'blocked'].includes(record.readiness));
     assert.equal(record.sourcePatchBundle.admission.autoMergeClaim, false);
+    if (index % 4 === 0) assert.equal(record.summary.sourceMapBackedMatches >= 1, true);
   }
   for (let index = 0; index < 40; index += 1) {
     const name = `lineageFuzz${index}`;
@@ -125,4 +130,27 @@ action updateItem @id("action_${index}") {
     assert.ok(['ready', 'needs-review', 'blocked'].includes(inference.readiness));
     assert.ok(inference.events.length <= inference.summary.beforeSymbols + inference.summary.afterSymbols);
   }
+}
+
+function fuzzRustSourceMap(source, sourceSymbol, sourceMapping, targetPath, targetName, index) {
+  return {
+    kind: 'frontier.lang.sourceMap',
+    version: 1,
+    id: `fuzz_source_map_${index}`,
+    sourcePath: source.sourcePath,
+    sourceHash: source.nativeSource.sourceHash,
+    target: 'rust',
+    targetPath,
+    mappings: [{
+      id: `fuzz_source_map_run_${index}`,
+      semanticSymbolId: sourceSymbol.id,
+      nativeAstNodeId: sourceSymbol.nativeAstNodeId,
+      sourceSpan: sourceMapping.sourceSpan,
+      generatedSpan: { path: targetPath, target: 'rust', targetPath, startLine: 1, startColumn: 1, endLine: 1, endColumn: 72, generatedName: targetName },
+      target: 'rust',
+      generatedName: targetName,
+      precision: 'declaration',
+      preservation: 'declaration'
+    }]
+  };
 }

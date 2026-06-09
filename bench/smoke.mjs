@@ -116,6 +116,7 @@ console.log(JSON.stringify({
   semanticLineageInferenceDurationMs: Number(sourceChangeMetrics.semanticLineageInferenceDurationMs.toFixed(2)),
   bidirectionalTargetChanges: sourceChangeMetrics.bidirectionalTargetChanges,
   bidirectionalTargetChangeMatches: sourceChangeMetrics.bidirectionalTargetChangeMatches,
+  bidirectionalTargetChangeSourceMapBacked: sourceChangeMetrics.bidirectionalTargetChangeSourceMapBacked,
   bidirectionalTargetChangeBlocked: sourceChangeMetrics.bidirectionalTargetChangeBlocked,
   bidirectionalTargetChangeDurationMs: Number(sourceChangeMetrics.bidirectionalTargetChangeDurationMs.toFixed(2)),
   externalSemanticImports: sourceChangeMetrics.externalSemanticImports,

@@ -64,6 +64,64 @@ assert.equal(record.historyRecord.index.evidenceIds.includes(record.evidence[0].
 assert.equal(record.evidence[0].metadata.autoMergeClaim, false);
 assert.equal(record.evidence[0].metadata.semanticEquivalenceClaim, false);
 
+const sourceSymbol = sourceImport.semanticIndex.symbols.find((symbol) => symbol.name === 'add');
+const sourceMapping = sourceImport.sourceMaps[0].mappings.find((mapping) => mapping.semanticSymbolId === sourceSymbol.id);
+const rustProjectionMap = {
+  kind: 'frontier.lang.sourceMap',
+  version: 1,
+  id: 'source_map_counter_ts_to_rust',
+  sourcePath: 'src/counter.ts',
+  sourceHash: sourceImport.nativeSource.sourceHash,
+  target: 'rust',
+  targetPath: 'src/counter.rs',
+  mappings: [{
+    id: 'map_ts_add_to_rust_add',
+    semanticSymbolId: sourceSymbol.id,
+    nativeAstNodeId: sourceSymbol.nativeAstNodeId,
+    sourceSpan: sourceMapping.sourceSpan,
+    generatedSpan: {
+      path: 'src/counter.rs',
+      target: 'rust',
+      targetPath: 'src/counter.rs',
+      startLine: 1,
+      startColumn: 1,
+      endLine: 1,
+      endColumn: 58,
+      generatedName: 'add'
+    },
+    target: 'rust',
+    generatedName: 'add',
+    precision: 'declaration',
+    preservation: 'declaration'
+  }]
+};
+const sourceMapRecord = createBidirectionalTargetChangeRecord({
+  id: 'counter_rust_target_change_from_source_map',
+  source: sourceImport,
+  targetLanguage: 'rust',
+  targetPath: 'src/counter.rs',
+  baseTarget: {
+    language: 'rust',
+    sourcePath: 'src/counter.rs',
+    sourceText: 'pub fn add(count: i32) -> i32 { count + 1 }\n'
+  },
+  editedTarget: {
+    language: 'rust',
+    sourcePath: 'src/counter.rs',
+    sourceText: 'pub fn add(count: i32, step: i32) -> i32 { count + step }\n'
+  },
+  sourceMaps: [rustProjectionMap]
+});
+assert.equal(sourceMapRecord.readiness, 'needs-review');
+assert.equal(sourceMapRecord.summary.sourceMapBackedMatches, 1);
+assert.equal(sourceMapRecord.sourceAnchorMatches[0].status, 'matched');
+assert.equal(sourceMapRecord.sourceAnchorMatches[0].reasonCodes.includes('mapped-by-generated-source-map'), true);
+assert.equal(sourceMapRecord.sourceAnchorMatches[0].sourceMapLinks[0].sourceMapMappingId, 'map_ts_add_to_rust_add');
+assert.equal(sourceMapRecord.sourcePatchBundle.summary.sourceMapLinks, 1);
+assert.equal(sourceMapRecord.sourcePatchBundle.index.sourceMapMappingIds.includes('map_ts_add_to_rust_add'), true);
+assert.equal(sourceMapRecord.historyRecord.index.ownershipKeys.includes(sourceKey), true);
+assert.equal(sourceMapRecord.evidence[0].metadata.sourceMapBackedMatches, 1);
+
 const unmatched = createBidirectionalTargetChangeRecord({
   id: 'counter_unmatched_rust_target_change',
   source: sourceImport,

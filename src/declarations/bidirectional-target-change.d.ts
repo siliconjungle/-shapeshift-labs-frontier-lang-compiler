@@ -2,6 +2,8 @@ import type {
   EvidenceRecord,
   FrontierSourceLanguage,
   SemanticMergeReadiness,
+  SourceMapMappingRecord,
+  SourceMapRecord,
   SourceSpan
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { ImportNativeSourceOptions, NativeSourceImportResult } from './import-adapter-core.js';
@@ -27,6 +29,26 @@ export interface BidirectionalTargetChangeSourceAnchorMapping {
   readonly sourceSymbolId?: string;
 }
 
+export interface BidirectionalTargetChangeSourceMapLink {
+  readonly id: string;
+  readonly sourceMapId?: string;
+  readonly sourceMapMappingId?: string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly targetPath?: string;
+  readonly targetHash?: string;
+  readonly semanticSymbolId?: string;
+  readonly semanticOccurrenceId?: string;
+  readonly semanticNodeId?: string;
+  readonly nativeSourceId?: string;
+  readonly nativeAstNodeId?: string;
+  readonly precision?: string;
+  readonly sourceSpan?: SourceSpan;
+  readonly generatedSpan?: SourceMapMappingRecord['generatedSpan'];
+  readonly regionKey?: string;
+  readonly regionKind?: string;
+}
+
 export interface BidirectionalTargetChangeAnchor {
   readonly id?: string;
   readonly key?: string;
@@ -47,6 +69,7 @@ export interface BidirectionalTargetChangeSourceAnchorMatch {
   readonly targetRegion: Partial<NativeSourceChangeRegion>;
   readonly sourceAnchors: readonly BidirectionalTargetChangeAnchor[];
   readonly lineageResolutions: readonly SemanticLineageResolution[];
+  readonly sourceMapLinks: readonly BidirectionalTargetChangeSourceMapLink[];
   readonly status: BidirectionalTargetChangeAnchorStatus;
   readonly confidence?: number;
   readonly reasonCodes: readonly string[];
@@ -77,6 +100,11 @@ export interface CreateBidirectionalTargetChangeRecordOptions {
   readonly after?: NativeSourceImportResult | ImportNativeSourceOptions;
   readonly sourceAnchorMappings?: readonly BidirectionalTargetChangeSourceAnchorMapping[];
   readonly anchorMappings?: readonly BidirectionalTargetChangeSourceAnchorMapping[];
+  readonly sourceMaps?: readonly SourceMapRecord[];
+  readonly projectionSourceMaps?: readonly SourceMapRecord[];
+  readonly targetSourceMaps?: readonly SourceMapRecord[];
+  readonly targetProjectionSourceMaps?: readonly SourceMapRecord[];
+  readonly targetCompileResult?: { readonly sourceMaps?: readonly SourceMapRecord[]; readonly sourceMap?: SourceMapRecord };
   readonly lineage?: readonly SemanticLineageEvent[];
   readonly lineageEvents?: readonly SemanticLineageEvent[];
   readonly lineageMap?: unknown;
@@ -114,6 +142,7 @@ export interface BidirectionalTargetChangeRecord {
     readonly unmatchedTargetRegions: number;
     readonly deletedSourceAnchors: number;
     readonly sourceChangedRegions: number;
+    readonly sourceMapBackedMatches: number;
   };
   readonly metadata: {
     readonly autoMergeClaim: false;

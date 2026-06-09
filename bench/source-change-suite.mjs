@@ -112,6 +112,8 @@ function measureBidirectionalTargetChanges() {
     sourcePath: 'src/bidirectional-source.ts',
     sourceText: 'export function advance(frame: number): number { return frame + 1; }\n'
   });
+  const sourceSymbol = source.semanticIndex.symbols.find((symbol) => symbol.name === 'advance');
+  const sourceMapping = source.sourceMaps[0].mappings.find((mapping) => mapping.semanticSymbolId === sourceSymbol.id);
   const lineage = [createSemanticLineageEvent({
     eventKind: 'moved',
     from: { key: 'source#src/bidirectional-source.ts#body#advance', symbolName: 'advance' },
@@ -134,15 +136,42 @@ function measureBidirectionalTargetChanges() {
         sourcePath: `src/bidirectional-${index}.rs`,
         sourceText: `pub fn advance(frame: i32, delta: i32) -> i32 { frame + delta + ${index} }\n`
       },
-      sourceAnchorMappings: [{ targetSymbolName: 'advance', sourceSymbolName: 'advance' }],
+      ...(index % 2 === 0
+        ? { sourceMaps: [rustSourceMap(source, sourceSymbol, sourceMapping, index)] }
+        : { sourceAnchorMappings: [{ targetSymbolName: 'advance', sourceSymbolName: 'advance' }] }),
       lineage: index % 4 === 0 ? lineage : []
     }));
   }
   return {
     bidirectionalTargetChanges: records.length,
     bidirectionalTargetChangeMatches: records.reduce((sum, record) => sum + record.summary.sourceAnchorMatches, 0),
+    bidirectionalTargetChangeSourceMapBacked: records.reduce((sum, record) => sum + record.summary.sourceMapBackedMatches, 0),
     bidirectionalTargetChangeBlocked: records.filter((record) => record.readiness === 'blocked').length,
     bidirectionalTargetChangeDurationMs: performance.now() - start
+  };
+}
+
+function rustSourceMap(source, sourceSymbol, sourceMapping, index) {
+  const targetPath = `src/bidirectional-${index}.rs`;
+  return {
+    kind: 'frontier.lang.sourceMap',
+    version: 1,
+    id: `bench_source_map_bidirectional_${index}`,
+    sourcePath: source.sourcePath,
+    sourceHash: source.nativeSource.sourceHash,
+    target: 'rust',
+    targetPath,
+    mappings: [{
+      id: `bench_map_advance_${index}`,
+      semanticSymbolId: sourceSymbol.id,
+      nativeAstNodeId: sourceSymbol.nativeAstNodeId,
+      sourceSpan: sourceMapping.sourceSpan,
+      generatedSpan: { path: targetPath, target: 'rust', targetPath, startLine: 1, startColumn: 1, endLine: 1, endColumn: 80, generatedName: 'advance' },
+      target: 'rust',
+      generatedName: 'advance',
+      precision: 'declaration',
+      preservation: 'declaration'
+    }]
   };
 }
 

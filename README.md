@@ -422,6 +422,22 @@ console.log(targetChange.metadata.semanticEquivalenceClaim); // false
 
 Bidirectional target-change records are merge-admission evidence, not transpiler proof. They keep target diffs, source anchor matches, optional lineage resolutions, source patch-bundle records, semantic history records, evidence IDs, readiness, and reason codes. They always keep `autoMergeClaim: false` and `semanticEquivalenceClaim: false`; unmatched or deleted anchors block the source-port route, while matched and ambiguous anchors still require human or verifier review.
 
+When the target source came from a Frontier/native projection, pass the generated-output `sourceMaps` back into `createBidirectionalTargetChangeRecord`. The record will match target changed regions by generated span or generated name, emit `sourceMapLinks`, include `sourceMapBackedMatches` in the summary/evidence, and carry source-map mapping IDs into the source patch bundle index:
+
+```js
+const sourceMapBacked = createBidirectionalTargetChangeRecord({
+  source,
+  targetLanguage: 'rust',
+  targetPath: 'src/counter.rs',
+  baseTarget,
+  editedTarget,
+  sourceMaps: [projection.sourceMap]
+});
+
+console.log(sourceMapBacked.summary.sourceMapBackedMatches);
+console.log(sourceMapBacked.sourcePatchBundle.index.sourceMapMappingIds);
+```
+
 Store worker outputs as compact semantic history records when a coordinator needs to compare distributed changes without merging whole files:
 
 ```js
