@@ -3,6 +3,7 @@ export {
   attachUniversalDialectRegistry,
   compileFrontierSource,
   createBabelNativeImporterAdapter,
+  createBidirectionalTargetChangeRecord,
   createEstreeNativeImporterAdapter,
   createLanguageAdapterPackageContract,
   createNativeImportCoverageMatrix,

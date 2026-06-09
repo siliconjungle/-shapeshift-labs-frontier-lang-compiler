@@ -48,6 +48,7 @@ type ExpectedPublicRuntimeExport =
   | 'compileFrontierDocument'
   | 'compileFrontierSource'
   | 'createBabelNativeImporterAdapter'
+  | 'createBidirectionalTargetChangeRecord'
   | 'createEstreeNativeImporterAdapter'
   | 'createLanguageAdapterPackageContract'
   | 'createNativeImportCoverageMatrix'
@@ -163,6 +164,29 @@ const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecor
 );
 
 void queriedSemanticPatchBundles;
+
+const bidirectionalTargetChange = compilerApi.createBidirectionalTargetChangeRecord({
+  source: {
+    language: 'typescript',
+    sourcePath: 'src/example.ts',
+    sourceText: 'export function run() { return 1; }\n'
+  },
+  targetLanguage: 'rust',
+  targetPath: 'src/example.rs',
+  baseTarget: {
+    language: 'rust',
+    sourcePath: 'src/example.rs',
+    sourceText: 'pub fn run() -> i32 { 1 }\n'
+  },
+  editedTarget: {
+    language: 'rust',
+    sourcePath: 'src/example.rs',
+    sourceText: 'pub fn run() -> i32 { 2 }\n'
+  }
+});
+const typedBidirectionalTargetChange: compilerApi.BidirectionalTargetChangeRecord = bidirectionalTargetChange;
+
+void typedBidirectionalTargetChange;
 
 const semanticLineage = compilerApi.createSemanticLineageEvent({
   eventKind: 'moved',

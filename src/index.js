@@ -4,6 +4,7 @@ export { compileFrontierDocument } from './internal/index-impl/compileFrontierDo
 export { compileFrontierSource } from './internal/index-impl/compileFrontierSource.js';
 export { compileNativeSource } from './internal/index-impl/compileNativeSource.js';
 export { createBabelNativeImporterAdapter } from './internal/index-impl/createBabelNativeImporterAdapter.js';
+export { createBidirectionalTargetChangeRecord } from './internal/index-impl/createBidirectionalTargetChangeRecord.js';
 export { createClangAstNativeImporterAdapter } from './internal/index-impl/createClangAstNativeImporterAdapter.js';
 export { createCSharpRoslynNativeImporterAdapter } from './internal/index-impl/createCSharpRoslynNativeImporterAdapter.js';
 export { createEstreeNativeImporterAdapter } from './internal/index-impl/createEstreeNativeImporterAdapter.js';

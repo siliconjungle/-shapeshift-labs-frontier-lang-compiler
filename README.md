@@ -383,6 +383,45 @@ console.log(querySemanticPatchBundleRecords([bundle], { sourcePath: 'src/runtime
 
 Semantic patch bundle records keep compact refs and query indexes for base/target/source hashes, source paths, changed region keys, conflict keys, source-map IDs, evidence IDs, proof IDs, history IDs, readiness, and admission status. They intentionally omit `before`/`after` import payloads and source text; use the original diff result when a worker needs to re-read or re-project source.
 
+Map an edited target-language file back to source-language semantic anchors for review. This is the reverse direction a swarm needs when a worker changes generated Rust/Python/etc. and the coordinator wants source-port evidence:
+
+```js
+import {
+  createBidirectionalTargetChangeRecord,
+  importNativeSource
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const source = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/counter.ts',
+  sourceText: 'export function add(count: number) { return count + 1; }\n'
+});
+
+const targetChange = createBidirectionalTargetChangeRecord({
+  source,
+  targetLanguage: 'rust',
+  targetPath: 'src/counter.rs',
+  baseTarget: {
+    language: 'rust',
+    sourcePath: 'src/counter.rs',
+    sourceText: 'pub fn add(count: i32) -> i32 { count + 1 }\n'
+  },
+  editedTarget: {
+    language: 'rust',
+    sourcePath: 'src/counter.rs',
+    sourceText: 'pub fn add(count: i32, step: i32) -> i32 { count + step }\n'
+  },
+  sourceAnchorMappings: [{ targetSymbolName: 'add', sourceSymbolName: 'add' }]
+});
+
+console.log(targetChange.sourceAnchorMatches[0].status); // "matched"
+console.log(targetChange.sourcePatchBundle.admission.reviewRequired); // true
+console.log(targetChange.historyRecord.index.ownershipKeys);
+console.log(targetChange.metadata.semanticEquivalenceClaim); // false
+```
+
+Bidirectional target-change records are merge-admission evidence, not transpiler proof. They keep target diffs, source anchor matches, optional lineage resolutions, source patch-bundle records, semantic history records, evidence IDs, readiness, and reason codes. They always keep `autoMergeClaim: false` and `semanticEquivalenceClaim: false`; unmatched or deleted anchors block the source-port route, while matched and ambiguous anchors still require human or verifier review.
+
 Store worker outputs as compact semantic history records when a coordinator needs to compare distributed changes without merging whole files:
 
 ```js

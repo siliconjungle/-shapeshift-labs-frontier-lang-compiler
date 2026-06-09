@@ -1,6 +1,8 @@
 import { performance } from 'node:perf_hooks';
 import {
+  createBidirectionalTargetChangeRecord,
   createSemanticImportSidecar,
+  createSemanticLineageEvent,
   diffNativeSources,
   importExternalSemanticIndex,
   importNativeSource
@@ -10,6 +12,7 @@ export function measureSourceChangeSuites() {
   return {
     ...measureRegionScan(),
     ...measureChangeProjection(),
+    ...measureBidirectionalTargetChanges(),
     ...measureExternalSemanticImports()
   };
 }
@@ -69,6 +72,47 @@ function measureChangeProjection() {
     changedRegionProjections: changeProjectionSets.reduce((sum, changeSet) => sum + changeSet.metadata.changedRegionProjectionSummary.withProjection, 0),
     changedRegionProjectionSourceMapLinks: changeProjectionSets.reduce((sum, changeSet) => sum + changeSet.metadata.changedRegionProjectionSummary.sourceMapLinks, 0),
     changeProjectionDurationMs
+  };
+}
+
+function measureBidirectionalTargetChanges() {
+  const start = performance.now();
+  const source = importNativeSource({
+    language: 'typescript',
+    sourcePath: 'src/bidirectional-source.ts',
+    sourceText: 'export function advance(frame: number): number { return frame + 1; }\n'
+  });
+  const lineage = [createSemanticLineageEvent({
+    eventKind: 'moved',
+    from: { key: 'source#src/bidirectional-source.ts#body#advance', symbolName: 'advance' },
+    to: { key: 'source#src/runtime-core.ts#body#advanceFrame', symbolName: 'advanceFrame' }
+  })];
+  const records = [];
+  for (let index = 0; index < 60; index += 1) {
+    records.push(createBidirectionalTargetChangeRecord({
+      id: `bench_bidirectional_target_change_${index}`,
+      source,
+      targetLanguage: 'rust',
+      targetPath: `src/bidirectional-${index}.rs`,
+      baseTarget: {
+        language: 'rust',
+        sourcePath: `src/bidirectional-${index}.rs`,
+        sourceText: `pub fn advance(frame: i32) -> i32 { frame + ${index} }\n`
+      },
+      editedTarget: {
+        language: 'rust',
+        sourcePath: `src/bidirectional-${index}.rs`,
+        sourceText: `pub fn advance(frame: i32, delta: i32) -> i32 { frame + delta + ${index} }\n`
+      },
+      sourceAnchorMappings: [{ targetSymbolName: 'advance', sourceSymbolName: 'advance' }],
+      lineage: index % 4 === 0 ? lineage : []
+    }));
+  }
+  return {
+    bidirectionalTargetChanges: records.length,
+    bidirectionalTargetChangeMatches: records.reduce((sum, record) => sum + record.summary.sourceAnchorMatches, 0),
+    bidirectionalTargetChangeBlocked: records.filter((record) => record.readiness === 'blocked').length,
+    bidirectionalTargetChangeDurationMs: performance.now() - start
   };
 }
 

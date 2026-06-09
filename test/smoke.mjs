@@ -25,6 +25,7 @@ await import('./smoke/semantic-merge-candidates.mjs');
 await import('./smoke/semantic-merge-conflicts.mjs');
 await import('./smoke/semantic-history-records.mjs');
 await import('./smoke/semantic-patch-bundles.mjs');
+await import('./smoke/bidirectional-target-change.mjs');
 await import('./smoke/native-projection.mjs');
 await import('./smoke-workbench.mjs');
 await import('./smoke/roundtrip.mjs');

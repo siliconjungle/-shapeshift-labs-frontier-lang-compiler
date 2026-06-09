@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict';
-import { compileFrontierSource, createSemanticLineageEvent, createSemanticLineageMap, resolveSemanticLineage } from '../dist/index.js';
+import {
+  compileFrontierSource,
+  createBidirectionalTargetChangeRecord,
+  createSemanticLineageEvent,
+  createSemanticLineageMap,
+  importNativeSource,
+  resolveSemanticLineage
+} from '../dist/index.js';
 
 const targets = ['typescript', 'javascript', 'rust', 'python', 'c'];
 
@@ -50,5 +57,46 @@ action updateItem @id("action_${index}") {
     assert.ok(['resolved', 'cycle'].includes(result.status));
     assert.ok(result.traversedEventIds.length <= 16);
     assert.equal(new Set(result.traversedEventIds).size, result.traversedEventIds.length);
+  }
+  const source = importNativeSource({
+    language: 'typescript',
+    sourcePath: 'src/fuzz-bidirectional.ts',
+    sourceText: 'export function run(value: number): number { return value + 1; }\n'
+  });
+  for (let index = 0; index < 30; index += 1) {
+    const targetName = index % 3 === 0 ? 'missingRun' : 'run';
+    const lineage = index % 3 === 1
+      ? [
+        createSemanticLineageEvent({
+          eventKind: 'split',
+          from: { key: 'source#src/fuzz-bidirectional.ts#body#run', symbolName: 'run' },
+          to: [
+            { key: 'source#src/fuzz-a.ts#body#runFast', symbolName: 'runFast' },
+            { key: 'source#src/fuzz-b.ts#body#runSafe', symbolName: 'runSafe' }
+          ]
+        })
+      ]
+      : [];
+    const record = createBidirectionalTargetChangeRecord({
+      id: `fuzz_bidirectional_${index}`,
+      source,
+      targetLanguage: 'rust',
+      targetPath: `src/fuzz-${index}.rs`,
+      baseTarget: {
+        language: 'rust',
+        sourcePath: `src/fuzz-${index}.rs`,
+        sourceText: `pub fn ${targetName}(value: i32) -> i32 { value + ${index} }\n`
+      },
+      editedTarget: {
+        language: 'rust',
+        sourcePath: `src/fuzz-${index}.rs`,
+        sourceText: `pub fn ${targetName}(value: i32) -> i32 { value + ${index + 1} }\n`
+      },
+      lineage
+    });
+    assert.equal(record.metadata.autoMergeClaim, false);
+    assert.equal(record.metadata.semanticEquivalenceClaim, false);
+    assert.ok(['needs-review', 'blocked'].includes(record.readiness));
+    assert.equal(record.sourcePatchBundle.admission.autoMergeClaim, false);
   }
 }
