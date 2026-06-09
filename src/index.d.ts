@@ -16,6 +16,7 @@ export * from './declarations/source-preservation.js';
 export * from './declarations/semantic-sidecar-admission.js';
 export * from './declarations/semantic-merge-candidates.js';
 export * from './declarations/semantic-merge-conflicts.js';
+export * from './declarations/semantic-lineage.js';
 export * from './declarations/semantic-history.js';
 export * from './declarations/semantic-patch-bundle.js';
 export * from './declarations/semantic-impact.js';

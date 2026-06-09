@@ -6,6 +6,7 @@ import type {
   SourceSpan
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { SemanticImportOwnershipRegion } from './semantic-sidecar.js';
+import type { CreateSemanticLineageEventInput, SemanticLineageEvent } from './semantic-lineage.js';
 
 import type { SemanticHistoryAdmissionStatus, SemanticHistoryReviewerStatus, SemanticHistoryReplayLinkKind, SemanticHistoryOverlapKind, SemanticHistoryConflictReason, SemanticHistoryClaimKind, SemanticHistoryClaimStatus, SemanticHistoryProofAttemptStatus, SemanticHistoryMergeDecisionStatus, SemanticHistoryActorRef, SemanticHistoryRecordSourceRef, SemanticHistorySourceRef, SemanticHistoryOwnershipRegionRef, SemanticHistoryCandidateRef, SemanticHistoryClaimRecord, SemanticHistoryImportedParserEvidenceRecord, SemanticHistoryProofAttemptRecord, SemanticHistoryPatchAncestryRecord, SemanticHistoryMergeDecisionRecord, SemanticHistoryClaimInput, SemanticHistoryImportedParserEvidenceInput, SemanticHistoryProofAttemptInput, SemanticHistoryPatchAncestryInput, SemanticHistoryMergeDecisionInput, SemanticHistoryReviewerState, SemanticHistoryAdmissionState, SemanticHistoryReplayLink, SemanticHistoryRecordIndex } from './semantic-history-records.js';
 export type { SemanticHistoryAdmissionStatus, SemanticHistoryReviewerStatus, SemanticHistoryReplayLinkKind, SemanticHistoryOverlapKind, SemanticHistoryConflictReason, SemanticHistoryClaimKind, SemanticHistoryClaimStatus, SemanticHistoryProofAttemptStatus, SemanticHistoryMergeDecisionStatus, SemanticHistoryActorRef, SemanticHistoryRecordSourceRef, SemanticHistorySourceRef, SemanticHistoryOwnershipRegionRef, SemanticHistoryCandidateRef, SemanticHistoryClaimRecord, SemanticHistoryImportedParserEvidenceRecord, SemanticHistoryProofAttemptRecord, SemanticHistoryPatchAncestryRecord, SemanticHistoryMergeDecisionRecord, SemanticHistoryClaimInput, SemanticHistoryImportedParserEvidenceInput, SemanticHistoryProofAttemptInput, SemanticHistoryPatchAncestryInput, SemanticHistoryMergeDecisionInput, SemanticHistoryReviewerState, SemanticHistoryAdmissionState, SemanticHistoryReplayLink, SemanticHistoryRecordIndex } from './semantic-history-records.js';
@@ -31,6 +32,7 @@ export interface SemanticHistoryRecord {
   readonly rejectedTheories: readonly SemanticHistoryClaimRecord[];
   readonly importedParserEvidence: readonly SemanticHistoryImportedParserEvidenceRecord[];
   readonly proofAttempts: readonly SemanticHistoryProofAttemptRecord[];
+  readonly lineageEvents: readonly SemanticLineageEvent[];
   readonly patchAncestry: readonly SemanticHistoryPatchAncestryRecord[];
   readonly mergeDecisions: readonly SemanticHistoryMergeDecisionRecord[];
   readonly evidenceIds: readonly string[];
@@ -83,6 +85,9 @@ export interface CreateSemanticHistoryRecordInput {
   readonly parserEvidence?: readonly SemanticHistoryImportedParserEvidenceInput[] | SemanticHistoryImportedParserEvidenceInput;
   readonly proofAttempts?: readonly SemanticHistoryProofAttemptInput[] | SemanticHistoryProofAttemptInput;
   readonly proofs?: readonly SemanticHistoryProofAttemptInput[] | SemanticHistoryProofAttemptInput;
+  readonly lineageEvents?: readonly CreateSemanticLineageEventInput[] | CreateSemanticLineageEventInput;
+  readonly semanticLineageEvents?: readonly CreateSemanticLineageEventInput[] | CreateSemanticLineageEventInput;
+  readonly lineage?: readonly CreateSemanticLineageEventInput[] | CreateSemanticLineageEventInput;
   readonly patchAncestry?: readonly SemanticHistoryPatchAncestryInput[] | SemanticHistoryPatchAncestryInput;
   readonly patchAncestors?: readonly SemanticHistoryPatchAncestryInput[] | SemanticHistoryPatchAncestryInput;
   readonly ancestry?: readonly SemanticHistoryPatchAncestryInput[] | SemanticHistoryPatchAncestryInput;
@@ -107,6 +112,8 @@ export interface CreateSemanticHistoryRecordInput {
 export interface SemanticHistoryOverlapQueryOptions {
   readonly includeSourcePaths?: boolean;
   readonly includeClaims?: boolean;
+  readonly includeLineage?: boolean;
+  readonly includeCrdt?: boolean;
   readonly includeEvidence?: boolean;
   readonly includeProofs?: boolean;
   readonly includeReplay?: boolean;

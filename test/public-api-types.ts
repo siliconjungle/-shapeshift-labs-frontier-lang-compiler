@@ -32,6 +32,7 @@ type ExpectedPublicRuntimeExport =
   | 'SemanticPatchBundleAdmissionStatuses'
   | 'SemanticHistoryAdmissionStatuses'
   | 'SemanticHistoryConflictReasons'
+  | 'SemanticLineageEventKinds'
   | 'SemanticHistoryOverlapKinds'
   | 'SemanticHistoryReviewerStatuses'
   | 'UniversalDialectConstructKinds'
@@ -57,6 +58,9 @@ type ExpectedPublicRuntimeExport =
   | 'createProjectionReadinessMatrix'
   | 'createProjectionTargetLossMatrix'
   | 'createSemanticHistoryRecord'
+  | 'createSemanticAnchor'
+  | 'createSemanticLineageEvent'
+  | 'createSemanticLineageMap'
   | 'createSemanticMergeCandidateAdmissionRecord'
   | 'createSemanticPatchBundleRecord'
   | 'createUniversalCapabilityMatrix'
@@ -93,6 +97,7 @@ type ExpectedPublicRuntimeExport =
   | 'queryNativeParserFeatureMatrix'
   | 'queryProjectionReadinessMatrix'
   | 'querySemanticHistoryRecordOverlaps'
+  | 'querySemanticLineageEvents'
   | 'querySemanticMergeCandidateAdmissionOverlaps'
   | 'querySemanticPatchBundleRecords'
   | 'querySemanticMergeConflictClasses'
@@ -155,6 +160,28 @@ const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecor
 );
 
 void queriedSemanticPatchBundles;
+
+const semanticLineage = compilerApi.createSemanticLineageEvent({
+  eventKind: 'moved',
+  from: { key: 'source#src/example.js#function#run', bodyHash: 'body_old' },
+  to: { key: 'source#src/runtime.js#function#run', bodyHash: 'body_old' },
+  operationId: 'typed-agent:1',
+  heads: ['typed-agent:1'],
+  stateVector: { 'typed-agent': 1 },
+  evidenceIds: ['evidence_lineage']
+});
+const typedSemanticLineage: compilerApi.SemanticLineageEvent = semanticLineage;
+const semanticLineageMap: compilerApi.SemanticLineageMap = compilerApi.createSemanticLineageMap([
+  typedSemanticLineage
+]);
+const queriedSemanticLineage: readonly compilerApi.SemanticLineageEvent[] = compilerApi.querySemanticLineageEvents(
+  semanticLineageMap.events,
+  { operationId: 'typed-agent:1' }
+);
+const semanticAnchor: compilerApi.SemanticAnchor | undefined = compilerApi.createSemanticAnchor('source#src/example.js#function#run');
+
+void queriedSemanticLineage;
+void semanticAnchor;
 
 const semanticMergeAdmission = compilerApi.createSemanticMergeCandidateAdmissionRecord({
   id: 'typed_candidate',

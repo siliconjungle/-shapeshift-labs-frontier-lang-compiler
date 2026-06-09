@@ -68,6 +68,7 @@ export { createSemanticPatchBundleRecord, querySemanticPatchBundleRecords, Seman
 export { createSemanticMergeCandidateAdmissionRecord, decorateSemanticMergeCandidateForAdmission, querySemanticMergeCandidateAdmissionOverlaps, SemanticMergeCandidateProjectionRisks, semanticMergeCandidateReadinessSortKey, sortSemanticMergeCandidateAdmissionRecords } from './internal/index-impl/semanticMergeCandidateRecords.js';
 export { querySemanticMergeConflictClasses, SemanticMergeConflictClasses, semanticMergeConflictRiskScore, sortSemanticMergeCandidatesByConflictRisk, summarizeSemanticMergeConflicts } from './internal/index-impl/semanticMergeConflicts.js';
 export { queryUniversalConversionPlan } from './internal/index-impl/queryUniversalConversionPlan.js';
+export { createSemanticAnchor, createSemanticLineageEvent, createSemanticLineageMap, querySemanticLineageEvents, SemanticLineageEventKinds } from './internal/index-impl/semanticLineageRecords.js';
 export { createSemanticHistoryRecord, querySemanticHistoryRecordOverlaps, SemanticHistoryAdmissionStatuses, SemanticHistoryConflictReasons, SemanticHistoryOverlapKinds, SemanticHistoryReviewerStatuses, semanticHistoryRecordsConflict, semanticHistoryRecordsOverlap } from './internal/index-impl/semanticHistoryRecords.js';
 export { readSemanticSliceJson } from './internal/index-impl/readSemanticSliceJson.js';
 export { readUniversalAstJson } from './internal/index-impl/readUniversalAstJson.js';

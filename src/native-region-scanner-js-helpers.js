@@ -176,7 +176,7 @@ function jsObjectPropertyDeclaration(input, lineNumber, trimmed, context) {
 
 function jsRouteRecordDeclaration(input, lineNumber, trimmed, context) {
   if (context.regionKind !== 'route') return undefined;
-  const match = trimmed.match(/\b(?:path|route|href|url)\s*:\s*(['"`])([^'"`]+)\1/);
+  const match = trimmed.match(/^(?:\{\s*)?(?:path|route|href|url)\s*:\s*(['"`])([^'"`]+)\1/);
   if (!match) return undefined;
   const routePath = match[2];
   return nativeDeclaration(input, lineNumber, 'RouteRecord', 'route', `${context.name}.${routePath}`, {
@@ -224,7 +224,19 @@ function jsContainerWrapperLooksSemantic(callee, name, source) {
 
 function jsContainerDelta(source) {
   let delta = 0;
+  let quote;
+  let escaped = false;
   for (const char of String(source ?? '')) {
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === quote) quote = undefined;
+      continue;
+    }
+    if (char === '\'' || char === '"' || char === '`') {
+      quote = char;
+      continue;
+    }
     if (char === '{' || char === '[') delta += 1;
     if (char === '}' || char === ']') delta -= 1;
   }

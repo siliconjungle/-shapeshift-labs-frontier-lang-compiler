@@ -1,11 +1,12 @@
 import{hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
 import{ idFragment, maxSemanticMergeReadiness, normalizeSemanticMergeReadiness, uniqueStrings as uniqueRawStrings }from'../../native-import-utils.js';
 import{normalizeOwnershipRegions,normalizeSemanticCandidates,normalizeSemanticClaims,normalizeSources,semanticClaimsByStatus}from'./semanticHistoryRecordNormalizers.js';
+import{createSemanticLineageEvent,semanticLineageIndex}from'./semanticLineageRecords.js';
 
 export const SemanticHistoryAdmissionStatuses=Object.freeze(['proposed','queued','admitted','needs-review','blocked','rejected']);
 export const SemanticHistoryReviewerStatuses=Object.freeze(['unreviewed','approved','changes-requested','reviewed','rejected']);
-export const SemanticHistoryOverlapKinds=Object.freeze(['ownership','conflict-key','source','source-path','import','semantic-candidate','semantic-claim','claim-hash','evidence','proof','replay','patch','merge-decision','actor','record-source','base-hash','target-hash']);
-export const SemanticHistoryConflictReasons=Object.freeze(['ownership-overlap','semantic-conflict-key-overlap','base-hash-mismatch','target-hash-mismatch','admission-blocked','reviewer-rejected','source-path-overlap']);
+export const SemanticHistoryOverlapKinds=Object.freeze(['ownership','conflict-key','source','source-path','import','semantic-candidate','semantic-claim','claim-hash','semantic-lineage','semantic-anchor','crdt-operation','crdt-head','evidence','proof','replay','patch','merge-decision','actor','record-source','base-hash','target-hash']);
+export const SemanticHistoryConflictReasons=Object.freeze(['ownership-overlap','semantic-conflict-key-overlap','semantic-anchor-overlap','base-hash-mismatch','target-hash-mismatch','admission-blocked','reviewer-rejected','source-path-overlap']);
 
 export function createSemanticHistoryRecord(input={},options={}){
   const imported=input.importResult??input.imported;
@@ -36,18 +37,20 @@ export function createSemanticHistoryRecord(input={},options={}){
   const proofAttempts=normalizeProofAttempts([...(array(input.proofAttempts)),...(array(input.proofs))],sourceContext);
   const patchAncestry=normalizePatchAncestry(input.patchAncestry??input.patchAncestors??input.ancestry,sourceContext);
   const mergeDecisions=normalizeMergeDecisions(input.mergeDecisions??input.decisions,sourceContext);
+  const lineageEvents=normalizeLineageEvents(input.lineageEvents??input.semanticLineageEvents??input.lineage,sourceContext);
+  const lineage=semanticLineageIndex(lineageEvents);
   const semanticClaimIds=uniqueStrings([...acceptedFacts.map((claim)=>claim.id),...rejectedTheories.map((claim)=>claim.id)]);
   const semanticClaimHashes=uniqueStrings([...acceptedFacts.map((claim)=>claim.hash),...rejectedTheories.map((claim)=>claim.hash)]);
-  const evidenceIds=uniqueStrings([...(strings(input.evidenceIds)),...(array(input.evidence)).map((record)=>record?.id),...(array(imported?.evidence)).map((record)=>record?.id),...semanticCandidates.flatMap((candidate)=>candidate.evidenceIds),...acceptedFacts.flatMap((claim)=>claim.evidenceIds),...rejectedTheories.flatMap((claim)=>claim.evidenceIds),...importedParserEvidence.flatMap((record)=>[record.evidenceId,...array(record.evidenceIds)]),...proofAttempts.flatMap((record)=>record.evidenceIds),...mergeDecisions.flatMap((decision)=>decision.evidenceIds),...(strings(input.reviewer?.evidenceIds)),...(strings(input.admission?.evidenceIds))]);
-  const proofIds=uniqueStrings([...(strings(input.proofIds)),...(array(input.proofs)).map((record)=>record?.id),...semanticCandidates.flatMap((candidate)=>candidate.proofIds),...acceptedFacts.flatMap((claim)=>claim.proofIds),...rejectedTheories.flatMap((claim)=>claim.proofIds),...proofAttempts.flatMap((record)=>[record.proofId,...array(record.proofIds)]),...mergeDecisions.flatMap((decision)=>decision.proofIds)]);
+  const evidenceIds=uniqueStrings([...(strings(input.evidenceIds)),...(array(input.evidence)).map((record)=>record?.id),...(array(imported?.evidence)).map((record)=>record?.id),...semanticCandidates.flatMap((candidate)=>candidate.evidenceIds),...acceptedFacts.flatMap((claim)=>claim.evidenceIds),...rejectedTheories.flatMap((claim)=>claim.evidenceIds),...importedParserEvidence.flatMap((record)=>[record.evidenceId,...array(record.evidenceIds)]),...proofAttempts.flatMap((record)=>record.evidenceIds),...lineageEvents.flatMap((record)=>record.evidenceIds),...mergeDecisions.flatMap((decision)=>decision.evidenceIds),...(strings(input.reviewer?.evidenceIds)),...(strings(input.admission?.evidenceIds))]);
+  const proofIds=uniqueStrings([...(strings(input.proofIds)),...(array(input.proofs)).map((record)=>record?.id),...semanticCandidates.flatMap((candidate)=>candidate.proofIds),...acceptedFacts.flatMap((claim)=>claim.proofIds),...rejectedTheories.flatMap((claim)=>claim.proofIds),...proofAttempts.flatMap((record)=>[record.proofId,...array(record.proofIds)]),...lineageEvents.flatMap((record)=>record.proofIds),...mergeDecisions.flatMap((decision)=>decision.proofIds)]);
   const sourceIds=uniqueStrings([input.sourceId,...strings(input.sourceIds),...sources.map((source)=>source.id)]);
   const importIds=uniqueStrings([input.importId,input.importResultId,imported?.id,...strings(input.importIds),...sources.map((source)=>source.importId),...semanticCandidates.map((candidate)=>candidate.importResultId)]);
   const sourcePaths=uniqueStrings([input.sourcePath,imported?.sourcePath,...sources.map((source)=>source.sourcePath),...ownershipRegions.map((region)=>region.sourcePath),...semanticCandidates.map((candidate)=>candidate.sourcePath)]);
   const sourceHashes=uniqueStrings([input.sourceHash,imported?.sourceHash,...sources.map((source)=>source.sourceHash),...ownershipRegions.map((region)=>region.sourceHash)]);
-  const conflictKeys=uniqueStrings([...(strings(input.conflictKeys)),...semanticCandidates.flatMap((candidate)=>candidate.conflictKeys),...acceptedFacts.flatMap((claim)=>claim.conflictKeys),...rejectedTheories.flatMap((claim)=>claim.conflictKeys),...patchAncestry.flatMap((patch)=>patch.conflictKeys),...mergeDecisions.flatMap((decision)=>decision.conflictKeys)]);
+  const conflictKeys=uniqueStrings([...(strings(input.conflictKeys)),...semanticCandidates.flatMap((candidate)=>candidate.conflictKeys),...acceptedFacts.flatMap((claim)=>claim.conflictKeys),...rejectedTheories.flatMap((claim)=>claim.conflictKeys),...lineageEvents.flatMap((event)=>event.conflictKeys),...patchAncestry.flatMap((patch)=>patch.conflictKeys),...mergeDecisions.flatMap((decision)=>decision.conflictKeys)]);
   const reviewer=normalizeReviewer(input.reviewer);
   const admission=normalizeAdmission(input.admission,semanticCandidates,reviewer);
-  const actorIds=uniqueStrings([actor?.id,actor?.actorId,...acceptedFacts.map((claim)=>claim.actor?.id),...rejectedTheories.map((claim)=>claim.actor?.id),...importedParserEvidence.map((record)=>record.actor?.id),...proofAttempts.map((record)=>record.actor?.id),...patchAncestry.map((record)=>record.actor?.id),...mergeDecisions.map((record)=>record.actor?.id)]);
+  const actorIds=uniqueStrings([actor?.id,actor?.actorId,...acceptedFacts.map((claim)=>claim.actor?.id),...rejectedTheories.map((claim)=>claim.actor?.id),...importedParserEvidence.map((record)=>record.actor?.id),...proofAttempts.map((record)=>record.actor?.id),...lineageEvents.map((record)=>record.actor?.id),...patchAncestry.map((record)=>record.actor?.id),...mergeDecisions.map((record)=>record.actor?.id)]);
   const recordSourceIds=uniqueStrings([recordSource?.id,recordSource?.sourceId,...acceptedFacts.flatMap((claim)=>[claim.recordSource?.id,claim.recordSource?.sourceId]),...rejectedTheories.flatMap((claim)=>[claim.recordSource?.id,claim.recordSource?.sourceId]),...importedParserEvidence.flatMap((record)=>[record.recordSource?.id,record.recordSource?.sourceId]),...proofAttempts.flatMap((record)=>[record.recordSource?.id,record.recordSource?.sourceId]),...patchAncestry.flatMap((record)=>[record.recordSource?.id,record.recordSource?.sourceId]),...mergeDecisions.flatMap((record)=>[record.recordSource?.id,record.recordSource?.sourceId])]);
   const patchIds=uniqueStrings([...semanticCandidates.map((candidate)=>candidate.patchId),...patchAncestry.flatMap((patch)=>[patch.patchId,...array(patch.parentPatchIds),...array(patch.ancestorPatchIds)]),...mergeDecisions.flatMap((decision)=>decision.patchIds)]);
   const mergeDecisionIds=uniqueStrings(mergeDecisions.map((decision)=>decision.id));
@@ -66,6 +69,12 @@ export function createSemanticHistoryRecord(input={},options={}){
     semanticClaimHashes,
     acceptedFactIds:uniqueStrings(acceptedFacts.map((claim)=>claim.id)),
     rejectedTheoryIds:uniqueStrings(rejectedTheories.map((claim)=>claim.id)),
+    lineageEventIds:lineage.lineageEventIds,
+    semanticAnchorIds:lineage.semanticAnchorIds,
+    semanticAnchorKeys:uniqueStrings([...lineage.semanticAnchorKeys,...ownershipRegions.map((region)=>region.key),...semanticCandidates.flatMap((candidate)=>candidate.ownershipKeys)]),
+    semanticLineageKinds:lineage.semanticLineageKinds,
+    crdtOperationIds:lineage.crdtOperationIds,
+    crdtHeads:lineage.crdtHeads,
     conflictKeys,
     evidenceIds,
     importedParserEvidenceIds:uniqueStrings(importedParserEvidence.map((record)=>record.id)),
@@ -97,6 +106,7 @@ export function createSemanticHistoryRecord(input={},options={}){
     rejectedTheories,
     importedParserEvidence,
     proofAttempts,
+    lineageEvents,
     patchAncestry,
     mergeDecisions,
     evidenceIds,
@@ -168,6 +178,19 @@ function normalizeProofAttempts(records,defaults){
     });
     return withStableSubrecordIdentity('proof_attempt',normalized,source,index);
   });
+}
+
+function normalizeLineageEvents(records,defaults){
+  return array(records).filter(Boolean).map((record)=>createSemanticLineageEvent(record,{
+    id:record.id,
+    createdAt:record.createdAt,
+    actor:record.actor??defaults.actor,
+    actorId:record.actorId??defaults.actor?.id
+  })).map((record)=>({
+    ...record,
+    from:record.from?{...record.from,language:record.from.language??defaults.language,sourcePath:record.from.sourcePath??defaults.sourcePath,sourceHash:record.from.sourceHash??defaults.sourceHash}:record.from,
+    to:record.to.map((anchor)=>({...anchor,language:anchor.language??defaults.language,sourcePath:anchor.sourcePath??defaults.sourcePath,sourceHash:anchor.sourceHash??defaults.sourceHash}))
+  }));
 }
 
 function normalizePatchAncestry(records,defaults){

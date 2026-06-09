@@ -20,6 +20,13 @@ import {
   jsVariableHasBody,
   jsVariableSymbolKind
 } from './native-region-scanner-js-helpers.js';
+import {
+  jsContextAllowsPropertyScan,
+  jsCurrentObjectContext,
+  jsInlineNestedObjectDeclarations,
+  jsNestedObjectContextFromDeclaration,
+  updateJsObjectContextStack
+} from './native-region-scanner-js-nested.js';
 
 function scanJavaScriptLike(input) {
   const declarations = [];
@@ -32,7 +39,7 @@ function scanJavaScriptLike(input) {
   };
   let currentClass;
   let classDepth = 0;
-  let currentObject;
+  const objectStack = [];
   let currentType;
   const lexicalState = { inBlockComment: false, inTemplateString: false };
   for (const { line, number } of lines) {
@@ -44,13 +51,19 @@ function scanJavaScriptLike(input) {
     if (currentType && number !== currentType.startLine) {
       pushDeclaration(jsTypeMemberDeclaration(input, number, declarationLine, currentType));
     }
+    const currentObject = jsCurrentObjectContext(objectStack);
     if (currentObject) {
       const routeRecord = jsRouteRecordDeclaration(input, number, trimmed, currentObject);
       if (routeRecord) {
         pushDeclaration(routeRecord);
-      } else {
+      } else if (jsContextAllowsPropertyScan(currentObject)) {
         const property = jsObjectPropertyDeclaration(input, number, trimmed, currentObject);
-        if (property) pushDeclaration(property);
+        if (property) {
+          pushDeclaration(property);
+          pushDeclarations(jsInlineNestedObjectDeclarations(input, number, trimmed, property));
+          const nestedContext = jsNestedObjectContextFromDeclaration(property, number, trimmed);
+          if (nestedContext) objectStack.push(nestedContext);
+        }
       }
     }
     const importDeclarations = jsImportDeclarations(input, number, trimmed);
@@ -93,10 +106,13 @@ function scanJavaScriptLike(input) {
         regionKind,
         metadata: { initializerKind }
       }));
-      currentObject = jsObjectRegionContext(match[1], declarationLine, number, regionKind);
+      pushDeclarations(jsInlineNestedObjectDeclarations(input, number, declarationLine, declarations[declarations.length - 1]));
+      const objectContext = jsObjectRegionContext(match[1], declarationLine, number, regionKind);
+      if (objectContext) objectStack.push(objectContext);
     } else if ((match = jsExportedContainerDeclaration(input, number, trimmed))) {
       pushDeclaration(match.declaration);
-      currentObject = match.context;
+      pushDeclarations(jsInlineNestedObjectDeclarations(input, number, trimmed, match.declaration));
+      if (match.context) objectStack.push(match.context);
     } else if ((match = trimmed.match(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function\*?\s*\(([^)]*)\)/))) {
       pushDeclaration(nativeDeclaration(input, number, 'CommonJsFunctionExport', 'function', match[1], { parameters: splitParameters(match[2]) }, true));
     } else if ((match = trimmed.match(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=/))) {
@@ -126,10 +142,7 @@ function scanJavaScriptLike(input) {
       if (number !== currentType.startLine) currentType.depth += jsStructureDelta(trimmed).value;
       if (currentType.depth <= 0) currentType = undefined;
     }
-    if (currentObject) {
-      if (number !== currentObject.startLine) currentObject.depth += jsContainerDelta(trimmed);
-      if (currentObject.depth <= 0) currentObject = undefined;
-    }
+    updateJsObjectContextStack(objectStack, number, trimmed);
   }
   return declarations;
 }

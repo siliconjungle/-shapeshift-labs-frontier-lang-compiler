@@ -1,6 +1,9 @@
 import { assert } from './helpers.mjs';
 import {
+  createSemanticLineageEvent,
+  createSemanticLineageMap,
   createSemanticHistoryRecord,
+  querySemanticLineageEvents,
   querySemanticHistoryRecordOverlaps,
   SemanticHistoryAdmissionStatuses,
   SemanticHistoryOverlapKinds,
@@ -10,6 +13,7 @@ import {
 
 assert.equal(SemanticHistoryAdmissionStatuses.includes('queued'), true);
 assert.equal(SemanticHistoryOverlapKinds.includes('ownership'), true);
+assert.equal(SemanticHistoryOverlapKinds.includes('semantic-anchor'), true);
 
 const stepKey = 'source#src/runtime.ts#function#step';
 const renderKey = 'source#src/runtime.ts#function#render';
@@ -103,13 +107,66 @@ const renderRecord = createSemanticHistoryRecord({
   replayLinks: ['patches/render.json']
 });
 
+const movedLineage = createSemanticLineageEvent({
+  id: 'lineage_step_move',
+  eventKind: 'moved',
+  from: {
+    key: stepKey,
+    sourcePath: 'src/runtime.ts',
+    sourceHash: 'source_hash_old',
+    symbolName: 'step',
+    bodyHash: 'body_step'
+  },
+  to: {
+    key: stepKey,
+    sourcePath: 'src/runtime-core.ts',
+    sourceHash: 'source_hash_new',
+    symbolName: 'step',
+    bodyHash: 'body_step'
+  },
+  confidence: 0.94,
+  actorId: 'worker-17',
+  operationId: 'worker-17:4',
+  deps: ['worker-17:3'],
+  heads: ['worker-17:4'],
+  stateVector: { 'worker-17': 4 },
+  evidenceIds: ['evidence_lineage_scan'],
+  pathMatch: false,
+  bodyHashMatch: true
+});
+
+const lineageMap = createSemanticLineageMap([movedLineage], { id: 'lineage_map_runtime' });
+assert.equal(lineageMap.byAnchorKey[stepKey].includes('lineage_step_move'), true);
+assert.equal(querySemanticLineageEvents(lineageMap.events, { operationId: 'worker-17:4' }).length, 1);
+assert.equal(querySemanticLineageEvents(lineageMap.events, { sourcePath: 'src/runtime-core.ts' }).length, 1);
+
+const annotationLineage = createSemanticLineageEvent({
+  id: 'lineage_annotation',
+  eventKind: 'unchanged',
+  from: { key: renderKey, sourcePath: 'src/runtime.ts' }
+});
+assert.equal(annotationLineage.crdt, undefined);
+assert.equal(querySemanticLineageEvents([annotationLineage], { operationId: 'lineage_annotation' }).length, 0);
+
+const lineageRecord = createSemanticHistoryRecord({
+  id: 'history_lineage_move',
+  baseHash: 'base_hash_a',
+  targetHash: 'target_hash_lineage',
+  language: 'typescript',
+  lineageEvents: [movedLineage],
+  admission: { status: 'queued', readiness: 'needs-review' }
+});
+
 assert.equal(leftRecord.kind, 'frontier.lang.semanticHistoryRecord');
 assert.equal(leftRecord.index.ownershipKeys.includes(stepKey), true);
 assert.equal(leftRecord.index.evidenceIds.includes('evidence_left_test'), true);
 assert.equal(leftRecord.index.proofIds.includes('proof_left_replay'), true);
 assert.equal(leftRecord.index.replayIds.includes('replay_left_patch'), true);
+assert.equal(lineageRecord.index.semanticAnchorKeys.includes(stepKey), true);
+assert.equal(lineageRecord.index.crdtOperationIds.includes('worker-17:4'), true);
+assert.equal(lineageRecord.index.evidenceIds.includes('evidence_lineage_scan'), true);
 
-const overlaps = querySemanticHistoryRecordOverlaps([leftRecord, rightRecord, renderRecord], {
+const overlaps = querySemanticHistoryRecordOverlaps([leftRecord, rightRecord, renderRecord, lineageRecord], {
   includeReplay: true
 });
 const stepOverlap = overlaps.find((record) => record.leftId === 'history_left_step' && record.rightId === 'history_right_step');
@@ -124,6 +181,11 @@ const renderOverlap = overlaps.find((record) => record.leftId === 'history_left_
 assert.ok(renderOverlap);
 assert.equal(renderOverlap.overlap['source-path'].includes('src/runtime.ts'), true);
 assert.equal(renderOverlap.conflict, false);
+
+const lineageOverlap = overlaps.find((record) => record.leftId === 'history_left_step' && record.rightId === 'history_lineage_move');
+assert.ok(lineageOverlap);
+assert.equal(lineageOverlap.overlap['semantic-anchor'].includes(stepKey), true);
+assert.equal(lineageOverlap.conflictReasons.includes('semantic-anchor-overlap'), true);
 
 assert.equal(semanticHistoryRecordsOverlap(leftRecord, rightRecord), true);
 assert.equal(semanticHistoryRecordsConflict(leftRecord, rightRecord), true);

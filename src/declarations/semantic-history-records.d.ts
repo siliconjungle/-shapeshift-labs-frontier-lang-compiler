@@ -8,8 +8,8 @@ import type {
 export type SemanticHistoryAdmissionStatus = 'proposed' | 'queued' | 'admitted' | 'needs-review' | 'blocked' | 'rejected' | string;
 export type SemanticHistoryReviewerStatus = 'unreviewed' | 'approved' | 'changes-requested' | 'reviewed' | 'rejected' | string;
 export type SemanticHistoryReplayLinkKind = 'patch' | 'slice' | 'sidecar' | 'run' | 'proof' | 'source' | 'command' | 'url' | 'replay' | string;
-export type SemanticHistoryOverlapKind = 'ownership' | 'conflict-key' | 'source' | 'source-path' | 'import' | 'semantic-candidate' | 'semantic-claim' | 'claim-hash' | 'evidence' | 'proof' | 'replay' | 'patch' | 'merge-decision' | 'actor' | 'record-source' | 'base-hash' | 'target-hash';
-export type SemanticHistoryConflictReason = 'ownership-overlap' | 'semantic-conflict-key-overlap' | 'base-hash-mismatch' | 'target-hash-mismatch' | 'admission-blocked' | 'reviewer-rejected' | 'source-path-overlap' | string;
+export type SemanticHistoryOverlapKind = 'ownership' | 'conflict-key' | 'source' | 'source-path' | 'import' | 'semantic-candidate' | 'semantic-claim' | 'claim-hash' | 'semantic-lineage' | 'semantic-anchor' | 'crdt-operation' | 'crdt-head' | 'evidence' | 'proof' | 'replay' | 'patch' | 'merge-decision' | 'actor' | 'record-source' | 'base-hash' | 'target-hash';
+export type SemanticHistoryConflictReason = 'ownership-overlap' | 'semantic-conflict-key-overlap' | 'semantic-anchor-overlap' | 'base-hash-mismatch' | 'target-hash-mismatch' | 'admission-blocked' | 'reviewer-rejected' | 'source-path-overlap' | string;
 export type SemanticHistoryClaimKind = 'fact' | 'theory' | 'invariant' | 'semantic-claim' | string;
 export type SemanticHistoryClaimStatus = 'accepted' | 'rejected' | 'proposed' | 'superseded' | string;
 export type SemanticHistoryProofAttemptStatus = 'passed' | 'failed' | 'unknown' | 'blocked' | string;
@@ -262,6 +262,12 @@ export interface SemanticHistoryRecordIndex {
   readonly semanticClaimHashes: readonly string[];
   readonly acceptedFactIds: readonly string[];
   readonly rejectedTheoryIds: readonly string[];
+  readonly lineageEventIds: readonly string[];
+  readonly semanticAnchorIds: readonly string[];
+  readonly semanticAnchorKeys: readonly string[];
+  readonly semanticLineageKinds: readonly string[];
+  readonly crdtOperationIds: readonly string[];
+  readonly crdtHeads: readonly string[];
   readonly conflictKeys: readonly string[];
   readonly evidenceIds: readonly string[];
   readonly importedParserEvidenceIds: readonly string[];

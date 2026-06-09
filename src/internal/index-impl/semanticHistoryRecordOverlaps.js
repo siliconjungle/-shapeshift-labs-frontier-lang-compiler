@@ -32,6 +32,10 @@ function semanticHistoryOverlap(left,right,options){
     'semantic-candidate':intersect(leftIndex.semanticCandidateIds,rightIndex.semanticCandidateIds),
     'semantic-claim':options.includeClaims?intersect(leftIndex.semanticClaimIds,rightIndex.semanticClaimIds):[],
     'claim-hash':options.includeClaims?intersect(leftIndex.semanticClaimHashes,rightIndex.semanticClaimHashes):[],
+    'semantic-lineage':options.includeLineage?intersect(leftIndex.lineageEventIds,rightIndex.lineageEventIds):[],
+    'semantic-anchor':intersect(leftIndex.semanticAnchorKeys,rightIndex.semanticAnchorKeys),
+    'crdt-operation':options.includeCrdt?intersect(leftIndex.crdtOperationIds,rightIndex.crdtOperationIds):[],
+    'crdt-head':options.includeCrdt?intersect(leftIndex.crdtHeads,rightIndex.crdtHeads):[],
     evidence:options.includeEvidence?intersect(leftIndex.evidenceIds,rightIndex.evidenceIds):[],
     proof:options.includeProofs?intersect(leftIndex.proofIds,rightIndex.proofIds):[],
     replay:options.includeReplay?intersect(leftIndex.replayIds,rightIndex.replayIds):[],
@@ -43,10 +47,11 @@ function semanticHistoryOverlap(left,right,options){
     'target-hash':options.includeTargetHashes?intersect(leftIndex.targetHashes,rightIndex.targetHashes):[]
   });
   const overlapKinds=Object.keys(overlap);
-  const semanticOverlap=Boolean(overlap.ownership?.length||overlap['conflict-key']?.length||overlap.source?.length||overlap['source-path']?.length||overlap.import?.length);
+  const semanticOverlap=Boolean(overlap.ownership?.length||overlap['conflict-key']?.length||overlap['semantic-anchor']?.length||overlap.source?.length||overlap['source-path']?.length||overlap.import?.length);
   const conflictReasons=uniqueStrings([
     overlap.ownership?.length?'ownership-overlap':undefined,
     overlap['conflict-key']?.length?'semantic-conflict-key-overlap':undefined,
+    overlap['semantic-anchor']?.length?'semantic-anchor-overlap':undefined,
     semanticOverlap&&disjointNonEmpty(leftIndex.baseHashes,rightIndex.baseHashes)?'base-hash-mismatch':undefined,
     (overlap.ownership?.length||overlap['conflict-key']?.length)&&disjointNonEmpty(leftIndex.targetHashes,rightIndex.targetHashes)?'target-hash-mismatch':undefined,
     semanticOverlap&&(blockedAdmission(left)||blockedAdmission(right))?'admission-blocked':undefined,
@@ -71,6 +76,7 @@ function historyIndex(record){
   const rejectedTheories=record?.rejectedTheories??[];
   const importedParserEvidence=record?.importedParserEvidence??[];
   const proofAttempts=record?.proofAttempts??[];
+  const lineageEvents=record?.lineageEvents??[];
   const patchAncestry=record?.patchAncestry??[];
   const mergeDecisions=record?.mergeDecisions??[];
   return record?.index??{
@@ -88,11 +94,21 @@ function historyIndex(record){
     semanticClaimHashes:uniqueStrings([...acceptedFacts.map((claim)=>claim.hash),...rejectedTheories.map((claim)=>claim.hash)]),
     acceptedFactIds:uniqueStrings(acceptedFacts.map((claim)=>claim.id)),
     rejectedTheoryIds:uniqueStrings(rejectedTheories.map((claim)=>claim.id)),
-    conflictKeys:uniqueStrings([...(record?.semanticCandidates??[]).flatMap((candidate)=>candidate.conflictKeys??[]),...acceptedFacts.flatMap((claim)=>claim.conflictKeys??[]),...rejectedTheories.flatMap((claim)=>claim.conflictKeys??[]),...patchAncestry.flatMap((patch)=>patch.conflictKeys??[]),...mergeDecisions.flatMap((decision)=>decision.conflictKeys??[])]),
-    evidenceIds:uniqueStrings([...(record?.evidenceIds??[]),...acceptedFacts.flatMap((claim)=>claim.evidenceIds??[]),...rejectedTheories.flatMap((claim)=>claim.evidenceIds??[]),...importedParserEvidence.flatMap((entry)=>[entry.evidenceId,...(entry.evidenceIds??[])]),...proofAttempts.flatMap((entry)=>entry.evidenceIds??[]),...mergeDecisions.flatMap((entry)=>entry.evidenceIds??[])]),
+    lineageEventIds:uniqueStrings(lineageEvents.map((entry)=>entry.id)),
+    semanticAnchorIds:uniqueStrings(lineageEvents.flatMap((entry)=>[entry.from?.id,...(entry.to??[]).map((anchor)=>anchor.id)])),
+    semanticAnchorKeys:uniqueStrings([
+      ...lineageEvents.flatMap((entry)=>[entry.from?.key,...(entry.to??[]).map((anchor)=>anchor.key)]),
+      ...(record?.ownershipRegions??[]).map((region)=>region.key),
+      ...(record?.semanticCandidates??[]).flatMap((candidate)=>candidate.ownershipKeys??[])
+    ]),
+    semanticLineageKinds:uniqueStrings(lineageEvents.map((entry)=>entry.eventKind)),
+    crdtOperationIds:uniqueStrings(lineageEvents.map((entry)=>entry.crdt?.operationId)),
+    crdtHeads:uniqueStrings(lineageEvents.flatMap((entry)=>entry.crdt?.heads??[])),
+    conflictKeys:uniqueStrings([...(record?.semanticCandidates??[]).flatMap((candidate)=>candidate.conflictKeys??[]),...acceptedFacts.flatMap((claim)=>claim.conflictKeys??[]),...rejectedTheories.flatMap((claim)=>claim.conflictKeys??[]),...lineageEvents.flatMap((entry)=>entry.conflictKeys??[]),...patchAncestry.flatMap((patch)=>patch.conflictKeys??[]),...mergeDecisions.flatMap((decision)=>decision.conflictKeys??[])]),
+    evidenceIds:uniqueStrings([...(record?.evidenceIds??[]),...acceptedFacts.flatMap((claim)=>claim.evidenceIds??[]),...rejectedTheories.flatMap((claim)=>claim.evidenceIds??[]),...importedParserEvidence.flatMap((entry)=>[entry.evidenceId,...(entry.evidenceIds??[])]),...proofAttempts.flatMap((entry)=>entry.evidenceIds??[]),...lineageEvents.flatMap((entry)=>entry.evidenceIds??[]),...mergeDecisions.flatMap((entry)=>entry.evidenceIds??[])]),
     importedParserEvidenceIds:uniqueStrings(importedParserEvidence.map((entry)=>entry.id)),
     importedParserEvidenceHashes:uniqueStrings(importedParserEvidence.map((entry)=>entry.hash)),
-    proofIds:uniqueStrings([...(record?.proofIds??[]),...acceptedFacts.flatMap((claim)=>claim.proofIds??[]),...rejectedTheories.flatMap((claim)=>claim.proofIds??[]),...proofAttempts.flatMap((entry)=>[entry.proofId,...(entry.proofIds??[])]),...mergeDecisions.flatMap((entry)=>entry.proofIds??[])]),
+    proofIds:uniqueStrings([...(record?.proofIds??[]),...acceptedFacts.flatMap((claim)=>claim.proofIds??[]),...rejectedTheories.flatMap((claim)=>claim.proofIds??[]),...proofAttempts.flatMap((entry)=>[entry.proofId,...(entry.proofIds??[])]),...lineageEvents.flatMap((entry)=>entry.proofIds??[]),...mergeDecisions.flatMap((entry)=>entry.proofIds??[])]),
     proofAttemptIds:uniqueStrings(proofAttempts.map((entry)=>entry.id)),
     proofAttemptHashes:uniqueStrings(proofAttempts.map((entry)=>entry.hash)),
     replayIds:uniqueStrings([...(record?.replayLinks??[]).map((link)=>link.id),...(record?.semanticCandidates??[]).flatMap((candidate)=>candidate.replayIds??[]),...acceptedFacts.flatMap((claim)=>claim.replayIds??[]),...rejectedTheories.flatMap((claim)=>claim.replayIds??[]),...proofAttempts.flatMap((entry)=>entry.replayIds??[])]),

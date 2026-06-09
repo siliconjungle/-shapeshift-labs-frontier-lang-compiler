@@ -110,6 +110,42 @@ const scannedDefaultConfigImport = importNativeSource({
 assert.equal(scannedDefaultConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default' && symbol.metadata.ownershipRegionKind === 'config'), true);
 assert.equal(scannedDefaultConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default.docs' && symbol.metadata.ownershipRegionKind === 'content'), true);
 assert.equal(scannedDefaultConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default.resolve' && symbol.kind === 'function'), true);
+const scannedNestedConfigImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/nested-config.ts',
+  sourceText: 'export const adminSettings = {\n  quota: { limit: 5, refill: { intervalMs: 1000 } },\n  roles: {\n    owner: { canEdit: true }\n  }\n};\nexport const websiteContent = {\n  docs: { title: "Docs", hero: { cta: "Start" } }\n};\n'
+});
+const nestedConfigSymbols = new Set(scannedNestedConfigImport.semanticIndex.symbols.map((symbol) => symbol.name));
+for (const expectedName of ['adminSettings.quota.limit', 'adminSettings.quota.refill.intervalMs', 'adminSettings.roles.owner.canEdit', 'websiteContent.docs.title', 'websiteContent.docs.hero.cta']) {
+  assert.equal(nestedConfigSymbols.has(expectedName), true);
+}
+assert.equal(scannedNestedConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'adminSettings.quota.limit' && symbol.metadata.ownershipRegionKind === 'config'), true);
+assert.equal(scannedNestedConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'websiteContent.docs.title' && symbol.metadata.ownershipRegionKind === 'content'), true);
+const nestedConfigSidecar = createSemanticImportSidecar(scannedNestedConfigImport);
+assert.equal(nestedConfigSidecar.ownershipRegions.some((region) => region.symbolName === 'adminSettings.quota.refill.intervalMs'), true);
+assert.equal(nestedConfigSidecar.patchHints.some((hint) => hint.ownershipKey.includes('websiteContent.docs.hero.cta')), true);
+const scannedArrayRiskImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/array-risk.ts',
+  sourceText: 'export const entries = [\n  {\n    value: 1,\n    run() { return value; }\n  }\n];\nexport const appRoutes = [\n  {\n    path: "/todos",\n    component: TodoStore,\n    meta: { title: "Todos", path: "/meta" },\n    label: `path: "/template"`\n  }\n];\n'
+});
+const arrayRiskNames = new Set(scannedArrayRiskImport.semanticIndex.symbols.map((symbol) => symbol.name));
+assert.equal(arrayRiskNames.has('entries'), true);
+assert.equal(arrayRiskNames.has('entries.value'), false);
+assert.equal(arrayRiskNames.has('entries.run'), false);
+assert.equal(arrayRiskNames.has('appRoutes./todos'), true);
+assert.equal(arrayRiskNames.has('appRoutes.component'), false);
+assert.equal(arrayRiskNames.has('appRoutes./meta'), false);
+assert.equal(arrayRiskNames.has('appRoutes./template'), false);
+const scannedComputedConfigImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/computed-config.ts',
+  sourceText: 'export const runtimeConfig = {\n  copy: "{ not a block }",\n  [featureKey]: true,\n  ...defaults,\n  normal: 1,\n  nested: { ready: true }\n};\n'
+});
+const computedConfigNames = new Set(scannedComputedConfigImport.semanticIndex.symbols.map((symbol) => symbol.name));
+assert.equal(computedConfigNames.has('runtimeConfig.normal'), true);
+assert.equal(computedConfigNames.has('runtimeConfig.nested.ready'), true);
+assert.equal(Array.from(computedConfigNames).some((name) => name.includes('featureKey')), false);
 const scannedCommonJsConfigImport = importNativeSource({
   language: 'javascript',
   sourcePath: 'src/commonjs-config.js',
