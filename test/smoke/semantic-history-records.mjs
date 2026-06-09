@@ -5,7 +5,10 @@ import {
   createSemanticHistoryRecord,
   querySemanticLineageEvents,
   querySemanticHistoryRecordOverlaps,
+  resolveSemanticLineage,
+  resolveSemanticLineageBatch,
   SemanticHistoryAdmissionStatuses,
+  SemanticLineageResolutionStatuses,
   SemanticHistoryOverlapKinds,
   semanticHistoryRecordsConflict,
   semanticHistoryRecordsOverlap
@@ -14,8 +17,10 @@ import {
 assert.equal(SemanticHistoryAdmissionStatuses.includes('queued'), true);
 assert.equal(SemanticHistoryOverlapKinds.includes('ownership'), true);
 assert.equal(SemanticHistoryOverlapKinds.includes('semantic-anchor'), true);
+assert.equal(SemanticLineageResolutionStatuses.includes('resolved'), true);
 
 const stepKey = 'source#src/runtime.ts#function#step';
+const coreStepKey = 'source#src/runtime-core.ts#function#step';
 const renderKey = 'source#src/runtime.ts#function#render';
 
 const leftRecord = createSemanticHistoryRecord({
@@ -109,6 +114,7 @@ const renderRecord = createSemanticHistoryRecord({
 
 const movedLineage = createSemanticLineageEvent({
   id: 'lineage_step_move',
+  createdAt: 1,
   eventKind: 'moved',
   from: {
     key: stepKey,
@@ -118,7 +124,7 @@ const movedLineage = createSemanticLineageEvent({
     bodyHash: 'body_step'
   },
   to: {
-    key: stepKey,
+    key: coreStepKey,
     sourcePath: 'src/runtime-core.ts',
     sourceHash: 'source_hash_new',
     symbolName: 'step',
@@ -139,6 +145,98 @@ const lineageMap = createSemanticLineageMap([movedLineage], { id: 'lineage_map_r
 assert.equal(lineageMap.byAnchorKey[stepKey].includes('lineage_step_move'), true);
 assert.equal(querySemanticLineageEvents(lineageMap.events, { operationId: 'worker-17:4' }).length, 1);
 assert.equal(querySemanticLineageEvents(lineageMap.events, { sourcePath: 'src/runtime-core.ts' }).length, 1);
+
+const renameLineage = createSemanticLineageEvent({
+  id: 'lineage_step_rename',
+  createdAt: 2,
+  eventKind: 'renamed',
+  from: { key: coreStepKey, sourcePath: 'src/runtime-core.ts', symbolName: 'step' },
+  to: { key: 'source#src/runtime-core.ts#function#advance', sourcePath: 'src/runtime-core.ts', symbolName: 'advance' },
+  confidence: 0.87,
+  operationId: 'worker-17:5',
+  heads: ['worker-17:5'],
+  evidenceIds: ['evidence_rename_scan']
+});
+const splitLineage = createSemanticLineageEvent({
+  id: 'lineage_render_split',
+  createdAt: 1,
+  eventKind: 'split',
+  from: { key: renderKey, sourcePath: 'src/runtime.ts', symbolName: 'render' },
+  to: [
+    { key: 'source#src/runtime.ts#function#renderCanvas', sourcePath: 'src/runtime.ts', symbolName: 'renderCanvas' },
+    { key: 'source#src/runtime.ts#function#renderDebug', sourcePath: 'src/runtime.ts', symbolName: 'renderDebug' }
+  ],
+  confidence: 0.72
+});
+const deleteLineage = createSemanticLineageEvent({
+  id: 'lineage_obsolete_delete',
+  createdAt: 1,
+  eventKind: 'deleted',
+  from: { key: 'source#src/runtime.ts#function#obsolete', sourcePath: 'src/runtime.ts', symbolName: 'obsolete' },
+  confidence: 0.98
+});
+const recreateLineage = createSemanticLineageEvent({
+  id: 'lineage_boot_recreate',
+  createdAt: 1,
+  eventKind: 'recreated',
+  from: { key: 'source#src/runtime.ts#function#boot', sourcePath: 'src/runtime.ts', symbolName: 'boot' },
+  to: { key: 'source#src/bootstrap.ts#function#boot', sourcePath: 'src/bootstrap.ts', symbolName: 'boot' },
+  confidence: 0.68
+});
+const cycleA = createSemanticLineageEvent({
+  id: 'lineage_cycle_a',
+  createdAt: 1,
+  eventKind: 'moved',
+  from: { key: 'cycle#a' },
+  to: { key: 'cycle#b' }
+});
+const cycleB = createSemanticLineageEvent({
+  id: 'lineage_cycle_b',
+  createdAt: 2,
+  eventKind: 'moved',
+  from: { key: 'cycle#b' },
+  to: { key: 'cycle#a' }
+});
+const extendedLineageMap = createSemanticLineageMap([
+  movedLineage,
+  renameLineage,
+  splitLineage,
+  deleteLineage,
+  recreateLineage,
+  cycleA,
+  cycleB
+]);
+const stepResolution = resolveSemanticLineage(extendedLineageMap, stepKey);
+assert.equal(stepResolution.kind, 'frontier.lang.semanticLineageResolution');
+assert.equal(stepResolution.status, 'resolved');
+assert.equal(stepResolution.currentAnchors[0].key, 'source#src/runtime-core.ts#function#advance');
+assert.equal(stepResolution.traversedEventIds.join(','), 'lineage_step_move,lineage_step_rename');
+assert.equal(stepResolution.confidence, 0.87);
+assert.equal(stepResolution.crdtOperationIds.includes('worker-17:5'), true);
+assert.equal(stepResolution.evidenceIds.includes('evidence_rename_scan'), true);
+
+const splitResolution = resolveSemanticLineage(extendedLineageMap, { anchorKey: renderKey });
+assert.equal(splitResolution.status, 'ambiguous');
+assert.equal(splitResolution.currentAnchors.length, 2);
+assert.equal(splitResolution.reasonCodes.includes('anchor-split'), true);
+
+const deleteResolution = resolveSemanticLineage(extendedLineageMap, 'source#src/runtime.ts#function#obsolete');
+assert.equal(deleteResolution.status, 'deleted');
+assert.equal(deleteResolution.currentAnchors.length, 0);
+assert.equal(deleteResolution.terminalEventIds.includes('lineage_obsolete_delete'), true);
+
+const recreatedResolution = resolveSemanticLineage(extendedLineageMap, 'source#src/runtime.ts#function#boot');
+assert.equal(recreatedResolution.status, 'recreated');
+assert.equal(recreatedResolution.currentAnchors[0].sourcePath, 'src/bootstrap.ts');
+
+const cycleResolution = resolveSemanticLineage(extendedLineageMap, 'cycle#a');
+assert.equal(cycleResolution.status, 'cycle');
+assert.equal(cycleResolution.reasonCodes.includes('lineage-cycle'), true);
+
+const batchResolutions = resolveSemanticLineageBatch(extendedLineageMap, [stepKey, renderKey]);
+assert.equal(batchResolutions.length, 2);
+assert.equal(batchResolutions[0].status, 'resolved');
+assert.equal(batchResolutions[1].status, 'ambiguous');
 
 const annotationLineage = createSemanticLineageEvent({
   id: 'lineage_annotation',

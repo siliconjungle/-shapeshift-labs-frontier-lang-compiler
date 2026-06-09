@@ -2,12 +2,15 @@ import { performance } from 'node:perf_hooks';
 import {
   compileNativeSource,
   createNativeSourcePreservation,
+  createSemanticLineageEvent,
+  createSemanticLineageMap,
   createSemanticImportSidecar,
   createSemanticSlice,
   createSemanticSliceAdmissionRecord,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
   projectNativeImportToSource,
+  resolveSemanticLineageBatch,
   summarizeNativeImportFeatureEvidence,
   testSemanticSlice
 } from '../dist/index.js';
@@ -58,6 +61,36 @@ export function measureNativeTransformations(nativeImportResults) {
   const conversionArtifactsStart = performance.now();
   const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan);
   const conversionArtifactsDurationMs = performance.now() - conversionArtifactsStart;
+
+  const lineageResolutionStart = performance.now();
+  const lineageEvents = [];
+  const lineageQueries = [];
+  for (let index = 0; index < 100; index += 1) {
+    const fromKey = `bench#lineage#${index}#0`;
+    const midKey = `bench#lineage#${index}#1`;
+    const targetKey = `bench#lineage#${index}#2`;
+    lineageQueries.push(fromKey);
+    lineageEvents.push(createSemanticLineageEvent({
+      id: `bench_lineage_${index}_move`,
+      createdAt: index * 2,
+      eventKind: 'moved',
+      from: { key: fromKey, sourcePath: `src/${index}.ts` },
+      to: { key: midKey, sourcePath: `src/runtime/${index}.ts` },
+      confidence: 0.96
+    }));
+    lineageEvents.push(createSemanticLineageEvent({
+      id: `bench_lineage_${index}_rename`,
+      createdAt: index * 2 + 1,
+      eventKind: index % 10 === 0 ? 'split' : 'renamed',
+      from: { key: midKey, sourcePath: `src/runtime/${index}.ts` },
+      to: index % 10 === 0
+        ? [{ key: `${targetKey}:a` }, { key: `${targetKey}:b` }]
+        : { key: targetKey, sourcePath: `src/runtime/${index}.ts` },
+      confidence: 0.91
+    }));
+  }
+  const lineageResolutions = resolveSemanticLineageBatch(createSemanticLineageMap(lineageEvents), lineageQueries);
+  const lineageResolutionDurationMs = performance.now() - lineageResolutionStart;
 
   const featureEvidenceStart = performance.now();
   const featureEvidenceSummaries = nativeImportResults.map((imported) => summarizeNativeImportFeatureEvidence(imported.losses, {
@@ -112,6 +145,10 @@ export function measureNativeTransformations(nativeImportResults) {
     conversionArtifactAdmissionEvidenceIds: conversionArtifacts.summary.evidenceIds,
     conversionArtifactAdmissionProofIds: conversionArtifacts.summary.proofIds,
     conversionArtifactsDurationMs,
+    lineageResolutionEvents: lineageEvents.length,
+    lineageResolutions: lineageResolutions.length,
+    lineageResolutionAmbiguous: lineageResolutions.filter((result) => result.status === 'ambiguous').length,
+    lineageResolutionDurationMs,
     featureEvidencePolicyMatches,
     featureEvidenceDurationMs,
     nativeProjections: nativeProjections.length,

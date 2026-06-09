@@ -418,6 +418,38 @@ console.log(querySemanticHistoryRecordOverlaps([left, right])[0].conflict); // t
 
 The record stores base/target hashes, source and import IDs, ownership-region keys, semantic candidate IDs and conflict keys, evidence/proof IDs, reviewer and admission status, plus replay links. Overlap queries compare those compact indexes directly, so centralized and distributed swarms can find shared regions, stale-base conflicts, and replay targets without loading source text.
 
+Resolve old semantic anchors through move/rename/split/delete lineage before a coordinator decides whether a worker bundle still touches the current code shape:
+
+```js
+import {
+  createSemanticLineageEvent,
+  createSemanticLineageMap,
+  resolveSemanticLineage
+} from '@shapeshift-labs/frontier-lang-compiler';
+
+const lineage = createSemanticLineageMap([
+  createSemanticLineageEvent({
+    eventKind: 'moved',
+    from: { key: 'source#src/runtime.ts#function#step' },
+    to: { key: 'source#src/runtime-core.ts#function#step' },
+    evidenceIds: ['evidence_source_scan']
+  }),
+  createSemanticLineageEvent({
+    eventKind: 'renamed',
+    from: { key: 'source#src/runtime-core.ts#function#step' },
+    to: { key: 'source#src/runtime-core.ts#function#advance' }
+  })
+]);
+
+const resolution = resolveSemanticLineage(lineage, 'source#src/runtime.ts#function#step');
+
+console.log(resolution.status); // "resolved"
+console.log(resolution.currentAnchors[0].key); // current semantic anchor
+console.log(resolution.traversedEventIds); // compact history path
+```
+
+Resolver output is merge-admission evidence: it helps a swarm compare old worker bundles against current semantic anchors after code moved, split, or was deleted. It is not proof that the projected code is correct or semantically equivalent; admission still needs tests, source evidence, review status, and conflict scoring.
+
 Extract a surgical semantic slice when a worker only needs one symbol, region, native AST node, or source path:
 
 ```js

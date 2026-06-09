@@ -1,6 +1,7 @@
 import type { FrontierSourceLanguage, SourceSpan } from '@shapeshift-labs/frontier-lang-kernel';
 
 export type SemanticLineageEventKind = 'unchanged' | 'moved' | 'renamed' | 'split' | 'merged' | 'deleted' | 'recreated' | 'unknown' | string;
+export type SemanticLineageResolutionStatus = 'unchanged' | 'resolved' | 'ambiguous' | 'deleted' | 'recreated' | 'cycle' | 'max-depth' | 'not-found' | string;
 
 export interface SemanticAnchor {
   readonly id?: string;
@@ -126,6 +127,50 @@ export interface SemanticLineageMap {
   };
 }
 
+export interface SemanticLineageResolutionQuery {
+  readonly id?: string;
+  readonly anchor?: SemanticAnchor | string;
+  readonly anchorKey?: string;
+  readonly key?: string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly symbolId?: string;
+  readonly symbolName?: string;
+  readonly maxDepth?: number;
+  readonly generatedAt?: number | string;
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface SemanticLineageResolution {
+  readonly kind: 'frontier.lang.semanticLineageResolution';
+  readonly version: 1;
+  readonly id: string;
+  readonly stableId: string;
+  readonly hash: string;
+  readonly generatedAt: number | string;
+  readonly query: {
+    readonly anchorKey?: string;
+    readonly anchorId?: string;
+    readonly sourcePath?: string;
+    readonly symbolName?: string;
+    readonly maxDepth?: number;
+  };
+  readonly startAnchor?: SemanticAnchor;
+  readonly currentAnchors: readonly SemanticAnchor[];
+  readonly traversedEventIds: readonly string[];
+  readonly terminalEventIds: readonly string[];
+  readonly status: SemanticLineageResolutionStatus;
+  readonly confidence?: number;
+  readonly conflictKeys: readonly string[];
+  readonly evidenceIds: readonly string[];
+  readonly proofIds: readonly string[];
+  readonly crdtOperationIds: readonly string[];
+  readonly crdtHeads: readonly string[];
+  readonly lineageEventKinds: readonly SemanticLineageEventKind[];
+  readonly reasonCodes: readonly string[];
+  readonly metadata?: Record<string, unknown>;
+}
+
 export interface SemanticLineageQuery {
   readonly eventKind?: SemanticLineageEventKind | readonly string[];
   readonly anchorKey?: string | readonly string[];
@@ -139,7 +184,10 @@ export interface SemanticLineageQuery {
 }
 
 export declare const SemanticLineageEventKinds: readonly SemanticLineageEventKind[];
+export declare const SemanticLineageResolutionStatuses: readonly SemanticLineageResolutionStatus[];
 export declare function createSemanticAnchor(input?: SemanticAnchor | string, defaults?: Partial<SemanticAnchor>): SemanticAnchor | undefined;
 export declare function createSemanticLineageEvent(input?: CreateSemanticLineageEventInput, options?: { readonly id?: string; readonly createdAt?: number | string; readonly actor?: SemanticLineageActor | string; readonly actorId?: string; readonly actorRole?: string }): SemanticLineageEvent;
 export declare function createSemanticLineageMap(events?: readonly (SemanticLineageEvent | CreateSemanticLineageEventInput)[], options?: { readonly id?: string; readonly generatedAt?: number | string }): SemanticLineageMap;
 export declare function querySemanticLineageEvents(events: SemanticLineageEvent | readonly SemanticLineageEvent[], query?: SemanticLineageQuery): readonly SemanticLineageEvent[];
+export declare function resolveSemanticLineage(eventsOrMap?: SemanticLineageMap | readonly (SemanticLineageEvent | CreateSemanticLineageEventInput)[], query?: SemanticLineageResolutionQuery | SemanticAnchor | string, options?: { readonly id?: string; readonly generatedAt?: number | string; readonly maxDepth?: number; readonly metadata?: Record<string, unknown> }): SemanticLineageResolution;
+export declare function resolveSemanticLineageBatch(eventsOrMap?: SemanticLineageMap | readonly (SemanticLineageEvent | CreateSemanticLineageEventInput)[], queries?: readonly (SemanticLineageResolutionQuery | SemanticAnchor | string)[], options?: { readonly generatedAt?: number | string; readonly maxDepth?: number; readonly metadata?: Record<string, unknown> }): readonly SemanticLineageResolution[];
