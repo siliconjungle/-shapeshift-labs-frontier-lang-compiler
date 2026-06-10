@@ -32,6 +32,7 @@ export function projectSemanticEditScriptToSource(input = {}) {
     projectedHash: sourceText === undefined ? undefined : hashSemanticValue(sourceText),
     appliedOperations: blocked ? [] : edits.map((edit) => edit.operationId),
     skippedOperations: blocked ? (script.operations ?? []).map((operation) => operation.id) : [],
+    edits: blocked ? [] : edits.map(projectionEditRecord),
     sourceText,
     admission: {
       status: blocked ? 'blocked' : 'auto-merge-candidate',
@@ -43,6 +44,8 @@ export function projectSemanticEditScriptToSource(input = {}) {
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
       editCount: edits.length,
+      appliedEditCount: edits.filter((edit) => !edit.alreadyApplied).length,
+      alreadyAppliedEditCount: edits.filter((edit) => edit.alreadyApplied).length,
       ...input.metadata
     })
   };
@@ -51,7 +54,7 @@ export function projectSemanticEditScriptToSource(input = {}) {
 
 function sourceEditForOperation(operation, workerSourceText, headSourceText) {
   if (operation.status === 'already-applied') {
-    return { ok: true, value: { operationId: operation.id, start: 0, end: 0, replacement: '', alreadyApplied: true } };
+    return { ok: true, value: { operationId: operation.id, start: 0, end: 0, replacement: '', current: '', alreadyApplied: true } };
   }
   if (operation.status !== 'portable') return { ok: false, reasonCodes: [`operation-not-portable:${operation.id}`] };
   const workerOffsets = spanOffsets(workerSourceText, operation.spans?.worker);
@@ -70,7 +73,34 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText) {
     reasons.push(`head-span-hash-mismatch:${operation.id}`);
   }
   if (reasons.length) return { ok: false, reasonCodes: reasons };
-  return { ok: true, value: { operationId: operation.id, start: headOffsets.start, end: headOffsets.end, replacement } };
+  return {
+    ok: true,
+    value: {
+      operationId: operation.id,
+      start: headOffsets.start,
+      end: headOffsets.end,
+      workerStart: workerOffsets.start,
+      workerEnd: workerOffsets.end,
+      replacement,
+      current
+    }
+  };
+}
+
+function projectionEditRecord(edit) {
+  return compactRecord({
+    operationId: edit.operationId,
+    status: edit.alreadyApplied ? 'already-applied' : 'applied',
+    headStart: edit.start,
+    headEnd: edit.end,
+    workerStart: edit.workerStart,
+    workerEnd: edit.workerEnd,
+    deletedBytes: edit.current.length,
+    replacementBytes: edit.replacement.length,
+    deletedTextHash: hashSemanticValue(edit.current),
+    replacementTextHash: hashSemanticValue(edit.replacement),
+    replacementText: edit.replacement
+  });
 }
 
 function applySourceEdits(sourceText, edits) {

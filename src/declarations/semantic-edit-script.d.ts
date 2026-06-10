@@ -120,6 +120,20 @@ export interface SemanticEditScript {
   readonly metadata?: Record<string, unknown>;
 }
 
+export interface SemanticEditProjectionEdit {
+  readonly operationId?: string;
+  readonly status: 'applied' | 'already-applied';
+  readonly headStart: number;
+  readonly headEnd: number;
+  readonly workerStart?: number;
+  readonly workerEnd?: number;
+  readonly deletedBytes: number;
+  readonly replacementBytes: number;
+  readonly deletedTextHash?: string;
+  readonly replacementTextHash?: string;
+  readonly replacementText?: string;
+}
+
 export interface SemanticEditProjection {
   readonly kind: 'frontier.lang.semanticEditProjection';
   readonly version: 1;
@@ -135,6 +149,7 @@ export interface SemanticEditProjection {
   readonly projectedHash?: string;
   readonly appliedOperations: readonly string[];
   readonly skippedOperations: readonly string[];
+  readonly edits: readonly SemanticEditProjectionEdit[];
   readonly sourceText?: string;
   readonly admission: {
     readonly status: 'auto-merge-candidate' | 'blocked';

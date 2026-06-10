@@ -18,7 +18,10 @@ const semanticEditProjection = compilerApi.projectSemanticEditScriptToSource({
   headSourceText: 'export function run() { return 1; }\n'
 });
 const typedSemanticEditProjection: compilerApi.SemanticEditProjection = semanticEditProjection;
+const typedSemanticEditProjectionEdit: compilerApi.SemanticEditProjectionEdit | undefined = typedSemanticEditProjection.edits[0];
 typedSemanticEditProjection.admission.autoMergeClaim satisfies false;
+typedSemanticEditProjectionEdit?.status satisfies 'applied' | 'already-applied' | undefined;
 
 void typedSemanticEditScript;
 void typedSemanticEditProjection;
+void typedSemanticEditProjectionEdit;
