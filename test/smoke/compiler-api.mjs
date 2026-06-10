@@ -71,6 +71,7 @@ export {
   ProjectionReadinessStatuses,
   ProjectionTargetLossClasses,
   normalizeCompileTarget,
+  projectSemanticEditScriptToSource,
   projectNativeImportToSource,
   projectFrontierAst,
   readUniversalAstJson,

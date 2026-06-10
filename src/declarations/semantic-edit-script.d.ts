@@ -40,6 +40,11 @@ export interface SemanticEditScriptOperation {
     readonly symbolKind?: string;
     readonly sourceSpan?: SourceSpan;
   };
+  readonly spans?: {
+    readonly base?: SourceSpan;
+    readonly worker?: SourceSpan;
+    readonly head?: SourceSpan;
+  };
   readonly hashes?: {
     readonly baseSourceHash?: string;
     readonly workerSourceHash?: string;
@@ -49,6 +54,7 @@ export interface SemanticEditScriptOperation {
     readonly headSpanHash?: string;
     readonly baseTextHash?: string;
     readonly workerTextHash?: string;
+    readonly headTextHash?: string;
     readonly beforeSignatureHash?: string;
     readonly afterSignatureHash?: string;
   };
@@ -114,6 +120,39 @@ export interface SemanticEditScript {
   readonly metadata?: Record<string, unknown>;
 }
 
+export interface SemanticEditProjection {
+  readonly kind: 'frontier.lang.semanticEditProjection';
+  readonly version: 1;
+  readonly id: string;
+  readonly hash: string;
+  readonly scriptId?: string;
+  readonly status: 'projected' | 'blocked';
+  readonly sourcePath?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly baseHash?: string;
+  readonly workerHash?: string;
+  readonly headHash?: string;
+  readonly projectedHash?: string;
+  readonly appliedOperations: readonly string[];
+  readonly skippedOperations: readonly string[];
+  readonly sourceText?: string;
+  readonly admission: {
+    readonly status: 'auto-merge-candidate' | 'blocked';
+    readonly autoMergeClaim: false;
+    readonly semanticEquivalenceClaim: false;
+    readonly reasonCodes: readonly string[];
+  };
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface ProjectSemanticEditScriptToSourceOptions {
+  readonly id?: string;
+  readonly script: SemanticEditScript;
+  readonly workerSourceText: string;
+  readonly headSourceText: string;
+  readonly metadata?: Record<string, unknown>;
+}
+
 export interface CreateSemanticEditScriptOptions {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage | string;
@@ -141,3 +180,4 @@ export interface CreateSemanticEditScriptOptions {
 
 export declare const SemanticEditScriptAdmissionStatuses: readonly SemanticEditScriptAdmissionStatus[];
 export declare function createSemanticEditScript(input?: CreateSemanticEditScriptOptions): SemanticEditScript;
+export declare function projectSemanticEditScriptToSource(input: ProjectSemanticEditScriptToSourceOptions): SemanticEditProjection;

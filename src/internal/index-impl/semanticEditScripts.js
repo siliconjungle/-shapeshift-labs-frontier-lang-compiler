@@ -136,6 +136,7 @@ function semanticEditOperation(region, index, context, input) {
   const kind = semanticEditOperationKind(region);
   const baseText = spanText(context.base, baseSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.before?.sourceSpan ?? region.sourceSpan);
   const workerText = spanText(context.worker, workerSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.after?.sourceSpan ?? region.sourceSpan);
+  const headText = spanText(context.head, headSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.head?.sourceSpan ?? baseSymbol?.sourceSpan);
   return compactRecord({
     id: `semantic_edit_op_${idFragment(firstString(input.id, anchorKey, index))}`,
     kind,
@@ -153,6 +154,11 @@ function semanticEditOperation(region, index, context, input) {
       symbolKind: region.symbolKind ?? workerSymbol?.kind ?? baseSymbol?.kind,
       sourceSpan: workerSymbol?.sourceSpan ?? region.sourceSpan
     }),
+    spans: compactRecord({
+      base: baseSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.before?.sourceSpan,
+      worker: workerSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.after?.sourceSpan ?? region.sourceSpan,
+      head: headSymbol?.sourceSpan
+    }),
     hashes: compactRecord({
       baseSourceHash: context.workerChangeSet.beforeHash,
       workerSourceHash: context.workerChangeSet.afterHash,
@@ -162,6 +168,7 @@ function semanticEditOperation(region, index, context, input) {
       headSpanHash: headSymbol?.spanHash,
       baseTextHash: baseText === undefined ? undefined : hashSemanticValue(baseText),
       workerTextHash: workerText === undefined ? undefined : hashSemanticValue(workerText),
+      headTextHash: headText === undefined ? undefined : hashSemanticValue(headText),
       beforeSignatureHash: workerSymbol?.beforeSignatureHash ?? baseSymbol?.signatureHash,
       afterSignatureHash: workerSymbol?.afterSignatureHash ?? workerSymbol?.signatureHash
     }),

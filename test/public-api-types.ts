@@ -118,6 +118,7 @@ type ExpectedPublicRuntimeExport =
   | 'inferSemanticLineageEvents'
   | 'normalizeCompileTarget'
   | 'projectFrontierAst'
+  | 'projectSemanticEditScriptToSource'
   | 'projectNativeImportToSource'
   | 'readSemanticSliceJson'
   | 'readUniversalAstJson'

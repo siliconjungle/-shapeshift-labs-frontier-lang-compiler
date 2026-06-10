@@ -1,5 +1,5 @@
 import { assert } from './helpers.mjs';
-import { createSemanticEditScript } from './compiler-api.mjs';
+import { createSemanticEditScript, projectSemanticEditScriptToSource } from './compiler-api.mjs';
 
 const baseSource = 'export function step(value: number) { return value + 1; }\n';
 const workerSource = 'export function step(value: number) { return value + 2; }\n';
@@ -34,6 +34,22 @@ assert.equal(cleanHead.admission.autoApplyCandidate, true);
 assert.equal(cleanHead.summary.autoMergeCandidates, 1);
 assert.equal(cleanHead.operations[0].status, 'portable');
 assert.equal(cleanHead.operations[0].reasonCodes.includes('head-source-matches-base'), true);
+assert.ok(cleanHead.operations[0].spans.worker);
+assert.ok(cleanHead.operations[0].hashes.headTextHash);
+
+const cleanProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_clean_projection',
+  script: cleanHead,
+  workerSourceText: workerSource,
+  headSourceText: baseSource
+});
+assert.equal(cleanProjection.kind, 'frontier.lang.semanticEditProjection');
+assert.equal(cleanProjection.status, 'projected');
+assert.equal(cleanProjection.sourceText, workerSource);
+assert.deepEqual(cleanProjection.appliedOperations, [cleanHead.operations[0].id]);
+assert.equal(cleanProjection.admission.status, 'auto-merge-candidate');
+assert.equal(cleanProjection.admission.autoMergeClaim, false);
+assert.equal(cleanProjection.admission.semanticEquivalenceClaim, false);
 
 const conflictingHead = createSemanticEditScript({
   id: 'semantic_edit_conflicting_head',
@@ -47,6 +63,14 @@ const conflictingHead = createSemanticEditScript({
 assert.equal(conflictingHead.admission.status, 'conflict');
 assert.equal(conflictingHead.summary.conflicts, 1);
 assert.equal(conflictingHead.operations[0].reasonCodes.includes('head-anchor-changed-since-base'), true);
+const blockedProjection = projectSemanticEditScriptToSource({
+  script: conflictingHead,
+  workerSourceText: workerSource,
+  headSourceText: 'export function step(value: number) { return value + 3; }\n'
+});
+assert.equal(blockedProjection.status, 'blocked');
+assert.equal(blockedProjection.sourceText, undefined);
+assert.equal(blockedProjection.admission.reasonCodes.includes('script-not-auto-merge-candidate'), true);
 
 const movedHead = createSemanticEditScript({
   id: 'semantic_edit_moved_head',

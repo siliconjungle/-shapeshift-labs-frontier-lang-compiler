@@ -70,6 +70,7 @@ export { createSemanticPatchBundleRecord, querySemanticPatchBundleRecords, Seman
 export { createSemanticMergeCandidateAdmissionRecord, decorateSemanticMergeCandidateForAdmission, querySemanticMergeCandidateAdmissionOverlaps, SemanticMergeCandidateProjectionRisks, semanticMergeCandidateReadinessSortKey, sortSemanticMergeCandidateAdmissionRecords } from './internal/index-impl/semanticMergeCandidateRecords.js';
 export { querySemanticMergeConflictClasses, SemanticMergeConflictClasses, semanticMergeConflictRiskScore, sortSemanticMergeCandidatesByConflictRisk, summarizeSemanticMergeConflicts } from './internal/index-impl/semanticMergeConflicts.js';
 export { createSemanticEditScript, SemanticEditScriptAdmissionStatuses } from './internal/index-impl/semanticEditScripts.js';
+export { projectSemanticEditScriptToSource } from './internal/index-impl/projectSemanticEditScriptToSource.js';
 export { queryUniversalConversionPlan } from './internal/index-impl/queryUniversalConversionPlan.js';
 export { createSemanticAnchor, createSemanticLineageEvent, createSemanticLineageMap, querySemanticLineageEvents, SemanticLineageEventKinds } from './internal/index-impl/semanticLineageRecords.js';
 export { resolveSemanticLineage, resolveSemanticLineageBatch, SemanticLineageResolutionStatuses } from './internal/index-impl/semanticLineageResolutionRecords.js';
