@@ -21,6 +21,9 @@ const typedSemanticEditProjection: compilerApi.SemanticEditProjection = semantic
 const typedSemanticEditProjectionEdit: compilerApi.SemanticEditProjectionEdit | undefined = typedSemanticEditProjection.edits[0];
 typedSemanticEditProjection.admission.autoMergeClaim satisfies false;
 typedSemanticEditProjectionEdit?.status satisfies 'applied' | 'already-applied' | undefined;
+typedSemanticEditProjectionEdit?.anchorKey satisfies string | undefined;
+typedSemanticEditProjectionEdit?.conflictKey satisfies string | undefined;
+typedSemanticEditProjectionEdit?.symbolName satisfies string | undefined;
 
 void typedSemanticEditScript;
 void typedSemanticEditProjection;

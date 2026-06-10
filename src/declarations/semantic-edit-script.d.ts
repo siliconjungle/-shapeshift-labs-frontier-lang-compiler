@@ -123,6 +123,16 @@ export interface SemanticEditScript {
 export interface SemanticEditProjectionEdit {
   readonly operationId?: string;
   readonly status: 'applied' | 'already-applied';
+  readonly kind?: string;
+  readonly changeKind?: string;
+  readonly anchorKey?: string;
+  readonly conflictKey?: string;
+  readonly regionId?: string;
+  readonly regionKind?: string;
+  readonly sourcePath?: string;
+  readonly symbolId?: string;
+  readonly symbolName?: string;
+  readonly symbolKind?: string;
   readonly headStart: number;
   readonly headEnd: number;
   readonly workerStart?: number;

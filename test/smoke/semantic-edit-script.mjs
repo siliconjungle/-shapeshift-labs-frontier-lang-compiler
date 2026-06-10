@@ -50,6 +50,10 @@ assert.deepEqual(cleanProjection.appliedOperations, [cleanHead.operations[0].id]
 assert.equal(cleanProjection.edits.length, 1);
 assert.equal(cleanProjection.edits[0].operationId, cleanHead.operations[0].id);
 assert.equal(cleanProjection.edits[0].status, 'applied');
+assert.equal(cleanProjection.edits[0].anchorKey, cleanHead.operations[0].anchor.key);
+assert.equal(cleanProjection.edits[0].conflictKey, cleanHead.operations[0].anchor.conflictKey);
+assert.equal(cleanProjection.edits[0].symbolName, 'step');
+assert.equal(cleanProjection.edits[0].sourcePath, 'src/runtime.ts');
 assert.equal(cleanProjection.edits[0].replacementText, 'export function step(value: number) { return value + 2; }');
 assert.equal(cleanProjection.edits[0].deletedBytes, 'export function step(value: number) { return value + 1; }'.length);
 assert.ok(cleanProjection.edits[0].replacementTextHash);

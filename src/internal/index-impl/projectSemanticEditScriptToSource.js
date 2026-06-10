@@ -54,7 +54,7 @@ export function projectSemanticEditScriptToSource(input = {}) {
 
 function sourceEditForOperation(operation, workerSourceText, headSourceText) {
   if (operation.status === 'already-applied') {
-    return { ok: true, value: { operationId: operation.id, start: 0, end: 0, replacement: '', current: '', alreadyApplied: true } };
+    return { ok: true, value: { ...semanticEditIdentity(operation), operationId: operation.id, start: 0, end: 0, replacement: '', current: '', alreadyApplied: true } };
   }
   if (operation.status !== 'portable') return { ok: false, reasonCodes: [`operation-not-portable:${operation.id}`] };
   const workerOffsets = spanOffsets(workerSourceText, operation.spans?.worker);
@@ -77,6 +77,7 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText) {
     ok: true,
     value: {
       operationId: operation.id,
+      ...semanticEditIdentity(operation),
       start: headOffsets.start,
       end: headOffsets.end,
       workerStart: workerOffsets.start,
@@ -91,6 +92,16 @@ function projectionEditRecord(edit) {
   return compactRecord({
     operationId: edit.operationId,
     status: edit.alreadyApplied ? 'already-applied' : 'applied',
+    kind: edit.kind,
+    changeKind: edit.changeKind,
+    anchorKey: edit.anchorKey,
+    conflictKey: edit.conflictKey,
+    regionId: edit.regionId,
+    regionKind: edit.regionKind,
+    sourcePath: edit.sourcePath,
+    symbolId: edit.symbolId,
+    symbolName: edit.symbolName,
+    symbolKind: edit.symbolKind,
     headStart: edit.start,
     headEnd: edit.end,
     workerStart: edit.workerStart,
@@ -100,6 +111,22 @@ function projectionEditRecord(edit) {
     deletedTextHash: hashSemanticValue(edit.current),
     replacementTextHash: hashSemanticValue(edit.replacement),
     replacementText: edit.replacement
+  });
+}
+
+function semanticEditIdentity(operation) {
+  const anchor = operation.anchor ?? {};
+  return compactRecord({
+    kind: operation.kind,
+    changeKind: operation.changeKind,
+    anchorKey: anchor.key,
+    conflictKey: anchor.conflictKey,
+    regionId: anchor.regionId,
+    regionKind: anchor.regionKind,
+    sourcePath: anchor.sourcePath,
+    symbolId: anchor.symbolId,
+    symbolName: anchor.symbolName,
+    symbolKind: anchor.symbolKind
   });
 }
 
