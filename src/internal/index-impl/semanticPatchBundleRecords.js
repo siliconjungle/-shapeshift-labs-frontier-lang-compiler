@@ -16,6 +16,7 @@ export function createSemanticPatchBundleRecord(input={},options={}){
   const transformContext={sourceLanguage:options.sourceLanguage??source.sourceLanguage??source.language,targetLanguage:options.targetLanguage??source.targetLanguage};
   const semanticTransformIdentities=normalizeSemanticTransformIdentityRecords(semanticTransformInputs(source,options),transformContext);
   const semanticTransformIndex=semanticTransformRecordIndex(semanticTransformIdentities,source);
+  const targetPortability=options.targetPortability??source.targetPortability??source.metadata?.targetPortability??options.metadata?.targetPortability;
   const regionInputs=array(options.changedRegions??source.changedRegions??source.regions);
   const sourceMapLinks=normalizeSourceMapLinks([
     ...array(options.sourceMapLinks??source.sourceMapLinks),
@@ -50,7 +51,7 @@ export function createSemanticPatchBundleRecord(input={},options={}){
     ??`semantic_patch_bundle_${idFragment(firstString(source.id,patchId,mergeCandidateId,source.sourcePath,source.language,'record'))}`;
   const language=options.language??source.language??mergeCandidate?.language??sources.find((item)=>item.language)?.language;
   const sourcePath=options.sourcePath??source.sourcePath??mergeCandidate?.sourcePath??sources.find((item)=>item.sourcePath)?.sourcePath;
-  const index=recordIndex({baseHash,targetHash,sources,changedRegions,sourceMapLinks,evidenceIds,proofIds,historyIds,semanticOperationIds,patchId,mergeCandidateId,admission,semanticEditIndex,semanticTransformIndex});
+  const index=recordIndex({baseHash,targetHash,sources,changedRegions,sourceMapLinks,evidenceIds,proofIds,historyIds,semanticOperationIds,patchId,mergeCandidateId,admission,semanticEditIndex,semanticTransformIndex,targetPortability});
   return{
     kind:'frontier.lang.semanticPatchBundleRecord',
     version:1,
@@ -85,6 +86,7 @@ export function createSemanticPatchBundleRecord(input={},options={}){
       semanticMergeConflictSummary:source.metadata?.semanticMergeConflictSummary,
       semanticEditSummary:semanticEditSummary(semanticEditIndex),
       semanticTransformSummary:semanticTransformSummary(semanticTransformIndex),
+      targetPortability,
       ...options.metadata
     })
   };
@@ -154,11 +156,12 @@ function normalizeRegions(regions,context){
       sourceMapIds:uniqueStrings([...strings(region.sourceMapIds),...links.map((link)=>link.sourceMapId)]),
       sourceMapMappingIds:uniqueStrings([...strings(region.sourceMapMappingIds),...links.map((link)=>link.sourceMapMappingId)]),
       admission:compactRecord({
-        readiness:projection?.admission?.readiness,
-        action:projection?.admission?.action,
-        reasonCodes:uniqueStrings(projection?.admission?.reasons),
-        conflictKeys:uniqueStrings(projection?.admission?.conflictKeys)
-      })
+        readiness:projection?.admission?.readiness??region.admission?.readiness,
+        action:projection?.admission?.action??region.admission?.action,
+        reasonCodes:uniqueStrings([...strings(region.admission?.reasonCodes),...strings(projection?.admission?.reasons)]),
+        conflictKeys:uniqueStrings([...strings(region.admission?.conflictKeys),...strings(projection?.admission?.conflictKeys)])
+      }),
+      metadata:region.metadata
     });
   });
 }
@@ -229,6 +232,9 @@ function recordIndex(parts){
     transformTargetLanguages:semanticTransformIndex.transformTargetLanguages,
     transformSourcePaths:semanticTransformIndex.transformSourcePaths,
     transformTargetPaths:semanticTransformIndex.transformTargetPaths,
+    targetPortabilityStatuses:uniqueStrings([parts.targetPortability?.status]),
+    targetPortabilityActions:uniqueStrings([parts.targetPortability?.action]),
+    targetPortabilityReasonCodes:uniqueStrings(parts.targetPortability?.reasonCodes),
     patchIds:uniqueStrings([parts.patchId]),
     mergeCandidateIds:uniqueStrings([parts.mergeCandidateId]),
     readinesses:uniqueStrings([parts.admission.readiness,...parts.changedRegions.map((region)=>region.admission?.readiness)]),
@@ -237,7 +243,7 @@ function recordIndex(parts){
 }
 
 function matchesRecord(record,query){
-  const index=record.index??recordIndex({...record,baseHash:record.baseHash,targetHash:record.targetHash,sources:record.sources??[],changedRegions:record.changedRegions??[],sourceMapLinks:record.sourceMapLinks??[],evidenceIds:record.evidenceIds??[],proofIds:record.proofIds??[],historyIds:record.historyIds??[],semanticOperationIds:record.semanticOperationIds??[],patchId:record.patchId,mergeCandidateId:record.mergeCandidateId,admission:record.admission??{}});
+  const index=record.index??recordIndex({...record,baseHash:record.baseHash,targetHash:record.targetHash,sources:record.sources??[],changedRegions:record.changedRegions??[],sourceMapLinks:record.sourceMapLinks??[],evidenceIds:record.evidenceIds??[],proofIds:record.proofIds??[],historyIds:record.historyIds??[],semanticOperationIds:record.semanticOperationIds??[],patchId:record.patchId,mergeCandidateId:record.mergeCandidateId,admission:record.admission??{},targetPortability:record.metadata?.targetPortability});
   return matchAny(queryValues(query.id,query.ids),[record.id])
     &&matchAny(queryValues(query.patchId,query.patchIds),index.patchIds)
     &&matchAny(queryValues(query.mergeCandidateId,query.mergeCandidateIds),index.mergeCandidateIds)
@@ -278,6 +284,9 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.transformTargetLanguage,query.transformTargetLanguages),index.transformTargetLanguages)
     &&matchAny(queryValues(query.transformSourcePath,query.transformSourcePaths),index.transformSourcePaths)
     &&matchAny(queryValues(query.transformTargetPath,query.transformTargetPaths),index.transformTargetPaths)
+    &&matchAny(queryValues(query.targetPortabilityStatus,query.targetPortabilityStatuses),index.targetPortabilityStatuses)
+    &&matchAny(queryValues(query.targetPortabilityAction,query.targetPortabilityActions),index.targetPortabilityActions)
+    &&matchAny(queryValues(query.targetPortabilityReasonCode,query.targetPortabilityReasonCodes),index.targetPortabilityReasonCodes)
     &&matchAny(queryValues(query.readiness,query.readinesses),index.readinesses)
     &&matchAny(queryValues(query.admissionStatus,query.admissionStatuses),index.admissionStatuses);
 }

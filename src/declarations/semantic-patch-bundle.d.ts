@@ -10,6 +10,7 @@ import type { NativeSourceChangeKind, NativeSourceChangeSet } from './native-dif
 import type { SemanticEditProjection, SemanticEditReplay, SemanticEditScript } from './semantic-edit-script.js';
 import type { SemanticPatchBundleRecordIndex } from './semantic-patch-bundle-index.js';
 import type { SemanticTransformIdentityRecord } from './semantic-transform-identity.js';
+import type { BidirectionalTargetPortabilityRecord } from './bidirectional-target-change.js';
 
 export type { SemanticPatchBundleRecordIndex } from './semantic-patch-bundle-index.js';
 
@@ -56,6 +57,7 @@ export interface SemanticPatchBundleChangedRegion {
     readonly reasonCodes?: readonly string[];
     readonly conflictKeys?: readonly string[];
   };
+  readonly metadata?: Record<string, unknown>;
 }
 
 export interface SemanticPatchBundleSourceMapLink {
@@ -185,6 +187,7 @@ export interface CreateSemanticPatchBundleRecordOptions {
   readonly semanticEditReplays?: readonly SemanticEditReplay[] | SemanticEditReplay;
   readonly semanticTransformIdentity?: SemanticTransformIdentityRecord | Record<string, unknown>;
   readonly semanticTransformIdentities?: readonly (SemanticTransformIdentityRecord | Record<string, unknown>)[];
+  readonly targetPortability?: BidirectionalTargetPortabilityRecord | Record<string, unknown>;
   readonly sourceLanguage?: FrontierSourceLanguage | string;
   readonly targetLanguage?: FrontierSourceLanguage | string;
   readonly conflictKeys?: readonly string[] | string;
@@ -275,6 +278,12 @@ export interface SemanticPatchBundleRecordQuery {
   readonly transformSourcePaths?: readonly string[];
   readonly transformTargetPath?: string | readonly string[];
   readonly transformTargetPaths?: readonly string[];
+  readonly targetPortabilityStatus?: string | readonly string[];
+  readonly targetPortabilityStatuses?: readonly string[];
+  readonly targetPortabilityAction?: string | readonly string[];
+  readonly targetPortabilityActions?: readonly string[];
+  readonly targetPortabilityReasonCode?: string | readonly string[];
+  readonly targetPortabilityReasonCodes?: readonly string[];
   readonly readiness?: SemanticMergeReadiness | string | readonly string[];
   readonly readinesses?: readonly string[];
   readonly admissionStatus?: SemanticPatchBundleAdmissionStatus | readonly string[];

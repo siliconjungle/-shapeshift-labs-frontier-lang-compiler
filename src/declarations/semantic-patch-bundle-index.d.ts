@@ -36,6 +36,9 @@ export interface SemanticPatchBundleRecordIndex {
   readonly transformTargetLanguages: readonly string[];
   readonly transformSourcePaths: readonly string[];
   readonly transformTargetPaths: readonly string[];
+  readonly targetPortabilityStatuses: readonly string[];
+  readonly targetPortabilityActions: readonly string[];
+  readonly targetPortabilityReasonCodes: readonly string[];
   readonly patchIds: readonly string[];
   readonly mergeCandidateIds: readonly string[];
   readonly readinesses: readonly string[];

@@ -3,7 +3,8 @@ import {
   createBidirectionalTargetChangeRecord,
   createSemanticImportSidecar,
   createSemanticLineageEvent,
-  importNativeSource
+  importNativeSource,
+  querySemanticPatchBundleRecords
 } from './compiler-api.mjs';
 
 const sourceImport = importNativeSource({
@@ -48,10 +49,17 @@ assert.equal(record.sourceLanguage, 'typescript');
 assert.equal(record.readiness, 'needs-review');
 assert.equal(record.metadata.autoMergeClaim, false);
 assert.equal(record.metadata.semanticEquivalenceClaim, false);
+assert.equal(record.targetPortability.kind, 'frontier.lang.bidirectionalTargetPortability');
+assert.equal(record.targetPortability.status, 'needs-port');
+assert.equal(record.targetPortability.action, 'human-port');
+assert.equal(record.targetPortability.autoMergeClaim, false);
+assert.equal(record.targetPortability.semanticEquivalenceClaim, false);
 assert.equal(record.summary.targetChangedRegions > 0, true);
 assert.equal(record.summary.sourceAnchorMatches, 1);
 assert.equal(record.summary.unmatchedTargetRegions, 0);
+assert.equal(record.summary.targetPortabilityStatus, 'needs-port');
 assert.equal(record.sourceAnchorMatches[0].status, 'matched');
+assert.equal(record.sourceAnchorMatches[0].portability.status, 'needs-port');
 assert.equal(record.sourceAnchorMatches[0].sourceAnchors[0].key, movedKey);
 assert.equal(record.sourceAnchorMatches[0].lineageResolutions[0].status, 'resolved');
 assert.equal(record.sourcePatchBundle.kind, 'frontier.lang.semanticPatchBundleRecord');
@@ -113,14 +121,56 @@ const sourceMapRecord = createBidirectionalTargetChangeRecord({
   sourceMaps: [rustProjectionMap]
 });
 assert.equal(sourceMapRecord.readiness, 'needs-review');
+assert.equal(sourceMapRecord.targetPortability.status, 'portable');
+assert.equal(sourceMapRecord.targetPortability.action, 'port-with-source-map-review');
+assert.equal(sourceMapRecord.targetPortability.sourceMapMappingIds.includes('map_ts_add_to_rust_add'), true);
+assert.equal(sourceMapRecord.targetPortability.reviewRequired, true);
+assert.equal(sourceMapRecord.summary.targetPortabilityStatus, 'portable');
+assert.equal(sourceMapRecord.summary.portableTargetRegions, sourceMapRecord.summary.targetChangedRegions);
 assert.equal(sourceMapRecord.summary.sourceMapBackedMatches, 1);
 assert.equal(sourceMapRecord.sourceAnchorMatches[0].status, 'matched');
+assert.equal(sourceMapRecord.sourceAnchorMatches[0].portability.status, 'portable');
+assert.equal(sourceMapRecord.sourceAnchorMatches[0].portability.sourceMapMappingIds.includes('map_ts_add_to_rust_add'), true);
 assert.equal(sourceMapRecord.sourceAnchorMatches[0].reasonCodes.includes('mapped-by-generated-source-map'), true);
 assert.equal(sourceMapRecord.sourceAnchorMatches[0].sourceMapLinks[0].sourceMapMappingId, 'map_ts_add_to_rust_add');
 assert.equal(sourceMapRecord.sourcePatchBundle.summary.sourceMapLinks, 1);
 assert.equal(sourceMapRecord.sourcePatchBundle.index.sourceMapMappingIds.includes('map_ts_add_to_rust_add'), true);
+assert.equal(sourceMapRecord.sourcePatchBundle.index.targetPortabilityStatuses.includes('portable'), true);
+assert.equal(sourceMapRecord.sourcePatchBundle.index.targetPortabilityActions.includes('port-with-source-map-review'), true);
+assert.equal(sourceMapRecord.sourcePatchBundle.changedRegions[0].admission.action, 'port-with-source-map-review');
+assert.equal(sourceMapRecord.sourcePatchBundle.changedRegions[0].metadata.bidirectionalTargetChange.targetPortability.status, 'portable');
+assert.equal(sourceMapRecord.sourcePatchBundle.metadata.targetPortability.status, 'portable');
+assert.equal(sourceMapRecord.historyRecord.metadata.targetPortability.status, 'portable');
+assert.equal(sourceMapRecord.evidence[0].metadata.targetPortabilityStatus, 'portable');
 assert.equal(sourceMapRecord.historyRecord.index.ownershipKeys.includes(sourceKey), true);
 assert.equal(sourceMapRecord.evidence[0].metadata.sourceMapBackedMatches, 1);
+assert.equal(querySemanticPatchBundleRecords([sourceMapRecord.sourcePatchBundle], { targetPortabilityStatus: 'portable' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([sourceMapRecord.sourcePatchBundle], { targetPortabilityAction: 'port-with-source-map-review' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([sourceMapRecord.sourcePatchBundle], { targetPortabilityReasonCode: 'target-change-source-map-portable' }).length, 1);
+const { index: sourcePortIndex, ...sourcePatchBundleWithoutIndex } = sourceMapRecord.sourcePatchBundle;
+assert.equal(querySemanticPatchBundleRecords([sourcePatchBundleWithoutIndex], { targetPortabilityStatus: 'portable' }).length, 1);
+void sourcePortIndex;
+
+const staleSourceMapRecord = createBidirectionalTargetChangeRecord({
+  id: 'counter_stale_rust_target_change_from_source_map',
+  source: sourceImport,
+  targetLanguage: 'rust',
+  targetPath: 'src/counter.rs',
+  baseTarget: {
+    language: 'rust',
+    sourcePath: 'src/counter.rs',
+    sourceText: 'pub fn add(count: i32) -> i32 { count + 1 }\n'
+  },
+  editedTarget: {
+    language: 'rust',
+    sourcePath: 'src/counter.rs',
+    sourceText: 'pub fn add(count: i32, step: i32) -> i32 { count + step }\n'
+  },
+  sourceMaps: [{ ...rustProjectionMap, mappings: [{ ...rustProjectionMap.mappings[0], sourceSpan: { ...rustProjectionMap.mappings[0].sourceSpan, sourceId: 'fnv1a32:stale' } }] }]
+});
+assert.equal(staleSourceMapRecord.targetPortability.status, 'stale');
+assert.equal(staleSourceMapRecord.sourceAnchorMatches[0].portability.status, 'stale');
+assert.equal(staleSourceMapRecord.targetPortability.staleSourceMapLinkIds.length, 1);
 
 const unmatched = createBidirectionalTargetChangeRecord({
   id: 'counter_unmatched_rust_target_change',
@@ -140,6 +190,9 @@ const unmatched = createBidirectionalTargetChangeRecord({
 });
 
 assert.equal(unmatched.readiness, 'blocked');
+assert.equal(unmatched.targetPortability.status, 'blocked');
+assert.equal(unmatched.targetPortability.action, 'block');
+assert.equal(unmatched.sourceAnchorMatches[0].portability.status, 'blocked');
 assert.equal(unmatched.summary.sourceAnchorMatches, 0);
 assert.equal(unmatched.summary.unmatchedTargetRegions > 0, true);
 assert.equal(unmatched.sourceAnchorMatches[0].reasonCodes.includes('source-anchor-not-found'), true);

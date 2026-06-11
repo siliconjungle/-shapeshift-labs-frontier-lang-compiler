@@ -13,6 +13,15 @@ import type { SemanticLineageEvent, SemanticLineageResolution } from './semantic
 import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
 
 export type BidirectionalTargetChangeAnchorStatus = 'matched' | 'unmatched' | 'ambiguous' | 'deleted' | string;
+export type BidirectionalTargetPortabilityStatus = 'portable' | 'needs-port' | 'stale' | 'conflict' | 'blocked' | 'evidence-only' | string;
+export type BidirectionalTargetPortabilityAction =
+  | 'port-with-source-map-review'
+  | 'human-port'
+  | 'refresh-source-map'
+  | 'resolve-anchor-conflict'
+  | 'block'
+  | 'record-evidence'
+  | string;
 
 export interface BidirectionalTargetChangeSourceAnchorMapping {
   readonly targetAnchorKey?: string;
@@ -62,6 +71,20 @@ export interface BidirectionalTargetChangeAnchor {
   readonly metadata?: Record<string, unknown>;
 }
 
+export interface BidirectionalTargetMatchPortability {
+  readonly status: BidirectionalTargetPortabilityStatus;
+  readonly action: BidirectionalTargetPortabilityAction;
+  readonly readiness: SemanticMergeReadiness | string;
+  readonly confidence?: number;
+  readonly reviewRequired: true;
+  readonly autoMergeClaim: false;
+  readonly semanticEquivalenceClaim: false;
+  readonly reasonCodes: readonly string[];
+  readonly sourceMapLinkIds: readonly string[];
+  readonly sourceMapMappingIds: readonly string[];
+  readonly staleSourceMapLinkIds: readonly string[];
+}
+
 export interface BidirectionalTargetChangeSourceAnchorMatch {
   readonly kind: 'frontier.lang.bidirectionalTargetChangeSourceAnchorMatch';
   readonly version: 1;
@@ -70,6 +93,7 @@ export interface BidirectionalTargetChangeSourceAnchorMatch {
   readonly sourceAnchors: readonly BidirectionalTargetChangeAnchor[];
   readonly lineageResolutions: readonly SemanticLineageResolution[];
   readonly sourceMapLinks: readonly BidirectionalTargetChangeSourceMapLink[];
+  readonly portability?: BidirectionalTargetMatchPortability;
   readonly status: BidirectionalTargetChangeAnchorStatus;
   readonly confidence?: number;
   readonly reasonCodes: readonly string[];
@@ -77,6 +101,31 @@ export interface BidirectionalTargetChangeSourceAnchorMatch {
   readonly autoMergeClaim: false;
   readonly semanticEquivalenceClaim: false;
   readonly conflictKeys: readonly string[];
+}
+
+export interface BidirectionalTargetPortabilityRecord {
+  readonly kind: 'frontier.lang.bidirectionalTargetPortability';
+  readonly version: 1;
+  readonly id?: string;
+  readonly status: BidirectionalTargetPortabilityStatus;
+  readonly action: BidirectionalTargetPortabilityAction;
+  readonly readiness: SemanticMergeReadiness | string;
+  readonly confidence?: number;
+  readonly reviewRequired: true;
+  readonly autoMergeClaim: false;
+  readonly semanticEquivalenceClaim: false;
+  readonly reasonCodes: readonly string[];
+  readonly conflictKeys: readonly string[];
+  readonly sourceAnchorMatchIds: readonly string[];
+  readonly sourceMapLinkIds: readonly string[];
+  readonly sourceMapMappingIds: readonly string[];
+  readonly staleSourceMapLinkIds: readonly string[];
+  readonly targetChangedRegions: number;
+  readonly matchedTargetRegions: number;
+  readonly sourceMapBackedRegions: number;
+  readonly unmatchedTargetRegions: number;
+  readonly ambiguousTargetRegions: number;
+  readonly deletedSourceAnchors: number;
 }
 
 export interface CreateBidirectionalTargetChangeRecordOptions {
@@ -130,6 +179,7 @@ export interface BidirectionalTargetChangeRecord {
   readonly sourceImport?: NativeSourceImportResult;
   readonly targetChangeSet: NativeSourceChangeSet;
   readonly sourceAnchorMatches: readonly BidirectionalTargetChangeSourceAnchorMatch[];
+  readonly targetPortability: BidirectionalTargetPortabilityRecord;
   readonly sourcePatchBundle: SemanticPatchBundleRecord;
   readonly historyRecord: SemanticHistoryRecord;
   readonly evidence: readonly EvidenceRecord[];
@@ -143,6 +193,10 @@ export interface BidirectionalTargetChangeRecord {
     readonly deletedSourceAnchors: number;
     readonly sourceChangedRegions: number;
     readonly sourceMapBackedMatches: number;
+    readonly targetPortabilityStatus: BidirectionalTargetPortabilityStatus;
+    readonly portableTargetRegions: number;
+    readonly staleTargetRegions: number;
+    readonly conflictingTargetRegions: number;
   };
   readonly metadata: {
     readonly autoMergeClaim: false;

@@ -176,8 +176,15 @@ const bidirectionalTargetChange = compilerApi.createBidirectionalTargetChangeRec
   }
 });
 const typedBidirectionalTargetChange: compilerApi.BidirectionalTargetChangeRecord = bidirectionalTargetChange;
+const typedBidirectionalTargetPortability: compilerApi.BidirectionalTargetPortabilityRecord = typedBidirectionalTargetChange.targetPortability;
+const typedBidirectionalMatchPortability: compilerApi.BidirectionalTargetMatchPortability | undefined = typedBidirectionalTargetChange.sourceAnchorMatches[0]?.portability;
+typedBidirectionalTargetPortability.status satisfies compilerApi.BidirectionalTargetPortabilityStatus;
+typedBidirectionalTargetPortability.action satisfies compilerApi.BidirectionalTargetPortabilityAction;
+typedBidirectionalMatchPortability?.status satisfies compilerApi.BidirectionalTargetPortabilityStatus | undefined;
 
 void typedBidirectionalTargetChange;
+void typedBidirectionalTargetPortability;
+void typedBidirectionalMatchPortability;
 
 const semanticLineage = compilerApi.createSemanticLineageEvent({
   eventKind: 'moved',

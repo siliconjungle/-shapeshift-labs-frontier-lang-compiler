@@ -15,11 +15,13 @@ const typedSemanticPatchBundle: compilerApi.SemanticPatchBundleRecord = semantic
 const typedSemanticPatchBundleIndex: compilerApi.SemanticPatchBundleRecordIndex = typedSemanticPatchBundle.index;
 const semanticPatchBundleOptions: compilerApi.CreateSemanticPatchBundleRecordOptions = {
   semanticEditReplays: [],
+  targetPortability: { status: 'portable', action: 'port-with-source-map-review' },
   admission: { status: 'queued', readiness: 'needs-review' }
 };
 const semanticPatchBundleQuery: compilerApi.SemanticPatchBundleRecordQuery = {
   semanticEditReplayStatus: 'accepted-clean',
-  semanticEditReplayAction: 'apply'
+  semanticEditReplayAction: 'apply',
+  targetPortabilityStatus: 'portable'
 };
 const semanticPatchBundleOverlapQuery: compilerApi.SemanticPatchBundleOverlapQuery = {
   overlapKind: 'replay-output',

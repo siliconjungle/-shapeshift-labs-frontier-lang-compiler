@@ -8,6 +8,7 @@ import { createSemanticPatchBundleRecord } from './semanticPatchBundleRecords.js
 import { createSemanticHistoryRecord } from './semanticHistoryRecords.js';
 import { diffNativeSourceImports } from './diffNativeSourceImports.js';
 import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
+import { attachBidirectionalMatchPortability, classifyBidirectionalTargetPortability } from './bidirectionalTargetPortability.js';
 import {
   anchorsFromSourceSidecar,
   classifyBidirectionalReadiness,
@@ -64,12 +65,24 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     mappings,
     sourceMaps,
     lineage
+  })).map((match) => attachBidirectionalMatchPortability(match, {
+    currentSourceHash: sourceHash(source),
+    targetChangeSet
   }));
+  const targetPortability = classifyBidirectionalTargetPortability({
+    id,
+    source,
+    currentSourceHash: sourceHash(source),
+    targetChangeSet,
+    sourceAnchorMatches
+  });
   const readiness = classifyBidirectionalReadiness(targetChangeSet, source, sourceAnchorMatches);
   const reasons = uniqueStrings([
     'source-port-review-required',
     'target-change-is-merge-evidence-not-proof',
+    `target-portability:${targetPortability.status}`,
     ...array(targetChangeSet.reasons),
+    ...array(targetPortability.reasonCodes),
     ...sourceAnchorMatches.flatMap((match) => match.reasonCodes)
   ]);
   const evidence = [createBidirectionalEvidence({
@@ -78,6 +91,7 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     source,
     targetChangeSet,
     sourceAnchorMatches,
+    targetPortability,
     readiness,
     reasons
   })];
@@ -97,6 +111,7 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       targetChangeSetId: targetChangeSet.id,
       targetPatchId: targetChangeSet.patch?.id,
       targetMergeCandidateId: targetChangeSet.mergeCandidate?.id,
+      targetPortability,
       sourceMapBackprojection: summarizeSourceMapBackprojection(sourceAnchorMatches)
     }
   }, {
@@ -106,6 +121,7 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     admission: { status: readiness === 'blocked' ? 'blocked' : 'needs-review', readiness },
     metadata: {
       source: 'createBidirectionalTargetChangeRecord',
+      targetPortability,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     }
@@ -138,6 +154,7 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       bidirectionalTargetChangeId: id,
       sourcePatchBundleId: sourcePatchBundle.id,
       targetChangeSetId: targetChangeSet.id,
+      targetPortability,
       sourceMapBackprojection: summarizeSourceMapBackprojection(sourceAnchorMatches),
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
@@ -154,6 +171,7 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     sourceImport: source,
     targetChangeSet,
     sourceAnchorMatches,
+    targetPortability,
     sourcePatchBundle,
     historyRecord,
     evidence,
@@ -166,12 +184,17 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       unmatchedTargetRegions: sourceAnchorMatches.filter((match) => match.status === 'unmatched').length,
       deletedSourceAnchors: sourceAnchorMatches.filter((match) => match.status === 'deleted').length,
       sourceChangedRegions: sourceChangedRegions.length,
-      sourceMapBackedMatches: sourceAnchorMatches.filter((match) => match.sourceMapLinks.length > 0).length
+      sourceMapBackedMatches: sourceAnchorMatches.filter((match) => match.sourceMapLinks.length > 0).length,
+      targetPortabilityStatus: targetPortability.status,
+      portableTargetRegions: targetPortability.status === 'portable' ? targetPortability.targetChangedRegions : 0,
+      staleTargetRegions: targetPortability.status === 'stale' ? targetPortability.targetChangedRegions : 0,
+      conflictingTargetRegions: targetPortability.status === 'conflict' ? targetPortability.ambiguousTargetRegions : 0
     },
     metadata: {
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
       reviewRequired: true,
+      targetPortability,
       ...input.metadata
     }
   };

@@ -55,6 +55,7 @@ export function classifyBidirectionalReadiness(targetChangeSet, source, matches)
 
 export function sourceRegionsForMatch(match, readiness) {
   const anchors = match.sourceAnchors.length ? match.sourceAnchors : [undefined];
+  const portability = match.portability;
   return anchors.map((anchor, index) => compactRecord({
     id: `source_port_region_${idFragment(match.id)}_${index + 1}`,
     key: anchor?.key ?? `unmapped-target#${match.targetRegion.key ?? match.targetRegion.id}`,
@@ -70,9 +71,9 @@ export function sourceRegionsForMatch(match, readiness) {
     sourceSpan: anchor?.sourceSpan,
     sourceMapLinks: match.sourceMapLinks,
     admission: {
-      readiness,
-      action: 'review-port-from-target-change',
-      reasonCodes: match.reasonCodes,
+      readiness: portability?.readiness ?? readiness,
+      action: portability?.action ?? 'review-port-from-target-change',
+      reasonCodes: uniqueStrings([...match.reasonCodes, ...array(portability?.reasonCodes)]),
       conflictKeys: match.conflictKeys
     },
     metadata: {
@@ -81,6 +82,7 @@ export function sourceRegionsForMatch(match, readiness) {
         targetRegion: match.targetRegion,
         sourceMapLinkIds: match.sourceMapLinks.map((link) => link.id),
         lineageResolutionIds: match.lineageResolutions.map((resolution) => resolution.id),
+        targetPortability: portability,
         reviewRequired: true,
         autoMergeClaim: false,
         semanticEquivalenceClaim: false
@@ -104,6 +106,10 @@ export function createBidirectionalEvidence(context) {
       sourceAnchorMatchIds: context.sourceAnchorMatches.map((match) => match.id),
       sourceMapBackedMatches: context.sourceAnchorMatches.filter((match) => match.sourceMapLinks.length > 0).length,
       sourceMapLinkIds: context.sourceAnchorMatches.flatMap((match) => match.sourceMapLinks.map((link) => link.id)),
+      targetPortabilityStatus: context.targetPortability?.status,
+      targetPortabilityAction: context.targetPortability?.action,
+      targetPortabilityReasonCodes: context.targetPortability?.reasonCodes,
+      targetPortabilitySourceMapLinkIds: context.targetPortability?.sourceMapLinkIds,
       readiness: context.readiness,
       reasons: context.reasons,
       autoMergeClaim: false,
