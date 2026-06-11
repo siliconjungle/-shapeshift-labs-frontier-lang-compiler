@@ -133,6 +133,10 @@ export interface SemanticEditProjectionEdit {
   readonly symbolId?: string;
   readonly symbolName?: string;
   readonly symbolKind?: string;
+  readonly semanticKey?: string;
+  readonly semanticIdentityHash?: string;
+  readonly sourceIdentityHash?: string;
+  readonly editContentHash?: string;
   readonly headStart: number;
   readonly headEnd: number;
   readonly workerStart?: number;

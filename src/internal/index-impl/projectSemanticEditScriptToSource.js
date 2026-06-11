@@ -89,6 +89,11 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText) {
 }
 
 function projectionEditRecord(edit) {
+  const deletedTextHash = hashSemanticValue(edit.current);
+  const replacementTextHash = hashSemanticValue(edit.replacement);
+  const semanticKey = semanticEditKey(edit);
+  const semanticIdentityHash = hashSemanticValue(semanticIdentityRecord(edit, semanticKey));
+  const sourceIdentityHash = hashSemanticValue(sourceIdentityRecord(edit));
   return compactRecord({
     operationId: edit.operationId,
     status: edit.alreadyApplied ? 'already-applied' : 'applied',
@@ -102,15 +107,53 @@ function projectionEditRecord(edit) {
     symbolId: edit.symbolId,
     symbolName: edit.symbolName,
     symbolKind: edit.symbolKind,
+    semanticKey,
+    semanticIdentityHash,
+    sourceIdentityHash,
+    editContentHash: hashSemanticValue(compactRecord({
+      semanticIdentityHash,
+      deletedTextHash,
+      replacementTextHash,
+      status: edit.alreadyApplied ? 'already-applied' : 'applied'
+    })),
     headStart: edit.start,
     headEnd: edit.end,
     workerStart: edit.workerStart,
     workerEnd: edit.workerEnd,
     deletedBytes: edit.current.length,
     replacementBytes: edit.replacement.length,
-    deletedTextHash: hashSemanticValue(edit.current),
-    replacementTextHash: hashSemanticValue(edit.replacement),
+    deletedTextHash,
+    replacementTextHash,
     replacementText: edit.replacement
+  });
+}
+
+function semanticEditKey(edit) {
+  const scope = edit.symbolName
+    ? `${edit.symbolKind ?? 'symbol'}:${edit.symbolName}`
+    : edit.anchorKey ?? edit.regionId ?? edit.operationId;
+  return ['semantic-edit', edit.kind ?? 'region', edit.changeKind ?? 'change', scope].filter(Boolean).join(':');
+}
+
+function semanticIdentityRecord(edit, semanticKey) {
+  return compactRecord({
+    semanticKey,
+    kind: edit.kind,
+    changeKind: edit.changeKind,
+    regionKind: edit.regionKind,
+    symbolName: edit.symbolName,
+    symbolKind: edit.symbolKind
+  });
+}
+
+function sourceIdentityRecord(edit) {
+  return compactRecord({
+    anchorKey: edit.anchorKey,
+    conflictKey: edit.conflictKey,
+    regionId: edit.regionId,
+    sourcePath: edit.sourcePath,
+    symbolId: edit.symbolId,
+    semanticKey: semanticEditKey(edit)
   });
 }
 

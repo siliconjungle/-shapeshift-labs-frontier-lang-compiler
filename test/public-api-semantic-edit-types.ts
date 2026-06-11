@@ -24,6 +24,9 @@ typedSemanticEditProjectionEdit?.status satisfies 'applied' | 'already-applied' 
 typedSemanticEditProjectionEdit?.anchorKey satisfies string | undefined;
 typedSemanticEditProjectionEdit?.conflictKey satisfies string | undefined;
 typedSemanticEditProjectionEdit?.symbolName satisfies string | undefined;
+typedSemanticEditProjectionEdit?.semanticKey satisfies string | undefined;
+typedSemanticEditProjectionEdit?.semanticIdentityHash satisfies string | undefined;
+typedSemanticEditProjectionEdit?.editContentHash satisfies string | undefined;
 
 void typedSemanticEditScript;
 void typedSemanticEditProjection;

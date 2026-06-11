@@ -54,6 +54,10 @@ assert.equal(cleanProjection.edits[0].anchorKey, cleanHead.operations[0].anchor.
 assert.equal(cleanProjection.edits[0].conflictKey, cleanHead.operations[0].anchor.conflictKey);
 assert.equal(cleanProjection.edits[0].symbolName, 'step');
 assert.equal(cleanProjection.edits[0].sourcePath, 'src/runtime.ts');
+assert.equal(cleanProjection.edits[0].semanticKey, 'semantic-edit:replaceBody:modified:function:step');
+assert.ok(cleanProjection.edits[0].semanticIdentityHash);
+assert.ok(cleanProjection.edits[0].sourceIdentityHash);
+assert.ok(cleanProjection.edits[0].editContentHash);
 assert.equal(cleanProjection.edits[0].replacementText, 'export function step(value: number) { return value + 2; }');
 assert.equal(cleanProjection.edits[0].deletedBytes, 'export function step(value: number) { return value + 1; }'.length);
 assert.ok(cleanProjection.edits[0].replacementTextHash);
