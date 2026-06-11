@@ -132,8 +132,9 @@ function semanticEditOperation(region, index, context, input) {
   const anchorKey = region.key ?? region.conflictKey ?? region.id;
   const baseSymbol = context.baseSymbols.get(anchorKey);
   const workerSymbol = context.workerSymbols.get(anchorKey);
-  const headSymbol = context.headSymbols.get(anchorKey);
-  const classification = classifySemanticEdit({ region, anchorKey, baseSymbol, workerSymbol, headSymbol, context });
+  const directHeadSymbol = context.headSymbols.get(anchorKey);
+  const classification = classifySemanticEdit({ region, anchorKey, baseSymbol, workerSymbol, headSymbol: directHeadSymbol, context });
+  const headSymbol = directHeadSymbol ?? reanchoredHeadSymbol(context, classification);
   const kind = semanticEditOperationKind(region);
   const baseText = spanText(context.base, baseSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.before?.sourceSpan ?? region.sourceSpan);
   const workerText = spanText(context.worker, workerSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.after?.sourceSpan ?? region.sourceSpan);
@@ -190,6 +191,11 @@ function semanticEditOperation(region, index, context, input) {
       semanticEquivalenceClaim: false
     }
   });
+}
+
+function reanchoredHeadSymbol(context, classification) {
+  const targetKey = classification.reanchor?.toAnchorKey;
+  return targetKey ? context.headSymbols.get(targetKey) : undefined;
 }
 
 function semanticEditIdentityRecord(input) {

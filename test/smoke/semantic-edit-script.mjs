@@ -105,7 +105,24 @@ const movedHead = createSemanticEditScript({
   headSourceText: baseSource,
   generatedAt: 40
 });
-assert.equal(movedHead.admission.status, 'needs-port');
-assert.equal(movedHead.summary.needsPort, 1);
+assert.equal(movedHead.admission.status, 'auto-merge-candidate');
+assert.equal(movedHead.summary.portable, 1);
 assert.equal(movedHead.operations[0].reanchor.toAnchorKey.includes('src/runtime-core.ts'), true);
-assert.equal(movedHead.operations[0].reasonCodes.includes('anchor-moved-or-renamed'), true);
+assert.equal(movedHead.operations[0].reanchor.toSourcePath, 'src/runtime-core.ts');
+assert.equal(movedHead.operations[0].reasonCodes.includes('anchor-reanchored-head-matches-base'), true);
+
+const movedProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_moved_projection',
+  script: movedHead,
+  workerSourceText: workerSource,
+  headSourceText: baseSource,
+  headSourcePath: 'src/runtime-core.ts'
+});
+assert.equal(movedProjection.status, 'projected');
+assert.equal(movedProjection.sourcePath, 'src/runtime-core.ts');
+assert.equal(movedProjection.sourceText, workerSource);
+assert.equal(movedProjection.edits[0].sourcePath, 'src/runtime-core.ts');
+assert.equal(movedProjection.edits[0].originalSourcePath, 'src/runtime.ts');
+assert.equal(movedProjection.edits[0].targetSourcePath, 'src/runtime-core.ts');
+assert.equal(movedProjection.edits[0].targetAnchorKey, movedHead.operations[0].reanchor.toAnchorKey);
+assert.equal(movedProjection.edits[0].operationContentHash, movedHead.operations[0].operationContentHash);

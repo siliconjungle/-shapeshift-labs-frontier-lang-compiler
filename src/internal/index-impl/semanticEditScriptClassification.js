@@ -92,12 +92,15 @@ function classifyMissingHeadAnchor(input) {
     ? resolveSemanticLineage(input.context.headLineage.lineageMap, { anchorKey: input.anchorKey })
     : undefined;
   if (resolved?.status === 'resolved' && resolved.currentAnchors.length === 1) {
-    return editStatus('needs-port', 'needs-review', 0.72, ['anchor-moved-or-renamed'], {
-      fromAnchorKey: input.anchorKey,
-      toAnchorKey: resolved.currentAnchors[0].key,
-      lineageStatus: resolved.status,
-      traversedEventIds: resolved.traversedEventIds
-    }, resolved.evidenceIds);
+    const target = resolved.currentAnchors[0];
+    const reanchor = reanchorRecord(input.anchorKey, target, resolved);
+    if (target.bodyHash && input.baseSymbol?.spanHash && target.bodyHash === input.baseSymbol.spanHash) {
+      return editStatus('portable', 'ready', 0.86, ['anchor-reanchored-head-matches-base'], reanchor, resolved.evidenceIds);
+    }
+    if (target.bodyHash && input.workerSymbol?.spanHash && target.bodyHash === input.workerSymbol.spanHash) {
+      return editStatus('already-applied', 'ready', 0.87, ['anchor-reanchored-head-matches-worker'], reanchor, resolved.evidenceIds);
+    }
+    return editStatus('needs-port', 'needs-review', 0.72, ['anchor-moved-or-renamed'], reanchor, resolved.evidenceIds);
   }
   if (resolved?.status === 'ambiguous') {
     return editStatus('blocked', 'blocked', 0.1, ['anchor-lineage-ambiguous'], { fromAnchorKey: input.anchorKey, lineageStatus: resolved.status }, resolved.evidenceIds);
@@ -110,6 +113,18 @@ function classifyMissingHeadAnchor(input) {
 
 function editStatus(status, readiness, confidence, reasonCodes, reanchor, evidenceIds = []) {
   return { status, readiness, confidence, reasonCodes, reanchor, evidenceIds };
+}
+
+function reanchorRecord(fromAnchorKey, target, resolved) {
+  return {
+    fromAnchorKey,
+    toAnchorKey: target.key,
+    toSourcePath: target.sourcePath,
+    toSymbolName: target.symbolName,
+    toSymbolKind: target.kind,
+    lineageStatus: resolved.status,
+    traversedEventIds: resolved.traversedEventIds
+  };
 }
 
 function admissionStatus(summary) {

@@ -66,6 +66,9 @@ export interface SemanticEditScriptOperation {
   readonly reanchor?: {
     readonly fromAnchorKey?: string;
     readonly toAnchorKey?: string;
+    readonly toSourcePath?: string;
+    readonly toSymbolName?: string;
+    readonly toSymbolKind?: string;
     readonly lineageStatus?: string;
     readonly traversedEventIds?: readonly string[];
   };
@@ -138,6 +141,11 @@ export interface SemanticEditProjectionEdit {
   readonly regionId?: string;
   readonly regionKind?: string;
   readonly sourcePath?: string;
+  readonly originalSourcePath?: string;
+  readonly targetAnchorKey?: string;
+  readonly targetSourcePath?: string;
+  readonly targetSymbolName?: string;
+  readonly targetSymbolKind?: string;
   readonly symbolId?: string;
   readonly symbolName?: string;
   readonly symbolKind?: string;
@@ -188,6 +196,7 @@ export interface ProjectSemanticEditScriptToSourceOptions {
   readonly script: SemanticEditScript;
   readonly workerSourceText: string;
   readonly headSourceText: string;
+  readonly headSourcePath?: string;
   readonly metadata?: Record<string, unknown>;
 }
 
@@ -207,6 +216,7 @@ export interface CreateSemanticEditScriptOptions {
   readonly workerSourceText?: string;
   readonly afterSourceText?: string;
   readonly headSourceText?: string;
+  readonly headSourcePath?: string;
   readonly currentSourceText?: string;
   readonly baseSourceHash?: string;
   readonly workerSourceHash?: string;

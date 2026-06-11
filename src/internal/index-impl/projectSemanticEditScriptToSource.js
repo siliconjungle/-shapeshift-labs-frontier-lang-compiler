@@ -25,7 +25,7 @@ export function projectSemanticEditScriptToSource(input = {}) {
     id: input.id ?? `semantic_edit_projection_${idFragment(script.id ?? script.hash ?? 'script')}`,
     scriptId: script.id,
     status: blocked ? 'blocked' : 'projected',
-    sourcePath: script.sourcePath,
+    sourcePath: input.headSourcePath ?? projectedSourcePath(script, edits),
     language: script.language,
     baseHash: script.baseHash,
     workerHash: script.workerHash,
@@ -54,8 +54,9 @@ export function projectSemanticEditScriptToSource(input = {}) {
 }
 
 function sourceEditForOperation(operation, workerSourceText, headSourceText) {
+  const identity = projectionIdentity(operation);
   if (operation.status === 'already-applied') {
-    return { ok: true, value: { ...semanticEditIdentity(operation), operationId: operation.id, start: 0, end: 0, replacement: '', current: '', alreadyApplied: true } };
+    return { ok: true, value: { ...identity, operationId: operation.id, start: 0, end: 0, replacement: '', current: '', alreadyApplied: true } };
   }
   if (operation.status !== 'portable') return { ok: false, reasonCodes: [`operation-not-portable:${operation.id}`] };
   const workerOffsets = spanOffsets(workerSourceText, operation.spans?.worker);
@@ -78,7 +79,7 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText) {
     ok: true,
     value: {
       operationId: operation.id,
-      ...semanticEditIdentity(operation),
+      ...identity,
       start: headOffsets.start,
       end: headOffsets.end,
       workerStart: workerOffsets.start,
@@ -87,6 +88,11 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText) {
       current
     }
   };
+}
+
+function projectionIdentity(operation) {
+  const identity = semanticEditIdentity(operation);
+  return { ...identity, sourcePath: operation.reanchor?.toSourcePath ?? identity.sourcePath };
 }
 
 function projectionEditRecord(edit) {
@@ -103,6 +109,11 @@ function projectionEditRecord(edit) {
     regionId: edit.regionId,
     regionKind: edit.regionKind,
     sourcePath: edit.sourcePath,
+    originalSourcePath: edit.originalSourcePath,
+    targetAnchorKey: edit.targetAnchorKey,
+    targetSourcePath: edit.targetSourcePath,
+    targetSymbolName: edit.targetSymbolName,
+    targetSymbolKind: edit.targetSymbolKind,
     symbolId: edit.symbolId,
     symbolName: edit.symbolName,
     symbolKind: edit.symbolKind,
@@ -136,6 +147,11 @@ function semanticEditIdentity(operation) {
     regionId: anchor.regionId,
     regionKind: anchor.regionKind,
     sourcePath: anchor.sourcePath,
+    originalSourcePath: operation.reanchor?.toSourcePath ? anchor.sourcePath : undefined,
+    targetAnchorKey: operation.reanchor?.toAnchorKey,
+    targetSourcePath: operation.reanchor?.toSourcePath,
+    targetSymbolName: operation.reanchor?.toSymbolName,
+    targetSymbolKind: operation.reanchor?.toSymbolKind,
     symbolId: anchor.symbolId,
     symbolName: anchor.symbolName,
     symbolKind: anchor.symbolKind,
@@ -150,6 +166,10 @@ function applySourceEdits(sourceText, edits) {
   return edits.filter((edit) => !edit.alreadyApplied)
     .sort((left, right) => right.start - left.start)
     .reduce((text, edit) => text.slice(0, edit.start) + edit.replacement + text.slice(edit.end), sourceText);
+}
+
+function projectedSourcePath(script, edits) {
+  return edits.map((edit) => edit.sourcePath).find(Boolean) ?? script.sourcePath;
 }
 
 function spanOffsets(sourceText, span) {
