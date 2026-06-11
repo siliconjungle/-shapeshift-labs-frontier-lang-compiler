@@ -6,6 +6,9 @@ export const SemanticPatchBundleOverlapKinds=Object.freeze([
   'semantic-edit-key',
   'semantic-identity',
   'source-identity',
+  'semantic-edit-replay',
+  'replay-output',
+  'replay-current',
   'transform-content',
   'semantic-transform',
   'projection-identity',
@@ -27,6 +30,9 @@ const KIND_FIELDS=Object.freeze({
   'semantic-edit-key':'semanticEditKeys',
   'semantic-identity':'semanticIdentityHashes',
   'source-identity':'sourceIdentityHashes',
+  'semantic-edit-replay':'semanticEditReplayIds',
+  'replay-output':'semanticEditReplayOutputHashes',
+  'replay-current':'semanticEditReplayCurrentHashes',
   'transform-content':'semanticTransformContentHashes',
   'semantic-transform':'semanticTransformIdentityHashes',
   'projection-identity':'projectionIdentityHashes',
@@ -55,9 +61,9 @@ export function compareSemanticPatchBundleRecords(left={},right={},options={}){
     score:overlapScore(admission.status,shared,admission.reasonCodes),
     summary:{
       sharedKeys:countShared(shared),
-      duplicateSignals:shared.operationContentHashes.length+shared.editContentHashes.length+shared.semanticTransformContentHashes.length,
+      duplicateSignals:shared.operationContentHashes.length+shared.editContentHashes.length+shared.semanticTransformContentHashes.length+shared.semanticEditReplayIds.length+shared.semanticEditReplayOutputHashes.length,
       semanticSignals:shared.semanticEditKeys.length+shared.semanticIdentityHashes.length+shared.sourceIdentityHashes.length+shared.semanticTransformIdentityHashes.length+shared.projectionIdentityHashes.length,
-      sourceSignals:shared.regionKeys.length+shared.conflictKeys.length+shared.sourcePaths.length,
+      sourceSignals:shared.regionKeys.length+shared.conflictKeys.length+shared.sourcePaths.length+shared.semanticEditReplayCurrentHashes.length,
       baseHashMismatch:admission.reasonCodes.includes('base-hash-mismatch'),
       targetHashMismatch:admission.reasonCodes.includes('target-hash-mismatch')
     },
@@ -90,6 +96,11 @@ function sharedIndex(left,right,options){
     semanticEditKeys:intersect(left.semanticEditKeys,right.semanticEditKeys),
     semanticIdentityHashes:intersect(left.semanticIdentityHashes,right.semanticIdentityHashes),
     sourceIdentityHashes:intersect(left.sourceIdentityHashes,right.sourceIdentityHashes),
+    semanticEditReplayIds:intersect(left.semanticEditReplayIds,right.semanticEditReplayIds),
+    semanticEditReplayStatuses:intersect(left.semanticEditReplayStatuses,right.semanticEditReplayStatuses),
+    semanticEditReplayActions:intersect(left.semanticEditReplayActions,right.semanticEditReplayActions),
+    semanticEditReplayCurrentHashes:intersect(left.semanticEditReplayCurrentHashes,right.semanticEditReplayCurrentHashes),
+    semanticEditReplayOutputHashes:intersect(left.semanticEditReplayOutputHashes,right.semanticEditReplayOutputHashes),
     semanticTransformContentHashes:intersect(left.semanticTransformContentHashes,right.semanticTransformContentHashes),
     semanticTransformIdentityHashes:intersect(left.semanticTransformIdentityHashes,right.semanticTransformIdentityHashes),
     projectionIdentityHashes:intersect(left.projectionIdentityHashes,right.projectionIdentityHashes),
@@ -102,9 +113,9 @@ function sharedIndex(left,right,options){
 }
 
 function overlapAdmission(shared,{leftIndex,rightIndex,options}){
-  const duplicate=shared.operationContentHashes.length||shared.editContentHashes.length||shared.semanticTransformContentHashes.length;
+  const duplicate=shared.operationContentHashes.length||shared.editContentHashes.length||shared.semanticTransformContentHashes.length||shared.semanticEditReplayIds.length||shared.semanticEditReplayOutputHashes.length;
   const semantic=shared.semanticEditKeys.length||shared.semanticIdentityHashes.length||shared.sourceIdentityHashes.length||shared.semanticTransformIdentityHashes.length||shared.projectionIdentityHashes.length;
-  const source=shared.regionKeys.length||shared.conflictKeys.length||shared.sourcePaths.length;
+  const source=shared.regionKeys.length||shared.conflictKeys.length||shared.sourcePaths.length||shared.semanticEditReplayCurrentHashes.length;
   const status=duplicate?'duplicate':semantic?'semantic-overlap':source?'source-overlap':'independent';
   const reasonCodes=uniqueStrings([
     shared.operationContentHashes.length?'same-operation-content':undefined,
@@ -113,6 +124,9 @@ function overlapAdmission(shared,{leftIndex,rightIndex,options}){
     shared.semanticEditKeys.length?'same-semantic-edit-key':undefined,
     shared.semanticIdentityHashes.length?'same-semantic-identity':undefined,
     shared.sourceIdentityHashes.length?'same-source-identity':undefined,
+    shared.semanticEditReplayIds.length?'same-semantic-edit-replay':undefined,
+    shared.semanticEditReplayOutputHashes.length?'same-replay-output':undefined,
+    shared.semanticEditReplayCurrentHashes.length?'same-replay-current':undefined,
     shared.semanticTransformIdentityHashes.length?'same-semantic-transform':undefined,
     shared.projectionIdentityHashes.length?'same-projection-identity':undefined,
     shared.regionKeys.length?'same-region-key':undefined,
@@ -141,6 +155,11 @@ function bundleIndex(record){
     semanticEditKeys:uniqueStrings(index.semanticEditKeys),
     semanticIdentityHashes:uniqueStrings(index.semanticIdentityHashes),
     sourceIdentityHashes:uniqueStrings(index.sourceIdentityHashes),
+    semanticEditReplayIds:uniqueStrings(index.semanticEditReplayIds),
+    semanticEditReplayStatuses:uniqueStrings(index.semanticEditReplayStatuses),
+    semanticEditReplayActions:uniqueStrings(index.semanticEditReplayActions),
+    semanticEditReplayCurrentHashes:uniqueStrings(index.semanticEditReplayCurrentHashes),
+    semanticEditReplayOutputHashes:uniqueStrings(index.semanticEditReplayOutputHashes),
     semanticTransformContentHashes:uniqueStrings(index.semanticTransformContentHashes),
     semanticTransformIdentityHashes:uniqueStrings(index.semanticTransformIdentityHashes),
     projectionIdentityHashes:uniqueStrings(index.projectionIdentityHashes),
@@ -161,6 +180,11 @@ function matchesOverlap(overlap,query){
     &&matchAny(queryValues(query.sourcePath,query.sourcePaths),overlap.shared.sourcePaths)
     &&matchAny(queryValues(query.conflictKey,query.conflictKeys),overlap.shared.conflictKeys)
     &&matchAny(queryValues(query.semanticEditKey,query.semanticEditKeys),overlap.shared.semanticEditKeys)
+    &&matchAny(queryValues(query.semanticEditReplayId,query.semanticEditReplayIds),overlap.shared.semanticEditReplayIds)
+    &&matchAny(queryValues(query.semanticEditReplayStatus,query.semanticEditReplayStatuses),overlap.shared.semanticEditReplayStatuses)
+    &&matchAny(queryValues(query.semanticEditReplayAction,query.semanticEditReplayActions),overlap.shared.semanticEditReplayActions)
+    &&matchAny(queryValues(query.semanticEditReplayCurrentHash,query.semanticEditReplayCurrentHashes),overlap.shared.semanticEditReplayCurrentHashes)
+    &&matchAny(queryValues(query.semanticEditReplayOutputHash,query.semanticEditReplayOutputHashes),overlap.shared.semanticEditReplayOutputHashes)
     &&matchAny(queryValues(query.semanticTransformIdentityHash,query.semanticTransformIdentityHashes),overlap.shared.semanticTransformIdentityHashes)
     &&matchAny(queryValues(query.semanticTransformContentHash,query.semanticTransformContentHashes),overlap.shared.semanticTransformContentHashes)
     &&matchAny(queryValues(query.projectionIdentityHash,query.projectionIdentityHashes),overlap.shared.projectionIdentityHashes)

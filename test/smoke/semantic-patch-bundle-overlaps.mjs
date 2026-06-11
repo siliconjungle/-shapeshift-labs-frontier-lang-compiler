@@ -7,11 +7,13 @@ import {
   diffNativeSources,
   projectSemanticEditScriptToSource,
   querySemanticPatchBundleOverlaps,
+  replaySemanticEditProjection,
   SemanticPatchBundleOverlapKinds,
   SemanticPatchBundleOverlapStatuses
 } from './compiler-api.mjs';
 
 assert.equal(SemanticPatchBundleOverlapKinds.includes('operation-content'), true);
+assert.equal(SemanticPatchBundleOverlapKinds.includes('replay-output'), true);
 assert.equal(SemanticPatchBundleOverlapStatuses.includes('semantic-overlap'), true);
 
 const baseSource = 'export function score(value) { return value + 1; }\n';
@@ -39,15 +41,22 @@ const projection = projectSemanticEditScriptToSource({
   workerSourceText: workerSource,
   headSourceText: baseSource
 });
+const replay = replaySemanticEditProjection({
+  id: 'score_overlap_replay',
+  projection,
+  currentSourceText: baseSource
+});
 const duplicateA = createSemanticPatchBundleRecord(changeSet, {
   id: 'score_overlap_bundle_a',
   semanticEditScripts: [script],
-  semanticEditProjections: [projection]
+  semanticEditProjections: [projection],
+  semanticEditReplays: [replay]
 });
 const duplicateB = createSemanticPatchBundleRecord(changeSet, {
   id: 'score_overlap_bundle_b',
   semanticEditScripts: [script],
-  semanticEditProjections: [projection]
+  semanticEditProjections: [projection],
+  semanticEditReplays: [replay]
 });
 const duplicateOverlap = compareSemanticPatchBundleRecords(duplicateA, duplicateB);
 
@@ -57,8 +66,13 @@ assert.equal(duplicateOverlap.admission.autoMergeClaim, false);
 assert.equal(duplicateOverlap.admission.reviewRequired, true);
 assert.equal(duplicateOverlap.overlapKinds.includes('operation-content'), true);
 assert.equal(duplicateOverlap.overlapKinds.includes('edit-content'), true);
+assert.equal(duplicateOverlap.overlapKinds.includes('semantic-edit-replay'), true);
+assert.equal(duplicateOverlap.overlapKinds.includes('replay-output'), true);
 assert.equal(duplicateOverlap.shared.operationContentHashes.length, 1);
 assert.equal(duplicateOverlap.shared.editContentHashes.length, 1);
+assert.equal(duplicateOverlap.shared.semanticEditReplayIds.includes(replay.id), true);
+assert.equal(duplicateOverlap.shared.semanticEditReplayOutputHashes.includes(replay.outputHash), true);
+assert.equal(duplicateOverlap.admission.reasonCodes.includes('same-replay-output'), true);
 assert.equal(duplicateOverlap.score >= 100, true);
 
 const alternateChangeSet = diffNativeSources({
@@ -80,7 +94,7 @@ assert.equal(sourceOverlap.admission.reasonCodes.includes('target-hash-mismatch'
 
 const queriedDuplicates = querySemanticPatchBundleOverlaps(
   [duplicateA, duplicateB, sourceOnly],
-  { status: 'duplicate', operationContentHash: script.operations[0].operationContentHash }
+  { status: 'duplicate', operationContentHash: script.operations[0].operationContentHash, semanticEditReplayStatus: 'accepted-clean' }
 );
 assert.equal(queriedDuplicates.length, 1);
 assert.equal(queriedDuplicates[0].leftBundleId, 'score_overlap_bundle_a');
@@ -91,6 +105,39 @@ const queriedSourceOverlaps = querySemanticPatchBundleOverlaps(
   { status: 'source-overlap', reasonCode: 'same-source-path' }
 );
 assert.equal(queriedSourceOverlaps.length, 2);
+
+const alternateScript = createSemanticEditScript({
+  id: 'score_overlap_alternate_script',
+  language: 'javascript',
+  sourcePath: 'src/score.js',
+  baseSourceText: baseSource,
+  workerSourceText: alternateSource,
+  headSourceText: baseSource,
+  generatedAt: 21
+});
+const alternateProjection = projectSemanticEditScriptToSource({
+  id: 'score_overlap_alternate_projection',
+  script: alternateScript,
+  workerSourceText: alternateSource,
+  headSourceText: baseSource
+});
+const alternateReplay = replaySemanticEditProjection({
+  id: 'score_overlap_alternate_replay',
+  projection: alternateProjection,
+  currentSourceText: baseSource
+});
+const replayCurrentBundle = createSemanticPatchBundleRecord(alternateChangeSet, {
+  id: 'score_overlap_bundle_replay_current',
+  semanticEditScripts: [alternateScript],
+  semanticEditProjections: [alternateProjection],
+  semanticEditReplays: [alternateReplay]
+});
+const replayCurrentOverlap = compareSemanticPatchBundleRecords(duplicateA, replayCurrentBundle, { includeSourcePaths: false });
+assert.equal(replayCurrentOverlap.overlapKinds.includes('replay-current'), true);
+assert.equal(replayCurrentOverlap.admission.reasonCodes.includes('same-replay-current'), true);
+assert.equal(querySemanticPatchBundleOverlaps([duplicateA, replayCurrentBundle], {
+  semanticEditReplayCurrentHash: replay.currentHash
+}).length, 1);
 
 const independentBundle = createSemanticPatchBundleRecord({
   id: 'score_overlap_independent_change',

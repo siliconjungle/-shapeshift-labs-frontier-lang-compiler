@@ -21,6 +21,10 @@ const semanticPatchBundleQuery: compilerApi.SemanticPatchBundleRecordQuery = {
   semanticEditReplayStatus: 'accepted-clean',
   semanticEditReplayAction: 'apply'
 };
+const semanticPatchBundleOverlapQuery: compilerApi.SemanticPatchBundleOverlapQuery = {
+  overlapKind: 'replay-output',
+  semanticEditReplayOutputHash: 'output_hash'
+};
 const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecord[] = compilerApi.querySemanticPatchBundleRecords(
   [typedSemanticPatchBundle],
   { ...semanticPatchBundleQuery, regionKey: 'source#src/example.js#function#run', evidenceId: 'evidence_example', admissionStatus: 'queued' }
@@ -29,3 +33,4 @@ const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecor
 void queriedSemanticPatchBundles;
 void typedSemanticPatchBundleIndex;
 void semanticPatchBundleOptions;
+void semanticPatchBundleOverlapQuery;

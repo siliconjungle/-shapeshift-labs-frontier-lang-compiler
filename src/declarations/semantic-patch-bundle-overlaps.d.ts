@@ -6,6 +6,9 @@ export type SemanticPatchBundleOverlapKind =
   | 'semantic-edit-key'
   | 'semantic-identity'
   | 'source-identity'
+  | 'semantic-edit-replay'
+  | 'replay-output'
+  | 'replay-current'
   | 'transform-content'
   | 'semantic-transform'
   | 'projection-identity'
@@ -27,6 +30,11 @@ export interface SemanticPatchBundleOverlapShared {
   readonly semanticEditKeys: readonly string[];
   readonly semanticIdentityHashes: readonly string[];
   readonly sourceIdentityHashes: readonly string[];
+  readonly semanticEditReplayIds: readonly string[];
+  readonly semanticEditReplayStatuses: readonly string[];
+  readonly semanticEditReplayActions: readonly string[];
+  readonly semanticEditReplayCurrentHashes: readonly string[];
+  readonly semanticEditReplayOutputHashes: readonly string[];
   readonly semanticTransformContentHashes: readonly string[];
   readonly semanticTransformIdentityHashes: readonly string[];
   readonly projectionIdentityHashes: readonly string[];
@@ -97,6 +105,16 @@ export interface SemanticPatchBundleOverlapQuery {
   readonly conflictKeys?: readonly string[];
   readonly semanticEditKey?: string | readonly string[];
   readonly semanticEditKeys?: readonly string[];
+  readonly semanticEditReplayId?: string | readonly string[];
+  readonly semanticEditReplayIds?: readonly string[];
+  readonly semanticEditReplayStatus?: string | readonly string[];
+  readonly semanticEditReplayStatuses?: readonly string[];
+  readonly semanticEditReplayAction?: string | readonly string[];
+  readonly semanticEditReplayActions?: readonly string[];
+  readonly semanticEditReplayCurrentHash?: string | readonly string[];
+  readonly semanticEditReplayCurrentHashes?: readonly string[];
+  readonly semanticEditReplayOutputHash?: string | readonly string[];
+  readonly semanticEditReplayOutputHashes?: readonly string[];
   readonly semanticTransformIdentityHash?: string | readonly string[];
   readonly semanticTransformIdentityHashes?: readonly string[];
   readonly semanticTransformContentHash?: string | readonly string[];
