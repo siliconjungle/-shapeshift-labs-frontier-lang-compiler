@@ -12,13 +12,15 @@ export function projectSemanticEditScriptToSource(input = {}) {
   if (typeof workerSourceText !== 'string') reasonCodes.push('missing-worker-source-text');
   if (typeof headSourceText !== 'string') reasonCodes.push('missing-head-source-text');
   const edits = [];
-  for (const operation of script.operations ?? []) {
-    const edit = sourceEditForOperation(operation, workerSourceText, headSourceText);
+  for (const [index, operation] of (script.operations ?? []).entries()) {
+    const edit = sourceEditForOperation(operation, workerSourceText, headSourceText, index);
     if (edit.ok) edits.push(edit.value);
     else reasonCodes.push(...edit.reasonCodes);
   }
+  const deduped = dedupeSourceEdits(edits);
+  reasonCodes.push(...validateSourceEdits(deduped.edits));
   const blocked = reasonCodes.length > 0;
-  const sourceText = blocked ? undefined : applySourceEdits(headSourceText, edits);
+  const sourceText = blocked ? undefined : applySourceEdits(headSourceText, deduped.edits);
   const core = {
     kind: 'frontier.lang.semanticEditProjection',
     version: 1,
@@ -31,9 +33,9 @@ export function projectSemanticEditScriptToSource(input = {}) {
     workerHash: script.workerHash,
     headHash: script.headHash,
     projectedHash: sourceText === undefined ? undefined : hashSemanticValue(sourceText),
-    appliedOperations: blocked ? [] : edits.map((edit) => edit.operationId),
-    skippedOperations: blocked ? (script.operations ?? []).map((operation) => operation.id) : [],
-    edits: blocked ? [] : edits.map(projectionEditRecord),
+    appliedOperations: blocked ? [] : deduped.edits.map((edit) => edit.operationId),
+    skippedOperations: blocked ? (script.operations ?? []).map((operation) => operation.id) : deduped.skippedOperationIds,
+    edits: blocked ? [] : deduped.edits.map(projectionEditRecord),
     sourceText,
     admission: {
       status: blocked ? 'blocked' : 'auto-merge-candidate',
@@ -45,20 +47,24 @@ export function projectSemanticEditScriptToSource(input = {}) {
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
       editCount: edits.length,
-      appliedEditCount: edits.filter((edit) => !edit.alreadyApplied).length,
-      alreadyAppliedEditCount: edits.filter((edit) => edit.alreadyApplied).length,
+      appliedEditCount: deduped.edits.filter((edit) => !edit.alreadyApplied).length,
+      alreadyAppliedEditCount: deduped.edits.filter((edit) => edit.alreadyApplied).length,
+      dedupedEditCount: deduped.skippedOperationIds.length,
       ...input.metadata
     })
   };
   return { ...core, hash: hashSemanticValue(core) };
 }
 
-function sourceEditForOperation(operation, workerSourceText, headSourceText) {
+function sourceEditForOperation(operation, workerSourceText, headSourceText, order) {
   const identity = projectionIdentity(operation);
   if (operation.status === 'already-applied') {
-    return { ok: true, value: { ...identity, operationId: operation.id, start: 0, end: 0, replacement: '', current: '', alreadyApplied: true } };
+    return { ok: true, value: { ...identity, operationId: operation.id, order, start: 0, end: 0, replacement: '', current: '', alreadyApplied: true } };
   }
   if (operation.status !== 'portable') return { ok: false, reasonCodes: [`operation-not-portable:${operation.id}`] };
+  if (operation.changeKind === 'added' || String(operation.kind ?? '').startsWith('add')) {
+    return insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order);
+  }
   const workerOffsets = spanOffsets(workerSourceText, operation.spans?.worker);
   const headOffsets = spanOffsets(headSourceText, operation.spans?.head ?? operation.spans?.base ?? operation.anchor?.sourceSpan);
   const reasons = [];
@@ -79,13 +85,46 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText) {
     ok: true,
     value: {
       operationId: operation.id,
+      order,
       ...identity,
+      editKind: 'replace',
       start: headOffsets.start,
       end: headOffsets.end,
       workerStart: workerOffsets.start,
       workerEnd: workerOffsets.end,
       replacement,
       current
+    }
+  };
+}
+
+function insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order) {
+  const workerOffsets = spanOffsets(workerSourceText, operation.spans?.worker);
+  const reasons = [];
+  if (!workerOffsets) reasons.push(`worker-span-not-resolvable:${operation.id}`);
+  const insertion = insertionOffset(headSourceText, operation.insertion);
+  if (!insertion.ok) reasons.push(...insertion.reasonCodes.map((reason) => `${reason}:${operation.id}`));
+  if (reasons.length) return { ok: false, reasonCodes: reasons };
+  const spanText = workerSourceText.slice(workerOffsets.start, workerOffsets.end);
+  if (operation.hashes?.workerTextHash && hashSemanticValue(spanText) !== operation.hashes.workerTextHash) {
+    reasons.push(`worker-span-hash-mismatch:${operation.id}`);
+  }
+  if (reasons.length) return { ok: false, reasonCodes: reasons };
+  return {
+    ok: true,
+    value: {
+      operationId: operation.id,
+      order,
+      ...identity,
+      editKind: 'insert',
+      insertion: operation.insertion,
+      start: insertion.offset,
+      end: insertion.offset,
+      workerStart: workerOffsets.start,
+      workerEnd: workerOffsets.end,
+      replacement: insertionReplacement(spanText, headSourceText, insertion.offset),
+      replacementSpanText: spanText,
+      current: ''
     }
   };
 }
@@ -103,6 +142,7 @@ function projectionEditRecord(edit) {
     operationId: edit.operationId,
     status: edit.alreadyApplied ? 'already-applied' : 'applied',
     kind: edit.kind,
+    editKind: edit.editKind,
     changeKind: edit.changeKind,
     anchorKey: edit.anchorKey,
     conflictKey: edit.conflictKey,
@@ -133,6 +173,11 @@ function projectionEditRecord(edit) {
     replacementBytes: edit.replacement.length,
     deletedTextHash,
     replacementTextHash,
+    replacementSpanTextHash: hashSemanticValue(edit.replacementSpanText ?? edit.replacement),
+    insertionMode: edit.insertion?.mode,
+    insertionAnchorKey: edit.insertion?.anchorKey,
+    insertionAnchorSymbolName: edit.insertion?.anchorSymbolName,
+    insertionAnchorSymbolKind: edit.insertion?.anchorSymbolKind,
     replacementText: edit.replacement
   });
 }
@@ -164,8 +209,40 @@ function semanticEditIdentity(operation) {
 
 function applySourceEdits(sourceText, edits) {
   return edits.filter((edit) => !edit.alreadyApplied)
-    .sort((left, right) => right.start - left.start)
+    .sort(sourceEditSort)
     .reduce((text, edit) => text.slice(0, edit.start) + edit.replacement + text.slice(edit.end), sourceText);
+}
+
+function dedupeSourceEdits(edits) {
+  const seen = new Map();
+  const result = [];
+  const skippedOperationIds = [];
+  for (const edit of edits) {
+    const key = duplicateEditKey(edit);
+    if (key && seen.has(key)) {
+      skippedOperationIds.push(edit.operationId);
+      continue;
+    }
+    if (key) seen.set(key, edit.operationId);
+    result.push(edit);
+  }
+  return { edits: result, skippedOperationIds };
+}
+
+function duplicateEditKey(edit) {
+  if (edit.editKind !== 'insert') return undefined;
+  return [
+    'insert',
+    edit.start,
+    edit.end,
+    edit.insertion?.mode,
+    edit.insertion?.anchorKey,
+    hashSemanticValue(edit.replacementSpanText ?? edit.replacement)
+  ].join(':');
+}
+
+function sourceEditSort(left, right) {
+  return right.start - left.start || right.end - left.end || (right.order ?? 0) - (left.order ?? 0);
 }
 
 function projectedSourcePath(script, edits) {
@@ -187,6 +264,48 @@ function spanOffsets(sourceText, span) {
   const lineEnd = lineStarts[endLine] === undefined ? sourceText.length : lineStarts[endLine] - 1;
   const endColumn = span.endColumn === undefined ? lineEnd - endLineStart : Math.max(1, span.endColumn) - 1;
   return { start: start + startColumn, end: endLineStart + endColumn };
+}
+
+function insertionOffset(sourceText, insertion) {
+  if (typeof sourceText !== 'string') return { ok: false, reasonCodes: ['missing-head-source-text'] };
+  const mode = insertion?.mode;
+  if (mode === 'file-start') return { ok: true, offset: 0 };
+  if (mode === 'file-end') return { ok: true, offset: sourceText.length };
+  const range = spanOffsets(sourceText, insertion?.headSpan);
+  if (!range) return { ok: false, reasonCodes: ['insertion-anchor-not-resolvable'] };
+  if (mode === 'before') return { ok: true, offset: range.start };
+  if (mode === 'after') return { ok: true, offset: afterLineOffset(sourceText, range.end) };
+  return { ok: false, reasonCodes: ['insertion-mode-unsupported'] };
+}
+
+function insertionReplacement(text, sourceText, offset) {
+  let replacement = String(text ?? '');
+  if (offset > 0 && sourceText[offset - 1] !== '\n') replacement = `\n${replacement}`;
+  if (offset < sourceText.length && !replacement.endsWith('\n')) replacement += '\n';
+  if (offset === sourceText.length && sourceText && !sourceText.endsWith('\n')) replacement = `\n${replacement}`;
+  if (offset === sourceText.length && !replacement.endsWith('\n')) replacement += '\n';
+  return replacement;
+}
+
+function afterLineOffset(sourceText, offset) {
+  return sourceText[offset] === '\n' ? offset + 1 : offset;
+}
+
+function validateSourceEdits(edits) {
+  const reasons = [];
+  const ordered = edits.filter((edit) => !edit.alreadyApplied).sort((left, right) => left.start - right.start || left.end - right.end);
+  for (let index = 1; index < ordered.length; index += 1) {
+    const previous = ordered[index - 1];
+    const current = ordered[index];
+    if (editsOverlap(previous, current)) reasons.push(`source-edit-overlap:${previous.operationId}:${current.operationId}`);
+  }
+  return uniqueStrings(reasons);
+}
+
+function editsOverlap(left, right) {
+  if (left.start === left.end) return right.start < left.start && left.start < right.end;
+  if (right.start === right.end) return left.start < right.start && right.start < left.end;
+  return left.start < right.end && right.start < left.end;
 }
 
 function compactRecord(value) {

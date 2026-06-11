@@ -28,39 +28,32 @@ export interface SemanticEditScriptOperation {
   readonly kind: string;
   readonly changeKind?: string;
   readonly anchor: {
-    readonly key?: string;
-    readonly conflictKey?: string;
-    readonly regionId?: string;
-    readonly regionKind?: string;
-    readonly granularity?: string;
+    readonly key?: string; readonly conflictKey?: string; readonly regionId?: string;
+    readonly regionKind?: string; readonly granularity?: string;
     readonly language?: FrontierSourceLanguage | string;
-    readonly sourcePath?: string;
-    readonly symbolId?: string;
-    readonly symbolName?: string;
-    readonly symbolKind?: string;
+    readonly sourcePath?: string; readonly symbolId?: string; readonly symbolName?: string; readonly symbolKind?: string;
     readonly sourceSpan?: SourceSpan;
+  };
+  readonly insertion?: {
+    readonly mode?: 'before' | 'after' | 'file-start' | 'file-end' | string;
+    readonly anchorKey?: string; readonly anchorSymbolId?: string; readonly anchorSymbolName?: string; readonly anchorSymbolKind?: string;
+    readonly baseSpan?: SourceSpan; readonly workerAnchorSpan?: SourceSpan; readonly headSpan?: SourceSpan; readonly sourcePath?: string;
+    readonly insertedSymbolId?: string; readonly insertedSymbolName?: string; readonly insertedSymbolKind?: string;
+    readonly insertedSourceSpan?: SourceSpan; readonly insertedSourcePath?: string;
+    readonly reasonCodes?: readonly string[];
   };
   readonly semanticKey?: string;
   readonly semanticIdentityHash?: string;
   readonly sourceIdentityHash?: string;
   readonly operationContentHash?: string;
   readonly spans?: {
-    readonly base?: SourceSpan;
-    readonly worker?: SourceSpan;
-    readonly head?: SourceSpan;
+    readonly base?: SourceSpan; readonly worker?: SourceSpan; readonly head?: SourceSpan;
   };
   readonly hashes?: {
-    readonly baseSourceHash?: string;
-    readonly workerSourceHash?: string;
-    readonly headSourceHash?: string;
-    readonly baseSpanHash?: string;
-    readonly workerSpanHash?: string;
-    readonly headSpanHash?: string;
-    readonly baseTextHash?: string;
-    readonly workerTextHash?: string;
-    readonly headTextHash?: string;
-    readonly beforeSignatureHash?: string;
-    readonly afterSignatureHash?: string;
+    readonly baseSourceHash?: string; readonly workerSourceHash?: string; readonly headSourceHash?: string;
+    readonly baseSpanHash?: string; readonly workerSpanHash?: string; readonly headSpanHash?: string;
+    readonly baseTextHash?: string; readonly workerTextHash?: string; readonly headTextHash?: string;
+    readonly beforeSignatureHash?: string; readonly afterSignatureHash?: string;
   };
   readonly status: SemanticEditScriptOperationStatus;
   readonly reanchor?: {
@@ -135,6 +128,7 @@ export interface SemanticEditProjectionEdit {
   readonly operationId?: string;
   readonly status: 'applied' | 'already-applied';
   readonly kind?: string;
+  readonly editKind?: 'replace' | 'insert' | string;
   readonly changeKind?: string;
   readonly anchorKey?: string;
   readonly conflictKey?: string;
@@ -162,6 +156,11 @@ export interface SemanticEditProjectionEdit {
   readonly replacementBytes: number;
   readonly deletedTextHash?: string;
   readonly replacementTextHash?: string;
+  readonly replacementSpanTextHash?: string;
+  readonly insertionMode?: string;
+  readonly insertionAnchorKey?: string;
+  readonly insertionAnchorSymbolName?: string;
+  readonly insertionAnchorSymbolKind?: string;
   readonly replacementText?: string;
 }
 
@@ -206,6 +205,7 @@ export interface SemanticEditReplayEdit {
   readonly semanticIdentityHash?: string;
   readonly sourceIdentityHash?: string;
   readonly editContentHash?: string;
+  readonly editKind?: 'replace' | 'insert' | string;
   readonly sourcePath?: string;
   readonly symbolName?: string;
   readonly symbolKind?: string;

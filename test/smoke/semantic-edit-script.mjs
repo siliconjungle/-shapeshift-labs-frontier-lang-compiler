@@ -171,3 +171,63 @@ assert.equal(movedProjection.edits[0].originalSourcePath, 'src/runtime.ts');
 assert.equal(movedProjection.edits[0].targetSourcePath, 'src/runtime-core.ts');
 assert.equal(movedProjection.edits[0].targetAnchorKey, movedHead.operations[0].reanchor.toAnchorKey);
 assert.equal(movedProjection.edits[0].operationContentHash, movedHead.operations[0].operationContentHash);
+
+const insertionBase = 'export function existing() { return 1; }\n';
+const insertionWorker = "import { helper } from './helper.js';\nexport function existing() { return 1; }\nexport function added() { return helper(); }\n";
+const insertionScript = createSemanticEditScript({
+  id: 'semantic_edit_insertions',
+  language: 'typescript',
+  sourcePath: 'src/runtime.ts',
+  baseSourceText: insertionBase,
+  workerSourceText: insertionWorker,
+  headSourceText: insertionBase,
+  generatedAt: 50
+});
+assert.equal(insertionScript.admission.status, 'auto-merge-candidate');
+assert.equal(insertionScript.summary.byKind.addImport >= 1, true);
+assert.equal(insertionScript.summary.byKind.addBody, 1);
+const addImportOperation = insertionScript.operations.find((operation) => operation.kind === 'addImport');
+const addBodyOperation = insertionScript.operations.find((operation) => operation.kind === 'addBody');
+assert.equal(addImportOperation.insertion.mode, 'before');
+assert.equal(addImportOperation.insertion.anchorSymbolName, 'existing');
+assert.equal(addBodyOperation.insertion.mode, 'after');
+assert.equal(addBodyOperation.insertion.anchorSymbolName, 'existing');
+
+const insertionProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_insertions_projection',
+  script: insertionScript,
+  workerSourceText: insertionWorker,
+  headSourceText: insertionBase
+});
+assert.equal(insertionProjection.status, 'projected');
+assert.equal(insertionProjection.sourceText, insertionWorker);
+assert.equal(insertionProjection.edits.filter((edit) => edit.editKind === 'insert').length, 2);
+assert.equal(insertionProjection.edits.some((edit) => edit.insertionMode === 'before'), true);
+assert.equal(insertionProjection.edits.some((edit) => edit.insertionMode === 'after'), true);
+assert.equal(insertionProjection.edits.every((edit) => edit.replacementSpanTextHash), true);
+
+const insertionReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_insertions_replay',
+  projection: insertionProjection,
+  currentSourceText: insertionBase
+});
+assert.equal(insertionReplay.status, 'accepted-clean');
+assert.equal(insertionReplay.outputSourceText, insertionWorker);
+assert.equal(insertionReplay.edits.filter((edit) => edit.editKind === 'insert').length, 2);
+assert.equal(insertionReplay.edits.some((edit) => edit.reasonCodes.includes('current-insertion-anchor')), true);
+
+const shiftedInsertionReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_shifted_insertions_replay',
+  projection: insertionProjection,
+  currentSourceText: '\n\n' + insertionBase
+});
+assert.equal(shiftedInsertionReplay.status, 'accepted-clean');
+assert.equal(shiftedInsertionReplay.outputSourceText, '\n\n' + insertionWorker);
+
+const alreadyAppliedInsertionReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_already_applied_insertions_replay',
+  projection: insertionProjection,
+  currentSourceText: insertionWorker
+});
+assert.equal(alreadyAppliedInsertionReplay.status, 'already-applied');
+assert.equal(alreadyAppliedInsertionReplay.outputSourceText, insertionWorker);

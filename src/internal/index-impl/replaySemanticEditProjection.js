@@ -53,6 +53,7 @@ export function replaySemanticEditProjection(input = {}) {
 function replayProjectionEdit(edit, context) {
   if (edit.status === 'already-applied') return replayEditRecord(edit, 'already-applied', undefined, ['projection-edit-already-applied']);
   if (typeof edit.replacementText !== 'string') return replayEditRecord(edit, 'blocked', undefined, ['missing-replacement-text']);
+  if (edit.editKind === 'insert') return replayInsertionEdit(edit, context);
   const offset = checkRange(edit, { start: edit.headStart, end: edit.headEnd }, context.currentSourceText, 'head-offset');
   if (offset) return replayEditRecord(edit, offset.status, offset.range, [offset.reason]);
   const symbol = findCurrentSymbol(edit, context.currentSymbols);
@@ -64,13 +65,27 @@ function replayProjectionEdit(edit, context) {
   ]);
 }
 
+function replayInsertionEdit(edit, context) {
+  const inserted = findCurrentSymbol(edit, context.currentSymbols);
+  const insertedRange = spanOffsets(context.currentSourceText, inserted?.sourceSpan);
+  const already = checkRange(edit, insertedRange, context.currentSourceText, 'current-inserted-symbol');
+  if (already?.status === 'already-applied') return replayEditRecord(edit, 'already-applied', already.range, [already.reason]);
+  const anchor = findInsertionAnchorSymbol(edit, context.currentSymbols);
+  const range = insertionRange(edit, anchor, context.currentSourceText);
+  if (range) return replayEditRecord(edit, 'applied', range, [anchor ? 'current-insertion-anchor' : `current-${edit.insertionMode}`]);
+  return replayEditRecord(edit, anchor ? 'conflict' : 'stale', undefined, [
+    anchor ? 'current-insertion-anchor-unusable' : 'current-insertion-anchor-missing'
+  ]);
+}
+
 function checkRange(edit, range, sourceText, label) {
   if (!range || range.end < range.start) return undefined;
   const current = sourceText.slice(range.start, range.end);
   const currentHash = hashSemanticValue(current);
-  if (edit.deletedTextHash && currentHash === edit.deletedTextHash) return { status: 'applied', range, reason: `${label}-matches-deleted` };
+  if (edit.replacementSpanTextHash && currentHash === edit.replacementSpanTextHash) return { status: 'already-applied', range, reason: `${label}-matches-replacement-span` };
   if (edit.replacementTextHash && currentHash === edit.replacementTextHash) return { status: 'already-applied', range, reason: `${label}-matches-replacement` };
   if (current === edit.replacementText) return { status: 'already-applied', range, reason: `${label}-matches-replacement-text` };
+  if (edit.deletedTextHash && currentHash === edit.deletedTextHash) return { status: 'applied', range, reason: `${label}-matches-deleted` };
   return undefined;
 }
 
@@ -81,6 +96,7 @@ function replayEditRecord(edit, status, range, reasonCodes) {
     semanticIdentityHash: edit.semanticIdentityHash,
     sourceIdentityHash: edit.sourceIdentityHash,
     editContentHash: edit.editContentHash,
+    editKind: edit.editKind,
     sourcePath: edit.targetSourcePath ?? edit.sourcePath,
     symbolName: edit.targetSymbolName ?? edit.symbolName,
     symbolKind: edit.targetSymbolKind ?? edit.symbolKind,
@@ -113,6 +129,24 @@ function findCurrentSymbol(edit, symbols) {
   const name = edit.targetSymbolName ?? edit.symbolName;
   const kind = edit.targetSymbolKind ?? edit.symbolKind;
   return symbols.find((symbol) => symbol.name === name && (!kind || symbol.kind === kind));
+}
+
+function findInsertionAnchorSymbol(edit, symbols) {
+  return symbols.find((symbol) => [symbol.ownershipKey, symbol.key, symbol.id].some((key) => key && key === edit.insertionAnchorKey))
+    ?? symbols.find((symbol) => symbol.name === edit.insertionAnchorSymbolName && (!edit.insertionAnchorSymbolKind || symbol.kind === edit.insertionAnchorSymbolKind));
+}
+
+function insertionRange(edit, anchor, sourceText) {
+  if (edit.insertionMode === 'file-start') return { start: 0, end: 0 };
+  if (edit.insertionMode === 'file-end') return { start: sourceText.length, end: sourceText.length };
+  const anchorRange = spanOffsets(sourceText, anchor?.sourceSpan);
+  if (!anchorRange) return undefined;
+  if (edit.insertionMode === 'before') return { start: anchorRange.start, end: anchorRange.start };
+  if (edit.insertionMode === 'after') {
+    const offset = sourceText[anchorRange.end] === '\n' ? anchorRange.end + 1 : anchorRange.end;
+    return { start: offset, end: offset };
+  }
+  return undefined;
 }
 
 function replayStatus(reasonCodes, edits, projection) {

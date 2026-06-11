@@ -12,6 +12,7 @@ import {
   semanticEditAdmission,
   summarizeSemanticEditOperations
 } from './semanticEditScriptClassification.js';
+import { semanticEditInsertionAnchor } from './semanticEditInsertionAnchors.js';
 import { sourceTextForSpan } from './sourceTextForSpan.js';
 import { semanticEditIdentityFields, semanticEditOperationContentHash } from './semanticEditIdentityRecords.js';
 
@@ -168,10 +169,11 @@ function semanticEditOperation(region, index, context, input) {
   const identityRecord = semanticEditIdentityRecord({ kind, region, anchor });
   const identity = semanticEditIdentityFields(identityRecord);
   return compactRecord({
-    id: `semantic_edit_op_${idFragment(firstString(input.id, anchorKey, index))}`,
+    id: `semantic_edit_op_${idFragment([input.id ?? 'semantic_edit', anchorKey, index].join(':'))}`,
     kind,
     changeKind: region.changeKind,
     anchor,
+    insertion: semanticEditInsertionAnchor(region, context),
     ...identity,
     spans: compactRecord({
       base: baseSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.before?.sourceSpan,

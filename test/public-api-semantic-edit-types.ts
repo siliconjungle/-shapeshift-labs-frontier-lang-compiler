@@ -16,6 +16,7 @@ typedSemanticEditScript.operations[0]?.semanticKey satisfies string | undefined;
 typedSemanticEditScript.operations[0]?.semanticIdentityHash satisfies string | undefined;
 typedSemanticEditScript.operations[0]?.operationContentHash satisfies string | undefined;
 typedSemanticEditScript.operations[0]?.spans?.worker satisfies object | undefined;
+typedSemanticEditScript.operations[0]?.insertion?.mode satisfies string | undefined;
 
 const semanticEditProjection = compilerApi.projectSemanticEditScriptToSource({
   script: semanticEditScript,
@@ -33,6 +34,9 @@ typedSemanticEditProjectionEdit?.semanticKey satisfies string | undefined;
 typedSemanticEditProjectionEdit?.semanticIdentityHash satisfies string | undefined;
 typedSemanticEditProjectionEdit?.operationContentHash satisfies string | undefined;
 typedSemanticEditProjectionEdit?.editContentHash satisfies string | undefined;
+typedSemanticEditProjectionEdit?.editKind satisfies string | undefined;
+typedSemanticEditProjectionEdit?.replacementSpanTextHash satisfies string | undefined;
+typedSemanticEditProjectionEdit?.insertionAnchorKey satisfies string | undefined;
 
 const semanticEditReplay = compilerApi.replaySemanticEditProjection({
   projection: semanticEditProjection,
@@ -44,6 +48,7 @@ typedSemanticEditReplay.admission.action satisfies string;
 typedSemanticEditReplay.admission.autoMergeClaim satisfies false;
 typedSemanticEditReplay.admission.semanticEquivalenceClaim satisfies false;
 typedSemanticEditReplay.edits[0]?.status satisfies string | undefined;
+typedSemanticEditReplay.edits[0]?.editKind satisfies string | undefined;
 typedSemanticEditReplay.outputSourceText satisfies string | undefined;
 
 void typedSemanticEditScript;
