@@ -1,5 +1,5 @@
 import { assert } from './helpers.mjs';
-import { createSemanticEditScript, projectSemanticEditScriptToSource } from './compiler-api.mjs';
+import { createSemanticEditScript, projectSemanticEditScriptToSource, replaySemanticEditProjection } from './compiler-api.mjs';
 
 const baseSource = 'export function step(value: number) { return value + 1; }\n';
 const workerSource = 'export function step(value: number) { return value + 2; }\n';
@@ -73,6 +73,51 @@ assert.ok(cleanProjection.edits[0].replacementTextHash);
 assert.equal(cleanProjection.admission.status, 'auto-merge-candidate');
 assert.equal(cleanProjection.admission.autoMergeClaim, false);
 assert.equal(cleanProjection.admission.semanticEquivalenceClaim, false);
+
+const cleanReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_clean_replay',
+  projection: cleanProjection,
+  currentSourceText: baseSource
+});
+assert.equal(cleanReplay.kind, 'frontier.lang.semanticEditReplay');
+assert.equal(cleanReplay.status, 'accepted-clean');
+assert.equal(cleanReplay.outputSourceText, workerSource);
+assert.equal(cleanReplay.admission.action, 'apply');
+assert.equal(cleanReplay.admission.autoApplyCandidate, true);
+assert.equal(cleanReplay.admission.autoMergeClaim, false);
+assert.equal(cleanReplay.admission.semanticEquivalenceClaim, false);
+assert.deepEqual(cleanReplay.appliedOperations, [cleanHead.operations[0].id]);
+assert.equal(cleanReplay.edits[0].reasonCodes.includes('head-offset-matches-deleted'), true);
+
+const shiftedBaseSource = '\n\n' + baseSource;
+const shiftedWorkerSource = '\n\n' + workerSource;
+const shiftedReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_shifted_replay',
+  projection: cleanProjection,
+  currentSourceText: shiftedBaseSource
+});
+assert.equal(shiftedReplay.status, 'accepted-clean');
+assert.equal(shiftedReplay.outputSourceText, shiftedWorkerSource);
+assert.equal(shiftedReplay.edits[0].reasonCodes.includes('current-symbol-anchor-matches-deleted'), true);
+assert.equal(shiftedReplay.edits[0].reasonCodes.includes('offset-reanchored-by-symbol'), true);
+
+const alreadyAppliedReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_already_applied_replay',
+  projection: cleanProjection,
+  currentSourceText: workerSource
+});
+assert.equal(alreadyAppliedReplay.status, 'already-applied');
+assert.equal(alreadyAppliedReplay.outputSourceText, workerSource);
+assert.equal(alreadyAppliedReplay.admission.action, 'skip');
+
+const conflictReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_conflict_replay',
+  projection: cleanProjection,
+  currentSourceText: 'export function step(value: number) { return value + 3; }\n'
+});
+assert.equal(conflictReplay.status, 'conflict');
+assert.equal(conflictReplay.outputSourceText, undefined);
+assert.equal(conflictReplay.summary.conflicts, 1);
 
 const conflictingHead = createSemanticEditScript({
   id: 'semantic_edit_conflicting_head',

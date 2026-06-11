@@ -191,12 +191,88 @@ export interface SemanticEditProjection {
   readonly metadata?: Record<string, unknown>;
 }
 
+export type SemanticEditReplayStatus =
+  | 'accepted-clean'
+  | 'already-applied'
+  | 'conflict'
+  | 'stale'
+  | 'blocked'
+  | 'needs-port'
+  | 'evidence-only';
+
+export interface SemanticEditReplayEdit {
+  readonly operationId?: string;
+  readonly semanticKey?: string;
+  readonly semanticIdentityHash?: string;
+  readonly sourceIdentityHash?: string;
+  readonly editContentHash?: string;
+  readonly sourcePath?: string;
+  readonly symbolName?: string;
+  readonly symbolKind?: string;
+  readonly status: 'applied' | 'already-applied' | 'conflict' | 'stale' | 'blocked' | string;
+  readonly start?: number;
+  readonly end?: number;
+  readonly replacementBytes?: number;
+  readonly replacementText?: string;
+  readonly reasonCodes: readonly string[];
+}
+
+export interface SemanticEditReplay {
+  readonly kind: 'frontier.lang.semanticEditReplay';
+  readonly version: 1;
+  readonly schema: 'frontier.lang.semanticEditReplay.v1';
+  readonly id: string;
+  readonly hash: string;
+  readonly projectionId?: string;
+  readonly scriptId?: string;
+  readonly sourcePath?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly currentHash?: string;
+  readonly projectedHash?: string;
+  readonly outputHash?: string;
+  readonly status: SemanticEditReplayStatus;
+  readonly edits: readonly SemanticEditReplayEdit[];
+  readonly appliedOperations: readonly string[];
+  readonly skippedOperations: readonly string[];
+  readonly admission: {
+    readonly status: SemanticEditReplayStatus;
+    readonly action: 'apply' | 'skip' | 'rerun-semantic-import' | 'human-review' | 'block' | string;
+    readonly reviewRequired: boolean;
+    readonly autoApplyCandidate: boolean;
+    readonly autoMergeClaim: false;
+    readonly semanticEquivalenceClaim: false;
+    readonly reasonCodes: readonly string[];
+  };
+  readonly outputSourceText?: string;
+  readonly summary: {
+    readonly edits: number;
+    readonly applied: number;
+    readonly alreadyApplied: number;
+    readonly conflicts: number;
+    readonly stale: number;
+    readonly blocked: number;
+    readonly reasonCodes: readonly string[];
+  };
+  readonly metadata?: Record<string, unknown>;
+}
+
 export interface ProjectSemanticEditScriptToSourceOptions {
   readonly id?: string;
   readonly script: SemanticEditScript;
   readonly workerSourceText: string;
   readonly headSourceText: string;
   readonly headSourcePath?: string;
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface ReplaySemanticEditProjectionOptions {
+  readonly id?: string;
+  readonly projection: SemanticEditProjection;
+  readonly currentSourceText: string;
+  readonly currentSourcePath?: string;
+  readonly currentSourceHash?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly parser?: string;
   readonly metadata?: Record<string, unknown>;
 }
 
@@ -229,3 +305,4 @@ export interface CreateSemanticEditScriptOptions {
 export declare const SemanticEditScriptAdmissionStatuses: readonly SemanticEditScriptAdmissionStatus[];
 export declare function createSemanticEditScript(input?: CreateSemanticEditScriptOptions): SemanticEditScript;
 export declare function projectSemanticEditScriptToSource(input: ProjectSemanticEditScriptToSourceOptions): SemanticEditProjection;
+export declare function replaySemanticEditProjection(input: ReplaySemanticEditProjectionOptions): SemanticEditReplay;

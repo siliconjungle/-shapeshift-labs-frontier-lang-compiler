@@ -100,6 +100,7 @@ for (const requiredExport of [
   'importNativeSource',
   'importNativeProject',
   'renderTargetAstWithSourceMap',
+  'replaySemanticEditProjection',
   'runNativeTargetProjectionAdapter'
 ]) {
   assert.equal(publicRuntimeExports.includes(requiredExport), true, `missing public export ${requiredExport}`);

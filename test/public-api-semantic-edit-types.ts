@@ -34,6 +34,19 @@ typedSemanticEditProjectionEdit?.semanticIdentityHash satisfies string | undefin
 typedSemanticEditProjectionEdit?.operationContentHash satisfies string | undefined;
 typedSemanticEditProjectionEdit?.editContentHash satisfies string | undefined;
 
+const semanticEditReplay = compilerApi.replaySemanticEditProjection({
+  projection: semanticEditProjection,
+  currentSourceText: 'export function run() { return 1; }\n'
+});
+const typedSemanticEditReplay: compilerApi.SemanticEditReplay = semanticEditReplay;
+typedSemanticEditReplay.status satisfies compilerApi.SemanticEditReplayStatus;
+typedSemanticEditReplay.admission.action satisfies string;
+typedSemanticEditReplay.admission.autoMergeClaim satisfies false;
+typedSemanticEditReplay.admission.semanticEquivalenceClaim satisfies false;
+typedSemanticEditReplay.edits[0]?.status satisfies string | undefined;
+typedSemanticEditReplay.outputSourceText satisfies string | undefined;
+
 void typedSemanticEditScript;
 void typedSemanticEditProjection;
 void typedSemanticEditProjectionEdit;
+void typedSemanticEditReplay;

@@ -75,6 +75,7 @@ export {
   ProjectionTargetLossClasses,
   normalizeCompileTarget,
   projectSemanticEditScriptToSource,
+  replaySemanticEditProjection,
   projectNativeImportToSource,
   projectFrontierAst,
   readUniversalAstJson,
