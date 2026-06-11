@@ -1,4 +1,5 @@
 import{idFragment,normalizeSemanticMergeReadiness,uniqueStrings}from'../../native-import-utils.js';
+import{createSemanticPatchBundleAdmission}from'./semanticPatchBundleAdmission.js';
 import{normalizeSemanticTransformIdentityRecords,semanticTransformInputs,semanticTransformRecordIndex,semanticTransformSummary}from'./semanticTransformIdentityRecords.js';
 
 export const SemanticPatchBundleAdmissionStatuses=Object.freeze(['proposed','queued','admitted','needs-review','blocked','rejected']);
@@ -42,7 +43,7 @@ export function createSemanticPatchBundleRecord(input={},options={}){
     ...changedRegions.flatMap((region)=>[region.conflictKey,...array(region.admission?.conflictKeys)]),
     ...(source.metadata?.semanticMergeConflictSummary?.conflictKeys??[])
   ]);
-  const admission=normalizeAdmission(options.admission??source.admission,{readiness,conflictKeys,source,mergeCandidate});
+  const admission=createSemanticPatchBundleAdmission(options.admission??source.admission,{readiness,conflictKeys,source,mergeCandidate,semanticTransformIndex,semanticTransformIdentities});
   const id=options.id??(source.kind==='frontier.lang.semanticPatchBundleRecord'?source.id:undefined)
     ??`semantic_patch_bundle_${idFragment(firstString(source.id,patchId,mergeCandidateId,source.sourcePath,source.language,'record'))}`;
   const language=options.language??source.language??mergeCandidate?.language??sources.find((item)=>item.language)?.language;
@@ -184,23 +185,6 @@ function normalizeSourceMapLinks(links){
   return result;
 }
 
-function normalizeAdmission(input={},context){
-  const readiness=normalizeSemanticMergeReadiness(input.readiness??context.readiness)??input.readiness??context.readiness;
-  const status=input.status??admissionStatusForReadiness(readiness);
-  return compactRecord({
-    status,
-    readiness,
-    reviewRequired:input.reviewRequired??status!=='admitted',
-    autoMergeClaim:false,
-    reasonCodes:uniqueStrings([...strings(input.reasonCodes),...strings(context.source.reasons),...strings(context.mergeCandidate?.reasons)]),
-    conflictKeys:uniqueStrings([...strings(input.conflictKeys),...context.conflictKeys]),
-    admittedAt:input.admittedAt,
-    reviewerId:input.reviewerId,
-    evidenceIds:uniqueStrings(input.evidenceIds),
-    metadata:input.metadata
-  });
-}
-
 function recordIndex(parts){
   const semanticEditIndex=parts.semanticEditIndex??semanticEditRecordIndex([],[]);
   const semanticTransformIndex=parts.semanticTransformIndex??semanticTransformRecordIndex([],parts);
@@ -231,6 +215,8 @@ function recordIndex(parts){
     semanticTransformIdentityHashes:semanticTransformIndex.semanticTransformIdentityHashes,
     semanticTransformContentHashes:semanticTransformIndex.semanticTransformContentHashes,
     projectionIdentityHashes:semanticTransformIndex.projectionIdentityHashes,
+    semanticTransformReadinesses:semanticTransformIndex.semanticTransformReadinesses,
+    semanticTransformEvidenceIds:semanticTransformIndex.semanticTransformEvidenceIds,
     transformSourceLanguages:semanticTransformIndex.transformSourceLanguages,
     transformTargetLanguages:semanticTransformIndex.transformTargetLanguages,
     transformSourcePaths:semanticTransformIndex.transformSourcePaths,
@@ -273,6 +259,8 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.semanticTransformIdentityHash,query.semanticTransformIdentityHashes),index.semanticTransformIdentityHashes)
     &&matchAny(queryValues(query.semanticTransformContentHash,query.semanticTransformContentHashes),index.semanticTransformContentHashes)
     &&matchAny(queryValues(query.projectionIdentityHash,query.projectionIdentityHashes),index.projectionIdentityHashes)
+    &&matchAny(queryValues(query.semanticTransformReadiness,query.semanticTransformReadinesses),index.semanticTransformReadinesses)
+    &&matchAny(queryValues(query.semanticTransformEvidenceId,query.semanticTransformEvidenceIds),index.semanticTransformEvidenceIds)
     &&matchAny(queryValues(query.transformSourceLanguage,query.transformSourceLanguages),index.transformSourceLanguages)
     &&matchAny(queryValues(query.transformTargetLanguage,query.transformTargetLanguages),index.transformTargetLanguages)
     &&matchAny(queryValues(query.transformSourcePath,query.transformSourcePaths),index.transformSourcePaths)
@@ -281,7 +269,6 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.admissionStatus,query.admissionStatuses),index.admissionStatuses);
 }
 
-function admissionStatusForReadiness(readiness){return readiness==='blocked'?'blocked':readiness==='needs-review'?'needs-review':'proposed';}
 function semanticEditRecordIndex(scripts,projections,source={}){
   const operations=scripts.flatMap((script)=>array(script.operations));
   const edits=projections.flatMap((projection)=>array(projection.edits));

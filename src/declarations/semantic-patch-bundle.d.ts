@@ -81,12 +81,31 @@ export interface SemanticPatchBundleAdmission {
   readonly readiness: SemanticMergeReadiness | string;
   readonly reviewRequired: boolean;
   readonly autoMergeClaim: false;
+  readonly autoApplyCandidate?: boolean;
+  readonly transformAdmission?: SemanticPatchBundleTransformAdmission;
   readonly reasonCodes?: readonly string[];
   readonly conflictKeys?: readonly string[];
   readonly admittedAt?: number | string;
   readonly reviewerId?: string;
   readonly evidenceIds?: readonly string[];
   readonly metadata?: Record<string, unknown>;
+}
+
+export interface SemanticPatchBundleTransformAdmission {
+  readonly status: 'none' | 'ready' | 'needs-review' | 'blocked' | string;
+  readonly action: 'none' | 'admit' | 'review' | 'block' | string;
+  readonly readiness: SemanticMergeReadiness | string;
+  readonly crossLanguage?: boolean;
+  readonly reasonCodes?: readonly string[];
+  readonly transformIds?: readonly string[];
+  readonly transformKeys?: readonly string[];
+  readonly contentHashes?: readonly string[];
+  readonly projectionIdentityHashes?: readonly string[];
+  readonly sourceLanguages?: readonly string[];
+  readonly targetLanguages?: readonly string[];
+  readonly sourcePaths?: readonly string[];
+  readonly targetPaths?: readonly string[];
+  readonly evidenceIds?: readonly string[];
 }
 
 export interface SemanticPatchBundleRecordIndex {
@@ -116,6 +135,8 @@ export interface SemanticPatchBundleRecordIndex {
   readonly semanticTransformIdentityHashes: readonly string[];
   readonly semanticTransformContentHashes: readonly string[];
   readonly projectionIdentityHashes: readonly string[];
+  readonly semanticTransformReadinesses: readonly string[];
+  readonly semanticTransformEvidenceIds: readonly string[];
   readonly transformSourceLanguages: readonly string[];
   readonly transformTargetLanguages: readonly string[];
   readonly transformSourcePaths: readonly string[];
@@ -263,6 +284,10 @@ export interface SemanticPatchBundleRecordQuery {
   readonly semanticTransformContentHashes?: readonly string[];
   readonly projectionIdentityHash?: string | readonly string[];
   readonly projectionIdentityHashes?: readonly string[];
+  readonly semanticTransformReadiness?: string | readonly string[];
+  readonly semanticTransformReadinesses?: readonly string[];
+  readonly semanticTransformEvidenceId?: string | readonly string[];
+  readonly semanticTransformEvidenceIds?: readonly string[];
   readonly transformSourceLanguage?: string | readonly string[];
   readonly transformSourceLanguages?: readonly string[];
   readonly transformTargetLanguage?: string | readonly string[];

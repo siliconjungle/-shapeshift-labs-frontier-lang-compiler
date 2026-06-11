@@ -136,6 +136,23 @@ assert.equal(derivedTransforms[0].targetLanguage, 'rust');
 assert.equal(derivedTransforms[0].targetPath, 'src/counter-core.js');
 assert.equal(derivedTransforms[0].editContentHash, semanticEdit.editContentHash);
 
+const autoTransformBundle = createSemanticPatchBundleRecord(changeSet, {
+  id: 'bundle_counter_patch_transform_auto',
+  semanticEditProjections: [semanticEditProjection],
+  targetLanguage: 'rust',
+  evidenceIds: ['evidence_counter_transform_projection']
+});
+assert.equal(autoTransformBundle.admission.status, 'admitted');
+assert.equal(autoTransformBundle.admission.reviewRequired, false);
+assert.equal(autoTransformBundle.admission.autoApplyCandidate, true);
+assert.equal(autoTransformBundle.admission.autoMergeClaim, false);
+assert.equal(autoTransformBundle.admission.transformAdmission.action, 'admit');
+assert.equal(autoTransformBundle.admission.transformAdmission.crossLanguage, true);
+assert.equal(autoTransformBundle.admission.reasonCodes.includes('transform-auto-apply-candidate'), true);
+assert.equal(autoTransformBundle.admission.evidenceIds.includes('evidence_counter_transform_projection'), true);
+assert.equal(querySemanticPatchBundleRecords([autoTransformBundle], { semanticTransformReadiness: 'auto-merge-candidate' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([autoTransformBundle], { semanticTransformEvidenceId: 'evidence_counter_transform_projection' }).length, 1);
+
 const semanticTransform = createSemanticTransformIdentityRecord(semanticOperation, {
   id: 'counter_ts_to_rust_transform',
   sourceLanguage: 'typescript',

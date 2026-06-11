@@ -104,6 +104,8 @@ export function semanticTransformRecordIndex(records, source = {}) {
     semanticTransformIdentityHashes: uniqueStrings([...strings(source.semanticTransformIdentityHashes), ...strings(index.semanticTransformIdentityHashes), ...records.map((record) => record.transformIdentityHash)]),
     semanticTransformContentHashes: uniqueStrings([...strings(source.semanticTransformContentHashes), ...strings(index.semanticTransformContentHashes), ...records.map((record) => record.transformContentHash)]),
     projectionIdentityHashes: uniqueStrings([...strings(source.projectionIdentityHashes), ...strings(index.projectionIdentityHashes), ...records.map((record) => record.projectionIdentityHash)]),
+    semanticTransformReadinesses: uniqueStrings([...strings(source.semanticTransformReadinesses), ...strings(index.semanticTransformReadinesses), ...records.map((record) => record.readiness)]),
+    semanticTransformEvidenceIds: uniqueStrings([...strings(source.semanticTransformEvidenceIds), ...strings(index.semanticTransformEvidenceIds), ...records.flatMap((record) => record.evidenceIds)]),
     transformSourceLanguages: uniqueStrings([...strings(source.transformSourceLanguages), ...strings(index.transformSourceLanguages), ...records.map((record) => record.sourceLanguage)]),
     transformTargetLanguages: uniqueStrings([...strings(source.transformTargetLanguages), ...strings(index.transformTargetLanguages), ...records.map((record) => record.targetLanguage)]),
     transformSourcePaths: uniqueStrings([...strings(source.transformSourcePaths), ...strings(index.transformSourcePaths), ...records.map((record) => record.sourcePath)]),
@@ -119,6 +121,8 @@ export function semanticTransformSummary(index) {
     identityHashes: index.semanticTransformIdentityHashes,
     contentHashes: index.semanticTransformContentHashes,
     projectionIdentityHashes: index.projectionIdentityHashes,
+    readinesses: index.semanticTransformReadinesses,
+    evidenceIds: index.semanticTransformEvidenceIds,
     sourceLanguages: index.transformSourceLanguages,
     targetLanguages: index.transformTargetLanguages,
     targetPaths: index.transformTargetPaths
