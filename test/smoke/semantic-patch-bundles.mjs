@@ -8,6 +8,7 @@ import {
   diffNativeSources,
   projectSemanticEditScriptToSource,
   querySemanticPatchBundleRecords,
+  replaySemanticEditProjection,
   SemanticPatchBundleAdmissionStatuses
 } from './compiler-api.mjs';
 
@@ -100,26 +101,46 @@ const semanticEditProjection = projectSemanticEditScriptToSource({
   headSourceText: beforeSourceText,
   headSourcePath: 'src/counter-core.js'
 });
+const semanticEditReplay = replaySemanticEditProjection({
+  id: 'counter_patch_bundle_semantic_replay',
+  projection: semanticEditProjection,
+  currentSourceText: beforeSourceText,
+  currentSourcePath: 'src/counter-core.js'
+});
 const semanticBundle = createSemanticPatchBundleRecord(changeSet, {
   id: 'bundle_counter_patch_semantic_edit',
   semanticEditScripts: [semanticEditScript],
   semanticEditProjections: [semanticEditProjection],
+  semanticEditReplays: [semanticEditReplay],
   admission: { status: 'queued', readiness: changeSet.readiness }
 });
 const semanticOperation = semanticEditScript.operations[0];
 const semanticEdit = semanticEditProjection.edits[0];
 assert.equal(semanticBundle.semanticEditScriptIds.includes(semanticEditScript.id), true);
 assert.equal(semanticBundle.semanticEditProjectionIds.includes(semanticEditProjection.id), true);
+assert.equal(semanticBundle.semanticEditReplayIds.includes(semanticEditReplay.id), true);
 assert.equal(semanticBundle.index.semanticEditKeys.includes(semanticOperation.semanticKey), true);
 assert.equal(semanticBundle.index.operationContentHashes.includes(semanticOperation.operationContentHash), true);
 assert.equal(semanticBundle.index.editContentHashes.includes(semanticEdit.editContentHash), true);
+assert.equal(semanticBundle.index.semanticEditReplayStatuses.includes('accepted-clean'), true);
+assert.equal(semanticBundle.index.semanticEditReplayActions.includes('apply'), true);
+assert.equal(semanticBundle.index.semanticEditReplayOutputHashes.includes(semanticEditReplay.outputHash), true);
 assert.equal(semanticBundle.index.sourcePaths.includes('src/counter-core.js'), true);
 assert.equal(semanticBundle.summary.semanticEditScripts, 1);
 assert.equal(semanticBundle.summary.semanticEditProjections, 1);
+assert.equal(semanticBundle.summary.semanticEditReplays, 1);
 assert.equal(semanticBundle.summary.semanticEditProjectionEdits, 1);
+assert.equal(semanticBundle.summary.semanticEditReplayEdits, 1);
 assert.equal(semanticBundle.summary.semanticTransformIdentities, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditScriptId: semanticEditScript.id }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditProjectionId: semanticEditProjection.id }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditReplayId: semanticEditReplay.id }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditReplayStatus: 'accepted-clean' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditReplayAction: 'apply' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditReplayOutputHash: semanticEditReplay.outputHash }).length, 1);
+const { index: semanticBundleIndex, ...semanticBundleWithoutIndex } = semanticBundle;
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { semanticEditReplayStatus: 'accepted-clean' }).length, 1);
+void semanticBundleIndex;
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditKey: semanticOperation.semanticKey }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { operationContentHash: semanticOperation.operationContentHash }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { editContentHash: semanticEdit.editContentHash }).length, 1);

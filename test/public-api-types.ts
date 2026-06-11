@@ -1,6 +1,7 @@
 import * as compilerApi from '../src/index.js';
 import './public-api-native-fixtures.js';
 import './public-api-adapter-fixtures.js';
+import './public-api-bundle-types.js';
 import './public-api-transform-types.js';
 
 type Expect<T extends true> = T;
@@ -154,24 +155,6 @@ void (null as unknown as PublicRuntimeExportsMatchDeclarations);
 void (null as unknown as RoundtripRouteAuditBuckets);
 void (null as unknown as RoundtripSemanticEquivalenceClaimStaysFalse);
 void (null as unknown as RoundtripRouteSourceMapPrecisionIsTyped);
-
-const semanticPatchBundle = compilerApi.createSemanticPatchBundleRecord({
-  language: 'javascript',
-  sourcePath: 'src/example.js',
-  baseHash: 'base_hash',
-  targetHash: 'target_hash',
-  changedRegions: [{ key: 'source#src/example.js#function#run', conflictKey: 'source#src/example.js#function#run' }],
-  evidenceIds: ['evidence_example'],
-  proofIds: ['proof_example'],
-  historyIds: ['history_example'],
-  admission: { status: 'queued', readiness: 'needs-review' }
-});
-const typedSemanticPatchBundle: compilerApi.SemanticPatchBundleRecord = semanticPatchBundle;
-const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecord[] = compilerApi.querySemanticPatchBundleRecords(
-  [typedSemanticPatchBundle],
-  { regionKey: 'source#src/example.js#function#run', evidenceId: 'evidence_example', admissionStatus: 'queued' }
-);
-void queriedSemanticPatchBundles;
 
 const bidirectionalTargetChange = compilerApi.createBidirectionalTargetChangeRecord({
   source: {
