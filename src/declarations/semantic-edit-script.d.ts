@@ -10,6 +10,7 @@ export type SemanticEditScriptOperationStatus =
   | 'candidate'
   | 'portable'
   | 'already-applied'
+  | 'covered'
   | 'needs-port'
   | 'conflict'
   | 'stale'
@@ -82,6 +83,7 @@ export interface SemanticEditScriptSummary {
   readonly conflicts: number;
   readonly stale: number;
   readonly blocked: number;
+  readonly covered?: number;
   readonly candidates: number;
   readonly autoMergeCandidates: number;
   readonly semanticKeys?: readonly string[];

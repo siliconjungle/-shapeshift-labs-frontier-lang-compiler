@@ -43,6 +43,7 @@ export function summarizeSemanticEditOperations(operations) {
     conflicts: byStatus.conflict ?? 0,
     stale: byStatus.stale ?? 0,
     blocked: byStatus.blocked ?? 0,
+    covered: byStatus.covered ?? 0,
     candidates: byStatus.candidate ?? 0,
     autoMergeCandidates: (byStatus.portable ?? 0) + (byStatus['already-applied'] ?? 0),
     semanticKeys: uniqueStrings(operations.map((operation) => operation.semanticKey).filter(Boolean)),

@@ -13,6 +13,7 @@ import {
   summarizeSemanticEditOperations
 } from './semanticEditScriptClassification.js';
 import { semanticEditInsertionAnchor } from './semanticEditInsertionAnchors.js';
+import { markCoveredSemanticEditOperations } from './semanticEditOperationCoverage.js';
 import { sourceTextForSpan } from './sourceTextForSpan.js';
 import { semanticEditIdentityFields, semanticEditOperationContentHash } from './semanticEditIdentityRecords.js';
 
@@ -52,7 +53,10 @@ export function createSemanticEditScript(input = {}, options = {}) {
     metadata: { source: 'createSemanticEditScript' }
   }) : undefined;
   const context = createEditContext({ base, worker, head, workerChangeSet, headChangeSet, headLineage });
-  const operations = workerChangeSet.changedRegions.map((region, index) => semanticEditOperation(region, index, context, input));
+  const operations = markCoveredSemanticEditOperations(
+    workerChangeSet.changedRegions.map((region, index) => semanticEditOperation(region, index, context, input)),
+    context
+  );
   const summary = summarizeSemanticEditOperations(operations);
   const admission = semanticEditAdmission({ operations, summary, head, workerChangeSet, headChangeSet, input });
   const evidence = semanticEditEvidence({ input, language, sourcePath, workerChangeSet, headChangeSet, headLineage, summary, admission });
@@ -169,7 +173,7 @@ function semanticEditOperation(region, index, context, input) {
   const identityRecord = semanticEditIdentityRecord({ kind, region, anchor });
   const identity = semanticEditIdentityFields(identityRecord);
   return compactRecord({
-    id: `semantic_edit_op_${idFragment([input.id ?? 'semantic_edit', anchorKey, index].join(':'))}`,
+    id: `semantic_edit_op_${idFragment([index, anchorKey, input.id ?? 'semantic_edit'].join(':'))}`,
     kind,
     changeKind: region.changeKind,
     anchor,

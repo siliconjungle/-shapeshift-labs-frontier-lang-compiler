@@ -13,7 +13,12 @@ export function projectSemanticEditScriptToSource(input = {}) {
   if (typeof workerSourceText !== 'string') reasonCodes.push('missing-worker-source-text');
   if (typeof headSourceText !== 'string') reasonCodes.push('missing-head-source-text');
   const edits = [];
+  const coveredOperationIds = [];
   for (const [index, operation] of (script.operations ?? []).entries()) {
+    if (operation.status === 'covered') {
+      coveredOperationIds.push(operation.id);
+      continue;
+    }
     const edit = sourceEditForOperation(operation, workerSourceText, headSourceText, index);
     if (edit.ok) edits.push(edit.value);
     else reasonCodes.push(...edit.reasonCodes);
@@ -35,7 +40,7 @@ export function projectSemanticEditScriptToSource(input = {}) {
     headHash: script.headHash,
     projectedHash: sourceText === undefined ? undefined : hashSemanticValue(sourceText),
     appliedOperations: blocked ? [] : deduped.edits.map((edit) => edit.operationId),
-    skippedOperations: blocked ? (script.operations ?? []).map((operation) => operation.id) : deduped.skippedOperationIds,
+    skippedOperations: blocked ? (script.operations ?? []).map((operation) => operation.id) : uniqueStrings([...coveredOperationIds, ...deduped.skippedOperationIds]),
     edits: blocked ? [] : deduped.edits.map(projectionEditRecord),
     sourceText,
     admission: {
@@ -66,6 +71,9 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText, ord
   if (operation.changeKind === 'added' || String(operation.kind ?? '').startsWith('add')) {
     return insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order);
   }
+  if (operation.changeKind === 'removed' || String(operation.kind ?? '').startsWith('remove')) {
+    return removalEditForOperation(operation, identity, headSourceText, order);
+  }
   const workerOffsets = spanOffsets(workerSourceText, operation.spans?.worker);
   const headOffsets = spanOffsets(headSourceText, operation.spans?.head ?? operation.spans?.base ?? operation.anchor?.sourceSpan);
   const reasons = [];
@@ -95,6 +103,33 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText, ord
       workerEnd: workerOffsets.end,
       replacement,
       current
+    }
+  };
+}
+
+function removalEditForOperation(operation, identity, headSourceText, order) {
+  const headOffsets = spanOffsets(headSourceText, operation.spans?.head ?? operation.spans?.base ?? operation.anchor?.sourceSpan);
+  const reasons = [];
+  if (!headOffsets) reasons.push(`head-span-not-resolvable:${operation.id}`);
+  if (reasons.length) return { ok: false, reasonCodes: reasons };
+  const rawCurrent = headSourceText.slice(headOffsets.start, headOffsets.end);
+  const expectedHeadHash = operation.hashes?.headTextHash ?? operation.hashes?.baseTextHash;
+  if (expectedHeadHash && hashSemanticValue(rawCurrent) !== expectedHeadHash) {
+    reasons.push(`head-span-hash-mismatch:${operation.id}`);
+  }
+  if (reasons.length) return { ok: false, reasonCodes: reasons };
+  const range = removalRange(headSourceText, headOffsets);
+  return {
+    ok: true,
+    value: {
+      operationId: operation.id,
+      order,
+      ...identity,
+      editKind: 'delete',
+      start: range.start,
+      end: range.end,
+      current: headSourceText.slice(range.start, range.end),
+      replacement: ''
     }
   };
 }
@@ -239,6 +274,13 @@ function insertionOffset(sourceText, insertion) {
   if (mode === 'before') return { ok: true, offset: range.start };
   if (mode === 'after') return { ok: true, offset: afterLineOffset(sourceText, range.end) };
   return { ok: false, reasonCodes: ['insertion-mode-unsupported'] };
+}
+
+function removalRange(sourceText, span) {
+  const range = { ...span };
+  if (range.end < sourceText.length && sourceText[range.end] === '\n') range.end += 1;
+  else if (range.start > 0 && sourceText[range.start - 1] === '\n') range.start -= 1;
+  return range;
 }
 
 function insertionReplacement(text, sourceText, offset) {

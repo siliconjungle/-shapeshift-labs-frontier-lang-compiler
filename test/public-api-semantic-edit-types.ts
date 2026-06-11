@@ -11,7 +11,9 @@ const typedSemanticEditScript: compilerApi.SemanticEditScript = semanticEditScri
 typedSemanticEditScript.admission.status satisfies compilerApi.SemanticEditScriptAdmissionStatus;
 typedSemanticEditScript.summary.semanticKeys satisfies readonly string[] | undefined;
 typedSemanticEditScript.summary.operationContentHashes satisfies readonly string[] | undefined;
+typedSemanticEditScript.summary.covered satisfies number | undefined;
 typedSemanticEditScript.operations[0]?.status satisfies compilerApi.SemanticEditScriptOperationStatus | undefined;
+const coveredStatus: compilerApi.SemanticEditScriptOperationStatus = 'covered';
 typedSemanticEditScript.operations[0]?.semanticKey satisfies string | undefined;
 typedSemanticEditScript.operations[0]?.semanticIdentityHash satisfies string | undefined;
 typedSemanticEditScript.operations[0]?.operationContentHash satisfies string | undefined;
@@ -52,6 +54,7 @@ typedSemanticEditReplay.edits[0]?.editKind satisfies string | undefined;
 typedSemanticEditReplay.outputSourceText satisfies string | undefined;
 
 void typedSemanticEditScript;
+void coveredStatus;
 void typedSemanticEditProjection;
 void typedSemanticEditProjectionEdit;
 void typedSemanticEditReplay;

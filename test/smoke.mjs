@@ -27,6 +27,7 @@ await import('./smoke/semantic-history-records.mjs');
 await import('./smoke/semantic-history-lineage-resolution.mjs');
 await import('./smoke/semantic-lineage-inference.mjs');
 await import('./smoke/semantic-edit-script.mjs');
+await import('./smoke/semantic-edit-sibling-merge.mjs');
 await import('./smoke/semantic-patch-bundles.mjs');
 await import('./smoke/semantic-patch-bundle-overlaps.mjs');
 await import('./smoke/bidirectional-target-change.mjs');
