@@ -44,6 +44,13 @@ export interface CreateSemanticTransformIdentityRecordOptions extends Partial<Se
   readonly operationId?: string;
 }
 
+export interface DeriveSemanticTransformIdentityRecordsOptions extends CreateSemanticTransformIdentityRecordOptions {
+  readonly semanticEditProjection?: unknown;
+  readonly semanticEditProjections?: readonly unknown[] | unknown;
+  readonly projection?: unknown;
+  readonly projections?: readonly unknown[] | unknown;
+}
+
 export type CreateSemanticTransformIdentityRecordInput =
   | Partial<SemanticTransformIdentityRecord>
   | Record<string, unknown>;
@@ -55,3 +62,7 @@ export declare function createSemanticTransformIdentityRecord(
 export declare function semanticTransformIdentityFields(
   record?: SemanticTransformIdentityRecord | Record<string, unknown>
 ): SemanticTransformIdentityRecord;
+export declare function deriveSemanticTransformIdentityRecords(
+  input?: DeriveSemanticTransformIdentityRecordsOptions | Record<string, unknown>,
+  options?: DeriveSemanticTransformIdentityRecordsOptions
+): readonly SemanticTransformIdentityRecord[];

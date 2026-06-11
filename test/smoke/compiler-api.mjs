@@ -19,6 +19,7 @@ export {
   createSemanticLineageMap,
   createSemanticEditScript,
   createSemanticTransformIdentityRecord,
+  deriveSemanticTransformIdentityRecords,
   createSemanticMergeCandidateAdmissionRecord,
   createSemanticHistoryRecord,
   createSemanticPatchBundleRecord,

@@ -72,15 +72,28 @@ export function semanticTransformIdentityFields(record = {}) {
 }
 
 export function normalizeSemanticTransformIdentityRecords(records, context = {}) {
-  return array(records).filter(Boolean).map((record) => createSemanticTransformIdentityRecord(record, context));
+  return uniqueRecords(array(records).filter(Boolean).map((record) => createSemanticTransformIdentityRecord(record, context)));
 }
 
 export function semanticTransformInputs(source = {}, options = {}) {
+  const projections = [
+    ...array(options.semanticEditProjections ?? options.semanticEditProjection),
+    ...array(source.semanticEditProjections ?? source.semanticEditProjection)
+  ];
   return [
     ...array(options.semanticTransformIdentities ?? options.semanticTransformIdentity),
     ...array(source.semanticTransformIdentities ?? source.semanticTransformIdentity ?? source.semanticTransforms),
-    ...array(source.index?.semanticTransformIdentities)
+    ...array(source.index?.semanticTransformIdentities),
+    ...deriveSemanticTransformIdentityRecords({ semanticEditProjections: projections }, { ...source, ...options })
   ];
+}
+
+export function deriveSemanticTransformIdentityRecords(input = {}, options = {}) {
+  const projections = semanticEditProjectionInputs(input);
+  return uniqueRecords(projections.flatMap((projection, projectionIndex) => {
+    const edits = array(projection.edits).filter((edit) => edit && typeof edit === 'object');
+    return edits.map((edit, editIndex) => transformRecordForProjectionEdit(edit, projection, input, options, projectionIndex, editIndex));
+  }));
 }
 
 export function semanticTransformRecordIndex(records, source = {}) {
@@ -118,6 +131,49 @@ function semanticTransformKey(record) {
     : record.anchorKey ?? record.regionId ?? record.operationId ?? record.id);
   const route = [record.sourceLanguage ?? record.language, record.targetLanguage ?? record.projectedLanguage].filter(Boolean).join('->');
   return ['semantic-transform', route, scope].filter(Boolean).join(':');
+}
+
+function semanticEditProjectionInputs(input) {
+  if (input.kind === 'frontier.lang.semanticEditProjection') return [input];
+  return [
+    ...array(input.semanticEditProjections ?? input.semanticEditProjection),
+    ...array(input.projections ?? input.projection)
+  ].filter((entry) => entry && typeof entry === 'object');
+}
+
+function transformRecordForProjectionEdit(edit, projection, input, options, projectionIndex, editIndex) {
+  const sourceLanguage = firstString(edit.sourceLanguage, edit.language, input.sourceLanguage, options.sourceLanguage, projection.sourceLanguage, projection.language);
+  const targetLanguage = firstString(edit.targetLanguage, edit.projectedLanguage, input.targetLanguage, options.targetLanguage, projection.targetLanguage, projection.projectedLanguage, projection.language);
+  const sourcePath = firstString(edit.originalSourcePath, edit.sourcePath, input.sourcePath, options.sourcePath, projection.sourcePath);
+  const targetPath = firstString(edit.targetPath, edit.targetSourcePath, input.targetPath, options.targetPath, projection.targetPath, projection.projectedSourcePath, projection.sourcePath);
+  const transformId = [projection.id, edit.operationId, projectionIndex, editIndex].filter((entry) => entry !== undefined && entry !== null).join(':');
+  return createSemanticTransformIdentityRecord(edit, {
+    id: `semantic_transform_${idFragment(transformId)}`,
+    sourceLanguage,
+    targetLanguage,
+    sourcePath,
+    targetPath,
+    baseHash: firstString(edit.baseHash, projection.baseHash, input.baseHash, options.baseHash),
+    targetHash: firstString(edit.targetHash, projection.projectedHash, projection.targetHash, input.targetHash, options.targetHash),
+    readiness: firstString(edit.readiness, projection.admission?.status, projection.status),
+    evidenceIds: uniqueStrings([...strings(input.evidenceIds), ...strings(options.evidenceIds), ...strings(projection.evidenceIds), ...strings(edit.evidenceIds)]),
+    metadata: compactRecord({
+      sourceProjectionId: projection.id,
+      sourceProjectionEditOperationId: edit.operationId
+    })
+  });
+}
+
+function uniqueRecords(records) {
+  const seen = new Set();
+  const result = [];
+  for (const record of records) {
+    const key = firstString(record.id, record.transformContentHash, record.projectionIdentityHash, record.transformIdentityHash);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(record);
+  }
+  return result;
 }
 
 function array(value) { if (value === undefined || value === null) return []; return Array.isArray(value) ? value : [value]; }

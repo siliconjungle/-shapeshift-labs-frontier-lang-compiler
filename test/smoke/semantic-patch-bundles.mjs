@@ -4,6 +4,7 @@ import {
   createSemanticHistoryRecord,
   createSemanticPatchBundleRecord,
   createSemanticTransformIdentityRecord,
+  deriveSemanticTransformIdentityRecords,
   diffNativeSources,
   projectSemanticEditScriptToSource,
   querySemanticPatchBundleRecords,
@@ -116,12 +117,24 @@ assert.equal(semanticBundle.index.sourcePaths.includes('src/counter-core.js'), t
 assert.equal(semanticBundle.summary.semanticEditScripts, 1);
 assert.equal(semanticBundle.summary.semanticEditProjections, 1);
 assert.equal(semanticBundle.summary.semanticEditProjectionEdits, 1);
+assert.equal(semanticBundle.summary.semanticTransformIdentities, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditScriptId: semanticEditScript.id }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditProjectionId: semanticEditProjection.id }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditKey: semanticOperation.semanticKey }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { operationContentHash: semanticOperation.operationContentHash }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { editContentHash: semanticEdit.editContentHash }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { sourcePath: 'src/counter-core.js' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticTransformContentHash: semanticBundle.index.semanticTransformContentHashes[0] }).length, 1);
+
+const derivedTransforms = deriveSemanticTransformIdentityRecords({
+  semanticEditProjections: [semanticEditProjection],
+  targetLanguage: 'rust'
+});
+assert.equal(derivedTransforms.length, 1);
+assert.equal(derivedTransforms[0].sourceLanguage, 'javascript');
+assert.equal(derivedTransforms[0].targetLanguage, 'rust');
+assert.equal(derivedTransforms[0].targetPath, 'src/counter-core.js');
+assert.equal(derivedTransforms[0].editContentHash, semanticEdit.editContentHash);
 
 const semanticTransform = createSemanticTransformIdentityRecord(semanticOperation, {
   id: 'counter_ts_to_rust_transform',

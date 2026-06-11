@@ -68,7 +68,7 @@ type ExpectedPublicRuntimeExport =
   | 'createSemanticMergeCandidateAdmissionRecord'
   | 'createSemanticEditScript'
   | 'createSemanticPatchBundleRecord' | 'compareSemanticPatchBundleRecords'
-  | 'createSemanticTransformIdentityRecord'
+  | 'createSemanticTransformIdentityRecord' | 'deriveSemanticTransformIdentityRecords'
   | 'createUniversalCapabilityMatrix'
   | 'createUniversalConversionArtifacts'
   | 'createUniversalConversionPlan'
