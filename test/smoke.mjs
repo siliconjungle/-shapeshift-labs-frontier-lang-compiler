@@ -28,6 +28,7 @@ await import('./smoke/semantic-history-lineage-resolution.mjs');
 await import('./smoke/semantic-lineage-inference.mjs');
 await import('./smoke/semantic-edit-script.mjs');
 await import('./smoke/semantic-patch-bundles.mjs');
+await import('./smoke/semantic-patch-bundle-overlaps.mjs');
 await import('./smoke/bidirectional-target-change.mjs');
 await import('./smoke/native-projection.mjs');
 await import('./smoke-workbench.mjs');

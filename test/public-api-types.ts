@@ -29,7 +29,7 @@ type ExpectedPublicRuntimeExport =
   | 'LanguageAdapterPackageReleaseReadinessStatuses'
   | 'SemanticMergeConflictClasses'
   | 'SemanticMergeCandidateProjectionRisks'
-  | 'SemanticPatchBundleAdmissionStatuses'
+  | 'SemanticPatchBundleAdmissionStatuses' | 'SemanticPatchBundleOverlapKinds' | 'SemanticPatchBundleOverlapStatuses'
   | 'SemanticEditScriptAdmissionStatuses'
   | 'SemanticHistoryAdmissionStatuses'
   | 'SemanticHistoryConflictReasons'
@@ -66,7 +66,7 @@ type ExpectedPublicRuntimeExport =
   | 'createSemanticLineageMap'
   | 'createSemanticMergeCandidateAdmissionRecord'
   | 'createSemanticEditScript'
-  | 'createSemanticPatchBundleRecord'
+  | 'createSemanticPatchBundleRecord' | 'compareSemanticPatchBundleRecords'
   | 'createUniversalCapabilityMatrix'
   | 'createUniversalConversionArtifacts'
   | 'createUniversalConversionPlan'
@@ -103,7 +103,7 @@ type ExpectedPublicRuntimeExport =
   | 'querySemanticHistoryRecordOverlaps'
   | 'querySemanticLineageEvents'
   | 'querySemanticMergeCandidateAdmissionOverlaps'
-  | 'querySemanticPatchBundleRecords'
+  | 'querySemanticPatchBundleRecords' | 'querySemanticPatchBundleOverlaps'
   | 'querySemanticMergeConflictClasses'
   | 'queryUniversalConversionArtifacts'
   | 'queryUniversalConversionPlan'
@@ -168,7 +168,6 @@ const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecor
   [typedSemanticPatchBundle],
   { regionKey: 'source#src/example.js#function#run', evidenceId: 'evidence_example', admissionStatus: 'queued' }
 );
-
 void queriedSemanticPatchBundles;
 
 const bidirectionalTargetChange = compilerApi.createBidirectionalTargetChangeRecord({
