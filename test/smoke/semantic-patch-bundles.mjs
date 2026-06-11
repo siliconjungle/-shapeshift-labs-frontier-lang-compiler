@@ -1,8 +1,10 @@
 import { assert } from './helpers.mjs';
 import {
+  createSemanticEditScript,
   createSemanticHistoryRecord,
   createSemanticPatchBundleRecord,
   diffNativeSources,
+  projectSemanticEditScriptToSource,
   querySemanticPatchBundleRecords,
   SemanticPatchBundleAdmissionStatuses
 } from './compiler-api.mjs';
@@ -78,3 +80,44 @@ assert.equal(querySemanticPatchBundleRecords(records, { semanticOperationId: 'se
 assert.equal(querySemanticPatchBundleRecords(records, { readiness: changeSet.readiness }).length, 1);
 assert.equal(querySemanticPatchBundleRecords(records, { admissionStatus: 'queued' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords(records, { sourceHash: 'not_present' }).length, 0);
+
+const semanticEditScript = createSemanticEditScript({
+  id: 'counter_patch_bundle_semantic_edit',
+  language: 'javascript',
+  sourcePath: 'src/counter.js',
+  baseSourceText: beforeSourceText,
+  workerSourceText: afterSourceText,
+  headSourcePath: 'src/counter-core.js',
+  headSourceText: beforeSourceText,
+  generatedAt: 10
+});
+const semanticEditProjection = projectSemanticEditScriptToSource({
+  id: 'counter_patch_bundle_semantic_projection',
+  script: semanticEditScript,
+  workerSourceText: afterSourceText,
+  headSourceText: beforeSourceText,
+  headSourcePath: 'src/counter-core.js'
+});
+const semanticBundle = createSemanticPatchBundleRecord(changeSet, {
+  id: 'bundle_counter_patch_semantic_edit',
+  semanticEditScripts: [semanticEditScript],
+  semanticEditProjections: [semanticEditProjection],
+  admission: { status: 'queued', readiness: changeSet.readiness }
+});
+const semanticOperation = semanticEditScript.operations[0];
+const semanticEdit = semanticEditProjection.edits[0];
+assert.equal(semanticBundle.semanticEditScriptIds.includes(semanticEditScript.id), true);
+assert.equal(semanticBundle.semanticEditProjectionIds.includes(semanticEditProjection.id), true);
+assert.equal(semanticBundle.index.semanticEditKeys.includes(semanticOperation.semanticKey), true);
+assert.equal(semanticBundle.index.operationContentHashes.includes(semanticOperation.operationContentHash), true);
+assert.equal(semanticBundle.index.editContentHashes.includes(semanticEdit.editContentHash), true);
+assert.equal(semanticBundle.index.sourcePaths.includes('src/counter-core.js'), true);
+assert.equal(semanticBundle.summary.semanticEditScripts, 1);
+assert.equal(semanticBundle.summary.semanticEditProjections, 1);
+assert.equal(semanticBundle.summary.semanticEditProjectionEdits, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditScriptId: semanticEditScript.id }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditProjectionId: semanticEditProjection.id }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditKey: semanticOperation.semanticKey }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { operationContentHash: semanticOperation.operationContentHash }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { editContentHash: semanticEdit.editContentHash }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundle], { sourcePath: 'src/counter-core.js' }).length, 1);

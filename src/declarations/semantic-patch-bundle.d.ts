@@ -7,6 +7,7 @@ import type {
   SourceSpan
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { NativeSourceChangeKind, NativeSourceChangeSet } from './native-diff.js';
+import type { SemanticEditProjection, SemanticEditScript } from './semantic-edit-script.js';
 
 export type SemanticPatchBundleAdmissionStatus = 'proposed' | 'queued' | 'admitted' | 'needs-review' | 'blocked' | 'rejected' | string;
 
@@ -102,6 +103,13 @@ export interface SemanticPatchBundleRecordIndex {
   readonly proofIds: readonly string[];
   readonly historyIds: readonly string[];
   readonly semanticOperationIds: readonly string[];
+  readonly semanticEditScriptIds: readonly string[];
+  readonly semanticEditProjectionIds: readonly string[];
+  readonly semanticEditKeys: readonly string[];
+  readonly semanticIdentityHashes: readonly string[];
+  readonly sourceIdentityHashes: readonly string[];
+  readonly operationContentHashes: readonly string[];
+  readonly editContentHashes: readonly string[];
   readonly patchIds: readonly string[];
   readonly mergeCandidateIds: readonly string[];
   readonly readinesses: readonly string[];
@@ -127,6 +135,8 @@ export interface SemanticPatchBundleRecord {
   readonly proofIds: readonly string[];
   readonly historyIds: readonly string[];
   readonly semanticOperationIds: readonly string[];
+  readonly semanticEditScriptIds: readonly string[];
+  readonly semanticEditProjectionIds: readonly string[];
   readonly admission: SemanticPatchBundleAdmission;
   readonly index: SemanticPatchBundleRecordIndex;
   readonly summary: {
@@ -136,6 +146,9 @@ export interface SemanticPatchBundleRecord {
     readonly proofIds: number;
     readonly historyIds: number;
     readonly semanticOperations: number;
+    readonly semanticEditScripts: number;
+    readonly semanticEditProjections: number;
+    readonly semanticEditProjectionEdits: number;
     readonly reviewRequired: boolean;
     readonly autoMergeClaim: false;
   };
@@ -164,6 +177,10 @@ export interface CreateSemanticPatchBundleRecordOptions {
   readonly historyIds?: readonly string[] | string;
   readonly semanticOperationId?: string;
   readonly semanticOperationIds?: readonly string[] | string;
+  readonly semanticEditScript?: SemanticEditScript;
+  readonly semanticEditScripts?: readonly SemanticEditScript[] | SemanticEditScript;
+  readonly semanticEditProjection?: SemanticEditProjection;
+  readonly semanticEditProjections?: readonly SemanticEditProjection[] | SemanticEditProjection;
   readonly conflictKeys?: readonly string[] | string;
   readonly admission?: Partial<SemanticPatchBundleAdmission>;
   readonly metadata?: Record<string, unknown>;
@@ -206,6 +223,20 @@ export interface SemanticPatchBundleRecordQuery {
   readonly historyIds?: readonly string[];
   readonly semanticOperationId?: string | readonly string[];
   readonly semanticOperationIds?: readonly string[];
+  readonly semanticEditScriptId?: string | readonly string[];
+  readonly semanticEditScriptIds?: readonly string[];
+  readonly semanticEditProjectionId?: string | readonly string[];
+  readonly semanticEditProjectionIds?: readonly string[];
+  readonly semanticEditKey?: string | readonly string[];
+  readonly semanticEditKeys?: readonly string[];
+  readonly semanticIdentityHash?: string | readonly string[];
+  readonly semanticIdentityHashes?: readonly string[];
+  readonly sourceIdentityHash?: string | readonly string[];
+  readonly sourceIdentityHashes?: readonly string[];
+  readonly operationContentHash?: string | readonly string[];
+  readonly operationContentHashes?: readonly string[];
+  readonly editContentHash?: string | readonly string[];
+  readonly editContentHashes?: readonly string[];
   readonly readiness?: SemanticMergeReadiness | string | readonly string[];
   readonly readinesses?: readonly string[];
   readonly admissionStatus?: SemanticPatchBundleAdmissionStatus | readonly string[];
