@@ -1,6 +1,6 @@
 {
   "name": "@shapeshift-labs/frontier-lang-compiler",
-  "version": "0.2.96",
+  "version": "0.2.97",
   "description": "Compiler facade for Frontier Lang source documents and language projection adapters.",
   "type": "module",
   "main": "./dist/index.js",

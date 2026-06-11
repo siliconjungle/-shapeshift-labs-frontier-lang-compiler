@@ -160,9 +160,14 @@ function jsDeclarationWithSourceSpan(input, declaration, lines) {
       startLine,
       endLine,
       startColumn: declaration.span?.startColumn ?? 1,
-      endColumn: declaration.span?.endColumn ?? endLineText.length + 1
+      endColumn: declarationEndColumn(declaration, startLine, endLine, endLineText)
     }
   };
+}
+
+function declarationEndColumn(declaration, startLine, endLine, endLineText) {
+  if (endLine !== startLine) return endLineText.length + 1;
+  return declaration.span?.endColumn ?? endLineText.length + 1;
 }
 
 function jsBalancedDeclarationEndLine(input, lines, startLine) {

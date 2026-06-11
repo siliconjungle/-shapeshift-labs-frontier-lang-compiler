@@ -231,3 +231,52 @@ const alreadyAppliedInsertionReplay = replaySemanticEditProjection({
 });
 assert.equal(alreadyAppliedInsertionReplay.status, 'already-applied');
 assert.equal(alreadyAppliedInsertionReplay.outputSourceText, insertionWorker);
+
+const memberInsertionFixtures = [
+  {
+    id: 'class_method',
+    base: 'export class Store {\n  get() {\n    return 1;\n  }\n}\n',
+    worker: 'export class Store {\n  get() {\n    return 1;\n  }\n  set(value) {\n    return value;\n  }\n}\n',
+    skippedKind: 'replaceTypeDeclaration',
+    insertedName: 'Store.set'
+  },
+  {
+    id: 'interface_property',
+    base: 'export interface User {\n  id: string;\n}\n',
+    worker: 'export interface User {\n  id: string;\n  name: string;\n}\n',
+    skippedKind: 'replaceTypeDeclaration',
+    insertedName: 'User.name'
+  },
+  {
+    id: 'object_property',
+    base: "export const config = {\n  mode: 'a',\n};\n",
+    worker: "export const config = {\n  mode: 'a',\n  flag: true,\n};\n",
+    skippedKind: 'replaceRegion',
+    insertedName: 'config.flag'
+  }
+];
+
+for (const fixture of memberInsertionFixtures) {
+  const script = createSemanticEditScript({
+    id: `semantic_edit_member_${fixture.id}`,
+    language: 'typescript',
+    sourcePath: 'src/member.ts',
+    baseSourceText: fixture.base,
+    workerSourceText: fixture.worker,
+    headSourceText: fixture.base,
+    generatedAt: 60
+  });
+  assert.equal(script.admission.status, 'auto-merge-candidate');
+  assert.equal(script.operations.some((operation) => operation.kind === fixture.skippedKind), true);
+  assert.equal(script.operations.some((operation) => operation.anchor.symbolName === fixture.insertedName), true);
+  const projection = projectSemanticEditScriptToSource({ script, workerSourceText: fixture.worker, headSourceText: fixture.base });
+  assert.equal(projection.status, 'projected');
+  assert.equal(projection.sourceText, fixture.worker);
+  assert.equal(projection.skippedOperations.length, 1);
+  assert.equal(projection.edits.length, 1);
+  assert.equal(projection.edits[0].editKind, 'insert');
+  assert.equal(projection.edits[0].symbolName, fixture.insertedName);
+  const replay = replaySemanticEditProjection({ projection, currentSourceText: fixture.base });
+  assert.equal(replay.status, 'accepted-clean');
+  assert.equal(replay.outputSourceText, fixture.worker);
+}
