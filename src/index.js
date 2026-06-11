@@ -67,6 +67,7 @@ export { projectNativeImportToSource } from './internal/index-impl/projectNative
 export { queryNativeParserFeatureMatrix } from './internal/index-impl/queryNativeParserFeatureMatrix.js';
 export { queryProjectionReadinessMatrix } from './internal/index-impl/queryProjectionReadinessMatrix.js';
 export { createSemanticPatchBundleRecord, querySemanticPatchBundleRecords, SemanticPatchBundleAdmissionStatuses } from './internal/index-impl/semanticPatchBundleRecords.js';
+export { createSemanticEditBundleAdmission, SemanticEditBundleAdmissionStatuses } from './internal/index-impl/semanticEditBundleAdmission.js';
 export { compareSemanticPatchBundleRecords, querySemanticPatchBundleOverlaps, SemanticPatchBundleOverlapKinds, SemanticPatchBundleOverlapStatuses } from './internal/index-impl/semanticPatchBundleOverlaps.js';
 export { createSemanticTransformIdentityRecord, deriveSemanticTransformIdentityRecords, semanticTransformIdentityFields } from './internal/index-impl/semanticTransformIdentityRecords.js';
 export { createSemanticMergeCandidateAdmissionRecord, decorateSemanticMergeCandidateForAdmission, querySemanticMergeCandidateAdmissionOverlaps, SemanticMergeCandidateProjectionRisks, semanticMergeCandidateReadinessSortKey, sortSemanticMergeCandidateAdmissionRecords } from './internal/index-impl/semanticMergeCandidateRecords.js';

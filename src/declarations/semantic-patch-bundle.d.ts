@@ -7,6 +7,7 @@ import type {
   SourceSpan
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { NativeSourceChangeKind, NativeSourceChangeSet } from './native-diff.js';
+import type { SemanticEditBundleAdmission } from './semantic-edit-bundle.js';
 import type { SemanticEditProjection, SemanticEditReplay, SemanticEditScript } from './semantic-edit-script.js';
 import type { SemanticPatchBundleRecordIndex } from './semantic-patch-bundle-index.js';
 import type { SemanticTransformIdentityRecord } from './semantic-transform-identity.js';
@@ -88,6 +89,7 @@ export interface SemanticPatchBundleAdmission {
   readonly autoMergeClaim: false;
   readonly autoApplyCandidate?: boolean;
   readonly transformAdmission?: SemanticPatchBundleTransformAdmission;
+  readonly semanticEditAdmission?: SemanticEditBundleAdmission;
   readonly reasonCodes?: readonly string[];
   readonly conflictKeys?: readonly string[];
   readonly admittedAt?: number | string;
@@ -150,6 +152,7 @@ export interface SemanticPatchBundleRecord {
     readonly semanticEditReplays: number;
     readonly semanticEditProjectionEdits: number;
     readonly semanticEditReplayEdits: number;
+    readonly semanticEditBundleStatus?: string;
     readonly semanticTransformIdentities: number;
     readonly reviewRequired: boolean;
     readonly autoMergeClaim: false;
@@ -185,6 +188,7 @@ export interface CreateSemanticPatchBundleRecordOptions {
   readonly semanticEditProjections?: readonly SemanticEditProjection[] | SemanticEditProjection;
   readonly semanticEditReplay?: SemanticEditReplay;
   readonly semanticEditReplays?: readonly SemanticEditReplay[] | SemanticEditReplay;
+  readonly semanticEditAdmission?: Partial<SemanticEditBundleAdmission>;
   readonly semanticTransformIdentity?: SemanticTransformIdentityRecord | Record<string, unknown>;
   readonly semanticTransformIdentities?: readonly (SemanticTransformIdentityRecord | Record<string, unknown>)[];
   readonly targetPortability?: BidirectionalTargetPortabilityRecord | Record<string, unknown>;
@@ -242,6 +246,12 @@ export interface SemanticPatchBundleRecordQuery {
   readonly semanticEditReplayStatuses?: readonly string[];
   readonly semanticEditReplayAction?: string | readonly string[];
   readonly semanticEditReplayActions?: readonly string[];
+  readonly semanticEditAdmissionStatus?: string | readonly string[];
+  readonly semanticEditAdmissionStatuses?: readonly string[];
+  readonly semanticEditAdmissionAction?: string | readonly string[];
+  readonly semanticEditAdmissionActions?: readonly string[];
+  readonly semanticEditAdmissionReadiness?: string | readonly string[];
+  readonly semanticEditAdmissionReadinesses?: readonly string[];
   readonly semanticEditReplayCurrentHash?: string | readonly string[];
   readonly semanticEditReplayCurrentHashes?: readonly string[];
   readonly semanticEditReplayOutputHash?: string | readonly string[];

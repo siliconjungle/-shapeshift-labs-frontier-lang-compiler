@@ -1,41 +1,56 @@
 #!/usr/bin/env node
 
-await import('./smoke/public-api.mjs');
-await import('./smoke/compile-core.mjs');
-await import('./smoke/semantic-index.mjs');
-await import('./smoke/semantic-slice-surgical.mjs');
-await import('./smoke/external-semantic-index-formats.mjs');
-await import('./smoke/glean-semantic-index.mjs');
-await import('./smoke/universal-dialects.mjs');
-await import('./smoke/adapter-contract.mjs');
-await import('./smoke/js-ts-adapters.mjs');
-await import('./smoke/python-adapter.mjs');
-await import('./smoke/rust-adapter.mjs');
-await import('./smoke/clang-go-adapters.mjs');
-await import('./smoke/java-adapter.mjs');
-await import('./smoke/csharp-adapter.mjs');
-await import('./smoke/swift-kotlin-project.mjs');
-await import('./smoke/project-admission.mjs');
-await import('./smoke/tree-sitter-cst-envelope.mjs');
-await import('./smoke/scanned-js.mjs');
-await import('./smoke/semantic-sidecars.mjs');
-await import('./smoke/semantic-impact-merge-signals.mjs');
-await import('./smoke/semantic-sidecar-expected.mjs');
-await import('./smoke/semantic-merge-candidates.mjs');
-await import('./smoke/semantic-merge-conflicts.mjs');
-await import('./smoke/semantic-history-records.mjs');
-await import('./smoke/semantic-history-lineage-resolution.mjs');
-await import('./smoke/semantic-lineage-inference.mjs');
-await import('./smoke/semantic-edit-script.mjs');
-await import('./smoke/semantic-edit-sibling-merge.mjs');
-await import('./smoke/semantic-patch-bundles.mjs');
-await import('./smoke/semantic-patch-bundle-overlaps.mjs');
-await import('./smoke/bidirectional-target-change.mjs');
-await import('./smoke/native-projection.mjs');
-await import('./smoke-workbench.mjs');
-await import('./smoke/roundtrip.mjs');
-await import('./smoke/scanned-languages.mjs');
-await import('./smoke/matrices-final.mjs');
-await import('./smoke/matrices-universal-fixtures.mjs');
-await import('./smoke/projection-readiness.mjs');
-await import('./smoke/universal-conversion-plan.mjs');
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+const smokeModules = [
+  './smoke/public-api.mjs',
+  './smoke/compile-core.mjs',
+  './smoke/semantic-index.mjs',
+  './smoke/semantic-slice-surgical.mjs',
+  './smoke/external-semantic-index-formats.mjs',
+  './smoke/glean-semantic-index.mjs',
+  './smoke/universal-dialects.mjs',
+  './smoke/adapter-contract.mjs',
+  './smoke/js-ts-adapters.mjs',
+  './smoke/python-adapter.mjs',
+  './smoke/rust-adapter.mjs',
+  './smoke/clang-go-adapters.mjs',
+  './smoke/java-adapter.mjs',
+  './smoke/csharp-adapter.mjs',
+  './smoke/swift-kotlin-project.mjs',
+  './smoke/project-admission.mjs',
+  './smoke/tree-sitter-cst-envelope.mjs',
+  './smoke/scanned-js.mjs',
+  './smoke/semantic-sidecars.mjs',
+  './smoke/semantic-impact-merge-signals.mjs',
+  './smoke/semantic-sidecar-expected.mjs',
+  './smoke/semantic-merge-candidates.mjs',
+  './smoke/semantic-merge-conflicts.mjs',
+  './smoke/semantic-history-records.mjs',
+  './smoke/semantic-history-lineage-resolution.mjs',
+  './smoke/semantic-lineage-inference.mjs',
+  './smoke/semantic-edit-script.mjs',
+  './smoke/semantic-edit-sibling-merge.mjs',
+  './smoke/semantic-edit-bundle-admission.mjs',
+  './smoke/semantic-patch-bundles.mjs',
+  './smoke/semantic-patch-bundle-overlaps.mjs',
+  './smoke/bidirectional-target-change.mjs',
+  './smoke/native-projection.mjs',
+  './smoke-workbench.mjs',
+  './smoke/roundtrip.mjs',
+  './smoke/scanned-languages.mjs',
+  './smoke/matrices-final.mjs',
+  './smoke/matrices-universal-fixtures.mjs',
+  './smoke/projection-readiness.mjs',
+  './smoke/universal-conversion-plan.mjs'
+];
+
+const explicitModules = process.argv.slice(2).filter((arg) => arg.endsWith('.mjs'));
+const modules = explicitModules.length > 0
+  ? explicitModules.map((arg) => pathToFileURL(resolve(arg)).href)
+  : smokeModules;
+
+for (const modulePath of modules) {
+  await import(modulePath);
+}

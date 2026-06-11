@@ -18,6 +18,9 @@ export interface SemanticPatchBundleRecordIndex {
   readonly semanticEditReplayIds: readonly string[];
   readonly semanticEditReplayStatuses: readonly string[];
   readonly semanticEditReplayActions: readonly string[];
+  readonly semanticEditAdmissionStatuses: readonly string[];
+  readonly semanticEditAdmissionActions: readonly string[];
+  readonly semanticEditAdmissionReadinesses: readonly string[];
   readonly semanticEditReplayCurrentHashes: readonly string[];
   readonly semanticEditReplayOutputHashes: readonly string[];
   readonly semanticEditKeys: readonly string[];

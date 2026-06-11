@@ -19,6 +19,7 @@ export * from './declarations/semantic-merge-conflicts.js';
 export * from './declarations/semantic-edit-script.js';
 export * from './declarations/semantic-lineage.js';
 export * from './declarations/semantic-history.js';
+export * from './declarations/semantic-edit-bundle.js';
 export * from './declarations/semantic-patch-bundle-index.js';
 export * from './declarations/semantic-patch-bundle.js';
 export * from './declarations/semantic-patch-bundle-overlaps.js';

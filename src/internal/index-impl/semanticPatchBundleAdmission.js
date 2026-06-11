@@ -2,10 +2,14 @@ import { normalizeSemanticMergeReadiness, uniqueStrings } from '../../native-imp
 
 export function createSemanticPatchBundleAdmission(input = {}, context = {}) {
   const transformAdmission = semanticTransformAdmission(context);
-  const fallbackReadiness = transformAdmission.readiness === 'ready' ? 'ready' : context.readiness;
+  const semanticEditAdmission = context.semanticEditAdmission ?? { status: 'none', action: 'none', readiness: 'needs-review', reasonCodes: [] };
+  const fallbackReadiness = fallbackAdmissionReadiness(transformAdmission, semanticEditAdmission, context.readiness);
   const readiness = normalizeSemanticMergeReadiness(input.readiness ?? fallbackReadiness) ?? input.readiness ?? fallbackReadiness;
-  const status = input.status ?? admissionStatusForReadiness(readiness, transformAdmission);
-  const autoApplyCandidate = input.autoApplyCandidate ?? (status === 'admitted' && transformAdmission.action === 'admit');
+  const status = input.status ?? admissionStatusForReadiness(readiness, transformAdmission, semanticEditAdmission);
+  const autoApplyCandidate = input.autoApplyCandidate ?? (status === 'admitted' && [
+    transformAdmission.action,
+    semanticEditAdmission.action
+  ].includes('admit'));
   return compactRecord({
     status,
     readiness,
@@ -13,11 +17,13 @@ export function createSemanticPatchBundleAdmission(input = {}, context = {}) {
     autoMergeClaim: false,
     autoApplyCandidate,
     transformAdmission,
+    semanticEditAdmission,
     reasonCodes: uniqueStrings([
       ...strings(input.reasonCodes),
       ...strings(context.source?.reasons),
       ...strings(context.mergeCandidate?.reasons),
-      ...transformAdmission.reasonCodes
+      ...transformAdmission.reasonCodes,
+      ...strings(semanticEditAdmission.reasonCodes)
     ]),
     conflictKeys: uniqueStrings([...strings(input.conflictKeys), ...context.conflictKeys]),
     admittedAt: input.admittedAt,
@@ -81,10 +87,21 @@ function transformReadiness(value) {
   return undefined;
 }
 
-function admissionStatusForReadiness(readiness, transformAdmission) {
+function fallbackAdmissionReadiness(transformAdmission, semanticEditAdmission, fallback) {
+  if ([transformAdmission.readiness, semanticEditAdmission.readiness].includes('blocked')) return 'blocked';
+  if (hasAdmissibleReadyAction(transformAdmission, semanticEditAdmission)) return 'ready';
+  return fallback;
+}
+
+function admissionStatusForReadiness(readiness, transformAdmission, semanticEditAdmission) {
   if (readiness === 'blocked') return 'blocked';
-  if (transformAdmission.action === 'admit' && readiness === 'ready') return 'admitted';
+  if (hasAdmissibleReadyAction(transformAdmission, semanticEditAdmission) && readiness === 'ready') return 'admitted';
   return readiness === 'needs-review' ? 'needs-review' : 'proposed';
+}
+
+function hasAdmissibleReadyAction(transformAdmission, semanticEditAdmission) {
+  return [transformAdmission.action, semanticEditAdmission.action].includes('admit') ||
+    (semanticEditAdmission.action === 'skip' && semanticEditAdmission.readiness === 'ready' && semanticEditAdmission.reviewRequired === false);
 }
 
 function hasCrossLanguageTransform(index) {

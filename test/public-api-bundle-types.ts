@@ -13,14 +13,21 @@ const semanticPatchBundle = compilerApi.createSemanticPatchBundleRecord({
 });
 const typedSemanticPatchBundle: compilerApi.SemanticPatchBundleRecord = semanticPatchBundle;
 const typedSemanticPatchBundleIndex: compilerApi.SemanticPatchBundleRecordIndex = typedSemanticPatchBundle.index;
+const semanticEditBundleAdmission = compilerApi.createSemanticEditBundleAdmission({ replays: [] });
+const typedSemanticEditBundleAdmission: compilerApi.SemanticEditBundleAdmission = semanticEditBundleAdmission;
+const semanticEditBundleStatus: compilerApi.SemanticEditBundleAdmissionStatus = 'ready';
 const semanticPatchBundleOptions: compilerApi.CreateSemanticPatchBundleRecordOptions = {
   semanticEditReplays: [],
+  semanticEditAdmission: typedSemanticEditBundleAdmission,
   targetPortability: { status: 'portable', action: 'port-with-source-map-review' },
   admission: { status: 'queued', readiness: 'needs-review' }
 };
 const semanticPatchBundleQuery: compilerApi.SemanticPatchBundleRecordQuery = {
   semanticEditReplayStatus: 'accepted-clean',
   semanticEditReplayAction: 'apply',
+  semanticEditAdmissionStatus: 'ready',
+  semanticEditAdmissionAction: 'admit',
+  semanticEditAdmissionReadiness: 'ready',
   targetPortabilityStatus: 'portable'
 };
 const semanticPatchBundleOverlapQuery: compilerApi.SemanticPatchBundleOverlapQuery = {
@@ -34,5 +41,7 @@ const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecor
 
 void queriedSemanticPatchBundles;
 void typedSemanticPatchBundleIndex;
+void typedSemanticEditBundleAdmission;
+void semanticEditBundleStatus;
 void semanticPatchBundleOptions;
 void semanticPatchBundleOverlapQuery;
