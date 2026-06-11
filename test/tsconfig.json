@@ -12,6 +12,7 @@
   "include": [
     "../src/**/*.d.ts",
     "./public-api-types.ts",
-    "./public-api-semantic-edit-types.ts"
+    "./public-api-semantic-edit-types.ts",
+    "./public-api-transform-types.ts"
   ]
 }

@@ -8,6 +8,7 @@ import type {
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { NativeSourceChangeKind, NativeSourceChangeSet } from './native-diff.js';
 import type { SemanticEditProjection, SemanticEditScript } from './semantic-edit-script.js';
+import type { SemanticTransformIdentityRecord } from './semantic-transform-identity.js';
 
 export type SemanticPatchBundleAdmissionStatus = 'proposed' | 'queued' | 'admitted' | 'needs-review' | 'blocked' | 'rejected' | string;
 
@@ -110,6 +111,15 @@ export interface SemanticPatchBundleRecordIndex {
   readonly sourceIdentityHashes: readonly string[];
   readonly operationContentHashes: readonly string[];
   readonly editContentHashes: readonly string[];
+  readonly semanticTransformIds: readonly string[];
+  readonly semanticTransformKeys: readonly string[];
+  readonly semanticTransformIdentityHashes: readonly string[];
+  readonly semanticTransformContentHashes: readonly string[];
+  readonly projectionIdentityHashes: readonly string[];
+  readonly transformSourceLanguages: readonly string[];
+  readonly transformTargetLanguages: readonly string[];
+  readonly transformSourcePaths: readonly string[];
+  readonly transformTargetPaths: readonly string[];
   readonly patchIds: readonly string[];
   readonly mergeCandidateIds: readonly string[];
   readonly readinesses: readonly string[];
@@ -137,6 +147,7 @@ export interface SemanticPatchBundleRecord {
   readonly semanticOperationIds: readonly string[];
   readonly semanticEditScriptIds: readonly string[];
   readonly semanticEditProjectionIds: readonly string[];
+  readonly semanticTransformIdentityIds: readonly string[];
   readonly admission: SemanticPatchBundleAdmission;
   readonly index: SemanticPatchBundleRecordIndex;
   readonly summary: {
@@ -149,6 +160,7 @@ export interface SemanticPatchBundleRecord {
     readonly semanticEditScripts: number;
     readonly semanticEditProjections: number;
     readonly semanticEditProjectionEdits: number;
+    readonly semanticTransformIdentities: number;
     readonly reviewRequired: boolean;
     readonly autoMergeClaim: false;
   };
@@ -181,6 +193,10 @@ export interface CreateSemanticPatchBundleRecordOptions {
   readonly semanticEditScripts?: readonly SemanticEditScript[] | SemanticEditScript;
   readonly semanticEditProjection?: SemanticEditProjection;
   readonly semanticEditProjections?: readonly SemanticEditProjection[] | SemanticEditProjection;
+  readonly semanticTransformIdentity?: SemanticTransformIdentityRecord | Record<string, unknown>;
+  readonly semanticTransformIdentities?: readonly (SemanticTransformIdentityRecord | Record<string, unknown>)[];
+  readonly sourceLanguage?: FrontierSourceLanguage | string;
+  readonly targetLanguage?: FrontierSourceLanguage | string;
   readonly conflictKeys?: readonly string[] | string;
   readonly admission?: Partial<SemanticPatchBundleAdmission>;
   readonly metadata?: Record<string, unknown>;
@@ -237,6 +253,24 @@ export interface SemanticPatchBundleRecordQuery {
   readonly operationContentHashes?: readonly string[];
   readonly editContentHash?: string | readonly string[];
   readonly editContentHashes?: readonly string[];
+  readonly semanticTransformId?: string | readonly string[];
+  readonly semanticTransformIds?: readonly string[];
+  readonly semanticTransformKey?: string | readonly string[];
+  readonly semanticTransformKeys?: readonly string[];
+  readonly semanticTransformIdentityHash?: string | readonly string[];
+  readonly semanticTransformIdentityHashes?: readonly string[];
+  readonly semanticTransformContentHash?: string | readonly string[];
+  readonly semanticTransformContentHashes?: readonly string[];
+  readonly projectionIdentityHash?: string | readonly string[];
+  readonly projectionIdentityHashes?: readonly string[];
+  readonly transformSourceLanguage?: string | readonly string[];
+  readonly transformSourceLanguages?: readonly string[];
+  readonly transformTargetLanguage?: string | readonly string[];
+  readonly transformTargetLanguages?: readonly string[];
+  readonly transformSourcePath?: string | readonly string[];
+  readonly transformSourcePaths?: readonly string[];
+  readonly transformTargetPath?: string | readonly string[];
+  readonly transformTargetPaths?: readonly string[];
   readonly readiness?: SemanticMergeReadiness | string | readonly string[];
   readonly readinesses?: readonly string[];
   readonly admissionStatus?: SemanticPatchBundleAdmissionStatus | readonly string[];

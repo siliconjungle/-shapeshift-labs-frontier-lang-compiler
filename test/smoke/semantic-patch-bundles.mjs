@@ -3,6 +3,7 @@ import {
   createSemanticEditScript,
   createSemanticHistoryRecord,
   createSemanticPatchBundleRecord,
+  createSemanticTransformIdentityRecord,
   diffNativeSources,
   projectSemanticEditScriptToSource,
   querySemanticPatchBundleRecords,
@@ -121,3 +122,34 @@ assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditKey
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { operationContentHash: semanticOperation.operationContentHash }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { editContentHash: semanticEdit.editContentHash }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { sourcePath: 'src/counter-core.js' }).length, 1);
+
+const semanticTransform = createSemanticTransformIdentityRecord(semanticOperation, {
+  id: 'counter_ts_to_rust_transform',
+  sourceLanguage: 'typescript',
+  targetLanguage: 'rust',
+  sourcePath: 'src/counter.ts',
+  targetPath: 'src/counter.rs',
+  editContentHash: semanticEdit.editContentHash,
+  evidenceIds: ['evidence_counter_transform']
+});
+const transformBundle = createSemanticPatchBundleRecord(changeSet, {
+  id: 'bundle_counter_patch_transform',
+  semanticTransformIdentities: [semanticTransform],
+  targetLanguage: 'rust',
+  admission: { status: 'queued', readiness: changeSet.readiness }
+});
+
+assert.equal(transformBundle.semanticTransformIdentityIds.includes(semanticTransform.id), true);
+assert.equal(transformBundle.index.semanticTransformKeys.includes(semanticTransform.transformKey), true);
+assert.equal(transformBundle.index.semanticTransformIdentityHashes.includes(semanticTransform.transformIdentityHash), true);
+assert.equal(transformBundle.index.semanticTransformContentHashes.includes(semanticTransform.transformContentHash), true);
+assert.equal(transformBundle.index.projectionIdentityHashes.includes(semanticTransform.projectionIdentityHash), true);
+assert.equal(transformBundle.index.transformTargetLanguages.includes('rust'), true);
+assert.equal(transformBundle.index.sourcePaths.includes('src/counter.rs'), true);
+assert.equal(transformBundle.summary.semanticTransformIdentities, 1);
+assert.equal(querySemanticPatchBundleRecords([transformBundle], { semanticTransformId: semanticTransform.id }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([transformBundle], { semanticTransformKey: semanticTransform.transformKey }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([transformBundle], { semanticTransformContentHash: semanticTransform.transformContentHash }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([transformBundle], { projectionIdentityHash: semanticTransform.projectionIdentityHash }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([transformBundle], { transformTargetLanguage: 'rust' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([transformBundle], { transformTargetPath: 'src/counter.rs' }).length, 1);

@@ -6,6 +6,9 @@ export type SemanticPatchBundleOverlapKind =
   | 'semantic-edit-key'
   | 'semantic-identity'
   | 'source-identity'
+  | 'transform-content'
+  | 'semantic-transform'
+  | 'projection-identity'
   | 'region'
   | 'conflict-key'
   | 'source-path'
@@ -24,6 +27,9 @@ export interface SemanticPatchBundleOverlapShared {
   readonly semanticEditKeys: readonly string[];
   readonly semanticIdentityHashes: readonly string[];
   readonly sourceIdentityHashes: readonly string[];
+  readonly semanticTransformContentHashes: readonly string[];
+  readonly semanticTransformIdentityHashes: readonly string[];
+  readonly projectionIdentityHashes: readonly string[];
   readonly regionKeys: readonly string[];
   readonly conflictKeys: readonly string[];
   readonly sourcePaths: readonly string[];
@@ -91,6 +97,12 @@ export interface SemanticPatchBundleOverlapQuery {
   readonly conflictKeys?: readonly string[];
   readonly semanticEditKey?: string | readonly string[];
   readonly semanticEditKeys?: readonly string[];
+  readonly semanticTransformIdentityHash?: string | readonly string[];
+  readonly semanticTransformIdentityHashes?: readonly string[];
+  readonly semanticTransformContentHash?: string | readonly string[];
+  readonly semanticTransformContentHashes?: readonly string[];
+  readonly projectionIdentityHash?: string | readonly string[];
+  readonly projectionIdentityHashes?: readonly string[];
   readonly operationContentHash?: string | readonly string[];
   readonly operationContentHashes?: readonly string[];
   readonly editContentHash?: string | readonly string[];

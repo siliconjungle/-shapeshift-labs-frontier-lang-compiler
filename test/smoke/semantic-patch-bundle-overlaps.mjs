@@ -3,6 +3,7 @@ import {
   compareSemanticPatchBundleRecords,
   createSemanticEditScript,
   createSemanticPatchBundleRecord,
+  createSemanticTransformIdentityRecord,
   diffNativeSources,
   projectSemanticEditScriptToSource,
   querySemanticPatchBundleOverlaps,
@@ -102,3 +103,51 @@ const independent = compareSemanticPatchBundleRecords(duplicateA, independentBun
 assert.equal(independent.admission.status, 'independent');
 assert.equal(independent.admission.reviewRequired, false);
 assert.equal(querySemanticPatchBundleOverlaps([duplicateA, independentBundle], { includeIndependent: true }).length, 1);
+
+const transformBase = createSemanticTransformIdentityRecord(script.operations[0], {
+  id: 'score_js_to_rust_transform',
+  sourceLanguage: 'javascript',
+  targetLanguage: 'rust',
+  sourcePath: 'src/score.js',
+  targetPath: 'src/score.rs',
+  editContentHash: projection.edits[0].editContentHash
+});
+const transformDuplicateA = createSemanticPatchBundleRecord(changeSet, {
+  id: 'score_overlap_bundle_transform_a',
+  semanticTransformIdentities: [transformBase],
+  sourcePath: 'src/score.js'
+});
+const transformDuplicateB = createSemanticPatchBundleRecord(changeSet, {
+  id: 'score_overlap_bundle_transform_b',
+  semanticTransformIdentities: [transformBase],
+  sourcePath: 'src/score.rs'
+});
+const transformDuplicate = compareSemanticPatchBundleRecords(transformDuplicateA, transformDuplicateB, { includeSourcePaths: false });
+assert.equal(transformDuplicate.admission.status, 'duplicate');
+assert.equal(transformDuplicate.overlapKinds.includes('transform-content'), true);
+assert.equal(transformDuplicate.admission.reasonCodes.includes('same-transform-content'), true);
+assert.equal(transformDuplicate.shared.semanticTransformContentHashes.length, 1);
+
+const transformIdentityOnly = createSemanticTransformIdentityRecord(script.operations[0], {
+  id: 'score_js_to_rust_transform_identity_only',
+  sourceLanguage: 'javascript',
+  targetLanguage: 'rust',
+  sourcePath: 'src/score.js',
+  targetPath: 'src/score.rs',
+  editContentHash: 'different_edit_content'
+});
+const transformSemanticBundle = createSemanticPatchBundleRecord(changeSet, {
+  id: 'score_overlap_bundle_transform_semantic',
+  semanticTransformIdentities: [transformIdentityOnly]
+});
+const transformSemantic = compareSemanticPatchBundleRecords(transformDuplicateA, transformSemanticBundle, { includeSourcePaths: false });
+assert.equal(transformSemantic.admission.status, 'semantic-overlap');
+assert.equal(transformSemantic.overlapKinds.includes('semantic-transform'), true);
+assert.equal(transformSemantic.overlapKinds.includes('projection-identity'), true);
+assert.equal(transformSemantic.admission.reasonCodes.includes('same-semantic-transform'), true);
+
+const queriedTransformOverlaps = querySemanticPatchBundleOverlaps(
+  [transformDuplicateA, transformDuplicateB, transformSemanticBundle],
+  { semanticTransformContentHash: transformBase.transformContentHash }
+);
+assert.equal(queriedTransformOverlaps.length, 1);

@@ -6,6 +6,9 @@ export const SemanticPatchBundleOverlapKinds=Object.freeze([
   'semantic-edit-key',
   'semantic-identity',
   'source-identity',
+  'transform-content',
+  'semantic-transform',
+  'projection-identity',
   'region',
   'conflict-key',
   'source-path'
@@ -24,6 +27,9 @@ const KIND_FIELDS=Object.freeze({
   'semantic-edit-key':'semanticEditKeys',
   'semantic-identity':'semanticIdentityHashes',
   'source-identity':'sourceIdentityHashes',
+  'transform-content':'semanticTransformContentHashes',
+  'semantic-transform':'semanticTransformIdentityHashes',
+  'projection-identity':'projectionIdentityHashes',
   region:'regionKeys',
   'conflict-key':'conflictKeys',
   'source-path':'sourcePaths'
@@ -49,8 +55,8 @@ export function compareSemanticPatchBundleRecords(left={},right={},options={}){
     score:overlapScore(admission.status,shared,admission.reasonCodes),
     summary:{
       sharedKeys:countShared(shared),
-      duplicateSignals:shared.operationContentHashes.length+shared.editContentHashes.length,
-      semanticSignals:shared.semanticEditKeys.length+shared.semanticIdentityHashes.length+shared.sourceIdentityHashes.length,
+      duplicateSignals:shared.operationContentHashes.length+shared.editContentHashes.length+shared.semanticTransformContentHashes.length,
+      semanticSignals:shared.semanticEditKeys.length+shared.semanticIdentityHashes.length+shared.sourceIdentityHashes.length+shared.semanticTransformIdentityHashes.length+shared.projectionIdentityHashes.length,
       sourceSignals:shared.regionKeys.length+shared.conflictKeys.length+shared.sourcePaths.length,
       baseHashMismatch:admission.reasonCodes.includes('base-hash-mismatch'),
       targetHashMismatch:admission.reasonCodes.includes('target-hash-mismatch')
@@ -84,6 +90,9 @@ function sharedIndex(left,right,options){
     semanticEditKeys:intersect(left.semanticEditKeys,right.semanticEditKeys),
     semanticIdentityHashes:intersect(left.semanticIdentityHashes,right.semanticIdentityHashes),
     sourceIdentityHashes:intersect(left.sourceIdentityHashes,right.sourceIdentityHashes),
+    semanticTransformContentHashes:intersect(left.semanticTransformContentHashes,right.semanticTransformContentHashes),
+    semanticTransformIdentityHashes:intersect(left.semanticTransformIdentityHashes,right.semanticTransformIdentityHashes),
+    projectionIdentityHashes:intersect(left.projectionIdentityHashes,right.projectionIdentityHashes),
     regionKeys:intersect(left.regionKeys,right.regionKeys),
     conflictKeys:intersect(left.conflictKeys,right.conflictKeys),
     sourcePaths:options.includeSourcePaths===false?[]:intersect(left.sourcePaths,right.sourcePaths),
@@ -93,16 +102,19 @@ function sharedIndex(left,right,options){
 }
 
 function overlapAdmission(shared,{leftIndex,rightIndex,options}){
-  const duplicate=shared.operationContentHashes.length||shared.editContentHashes.length;
-  const semantic=shared.semanticEditKeys.length||shared.semanticIdentityHashes.length||shared.sourceIdentityHashes.length;
+  const duplicate=shared.operationContentHashes.length||shared.editContentHashes.length||shared.semanticTransformContentHashes.length;
+  const semantic=shared.semanticEditKeys.length||shared.semanticIdentityHashes.length||shared.sourceIdentityHashes.length||shared.semanticTransformIdentityHashes.length||shared.projectionIdentityHashes.length;
   const source=shared.regionKeys.length||shared.conflictKeys.length||shared.sourcePaths.length;
   const status=duplicate?'duplicate':semantic?'semantic-overlap':source?'source-overlap':'independent';
   const reasonCodes=uniqueStrings([
     shared.operationContentHashes.length?'same-operation-content':undefined,
     shared.editContentHashes.length?'same-edit-content':undefined,
+    shared.semanticTransformContentHashes.length?'same-transform-content':undefined,
     shared.semanticEditKeys.length?'same-semantic-edit-key':undefined,
     shared.semanticIdentityHashes.length?'same-semantic-identity':undefined,
     shared.sourceIdentityHashes.length?'same-source-identity':undefined,
+    shared.semanticTransformIdentityHashes.length?'same-semantic-transform':undefined,
+    shared.projectionIdentityHashes.length?'same-projection-identity':undefined,
     shared.regionKeys.length?'same-region-key':undefined,
     shared.conflictKeys.length?'same-conflict-key':undefined,
     shared.sourcePaths.length?'same-source-path':undefined,
@@ -129,6 +141,9 @@ function bundleIndex(record){
     semanticEditKeys:uniqueStrings(index.semanticEditKeys),
     semanticIdentityHashes:uniqueStrings(index.semanticIdentityHashes),
     sourceIdentityHashes:uniqueStrings(index.sourceIdentityHashes),
+    semanticTransformContentHashes:uniqueStrings(index.semanticTransformContentHashes),
+    semanticTransformIdentityHashes:uniqueStrings(index.semanticTransformIdentityHashes),
+    projectionIdentityHashes:uniqueStrings(index.projectionIdentityHashes),
     operationContentHashes:uniqueStrings(index.operationContentHashes),
     editContentHashes:uniqueStrings(index.editContentHashes)
   };
@@ -146,6 +161,9 @@ function matchesOverlap(overlap,query){
     &&matchAny(queryValues(query.sourcePath,query.sourcePaths),overlap.shared.sourcePaths)
     &&matchAny(queryValues(query.conflictKey,query.conflictKeys),overlap.shared.conflictKeys)
     &&matchAny(queryValues(query.semanticEditKey,query.semanticEditKeys),overlap.shared.semanticEditKeys)
+    &&matchAny(queryValues(query.semanticTransformIdentityHash,query.semanticTransformIdentityHashes),overlap.shared.semanticTransformIdentityHashes)
+    &&matchAny(queryValues(query.semanticTransformContentHash,query.semanticTransformContentHashes),overlap.shared.semanticTransformContentHashes)
+    &&matchAny(queryValues(query.projectionIdentityHash,query.projectionIdentityHashes),overlap.shared.projectionIdentityHashes)
     &&matchAny(queryValues(query.operationContentHash,query.operationContentHashes),overlap.shared.operationContentHashes)
     &&matchAny(queryValues(query.editContentHash,query.editContentHashes),overlap.shared.editContentHashes)
     &&(query.reviewRequired===undefined||overlap.admission.reviewRequired===query.reviewRequired)

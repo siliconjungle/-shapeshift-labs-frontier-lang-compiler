@@ -1,4 +1,5 @@
 import{idFragment,normalizeSemanticMergeReadiness,uniqueStrings}from'../../native-import-utils.js';
+import{normalizeSemanticTransformIdentityRecords,semanticTransformInputs,semanticTransformRecordIndex,semanticTransformSummary}from'./semanticTransformIdentityRecords.js';
 
 export const SemanticPatchBundleAdmissionStatuses=Object.freeze(['proposed','queued','admitted','needs-review','blocked','rejected']);
 
@@ -9,6 +10,9 @@ export function createSemanticPatchBundleRecord(input={},options={}){
   const semanticEditScripts=array(options.semanticEditScripts??source.semanticEditScripts??source.semanticEditScript);
   const semanticEditProjections=array(options.semanticEditProjections??source.semanticEditProjections??source.semanticEditProjection);
   const semanticEditIndex=semanticEditRecordIndex(semanticEditScripts,semanticEditProjections,source);
+  const transformContext={sourceLanguage:options.sourceLanguage??source.sourceLanguage??source.language,targetLanguage:options.targetLanguage??source.targetLanguage};
+  const semanticTransformIdentities=normalizeSemanticTransformIdentityRecords(semanticTransformInputs(source,options),transformContext);
+  const semanticTransformIndex=semanticTransformRecordIndex(semanticTransformIdentities,source);
   const regionInputs=array(options.changedRegions??source.changedRegions??source.regions);
   const sourceMapLinks=normalizeSourceMapLinks([
     ...array(options.sourceMapLinks??source.sourceMapLinks),
@@ -43,7 +47,7 @@ export function createSemanticPatchBundleRecord(input={},options={}){
     ??`semantic_patch_bundle_${idFragment(firstString(source.id,patchId,mergeCandidateId,source.sourcePath,source.language,'record'))}`;
   const language=options.language??source.language??mergeCandidate?.language??sources.find((item)=>item.language)?.language;
   const sourcePath=options.sourcePath??source.sourcePath??mergeCandidate?.sourcePath??sources.find((item)=>item.sourcePath)?.sourcePath;
-  const index=recordIndex({baseHash,targetHash,sources,changedRegions,sourceMapLinks,evidenceIds,proofIds,historyIds,semanticOperationIds,patchId,mergeCandidateId,admission,semanticEditIndex});
+  const index=recordIndex({baseHash,targetHash,sources,changedRegions,sourceMapLinks,evidenceIds,proofIds,historyIds,semanticOperationIds,patchId,mergeCandidateId,admission,semanticEditIndex,semanticTransformIndex});
   return{
     kind:'frontier.lang.semanticPatchBundleRecord',
     version:1,
@@ -65,9 +69,10 @@ export function createSemanticPatchBundleRecord(input={},options={}){
     semanticOperationIds,
     semanticEditScriptIds:semanticEditIndex.semanticEditScriptIds,
     semanticEditProjectionIds:semanticEditIndex.semanticEditProjectionIds,
+    semanticTransformIdentityIds:semanticTransformIndex.semanticTransformIds,
     admission,
     index,
-    summary:{changedRegions:changedRegions.length,sourceMapLinks:sourceMapLinks.length,evidenceIds:evidenceIds.length,proofIds:proofIds.length,historyIds:historyIds.length,semanticOperations:semanticOperationIds.length,semanticEditScripts:semanticEditScripts.length,semanticEditProjections:semanticEditProjections.length,semanticEditProjectionEdits:semanticEditIndex.semanticEditProjectionEditCount,reviewRequired:admission.reviewRequired,autoMergeClaim:admission.autoMergeClaim},
+    summary:{changedRegions:changedRegions.length,sourceMapLinks:sourceMapLinks.length,evidenceIds:evidenceIds.length,proofIds:proofIds.length,historyIds:historyIds.length,semanticOperations:semanticOperationIds.length,semanticEditScripts:semanticEditScripts.length,semanticEditProjections:semanticEditProjections.length,semanticEditProjectionEdits:semanticEditIndex.semanticEditProjectionEditCount,semanticTransformIdentities:semanticTransformIdentities.length,reviewRequired:admission.reviewRequired,autoMergeClaim:admission.autoMergeClaim},
     metadata:compactRecord({
       sourceChangeSetId:source.kind==='frontier.lang.nativeSourceChangeSet'?source.id:undefined,
       patchRisk:patch?.risk,
@@ -75,6 +80,7 @@ export function createSemanticPatchBundleRecord(input={},options={}){
       changedRegionProjectionSummary:source.metadata?.changedRegionProjectionSummary,
       semanticMergeConflictSummary:source.metadata?.semanticMergeConflictSummary,
       semanticEditSummary:semanticEditSummary(semanticEditIndex),
+      semanticTransformSummary:semanticTransformSummary(semanticTransformIndex),
       ...options.metadata
     })
   };
@@ -197,11 +203,12 @@ function normalizeAdmission(input={},context){
 
 function recordIndex(parts){
   const semanticEditIndex=parts.semanticEditIndex??semanticEditRecordIndex([],[]);
+  const semanticTransformIndex=parts.semanticTransformIndex??semanticTransformRecordIndex([],parts);
   return{
     baseHashes:uniqueStrings([parts.baseHash,...parts.sources.map((item)=>item.baseHash)]),
     targetHashes:uniqueStrings([parts.targetHash,...parts.sources.map((item)=>item.targetHash)]),
     sourceHashes:uniqueStrings(parts.sources.map((item)=>item.sourceHash)),
-    sourcePaths:uniqueStrings([...parts.sources.map((item)=>item.sourcePath),...semanticEditIndex.projectedSourcePaths]),
+    sourcePaths:uniqueStrings([...parts.sources.map((item)=>item.sourcePath),...semanticEditIndex.projectedSourcePaths,...semanticTransformIndex.transformSourcePaths,...semanticTransformIndex.transformTargetPaths]),
     regionKeys:uniqueStrings([...parts.changedRegions.map((region)=>region.key),...semanticEditIndex.anchorKeys]),
     regionKinds:uniqueStrings(parts.changedRegions.map((region)=>region.regionKind)),
     conflictKeys:uniqueStrings([...parts.changedRegions.flatMap((region)=>[region.conflictKey,...array(region.admission?.conflictKeys)]),...semanticEditIndex.conflictKeys]),
@@ -219,6 +226,15 @@ function recordIndex(parts){
     sourceIdentityHashes:semanticEditIndex.sourceIdentityHashes,
     operationContentHashes:semanticEditIndex.operationContentHashes,
     editContentHashes:semanticEditIndex.editContentHashes,
+    semanticTransformIds:semanticTransformIndex.semanticTransformIds,
+    semanticTransformKeys:semanticTransformIndex.semanticTransformKeys,
+    semanticTransformIdentityHashes:semanticTransformIndex.semanticTransformIdentityHashes,
+    semanticTransformContentHashes:semanticTransformIndex.semanticTransformContentHashes,
+    projectionIdentityHashes:semanticTransformIndex.projectionIdentityHashes,
+    transformSourceLanguages:semanticTransformIndex.transformSourceLanguages,
+    transformTargetLanguages:semanticTransformIndex.transformTargetLanguages,
+    transformSourcePaths:semanticTransformIndex.transformSourcePaths,
+    transformTargetPaths:semanticTransformIndex.transformTargetPaths,
     patchIds:uniqueStrings([parts.patchId]),
     mergeCandidateIds:uniqueStrings([parts.mergeCandidateId]),
     readinesses:uniqueStrings([parts.admission.readiness,...parts.changedRegions.map((region)=>region.admission?.readiness)]),
@@ -252,6 +268,15 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.sourceIdentityHash,query.sourceIdentityHashes),index.sourceIdentityHashes)
     &&matchAny(queryValues(query.operationContentHash,query.operationContentHashes),index.operationContentHashes)
     &&matchAny(queryValues(query.editContentHash,query.editContentHashes),index.editContentHashes)
+    &&matchAny(queryValues(query.semanticTransformId,query.semanticTransformIds),index.semanticTransformIds)
+    &&matchAny(queryValues(query.semanticTransformKey,query.semanticTransformKeys),index.semanticTransformKeys)
+    &&matchAny(queryValues(query.semanticTransformIdentityHash,query.semanticTransformIdentityHashes),index.semanticTransformIdentityHashes)
+    &&matchAny(queryValues(query.semanticTransformContentHash,query.semanticTransformContentHashes),index.semanticTransformContentHashes)
+    &&matchAny(queryValues(query.projectionIdentityHash,query.projectionIdentityHashes),index.projectionIdentityHashes)
+    &&matchAny(queryValues(query.transformSourceLanguage,query.transformSourceLanguages),index.transformSourceLanguages)
+    &&matchAny(queryValues(query.transformTargetLanguage,query.transformTargetLanguages),index.transformTargetLanguages)
+    &&matchAny(queryValues(query.transformSourcePath,query.transformSourcePaths),index.transformSourcePaths)
+    &&matchAny(queryValues(query.transformTargetPath,query.transformTargetPaths),index.transformTargetPaths)
     &&matchAny(queryValues(query.readiness,query.readinesses),index.readinesses)
     &&matchAny(queryValues(query.admissionStatus,query.admissionStatuses),index.admissionStatuses);
 }

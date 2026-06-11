@@ -1,6 +1,7 @@
 import * as compilerApi from '../src/index.js';
 import './public-api-native-fixtures.js';
 import './public-api-adapter-fixtures.js';
+import './public-api-transform-types.js';
 
 type Expect<T extends true> = T;
 type Equal<A, B> =
@@ -67,6 +68,7 @@ type ExpectedPublicRuntimeExport =
   | 'createSemanticMergeCandidateAdmissionRecord'
   | 'createSemanticEditScript'
   | 'createSemanticPatchBundleRecord' | 'compareSemanticPatchBundleRecords'
+  | 'createSemanticTransformIdentityRecord'
   | 'createUniversalCapabilityMatrix'
   | 'createUniversalConversionArtifacts'
   | 'createUniversalConversionPlan'
@@ -131,6 +133,7 @@ type ExpectedPublicRuntimeExport =
   | 'semanticMergeConflictRiskScore'
   | 'semanticHistoryRecordsConflict'
   | 'semanticHistoryRecordsOverlap'
+  | 'semanticTransformIdentityFields'
   | 'sortSemanticMergeCandidateAdmissionRecords'
   | 'sortSemanticMergeCandidatesByConflictRisk'
   | 'summarizeLanguageAdapterPackageContracts'
