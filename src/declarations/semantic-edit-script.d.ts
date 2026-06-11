@@ -40,6 +40,10 @@ export interface SemanticEditScriptOperation {
     readonly symbolKind?: string;
     readonly sourceSpan?: SourceSpan;
   };
+  readonly semanticKey?: string;
+  readonly semanticIdentityHash?: string;
+  readonly sourceIdentityHash?: string;
+  readonly operationContentHash?: string;
   readonly spans?: {
     readonly base?: SourceSpan;
     readonly worker?: SourceSpan;
@@ -84,6 +88,10 @@ export interface SemanticEditScriptSummary {
   readonly blocked: number;
   readonly candidates: number;
   readonly autoMergeCandidates: number;
+  readonly semanticKeys?: readonly string[];
+  readonly semanticIdentityHashes?: readonly string[];
+  readonly sourceIdentityHashes?: readonly string[];
+  readonly operationContentHashes?: readonly string[];
 }
 
 export interface SemanticEditScriptAdmission {
@@ -136,6 +144,7 @@ export interface SemanticEditProjectionEdit {
   readonly semanticKey?: string;
   readonly semanticIdentityHash?: string;
   readonly sourceIdentityHash?: string;
+  readonly operationContentHash?: string;
   readonly editContentHash?: string;
   readonly headStart: number;
   readonly headEnd: number;

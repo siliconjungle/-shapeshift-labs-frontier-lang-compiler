@@ -44,7 +44,11 @@ export function summarizeSemanticEditOperations(operations) {
     stale: byStatus.stale ?? 0,
     blocked: byStatus.blocked ?? 0,
     candidates: byStatus.candidate ?? 0,
-    autoMergeCandidates: (byStatus.portable ?? 0) + (byStatus['already-applied'] ?? 0)
+    autoMergeCandidates: (byStatus.portable ?? 0) + (byStatus['already-applied'] ?? 0),
+    semanticKeys: uniqueStrings(operations.map((operation) => operation.semanticKey).filter(Boolean)),
+    semanticIdentityHashes: uniqueStrings(operations.map((operation) => operation.semanticIdentityHash).filter(Boolean)),
+    sourceIdentityHashes: uniqueStrings(operations.map((operation) => operation.sourceIdentityHash).filter(Boolean)),
+    operationContentHashes: uniqueStrings(operations.map((operation) => operation.operationContentHash).filter(Boolean))
   };
 }
 

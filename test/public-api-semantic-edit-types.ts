@@ -9,7 +9,12 @@ const semanticEditScript = compilerApi.createSemanticEditScript({
 });
 const typedSemanticEditScript: compilerApi.SemanticEditScript = semanticEditScript;
 typedSemanticEditScript.admission.status satisfies compilerApi.SemanticEditScriptAdmissionStatus;
+typedSemanticEditScript.summary.semanticKeys satisfies readonly string[] | undefined;
+typedSemanticEditScript.summary.operationContentHashes satisfies readonly string[] | undefined;
 typedSemanticEditScript.operations[0]?.status satisfies compilerApi.SemanticEditScriptOperationStatus | undefined;
+typedSemanticEditScript.operations[0]?.semanticKey satisfies string | undefined;
+typedSemanticEditScript.operations[0]?.semanticIdentityHash satisfies string | undefined;
+typedSemanticEditScript.operations[0]?.operationContentHash satisfies string | undefined;
 typedSemanticEditScript.operations[0]?.spans?.worker satisfies object | undefined;
 
 const semanticEditProjection = compilerApi.projectSemanticEditScriptToSource({
@@ -26,6 +31,7 @@ typedSemanticEditProjectionEdit?.conflictKey satisfies string | undefined;
 typedSemanticEditProjectionEdit?.symbolName satisfies string | undefined;
 typedSemanticEditProjectionEdit?.semanticKey satisfies string | undefined;
 typedSemanticEditProjectionEdit?.semanticIdentityHash satisfies string | undefined;
+typedSemanticEditProjectionEdit?.operationContentHash satisfies string | undefined;
 typedSemanticEditProjectionEdit?.editContentHash satisfies string | undefined;
 
 void typedSemanticEditScript;

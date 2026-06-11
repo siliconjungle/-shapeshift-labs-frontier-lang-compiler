@@ -34,6 +34,12 @@ assert.equal(cleanHead.admission.autoApplyCandidate, true);
 assert.equal(cleanHead.summary.autoMergeCandidates, 1);
 assert.equal(cleanHead.operations[0].status, 'portable');
 assert.equal(cleanHead.operations[0].reasonCodes.includes('head-source-matches-base'), true);
+assert.equal(cleanHead.operations[0].semanticKey, 'semantic-edit:replaceBody:modified:function:step');
+assert.ok(cleanHead.operations[0].semanticIdentityHash);
+assert.ok(cleanHead.operations[0].sourceIdentityHash);
+assert.ok(cleanHead.operations[0].operationContentHash);
+assert.deepEqual(cleanHead.summary.semanticKeys, [cleanHead.operations[0].semanticKey]);
+assert.deepEqual(cleanHead.summary.operationContentHashes, [cleanHead.operations[0].operationContentHash]);
 assert.ok(cleanHead.operations[0].spans.worker);
 assert.ok(cleanHead.operations[0].hashes.headTextHash);
 
@@ -55,6 +61,9 @@ assert.equal(cleanProjection.edits[0].conflictKey, cleanHead.operations[0].ancho
 assert.equal(cleanProjection.edits[0].symbolName, 'step');
 assert.equal(cleanProjection.edits[0].sourcePath, 'src/runtime.ts');
 assert.equal(cleanProjection.edits[0].semanticKey, 'semantic-edit:replaceBody:modified:function:step');
+assert.equal(cleanProjection.edits[0].semanticIdentityHash, cleanHead.operations[0].semanticIdentityHash);
+assert.equal(cleanProjection.edits[0].sourceIdentityHash, cleanHead.operations[0].sourceIdentityHash);
+assert.equal(cleanProjection.edits[0].operationContentHash, cleanHead.operations[0].operationContentHash);
 assert.ok(cleanProjection.edits[0].semanticIdentityHash);
 assert.ok(cleanProjection.edits[0].sourceIdentityHash);
 assert.ok(cleanProjection.edits[0].editContentHash);

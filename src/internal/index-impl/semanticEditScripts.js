@@ -13,6 +13,7 @@ import {
   summarizeSemanticEditOperations
 } from './semanticEditScriptClassification.js';
 import { sourceTextForSpan } from './sourceTextForSpan.js';
+import { semanticEditIdentityFields, semanticEditOperationContentHash } from './semanticEditIdentityRecords.js';
 
 export { SemanticEditScriptAdmissionStatuses };
 
@@ -137,42 +138,48 @@ function semanticEditOperation(region, index, context, input) {
   const baseText = spanText(context.base, baseSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.before?.sourceSpan ?? region.sourceSpan);
   const workerText = spanText(context.worker, workerSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.after?.sourceSpan ?? region.sourceSpan);
   const headText = spanText(context.head, headSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.head?.sourceSpan ?? baseSymbol?.sourceSpan);
+  const anchor = compactRecord({
+    key: anchorKey,
+    conflictKey: region.conflictKey ?? `region:${anchorKey}`,
+    regionId: region.id,
+    regionKind: region.regionKind,
+    granularity: region.granularity,
+    language: region.language ?? context.workerChangeSet.language,
+    sourcePath: region.sourcePath ?? context.workerChangeSet.sourcePath,
+    symbolId: region.symbolId ?? workerSymbol?.id ?? baseSymbol?.id,
+    symbolName: region.symbolName ?? workerSymbol?.name ?? baseSymbol?.name,
+    symbolKind: region.symbolKind ?? workerSymbol?.kind ?? baseSymbol?.kind,
+    sourceSpan: workerSymbol?.sourceSpan ?? region.sourceSpan
+  });
+  const hashes = compactRecord({
+    baseSourceHash: context.workerChangeSet.beforeHash,
+    workerSourceHash: context.workerChangeSet.afterHash,
+    headSourceHash: context.headChangeSet?.afterHash,
+    baseSpanHash: baseSymbol?.spanHash,
+    workerSpanHash: workerSymbol?.spanHash,
+    headSpanHash: headSymbol?.spanHash,
+    baseTextHash: baseText === undefined ? undefined : hashSemanticValue(baseText),
+    workerTextHash: workerText === undefined ? undefined : hashSemanticValue(workerText),
+    headTextHash: headText === undefined ? undefined : hashSemanticValue(headText),
+    beforeSignatureHash: workerSymbol?.beforeSignatureHash ?? baseSymbol?.signatureHash,
+    afterSignatureHash: workerSymbol?.afterSignatureHash ?? workerSymbol?.signatureHash
+  });
+  const identityRecord = semanticEditIdentityRecord({ kind, region, anchor });
+  const identity = semanticEditIdentityFields(identityRecord);
   return compactRecord({
     id: `semantic_edit_op_${idFragment(firstString(input.id, anchorKey, index))}`,
     kind,
     changeKind: region.changeKind,
-    anchor: compactRecord({
-      key: anchorKey,
-      conflictKey: region.conflictKey ?? `region:${anchorKey}`,
-      regionId: region.id,
-      regionKind: region.regionKind,
-      granularity: region.granularity,
-      language: region.language ?? context.workerChangeSet.language,
-      sourcePath: region.sourcePath ?? context.workerChangeSet.sourcePath,
-      symbolId: region.symbolId ?? workerSymbol?.id ?? baseSymbol?.id,
-      symbolName: region.symbolName ?? workerSymbol?.name ?? baseSymbol?.name,
-      symbolKind: region.symbolKind ?? workerSymbol?.kind ?? baseSymbol?.kind,
-      sourceSpan: workerSymbol?.sourceSpan ?? region.sourceSpan
-    }),
+    anchor,
+    ...identity,
     spans: compactRecord({
       base: baseSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.before?.sourceSpan,
       worker: workerSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.after?.sourceSpan ?? region.sourceSpan,
       head: headSymbol?.sourceSpan
     }),
-    hashes: compactRecord({
-      baseSourceHash: context.workerChangeSet.beforeHash,
-      workerSourceHash: context.workerChangeSet.afterHash,
-      headSourceHash: context.headChangeSet?.afterHash,
-      baseSpanHash: baseSymbol?.spanHash,
-      workerSpanHash: workerSymbol?.spanHash,
-      headSpanHash: headSymbol?.spanHash,
-      baseTextHash: baseText === undefined ? undefined : hashSemanticValue(baseText),
-      workerTextHash: workerText === undefined ? undefined : hashSemanticValue(workerText),
-      headTextHash: headText === undefined ? undefined : hashSemanticValue(headText),
-      beforeSignatureHash: workerSymbol?.beforeSignatureHash ?? baseSymbol?.signatureHash,
-      afterSignatureHash: workerSymbol?.afterSignatureHash ?? workerSymbol?.signatureHash
-    }),
+    hashes,
     status: classification.status,
+    operationContentHash: semanticEditOperationContentHash({ ...identityRecord, ...identity, ...hashes, status: classification.status }),
     reanchor: classification.reanchor,
     readiness: classification.readiness,
     confidence: classification.confidence,
@@ -183,6 +190,21 @@ function semanticEditOperation(region, index, context, input) {
       semanticEquivalenceClaim: false
     }
   });
+}
+
+function semanticEditIdentityRecord(input) {
+  return {
+    kind: input.kind,
+    changeKind: input.region.changeKind,
+    anchorKey: input.anchor.key,
+    conflictKey: input.anchor.conflictKey,
+    regionId: input.anchor.regionId,
+    regionKind: input.anchor.regionKind,
+    sourcePath: input.anchor.sourcePath,
+    symbolId: input.anchor.symbolId,
+    symbolName: input.anchor.symbolName,
+    symbolKind: input.anchor.symbolKind
+  };
 }
 
 function semanticEditOperationKind(region) {

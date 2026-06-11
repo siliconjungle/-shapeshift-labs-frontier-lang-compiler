@@ -1,5 +1,6 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { idFragment, uniqueStrings } from '../../native-import-utils.js';
+import { semanticEditIdentityFields } from './semanticEditIdentityRecords.js';
 
 export function projectSemanticEditScriptToSource(input = {}) {
   const script = input.script;
@@ -91,9 +92,7 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText) {
 function projectionEditRecord(edit) {
   const deletedTextHash = hashSemanticValue(edit.current);
   const replacementTextHash = hashSemanticValue(edit.replacement);
-  const semanticKey = semanticEditKey(edit);
-  const semanticIdentityHash = hashSemanticValue(semanticIdentityRecord(edit, semanticKey));
-  const sourceIdentityHash = hashSemanticValue(sourceIdentityRecord(edit));
+  const identity = semanticEditIdentityFields(edit);
   return compactRecord({
     operationId: edit.operationId,
     status: edit.alreadyApplied ? 'already-applied' : 'applied',
@@ -107,11 +106,10 @@ function projectionEditRecord(edit) {
     symbolId: edit.symbolId,
     symbolName: edit.symbolName,
     symbolKind: edit.symbolKind,
-    semanticKey,
-    semanticIdentityHash,
-    sourceIdentityHash,
+    ...identity,
+    operationContentHash: edit.operationContentHash,
     editContentHash: hashSemanticValue(compactRecord({
-      semanticIdentityHash,
+      semanticIdentityHash: identity.semanticIdentityHash,
       deletedTextHash,
       replacementTextHash,
       status: edit.alreadyApplied ? 'already-applied' : 'applied'
@@ -128,35 +126,6 @@ function projectionEditRecord(edit) {
   });
 }
 
-function semanticEditKey(edit) {
-  const scope = edit.symbolName
-    ? `${edit.symbolKind ?? 'symbol'}:${edit.symbolName}`
-    : edit.anchorKey ?? edit.regionId ?? edit.operationId;
-  return ['semantic-edit', edit.kind ?? 'region', edit.changeKind ?? 'change', scope].filter(Boolean).join(':');
-}
-
-function semanticIdentityRecord(edit, semanticKey) {
-  return compactRecord({
-    semanticKey,
-    kind: edit.kind,
-    changeKind: edit.changeKind,
-    regionKind: edit.regionKind,
-    symbolName: edit.symbolName,
-    symbolKind: edit.symbolKind
-  });
-}
-
-function sourceIdentityRecord(edit) {
-  return compactRecord({
-    anchorKey: edit.anchorKey,
-    conflictKey: edit.conflictKey,
-    regionId: edit.regionId,
-    sourcePath: edit.sourcePath,
-    symbolId: edit.symbolId,
-    semanticKey: semanticEditKey(edit)
-  });
-}
-
 function semanticEditIdentity(operation) {
   const anchor = operation.anchor ?? {};
   return compactRecord({
@@ -169,7 +138,11 @@ function semanticEditIdentity(operation) {
     sourcePath: anchor.sourcePath,
     symbolId: anchor.symbolId,
     symbolName: anchor.symbolName,
-    symbolKind: anchor.symbolKind
+    symbolKind: anchor.symbolKind,
+    semanticKey: operation.semanticKey,
+    semanticIdentityHash: operation.semanticIdentityHash,
+    sourceIdentityHash: operation.sourceIdentityHash,
+    operationContentHash: operation.operationContentHash
   });
 }
 
