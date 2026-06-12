@@ -11,14 +11,11 @@ const candidateOnly = createSemanticEditScript({
   generatedAt: 10
 });
 assert.equal(candidateOnly.kind, 'frontier.lang.semanticEditScript');
-assert.equal(candidateOnly.summary.operations, 3);
-assert.equal(candidateOnly.summary.candidates, 3);
+assert.equal(candidateOnly.summary.operations, 1);
+assert.equal(candidateOnly.summary.candidates, 1);
 assert.equal(candidateOnly.admission.status, 'needs-port');
 assert.equal(candidateOnly.operations[0].status, 'candidate');
-assert.equal(candidateOnly.operations[1].anchor.regionKind, 'export');
-assert.equal(candidateOnly.operations[1].status, 'candidate');
-assert.equal(candidateOnly.operations[2].kind, 'replaceControlFlow');
-assert.equal(candidateOnly.operations[2].status, 'candidate');
+assert.equal(candidateOnly.operations[0].kind, 'replaceControlFlow');
 assert.equal(candidateOnly.admission.autoMergeClaim, false);
 assert.equal(candidateOnly.admission.semanticEquivalenceClaim, false);
 const cleanHead = createSemanticEditScript({
@@ -32,13 +29,10 @@ const cleanHead = createSemanticEditScript({
 });
 assert.equal(cleanHead.admission.status, 'auto-merge-candidate');
 assert.equal(cleanHead.admission.autoApplyCandidate, true);
-assert.equal(cleanHead.summary.autoMergeCandidates, 2);
+assert.equal(cleanHead.summary.autoMergeCandidates, 1);
 assert.equal(cleanHead.operations[0].status, 'portable');
 assert.equal(cleanHead.operations[0].reasonCodes.includes('head-source-matches-base'), true);
-assert.equal(cleanHead.operations[0].semanticKey, 'semantic-edit:replaceBody:modified:function:step');
-assert.equal(cleanHead.operations[1].semanticKey, 'semantic-edit:replaceRegion:modified:export:step');
-assert.equal(cleanHead.operations[2].semanticKey, 'semantic-edit:replaceControlFlow:modified:controlFlow:step:controlFlow:exit#1');
-assert.equal(cleanHead.operations[2].status, 'covered');
+assert.equal(cleanHead.operations[0].semanticKey, 'semantic-edit:replaceControlFlow:modified:controlFlow:step:controlFlow:exit#1');
 assert.ok(cleanHead.operations[0].semanticIdentityHash);
 assert.ok(cleanHead.operations[0].sourceIdentityHash);
 assert.ok(cleanHead.operations[0].operationContentHash);
@@ -56,27 +50,27 @@ assert.equal(cleanProjection.kind, 'frontier.lang.semanticEditProjection');
 assert.equal(cleanProjection.status, 'projected');
 assert.equal(cleanProjection.sourceText, workerSource);
 assert.deepEqual(cleanProjection.appliedOperations, [cleanHead.operations[0].id]);
-assert.deepEqual(cleanProjection.skippedOperations, [cleanHead.operations[1].id, cleanHead.operations[2].id]);
+assert.deepEqual(cleanProjection.skippedOperations, []);
 assert.equal(cleanProjection.edits.length, 1);
 assert.equal(cleanProjection.edits[0].operationId, cleanHead.operations[0].id);
 assert.equal(cleanProjection.edits[0].status, 'applied');
 assert.equal(cleanProjection.edits[0].anchorKey, cleanHead.operations[0].anchor.key);
 assert.equal(cleanProjection.edits[0].conflictKey, cleanHead.operations[0].anchor.conflictKey);
-assert.equal(cleanProjection.edits[0].symbolName, 'step');
+assert.equal(cleanProjection.edits[0].symbolName, 'step:controlFlow:exit#1');
 assert.equal(cleanProjection.edits[0].sourcePath, 'src/runtime.ts');
-assert.equal(cleanProjection.edits[0].semanticKey, 'semantic-edit:replaceBody:modified:function:step');
+assert.equal(cleanProjection.edits[0].semanticKey, 'semantic-edit:replaceControlFlow:modified:controlFlow:step:controlFlow:exit#1');
 assert.equal(cleanProjection.edits[0].semanticIdentityHash, cleanHead.operations[0].semanticIdentityHash);
 assert.equal(cleanProjection.edits[0].sourceIdentityHash, cleanHead.operations[0].sourceIdentityHash);
 assert.equal(cleanProjection.edits[0].operationContentHash, cleanHead.operations[0].operationContentHash);
 assert.ok(cleanProjection.edits[0].semanticIdentityHash);
 assert.ok(cleanProjection.edits[0].sourceIdentityHash);
 assert.ok(cleanProjection.edits[0].editContentHash);
-assert.equal(cleanProjection.edits[0].sourceRangeKind, 'body-content');
-assert.equal(cleanProjection.edits[0].replacementText, ' return value + 2; ');
-assert.equal(cleanProjection.edits[0].deletedBytes, ' return value + 1; '.length);
+assert.equal(cleanProjection.edits[0].sourceRangeKind, undefined);
+assert.equal(cleanProjection.edits[0].replacementText, 'return value + 2;');
+assert.equal(cleanProjection.edits[0].deletedBytes, 'return value + 1;'.length);
 assert.ok(cleanProjection.edits[0].replacementTextHash);
-assert.ok(cleanProjection.edits[0].anchorDeletedTextHash);
-assert.ok(cleanProjection.edits[0].anchorReplacementTextHash);
+assert.ok(cleanProjection.edits[0].deletedTextHash);
+assert.ok(cleanProjection.edits[0].replacementSpanTextHash);
 assert.equal(cleanProjection.admission.status, 'auto-merge-candidate');
 assert.equal(cleanProjection.admission.autoMergeClaim, false);
 assert.equal(cleanProjection.admission.semanticEquivalenceClaim, false);
@@ -103,7 +97,7 @@ const shiftedReplay = replaySemanticEditProjection({
 });
 assert.equal(shiftedReplay.status, 'accepted-clean');
 assert.equal(shiftedReplay.outputSourceText, shiftedWorkerSource);
-assert.equal(shiftedReplay.edits[0].reasonCodes.includes('current-symbol-body-matches-deleted'), true);
+assert.equal(shiftedReplay.edits[0].reasonCodes.includes('current-symbol-anchor-matches-deleted'), true);
 assert.equal(shiftedReplay.edits[0].reasonCodes.includes('offset-reanchored-by-symbol'), true);
 const shiftedSignatureSource = 'export function step(value: string | number) { return value + 1; }\n';
 const shiftedSignatureExpected = 'export function step(value: string | number) { return value + 2; }\n';
@@ -114,8 +108,8 @@ const shiftedSignatureReplay = replaySemanticEditProjection({
 });
 assert.equal(shiftedSignatureReplay.status, 'accepted-clean');
 assert.equal(shiftedSignatureReplay.outputSourceText, '\n' + shiftedSignatureExpected);
-assert.equal(shiftedSignatureReplay.edits[0].reasonCodes.includes('current-symbol-body-matches-deleted'), true);
-assert.equal(shiftedSignatureReplay.edits[0].sourceRangeKind, 'body-content');
+assert.equal(shiftedSignatureReplay.edits[0].reasonCodes.includes('current-symbol-anchor-matches-deleted'), true);
+assert.equal(shiftedSignatureReplay.edits[0].sourceRangeKind, undefined);
 const shiftedSignatureBodyConflict = replaySemanticEditProjection({
   id: 'semantic_edit_shifted_signature_body_conflict',
   projection: cleanProjection,
@@ -123,7 +117,7 @@ const shiftedSignatureBodyConflict = replaySemanticEditProjection({
 });
 assert.equal(shiftedSignatureBodyConflict.status, 'conflict');
 assert.equal(shiftedSignatureBodyConflict.outputSourceText, undefined);
-assert.equal(shiftedSignatureBodyConflict.edits[0].reasonCodes.includes('current-symbol-body-content-mismatch'), true);
+assert.equal(shiftedSignatureBodyConflict.edits[0].reasonCodes.includes('current-symbol-anchor-content-mismatch'), true);
 const crlfBaseSource = 'export function crlf(value) {\r\n  return value + 1;\r\n}\r\n';
 const crlfWorkerSource = 'export function crlf(value) {\r\n  return value + 2;\r\n}\r\n';
 const crlfScript = createSemanticEditScript({
@@ -249,12 +243,9 @@ const conflictingHead = createSemanticEditScript({
   generatedAt: 30
 });
 assert.equal(conflictingHead.admission.status, 'conflict');
-assert.equal(conflictingHead.summary.conflicts, 3);
+assert.equal(conflictingHead.summary.conflicts, 1);
 assert.equal(conflictingHead.operations[0].reasonCodes.includes('head-anchor-changed-since-base'), true);
-assert.equal(conflictingHead.operations[1].anchor.regionKind, 'export');
-assert.equal(conflictingHead.operations[1].reasonCodes.includes('head-anchor-changed-since-base'), true);
-assert.equal(conflictingHead.operations[2].anchor.regionKind, 'controlFlow');
-assert.equal(conflictingHead.operations[2].reasonCodes.includes('head-anchor-changed-since-base'), true);
+assert.equal(conflictingHead.operations[0].anchor.regionKind, 'controlFlow');
 const blockedProjection = projectSemanticEditScriptToSource({
   script: conflictingHead,
   workerSourceText: workerSource,
@@ -274,12 +265,11 @@ const movedHead = createSemanticEditScript({
   generatedAt: 40
 });
 assert.equal(movedHead.admission.status, 'auto-merge-candidate');
-assert.equal(movedHead.summary.portable, 2);
+assert.equal(movedHead.summary.portable, 1);
 assert.equal(movedHead.operations[0].reanchor.toAnchorKey.includes('src/runtime-core.ts'), true);
 assert.equal(movedHead.operations[0].reanchor.toSourcePath, 'src/runtime-core.ts');
 assert.equal(movedHead.operations[0].reasonCodes.includes('anchor-reanchored-head-matches-base'), true);
-assert.equal(movedHead.operations[1].reanchor.toAnchorKey.includes('src/runtime-core.ts'), true);
-assert.equal(movedHead.operations[1].anchor.regionKind, 'export');
+assert.equal(movedHead.operations[0].anchor.regionKind, 'controlFlow');
 const movedProjection = projectSemanticEditScriptToSource({
   id: 'semantic_edit_moved_projection',
   script: movedHead,

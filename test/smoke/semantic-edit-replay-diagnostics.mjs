@@ -29,7 +29,8 @@ const conflictReplay = replaySemanticEditProjection({
 assert.equal(conflictReplay.status, 'conflict');
 assert.equal(conflictReplay.outputSourceText, undefined);
 assert.equal(conflictReplay.summary.conflicts, 1);
-assert.equal(conflictReplay.edits[0].diagnostics.some((diagnostic) => diagnostic.category === 'projection-mismatch' && diagnostic.code === 'current-symbol-body-content-mismatch'), true);
+assert.equal(conflictReplay.edits[0].diagnostics.some((diagnostic) => diagnostic.category === 'projection-mismatch'
+  && diagnostic.code === 'current-symbol-anchor-content-mismatch'), true);
 assert.equal(conflictReplay.diagnostics.some((diagnostic) => diagnostic.scope === 'edit' && diagnostic.category === 'projection-mismatch'), true);
 const staleAnchorReplay = replaySemanticEditProjection({
   id: 'semantic_edit_stale_anchor_replay',

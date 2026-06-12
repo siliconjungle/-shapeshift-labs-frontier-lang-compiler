@@ -37,7 +37,18 @@ for (const kind of ['controlFlow', 'effect', 'mutation']) {
 const effectRegion = workerSidecar.ownershipRegions.find((region) => region.regionKind === 'effect'
   && region.symbolName === 'loadTodo:effect:network#1');
 assert.ok(effectRegion);
-assert.equal(sourceTextForSpan(workerSource, effectRegion.sourceSpan), "fetch(api, { cache: 'no-store' });");
+assert.equal(effectRegion.precision, 'expression');
+assert.equal(effectRegion.metadata.spanKind, 'network-call');
+assert.equal(sourceTextForSpan(workerSource, effectRegion.sourceSpan), "fetch(api, { cache: 'no-store' })");
+const branchRegion = workerSidecar.ownershipRegions.find((region) => region.symbolName === 'loadTodo:controlFlow:branch#1');
+const mutationRegion = workerSidecar.ownershipRegions.find((region) => region.symbolName === 'loadTodo:mutation:assignment#1');
+assert.ok(branchRegion);
+assert.ok(mutationRegion);
+assert.equal(sourceTextForSpan(workerSource, branchRegion.sourceSpan), 'if (!state.ready)');
+assert.equal(sourceTextForSpan(workerSource, mutationRegion.sourceSpan), 'state.ready = true;');
+const mutatingCallRegion = workerSidecar.ownershipRegions.find((region) => region.symbolName === 'loadTodo:mutation:mutating-call#1');
+assert.ok(mutatingCallRegion);
+assert.equal(sourceTextForSpan(workerSource, mutatingCallRegion.sourceSpan), 'state.items.push(api)');
 assert.equal(workerSidecar.patchHints.some((hint) => hint.ownershipKey === effectRegion.key
   && hint.supportedOperations.includes('replace-effect-boundary')), true);
 
@@ -57,7 +68,7 @@ assert.equal(script.operations.some((operation) => operation.anchor.regionKind =
 const effectOperation = script.operations.find((operation) => operation.kind === 'replaceEffect');
 assert.ok(effectOperation);
 assert.equal(effectOperation.anchor.symbolName, 'loadTodo:effect:network#1');
-assert.equal(sourceTextForSpan(workerSource, effectOperation.spans.worker), "fetch(api, { cache: 'no-store' });");
+assert.equal(sourceTextForSpan(workerSource, effectOperation.spans.worker), "fetch(api, { cache: 'no-store' })");
 
 const projection = projectSemanticEditScriptToSource({
   id: 'semantic_effect_projection',

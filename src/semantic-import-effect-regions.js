@@ -12,6 +12,7 @@ export function semanticEffectRegionRecordsForImport(imported, semanticIndex, op
   const ordinals = new Map();
   const records = groups.map((group, index) => {
     const fact = group.facts[0];
+    const spanInfo = semanticFactSpanInfo(sourceText, group, fact, imported);
     const owner = symbolsById.get(fact.subjectId);
     const sourcePath = fact.value?.sourcePath ?? imported?.sourcePath ?? imported?.nativeSource?.sourcePath;
     const language = imported?.language ?? imported?.nativeSource?.language ?? imported?.nativeAst?.language;
@@ -31,8 +32,8 @@ export function semanticEffectRegionRecordsForImport(imported, semanticIndex, op
       symbolName,
       symbolKind: group.regionKind,
       nativeAstNodeId: owner?.nativeAstNodeId,
-      sourceSpan: semanticFactLineSpan(sourceText, fact, imported),
-      precision: sourceText ? 'line' : 'unknown',
+      sourceSpan: spanInfo.span,
+      precision: spanInfo.precision,
       mergePolicy: semanticFactRegionMergePolicy(group.regionKind),
       metadata: {
         semanticRegionTaxonomy: true,
@@ -40,6 +41,7 @@ export function semanticEffectRegionRecordsForImport(imported, semanticIndex, op
         factKinds: group.factKinds,
         factLine: group.line,
         predicate: group.regionKind,
+        spanKind: spanInfo.kind,
         occurrenceOrdinal: ordinal,
         subjectId: fact.subjectId,
         subjectName: owner?.name
@@ -100,19 +102,145 @@ function semanticFactSubjectCanOwnRuntimeRegion(symbol) {
     .test(String(symbol.kind ?? '').toLowerCase());
 }
 
-function semanticFactLineSpan(sourceText, fact, imported) {
+function semanticFactSpanInfo(sourceText, group, fact, imported) {
   const lineNumber = Number(fact?.value?.line);
-  if (!Number.isFinite(lineNumber)) return undefined;
+  if (!Number.isFinite(lineNumber)) return { span: undefined, precision: 'unknown', kind: 'unknown' };
   const line = String(sourceText ?? '').split(/\r\n|\n|\r/)[lineNumber - 1] ?? '';
   const leading = line.match(/^\s*/)?.[0].length ?? 0;
+  const expression = semanticFactExpressionRange(line, group) ?? { start: leading, end: line.length, kind: 'line' };
   return {
-    sourceId: imported?.nativeSource?.sourceHash ?? imported?.nativeAst?.sourceHash ?? imported?.sourceHash,
-    path: fact.value?.sourcePath ?? imported?.sourcePath ?? imported?.nativeSource?.sourcePath,
-    startLine: lineNumber,
-    endLine: lineNumber,
-    startColumn: leading + 1,
-    endColumn: line.length + 1
+    span: {
+      sourceId: imported?.nativeSource?.sourceHash ?? imported?.nativeAst?.sourceHash ?? imported?.sourceHash,
+      path: fact.value?.sourcePath ?? imported?.sourcePath ?? imported?.nativeSource?.sourcePath,
+      startLine: lineNumber,
+      endLine: lineNumber,
+      startColumn: expression.start + 1,
+      endColumn: expression.end + 1
+    },
+    precision: expression.kind === 'line' ? 'line' : 'expression',
+    kind: expression.kind
   };
+}
+
+function semanticFactExpressionRange(line, group) {
+  if (group.regionKind === 'effect') return effectRange(line, group.factKinds);
+  if (group.regionKind === 'mutation') return mutationRange(line, group.factKinds);
+  if (group.regionKind === 'controlFlow') return controlFlowRange(line, group.factKinds);
+  return undefined;
+}
+
+function effectRange(line, kinds) {
+  if (kinds.includes('network')) return namedCallRange(line, ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource'], 'network-call');
+  if (kinds.includes('scheduler')) return namedCallRange(line, ['setTimeout', 'setInterval', 'requestAnimationFrame', 'queueMicrotask'], 'scheduler-call');
+  if (kinds.includes('storage')) return tokenExpressionRange(line, ['localStorage', 'sessionStorage', 'indexedDB', 'caches', 'cookie'], 'storage-effect');
+  if (kinds.includes('host')) return tokenExpressionRange(line, ['console', 'process', 'Deno', 'Bun'], 'host-effect');
+  if (kinds.includes('browser')) return tokenExpressionRange(line, ['document', 'window', 'navigator', 'location', 'history'], 'browser-effect');
+  if (kinds.includes('async')) return keywordExpressionRange(line, 'await', 'async-effect');
+  return undefined;
+}
+
+function mutationRange(line, kinds) {
+  if (kinds.includes('mutating-call')) return mutatingCallRange(line);
+  if (kinds.includes('delete')) return keywordExpressionRange(line, 'delete', 'delete-mutation');
+  if (kinds.includes('assignment')) return assignmentRange(line);
+  if (kinds.includes('update')) return updateRange(line);
+  return undefined;
+}
+
+function controlFlowRange(line, kinds) {
+  if (kinds.includes('exit')) return keywordExpressionRange(line, /(return|yield)\b/, 'control-exit');
+  if (kinds.includes('branch')) return controlHeadRange(line, /(if|switch)\b/, 'control-branch')
+    ?? caseHeadRange(line) ?? keywordExpressionRange(line, /else\b/, 'control-branch');
+  if (kinds.includes('loop')) return controlHeadRange(line, /(for|while)\b/, 'control-loop')
+    ?? keywordExpressionRange(line, /do\b/, 'control-loop');
+  if (kinds.includes('exception')) return keywordExpressionRange(line, /(throw|catch|finally|try)\b/, 'control-exception');
+  if (kinds.includes('async')) return keywordExpressionRange(line, /(await|async)\b/, 'control-async');
+  return undefined;
+}
+
+function namedCallRange(line, names, kind) {
+  for (const name of names) {
+    const pattern = new RegExp(`(?:^|[^\\w$.])((?:window|globalThis|self)\\s*\\.\\s*)?${name}\\s*\\(`);
+    const match = pattern.exec(line);
+    if (!match) continue;
+    const start = match.index + match[0].search(new RegExp(`((?:window|globalThis|self)\\s*\\.\\s*)?${name}\\s*\\(`));
+    const open = line.indexOf('(', start);
+    const close = matchingParenIndex(line, open);
+    return { start, end: close === undefined ? statementEnd(line, open) : close + 1, kind };
+  }
+  return undefined;
+}
+
+function controlHeadRange(line, keyword, kind) {
+  const match = keyword.exec(line);
+  if (!match) return undefined;
+  const open = line.indexOf('(', match.index);
+  const close = matchingParenIndex(line, open);
+  return close === undefined ? undefined : { start: match.index, end: close + 1, kind };
+}
+
+function caseHeadRange(line) {
+  const match = /\b(case|default)\b/.exec(line);
+  if (!match) return undefined;
+  const colon = line.indexOf(':', match.index);
+  return { start: match.index, end: colon === -1 ? statementEnd(line, match.index) : colon + 1, kind: 'control-branch' };
+}
+
+function mutatingCallRange(line) {
+  const match = /[A-Za-z_$][\w$.[\]]*(?:\s*\.\s*[A-Za-z_$][\w$.[\]]*)*\s*\.\s*(?:push|pop|shift|unshift|splice|sort|reverse|set|add|delete|clear)\s*\(/.exec(line);
+  if (!match) return undefined;
+  const open = line.indexOf('(', match.index);
+  const close = matchingParenIndex(line, open);
+  return { start: match.index, end: close === undefined ? statementEnd(line, open) : close + 1, kind: 'mutating-call' };
+}
+
+function assignmentRange(line) {
+  const match = /\b[A-Za-z_$][\w$.[\]]*\s*=(?!=|>)/.exec(line);
+  return match ? { start: match.index, end: statementEnd(line, match.index), kind: 'assignment' } : undefined;
+}
+
+function updateRange(line) {
+  const match = /\b[A-Za-z_$][\w$.[\]]*(?:\+\+|--|\s*(?:\+=|-=|\*=|\/=|%=|\|\|=|&&=|\?\?=))/.exec(line);
+  return match ? { start: match.index, end: statementEnd(line, match.index), kind: 'update' } : undefined;
+}
+
+function tokenExpressionRange(line, tokens, kind) {
+  const pattern = new RegExp(`\\b(?:${tokens.join('|')})\\b`);
+  const match = pattern.exec(line);
+  return match ? { start: match.index, end: statementEnd(line, match.index), kind } : undefined;
+}
+
+function keywordExpressionRange(line, keyword, kind) {
+  const match = keyword instanceof RegExp ? keyword.exec(line) : new RegExp(`\\b${keyword}\\b`).exec(line);
+  return match ? { start: match.index, end: statementEnd(line, match.index), kind } : undefined;
+}
+
+function statementEnd(line, start) {
+  const semicolon = line.indexOf(';', Math.max(0, start));
+  return semicolon === -1 ? line.length : semicolon + 1;
+}
+
+function matchingParenIndex(line, open) {
+  if (open < 0) return undefined;
+  let depth = 0;
+  let quote;
+  let escaped = false;
+  for (let index = open; index < line.length; index += 1) {
+    const char = line[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === quote) quote = undefined;
+      continue;
+    }
+    if (char === '\'' || char === '"' || char === '`') {
+      quote = char;
+      continue;
+    }
+    if (char === '(') depth += 1;
+    else if (char === ')' && --depth === 0) return index;
+  }
+  return undefined;
 }
 
 function semanticFactRegionKey(prefix = 'source', sourcePath, regionKind, symbolName, index) {
