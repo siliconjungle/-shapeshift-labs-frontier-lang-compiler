@@ -146,6 +146,7 @@ function recordIndex(parts){
     semanticEditAdmissionReadinesses:uniqueStrings([editAdmission.readiness]),
     semanticEditReplayCurrentHashes:editIndex.semanticEditReplayCurrentHashes,
     semanticEditReplayOutputHashes:editIndex.semanticEditReplayOutputHashes,
+    sourceBackprojectionModes:editIndex.sourceBackprojectionModes,
     semanticEditKeys:editIndex.semanticEditKeys,
     semanticIdentityHashes:editIndex.semanticIdentityHashes,
     sourceIdentityHashes:editIndex.sourceIdentityHashes,
@@ -213,6 +214,7 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.semanticEditAdmissionReadiness,query.semanticEditAdmissionReadinesses),index.semanticEditAdmissionReadinesses)
     &&matchAny(queryValues(query.semanticEditReplayCurrentHash,query.semanticEditReplayCurrentHashes),index.semanticEditReplayCurrentHashes)
     &&matchAny(queryValues(query.semanticEditReplayOutputHash,query.semanticEditReplayOutputHashes),index.semanticEditReplayOutputHashes)
+    &&matchAny(queryValues(query.sourceBackprojectionMode,query.sourceBackprojectionModes),index.sourceBackprojectionModes)
     &&matchAny(queryValues(query.semanticEditKey,query.semanticEditKeys),index.semanticEditKeys)
     &&matchAny(queryValues(query.semanticIdentityHash,query.semanticIdentityHashes),index.semanticIdentityHashes)
     &&matchAny(queryValues(query.sourceIdentityHash,query.sourceIdentityHashes),index.sourceIdentityHashes)

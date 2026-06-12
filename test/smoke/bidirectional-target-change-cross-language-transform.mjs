@@ -61,6 +61,7 @@ assert.equal(record.sourcePatchBundle.index.transformBaseHashes.length, 1);
 assert.equal(record.sourcePatchBundle.index.transformTargetHashes.length, 1);
 assert.equal(record.sourcePatchBundle.index.semanticTransformReadinesses.includes('needs-port'), true);
 assert.equal(record.sourcePatchBundle.index.semanticTransformContentHashes.length, 1);
+assert.deepEqual(record.sourcePatchBundle.index.sourceBackprojectionModes, ['review-only']);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformSourceLanguage: 'typescript' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformTargetLanguage: 'rust' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformCrossLanguage: true }).length, 1);
@@ -70,6 +71,7 @@ assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { trans
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformBaseHash: record.sourcePatchBundle.index.transformBaseHashes[0] }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformTargetHash: record.sourcePatchBundle.index.transformTargetHashes[0] }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { semanticTransformReadiness: 'needs-port' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { sourceBackprojectionMode: 'review-only' }).length, 1);
 
 const exactTsSource = 'export function add(count: number): number { return count + 1; }\n';
 const exactRustBase = 'pub fn add(count: i32) -> i32 { count + 1 }\n';
@@ -128,6 +130,8 @@ assert.deepEqual(exactRecord.sourcePatchBundle.index.transformTargetLanguages, [
 assert.deepEqual(exactRecord.sourcePatchBundle.index.transformCrossLanguages, ['true']);
 assert.deepEqual(exactRecord.sourcePatchBundle.index.transformSourceMapIds, ['source_map_exact_counter_ts_to_rust']);
 assert.deepEqual(exactRecord.sourcePatchBundle.index.transformSourceMapMappingIds, ['map_ts_add_expr_to_rust_add_expr']);
+assert.deepEqual(exactRecord.sourcePatchBundle.index.sourceBackprojectionModes, ['cross-language-explicit-source-replacement']);
 assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { admissionStatus: 'admitted' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { transformTargetLanguage: 'rust' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { semanticTransformReadiness: 'auto-merge-candidate' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { sourceBackprojectionMode: 'cross-language-explicit-source-replacement' }).length, 1);

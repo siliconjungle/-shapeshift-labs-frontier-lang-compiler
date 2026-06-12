@@ -17,6 +17,7 @@ export function semanticEditRecordIndex(scripts, projections, replays, source = 
     semanticEditReplayActions: uniqueStrings([...strings(source.semanticEditReplayActions), ...strings(index.semanticEditReplayActions), ...strings(summary.replayActions), ...replays.map((replay) => replay.admission?.action)]),
     semanticEditReplayCurrentHashes: uniqueStrings([...strings(source.semanticEditReplayCurrentHashes), ...strings(index.semanticEditReplayCurrentHashes), ...strings(summary.replayCurrentHashes), ...strings(summary.semanticEditReplayCurrentHashes), ...replays.map((replay) => replay.currentHash)]),
     semanticEditReplayOutputHashes: uniqueStrings([...strings(source.semanticEditReplayOutputHashes), ...strings(index.semanticEditReplayOutputHashes), ...strings(summary.replayOutputHashes), ...strings(summary.semanticEditReplayOutputHashes), ...replays.map((replay) => replay.outputHash)]),
+    sourceBackprojectionModes: uniqueStrings([...strings(source.sourceBackprojectionModes), ...strings(index.sourceBackprojectionModes), ...strings(summary.sourceBackprojectionModes), ...scripts.flatMap(scriptBackprojectionModes), ...projections.map((projection) => projection.metadata?.sourceBackprojectionMode), ...replays.map((replay) => replay.metadata?.sourceBackprojectionMode)]),
     semanticEditKeys: uniqueStrings([...strings(source.semanticEditKeys), ...strings(index.semanticEditKeys), ...strings(summary.semanticEditKeys), ...operations.map((operation) => operation.semanticKey), ...edits.map((edit) => edit.semanticKey), ...replayEdits.map((edit) => edit.semanticKey)]),
     semanticIdentityHashes: uniqueStrings([...strings(source.semanticIdentityHashes), ...strings(index.semanticIdentityHashes), ...strings(summary.semanticIdentityHashes), ...operations.map((operation) => operation.semanticIdentityHash), ...edits.map((edit) => edit.semanticIdentityHash), ...replayEdits.map((edit) => edit.semanticIdentityHash)]),
     sourceIdentityHashes: uniqueStrings([...strings(source.sourceIdentityHashes), ...strings(index.sourceIdentityHashes), ...strings(summary.sourceIdentityHashes), ...operations.map((operation) => operation.sourceIdentityHash), ...edits.map((edit) => edit.sourceIdentityHash), ...replayEdits.map((edit) => edit.sourceIdentityHash)]),
@@ -38,6 +39,7 @@ export function semanticEditSummary(index) {
     replayActions: index.semanticEditReplayActions,
     replayCurrentHashes: index.semanticEditReplayCurrentHashes,
     replayOutputHashes: index.semanticEditReplayOutputHashes,
+    sourceBackprojectionModes: index.sourceBackprojectionModes,
     semanticEditKeys: index.semanticEditKeys,
     semanticIdentityHashes: index.semanticIdentityHashes,
     sourceIdentityHashes: index.sourceIdentityHashes,
@@ -56,6 +58,13 @@ function replayOperationIds(replays) {
     ...array(replay.skippedOperations),
     ...array(replay.edits).map((edit) => edit.operationId)
   ]);
+}
+function scriptBackprojectionModes(script) {
+  return [
+    script.metadata?.sourceBackprojectionMode,
+    script.metadata?.sourceProjectionHint?.sourceBackprojectionMode,
+    ...array(script.operations).map((operation) => operation.metadata?.sourceBackprojection?.mode)
+  ];
 }
 function array(value) { if (value === undefined || value === null) return []; return Array.isArray(value) ? value : [value]; }
 function strings(value) { return array(value).map((entry) => String(entry ?? '')).filter(Boolean); }
