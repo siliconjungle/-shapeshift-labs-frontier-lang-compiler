@@ -13,7 +13,7 @@ const cases = [
     baseSourceText: 'class Counter\n  def add(count)\n    count + 1\n  end\nend\n',
     workerSourceText: 'class Counter\n  def add(count)\n    count + 2\n  end\nend\n',
     prefix: '# prefix\n',
-    spans: { Counter: 5, add: 4 }
+    spans: { Counter: 5, 'Counter.instance.add': 4 }
   },
   {
     language: 'lua',

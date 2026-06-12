@@ -122,7 +122,7 @@ const scannedRubyImport = importNativeSource({
   sourcePath: 'todo.rb',
   sourceText: 'require "json"\nmodule Demo\nclass Todo\nend\ndef add_todo(title)\nend\nend\n'
 });
-assert.equal(scannedRubyImport.semanticIndex.symbols.some((symbol) => symbol.name === 'add_todo'), true);
+assert.equal(scannedRubyImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Demo.instance.add_todo'), true);
 const scannedKotlinImport = importNativeSource({
   language: 'kotlin',
   sourcePath: 'Todo.kt',

@@ -28,25 +28,6 @@ function scanPhp(input) {
   return declarations;
 }
 
-function scanRuby(input) {
-  const declarations = [];
-  const lines = sourceLines(input.sourceText);
-  for (const [index, { line, number }] of lines.entries()) {
-    const trimmed = line.trim();
-    let match;
-    if ((match = trimmed.match(/^(?:require|load)\s+['"]([^'"]+)['"]/))) {
-      declarations.push(nativeImportDeclaration(input, number, match[1], 'Require', 'module'));
-    } else if ((match = trimmed.match(/^module\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)/))) {
-      declarations.push(nativeDeclaration(input, number, 'Module', 'module', match[1], {}, true, endSpanOptions(input, lines, index)));
-    } else if ((match = trimmed.match(/^class\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)/))) {
-      declarations.push(nativeDeclaration(input, number, 'Class', 'class', match[1], {}, true, endSpanOptions(input, lines, index)));
-    } else if ((match = trimmed.match(/^def\s+(?:self\.)?([A-Za-z_]\w*[!?=]?)\s*(?:\(([^)]*)\)|([^#=]*))?/))) {
-      declarations.push(nativeDeclaration(input, number, 'Def', 'method', match[1], { parameters: splitParameters(match[2] ?? match[3]) }, true, endSpanOptions(input, lines, index)));
-    }
-  }
-  return declarations;
-}
-
 function scanKotlin(input) {
   const declarations = [];
   const lines = sourceLines(input.sourceText);
@@ -269,7 +250,6 @@ export {
   scanKotlin,
   scanLua,
   scanPhp,
-  scanRuby,
   scanScala,
   scanShell,
   scanSql,

@@ -13,12 +13,12 @@ import {
   scanKotlin,
   scanLua,
   scanPhp,
-  scanRuby,
   scanScala,
   scanShell,
   scanSql,
   scanZig
 } from './native-region-scanner-dynamic.js';
+import { scanRuby } from './native-region-scanner-ruby.js';
 import {
   scanElixir,
   scanErlang,
