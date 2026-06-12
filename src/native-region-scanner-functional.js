@@ -168,9 +168,19 @@ function scanR(input) {
 }
 
 function scanGenericDeclarations(input) {
-  return sourceLines(input.sourceText)
+  const lines = sourceLines(input.sourceText);
+  return lines
+    .map(({ line, number }, index) => ({ line, number, index }))
     .filter(({ line }) => /\b(function|class|struct|enum|trait|interface|def)\b/.test(line))
-    .map(({ line, number }) => nativeDeclaration(input, number, 'NativeDeclaration', 'variable', idFragment(line.trim()).slice(0, 40), { source: line.trim() }, true));
+    .map(({ line, number, index }) => nativeDeclaration(input, number, 'NativeDeclaration', 'variable', idFragment(line.trim()).slice(0, 40), { source: line.trim() }, true, genericSpanOptions(input, lines, index)));
+}
+
+function genericSpanOptions(input, lines, index) {
+  const line = lines[index]?.line.trim() ?? '';
+  if (line.includes('{')) return { span: braceBlockSpan(input, lines, index) };
+  if (/\b(?:class|module|def|function)\b/.test(line)) return { span: endKeywordBlockSpan(input, lines, index) };
+  if (/:\s*$/.test(line)) return { span: pythonBlockSpan(input, lines, index) };
+  return {};
 }
 
 function elixirMetaName(source) {
