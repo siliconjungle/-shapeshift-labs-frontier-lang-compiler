@@ -80,20 +80,29 @@ export function semanticTransformInputs(source = {}, options = {}) {
     ...array(options.semanticEditProjections ?? options.semanticEditProjection),
     ...array(source.semanticEditProjections ?? source.semanticEditProjection)
   ];
+  const scripts = [
+    ...array(options.semanticEditScripts ?? options.semanticEditScript),
+    ...array(source.semanticEditScripts ?? source.semanticEditScript)
+  ];
   return [
     ...array(options.semanticTransformIdentities ?? options.semanticTransformIdentity),
     ...array(source.semanticTransformIdentities ?? source.semanticTransformIdentity ?? source.semanticTransforms),
     ...array(source.index?.semanticTransformIdentities),
-    ...deriveSemanticTransformIdentityRecords({ semanticEditProjections: projections }, { ...source, ...options })
+    ...deriveSemanticTransformIdentityRecords({ semanticEditProjections: projections, semanticEditScripts: scripts }, { ...source, ...options })
   ];
 }
 
 export function deriveSemanticTransformIdentityRecords(input = {}, options = {}) {
   const projections = semanticEditProjectionInputs(input);
-  return uniqueRecords(projections.flatMap((projection, projectionIndex) => {
+  const projectionRecords = projections.flatMap((projection, projectionIndex) => {
     const edits = array(projection.edits).filter((edit) => edit && typeof edit === 'object');
     return edits.map((edit, editIndex) => transformRecordForProjectionEdit(edit, projection, input, options, projectionIndex, editIndex));
-  }));
+  });
+  const scriptRecords = projections.length ? [] : semanticEditScriptInputs(input).flatMap((script, scriptIndex) => {
+    const operations = array(script.operations).filter((operation) => operation && typeof operation === 'object');
+    return operations.map((operation, operationIndex) => transformRecordForScriptOperation(operation, script, input, options, scriptIndex, operationIndex));
+  });
+  return uniqueRecords([...projectionRecords, ...scriptRecords]);
 }
 
 export function semanticTransformRecordIndex(records, source = {}) {
@@ -145,6 +154,14 @@ function semanticEditProjectionInputs(input) {
   ].filter((entry) => entry && typeof entry === 'object');
 }
 
+function semanticEditScriptInputs(input) {
+  if (input.kind === 'frontier.lang.semanticEditScript') return [input];
+  return [
+    ...array(input.semanticEditScripts ?? input.semanticEditScript),
+    ...array(input.scripts ?? input.script)
+  ].filter((entry) => entry && typeof entry === 'object');
+}
+
 function transformRecordForProjectionEdit(edit, projection, input, options, projectionIndex, editIndex) {
   const sourceLanguage = firstString(edit.sourceLanguage, edit.language, input.sourceLanguage, options.sourceLanguage, projection.sourceLanguage, projection.language);
   const targetLanguage = firstString(edit.targetLanguage, edit.projectedLanguage, input.targetLanguage, options.targetLanguage, projection.targetLanguage, projection.projectedLanguage, projection.language);
@@ -164,6 +181,34 @@ function transformRecordForProjectionEdit(edit, projection, input, options, proj
     metadata: compactRecord({
       sourceProjectionId: projection.id,
       sourceProjectionEditOperationId: edit.operationId
+    })
+  });
+}
+
+function transformRecordForScriptOperation(operation, script, input, options, scriptIndex, operationIndex) {
+  const targetRegion = operation.metadata?.targetRegion ?? {};
+  const transformId = [script.id, operation.id, scriptIndex, operationIndex].filter((entry) => entry !== undefined && entry !== null).join(':');
+  return createSemanticTransformIdentityRecord(operation, {
+    id: `semantic_transform_${idFragment(transformId)}`,
+    sourceLanguage: firstString(operation.anchor?.language, script.language, input.sourceLanguage, options.sourceLanguage),
+    targetLanguage: firstString(targetRegion.language, script.metadata?.targetLanguage, input.targetLanguage, options.targetLanguage),
+    sourcePath: firstString(operation.anchor?.sourcePath, script.sourcePath, input.sourcePath, options.sourcePath),
+    targetPath: firstString(targetRegion.sourcePath, script.metadata?.targetPath, input.targetPath, options.targetPath),
+    baseHash: firstString(operation.hashes?.baseSourceHash, script.baseHash, input.baseHash, options.baseHash),
+    targetHash: firstString(targetRegion.sourceHash, operation.hashes?.workerSourceHash, input.targetHash, options.targetHash),
+    readiness: firstString(script.admission?.status, script.metadata?.sourceProjectionHint?.status),
+    evidenceIds: uniqueStrings([
+      ...strings(input.evidenceIds),
+      ...strings(options.evidenceIds),
+      ...array(script.evidence).map((record) => record?.id),
+      ...strings(operation.evidenceIds)
+    ]),
+    metadata: compactRecord({
+      sourceEditScriptId: script.id,
+      sourceEditOperationId: operation.id,
+      sourceProjectionHintId: script.metadata?.sourceProjectionHint?.id,
+      sourceMapMappingIds: operation.metadata?.sourceMapMappingIds,
+      reviewOnly: script.admission?.reviewRequired === true
     })
   });
 }
