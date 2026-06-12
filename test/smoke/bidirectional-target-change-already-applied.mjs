@@ -250,3 +250,43 @@ assert.equal(additionRecord.sourcePatchBundle.admission.status, 'admitted');
 assert.equal(additionRecord.sourcePatchBundle.admission.semanticEditAdmission.status, 'already-applied');
 assert.equal(additionRecord.roundtripEvidence.admission.action, 'skip-source-backprojection');
 assert.equal(additionRecord.metadata.reviewRequired, false);
+
+const deletionLfSourceText = 'export function keep() { return 1; }\nexport function removeLf() { return 2; }\n';
+const deletionCrlfTargetText = 'export function keep() { return 1; }\r\nexport function removeLf() { return 2; }\r\n';
+const deletionLfExpectedText = 'export function keep() { return 1; }\n';
+const deletionCrlfExpectedText = 'export function keep() { return 1; }\r\n';
+const deletionLfImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/delete-lf.ts',
+  sourceText: deletionLfSourceText
+});
+const deletionLfSymbol = deletionLfImport.semanticIndex.symbols.find((symbol) => symbol.name === 'removeLf');
+const deletionLfMapping = deletionLfImport.sourceMaps[0].mappings.find((mapping) => mapping.semanticSymbolId === deletionLfSymbol.id);
+const deletionLineEndingRecord = createBidirectionalTargetChangeRecord({
+  id: 'counter_ts_target_change_delete_line_endings',
+  source: deletionLfImport,
+  targetLanguage: 'typescript',
+  targetPath: 'dist/delete-crlf.ts',
+  baseTarget: { language: 'typescript', sourcePath: 'dist/delete-crlf.ts', sourceText: deletionCrlfTargetText },
+  editedTarget: { language: 'typescript', sourcePath: 'dist/delete-crlf.ts', sourceText: deletionCrlfExpectedText },
+  sourceMaps: [{
+    ...sourceMap,
+    id: 'source_map_delete_line_endings',
+    sourcePath: 'src/delete-lf.ts',
+    sourceHash: deletionLfImport.nativeSource.sourceHash,
+    targetPath: 'dist/delete-crlf.ts',
+    mappings: [{
+      ...sourceMap.mappings[0],
+      id: 'map_delete_remove_lf',
+      semanticSymbolId: deletionLfSymbol.id,
+      nativeAstNodeId: deletionLfSymbol.nativeAstNodeId,
+      sourceSpan: deletionLfMapping.sourceSpan,
+      generatedSpan: { path: 'dist/delete-crlf.ts', target: 'typescript', targetPath: 'dist/delete-crlf.ts', startLine: 2, startColumn: 1, endLine: 2, endColumn: 41, generatedName: 'removeLf' },
+      generatedName: 'removeLf'
+    }]
+  }]
+});
+assert.equal(deletionLineEndingRecord.sourceEditProjection.sourceText, deletionLfExpectedText);
+assert.equal(deletionLineEndingRecord.sourceEditReplay.status, 'accepted-clean');
+assert.equal(deletionLineEndingRecord.sourcePatchBundle.admission.status, 'admitted');
+assert.equal(deletionLineEndingRecord.roundtripEvidence.admission.action, 'admit-source-backprojection');
