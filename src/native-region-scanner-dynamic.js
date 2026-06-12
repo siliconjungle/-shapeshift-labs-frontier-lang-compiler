@@ -8,31 +8,6 @@ import {
 } from './native-region-scanner-core.js';
 import { braceBlockSpan, endKeywordBlockSpan, sqlStatementSpan } from './native-region-scanner-spans.js';
 
-function scanDart(input) {
-  const declarations = [];
-  const lines = sourceLines(input.sourceText);
-  for (const [index, { line, number }] of lines.entries()) {
-    const trimmed = line.trim();
-    let match;
-    if ((match = trimmed.match(/^(?:import|export)\s+['"]([^'"]+)['"]/))) {
-      declarations.push(nativeImportDeclaration(input, number, match[1], 'UriBasedDirective', 'library'));
-    } else if ((match = trimmed.match(/^part\s+['"]([^'"]+)['"]/))) {
-      declarations.push(nativeImportDeclaration(input, number, match[1], 'PartDirective', 'library'));
-    } else if ((match = trimmed.match(/^(?:(?:abstract|base|final|interface|sealed)\s+)*(class|mixin|enum)\s+([A-Za-z_]\w*)/))) {
-      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Declaration`, dartSymbolKind(match[1]), match[2], {}, trimmed.includes('{'), spanOptions(input, lines, index, trimmed.includes('{'))));
-    } else if ((match = trimmed.match(/^extension\s+([A-Za-z_]\w*)\s+on\s+.+\{/))) {
-      declarations.push(nativeDeclaration(input, number, 'ExtensionDeclaration', 'implementation', match[1], {}, true, spanOptions(input, lines, index, true)));
-    } else if ((match = trimmed.match(/^typedef\s+([A-Za-z_]\w*)\b/))) {
-      declarations.push(nativeDeclaration(input, number, 'TypeAlias', 'type', match[1], {}, false));
-    } else if ((match = trimmed.match(/^(?:(?:external|static)\s+)*(?:[A-Za-z_]\w*(?:<[^>]+>)?\??|void)\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?:async\s*)?(?:\{|=>|;)/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{') || trimmed.includes('=>'), spanOptions(input, lines, index, trimmed.includes('{'))));
-    } else if ((match = trimmed.match(/^(?:(?:static|external|late)\s+)*(?:const|final|var)\s+(?:[A-Za-z_]\w*(?:<[^>]+>)?\??\s+)?([A-Za-z_]\w*)\b/))) {
-      declarations.push(nativeDeclaration(input, number, 'VariableDeclaration', 'variable', match[1], {}, false));
-    }
-  }
-  return declarations;
-}
-
 function scanLua(input) {
   const declarations = [];
   const lines = sourceLines(input.sourceText);
@@ -123,12 +98,6 @@ function endSpanOptions(input, lines, index) {
   return { span: endKeywordBlockSpan(input, lines, index) };
 }
 
-function dartSymbolKind(kind) {
-  if (kind === 'mixin') return 'trait';
-  if (kind === 'enum') return 'type';
-  return 'class';
-}
-
 function sqlSymbolKind(kind) {
   if (kind === 'FUNCTION' || kind === 'PROCEDURE' || kind === 'TRIGGER') return 'function';
   if (kind.includes('INDEX')) return 'index';
@@ -153,7 +122,6 @@ function zigMetaName(source) {
 }
 
 export {
-  scanDart,
   scanLua,
   scanShell,
   scanSql,

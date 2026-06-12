@@ -42,7 +42,8 @@ const cases = [
     sourcePath: 'lib/counter.dart',
     baseSourceText: 'class Counter {\n  int add(int count) {\n    return count + 1;\n  }\n}\n',
     workerSourceText: 'class Counter {\n  int add(int count) {\n    return count + 2;\n  }\n}\n',
-    spans: { Counter: 5, add: 4 }
+    operationAnchor: 'Counter.add:controlFlow:exit#1',
+    spans: { Counter: 5, 'Counter.add': 4 }
   },
   {
     language: 'zig',

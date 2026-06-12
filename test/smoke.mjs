@@ -46,6 +46,7 @@ const smokeModules = [
   './smoke/semantic-edit-ruby-methods.mjs',
   './smoke/semantic-edit-kotlin-methods.mjs',
   './smoke/semantic-edit-scala-methods.mjs',
+  './smoke/semantic-edit-dart-methods.mjs',
   './smoke/semantic-edit-rust-replay.mjs',
   './smoke/semantic-edit-java-replay.mjs',
   './smoke/semantic-edit-csharp-replay.mjs',

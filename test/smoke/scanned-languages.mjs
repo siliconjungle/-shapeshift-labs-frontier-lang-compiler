@@ -156,6 +156,13 @@ const scannedDartImport = importNativeSource({
   sourceText: 'import "dart:convert";\nclass TodoStore {}\nString addTodo(String title) => title;\n'
 });
 assertScannedSymbol(scannedDartImport, 'addTodo', 'addtodo');
+const scannedDartMethodImport = importNativeSource({
+  language: 'dart',
+  sourcePath: 'store.dart',
+  sourceText: 'class Store {\n  String save(String title) { return title; }\n}\nextension StoreLabels on Store {\n  String label(String title) { return title; }\n}\n'
+});
+assert.equal(symbolByName(scannedDartMethodImport, 'Store.save').kind, 'method');
+assert.equal(nativeNodeForSymbol(scannedDartMethodImport, 'StoreLabels.extension.label').fields.receiverKind, 'extension');
 const scannedLuaImport = importNativeSource({
   language: 'lua',
   sourcePath: 'todo.lua',
