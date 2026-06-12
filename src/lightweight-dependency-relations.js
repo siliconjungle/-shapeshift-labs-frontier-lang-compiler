@@ -221,7 +221,7 @@ function hasRuntimeAssignment(line) {
   const text = String(line ?? '');
   for (let index = 0; index < text.length; index += 1) {
     if (text[index] !== '=' || !isPlainAssignmentOperator(text, index)) continue;
-    if (!isLocalDeclarationInitializer(text, index)) return true;
+    if (!isLocalDeclarationInitializer(text, index) && !isJsxAttributeInitializer(text, index)) return true;
   }
   return false;
 }
@@ -241,6 +241,8 @@ function isLocalDeclarationInitializer(text, index) {
     || /^for\s*\([^;)]*(?:const|let|var)\b/.test(statement)
     || /^(?:export\s+)?type\s+[A-Za-z_$][\w$]*(?:\s*<[^>]+>)?\s*$/.test(statement);
 }
+
+function isJsxAttributeInitializer(text, index) { const before = text.slice(0, index); const open = before.lastIndexOf('<'); return open >= 0 && before.lastIndexOf('>') < open && /<[A-Za-z][^<>{}]*\s[A-Za-z_$][\w:.-]*\s*$/.test(before.slice(open)); }
 
 function addFactRecord(input, documentId, declaration, predicate, factKind, lineNumber, records) {
   const key = `${declaration.symbolId}|${predicate}|${factKind}|${lineNumber}`;
@@ -312,6 +314,4 @@ function addDependencyRecord(input, documentId, caller, target, occurrence, reco
   });
 }
 
-function isCallReference(line, afterIdentifierIndex) {
-  return /^\s*\(/.test(String(line ?? '').slice(afterIdentifierIndex));
-}
+function isCallReference(line, afterIdentifierIndex) { return /^\s*\(/.test(String(line ?? '').slice(afterIdentifierIndex)); }

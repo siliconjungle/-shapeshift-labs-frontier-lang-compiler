@@ -37,6 +37,7 @@ const smokeModules = [
   './smoke/semantic-edit-insertions.mjs',
   './smoke/semantic-edit-rename-move.mjs',
   './smoke/semantic-edit-script.mjs',
+  './smoke/semantic-edit-tsx-jsx-attributes.mjs',
   './smoke/semantic-edit-typescript-class-fields.mjs',
   './smoke/semantic-edit-typescript-object-functions.mjs',
   './smoke/semantic-edit-typescript-overloads.mjs',
