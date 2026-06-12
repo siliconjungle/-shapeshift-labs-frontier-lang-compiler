@@ -1,9 +1,7 @@
 import {
   braceDelta,
   jsControlKeyword,
-  nativeDeclaration,
-  nativeImportDeclaration,
-  nativeSignatureDeclaration,
+  nativeDeclaration, nativeImportDeclaration, nativeSignatureDeclaration,
   sourceLines,
   splitParameters
 } from './native-region-scanner-core.js';
@@ -161,11 +159,12 @@ function scanJavaScriptLike(input) {
       const regionKind = jsRegionKindForDeclarationName(match[1], trimmed);
       pushDeclaration(nativeDeclaration(input, number, 'CommonJsExport', 'variable', match[1], { export: 'commonjs' }, false, { regionKind }));
     } else if (currentClass && (match = declarationLine.match(/^(?:(?:public|private|protected|static|async|override|readonly|abstract|accessor|get|set)\s+)*(?:async\s+)?(?:get\s+|set\s+)?(#?[A-Za-z_$][\w$]*)\??\s*(?:<[^({;]+>)?\s*\(([^)]*)\)\s*(?::\s*[^={]+)?(?:\{|=>|$)/)) && !jsControlKeyword(match[1])) {
-      pushDeclaration(nativeDeclaration(input, number, 'MethodDefinition', 'method', `${currentClass}.${match[1]}`, {
+      const hasBody = declarationLine.includes('{') || declarationLine.includes('=>');
+      pushDeclaration((hasBody ? nativeDeclaration : nativeSignatureDeclaration)(input, number, 'MethodDefinition', 'method', `${currentClass}.${match[1]}`, {
         methodName: match[1],
         owner: currentClass,
         parameters: splitParameters(match[2])
-      }, declarationLine.includes('{') || declarationLine.includes('=>')));
+      }, hasBody));
     } else if (currentClass && (match = declarationLine.match(/^(?:(?:public|private|protected|static|readonly|declare|accessor)\s+)*(#?[A-Za-z_$][\w$]*)[?!]?\s*(?::\s*([^=;{]+))?(?:[=;]|$)/))) {
       pushDeclaration(nativeDeclaration(input, number, 'PropertyDefinition', 'property', `${currentClass}.${match[1]}`, {
         propertyName: match[1],
