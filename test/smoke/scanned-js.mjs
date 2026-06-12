@@ -11,6 +11,8 @@ assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name 
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TodoStore'), true);
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TODO_LIMIT'), true);
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'TodoStore.save'), true);
+const scannedTodoStoreSaveSymbol = scannedJsImport.semanticIndex.symbols.find((symbol) => symbol.name === 'TodoStore.save');
+assert.equal(scannedTodoStoreSaveSymbol.metadata.ownershipRegionKey, 'source#src/scanned.js#body#TodoStore.save');
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'appRoutes./todos' && symbol.kind === 'route'), true);
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'siteContent.docs'), true);
 assert.equal(scannedJsImport.semanticIndex.symbols.some((symbol) => symbol.name === 'runtimeConfig.resolve' && symbol.kind === 'function'), true);

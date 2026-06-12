@@ -142,3 +142,131 @@ assert.notEqual(dirtyWorkspaceAdmission.action, 'reject');
 assert.equal(dirtyWorkspaceAdmission.mergeScore.components.sourceFreshness.score, 100);
 assert.equal(dirtyWorkspaceAdmission.mergeScore.components.sourceFreshness.signals.dirtyWorkspace, 1);
 assert.equal(dirtyWorkspaceAdmission.mergeScore.penalties.some((penalty) => penalty.includes('dirty')), false);
+
+const zeroRegionProjectImport = await importNativeProject({
+  id: 'zero_region_project_admission',
+  projectRoot: 'src',
+  sources: [{
+    language: 'javascript',
+    sourcePath: 'src/zero-region-admission.js',
+    sourceText: 'export const zeroRegionAdmission = true;\n',
+    exactAst: true,
+    nodes: {
+      native_root: {
+        id: 'native_root',
+        kind: 'Program',
+        languageKind: 'javascript.program',
+        children: ['zero_region_decl']
+      },
+      zero_region_decl: {
+        id: 'zero_region_decl',
+        kind: 'VariableDeclaration',
+        languageKind: 'javascript.variableDeclaration',
+        value: 'zeroRegionAdmission'
+      }
+    },
+    semanticIndex: {
+      id: 'index_zero_region_admission',
+      documents: [{
+        id: 'doc_zero_region_admission',
+        path: 'src/zero-region-admission.js',
+        language: 'javascript'
+      }],
+      symbols: [{
+        id: 'symbol_zero_region_admission',
+        scheme: 'frontier',
+        name: 'zeroRegionAdmission',
+        kind: 'constant'
+      }],
+      occurrences: [],
+      relations: [],
+      facts: []
+    },
+    metadata: {
+      semanticImportExpected: true,
+      changedSource: true
+    }
+  }]
+});
+const zeroRegionAdmission = zeroRegionProjectImport.metadata.projectAdmission;
+assert.equal(zeroRegionAdmission.semanticEvidence.empty, false);
+assert.equal(zeroRegionAdmission.semanticEvidence.warningCount, 2);
+assert.equal(zeroRegionAdmission.semanticEvidence.warningReasonCodes.includes('missing-ownership-regions'), true);
+assert.equal(zeroRegionAdmission.semanticEvidence.warningReasonCodes.includes('missing-patch-hints'), true);
+assert.equal(zeroRegionAdmission.semanticEvidence.warningSourcePaths.includes('src/zero-region-admission.js'), true);
+assert.equal(zeroRegionAdmission.semanticEvidence.warnings.some((warning) => warning.reasonCode === 'missing-ownership-regions'), true);
+assert.equal(zeroRegionAdmission.reasons.some((reason) => reason.includes('missing-ownership-regions')), true);
+assert.equal(zeroRegionAdmission.action, 'prioritize');
+
+const healthyRegionProjectImport = await importNativeProject({
+  id: 'healthy_region_project_admission',
+  projectRoot: 'src',
+  sources: [{
+    language: 'javascript',
+    sourcePath: 'src/healthy-region-admission.js',
+    sourceText: 'export const healthyRegionAdmission = true;\n',
+    exactAst: true,
+    nodes: {
+      native_root: {
+        id: 'native_root',
+        kind: 'Program',
+        languageKind: 'javascript.program',
+        children: ['healthy_region_decl']
+      },
+      healthy_region_decl: {
+        id: 'healthy_region_decl',
+        kind: 'VariableDeclaration',
+        languageKind: 'javascript.variableDeclaration',
+        value: 'healthyRegionAdmission',
+        span: { path: 'src/healthy-region-admission.js', startLine: 1, startColumn: 1, endLine: 1, endColumn: 45 }
+      }
+    },
+    semanticIndex: {
+      id: 'index_healthy_region_admission',
+      documents: [{
+        id: 'doc_healthy_region_admission',
+        path: 'src/healthy-region-admission.js',
+        language: 'javascript'
+      }],
+      symbols: [{
+        id: 'symbol_healthy_region_admission',
+        scheme: 'frontier',
+        name: 'healthyRegionAdmission',
+        kind: 'constant',
+        metadata: {
+          ownershipRegionId: 'region_healthy_region_admission',
+          ownershipRegionKey: 'source#src/healthy-region-admission.js#declaration#healthyRegionAdmission',
+          ownershipRegionKind: 'declaration'
+        }
+      }],
+      occurrences: [],
+      relations: [],
+      facts: []
+    },
+    ownershipRegions: [{
+      id: 'region_healthy_region_admission',
+      key: 'source#src/healthy-region-admission.js#declaration#healthyRegionAdmission',
+      regionKind: 'declaration',
+      granularity: 'symbol',
+      language: 'javascript',
+      sourcePath: 'src/healthy-region-admission.js',
+      symbolId: 'symbol_healthy_region_admission',
+      symbolName: 'healthyRegionAdmission',
+      symbolKind: 'constant',
+      nativeAstNodeId: 'healthy_region_decl',
+      sourceSpan: { path: 'src/healthy-region-admission.js', startLine: 1, startColumn: 1, endLine: 1, endColumn: 45 },
+      precision: 'declaration'
+    }],
+    metadata: {
+      semanticImportExpected: true,
+      changedSource: true
+    }
+  }]
+});
+const healthyRegionAdmission = healthyRegionProjectImport.metadata.projectAdmission;
+assert.equal(healthyRegionAdmission.semanticEvidence.empty, false);
+assert.equal(healthyRegionAdmission.semanticEvidence.warningCount, 0);
+assert.deepEqual(healthyRegionAdmission.semanticEvidence.warningReasonCodes, []);
+assert.equal(healthyRegionAdmission.semanticEvidence.warnings.length, 0);
+assert.equal(healthyRegionAdmission.reasons.some((reason) => reason.includes('missing-ownership-regions')), false);
+assert.equal(healthyRegionAdmission.reasons.some((reason) => reason.includes('missing-patch-hints')), false);

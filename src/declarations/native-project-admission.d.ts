@@ -2,7 +2,13 @@ import type { FrontierSourceLanguage, SemanticMergeReadiness } from '@shapeshift
 import type { NativeImportLossSummary } from './native-import-losses.js';
 import type { NativeImportResultContract } from './native-import-contracts.js';
 import type { NativeProjectImportResult } from './native-project.js';
+import type { NativeProjectAdmissionSemanticEvidence } from './native-project-admission-semantic-evidence.js';
 import type { SemanticMergeCandidateAdmissionRecord, SemanticMergeCandidateOverlapRecord, SemanticMergeCandidateProjectionRisk } from './semantic-merge-candidates.js';
+export type {
+  NativeProjectAdmissionSemanticEvidence,
+  NativeProjectAdmissionSemanticEvidenceWarning,
+  NativeProjectAdmissionSemanticEvidenceWarningCode
+} from './native-project-admission-semantic-evidence.js';
 export type NativeProjectImportAdmissionAction = 'admit' | 'prioritize' | 'reject';
 export type NativeProjectImportAdmissionPriority = 'low' | 'normal' | 'high' | 'critical' | 'blocker';
 export type NativeProjectImportAdmissionRisk = 'low' | 'medium' | 'high' | 'unknown';
@@ -132,16 +138,6 @@ export interface NativeProjectAdmissionLanguages {
   readonly sourceRows: readonly NativeProjectAdmissionSourceSummary[];
   readonly readinessRows: readonly NativeProjectAdmissionLanguageReadinessSummary[];
   readonly rows: readonly NativeProjectAdmissionLanguageSummary[];
-}
-export interface NativeProjectAdmissionSemanticEvidence {
-  readonly empty: boolean;
-  readonly emptySourceCount: number;
-  readonly emptySourcePaths: readonly string[];
-  readonly symbols: number;
-  readonly occurrences: number;
-  readonly relations: number;
-  readonly facts: number;
-  readonly evidenceRecords: number;
 }
 export type NativeProjectAdmissionSourceStalenessReason =
   | 'source-hash-mismatch'

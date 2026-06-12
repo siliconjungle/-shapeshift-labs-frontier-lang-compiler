@@ -3,7 +3,8 @@ import { idFragment, normalizeNativeLanguageId, uniqueStrings } from '../../nati
 import { createSemanticImportSidecar } from './createSemanticImportSidecar.js';
 import { mapDiffSymbols } from './mapDiffSymbols.js';
 import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
-import { semanticEditIdentityFields } from './semanticEditIdentityRecords.js';
+import { alreadyAppliedImportEditForOperation } from './semanticEditImportProjection.js';
+import { projectionEditRecord } from './semanticEditProjectionRecord.js';
 import {
   insertionOffset,
   insertionReplacement,
@@ -40,7 +41,8 @@ export function projectSemanticEditScriptToSource(input = {}) {
     }
     const edit = sourceEditForOperation(operation, workerSourceText, headSourceText, index, {
       headSourcePath: input.headSourcePath,
-      headSymbols
+      headSymbols,
+      symbolIndexAvailable: isJavaScriptLike(language)
     });
     if (edit.ok) edits.push(edit.value);
     else reasonCodes.push(...edit.reasonCodes);
@@ -175,13 +177,19 @@ function insertionEditForOperation(operation, identity, workerSourceText, headSo
   const workerOffsets = spanOffsets(workerSourceText, operation.spans?.worker);
   const reasons = [];
   if (!workerOffsets) reasons.push(`worker-span-not-resolvable:${operation.id}`);
-  const insertion = insertionOffset(headSourceText, operation.insertion, { symbols: context.headSymbols });
-  if (!insertion.ok) reasons.push(...insertion.reasonCodes.map((reason) => `${reason}:${operation.id}`));
   if (reasons.length) return { ok: false, reasonCodes: reasons };
   const spanText = workerSourceText.slice(workerOffsets.start, workerOffsets.end);
   if (operation.hashes?.workerTextHash && hashSemanticValue(spanText) !== operation.hashes.workerTextHash) {
     reasons.push(`worker-span-hash-mismatch:${operation.id}`);
   }
+  if (reasons.length) return { ok: false, reasonCodes: reasons };
+  const alreadyAppliedImport = alreadyAppliedImportEditForOperation(operation, identity, spanText, headSourceText, workerOffsets, order, context);
+  if (alreadyAppliedImport) return { ok: true, value: alreadyAppliedImport };
+  const insertion = insertionOffset(headSourceText, operation.insertion, {
+    symbols: context.headSymbols,
+    symbolIndexAvailable: context.symbolIndexAvailable
+  });
+  if (!insertion.ok) reasons.push(...insertion.reasonCodes.map((reason) => `${reason}:${operation.id}`));
   if (reasons.length) return { ok: false, reasonCodes: reasons };
   return {
     ok: true,
@@ -212,64 +220,6 @@ function projectionIdentity(operation, headSourcePath) {
     : identity.targetSourcePath;
   return { ...identity, sourcePath, originalSourcePath, targetSourcePath };
 }
-function projectionEditRecord(edit) {
-  const deletedTextHash = hashSemanticValue(edit.current);
-  const replacementTextHash = hashSemanticValue(edit.replacement);
-  const identity = semanticEditIdentityFields(edit);
-  return compactRecord({
-    operationId: edit.operationId,
-    status: edit.alreadyApplied ? 'already-applied' : 'applied',
-    kind: edit.kind,
-    editKind: edit.editKind,
-    changeKind: edit.changeKind,
-    anchorKey: edit.anchorKey,
-    conflictKey: edit.conflictKey,
-    regionId: edit.regionId,
-    regionKind: edit.regionKind,
-    sourcePath: edit.sourcePath,
-    originalSourcePath: edit.originalSourcePath,
-    targetAnchorKey: edit.targetAnchorKey,
-    targetSourcePath: edit.targetSourcePath,
-    targetSymbolName: edit.targetSymbolName,
-    targetSymbolKind: edit.targetSymbolKind,
-    symbolId: edit.symbolId,
-    symbolName: edit.symbolName,
-    symbolKind: edit.symbolKind,
-    ...identity,
-    operationContentHash: edit.operationContentHash,
-    editContentHash: hashSemanticValue(compactRecord({
-      semanticIdentityHash: identity.semanticIdentityHash,
-      sourceRangeKind: edit.sourceRangeKind,
-      deletedTextHash,
-      replacementTextHash,
-      status: edit.alreadyApplied ? 'already-applied' : 'applied'
-    })),
-    sourceRangeKind: edit.sourceRangeKind,
-    headStart: edit.start,
-    headEnd: edit.end,
-    workerStart: edit.workerStart,
-    workerEnd: edit.workerEnd,
-    editOrder: edit.order,
-    headAnchorStart: edit.headAnchorStart,
-    headAnchorEnd: edit.headAnchorEnd,
-    workerAnchorStart: edit.workerAnchorStart,
-    workerAnchorEnd: edit.workerAnchorEnd,
-    deletedBytes: edit.current.length,
-    replacementBytes: edit.replacement.length,
-    deletedTextHash,
-    replacementTextHash,
-    anchorDeletedTextHash: edit.anchorDeletedTextHash,
-    anchorReplacementTextHash: edit.anchorReplacementTextHash,
-    replacementSpanTextHash: hashSemanticValue(edit.replacementSpanText ?? edit.replacement),
-    insertionMode: edit.insertion?.mode,
-    insertionAnchorKey: edit.insertion?.anchorKey,
-    insertionAnchorSymbolName: edit.insertion?.anchorSymbolName,
-    insertionAnchorSymbolKind: edit.insertion?.anchorSymbolKind,
-    insertionAnchorCandidates: edit.insertion?.anchorCandidates,
-    replacementText: edit.replacement
-  });
-}
-
 function sourceSymbolIndex(input) {
   try {
     const imported = normalizeNativeDiffImport({

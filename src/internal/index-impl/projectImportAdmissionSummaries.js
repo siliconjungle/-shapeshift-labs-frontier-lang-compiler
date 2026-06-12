@@ -1,12 +1,12 @@
 import{countBy,maxSemanticMergeReadiness,uniqueRecordsById,uniqueStrings}from'../../native-import-utils.js';
 import{createSemanticMergeCandidateAdmissionRecord,querySemanticMergeCandidateAdmissionOverlaps,sortSemanticMergeCandidateAdmissionRecords}from'./semanticMergeCandidateRecords.js';
-import{compactAdmissionSource,importLosses,sourceLossClasses,summarizeImportPreservation,summarizeParserEvidence}from'./projectImportAdmissionImportEvidence.js';
+import{compactAdmissionSource,importLosses,sourceLossClasses,summarizeImportPreservation,summarizeParserEvidence,summarizeSemanticAdmissionWarnings}from'./projectImportAdmissionImportEvidence.js';
 import{sourceMissingEvidence,sourceMissingTasks,sourceSemanticMergeScore}from'./projectImportAdmissionTasks.js';
 import{candidateRisk,maxPreservationQuality,maxRisk,normalizeRisk}from'./projectImportAdmissionRanks.js';
 
 export{admissionLanguages}from'./projectImportAdmissionLanguageSummaries.js';
 
-export function projectAdmissionImports(imports,sourceRows,mergeCandidates){
+export function projectAdmissionImports(imports,sourceRows,mergeCandidates,projectResult){
   return imports.map((imported,index)=>{
     const source=sourceRows?.[index]??compactAdmissionSource(imported,index);
     const sourcePath=source.sourcePath??imported?.sourcePath;
@@ -22,6 +22,7 @@ export function projectAdmissionImports(imports,sourceRows,mergeCandidates){
     };
     const readiness=source.readiness??imported?.metadata?.semanticMergeReadiness??candidates[0]?.readiness??'ready';
     const emptySemanticEvidence=Object.values(semanticCounts).reduce((sum,value)=>sum+value,0)===0;
+    const semanticAdmission=summarizeSemanticAdmissionWarnings(imported,{source,sourcePath,candidates,projectResult});
     const sourcePreservation=summarizeImportPreservation(imported,source);
     const losses=importLosses(imported);
     const lossClasses=sourceLossClasses(imported,losses);
@@ -55,6 +56,7 @@ export function projectAdmissionImports(imports,sourceRows,mergeCandidates){
       readiness,
       semanticCounts,
       emptySemanticEvidence,
+      semanticAdmission,
       parserEvidence,
       lossClasses,
       missingEvidence,
@@ -90,6 +92,7 @@ export function admissionSemanticEvidence(projectResult,imports,importSummaries)
     .filter((entry)=>entry.emptySemanticEvidence)
     .map((entry)=>entry.sourcePath)
     .filter(Boolean));
+  const warnings=uniqueSemanticAdmissionWarnings(importSummaries.flatMap((entry)=>entry.semanticAdmission?.warnings??[]));
   return {
     empty:Object.values(totals).reduce((sum,value)=>sum+value,0)===0,
     emptySourceCount:importSummaries.filter((entry)=>entry.emptySemanticEvidence).length,
@@ -98,8 +101,24 @@ export function admissionSemanticEvidence(projectResult,imports,importSummaries)
     evidenceRecords:uniqueRecordsById([
       ...(projectResult?.evidence??[]),
       ...imports.flatMap((imported)=>imported?.evidence??[])
-    ]).length
+    ]).length,
+    warningCount:warnings.length,
+    warningReasonCodes:uniqueStrings(warnings.map((warning)=>warning.reasonCode??warning.code)),
+    warningSourcePaths:uniqueStrings(warnings.flatMap((warning)=>warning.sourcePaths??[warning.sourcePath]).filter(Boolean)),
+    warnings
   };
+}
+
+function uniqueSemanticAdmissionWarnings(warnings){
+  const seen=new Set();
+  const result=[];
+  for(const warning of warnings.filter(Boolean)){
+    const key=[warning.reasonCode??warning.code,(warning.sourcePaths??[warning.sourcePath]).join('|')].join('\u0000');
+    if(seen.has(key)) continue;
+    seen.add(key);
+    result.push(warning);
+  }
+  return result;
 }
 
 export function admissionSourcePreservation(importSummaries,contract){

@@ -65,7 +65,8 @@ export function compareSemanticPatchBundleRecords(left={},right={},options={}){
       semanticSignals:shared.semanticEditKeys.length+shared.semanticIdentityHashes.length+shared.sourceIdentityHashes.length+shared.semanticTransformIdentityHashes.length+shared.projectionIdentityHashes.length,
       sourceSignals:shared.regionKeys.length+shared.conflictKeys.length+shared.sourcePaths.length+shared.semanticEditReplayCurrentHashes.length,
       baseHashMismatch:admission.reasonCodes.includes('base-hash-mismatch'),
-      targetHashMismatch:admission.reasonCodes.includes('target-hash-mismatch')
+      targetHashMismatch:admission.reasonCodes.includes('target-hash-mismatch'),
+      replayOutputHashMismatch:admission.reasonCodes.includes('replay-output-hash-mismatch')
     },
     metadata:compactRecord(options.metadata)
   };
@@ -110,19 +111,30 @@ function sharedIndex(left,right,options){
     baseHashes:intersect(left.baseHashes,right.baseHashes),
     targetHashes:intersect(left.targetHashes,right.targetHashes)
   };
-  const scopedEdit=hasSharedEditScope(shared);
-  const scopedSource=hasSharedSourceScope(shared);
-  return{
+  const semanticKeyIndependent=hasDisjointSemanticEditScope(left,right,shared);
+  const scopedShared={
     ...shared,
-    operationContentHashes:scopedEdit?shared.operationContentHashes:[],
-    editContentHashes:scopedEdit?shared.editContentHashes:[],
-    semanticEditKeys:scopedSource?shared.semanticEditKeys:[],
-    semanticIdentityHashes:scopedSource?shared.semanticIdentityHashes:[],
-    semanticEditReplayCurrentHashes:scopedSource?shared.semanticEditReplayCurrentHashes:[],
-    semanticEditReplayOutputHashes:scopedEdit?shared.semanticEditReplayOutputHashes:[],
-    semanticTransformContentHashes:shared.projectionIdentityHashes.length?shared.semanticTransformContentHashes:[],
-    semanticTransformIdentityHashes:shared.projectionIdentityHashes.length?shared.semanticTransformIdentityHashes:[]
+    sourcePaths:semanticKeyIndependent?[]:shared.sourcePaths
   };
+  const scopedEdit=hasSharedEditScope(scopedShared);
+  const scopedSource=hasSharedSourceScope(scopedShared);
+  return{
+    ...scopedShared,
+    operationContentHashes:scopedEdit?scopedShared.operationContentHashes:[],
+    editContentHashes:scopedEdit?scopedShared.editContentHashes:[],
+    semanticEditKeys:scopedSource?scopedShared.semanticEditKeys:[],
+    semanticIdentityHashes:scopedSource?scopedShared.semanticIdentityHashes:[],
+    semanticEditReplayCurrentHashes:scopedSource?scopedShared.semanticEditReplayCurrentHashes:[],
+    semanticEditReplayOutputHashes:scopedEdit?scopedShared.semanticEditReplayOutputHashes:[],
+    semanticTransformContentHashes:scopedShared.projectionIdentityHashes.length?scopedShared.semanticTransformContentHashes:[],
+    semanticTransformIdentityHashes:scopedShared.projectionIdentityHashes.length?scopedShared.semanticTransformIdentityHashes:[]
+  };
+}
+
+function hasDisjointSemanticEditScope(left,right,shared){
+  return Boolean(shared.sourcePaths.length&&left.semanticEditKeys.length&&right.semanticEditKeys.length
+    &&shared.semanticEditKeys.length===0&&shared.regionKeys.length===0&&shared.conflictKeys.length===0
+    &&shared.semanticIdentityHashes.length===0&&shared.sourceIdentityHashes.length===0);
 }
 
 function hasSharedEditScope(shared){
@@ -135,7 +147,10 @@ function hasSharedSourceScope(shared){
 }
 
 function overlapAdmission(shared,{leftIndex,rightIndex,options}){
-  const hashMismatch=disjointNonEmpty(leftIndex.baseHashes,rightIndex.baseHashes)||disjointNonEmpty(leftIndex.targetHashes,rightIndex.targetHashes);
+  const baseHashMismatch=disjointNonEmpty(leftIndex.baseHashes,rightIndex.baseHashes);
+  const targetHashMismatch=disjointNonEmpty(leftIndex.targetHashes,rightIndex.targetHashes);
+  const replayOutputHashMismatch=disjointNonEmpty(leftIndex.semanticEditReplayOutputHashes,rightIndex.semanticEditReplayOutputHashes);
+  const hashMismatch=baseHashMismatch||targetHashMismatch||replayOutputHashMismatch;
   const sourceRelated=shared.sourcePaths.length||shared.regionKeys.length||shared.conflictKeys.length||shared.sourceIdentityHashes.length;
   const editContent=shared.operationContentHashes.length||shared.editContentHashes.length||shared.semanticEditReplayOutputHashes.length;
   const transformContent=shared.semanticTransformContentHashes.length&&shared.projectionIdentityHashes.length;
@@ -158,8 +173,9 @@ function overlapAdmission(shared,{leftIndex,rightIndex,options}){
     shared.regionKeys.length?'same-region-key':undefined,
     shared.conflictKeys.length?'same-conflict-key':undefined,
     shared.sourcePaths.length?'same-source-path':undefined,
-    status!=='independent'&&disjointNonEmpty(leftIndex.baseHashes,rightIndex.baseHashes)?'base-hash-mismatch':undefined,
-    status!=='independent'&&disjointNonEmpty(leftIndex.targetHashes,rightIndex.targetHashes)?'target-hash-mismatch':undefined
+    status!=='independent'&&baseHashMismatch?'base-hash-mismatch':undefined,
+    status!=='independent'&&targetHashMismatch?'target-hash-mismatch':undefined,
+    status!=='independent'&&replayOutputHashMismatch?'replay-output-hash-mismatch':undefined
   ]);
   return{
     status,
@@ -223,7 +239,8 @@ function matchesOverlap(overlap,query){
 function overlapScore(status,shared,reasonCodes){
   const base=status==='duplicate'?100:status==='semantic-overlap'?75:status==='source-overlap'?35:0;
   const sharedBonus=Math.min(20,countShared(shared));
-  const stalePenalty=reasonCodes.includes('base-hash-mismatch')||reasonCodes.includes('target-hash-mismatch')?15:0;
+  const stalePenalty=reasonCodes.includes('base-hash-mismatch')||reasonCodes.includes('target-hash-mismatch')
+    ||reasonCodes.includes('replay-output-hash-mismatch')?15:0;
   return Math.max(0,base+sharedBonus-stalePenalty);
 }
 

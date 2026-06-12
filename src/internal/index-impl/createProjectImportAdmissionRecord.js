@@ -19,7 +19,7 @@ export function createProjectImportAdmissionRecord(projectResult,options={}){
     ...(projectResult?.mergeCandidates??[]),
     ...imports.flatMap((imported)=>imported?.mergeCandidates??[])
   ]);
-  const importSummaries=projectAdmissionImports(imports,contract?.sources??[],mergeCandidates);
+  const importSummaries=projectAdmissionImports(imports,contract?.sources??[],mergeCandidates,projectResult);
   const languages=admissionLanguages(importSummaries);
   const semanticEvidence=admissionSemanticEvidence(projectResult,imports,importSummaries);
   const sourceStaleness=admissionSourceStaleness(imports,importSummaries,contract);
@@ -42,7 +42,10 @@ export function createProjectImportAdmissionRecord(projectResult,options={}){
     failedEvidenceIds,
     blockingLossIds:contract?.readiness?.blockingLossIds??lossSummary?.blockingLossIds??[]
   });
-  const priorityReasons=admissionPriorityReasons({readiness,semanticEvidence,sourcePreservation,ownership,mergeCandidateRisk});
+  const priorityReasons=uniqueStrings([
+    ...admissionPriorityReasons({readiness,semanticEvidence,sourcePreservation,ownership,mergeCandidateRisk}),
+    ...semanticAdmissionWarningReasons(semanticEvidence)
+  ]);
   const action=rejectionReasons.length?'reject':priorityReasons.length?'prioritize':'admit';
   const priority=admissionPriority(action,readiness,sourcePreservation,mergeCandidateRisk);
   const mergeScore=admissionMergeScore({
@@ -219,6 +222,15 @@ function admissionSourcePreservationWithStaleness(sourcePreservation,sourceStale
     baseHashStaleSourcePaths:sourceStaleness.baseHashStaleSourcePaths,
     dirtyWorkspaceSourcePaths:sourceStaleness.dirtyWorkspaceSourcePaths
   };
+}
+
+function semanticAdmissionWarningReasons(semanticEvidence){
+  return (semanticEvidence?.warnings??[]).map((warning)=>{
+    const reasonCode=warning.reasonCode??warning.code;
+    const sourcePaths=warning.sourcePaths?.length?warning.sourcePaths:warning.sourcePath?[warning.sourcePath]:[];
+    const sourceText=sourcePaths.length?` for ${sourcePaths.join(', ')}`:'';
+    return `Project import semantic admission warning ${reasonCode}${sourceText}.`;
+  });
 }
 
 function sourcePaths(records){

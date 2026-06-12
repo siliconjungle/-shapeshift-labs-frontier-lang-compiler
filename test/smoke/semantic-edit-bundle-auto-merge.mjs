@@ -71,6 +71,19 @@ assert.notEqual(nonOverlapping.replay.status, 'stale');
 assert.notEqual(nonOverlapping.replay.status, 'conflict');
 assert.equal(nonOverlapping.replay.outputSourceText, nonOverlappingExpected);
 assert.equal(nonOverlapping.replay.admission.autoApplyCandidate, true);
+const nonOverlappingSecondReplay = replaySemanticEditProjection({
+  id: 'bundle_non_overlapping_portable_second_replay',
+  projection: nonOverlapping.projection,
+  currentSourceText: nonOverlapping.replay.outputSourceText
+});
+assert.equal(nonOverlappingSecondReplay.status, 'already-applied');
+assert.equal(nonOverlappingSecondReplay.outputSourceText, nonOverlappingExpected);
+assert.equal(nonOverlappingSecondReplay.admission.action, 'skip');
+assert.equal(nonOverlappingSecondReplay.summary.applied, 0);
+assert.equal(nonOverlappingSecondReplay.summary.alreadyApplied, 1);
+assert.deepEqual(nonOverlappingSecondReplay.appliedOperations, []);
+assert.deepEqual(nonOverlappingSecondReplay.skippedOperations, [nonOverlapping.script.operations[0].id]);
+assert.equal(nonOverlappingSecondReplay.edits[0].reasonCodes.includes('head-offset-matches-replacement-span'), true);
 const nonOverlappingAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [nonOverlapping.script],
   semanticEditProjections: [nonOverlapping.projection],

@@ -61,3 +61,35 @@ assert.equal(overlapReplay.status, 'conflict');
 assert.equal(overlapReplay.outputSourceText, undefined);
 assert.equal(overlapReplay.summary.conflicts, 2);
 assert.equal(overlapReplay.diagnostics.some((diagnostic) => diagnostic.category === 'overlap' && diagnostic.overlapOperationIds.includes('semantic_edit_overlap_left')), true);
+const crlfBaseSource = 'export function crlf(value) {\r\n  return value + 1;\r\n}\r\n';
+const crlfWorkerSource = 'export function crlf(value) {\r\n  return value + 2;\r\n}\r\n';
+const crlfScript = createSemanticEditScript({
+  id: 'semantic_edit_replay_diagnostics_crlf',
+  language: 'typescript',
+  sourcePath: 'src/crlf.ts',
+  baseSourceText: crlfBaseSource,
+  workerSourceText: crlfWorkerSource,
+  headSourceText: crlfBaseSource,
+  generatedAt: 60
+});
+const crlfProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_replay_diagnostics_crlf_projection',
+  script: crlfScript,
+  workerSourceText: crlfWorkerSource,
+  headSourceText: crlfBaseSource
+});
+const crlfWhitespaceReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_replay_diagnostics_crlf_whitespace',
+  projection: crlfProjection,
+  currentSourceText: 'export function crlf(value) {\n  return value + 1;\n}'
+});
+assert.equal(crlfWhitespaceReplay.status, 'accepted-clean');
+assert.equal(crlfWhitespaceReplay.diagnostics.some((diagnostic) => diagnostic.category === 'projection-mismatch'), false);
+const crlfWhitespaceConflictReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_replay_diagnostics_crlf_conflict',
+  projection: crlfProjection,
+  currentSourceText: 'export function crlf(value) {\n  return value + 3;\n}'
+});
+assert.equal(crlfWhitespaceConflictReplay.status, 'conflict');
+assert.equal(crlfWhitespaceConflictReplay.outputSourceText, undefined);
+assert.equal(crlfWhitespaceConflictReplay.edits[0].diagnostics.some((diagnostic) => diagnostic.category === 'projection-mismatch' && diagnostic.code === 'current-symbol-body-content-mismatch'), true);

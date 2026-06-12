@@ -2,7 +2,9 @@ import { normalizeSemanticMergeReadiness, uniqueStrings } from '../../native-imp
 
 export function createSemanticPatchBundleAdmission(input = {}, context = {}) {
   const transformAdmission = semanticTransformAdmission(context);
-  const semanticEditAdmission = context.semanticEditAdmission ?? { status: 'none', action: 'none', readiness: 'needs-review', reasonCodes: [] };
+  const semanticEditAdmission = semanticEditAdmissionWithReplayRequirement(
+    context.semanticEditAdmission ?? { status: 'none', action: 'none', readiness: 'needs-review', reasonCodes: [] }
+  );
   const evidenceAdmission = autoMergeEvidenceAdmission(context, { transformAdmission, semanticEditAdmission });
   const fallbackReadiness = fallbackAdmissionReadiness(transformAdmission, semanticEditAdmission, evidenceAdmission, context.readiness);
   const inputReadiness = normalizeSemanticMergeReadiness(input.readiness ?? fallbackReadiness) ?? input.readiness ?? fallbackReadiness;
@@ -35,7 +37,7 @@ export function createSemanticPatchBundleAdmission(input = {}, context = {}) {
       ...strings(semanticEditAdmission.reasonCodes),
       ...strings(evidenceAdmission.reasonCodes)
     ].filter(Boolean)),
-    conflictKeys: uniqueStrings([...strings(input.conflictKeys), ...context.conflictKeys]),
+    conflictKeys: uniqueStrings([...strings(input.conflictKeys), ...strings(context.conflictKeys)]),
     admittedAt: input.admittedAt,
     reviewerId: input.reviewerId,
     evidenceIds: uniqueStrings([...strings(input.evidenceIds), ...strings(transformAdmission.evidenceIds), ...strings(evidenceAdmission.evidenceIds)]),
@@ -155,6 +157,7 @@ function fallbackAdmissionReadiness(transformAdmission, semanticEditAdmission, e
   if ([transformAdmission.readiness, semanticEditAdmission.readiness, evidenceAdmission.readiness].includes('blocked')) return 'blocked';
   if (hasSkipReadyAction(semanticEditAdmission)) return 'ready';
   if (hasPositiveApplyAction(transformAdmission, semanticEditAdmission)) return evidenceAdmission.action === 'admit' ? 'ready' : evidenceAdmission.readiness;
+  if (semanticEditAdmission.action === 'review' || semanticEditAdmission.status === 'needs-review') return 'needs-review';
   return fallback;
 }
 
@@ -181,6 +184,51 @@ function hasPositiveApplyAttempt(transformAdmission, semanticEditAdmission) {
 
 function hasSkipReadyAction(semanticEditAdmission) {
   return semanticEditAdmission.action === 'skip' && semanticEditAdmission.readiness === 'ready' && semanticEditAdmission.reviewRequired === false;
+}
+
+function semanticEditAdmissionWithReplayRequirement(admission) {
+  if (!requiresSemanticEditReplay(admission) || hasAcceptedCleanSemanticEditReplay(admission)) return admission;
+  return compactRecord({
+    ...admission,
+    status: 'needs-review',
+    action: 'review',
+    readiness: 'needs-review',
+    reviewRequired: true,
+    autoApplyCandidate: false,
+    reasonCodes: uniqueStrings([
+      ...strings(admission.reasonCodes).filter((reason) => reason !== 'semantic-edit-positive-auto-merge-proof'),
+      ...semanticEditReplayRequirementReasonCodes(admission)
+    ])
+  });
+}
+
+function requiresSemanticEditReplay(admission) {
+  return admission.action === 'admit' ||
+    admission.autoApplyCandidate === true ||
+    admission.status === 'ready' ||
+    strings(admission.reasonCodes).includes('semantic-edit-positive-auto-merge-proof');
+}
+
+function hasAcceptedCleanSemanticEditReplay(admission) {
+  const summary = admission.summary ?? {};
+  const acceptedClean = count(summary.acceptedClean);
+  const alreadyApplied = count(summary.alreadyApplied);
+  const replays = count(summary.replays);
+  return acceptedClean > 0 && replays > 0 && acceptedClean + alreadyApplied === replays;
+}
+
+function semanticEditReplayRequirementReasonCodes(admission) {
+  const summary = admission.summary ?? {};
+  const scripts = count(summary.scripts);
+  const projections = count(summary.projections);
+  const replays = count(summary.replays);
+  const acceptedClean = count(summary.acceptedClean);
+  return [
+    scripts > 0 && projections === 0 ? 'semantic-edit-projection-missing' : undefined,
+    (scripts > 0 || projections > 0) && replays === 0 ? 'semantic-edit-replay-missing' : undefined,
+    replays > 0 && acceptedClean === 0 ? 'semantic-edit-replay-accepted-clean-missing' : undefined,
+    'semantic-edit-replay-required'
+  ].filter(Boolean);
 }
 
 function hasCrossLanguageTransform(index) {
@@ -211,6 +259,7 @@ function uniqueEvidenceRecords(records) {
 }
 
 function evidenceIds(evidence) { return uniqueStrings(evidence.map((record) => record.id)); }
+function count(value) { const number = Number(value ?? 0); return Number.isFinite(number) ? number : 0; }
 function array(value) { if (value === undefined || value === null) return []; return Array.isArray(value) ? value : [value]; }
 function strings(value) { return array(value).map((entry) => String(entry ?? '')).filter(Boolean); }
 function compactRecord(value) { return Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined && (!Array.isArray(entry) || entry.length > 0))); }

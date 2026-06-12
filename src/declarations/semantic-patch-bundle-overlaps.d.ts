@@ -71,6 +71,7 @@ export interface SemanticPatchBundleOverlapRecord {
     readonly sourceSignals: number;
     readonly baseHashMismatch: boolean;
     readonly targetHashMismatch: boolean;
+    readonly replayOutputHashMismatch: boolean;
   };
   readonly metadata?: Record<string, unknown>;
 }

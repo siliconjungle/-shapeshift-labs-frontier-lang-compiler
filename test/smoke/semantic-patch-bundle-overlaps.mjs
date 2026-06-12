@@ -144,6 +144,15 @@ assert.equal(querySemanticPatchBundleOverlaps([duplicateA, replayCurrentBundle],
   semanticEditReplayCurrentHash: replay.currentHash
 }).length, 1);
 
+const sameKeyDivergentOutputOverlap = compareSemanticPatchBundleRecords(duplicateA, replayCurrentBundle);
+assert.equal(sameKeyDivergentOutputOverlap.admission.status, 'semantic-overlap');
+assert.equal(sameKeyDivergentOutputOverlap.admission.reviewRequired, true);
+assert.equal(sameKeyDivergentOutputOverlap.overlapKinds.includes('semantic-edit-key'), true);
+assert.equal(sameKeyDivergentOutputOverlap.admission.reasonCodes.includes('same-semantic-edit-key'), true);
+assert.equal(sameKeyDivergentOutputOverlap.admission.reasonCodes.includes('target-hash-mismatch'), true);
+assert.equal(sameKeyDivergentOutputOverlap.admission.reasonCodes.includes('replay-output-hash-mismatch'), true);
+assert.equal(sameKeyDivergentOutputOverlap.summary.replayOutputHashMismatch, true);
+
 const sameContentDifferentFileScript = createSemanticEditScript({
   id: 'same_content_different_file_script',
   language: 'javascript',

@@ -168,11 +168,16 @@ function insertionAnchorResolution(sourceText, insertion, context) {
     const range = spanOffsets(sourceText, symbol?.sourceSpan);
     if (range) return { mode: candidate.mode, range };
   }
+  if (context.symbolIndexAvailable && candidates.some(hasSymbolAnchorIdentity)) return undefined;
   for (const candidate of candidates) {
     const range = spanOffsets(sourceText, candidate.headSpan);
     if (range) return { mode: candidate.mode, range };
   }
   return undefined;
+}
+
+function hasSymbolAnchorIdentity(candidate) {
+  return Boolean(candidate.anchorKey || candidate.anchorSymbolId || candidate.anchorSymbolName);
 }
 
 function insertionAnchorCandidates(insertion) {

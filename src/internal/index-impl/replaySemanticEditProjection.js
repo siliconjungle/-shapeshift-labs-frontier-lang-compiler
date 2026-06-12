@@ -4,7 +4,14 @@ import { createSemanticImportSidecar } from './createSemanticImportSidecar.js';
 import { mapDiffSymbols } from './mapDiffSymbols.js';
 import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
 import { replayDiagnostics, replayEditDiagnostics, replayEditsWithOverlapDiagnostics } from './semanticEditReplayDiagnostics.js';
-import { afterLineOffset, bodyContentRange, spanOffsets } from './semanticEditSourceRanges.js';
+import {
+  findCurrentSymbol,
+  findInsertionAnchor,
+  hasSymbolAnchorIdentity,
+  insertionAnchorCandidates,
+  insertionRange
+} from './semanticEditReplayAnchors.js';
+import { bodyContentRange, removalRange, spanOffsets } from './semanticEditSourceRanges.js';
 
 export function replaySemanticEditProjection(input = {}) {
   const projection = input.projection ?? input.semanticEditProjection;
@@ -19,7 +26,11 @@ export function replaySemanticEditProjection(input = {}) {
     ? currentSymbolIndex({ currentSourceText, sourcePath, language, parser: input.parser })
     : [];
   const replayedEdits = projection.status === 'projected' && typeof currentSourceText === 'string'
-    ? (projection.edits ?? []).map((edit, index) => replayProjectionEdit(projectionEditWithOrder(edit, index), { currentSourceText, currentSymbols }))
+    ? (projection.edits ?? []).map((edit, index) => replayProjectionEdit(projectionEditWithOrder(edit, index), {
+      currentSourceText,
+      currentSymbols,
+      symbolIndexAvailable: isJavaScriptLike(language)
+    }))
     : [];
   const edits = replayEditsWithOverlapDiagnostics(replayedEdits);
   const status = replayStatus(reasonCodes, edits, projection);
@@ -72,7 +83,7 @@ function replayProjectionEdit(edit, context) {
   const spanRange = currentSymbolEditRange(edit, spanOffsets(context.currentSourceText, symbol?.sourceSpan), context.currentSourceText);
   if (symbol && spanRange && !sameRange(headRange, spanRange)) {
     const moved = checkRange(edit, spanRange, context.currentSourceText, currentSymbolRangeLabel(edit));
-    if (moved) return replayEditRecord(edit, moved.status, moved.range, [moved.reason, 'offset-reanchored-by-symbol'], context.currentSourceText);
+    if (moved) return replayEditRecord(edit, moved.status, replayAppliedRange(edit, moved.range, context.currentSourceText), [moved.reason, 'offset-reanchored-by-symbol'], context.currentSourceText);
     if (edit.editKind === 'delete' && offset && rangesOverlap(headRange, spanRange)) {
       return replayEditRecord(edit, offset.status, offset.range, [offset.reason], context.currentSourceText);
     }
@@ -80,10 +91,15 @@ function replayProjectionEdit(edit, context) {
   }
   if (offset) return replayEditRecord(edit, offset.status, offset.range, [offset.reason], context.currentSourceText);
   const anchored = checkRange(edit, spanRange, context.currentSourceText, currentSymbolRangeLabel(edit));
-  if (anchored) return replayEditRecord(edit, anchored.status, anchored.range, [anchored.reason, 'offset-reanchored-by-symbol'], context.currentSourceText);
+  if (anchored) return replayEditRecord(edit, anchored.status, replayAppliedRange(edit, anchored.range, context.currentSourceText), [anchored.reason, 'offset-reanchored-by-symbol'], context.currentSourceText);
   return replayEditRecord(edit, symbol ? 'conflict' : 'stale', spanRange, [
     symbol ? `${currentSymbolRangeLabel(edit)}-content-mismatch` : 'current-symbol-anchor-missing'
   ], context.currentSourceText);
+}
+
+function replayAppliedRange(edit, range, sourceText) {
+  if (edit.editKind !== 'delete' || !range || typeof sourceText !== 'string') return range;
+  return removalRange(sourceText, range);
 }
 
 function replayInsertionEdit(edit, context) {
@@ -97,7 +113,8 @@ function replayInsertionEdit(edit, context) {
   const anchor = findInsertionAnchor(edit, context.currentSymbols);
   const range = insertionRange(edit, anchor?.candidate, anchor?.symbol, context.currentSourceText);
   if (range) return replayEditRecord(edit, 'applied', range, [anchor ? 'current-insertion-anchor' : `current-${edit.insertionMode}`], context.currentSourceText);
-  return replayEditRecord(edit, anchor ? 'conflict' : 'stale', undefined, [
+  const missingStableAnchor = context.symbolIndexAvailable && insertionAnchorCandidates(edit).some(hasSymbolAnchorIdentity);
+  return replayEditRecord(edit, anchor || missingStableAnchor ? 'conflict' : 'stale', undefined, [
     anchor ? 'current-insertion-anchor-unusable' : 'current-insertion-anchor-missing'
   ], context.currentSourceText);
 }
@@ -106,10 +123,26 @@ function checkRange(edit, range, sourceText, label) {
   if (!range || range.end < range.start) return undefined;
   const current = sourceText.slice(range.start, range.end);
   const currentHash = hashSemanticValue(current);
+  const currentLineEndingStableText = lineEndingStableText(current);
+  const currentLineEndingStableHash = currentLineEndingStableText === undefined
+    ? undefined
+    : hashSemanticValue(currentLineEndingStableText);
   if (edit.replacementSpanTextHash && currentHash === edit.replacementSpanTextHash) return { status: 'already-applied', range, reason: `${label}-matches-replacement-span` };
   if (edit.replacementTextHash && currentHash === edit.replacementTextHash) return { status: 'already-applied', range, reason: `${label}-matches-replacement` };
   if (current === edit.replacementText) return { status: 'already-applied', range, reason: `${label}-matches-replacement-text` };
+  if (edit.replacementSpanTextLineEndingStableHash && currentLineEndingStableHash === edit.replacementSpanTextLineEndingStableHash) {
+    return { status: 'already-applied', range, reason: `${label}-matches-replacement-span-line-ending-stable` };
+  }
+  if (edit.replacementTextLineEndingStableHash && currentLineEndingStableHash === edit.replacementTextLineEndingStableHash) {
+    return { status: 'already-applied', range, reason: `${label}-matches-replacement-line-ending-stable` };
+  }
+  if (typeof edit.replacementText === 'string' && currentLineEndingStableText === lineEndingStableText(edit.replacementText)) {
+    return { status: 'already-applied', range, reason: `${label}-matches-replacement-text-line-ending-stable` };
+  }
   if (edit.deletedTextHash && currentHash === edit.deletedTextHash) return { status: 'applied', range, reason: `${label}-matches-deleted` };
+  if (edit.deletedTextLineEndingStableHash && currentLineEndingStableHash === edit.deletedTextLineEndingStableHash) {
+    return { status: 'applied', range, reason: `${label}-matches-deleted-line-ending-stable` };
+  }
   return undefined;
 }
 
@@ -145,64 +178,6 @@ function currentSymbolIndex(input) {
     parser: input.parser
   }, input, 'current');
   return [...mapDiffSymbols(imported, createSemanticImportSidecar(imported)).values()];
-}
-
-function findCurrentSymbol(edit, symbols) {
-  const exact = symbols.find((symbol) => [symbol.ownershipKey, symbol.key, symbol.id].some((key) => key && [
-    edit.anchorKey,
-    edit.targetAnchorKey,
-    edit.symbolId
-  ].includes(key)));
-  if (exact) return exact;
-  const name = edit.targetSymbolName ?? edit.symbolName;
-  const kind = edit.targetSymbolKind ?? edit.symbolKind;
-  return symbols.find((symbol) => symbol.name === name && (!kind || symbol.kind === kind));
-}
-
-function findInsertionAnchor(edit, symbols) {
-  for (const candidate of insertionAnchorCandidates(edit)) {
-    const symbol = findInsertionAnchorSymbol(candidate, symbols);
-    if (symbol) return { candidate, symbol };
-  }
-  return undefined;
-}
-
-function findInsertionAnchorSymbol(candidate, symbols) {
-  const keys = [candidate.anchorKey, candidate.anchorSymbolId].filter(Boolean);
-  return symbols.find((symbol) => [symbol.ownershipKey, symbol.key, symbol.id].some((key) => key && keys.includes(key)))
-    ?? symbols.find((symbol) => symbol.name === candidate.anchorSymbolName && (!candidate.anchorSymbolKind || symbol.kind === candidate.anchorSymbolKind));
-}
-
-function insertionAnchorCandidates(edit) {
-  const primary = {
-    mode: edit.insertionMode,
-    anchorKey: edit.insertionAnchorKey,
-    anchorSymbolName: edit.insertionAnchorSymbolName,
-    anchorSymbolKind: edit.insertionAnchorSymbolKind
-  };
-  const seen = new Set();
-  const result = [];
-  for (const candidate of [primary, ...(Array.isArray(edit.insertionAnchorCandidates) ? edit.insertionAnchorCandidates : [])]) {
-    if (!candidate || (candidate.mode !== 'before' && candidate.mode !== 'after')) continue;
-    const key = [candidate.mode, candidate.anchorKey, candidate.anchorSymbolId, candidate.anchorSymbolName, candidate.anchorSymbolKind].join('\0');
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(candidate);
-  }
-  return result;
-}
-
-function insertionRange(edit, candidate, anchor, sourceText) {
-  if (edit.insertionMode === 'file-start') return { start: 0, end: 0 };
-  if (edit.insertionMode === 'file-end') return { start: sourceText.length, end: sourceText.length };
-  const mode = candidate?.mode ?? edit.insertionMode;
-  const anchorRange = spanOffsets(sourceText, anchor?.sourceSpan);
-  if (!anchorRange) return undefined;
-  if (mode === 'before') return { start: anchorRange.start, end: anchorRange.start };
-  if (mode === 'after') {
-    return { start: afterLineOffset(sourceText, anchorRange.end), end: afterLineOffset(sourceText, anchorRange.end) };
-  }
-  return undefined;
 }
 
 function currentSymbolEditRange(edit, symbolRange, sourceText) {
@@ -296,4 +271,9 @@ function rangesOverlap(left, right) {
 
 function isJavaScriptLike(language) { return language === 'javascript' || language === 'typescript'; }
 function reasonList(values) { return uniqueStrings((values ?? []).filter(Boolean)); }
+function lineEndingStableText(value) {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return normalized.length > 1 && normalized.endsWith('\n') ? normalized.slice(0, -1) : normalized;
+}
 function compactRecord(value) { return Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined && (!Array.isArray(entry) || entry.length > 0))); }

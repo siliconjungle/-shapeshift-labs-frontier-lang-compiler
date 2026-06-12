@@ -1,5 +1,6 @@
 import{uniqueStrings}from'../../native-import-utils.js';
 import{nativeImportCategoryForLossKind}from'./nativeImportCategoryForLossKind.js';
+export{summarizeSemanticAdmissionWarnings}from'./projectImportAdmissionSemanticWarnings.js';
 
 export function importLosses(imported){
   const nativeAst=imported?.nativeAst??imported?.nativeSource?.ast;
@@ -157,4 +158,3 @@ export function summarizeImportPreservation(imported,source){
   const quality=stale?'stale':missing?'missing':truncated||!exactSourceAvailable||sourcePreservationLosses.length?'lossy':'exact';
   return {quality,missing,stale,truncated,exactSourceAvailable,lossCount:sourcePreservationLosses.length,id:record?.id};
 }
-

@@ -32,13 +32,18 @@ const smokeModules = [
   './smoke/semantic-history-records.mjs',
   './smoke/semantic-history-lineage-resolution.mjs',
   './smoke/semantic-lineage-inference.mjs',
+  './smoke/semantic-edit-insertions.mjs',
+  './smoke/semantic-edit-rename-move.mjs',
   './smoke/semantic-edit-script.mjs',
+  './smoke/semantic-edit-script-reanchor.mjs',
   './smoke/semantic-edit-replay-diagnostics.mjs',
   './smoke/semantic-edit-sibling-merge.mjs',
   './smoke/semantic-edit-bundle-auto-merge.mjs',
   './smoke/semantic-edit-bundle-admission.mjs',
+  './smoke/semantic-edit-bundle-admission-replay-required.mjs',
   './smoke/semantic-patch-bundles.mjs',
   './smoke/semantic-patch-bundle-overlaps.mjs',
+  './smoke/semantic-patch-bundle-overlaps-same-file.mjs',
   './smoke/bidirectional-target-change.mjs',
   './smoke/native-projection.mjs',
   './smoke-workbench.mjs',
@@ -49,6 +54,19 @@ const smokeModules = [
   './smoke/projection-readiness.mjs',
   './smoke/universal-conversion-plan.mjs'
 ];
+
+const semanticAutoMergeSmokeModules = [
+  './smoke/semantic-edit-insertions.mjs',
+  './smoke/semantic-edit-rename-move.mjs',
+  './smoke/semantic-edit-bundle-auto-merge.mjs',
+  './smoke/semantic-edit-bundle-admission.mjs'
+];
+
+for (const modulePath of semanticAutoMergeSmokeModules) {
+  if (!smokeModules.includes(modulePath)) {
+    throw new Error(`Default smoke gate is missing required semantic auto-merge proof: ${modulePath}`);
+  }
+}
 
 const explicitModules = process.argv.slice(2).filter((arg) => arg.endsWith('.mjs'));
 const modules = explicitModules.length > 0

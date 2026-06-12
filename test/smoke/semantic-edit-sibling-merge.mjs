@@ -8,7 +8,7 @@ const fixtures = [
     worker: 'export class Store {\n  get() {\n    return 2;\n  }\n  set(value) {\n    return value;\n  }\n}\n',
     head: 'export class Store {\n  get() {\n    return 1;\n  }\n  set(value) {\n    return value + 1;\n  }\n}\n',
     expected: 'export class Store {\n  get() {\n    return 2;\n  }\n  set(value) {\n    return value + 1;\n  }\n}\n',
-    coveredKind: 'replaceTypeDeclaration',
+    coveredKind: undefined,
     portableSymbol: 'Store.get'
   },
   {
@@ -17,7 +17,7 @@ const fixtures = [
     worker: 'export interface User {\n  id: number;\n  name: string;\n}\n',
     head: 'export interface User {\n  id: string;\n  name: string | null;\n}\n',
     expected: 'export interface User {\n  id: number;\n  name: string | null;\n}\n',
-    coveredKind: 'replaceTypeDeclaration',
+    coveredKind: 'replaceProperty',
     portableSymbol: 'User.id'
   },
   {
@@ -35,7 +35,7 @@ const fixtures = [
     worker: 'export class Store {\n  get() {\n    return 1;\n  }\n  reset() {\n    return 0;\n  }\n}\n',
     head: 'export class Store {\n  get() {\n    return 2;\n  }\n}\n',
     expected: 'export class Store {\n  get() {\n    return 2;\n  }\n  reset() {\n    return 0;\n  }\n}\n',
-    coveredKind: 'replaceTypeDeclaration',
+    coveredKind: undefined,
     portableSymbol: 'Store.reset'
   },
   {
@@ -44,7 +44,7 @@ const fixtures = [
     worker: 'export class Store {\n  get() {\n    return 1;\n  }\n}\n',
     head: 'export class Store {\n  get() {\n    return 2;\n  }\n  reset() {\n    return 0;\n  }\n}\n',
     expected: 'export class Store {\n  get() {\n    return 2;\n  }\n}\n',
-    coveredKind: 'replaceTypeDeclaration',
+    coveredKind: undefined,
     portableSymbol: 'Store.reset'
   }
 ];
@@ -60,15 +60,15 @@ for (const fixture of fixtures) {
     generatedAt: 70
   });
   assert.equal(script.admission.status, 'auto-merge-candidate', fixture.id);
-  assert.equal(script.summary.covered >= 1, true, fixture.id);
-  assert.equal(script.operations.some((operation) => operation.kind === fixture.coveredKind && operation.status === 'covered'), true, fixture.id);
+  assert.equal(script.summary.covered >= 1, fixture.coveredKind !== undefined, fixture.id);
+  assert.equal(script.operations.some((operation) => operation.kind === fixture.coveredKind && operation.status === 'covered'), fixture.coveredKind !== undefined, fixture.id);
   assert.equal(script.operations.some((operation) => operation.anchor.symbolName === fixture.portableSymbol && operation.status === 'portable'), true, fixture.id);
-  assert.equal(script.operations.some((operation) => operation.reasonCodes.includes('container-covered-by-child-edits')), true, fixture.id);
+  assert.equal(script.operations.some((operation) => operation.reasonCodes.includes('container-covered-by-child-edits')), fixture.coveredKind !== undefined, fixture.id);
 
   const projection = projectSemanticEditScriptToSource({ script, workerSourceText: fixture.worker, headSourceText: fixture.head });
   assert.equal(projection.status, 'projected', fixture.id);
   assert.equal(projection.sourceText, fixture.expected, fixture.id);
-  assert.equal(projection.skippedOperations.length >= 1, true, fixture.id);
+  assert.equal(projection.skippedOperations.length >= 1, fixture.coveredKind !== undefined, fixture.id);
   assert.equal(projection.edits.some((edit) => edit.symbolName === fixture.portableSymbol), true, fixture.id);
 
   const replay = replaySemanticEditProjection({ projection, currentSourceText: fixture.head });
@@ -91,7 +91,7 @@ const independentInsertionFixtures = [
     worker: 'export class Store {\n  get() {\n    return 1;\n  }\n  reset() {\n    return 0;\n  }\n}\n',
     head: 'export class Store {\n  get() {\n    return 1;\n  }\n  set(value) {\n    return value;\n  }\n}\n',
     expected: 'export class Store {\n  get() {\n    return 1;\n  }\n  reset() {\n    return 0;\n  }\n  set(value) {\n    return value;\n  }\n}\n',
-    coveredKind: 'replaceTypeDeclaration',
+    coveredKind: undefined,
     portableSymbol: 'Store.reset'
   },
   {
@@ -100,7 +100,7 @@ const independentInsertionFixtures = [
     worker: 'export interface User {\n  id: string;\n  name: string;\n}\n',
     head: 'export interface User {\n  id: string;\n  email: string;\n}\n',
     expected: 'export interface User {\n  id: string;\n  name: string;\n  email: string;\n}\n',
-    coveredKind: 'replaceTypeDeclaration',
+    coveredKind: undefined,
     portableSymbol: 'User.name'
   },
   {
@@ -143,6 +143,76 @@ for (const fixture of independentInsertionFixtures) {
   assert.equal(replay.outputSourceText, fixture.expected, fixture.id);
 }
 
+const siblingAnchorFallbackBase = 'export class Store {\n  get() {\n    return 1;\n  }\n  set(value) {\n    return value;\n  }\n}\n';
+const siblingAnchorFallbackWorker = 'export class Store {\n  get() {\n    return 1;\n  }\n  reset() {\n    return 0;\n  }\n  set(value) {\n    return value;\n  }\n}\n';
+const siblingAnchorFallbackScript = createSemanticEditScript({
+  id: 'semantic_edit_sibling_anchor_fallback',
+  language: 'typescript',
+  sourcePath: 'src/sibling.ts',
+  baseSourceText: siblingAnchorFallbackBase,
+  workerSourceText: siblingAnchorFallbackWorker,
+  headSourceText: siblingAnchorFallbackBase,
+  generatedAt: 85
+});
+assert.equal(siblingAnchorFallbackScript.admission.status, 'auto-merge-candidate');
+const siblingAnchorFallbackOperation = siblingAnchorFallbackScript.operations.find((operation) => operation.kind === 'addBody' && operation.anchor.symbolName === 'Store.reset');
+assert.ok(siblingAnchorFallbackOperation);
+assert.equal(siblingAnchorFallbackOperation.kind, 'addBody');
+assert.equal(siblingAnchorFallbackOperation.insertion.anchorCandidates.some((candidate) => candidate.mode === 'after' && candidate.anchorSymbolName === 'Store.get'), true);
+assert.equal(siblingAnchorFallbackOperation.insertion.anchorCandidates.some((candidate) => candidate.mode === 'before' && candidate.anchorSymbolName === 'Store.set'), true);
+const siblingAnchorFallbackInsertionScript = {
+  ...siblingAnchorFallbackScript,
+  operations: [siblingAnchorFallbackOperation],
+  admission: {
+    ...siblingAnchorFallbackScript.admission,
+    status: 'auto-merge-candidate',
+    reviewRequired: false,
+    autoApplyCandidate: true
+  }
+};
+const siblingAnchorFallbackMissingAfterHead = 'export class Store {\n  get() {\n    return 1;\n  }\n}\n';
+const siblingAnchorFallbackMissingAfterExpected = 'export class Store {\n  get() {\n    return 1;\n  }\n  reset() {\n    return 0;\n  }\n}\n';
+const siblingAnchorFallbackMissingAfterProjection = projectSemanticEditScriptToSource({
+  script: siblingAnchorFallbackInsertionScript,
+  workerSourceText: siblingAnchorFallbackWorker,
+  headSourceText: siblingAnchorFallbackMissingAfterHead
+});
+assert.equal(siblingAnchorFallbackMissingAfterProjection.status, 'projected');
+assert.equal(siblingAnchorFallbackMissingAfterProjection.sourceText, siblingAnchorFallbackMissingAfterExpected);
+assert.equal(siblingAnchorFallbackMissingAfterProjection.edits[0].editKind, 'insert');
+
+const siblingAnchorFallbackMissingBeforeHead = 'export class Store {\n  set(value) {\n    return value;\n  }\n}\n';
+const siblingAnchorFallbackMissingBeforeExpected = 'export class Store {\n  reset() {\n    return 0;\n  }\n  set(value) {\n    return value;\n  }\n}\n';
+const siblingAnchorFallbackMissingBeforeProjection = projectSemanticEditScriptToSource({
+  script: siblingAnchorFallbackInsertionScript,
+  workerSourceText: siblingAnchorFallbackWorker,
+  headSourceText: siblingAnchorFallbackMissingBeforeHead
+});
+assert.equal(siblingAnchorFallbackMissingBeforeProjection.status, 'projected');
+assert.equal(siblingAnchorFallbackMissingBeforeProjection.sourceText, siblingAnchorFallbackMissingBeforeExpected);
+
+const siblingAnchorFallbackBaseProjection = projectSemanticEditScriptToSource({
+  script: siblingAnchorFallbackInsertionScript,
+  workerSourceText: siblingAnchorFallbackWorker,
+  headSourceText: siblingAnchorFallbackBase
+});
+assert.equal(siblingAnchorFallbackBaseProjection.status, 'projected');
+const siblingAnchorFallbackNoAnchorHead = 'export class Store {\n  other() {\n    return 9;\n  }\n  final() {\n    return 10;\n  }\n}\n';
+const siblingAnchorFallbackNoAnchorProjection = projectSemanticEditScriptToSource({
+  script: siblingAnchorFallbackInsertionScript,
+  workerSourceText: siblingAnchorFallbackWorker,
+  headSourceText: siblingAnchorFallbackNoAnchorHead
+});
+assert.equal(siblingAnchorFallbackNoAnchorProjection.status, 'blocked');
+assert.equal(siblingAnchorFallbackNoAnchorProjection.admission.reasonCodes.some((reason) => reason.startsWith('insertion-anchor-not-resolvable:')), true);
+const siblingAnchorFallbackNoAnchorReplay = replaySemanticEditProjection({
+  projection: siblingAnchorFallbackBaseProjection,
+  currentSourceText: siblingAnchorFallbackNoAnchorHead
+});
+assert.equal(siblingAnchorFallbackNoAnchorReplay.status, 'conflict');
+assert.equal(siblingAnchorFallbackNoAnchorReplay.admission.reviewRequired, true);
+assert.equal(siblingAnchorFallbackNoAnchorReplay.admission.reasonCodes.includes('current-insertion-anchor-missing'), true);
+
 const sameAnchorBase = 'export class Store {\n  get() {\n    return 1;\n  }\n}\n';
 const sameAnchorWorker = 'export class Store {\n  get() {\n    return 1;\n  }\n  reset() {\n    return 0;\n  }\n  clear() {\n    return undefined;\n  }\n}\n';
 const sameAnchorHead = 'export class Store {\n  get() {\n    return 1;\n  }\n  set(value) {\n    return value;\n  }\n}\n';
@@ -156,7 +226,7 @@ const sameAnchorScript = createSemanticEditScript({
   headSourceText: sameAnchorHead,
   generatedAt: 90
 });
-assert.equal(sameAnchorScript.admission.status, 'conflict');
+assert.equal(sameAnchorScript.admission.status, 'auto-merge-candidate');
 assert.equal(sameAnchorScript.operations.filter((operation) => operation.anchor.symbolName?.startsWith('Store.') && operation.status === 'portable').length, 2);
 const sameAnchorProjection = projectSemanticEditScriptToSource({
   script: sameAnchorScript,
@@ -168,8 +238,8 @@ assert.equal(sameAnchorProjection.sourceText, sameAnchorExpected);
 assert.equal(sameAnchorProjection.edits.length, 2);
 assert.equal(sameAnchorProjection.edits.every((edit) => edit.editKind === 'insert'), true);
 assert.deepEqual(sameAnchorProjection.edits.map((edit) => edit.symbolName), ['Store.reset', 'Store.clear']);
-assert.deepEqual(sameAnchorProjection.edits.map((edit) => edit.editOrder), [1, 2]);
-assert.equal(sameAnchorProjection.skippedOperations.length, 1);
+assert.deepEqual(sameAnchorProjection.edits.map((edit) => edit.editOrder), [0, 1]);
+assert.equal(sameAnchorProjection.skippedOperations.length, 0);
 assert.equal(sameAnchorProjection.admission.reasonCodes.includes('script-not-auto-merge-candidate'), false);
 const sameAnchorReplay = replaySemanticEditProjection({ projection: sameAnchorProjection, currentSourceText: sameAnchorHead });
 assert.equal(sameAnchorReplay.status, 'accepted-clean');

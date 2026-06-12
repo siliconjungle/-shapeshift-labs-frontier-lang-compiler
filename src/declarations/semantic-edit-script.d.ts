@@ -147,7 +147,10 @@ export interface SemanticEditProjectionEdit {
   readonly replacementBytes: number;
   readonly deletedTextHash?: string;
   readonly replacementTextHash?: string;
+  readonly deletedTextLineEndingStableHash?: string;
+  readonly replacementTextLineEndingStableHash?: string;
   readonly replacementSpanTextHash?: string;
+  readonly replacementSpanTextLineEndingStableHash?: string;
   readonly insertionMode?: string;
   readonly insertionAnchorKey?: string;
   readonly insertionAnchorSymbolName?: string;

@@ -50,6 +50,42 @@ assert.equal(emittedCandidate.mergeAdmission.kind, 'frontier.lang.semanticMergeC
 assert.equal(emittedCandidate.mergeAdmission.changedSemanticRegions.length, emittedCandidate.changedSemanticRegions.length);
 assert.equal(emittedCandidate.mergeAdmission.scoreFacets.summary.value, emittedCandidate.scoreFacets.summary.value);
 
+const classMemberBeforeSourceText = [
+  'export class TodoStore {',
+  '  save(title) {',
+  '    return addTodo(title);',
+  '  }',
+  '}',
+  ''
+].join('\n');
+const classMemberAfterSourceText = [
+  'export class TodoStore {',
+  '  save(title) {',
+  '    return addTodo(title.trim());',
+  '  }',
+  '}',
+  ''
+].join('\n');
+const classMemberChangeSet = diffNativeSources({
+  id: 'semantic_merge_candidate_class_member_precision',
+  language: 'javascript',
+  sourcePath: 'src/class-member-precision.js',
+  beforeSourceText: classMemberBeforeSourceText,
+  afterSourceText: classMemberAfterSourceText
+});
+const classMemberKey = 'source#src/class-member-precision.js#body#TodoStore.save';
+const classContainerKey = 'source#src/class-member-precision.js#type#TodoStore';
+const classMemberConflictKey = `region:${classMemberKey}`;
+const classContainerConflictKey = `region:${classContainerKey}`;
+assert.equal(classMemberChangeSet.changedSymbols.some((symbol) => symbol.name === 'TodoStore.save'), true);
+assert.equal(classMemberChangeSet.changedSymbols.some((symbol) => symbol.name === 'TodoStore'), false);
+assert.equal(classMemberChangeSet.changedRegions.some((region) => region.key === classMemberKey), true);
+assert.equal(classMemberChangeSet.changedRegions.some((region) => region.key === classContainerKey), false);
+assert.equal(classMemberChangeSet.mergeCandidate.conflictKeys.includes(classMemberConflictKey), true);
+assert.equal(classMemberChangeSet.mergeCandidate.conflictKeys.includes(classContainerConflictKey), false);
+assert.equal(classMemberChangeSet.mergeCandidate.changedSemanticRegions.some((region) => region.conflictKey === classMemberConflictKey), true);
+assert.equal(classMemberChangeSet.mergeCandidate.changedSemanticRegions.some((region) => region.conflictKey === classContainerConflictKey), false);
+
 const readyRecord = createSemanticMergeCandidateAdmissionRecord(changeSet, {
   id: 'admission_candidate_ready',
   candidateId: 'candidate_ready',

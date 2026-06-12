@@ -38,7 +38,8 @@ const stableRenameMoveAdd = stableRenameMoveScript.operations.find((operation) =
 assert.equal(stableRenameMoveRemove.reanchor.toSourcePath, 'src/runtime-core.ts');
 assert.equal(stableRenameMoveRemove.reanchor.toSymbolName, 'step');
 assert.equal(stableRenameMoveRemove.reasonCodes.includes('anchor-reanchored-head-matches-base'), true);
-assert.equal(stableRenameMoveAdd.anchor.symbolId, 'symbol:stable:step');
+assert.equal(stableRenameMoveAdd.anchor.symbolName, 'renamedStep');
+assert.equal(stableRenameMoveAdd.insertion.insertedSymbolId, 'symbol:stable:step');
 assert.equal(stableRenameMoveAdd.reasonCodes.includes('added-anchor-absent-from-head'), true);
 
 const stableRenameMoveProjection = projectSemanticEditScriptToSource({

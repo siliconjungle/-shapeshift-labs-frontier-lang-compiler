@@ -50,6 +50,38 @@ assert.equal(insertionProjection.edits.some((edit) => edit.insertionMode === 'be
 assert.equal(insertionProjection.edits.some((edit) => edit.insertionMode === 'after'), true);
 assert.equal(insertionProjection.edits.every((edit) => edit.replacementSpanTextHash), true);
 
+const importAlreadyPresentHead = "import { helper } from './helper.js';\n" + insertionBase;
+const importAlreadyPresentScript = {
+  ...insertionScript,
+  id: 'semantic_edit_import_already_present',
+  operations: insertionScript.operations.filter((operation) => operation.kind === 'addImport'),
+  admission: {
+    ...insertionScript.admission,
+    status: 'auto-merge-candidate'
+  }
+};
+const importAlreadyPresentProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_import_already_present_projection',
+  script: importAlreadyPresentScript,
+  workerSourceText: insertionWorker,
+  headSourceText: importAlreadyPresentHead
+});
+assert.equal(importAlreadyPresentProjection.status, 'projected');
+assert.equal(importAlreadyPresentProjection.sourceText, importAlreadyPresentHead);
+assert.equal((importAlreadyPresentProjection.sourceText.match(/import \{ helper \} from '\.\/helper\.js';/g) ?? []).length, 1);
+assert.equal(importAlreadyPresentProjection.edits.length, 2);
+assert.equal(importAlreadyPresentProjection.edits.every((edit) => edit.status === 'already-applied'), true);
+assert.equal(importAlreadyPresentProjection.metadata.alreadyAppliedEditCount, 2);
+
+const importAlreadyPresentReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_import_already_present_replay',
+  projection: importAlreadyPresentProjection,
+  currentSourceText: importAlreadyPresentHead
+});
+assert.equal(importAlreadyPresentReplay.status, 'already-applied');
+assert.equal(importAlreadyPresentReplay.outputSourceText, importAlreadyPresentHead);
+assert.equal((importAlreadyPresentReplay.outputSourceText.match(/import \{ helper \} from '\.\/helper\.js';/g) ?? []).length, 1);
+
 const insertionReplay = replaySemanticEditProjection({
   id: 'semantic_edit_insertions_replay',
   projection: insertionProjection,
@@ -133,14 +165,14 @@ const memberInsertionFixtures = [
     id: 'class_method',
     base: 'export class Store {\n  get() {\n    return 1;\n  }\n}\n',
     worker: 'export class Store {\n  get() {\n    return 1;\n  }\n  set(value) {\n    return value;\n  }\n}\n',
-    skippedKind: 'replaceTypeDeclaration',
+    skippedKind: undefined,
     insertedName: 'Store.set'
   },
   {
     id: 'interface_property',
     base: 'export interface User {\n  id: string;\n}\n',
     worker: 'export interface User {\n  id: string;\n  name: string;\n}\n',
-    skippedKind: 'replaceTypeDeclaration',
+    skippedKind: undefined,
     insertedName: 'User.name'
   },
   {
@@ -163,12 +195,12 @@ for (const fixture of memberInsertionFixtures) {
     generatedAt: 60
   });
   assert.equal(script.admission.status, 'auto-merge-candidate');
-  assert.equal(script.operations.some((operation) => operation.kind === fixture.skippedKind), true);
+  assert.equal(script.operations.some((operation) => operation.kind === fixture.skippedKind), fixture.skippedKind !== undefined);
   assert.equal(script.operations.some((operation) => operation.anchor.symbolName === fixture.insertedName), true);
   const projection = projectSemanticEditScriptToSource({ script, workerSourceText: fixture.worker, headSourceText: fixture.base });
   assert.equal(projection.status, 'projected');
   assert.equal(projection.sourceText, fixture.worker);
-  assert.equal(projection.skippedOperations.length, 1);
+  assert.equal(projection.skippedOperations.length, fixture.skippedKind === undefined ? 0 : 1);
   assert.equal(projection.edits.length, 1);
   assert.equal(projection.edits[0].editKind, 'insert');
   assert.equal(projection.edits[0].symbolName, fixture.insertedName);
