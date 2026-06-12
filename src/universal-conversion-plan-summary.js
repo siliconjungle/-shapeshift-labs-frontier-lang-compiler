@@ -1,9 +1,13 @@
+import { countBy } from './native-import-utils.js';
+
 export function conversionPlanSummary(routes) {
+  const compactCounts = compactRouteCounts(routes);
   const summary = {
     routes: routes.length,
     byMode: {},
     byReadiness: {},
     byAdmissionAction: {},
+    compactCounts,
     readyRoutes: 0,
     reviewRoutes: 0,
     blockedRoutes: 0,
@@ -39,4 +43,30 @@ export function conversionPlanSummary(routes) {
     if (route.semanticEquivalenceClaim) summary.semanticEquivalenceClaims += 1;
   }
   return summary;
+}
+
+function compactRouteCounts(routes) {
+  const constructs = routes.flatMap((route) => route.representation?.constructs ?? []);
+  const missingConstructs = routes.flatMap((route) => route.representation?.missing ?? []);
+  return {
+    representationConstructs: {
+      total: constructs.length,
+      represented: constructs.filter((construct) => construct.status === 'represented').length,
+      missing: constructs.filter((construct) => construct.status === 'missing').length,
+      review: constructs.filter((construct) => construct.status === 'review').length,
+      blocked: constructs.filter((construct) => construct.status === 'blocked').length,
+      byKind: countBy(constructs.map((construct) => construct.kind)),
+      byStatus: countBy(constructs.map((construct) => construct.status))
+    },
+    missingConstructs: {
+      total: missingConstructs.length,
+      byKind: countBy(missingConstructs)
+    },
+    semanticEditReadiness: { routes: countBy(routes.map((route) => route.readiness)) },
+    admissionStatuses: {
+      byAction: countBy(routes.map((route) => route.admissionAction)),
+      byRouteStatus: countBy(routes.map((route) => route.mergeRefs?.admissionStatus ?? route.admissionAction)),
+      byRisk: countBy(routes.map((route) => route.mergeScore?.risk))
+    }
+  };
 }

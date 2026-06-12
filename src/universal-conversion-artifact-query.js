@@ -1,4 +1,5 @@
 import { uniqueStrings } from './native-import-utils.js';
+import { artifactSemanticEditIndex } from './universal-conversion-artifact-semantic-edit.js';
 
 export function queryUniversalConversionArtifacts(records, query = {}) {
   return artifactRecords(records)
@@ -8,6 +9,7 @@ export function queryUniversalConversionArtifacts(records, query = {}) {
 }
 
 export function artifactIndex(routeArtifacts) {
+  const semanticEditIndexes = routeArtifacts.map(artifactSemanticEditIndex);
   return {
     routeIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.routeId)),
     historyIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.history.id)),
@@ -28,6 +30,23 @@ export function artifactIndex(routeArtifacts) {
     proofIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.proofIds)),
     semanticOperationIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []).map((operation) => operation.id)),
     semanticOperationKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []).map((operation) => operation.operationKind)),
+    semanticEditStatuses: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditStatuses)),
+    semanticEditScriptIds: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditScriptIds)),
+    semanticEditProjectionIds: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditProjectionIds)),
+    semanticEditReplayIds: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditReplayIds)),
+    semanticEditReplayStatuses: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditReplayStatuses)),
+    semanticEditReplayActions: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditReplayActions)),
+    semanticEditAdmissionStatuses: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditAdmissionStatuses)),
+    semanticEditAdmissionActions: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditAdmissionActions)),
+    semanticEditAdmissionReadinesses: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditAdmissionReadinesses)),
+    semanticEditReplayCurrentHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditReplayCurrentHashes)),
+    semanticEditReplayOutputHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditReplayOutputHashes)),
+    semanticEditKeys: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditKeys)),
+    semanticEditHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditHashes)),
+    semanticIdentityHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticIdentityHashes)),
+    sourceIdentityHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.sourceIdentityHashes)),
+    operationContentHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.operationContentHashes)),
+    editContentHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.editContentHashes)),
     representationConstructKinds: uniqueStrings(routeArtifacts.flatMap(artifactConstructKinds)),
     runtimeCapabilities: uniqueStrings(routeArtifacts.flatMap(artifactRuntimeCapabilities)),
     sourceMapPrecisions: uniqueStrings(routeArtifacts.flatMap(artifactSourceMapPrecisions)),
@@ -43,6 +62,7 @@ function artifactRecords(records) {
 }
 
 function matchesArtifact(record, query) {
+  const semanticEditIndex = artifactSemanticEditIndex(record);
   return match(query.routeId, [record.routeId])
     && match(query.historyId, [record.history.id])
     && match(query.patchBundleId, [record.patchBundle.id])
@@ -64,6 +84,23 @@ function matchesArtifact(record, query) {
     && match(query.proofId, record.history.proofIds)
     && match(query.semanticOperationId, (record.semanticOperations?.operations ?? []).map((operation) => operation.id))
     && match(query.semanticOperationKind, (record.semanticOperations?.operations ?? []).map((operation) => operation.operationKind))
+    && match(query.semanticEditStatus ?? query.semanticEditStatuses, semanticEditIndex.semanticEditStatuses)
+    && match(query.semanticEditScriptId ?? query.semanticEditScriptIds, semanticEditIndex.semanticEditScriptIds)
+    && match(query.semanticEditProjectionId ?? query.semanticEditProjectionIds, semanticEditIndex.semanticEditProjectionIds)
+    && match(query.semanticEditReplayId ?? query.semanticEditReplayIds, semanticEditIndex.semanticEditReplayIds)
+    && match(query.semanticEditReplayStatus ?? query.semanticEditReplayStatuses, semanticEditIndex.semanticEditReplayStatuses)
+    && match(query.semanticEditReplayAction ?? query.semanticEditReplayActions, semanticEditIndex.semanticEditReplayActions)
+    && match(query.semanticEditAdmission ?? query.semanticEditAdmissionStatus ?? query.semanticEditAdmissionStatuses, semanticEditIndex.semanticEditAdmissionStatuses)
+    && match(query.semanticEditAdmissionAction ?? query.semanticEditAdmissionActions, semanticEditIndex.semanticEditAdmissionActions)
+    && match(query.semanticEditAdmissionReadiness ?? query.semanticEditAdmissionReadinesses, semanticEditIndex.semanticEditAdmissionReadinesses)
+    && match(query.semanticEditReplayCurrentHash ?? query.semanticEditReplayCurrentHashes, semanticEditIndex.semanticEditReplayCurrentHashes)
+    && match(query.semanticEditReplayOutputHash ?? query.semanticEditReplayOutputHashes, semanticEditIndex.semanticEditReplayOutputHashes)
+    && match(query.semanticEditKey ?? query.semanticEditKeys, semanticEditIndex.semanticEditKeys)
+    && match(query.semanticEditHash ?? query.semanticEditHashes, semanticEditIndex.semanticEditHashes)
+    && match(query.semanticIdentityHash ?? query.semanticIdentityHashes, semanticEditIndex.semanticIdentityHashes)
+    && match(query.sourceIdentityHash ?? query.sourceIdentityHashes, semanticEditIndex.sourceIdentityHashes)
+    && match(query.operationContentHash ?? query.operationContentHashes, semanticEditIndex.operationContentHashes)
+    && match(query.editContentHash ?? query.editContentHashes, semanticEditIndex.editContentHashes)
     && match(query.constructKind ?? query.representationConstructKind, artifactConstructKinds(record))
     && match(query.runtimeCapability, artifactRuntimeCapabilities(record))
     && match(query.sourceMapPrecision, artifactSourceMapPrecisions(record))

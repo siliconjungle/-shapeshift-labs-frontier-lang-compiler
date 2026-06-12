@@ -10,6 +10,7 @@ import type { ProjectionSourceProjectionCoverage, ProjectionTargetCoverageEntry 
 import type { ProjectionReadinessTargetCell } from './projection-readiness.js';
 import type { UniversalCapabilityMatrix, UniversalCapabilityMatrixOptions } from './universal-capability.js';
 import type { UniversalRepresentationCoverage, UniversalRepresentationCoverageQuery } from './universal-representation-coverage.js';
+import type { UniversalConversionPlanCompactCounts } from './universal-conversion-compact-counts.js';
 import type {
   UniversalRuntimeAdapterRequirement,
   UniversalRuntimeCapabilityKind,
@@ -170,6 +171,7 @@ export interface UniversalConversionPlan {
     readonly byMode: Readonly<Record<UniversalConversionRouteMode, number>>;
     readonly byReadiness: Readonly<Record<SemanticMergeReadiness, number>>;
     readonly byAdmissionAction: Readonly<Record<UniversalConversionAdmissionAction, number>>;
+    readonly compactCounts: UniversalConversionPlanCompactCounts;
     readonly readyRoutes: number;
     readonly reviewRoutes: number;
     readonly blockedRoutes: number;

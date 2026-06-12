@@ -1,11 +1,16 @@
+import { countBy } from './native-import-utils.js';
+
 export function universalConversionArtifactSummary(routeArtifacts, records) {
   const admissionRecords = records.admissionRecords;
+  const semanticOperations = routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []);
+  const compactCounts = compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperations);
   return {
     routes: routeArtifacts.length,
     histories: records.historyRecords.length,
     patchBundles: records.patchBundleRecords.length,
     admissionRecords: admissionRecords.length,
-    semanticOperations: routeArtifacts.reduce((sum, artifact) => sum + artifact.semanticOperations.operations.length, 0),
+    semanticOperations: semanticOperations.length,
+    compactCounts,
     mergeReady: countAdmissionBucket(admissionRecords, 'merge-ready'),
     needsEvidence: countAdmissionBucket(admissionRecords, 'needs-evidence'),
     needsAdapter: countAdmissionBucket(admissionRecords, 'needs-adapter'),
@@ -34,4 +39,31 @@ function countAdmissionBucket(records, bucket) {
 
 function countAdmissionRisk(records, risk) {
   return records.filter((record) => record.risk === risk).length;
+}
+
+function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperations) {
+  const constructKinds = routeArtifacts.flatMap((artifact) => artifact.metadata?.representation?.constructKinds ?? []);
+  const missingConstructs = routeArtifacts.flatMap((artifact) => artifact.metadata?.representation?.missing ?? []);
+  return {
+    representationConstructs: {
+      total: constructKinds.length,
+      routeArtifacts: routeArtifacts.filter((artifact) => artifact.metadata?.representation?.constructKinds?.length).length,
+      byKind: countBy(constructKinds)
+    },
+    missingConstructs: {
+      total: missingConstructs.length,
+      routeArtifacts: routeArtifacts.filter((artifact) => artifact.metadata?.representation?.missing?.length).length,
+      byKind: countBy(missingConstructs)
+    },
+    semanticEditReadiness: {
+      routeArtifacts: countBy(routeArtifacts.map((artifact) => artifact.readiness)),
+      semanticOperations: countBy(semanticOperations.map((operation) => operation.readiness))
+    },
+    admissionStatuses: {
+      byStatus: countBy(routeArtifacts.map((artifact) => artifact.admissionStatus)),
+      byBucket: countBy(admissionRecords.map((record) => record.admissionBucket)),
+      byAction: countBy(admissionRecords.map((record) => record.admissionAction)),
+      byRisk: countBy(admissionRecords.map((record) => record.risk))
+    }
+  };
 }

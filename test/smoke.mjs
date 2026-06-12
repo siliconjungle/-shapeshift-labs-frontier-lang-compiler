@@ -52,7 +52,8 @@ const smokeModules = [
   './smoke/matrices-final.mjs',
   './smoke/matrices-universal-fixtures.mjs',
   './smoke/projection-readiness.mjs',
-  './smoke/universal-conversion-plan.mjs'
+  './smoke/universal-conversion-plan.mjs',
+  './smoke/universal-conversion-compact-counts.mjs'
 ];
 
 const semanticAutoMergeSmokeModules = [

@@ -6,6 +6,7 @@ import type {
 import type { FrontierCompileTarget } from './compile.js';
 import type { SemanticHistoryRecord } from './semantic-history.js';
 import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
+import type { UniversalConversionArtifactCompactCounts } from './universal-conversion-compact-counts.js';
 import type {
   UniversalConversionAdmissionAction,
   UniversalConversionPlan,
@@ -152,6 +153,23 @@ export interface UniversalConversionArtifactIndex {
   readonly proofIds: readonly string[];
   readonly semanticOperationIds: readonly string[];
   readonly semanticOperationKinds: readonly string[];
+  readonly semanticEditStatuses: readonly string[];
+  readonly semanticEditScriptIds: readonly string[];
+  readonly semanticEditProjectionIds: readonly string[];
+  readonly semanticEditReplayIds: readonly string[];
+  readonly semanticEditReplayStatuses: readonly string[];
+  readonly semanticEditReplayActions: readonly string[];
+  readonly semanticEditAdmissionStatuses: readonly string[];
+  readonly semanticEditAdmissionActions: readonly string[];
+  readonly semanticEditAdmissionReadinesses: readonly string[];
+  readonly semanticEditReplayCurrentHashes: readonly string[];
+  readonly semanticEditReplayOutputHashes: readonly string[];
+  readonly semanticEditKeys: readonly string[];
+  readonly semanticEditHashes: readonly string[];
+  readonly semanticIdentityHashes: readonly string[];
+  readonly sourceIdentityHashes: readonly string[];
+  readonly operationContentHashes: readonly string[];
+  readonly editContentHashes: readonly string[];
   readonly representationConstructKinds: readonly string[];
   readonly runtimeCapabilities: readonly string[];
   readonly sourceMapPrecisions: readonly string[];
@@ -176,6 +194,7 @@ export interface UniversalConversionArtifacts {
     readonly patchBundles: number;
     readonly admissionRecords: number;
     readonly semanticOperations: number;
+    readonly compactCounts: UniversalConversionArtifactCompactCounts;
     readonly mergeReady: number;
     readonly needsEvidence: number;
     readonly needsAdapter: number;
@@ -245,6 +264,41 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly proofId?: string | readonly string[];
   readonly semanticOperationId?: string | readonly string[];
   readonly semanticOperationKind?: string | readonly string[];
+  readonly semanticEditStatus?: string | readonly string[];
+  readonly semanticEditStatuses?: readonly string[];
+  readonly semanticEditScriptId?: string | readonly string[];
+  readonly semanticEditScriptIds?: readonly string[];
+  readonly semanticEditProjectionId?: string | readonly string[];
+  readonly semanticEditProjectionIds?: readonly string[];
+  readonly semanticEditReplayId?: string | readonly string[];
+  readonly semanticEditReplayIds?: readonly string[];
+  readonly semanticEditReplayStatus?: string | readonly string[];
+  readonly semanticEditReplayStatuses?: readonly string[];
+  readonly semanticEditReplayAction?: string | readonly string[];
+  readonly semanticEditReplayActions?: readonly string[];
+  readonly semanticEditAdmission?: string | readonly string[];
+  readonly semanticEditAdmissionStatus?: string | readonly string[];
+  readonly semanticEditAdmissionStatuses?: readonly string[];
+  readonly semanticEditAdmissionAction?: string | readonly string[];
+  readonly semanticEditAdmissionActions?: readonly string[];
+  readonly semanticEditAdmissionReadiness?: string | readonly string[];
+  readonly semanticEditAdmissionReadinesses?: readonly string[];
+  readonly semanticEditReplayCurrentHash?: string | readonly string[];
+  readonly semanticEditReplayCurrentHashes?: readonly string[];
+  readonly semanticEditReplayOutputHash?: string | readonly string[];
+  readonly semanticEditReplayOutputHashes?: readonly string[];
+  readonly semanticEditKey?: string | readonly string[];
+  readonly semanticEditKeys?: readonly string[];
+  readonly semanticEditHash?: string | readonly string[];
+  readonly semanticEditHashes?: readonly string[];
+  readonly semanticIdentityHash?: string | readonly string[];
+  readonly semanticIdentityHashes?: readonly string[];
+  readonly sourceIdentityHash?: string | readonly string[];
+  readonly sourceIdentityHashes?: readonly string[];
+  readonly operationContentHash?: string | readonly string[];
+  readonly operationContentHashes?: readonly string[];
+  readonly editContentHash?: string | readonly string[];
+  readonly editContentHashes?: readonly string[];
   readonly representationConstructKind?: string | readonly string[];
 }
 

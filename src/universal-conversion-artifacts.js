@@ -3,6 +3,13 @@ import { universalConversionArtifactSummary } from './universal-conversion-artif
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
 import { artifactIndex } from './universal-conversion-artifact-query.js';
 import { createUniversalConversionAdmissionRecord } from './universal-conversion-admission-record.js';
+import {
+  routeAdmissionMetadata,
+  routeAdmissionStatus,
+  routeReasonCodes,
+  routeRecordMetadata,
+  routeSemanticEditBundle
+} from './universal-conversion-route-metadata.js';
 import { routeSemanticOperations } from './universal-conversion-route-operations.js';
 import { createSemanticHistoryRecord } from './internal/index-impl/semanticHistoryRecords.js';
 import { createSemanticPatchBundleRecord } from './internal/index-impl/semanticPatchBundleRecords.js';
@@ -60,6 +67,8 @@ function createRouteArtifact(route, options) {
   const regions = routeRegions(route, refs, sources);
   const sourceMapLinks = routeSourceMapLinks(route, refs, sources, regions);
   const semanticOperations = routeSemanticOperations(route, refs, sources, regions, sourceMapLinks);
+  const semanticEditBundle = routeSemanticEditBundle(route);
+  const recordMetadata = routeRecordMetadata(route, planId, options.metadata);
   const admissionStatus = routeAdmissionStatus(route);
   const reasonCodes = routeReasonCodes(route);
   const historyId = refs.historyIds?.[0] ?? `history_${route.id}`;
@@ -82,7 +91,7 @@ function createRouteArtifact(route, options) {
       evidenceIds: refs.evidenceIds,
       metadata: routeAdmissionMetadata(route, planId)
     },
-    metadata: routeRecordMetadata(route, planId, options.metadata)
+    metadata: recordMetadata
   }, { id: historyId, createdAt: options.generatedAt });
   const patchBundle = createSemanticPatchBundleRecord({
     id: patchBundleId,
@@ -97,6 +106,7 @@ function createRouteArtifact(route, options) {
     historyIds: [history.id],
     readiness: route.readiness,
     conflictKeys: refs.conflictKeys,
+    ...semanticEditBundle,
     admission: {
       status: admissionStatus,
       readiness: route.readiness,
@@ -106,7 +116,7 @@ function createRouteArtifact(route, options) {
       evidenceIds: refs.evidenceIds,
       metadata: routeAdmissionMetadata(route, planId)
     },
-    metadata: routeRecordMetadata(route, planId, options.metadata)
+    metadata: recordMetadata
   }, { id: patchBundleId, createdAt: options.generatedAt });
   const materialization = {
     status: 'materialized',
@@ -154,7 +164,7 @@ function createRouteArtifact(route, options) {
     admissionBucket: admissionRecord.admissionBucket,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
-    metadata: { ...routeRecordMetadata(route, planId, options.metadata), materialization }
+    metadata: { ...recordMetadata, materialization }
   };
 }
 
@@ -257,62 +267,4 @@ function routeSemanticCandidates(route, refs) {
       risk: route.mergeScore?.risk
     }
   }));
-}
-
-function routeAdmissionStatus(route) {
-  if (route.readiness === 'blocked' || route.admissionAction === 'reject') return 'blocked';
-  if (route.readiness === 'ready' && route.missingEvidence?.length === 0) return 'queued';
-  return 'needs-review';
-}
-
-function routeReasonCodes(route) {
-  return uniqueStrings([
-    `mode:${route.mode}`,
-    `action:${route.routeAction}`,
-    ...(route.missingEvidence ?? []).map((item) => `missing:${item}`),
-    ...(route.blockers ?? []).map((item) => `blocker:${item}`),
-    ...(route.review ?? []).map((item) => `review:${item}`)
-  ]);
-}
-
-function routeAdmissionMetadata(route, planId) {
-  return {
-    planId,
-    routeId: route.id,
-    routeAction: route.routeAction,
-    admissionAction: route.admissionAction,
-    priority: route.priority,
-    mergeScore: route.mergeScore,
-    representation: routeRepresentationMetadata(route),
-    autoMergeClaim: false,
-    semanticEquivalenceClaim: false
-  };
-}
-
-function routeRecordMetadata(route, planId, metadata) {
-  return {
-    planId,
-    routeId: route.id,
-    target: route.target,
-    mode: route.mode,
-    routeAction: route.routeAction,
-    representation: routeRepresentationMetadata(route),
-    missingEvidence: route.missingEvidence ?? [],
-    blockers: route.blockers ?? [],
-    review: route.review ?? [],
-    autoMergeClaim: false,
-    semanticEquivalenceClaim: false,
-    ...metadata
-  };
-}
-
-function routeRepresentationMetadata(route) {
-  return {
-    constructKinds: route.representation?.constructKinds ?? [],
-    runtimeCapabilities: route.representation?.surfaces?.runtime?.requiredCapabilities ?? [],
-    sourceMapPrecisions: route.representation?.surfaces?.sourceMaps?.precisions ?? [],
-    transformIdentityHashes: route.representation?.surfaces?.mergeRefs?.transformIdentityHashes ?? [],
-    missing: route.representation?.missing ?? [],
-    blockers: route.representation?.blockers ?? []
-  };
 }

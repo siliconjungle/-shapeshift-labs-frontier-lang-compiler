@@ -2,10 +2,13 @@ import { assert } from './helpers.mjs';
 import { scannedJsImport } from './scanned-js.mjs';
 import { scannedCImport } from './scanned-languages.mjs';
 import {
+  createSemanticEditScript,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  projectSemanticEditScriptToSource,
   queryUniversalConversionArtifacts,
-  queryUniversalConversionPlan
+  queryUniversalConversionPlan,
+  replaySemanticEditProjection
 } from './compiler-api.mjs';
 
 const jsRustAdapter = {
@@ -117,6 +120,12 @@ assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, {
   admissionRecordId: jsArtifact.admissionRecord.id,
   risk: 'high'
 })[0].routeId, jsToJs.id);
+assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, {
+  representationConstructKind: 'source-import'
+}).length >= 1, true);
+assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, {
+  constructKind: 'source-import'
+}).length >= 1, true);
 
 const directReadyArtifact = createUniversalConversionArtifacts({
   id: 'manual-ready-route',
@@ -151,6 +160,109 @@ const directReadyArtifact = createUniversalConversionArtifacts({
 });
 assert.equal(directReadyArtifact.summary.mergeReady, 1);
 assert.equal(directReadyArtifact.admissionRecords[0].admissionBucket, 'merge-ready');
+
+const editBase = 'export function convert(count) { return count + 1; }\n';
+const editWorker = 'export function convert(count, step) { return count + step; }\n';
+const editScript = createSemanticEditScript({
+  id: 'conversion_artifact_semantic_edit',
+  language: 'javascript',
+  sourcePath: 'src/conversion-edit.js',
+  baseSourceText: editBase,
+  workerSourceText: editWorker,
+  headSourceText: editBase,
+  generatedAt: 779
+});
+const editProjection = projectSemanticEditScriptToSource({
+  id: 'conversion_artifact_semantic_projection',
+  script: editScript,
+  workerSourceText: editWorker,
+  headSourceText: editBase,
+  headSourcePath: 'src/conversion-edit.js'
+});
+const editReplay = replaySemanticEditProjection({
+  id: 'conversion_artifact_semantic_replay',
+  projection: editProjection,
+  currentSourceText: editBase,
+  currentSourcePath: 'src/conversion-edit.js'
+});
+const editArtifacts = createUniversalConversionArtifacts({
+  id: 'semantic-edit-route',
+  sourceLanguage: 'javascript',
+  target: 'javascript',
+  mode: 'preserve-source',
+  routeAction: 'preserve-source',
+  priority: 'high',
+  readiness: 'ready',
+  admissionAction: 'admit',
+  missingEvidence: [],
+  blockers: [],
+  review: [],
+  mergeScore: {
+    schema: 'frontier.lang.semanticMergeScore.v1',
+    version: 1,
+    value: 96,
+    uncappedValue: 96,
+    sortKey: 3396,
+    higherIsBetter: true,
+    readiness: 'ready',
+    risk: 'low',
+    action: 'admit',
+    components: {},
+    penalties: []
+  },
+  mergeRefs: {
+    sources: [{ sourcePath: 'src/conversion-edit.js', sourceHash: 'hash-conversion-edit' }],
+    semanticOwnershipKeys: ['content.conversionEdit'],
+    conflictKeys: ['content.conversionEdit']
+  },
+  metadata: {
+    semanticEditScripts: [editScript],
+    semanticEditProjections: [editProjection],
+    semanticEditReplays: [editReplay],
+    semanticEditEvidence: [{
+      id: 'evidence_conversion_artifact_semantic_edit_gate',
+      kind: 'test',
+      status: 'passed',
+      scope: 'semantic-edit:auto-merge'
+    }]
+  }
+});
+const editArtifact = editArtifacts.routeArtifacts[0];
+const editOperation = editScript.operations[0];
+const editProjectionRecord = editProjection.edits[0];
+assert.equal(editArtifact.patchBundle.semanticEditScriptIds.includes(editScript.id), true);
+assert.equal(editArtifact.patchBundle.semanticEditProjectionIds.includes(editProjection.id), true);
+assert.equal(editArtifact.patchBundle.semanticEditReplayIds.includes(editReplay.id), true);
+assert.equal(editArtifacts.index.semanticEditStatuses.includes('accepted-clean'), true);
+assert.equal(editArtifacts.index.semanticEditAdmissionStatuses.includes('ready'), true);
+assert.equal(editArtifacts.index.semanticEditReplayOutputHashes.includes(editReplay.outputHash), true);
+assert.equal(queryUniversalConversionArtifacts(editArtifacts, {
+  semanticEditStatus: 'accepted-clean'
+})[0].routeId, 'semantic-edit-route');
+assert.equal(queryUniversalConversionArtifacts(editArtifacts, {
+  semanticEditAdmission: 'ready'
+})[0].routeId, 'semantic-edit-route');
+assert.equal(queryUniversalConversionArtifacts(editArtifacts, {
+  semanticEditAdmissionAction: 'admit'
+})[0].routeId, 'semantic-edit-route');
+assert.equal(queryUniversalConversionArtifacts(editArtifacts, {
+  semanticEditReplayOutputHash: editReplay.outputHash
+})[0].routeId, 'semantic-edit-route');
+assert.equal(queryUniversalConversionArtifacts(editArtifacts, {
+  semanticEditHash: editReplay.outputHash
+})[0].routeId, 'semantic-edit-route');
+assert.equal(queryUniversalConversionArtifacts(editArtifacts, {
+  semanticIdentityHash: editOperation.semanticIdentityHash
+})[0].routeId, 'semantic-edit-route');
+assert.equal(queryUniversalConversionArtifacts(editArtifacts, {
+  operationContentHash: editOperation.operationContentHash
+})[0].routeId, 'semantic-edit-route');
+assert.equal(queryUniversalConversionArtifacts(editArtifacts, {
+  editContentHash: editProjectionRecord.editContentHash
+})[0].routeId, 'semantic-edit-route');
+assert.equal(queryUniversalConversionArtifacts(editArtifacts, {
+  semanticEditKey: editOperation.semanticKey
+})[0].routeId, 'semantic-edit-route');
 
 const jsToRust = queryUniversalConversionPlan(conversionPlan, {
   sourceLanguage: 'javascript',
