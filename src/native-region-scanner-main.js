@@ -143,7 +143,8 @@ function scanGo(input) {
 function scanSwift(input) {
   const declarations = [];
   const protocols = new Set();
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     const declarationLine = trimmed.replace(/^(?:@[A-Za-z_][\w.]+(?:\([^)]*\))?\s+)*/, '');
     let match;
@@ -151,24 +152,24 @@ function scanSwift(input) {
       declarations.push(nativeImportDeclaration(input, number, match[1], 'ImportDecl', 'module'));
     } else if ((match = declarationLine.match(/^(?:(?:public|private(?:\([^)]*\))?|fileprivate|internal|open|final|indirect)\s+)*(struct|class|enum|protocol|actor)\s+([A-Za-z_]\w*)/))) {
       if (match[1] === 'protocol') protocols.add(match[2]);
-      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Decl`, swiftSymbolKind(match[1]), match[2], {}, declarationLine.includes('{')));
+      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Decl`, swiftSymbolKind(match[1]), match[2], {}, declarationLine.includes('{'), { span: declarationLine.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = declarationLine.match(/^(?:(?:public|private(?:\([^)]*\))?|fileprivate|internal|open)\s+)*extension\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)(.*)$/))) {
       const extensionFields = parseSwiftExtensionTail(match[2]);
       const isProtocolExtension = protocols.has(match[1]) || /Protocol$/.test(match[1]);
       declarations.push(nativeDeclaration(input, number, isProtocolExtension ? 'ProtocolExtensionDecl' : 'ExtensionDecl', 'implementation', `${match[1]}.${isProtocolExtension ? 'protocolExtension' : 'extension'}`, {
         extendedType: match[1],
         ...extensionFields
-      }, declarationLine.includes('{')));
+      }, declarationLine.includes('{'), { span: declarationLine.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = declarationLine.match(/^(?:(?:public|private(?:\([^)]*\))?|fileprivate|internal|open|static|class|mutating|nonmutating|override|required|convenience|isolated|nonisolated)\s+)*func\s+([A-Za-z_]\w*|`[^`]+`)(?:\s*<([^>]+)>)?\s*\(([^)]*)\)/))) {
       declarations.push(nativeDeclaration(input, number, 'FunctionDecl', 'function', unquoteSwiftIdentifier(match[1]), {
         typeParameters: splitTypeParameters(match[2]),
         parameters: splitParameters(match[3])
-      }, declarationLine.includes('{')));
+      }, declarationLine.includes('{'), { span: declarationLine.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = declarationLine.match(/^(?:(?:public|private(?:\([^)]*\))?|fileprivate|internal|open|static|class|final|lazy|weak|unowned|override|required|nonisolated)\s+)*(let|var)\s+([A-Za-z_]\w*)\b(?::\s*([^={]+))?/))) {
       declarations.push(nativeDeclaration(input, number, 'PropertyDecl', 'property', match[2], {
         binding: match[1],
         valueType: match[3]?.trim()
-      }, declarationLine.includes('{') || declarationLine.includes('=>')));
+      }, declarationLine.includes('{') || declarationLine.includes('=>'), { span: declarationLine.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = declarationLine.match(/^(?:(?:public|private(?:\([^)]*\))?|fileprivate|internal|open)\s+)*typealias\s+([A-Za-z_]\w*)\b(?:\s*=\s*(.+))?/))) {
       declarations.push(nativeDeclaration(input, number, 'TypealiasDecl', 'type', match[1], { target: match[2]?.trim() }, false));
     }
