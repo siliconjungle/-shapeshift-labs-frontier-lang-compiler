@@ -166,11 +166,14 @@ function scanJavaScriptLike(input) {
         parameters: splitParameters(match[2])
       }, hasBody));
     } else if (currentClass && (match = declarationLine.match(/^(?:(?:public|private|protected|static|readonly|declare|accessor)\s+)*(#?[A-Za-z_$][\w$]*)[?!]?\s*(?::\s*([^=;{]+))?(?:[=;]|$)/))) {
-      pushDeclaration(nativeDeclaration(input, number, 'PropertyDefinition', 'property', `${currentClass}.${match[1]}`, {
+      const initializerKind = jsInitializerKind(declarationLine, match[1]);
+      const hasBody = jsVariableHasBody(initializerKind, declarationLine);
+      pushDeclaration(nativeDeclaration(input, number, 'PropertyDefinition', initializerKind === 'function' ? 'function' : 'property', `${currentClass}.${match[1]}`, {
         propertyName: match[1],
         owner: currentClass,
-        valueType: match[2]?.trim()
-      }, false, { regionKind: 'property' }));
+        valueType: match[2]?.trim(),
+        initializerKind
+      }, hasBody, { regionKind: initializerKind === 'function' ? 'body' : 'property', metadata: { initializerKind } }));
     }
     pushDeclarations(jsExportDeclarations(input, number, trimmed));
     if (currentClass) {
@@ -295,9 +298,7 @@ function jsTypeMemberDeclaration(input, lineNumber, declarationLine, context) {
   });
 }
 
-function jsTypeMemberRegionKind(context, propertyName, source) {
-  return jsRegionKindForDeclarationName(propertyName) ?? (context.regionKind === 'type' ? 'property' : context.regionKind) ?? 'property';
-}
+function jsTypeMemberRegionKind(context, propertyName) { return jsRegionKindForDeclarationName(propertyName) ?? (context.regionKind === 'type' ? 'property' : context.regionKind) ?? 'property'; }
 
 function jsInlineClassMemberDeclarations(input, lineNumber, declarationLine, className) {
   const open = declarationLine.indexOf('{');
