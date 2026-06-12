@@ -39,6 +39,28 @@ function endKeywordBlockSpan(input, lines, index) {
   return lineSpan(input, lines[index], lines[end] ?? lines[index]);
 }
 
+function terminatedBlockSpan(input, lines, index, terminator) {
+  let end = index;
+  for (let cursor = index; cursor < lines.length; cursor += 1) {
+    end = cursor;
+    if (terminator.test(lines[cursor].line.trim())) break;
+  }
+  return lineSpan(input, lines[index], lines[end] ?? lines[index]);
+}
+
+function sqlStatementSpan(input, lines, index) {
+  let end = index;
+  let inDollarQuote = false;
+  for (let cursor = index; cursor < lines.length; cursor += 1) {
+    const line = lines[cursor].line;
+    const markerCount = (line.match(/\$\$/g) ?? []).length;
+    if (markerCount % 2 === 1) inDollarQuote = !inDollarQuote;
+    end = cursor;
+    if (!inDollarQuote && /;\s*$/.test(line.trim())) break;
+  }
+  return lineSpan(input, lines[index], lines[end] ?? lines[index]);
+}
+
 function lineSpan(input, startLine, endLine) {
   return { sourceId: input.sourceHash, path: input.sourcePath, startLine: startLine.number, endLine: endLine.number, startColumn: 1, endColumn: endLine.line.length + 1 };
 }
@@ -49,4 +71,4 @@ function endBlockStart(line) {
   return /^(?:class|module|def|defp?|defmodule|function|if|unless|case|while|for|begin|try|receive)\b/.test(line);
 }
 
-export { braceBlockSpan, endKeywordBlockSpan, pythonBlockSpan };
+export { braceBlockSpan, endKeywordBlockSpan, pythonBlockSpan, sqlStatementSpan, terminatedBlockSpan };

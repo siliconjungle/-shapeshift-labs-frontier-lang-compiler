@@ -6,7 +6,7 @@ import {
   sourceLines,
   splitParameters
 } from './native-region-scanner-core.js';
-import { braceBlockSpan, endKeywordBlockSpan } from './native-region-scanner-spans.js';
+import { braceBlockSpan, endKeywordBlockSpan, pythonBlockSpan, terminatedBlockSpan } from './native-region-scanner-spans.js';
 
 function scanElixir(input) {
   const declarations = [];
@@ -53,7 +53,8 @@ function braceSpanOptions(input, lines, index, hasBraceBody) {
 function scanErlang(input) {
   const declarations = [];
   const seenFunctions = new Set();
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     let recordedMacro = false;
@@ -81,7 +82,7 @@ function scanErlang(input) {
       const name = erlangAtomName(match[1]);
       if (!seenFunctions.has(name)) {
         seenFunctions.add(name);
-        declarations.push(nativeDeclaration(input, number, 'FunctionClause', 'function', name, { parameters: splitParameters(match[2]) }, true));
+        declarations.push(nativeDeclaration(input, number, 'FunctionClause', 'function', name, { parameters: splitParameters(match[2]) }, true, { span: terminatedBlockSpan(input, lines, index, /\.\s*$/) }));
       }
     }
     if (!recordedMacro && /(^|[^A-Za-z0-9_])\?[A-Za-z_]\w*/.test(trimmed)) {
@@ -94,7 +95,8 @@ function scanErlang(input) {
 function scanHaskell(input) {
   const declarations = [];
   const seenFunctions = new Set();
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     if (/^#\s*(?:if|ifdef|ifndef|else|elif|endif|define|include)\b/.test(trimmed)) {
@@ -122,7 +124,7 @@ function scanHaskell(input) {
     } else if ((match = trimmed.match(/^([a-z_][A-Za-z0-9_']*)\b[^=]*=/))) {
       if (!seenFunctions.has(match[1])) {
         seenFunctions.add(match[1]);
-        declarations.push(nativeDeclaration(input, number, 'FunctionBinding', 'function', match[1], {}, true));
+        declarations.push(nativeDeclaration(input, number, 'FunctionBinding', 'function', match[1], {}, true, { span: pythonBlockSpan(input, lines, index) }));
       }
     }
   }
