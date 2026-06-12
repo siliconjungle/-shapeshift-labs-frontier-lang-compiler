@@ -84,6 +84,9 @@ function replayProjectionEdit(edit, context) {
   if (symbol && spanRange && !sameRange(headRange, spanRange)) {
     const moved = checkRange(edit, spanRange, context.currentSourceText, currentSymbolRangeLabel(edit));
     if (moved) return replayEditRecord(edit, moved.status, replayAppliedRange(edit, moved.range, context.currentSourceText), [moved.reason, 'offset-reanchored-by-symbol'], context.currentSourceText);
+    if (offset && containedRange(headRange, spanRange)) {
+      return replayEditRecord(edit, offset.status, offset.range, [offset.reason, 'offset-contained-in-current-symbol'], context.currentSourceText);
+    }
     if (edit.editKind === 'delete' && offset && rangesOverlap(headRange, spanRange)) {
       return replayEditRecord(edit, offset.status, offset.range, [offset.reason], context.currentSourceText);
     }
@@ -267,6 +270,10 @@ function sameRange(left, right) {
 
 function rangesOverlap(left, right) {
   return Boolean(left && right && left.start < right.end && right.start < left.end);
+}
+
+function containedRange(inner, outer) {
+  return Boolean(inner && outer && outer.start <= inner.start && inner.end <= outer.end);
 }
 
 function isJavaScriptLike(language) { return language === 'javascript' || language === 'typescript'; }

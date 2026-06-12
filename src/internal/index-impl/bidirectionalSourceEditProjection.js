@@ -1,6 +1,8 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
-import { idFragment, uniqueRecordsById, uniqueStrings } from '../../native-import-utils.js';
+import { idFragment, normalizeNativeLanguageId, uniqueRecordsById, uniqueStrings } from '../../native-import-utils.js';
+import { nativeImportSourceText } from './nativeImportSourceText.js';
 import { summarizeSemanticEditOperations } from './semanticEditScriptClassification.js';
+import { spanOffsets } from './semanticEditSourceRanges.js';
 
 export function createBidirectionalSourceEditProjection(context = {}) {
   const source = context.source;
@@ -11,8 +13,10 @@ export function createBidirectionalSourceEditProjection(context = {}) {
   const scriptId = `semantic_edit_script_${idFragment(context.id)}_source_projection`;
   const operations = matches.map((match, index) => sourceEditOperationForMatch(match, index, context));
   const sourceMapLinks = uniqueRecordsById(matches.flatMap((match) => match.sourceMapLinks));
+  const exactBackprojection = operations.length > 0 && operations.every((operation) => operation.metadata?.sourceBackprojection?.mode === 'same-language-exact-source-map');
   const sourceProjectionHint = sourceProjectionHintRecord({ context, matches, operations, sourceMapLinks, scriptId });
   const evidence = sourceEditProjectionEvidence({ context, operations, scriptId, sourceProjectionHint });
+  const reasonCodes = sourceEditAdmissionReasonCodes(context, matches, exactBackprojection);
   const core = {
     kind: 'frontier.lang.semanticEditScript',
     version: 1,
@@ -26,13 +30,13 @@ export function createBidirectionalSourceEditProjection(context = {}) {
     operations,
     summary: summarizeSemanticEditOperations(operations),
     admission: {
-      status: 'needs-port',
-      action: 'reanchor-or-human-port',
-      reviewRequired: true,
-      autoApplyCandidate: false,
+      status: exactBackprojection ? 'auto-merge-candidate' : 'needs-port',
+      action: exactBackprojection ? 'apply-source-map-backprojection' : 'reanchor-or-human-port',
+      reviewRequired: !exactBackprojection,
+      autoApplyCandidate: exactBackprojection,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
-      reasonCodes: projectionReasonCodes(context, matches),
+      reasonCodes,
       conflictKeys: uniqueStrings(matches.flatMap((match) => match.conflictKeys)),
       evidenceIds: evidence.map((record) => record.id)
     },
@@ -50,7 +54,8 @@ export function createBidirectionalSourceEditProjection(context = {}) {
       targetPortabilityStatus: context.targetPortability?.status,
       targetPortabilityAction: context.targetPortability?.action,
       sourceMapBacked: true,
-      singleSourceAnchor: true
+      singleSourceAnchor: true,
+      sourceBackprojectionMode: exactBackprojection ? 'same-language-exact-source-map' : 'review-only'
     }
   };
   return { sourceEditScript: { ...core, hash: hashSemanticValue(core) }, sourceProjectionHint, evidence };
@@ -60,6 +65,7 @@ function sourceEditOperationForMatch(match, index, context) {
   const anchor = match.sourceAnchors[0] ?? {};
   const region = match.targetRegion ?? {};
   const sourceMapLinks = uniqueRecordsById(match.sourceMapLinks);
+  const backprojection = exactSourceBackprojectionForMatch(match, context);
   const sourceIdentity = {
     sourcePath: anchor.sourcePath,
     sourceHash: anchor.sourceHash,
@@ -87,10 +93,20 @@ function sourceEditOperationForMatch(match, index, context) {
     semanticKey: `bidirectional-source-edit:${anchor.key ?? match.id}`,
     semanticIdentityHash: hashSemanticValue({ matchId: match.id, targetRegion: region.key, sourceIdentity }),
     sourceIdentityHash: hashSemanticValue(sourceIdentity),
-    spans: { base: anchor.sourceSpan, worker: anchor.sourceSpan },
-    hashes: { baseSourceHash: anchor.sourceHash, workerSourceHash: sourceHash(context.source) },
+    spans: {
+      base: backprojection?.sourceEditSpan ?? anchor.sourceSpan,
+      worker: backprojection?.targetAfterEditSpan ?? anchor.sourceSpan,
+      head: backprojection?.sourceEditSpan
+    },
+    hashes: {
+      baseSourceHash: anchor.sourceHash,
+      workerSourceHash: backprojection?.targetAfterSourceHash ?? sourceHash(context.source),
+      baseTextHash: backprojection?.sourceEditTextHash,
+      headTextHash: backprojection?.sourceEditTextHash,
+      workerTextHash: backprojection?.targetAfterEditTextHash
+    },
     status: 'portable',
-    readiness: 'needs-review',
+    readiness: backprojection ? 'ready' : 'needs-review',
     confidence: match.portability?.confidence ?? match.confidence,
     reasonCodes: uniqueStrings([
       'source-edit-script-projection-hint',
@@ -106,7 +122,8 @@ function sourceEditOperationForMatch(match, index, context) {
       bidirectionalTargetChangeId: context.id,
       targetRegion: region,
       sourceMapLinkIds: sourceMapLinks.map((link) => link.id),
-      sourceMapMappingIds: uniqueStrings(sourceMapLinks.map((link) => link.sourceMapMappingId))
+      sourceMapMappingIds: uniqueStrings(sourceMapLinks.map((link) => link.sourceMapMappingId)),
+      sourceBackprojection: backprojection
     }
   });
   return { ...core, operationContentHash: hashSemanticValue(core) };
@@ -116,14 +133,15 @@ function sourceProjectionHintRecord(input) {
   const { context, matches, operations, sourceMapLinks, scriptId } = input;
   const source = context.source;
   const targetChangeSet = context.targetChangeSet;
+  const exactBackprojection = operations.length > 0 && operations.every((operation) => operation.metadata?.sourceBackprojection?.mode === 'same-language-exact-source-map');
   const core = {
     schema: 'frontier.lang.bidirectionalTargetChangeSourceEditProjectionHint.v1',
     version: 1,
     id: `source_projection_hint_${idFragment(context.id)}`,
     scriptId,
-    status: 'portable',
-    action: context.targetPortability?.action ?? 'port-with-source-map-review',
-    readiness: 'needs-review',
+    status: exactBackprojection ? 'auto-merge-candidate' : 'portable',
+    action: exactBackprojection ? 'apply-source-map-backprojection' : context.targetPortability?.action ?? 'port-with-source-map-review',
+    readiness: exactBackprojection ? 'ready' : 'needs-review',
     sourcePath: projectionSourcePath(source, matches),
     sourceHash: sourceHash(source),
     targetPath: targetChangeSet.sourcePath,
@@ -137,10 +155,11 @@ function sourceProjectionHintRecord(input) {
     sourceMapIds: uniqueStrings(sourceMapLinks.map((link) => link.sourceMapId)),
     sourceMapMappingIds: uniqueStrings(sourceMapLinks.map((link) => link.sourceMapMappingId)),
     operationIds: operations.map((operation) => operation.id),
-    reviewRequired: true,
+    reviewRequired: !exactBackprojection,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
-    reasonCodes: projectionReasonCodes(context, matches)
+    reasonCodes: sourceEditAdmissionReasonCodes(context, matches, exactBackprojection),
+    sourceBackprojectionMode: exactBackprojection ? 'same-language-exact-source-map' : 'review-only'
   };
   return { ...core, hash: hashSemanticValue(core) };
 }
@@ -168,6 +187,49 @@ function sourceEditProjectionEvidence(input) {
   }];
 }
 
+function exactSourceBackprojectionForMatch(match, context) {
+  if (!sameLanguage(context.source?.language, context.targetChangeSet?.language)) return undefined;
+  const anchor = match.sourceAnchors[0];
+  const link = match.sourceMapLinks.find((entry) => entry.precision === 'exact');
+  const region = targetRegionForMatch(match, context);
+  if (!anchor || !link || region?.changeKind !== 'modified') return undefined;
+  const sourceText = nativeImportSourceText(context.source);
+  const targetBeforeText = nativeImportSourceText(context.targetChangeSet.before);
+  const targetAfterText = nativeImportSourceText(context.targetChangeSet.after);
+  const beforeSpan = region.metadata?.changedRegionProjection?.before?.sourceSpan ?? region.sourceSpan;
+  const afterSpan = region.metadata?.changedRegionProjection?.after?.sourceSpan;
+  const ranges = {
+    source: spanOffsets(sourceText, link.sourceSpan ?? anchor.sourceSpan),
+    generated: spanOffsets(targetBeforeText, link.generatedSpan),
+    before: spanOffsets(targetBeforeText, beforeSpan),
+    after: spanOffsets(targetAfterText, afterSpan)
+  };
+  if (!ranges.source || !ranges.generated || !ranges.before || !ranges.after || !containedRange(ranges.before, ranges.generated)) return undefined;
+  const sourceMappedText = sourceText.slice(ranges.source.start, ranges.source.end);
+  const targetMappedText = targetBeforeText.slice(ranges.generated.start, ranges.generated.end);
+  if (sourceMappedText !== targetMappedText) return undefined;
+  const sourceEditRange = {
+    start: ranges.source.start + ranges.before.start - ranges.generated.start,
+    end: ranges.source.start + ranges.before.end - ranges.generated.start
+  };
+  const sourceEditText = sourceText.slice(sourceEditRange.start, sourceEditRange.end);
+  const targetBeforeEditText = targetBeforeText.slice(ranges.before.start, ranges.before.end);
+  const targetAfterEditText = targetAfterText.slice(ranges.after.start, ranges.after.end);
+  if (sourceEditText !== targetBeforeEditText) return undefined;
+  return compactRecord({
+    mode: 'same-language-exact-source-map',
+    sourceMapLinkId: link.id,
+    sourceMapMappingId: link.sourceMapMappingId,
+    sourceEditSpan: { start: sourceEditRange.start, end: sourceEditRange.end, path: anchor.sourcePath },
+    targetBeforeEditSpan: { start: ranges.before.start, end: ranges.before.end, path: region.sourcePath },
+    targetAfterEditSpan: { start: ranges.after.start, end: ranges.after.end, path: region.sourcePath },
+    sourceEditTextHash: hashSemanticValue(sourceEditText),
+    targetBeforeEditTextHash: hashSemanticValue(targetBeforeEditText),
+    targetAfterEditTextHash: hashSemanticValue(targetAfterEditText),
+    targetAfterSourceHash: context.targetChangeSet.afterHash
+  });
+}
+
 function portableSingleAnchorMatches(matches = [], targetPortability = {}) {
   return matches.filter((match) => (
     match.status === 'matched' &&
@@ -189,6 +251,23 @@ function projectionReasonCodes(context, matches) {
   ]);
 }
 
+function sourceEditAdmissionReasonCodes(context, matches, exactBackprojection) {
+  if (!exactBackprojection) return projectionReasonCodes(context, matches);
+  return uniqueStrings([
+    'source-edit-script-projection-hint',
+    'target-change-source-map-portable',
+    'same-language-exact-source-map-backprojection',
+    ...array(context.targetPortability?.reasonCodes).filter((reason) => !reviewOnlyReason(reason)),
+    ...matches.flatMap((match) => [...array(match.reasonCodes), ...array(match.portability?.reasonCodes)])
+      .filter((reason) => !reviewOnlyReason(reason))
+  ]);
+}
+
+function targetRegionForMatch(match, context) {
+  return context.targetChangeSet.changedRegions.find((region) => region.id === match.targetRegion?.id)
+    ?? match.targetRegion;
+}
+
 function semanticEditKind(region = {}) {
   const prefix = region.changeKind === 'added' ? 'add' : region.changeKind === 'removed' ? 'remove' : 'replace';
   if (region.regionKind === 'body') return `${prefix}Body`;
@@ -203,6 +282,19 @@ function projectionSourcePath(source, matches) {
 
 function sourceHash(source) {
   return source?.nativeSource?.sourceHash ?? source?.nativeAst?.sourceHash ?? source?.sourceHash;
+}
+
+function sameLanguage(left, right) {
+  return normalizeNativeLanguageId(left) && normalizeNativeLanguageId(left) === normalizeNativeLanguageId(right);
+}
+
+function containedRange(inner, outer) {
+  return Boolean(inner && outer && outer.start <= inner.start && inner.end <= outer.end);
+}
+
+function reviewOnlyReason(reason) {
+  return ['target-edit-requires-source-review', 'source-port-review-required', 'human-source-port-required']
+    .includes(reason);
 }
 
 function array(value) {

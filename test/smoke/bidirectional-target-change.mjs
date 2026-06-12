@@ -4,7 +4,9 @@ import {
   createSemanticImportSidecar,
   createSemanticLineageEvent,
   importNativeSource,
-  querySemanticPatchBundleRecords
+  projectSemanticEditScriptToSource,
+  querySemanticPatchBundleRecords,
+  replaySemanticEditProjection
 } from './compiler-api.mjs';
 
 const sourceImport = importNativeSource({
@@ -187,6 +189,57 @@ assert.equal(querySemanticPatchBundleRecords([sourceMapRecord.sourcePatchBundle]
 const { index: sourcePortIndex, ...sourcePatchBundleWithoutIndex } = sourceMapRecord.sourcePatchBundle;
 assert.equal(querySemanticPatchBundleRecords([sourcePatchBundleWithoutIndex], { targetPortabilityStatus: 'portable' }).length, 1);
 void sourcePortIndex;
+
+const sameLanguageEditedTarget = 'export function add(count: number): number { return count + 2; }\n';
+const sameLanguageProjectionMap = {
+  ...rustProjectionMap,
+  id: 'source_map_counter_ts_to_dist_ts',
+  target: 'typescript',
+  targetPath: 'dist/counter.ts',
+  mappings: [{
+    ...rustProjectionMap.mappings[0],
+    id: 'map_ts_add_to_dist_ts_add',
+    generatedSpan: {
+      path: 'dist/counter.ts',
+      target: 'typescript',
+      targetPath: 'dist/counter.ts',
+      startLine: 1,
+      startColumn: 1,
+      endLine: 1,
+      endColumn: sourceImport.metadata.sourcePreservation.sourceText.length
+    },
+    target: 'typescript',
+    precision: 'exact',
+    preservation: 'exact'
+  }]
+};
+const sameLanguageRecord = createBidirectionalTargetChangeRecord({
+  id: 'counter_ts_target_change_from_exact_source_map',
+  source: sourceImport,
+  targetLanguage: 'typescript',
+  targetPath: 'dist/counter.ts',
+  baseTarget: { language: 'typescript', sourcePath: 'dist/counter.ts', sourceText: sourceImport.metadata.sourcePreservation.sourceText },
+  editedTarget: { language: 'typescript', sourcePath: 'dist/counter.ts', sourceText: sameLanguageEditedTarget },
+  sourceMaps: [sameLanguageProjectionMap]
+});
+assert.equal(sameLanguageRecord.sourceEditScript.admission.status, 'auto-merge-candidate');
+assert.equal(sameLanguageRecord.sourceProjectionHint.status, 'auto-merge-candidate');
+assert.equal(sameLanguageRecord.sourceProjectionHint.sourceBackprojectionMode, 'same-language-exact-source-map');
+assert.equal(sameLanguageRecord.sourceEditScript.operations[0].metadata.sourceBackprojection.mode, 'same-language-exact-source-map');
+const sameLanguageSourceProjection = projectSemanticEditScriptToSource({
+  script: sameLanguageRecord.sourceEditScript,
+  workerSourceText: sameLanguageEditedTarget,
+  headSourceText: sourceImport.metadata.sourcePreservation.sourceText
+});
+assert.equal(sameLanguageSourceProjection.status, 'projected');
+assert.equal(sameLanguageSourceProjection.sourceText, sameLanguageEditedTarget);
+const sameLanguageSourceReplay = replaySemanticEditProjection({
+  projection: sameLanguageSourceProjection,
+  currentSourceText: sourceImport.metadata.sourcePreservation.sourceText
+});
+assert.equal(sameLanguageSourceReplay.status, 'accepted-clean');
+assert.equal(sameLanguageSourceReplay.outputSourceText, sameLanguageEditedTarget);
+assert.equal(sameLanguageSourceReplay.edits[0].reasonCodes.includes('offset-contained-in-current-symbol'), true);
 
 const staleSourceMapRecord = createBidirectionalTargetChangeRecord({
   id: 'counter_stale_rust_target_change_from_source_map',
