@@ -51,6 +51,7 @@ const smokeModules = [
   './smoke/bidirectional-target-change-addition-line-endings.mjs',
   './smoke/bidirectional-target-change-same-language-insertions.mjs',
   './smoke/bidirectional-target-change-same-language-nonoverlap.mjs',
+  './smoke/bidirectional-target-change-same-language-conflict.mjs',
   './smoke/native-projection.mjs',
   './smoke-workbench.mjs',
   './smoke/roundtrip.mjs',

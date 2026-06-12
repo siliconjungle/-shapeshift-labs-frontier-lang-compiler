@@ -7,12 +7,13 @@ export function createSemanticPatchBundleAdmission(input = {}, context = {}) {
   );
   const evidenceAdmission = autoMergeEvidenceAdmission(context, { transformAdmission, semanticEditAdmission });
   const fallbackReadiness = fallbackAdmissionReadiness(transformAdmission, semanticEditAdmission, evidenceAdmission, context.readiness);
-  const inputReadiness = normalizeSemanticMergeReadiness(input.readiness ?? fallbackReadiness) ?? input.readiness ?? fallbackReadiness;
+  const requestedReadiness = normalizeSemanticMergeReadiness(input.readiness) ?? input.readiness;
+  const inputReadiness = fallbackReadiness === 'blocked' ? 'blocked' : requestedReadiness ?? fallbackReadiness;
   const readiness = hasPositiveApplyAction(transformAdmission, semanticEditAdmission) && evidenceAdmission.action !== 'admit'
     ? evidenceAdmission.readiness
     : inputReadiness;
   const computedStatus = admissionStatusForReadiness(readiness, transformAdmission, semanticEditAdmission, evidenceAdmission);
-  const status = input.status === 'admitted' && computedStatus !== 'admitted' ? computedStatus : input.status ?? computedStatus;
+  const status = safePatchBundleStatus(input.status, computedStatus);
   const computedAutoApplyCandidate = status === 'admitted' &&
     hasPositiveApplyAction(transformAdmission, semanticEditAdmission) &&
     evidenceAdmission.action === 'admit';
@@ -165,6 +166,12 @@ function admissionStatusForReadiness(readiness, transformAdmission, semanticEdit
   if (readiness === 'blocked') return 'blocked';
   if (hasAdmissibleReadyAction(transformAdmission, semanticEditAdmission, evidenceAdmission) && readiness === 'ready') return 'admitted';
   return readiness === 'needs-review' ? 'needs-review' : 'proposed';
+}
+
+function safePatchBundleStatus(requested, computed) {
+  if (computed === 'blocked' && requested !== 'rejected') return 'blocked';
+  if (requested === 'admitted' && computed !== 'admitted') return computed;
+  return requested ?? computed;
 }
 
 function hasAdmissibleReadyAction(transformAdmission, semanticEditAdmission, evidenceAdmission) {
