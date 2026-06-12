@@ -146,6 +146,9 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       sourceProjectionHint: sourceEditProjection.sourceProjectionHint
     }
   }, ...(sourceEditProjection.evidence ?? [])];
+  const sourcePatchAdmission = sourceEditProjection.sourceEditReplay?.status === 'accepted-clean'
+    ? { readiness: 'ready', reasonCodes: ['bidirectional-source-edit-replay-accepted-clean'] }
+    : { status: readiness === 'blocked' ? 'blocked' : 'needs-review', readiness };
   const sourceChangedRegions = sourceAnchorMatches.flatMap((match) => sourceRegionsForMatch(match, readiness));
   const sourcePatchBundle = createSemanticPatchBundleRecord({
     id: `${id}_source_port_projection`,
@@ -171,7 +174,10 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     id: sourcePatchBundleId,
     patchId: targetChangeSet.patch?.id,
     mergeCandidateId: targetChangeSet.mergeCandidate?.id,
-    admission: { status: readiness === 'blocked' ? 'blocked' : 'needs-review', readiness },
+    semanticEditScripts: [sourceEditProjection.sourceEditScript].filter(Boolean),
+    semanticEditProjections: [sourceEditProjection.sourceEditProjection].filter(Boolean),
+    semanticEditReplays: [sourceEditProjection.sourceEditReplay].filter(Boolean),
+    admission: sourcePatchAdmission,
     metadata: {
       source: 'createBidirectionalTargetChangeRecord',
       targetChangeSetId: targetChangeSet.id,
@@ -182,6 +188,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       roundtripEvidenceId: roundtripEvidence.id,
       semanticMergeAdmission,
       sourceEditScriptId: sourceEditProjection.sourceEditScript?.id,
+      sourceEditProjectionId: sourceEditProjection.sourceEditProjection?.id,
+      sourceEditReplayId: sourceEditProjection.sourceEditReplay?.id,
       sourceProjectionHintId: sourceEditProjection.sourceProjectionHint?.id,
       sourceProjectionHint: sourceEditProjection.sourceProjectionHint,
       autoMergeClaim: false,
@@ -241,6 +249,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     targetPortability,
     roundtripEvidence,
     sourceEditScript: sourceEditProjection.sourceEditScript,
+    sourceEditProjection: sourceEditProjection.sourceEditProjection,
+    sourceEditReplay: sourceEditProjection.sourceEditReplay,
     sourceProjectionHint: sourceEditProjection.sourceProjectionHint,
     sourcePatchBundle,
     historyRecord,
@@ -273,6 +283,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       roundtripEvidenceId: roundtripEvidence.id,
       semanticMergeAdmission,
       sourceEditScriptId: sourceEditProjection.sourceEditScript?.id,
+      sourceEditProjectionId: sourceEditProjection.sourceEditProjection?.id,
+      sourceEditReplayId: sourceEditProjection.sourceEditReplay?.id,
       sourceProjectionHintId: sourceEditProjection.sourceProjectionHint?.id,
       sourceProjectionHint: sourceEditProjection.sourceProjectionHint,
       ...input.metadata

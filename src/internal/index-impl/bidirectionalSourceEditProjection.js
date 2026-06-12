@@ -1,5 +1,6 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { idFragment, normalizeNativeLanguageId, uniqueRecordsById, uniqueStrings } from '../../native-import-utils.js';
+import { createBidirectionalSourceEditProjectionArtifacts } from './bidirectionalSourceEditProjectionArtifacts.js';
 import { nativeImportSourceText } from './nativeImportSourceText.js';
 import { summarizeSemanticEditOperations } from './semanticEditScriptClassification.js';
 import { spanOffsets } from './semanticEditSourceRanges.js';
@@ -58,7 +59,15 @@ export function createBidirectionalSourceEditProjection(context = {}) {
       sourceBackprojectionMode: exactBackprojection ? 'same-language-exact-source-map' : 'review-only'
     }
   };
-  return { sourceEditScript: { ...core, hash: hashSemanticValue(core) }, sourceProjectionHint, evidence };
+  const sourceEditScript = { ...core, hash: hashSemanticValue(core) };
+  const artifacts = createBidirectionalSourceEditProjectionArtifacts(context, sourceEditScript);
+  return {
+    sourceEditScript,
+    sourceProjectionHint,
+    sourceEditProjection: artifacts.sourceEditProjection,
+    sourceEditReplay: artifacts.sourceEditReplay,
+    evidence: [...evidence, ...array(artifacts.evidence)]
+  };
 }
 
 function sourceEditOperationForMatch(match, index, context) {

@@ -226,6 +226,14 @@ assert.equal(sameLanguageRecord.sourceEditScript.admission.status, 'auto-merge-c
 assert.equal(sameLanguageRecord.sourceProjectionHint.status, 'auto-merge-candidate');
 assert.equal(sameLanguageRecord.sourceProjectionHint.sourceBackprojectionMode, 'same-language-exact-source-map');
 assert.equal(sameLanguageRecord.sourceEditScript.operations[0].metadata.sourceBackprojection.mode, 'same-language-exact-source-map');
+assert.equal(sameLanguageRecord.sourceEditProjection.status, 'projected');
+assert.equal(sameLanguageRecord.sourceEditReplay.status, 'accepted-clean');
+assert.equal(sameLanguageRecord.sourcePatchBundle.admission.status, 'admitted');
+assert.equal(sameLanguageRecord.sourcePatchBundle.admission.semanticEditAdmission.status, 'ready');
+assert.equal(sameLanguageRecord.sourcePatchBundle.admission.evidenceAdmission.status, 'ready');
+assert.equal(sameLanguageRecord.sourcePatchBundle.summary.semanticEditProjections, 1);
+assert.equal(sameLanguageRecord.sourcePatchBundle.summary.semanticEditReplays, 1);
+assert.equal(querySemanticPatchBundleRecords([sameLanguageRecord.sourcePatchBundle], { semanticEditAdmissionStatus: 'ready' }).length, 1);
 const sameLanguageSourceProjection = projectSemanticEditScriptToSource({
   script: sameLanguageRecord.sourceEditScript,
   workerSourceText: sameLanguageEditedTarget,
