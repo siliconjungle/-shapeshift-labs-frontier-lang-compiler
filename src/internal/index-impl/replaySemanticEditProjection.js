@@ -85,6 +85,7 @@ function replayProjectionEdit(edit, context) {
   const explicitRange = explicitSourceReplacementReplayRange(edit, symbolRange, context.currentSourceText);
   const spanRange = explicitRange?.range ?? currentSymbolEditRange(edit, symbolRange, context.currentSourceText);
   const reanchorReason = explicitRange?.reasonCode ?? 'offset-reanchored-by-symbol';
+  const explicitConflictReasons = explicitRange?.conflictReasonCodes ?? [];
   if (symbol && spanRange && !sameRange(headRange, spanRange)) {
     const moved = checkRange(edit, spanRange, context.currentSourceText, currentSymbolRangeLabel(edit));
     if (moved) return replayEditRecord(edit, moved.status, replayAppliedRange(edit, moved.range, context.currentSourceText), [moved.reason, reanchorReason], context.currentSourceText);
@@ -94,13 +95,14 @@ function replayProjectionEdit(edit, context) {
     if (edit.editKind === 'delete' && offset && rangesOverlap(headRange, spanRange)) {
       return replayEditRecord(edit, offset.status, offset.range, [offset.reason], context.currentSourceText);
     }
-    return replayEditRecord(edit, 'conflict', spanRange, [`${currentSymbolRangeLabel(edit)}-content-mismatch`], context.currentSourceText);
+    return replayEditRecord(edit, 'conflict', spanRange, [`${currentSymbolRangeLabel(edit)}-content-mismatch`, ...explicitConflictReasons], context.currentSourceText);
   }
   if (offset) return replayEditRecord(edit, offset.status, offset.range, [offset.reason], context.currentSourceText);
   const anchored = checkRange(edit, spanRange, context.currentSourceText, currentSymbolRangeLabel(edit));
   if (anchored) return replayEditRecord(edit, anchored.status, replayAppliedRange(edit, anchored.range, context.currentSourceText), [anchored.reason, reanchorReason], context.currentSourceText);
   return replayEditRecord(edit, symbol ? 'conflict' : 'stale', spanRange, [
-    symbol ? `${currentSymbolRangeLabel(edit)}-content-mismatch` : 'current-symbol-anchor-missing'
+    symbol ? `${currentSymbolRangeLabel(edit)}-content-mismatch` : 'current-symbol-anchor-missing',
+    ...explicitConflictReasons
   ], context.currentSourceText);
 }
 

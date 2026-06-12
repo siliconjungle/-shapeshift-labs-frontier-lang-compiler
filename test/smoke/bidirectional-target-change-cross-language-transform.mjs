@@ -186,6 +186,16 @@ const replacementElsewhereReplay = replaySemanticEditProjection({
 });
 assert.equal(replacementElsewhereReplay.status, 'conflict');
 assert.equal(replacementElsewhereReplay.outputSourceText, undefined);
+assert.equal(replacementElsewhereReplay.edits[0].reasonCodes.includes('current-symbol-explicit-source-replacement-replacement-text-missing'), true);
+
+const ambiguousReplacementSource = 'export function add(count: number, step = 1): number { return count + 2 + (count + 2); }\n';
+const ambiguousReplacementReplay = replaySemanticEditProjection({
+  id: 'counter_ts_to_rust_ambiguous_replacement_replay',
+  projection: exactRecord.sourceEditProjection,
+  currentSourceText: ambiguousReplacementSource
+});
+assert.equal(ambiguousReplacementReplay.status, 'conflict');
+assert.equal(ambiguousReplacementReplay.edits[0].reasonCodes.includes('current-symbol-explicit-source-replacement-replacement-text-ambiguous'), true);
 
 const badReplacementHashRecord = createExactReplacementRecord({
   id: 'counter_ts_to_rust_bad_source_replacement_hash',

@@ -3,23 +3,32 @@ export function explicitSourceReplacementReplayRange(edit, symbolRange, sourceTe
     return undefined;
   }
   const deleted = uniqueTextRange(sourceText, symbolRange, edit.deletedText, 'deleted-text');
-  if (deleted) return deleted;
+  if (deleted.status === 'matched') return deleted;
   const replacement = uniqueTextRange(sourceText, symbolRange, edit.replacementText, 'replacement-text');
-  if (replacement) return replacement;
-  return relativeAnchorRange(edit, symbolRange);
+  if (replacement.status === 'matched') return replacement;
+  const relative = relativeAnchorRange(edit, symbolRange);
+  return {
+    ...relative,
+    conflictReasonCodes: [deleted.reasonCode, replacement.reasonCode].filter(Boolean)
+  };
 }
 
 function uniqueTextRange(sourceText, symbolRange, needle, label) {
-  if (typeof needle !== 'string' || needle.length === 0) return undefined;
+  if (typeof needle !== 'string' || needle.length === 0) {
+    return { status: 'missing', reasonCode: `current-symbol-explicit-source-replacement-${label}-missing` };
+  }
   const symbolText = sourceText.slice(symbolRange.start, symbolRange.end);
   const matches = [];
   for (let index = symbolText.indexOf(needle); index >= 0; index = symbolText.indexOf(needle, index + 1)) {
     const start = symbolRange.start + index;
     if (isCodeOffset(sourceText, start)) matches.push(start);
   }
-  if (matches.length !== 1) return undefined;
+  if (matches.length !== 1) {
+    return { status: matches.length ? 'ambiguous' : 'missing', reasonCode: `current-symbol-explicit-source-replacement-${label}-${matches.length ? 'ambiguous' : 'missing'}` };
+  }
   const first = matches[0] - symbolRange.start;
   return {
+    status: 'matched',
     range: { start: symbolRange.start + first, end: symbolRange.start + first + needle.length },
     reasonCode: `current-symbol-explicit-source-replacement-${label}`
   };
