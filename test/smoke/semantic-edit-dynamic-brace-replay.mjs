@@ -34,7 +34,8 @@ const cases = [
     baseSourceText: 'class Counter {\n  def add(count: Int): Int = {\n    count + 1\n  }\n}\n',
     workerSourceText: 'class Counter {\n  def add(count: Int): Int = {\n    count + 2\n  }\n}\n',
     bodyReason: true,
-    spans: { Counter: 5, add: 4 }
+    operationAnchor: 'Counter.add',
+    spans: { Counter: 5, 'Counter.add': 4 }
   },
   {
     language: 'dart',

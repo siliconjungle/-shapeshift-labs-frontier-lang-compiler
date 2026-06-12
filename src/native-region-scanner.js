@@ -10,10 +10,10 @@ import {
 import { scanPython } from './native-region-scanner-python.js';
 import { scanPhp } from './native-region-scanner-php.js';
 import { scanKotlin } from './native-region-scanner-kotlin.js';
+import { scanScala } from './native-region-scanner-scala.js';
 import {
   scanDart,
   scanLua,
-  scanScala,
   scanShell,
   scanSql,
   scanZig

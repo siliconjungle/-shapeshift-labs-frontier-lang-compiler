@@ -143,6 +143,13 @@ const scannedScalaImport = importNativeSource({
   sourceText: 'package demo\nimport scala.collection.mutable.ListBuffer\ncase class Todo(title: String)\ndef addTodo(title: String) = title\n'
 });
 assertScannedSymbol(scannedScalaImport, 'addTodo', 'addtodo');
+const scannedScalaMethodImport = importNativeSource({
+  language: 'scala',
+  sourcePath: 'Store.scala',
+  sourceText: 'class Store {\n  def save(title: String): String = { title }\n}\nobject Store {\n  def label(title: String): String = { title }\n}\n'
+});
+assert.equal(symbolByName(scannedScalaMethodImport, 'Store.save').kind, 'method');
+assert.equal(nativeNodeForSymbol(scannedScalaMethodImport, 'Store.object.label').fields.receiverKind, 'object');
 const scannedDartImport = importNativeSource({
   language: 'dart',
   sourcePath: 'todo.dart',

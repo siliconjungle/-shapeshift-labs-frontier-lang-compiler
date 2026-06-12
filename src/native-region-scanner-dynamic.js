@@ -8,29 +8,6 @@ import {
 } from './native-region-scanner-core.js';
 import { braceBlockSpan, endKeywordBlockSpan, sqlStatementSpan } from './native-region-scanner-spans.js';
 
-function scanScala(input) {
-  const declarations = [];
-  const lines = sourceLines(input.sourceText);
-  for (const [index, { line, number }] of lines.entries()) {
-    const trimmed = line.trim();
-    let match;
-    if ((match = trimmed.match(/^package\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)/))) {
-      declarations.push(nativeDeclaration(input, number, 'PackageClause', 'package', match[1], {}, false));
-    } else if ((match = trimmed.match(/^import\s+(.+?);?$/))) {
-      declarations.push(nativeImportDeclaration(input, number, match[1].trim(), 'Import', 'package'));
-    } else if ((match = trimmed.match(/^(?:(?:private|protected|final|sealed|abstract|case|implicit|lazy|override|inline|transparent|open)\s+)*(class|trait|object|enum)\s+([A-Za-z_]\w*)/))) {
-      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Def`, scalaSymbolKind(match[1]), match[2], {}, trimmed.includes('{') || trimmed.includes(':'), spanOptions(input, lines, index, trimmed.includes('{'))));
-    } else if ((match = trimmed.match(/^(?:(?:private|protected|final|implicit|override|inline)\s+)*def\s+([A-Za-z_]\w*)\s*(?:\[[^\]]+\])?\s*\(([^)]*)\)/))) {
-      declarations.push(nativeDeclaration(input, number, 'DefDef', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{') || trimmed.includes('='), spanOptions(input, lines, index, trimmed.includes('{'))));
-    } else if ((match = trimmed.match(/^(?:(?:private|protected|final|implicit|opaque)\s+)*type\s+([A-Za-z_]\w*)\b/))) {
-      declarations.push(nativeDeclaration(input, number, 'TypeDef', 'type', match[1], {}, false));
-    } else if ((match = trimmed.match(/^(?:(?:private|protected|final|implicit|lazy|override|inline)\s+)*(?:val|var)\s+([A-Za-z_]\w*)\b/))) {
-      declarations.push(nativeDeclaration(input, number, 'ValDef', 'variable', match[1], {}, false));
-    }
-  }
-  return declarations;
-}
-
 function scanDart(input) {
   const declarations = [];
   const lines = sourceLines(input.sourceText);
@@ -146,13 +123,6 @@ function endSpanOptions(input, lines, index) {
   return { span: endKeywordBlockSpan(input, lines, index) };
 }
 
-function scalaSymbolKind(kind) {
-  if (kind === 'trait') return 'trait';
-  if (kind === 'object') return 'module';
-  if (kind === 'enum') return 'type';
-  return 'class';
-}
-
 function dartSymbolKind(kind) {
   if (kind === 'mixin') return 'trait';
   if (kind === 'enum') return 'type';
@@ -185,7 +155,6 @@ function zigMetaName(source) {
 export {
   scanDart,
   scanLua,
-  scanScala,
   scanShell,
   scanSql,
   scanZig
