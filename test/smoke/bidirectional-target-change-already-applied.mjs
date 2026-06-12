@@ -208,3 +208,45 @@ assert.equal(deletionRecord.sourceEditProjection.edits.length, 1);
 assert.equal(deletionRecord.sourceEditReplay.status, 'accepted-clean');
 assert.equal(deletionRecord.sourcePatchBundle.admission.status, 'admitted');
 assert.equal(deletionRecord.roundtripEvidence.admission.status, 'ready');
+
+const additionSourceText = 'export function keep() { return 1; }\nexport function added() { return 2; }\n';
+const additionBaseTargetText = 'export function keep() { return 1; }\n';
+const additionSourceImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/add.ts',
+  sourceText: additionSourceText
+});
+const additionSymbol = additionSourceImport.semanticIndex.symbols.find((symbol) => symbol.name === 'added');
+const additionMapping = additionSourceImport.sourceMaps[0].mappings.find((mapping) => mapping.semanticSymbolId === additionSymbol.id);
+const additionRecord = createBidirectionalTargetChangeRecord({
+  id: 'counter_ts_target_change_add_exact_source_map_already_applied',
+  source: additionSourceImport,
+  targetLanguage: 'typescript',
+  targetPath: 'dist/add.ts',
+  baseTarget: { language: 'typescript', sourcePath: 'dist/add.ts', sourceText: additionBaseTargetText },
+  editedTarget: { language: 'typescript', sourcePath: 'dist/add.ts', sourceText: additionSourceText },
+  sourceMaps: [{
+    ...sourceMap,
+    id: 'source_map_add_exact',
+    sourcePath: 'src/add.ts',
+    sourceHash: additionSourceImport.nativeSource.sourceHash,
+    targetPath: 'dist/add.ts',
+    mappings: [{
+      ...sourceMap.mappings[0],
+      id: 'map_add_added',
+      semanticSymbolId: additionSymbol.id,
+      nativeAstNodeId: additionSymbol.nativeAstNodeId,
+      sourceSpan: additionMapping.sourceSpan,
+      generatedSpan: { ...additionMapping.sourceSpan, path: 'dist/add.ts', target: 'typescript', targetPath: 'dist/add.ts', generatedName: 'added' },
+      generatedName: 'added'
+    }]
+  }]
+});
+assert.equal(additionRecord.sourceEditScript.admission.status, 'auto-merge-candidate');
+assert.equal(additionRecord.sourceEditScript.summary.byStatus['already-applied'], 2);
+assert.equal(additionRecord.sourceEditScript.summary.byStatus.covered, 1);
+assert.equal(additionRecord.sourceEditReplay.status, 'already-applied');
+assert.equal(additionRecord.sourcePatchBundle.admission.status, 'admitted');
+assert.equal(additionRecord.sourcePatchBundle.admission.semanticEditAdmission.status, 'already-applied');
+assert.equal(additionRecord.roundtripEvidence.admission.action, 'skip-source-backprojection');
+assert.equal(additionRecord.metadata.reviewRequired, false);

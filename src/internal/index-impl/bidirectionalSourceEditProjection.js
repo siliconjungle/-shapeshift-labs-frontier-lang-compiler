@@ -2,7 +2,9 @@ import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { idFragment, uniqueRecordsById, uniqueStrings } from '../../native-import-utils.js';
 import { exactSourceBackprojectionForMatch } from './bidirectionalExactSourceBackprojection.js';
 import { createBidirectionalSourceEditProjectionArtifacts } from './bidirectionalSourceEditProjectionArtifacts.js';
+import { nativeImportSourceText } from './nativeImportSourceText.js';
 import { summarizeSemanticEditOperations } from './semanticEditScriptClassification.js';
+import { projectionCoveredContainerOperationIds, spanOffsets } from './semanticEditSourceRanges.js';
 
 export function createBidirectionalSourceEditProjection(context = {}) {
   const source = context.source;
@@ -11,9 +13,17 @@ export function createBidirectionalSourceEditProjection(context = {}) {
   if (!source || !targetChangeSet || matches.length === 0) return {};
 
   const scriptId = `semantic_edit_script_${idFragment(context.id)}_source_projection`;
-  const operations = matches.map((match, index) => sourceEditOperationForMatch(match, index, context));
+  const sourceText = nativeImportSourceText(source);
+  const initialOperations = matches.map((match, index) => sourceEditOperationForMatch(match, index, context));
+  const operations = markCoveredByExactSourceRange(initialOperations, sourceText);
   const sourceMapLinks = uniqueRecordsById(matches.flatMap((match) => match.sourceMapLinks));
-  const exactBackprojection = operations.length > 0 && operations.every((operation) => operation.metadata?.sourceBackprojection?.mode === 'same-language-exact-source-map');
+  const coveredOperationIds = projectionCoveredContainerOperationIds(operations, nativeImportSourceText(targetChangeSet.after));
+  const exactBackprojection = operations.length > 0 && operations.every((operation) => (
+    operation.metadata?.sourceBackprojection?.mode === 'same-language-exact-source-map' ||
+    operation.status === 'covered' ||
+    coveredOperationIds.has(operation.id) ||
+    operationCoveredByExactSourceRange(operation, operations, sourceText)
+  ));
   const sourceProjectionHint = sourceProjectionHintRecord({ context, matches, operations, sourceMapLinks, scriptId });
   const evidence = sourceEditProjectionEvidence({ context, operations, scriptId, sourceProjectionHint });
   const reasonCodes = sourceEditAdmissionReasonCodes(context, matches, exactBackprojection);
@@ -142,7 +152,9 @@ function sourceProjectionHintRecord(input) {
   const { context, matches, operations, sourceMapLinks, scriptId } = input;
   const source = context.source;
   const targetChangeSet = context.targetChangeSet;
-  const exactBackprojection = operations.length > 0 && operations.every((operation) => operation.metadata?.sourceBackprojection?.mode === 'same-language-exact-source-map');
+  const exactBackprojection = operations.length > 0 && operations.every((operation) => (
+    operation.metadata?.sourceBackprojection?.mode === 'same-language-exact-source-map' || operation.status === 'covered'
+  ));
   const core = {
     schema: 'frontier.lang.bidirectionalTargetChangeSourceEditProjectionHint.v1',
     version: 1,
@@ -195,6 +207,46 @@ function sourceEditProjectionEvidence(input) {
     }
   }];
 }
+
+function markCoveredByExactSourceRange(operations, sourceText) {
+  return operations.map((operation) => {
+    const coveredBy = exactSourceRangeCoveringOperation(operation, operations, sourceText);
+    if (!coveredBy) return operation;
+    return {
+      ...operation,
+      status: 'covered',
+      readiness: 'ready',
+      metadata: {
+        ...(operation.metadata ?? {}),
+        coveredByOperationIds: [coveredBy.id]
+      }
+    };
+  });
+}
+
+function operationCoveredByExactSourceRange(operation, operations, sourceText) { return Boolean(exactSourceRangeCoveringOperation(operation, operations, sourceText)); }
+
+function exactSourceRangeCoveringOperation(operation, operations, sourceText) {
+  if (operation.metadata?.sourceBackprojection?.mode === 'same-language-exact-source-map') return undefined;
+  const operationRange = spanOffsets(sourceText, operation.spans?.base ?? operation.anchor?.sourceSpan);
+  if (!operationRange) return undefined;
+  return operations.find((candidate) => {
+    if (candidate === operation || candidate.status === 'covered') return false;
+    const backprojection = candidate.metadata?.sourceBackprojection;
+    const candidateRange = spanOffsets(sourceText, backprojection?.sourceEditSpan);
+    return backprojection?.mode === 'same-language-exact-source-map' &&
+      sameSourcePath(operation, candidate) &&
+      containedRange(operationRange, candidateRange);
+  });
+}
+
+function sameSourcePath(left, right) {
+  const leftPath = left.anchor?.sourcePath ?? left.insertion?.sourcePath;
+  const rightPath = right.anchor?.sourcePath ?? right.insertion?.sourcePath;
+  return !leftPath || !rightPath || leftPath === rightPath;
+}
+
+function containedRange(inner, outer) { return Boolean(inner && outer && outer.start <= inner.start && inner.end <= outer.end); }
 
 function portableSingleAnchorMatches(matches = [], targetPortability = {}) {
   return matches.filter((match) => (

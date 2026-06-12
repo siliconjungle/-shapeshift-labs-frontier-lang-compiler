@@ -8,7 +8,7 @@ export function exactSourceBackprojectionForMatch(match, context) {
   const anchor = match.sourceAnchors[0];
   const link = match.sourceMapLinks.find((entry) => entry.precision === 'exact');
   const region = targetRegionForMatch(match, context);
-  if (!anchor || !link || !['modified', 'removed'].includes(region?.changeKind)) return undefined;
+  if (!anchor || !link || !['added', 'modified', 'removed'].includes(region?.changeKind)) return undefined;
   const sourceText = nativeImportSourceText(context.source);
   const targetBeforeText = nativeImportSourceText(context.targetChangeSet.before);
   const targetAfterText = nativeImportSourceText(context.targetChangeSet.after);
@@ -20,6 +20,7 @@ export function exactSourceBackprojectionForMatch(match, context) {
     before: spanOffsets(targetBeforeText, beforeSpan),
     after: spanOffsets(targetAfterText, afterSpan)
   };
+  if (region.changeKind === 'added') return addedSourceBackprojection({ anchor, link, region, sourceText, targetAfterText, ranges, context });
   if (!validRanges(ranges, region.changeKind)) return undefined;
   const sourceMappedText = sourceText.slice(ranges.source.start, ranges.source.end);
   const targetBeforeMappedText = targetBeforeText.slice(ranges.generated.start, ranges.generated.end);
@@ -53,6 +54,35 @@ export function exactSourceBackprojectionForMatch(match, context) {
     targetAfterEditSpan: ranges.after ? { start: ranges.after.start, end: ranges.after.end, path: region.sourcePath } : undefined,
     sourceEditTextHash: hashSemanticValue(sourceEditText),
     targetBeforeEditTextHash: hashSemanticValue(targetBeforeEditText),
+    targetAfterEditTextHash: hashSemanticValue(targetAfterEditText),
+    targetAfterSourceHash: context.targetChangeSet.afterHash
+  });
+}
+
+function addedSourceBackprojection(input) {
+  const { anchor, link, region, sourceText, targetAfterText, ranges, context } = input;
+  const generated = spanOffsets(targetAfterText, link.generatedSpan);
+  if (!ranges.source || !ranges.after || !generated) return undefined;
+  const sourceMappedText = sourceText.slice(ranges.source.start, ranges.source.end);
+  const targetAfterMappedText = targetAfterText.slice(generated.start, generated.end);
+  const targetAfterEditText = targetAfterText.slice(ranges.after.start, ranges.after.end);
+  const exact = sourceMappedText === targetAfterMappedText && sourceMappedText === targetAfterEditText;
+  const lineEndingStable = !exact && sameLineEndingStable(sourceMappedText, targetAfterMappedText) && sameLineEndingStable(sourceMappedText, targetAfterEditText);
+  if (!exact && !lineEndingStable) return undefined;
+  const sourceEditRange = lineEndingStable
+    ? lineEndingStableSourceEditRange(sourceMappedText, targetAfterMappedText, { ...ranges, before: generated, generated }, targetAfterEditText)
+    : { start: ranges.source.start, end: ranges.source.start + targetAfterEditText.length };
+  if (!sourceEditRange) return undefined;
+  return compactRecord({
+    mode: 'same-language-exact-source-map',
+    alreadyApplied: true,
+    lineEndingStable,
+    sourceMapLinkId: link.id,
+    sourceMapMappingId: link.sourceMapMappingId,
+    sourceEditSpan: { start: sourceEditRange.start, end: sourceEditRange.end, path: anchor.sourcePath },
+    targetAfterEditSpan: { start: ranges.after.start, end: ranges.after.end, path: region.sourcePath },
+    sourceEditTextHash: hashSemanticValue(sourceText.slice(sourceEditRange.start, sourceEditRange.end)),
+    targetBeforeEditTextHash: hashSemanticValue(''),
     targetAfterEditTextHash: hashSemanticValue(targetAfterEditText),
     targetAfterSourceHash: context.targetChangeSet.afterHash
   });
