@@ -10,12 +10,14 @@ export function applySourceEdits(sourceText, edits) {
 export function dedupeSourceEdits(edits) {
   const exact = dedupeExactEdits(edits);
   const noops = removeNoopReplacements(exact.edits);
-  const covered = removeCoveredContainerReplacements(noops.edits);
+  const coveredDeletes = removeContainedDeletionEdits(noops.edits);
+  const covered = removeCoveredContainerReplacements(coveredDeletes.edits);
   return {
     edits: covered.edits,
     skippedOperationIds: [
       ...exact.skippedOperationIds,
       ...noops.skippedOperationIds,
+      ...coveredDeletes.skippedOperationIds,
       ...covered.skippedOperationIds
     ]
   };
@@ -74,6 +76,31 @@ function removeCoveredContainerReplacements(edits) {
   return { edits: result, skippedOperationIds };
 }
 
+function removeContainedDeletionEdits(edits) {
+  const skippedOperationIds = [];
+  const result = [];
+  for (const edit of edits) {
+    if (deleteCoveredByLargerDelete(edit, edits)) {
+      skippedOperationIds.push(edit.operationId);
+      continue;
+    }
+    result.push(edit);
+  }
+  return { edits: result, skippedOperationIds };
+}
+
+function deleteCoveredByLargerDelete(edit, edits) {
+  return edit.editKind === 'delete' && !edit.alreadyApplied && edits.some((candidate) => (
+    candidate !== edit &&
+    candidate.editKind === 'delete' &&
+    !candidate.alreadyApplied &&
+    sameSourcePath(candidate, edit) &&
+    candidate.start <= edit.start &&
+    edit.end <= candidate.end &&
+    (candidate.start !== edit.start || candidate.end !== edit.end)
+  ));
+}
+
 function containerReplacementCoveredByInsertions(edit, edits) {
   if (edit.editKind !== 'replace' || edit.alreadyApplied) return false;
   const insertions = containedInsertions(edit, edits);
@@ -92,6 +119,12 @@ function containedInsertions(container, edits) {
     .filter((edit) => edit.operationId !== container.operationId)
     .filter((edit) => container.start <= edit.start && edit.end <= container.end)
     .sort((left, right) => left.start - right.start || (left.order ?? 0) - (right.order ?? 0));
+}
+
+function sameSourcePath(left, right) {
+  const leftPath = left.targetSourcePath ?? left.sourcePath;
+  const rightPath = right.targetSourcePath ?? right.sourcePath;
+  return !leftPath || !rightPath || leftPath === rightPath;
 }
 
 function duplicateEditKey(edit) {

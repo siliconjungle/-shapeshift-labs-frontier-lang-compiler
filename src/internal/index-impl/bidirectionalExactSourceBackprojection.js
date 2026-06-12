@@ -8,7 +8,7 @@ export function exactSourceBackprojectionForMatch(match, context) {
   const anchor = match.sourceAnchors[0];
   const link = match.sourceMapLinks.find((entry) => entry.precision === 'exact');
   const region = targetRegionForMatch(match, context);
-  if (!anchor || !link || region?.changeKind !== 'modified') return undefined;
+  if (!anchor || !link || !['modified', 'removed'].includes(region?.changeKind)) return undefined;
   const sourceText = nativeImportSourceText(context.source);
   const targetBeforeText = nativeImportSourceText(context.targetChangeSet.before);
   const targetAfterText = nativeImportSourceText(context.targetChangeSet.after);
@@ -20,11 +20,13 @@ export function exactSourceBackprojectionForMatch(match, context) {
     before: spanOffsets(targetBeforeText, beforeSpan),
     after: spanOffsets(targetAfterText, afterSpan)
   };
-  if (!validRanges(ranges)) return undefined;
+  if (!validRanges(ranges, region.changeKind)) return undefined;
   const sourceMappedText = sourceText.slice(ranges.source.start, ranges.source.end);
   const targetBeforeMappedText = targetBeforeText.slice(ranges.generated.start, ranges.generated.end);
   const targetBeforeEditText = targetBeforeText.slice(ranges.before.start, ranges.before.end);
-  const targetAfterEditText = targetAfterText.slice(ranges.after.start, ranges.after.end);
+  const targetAfterEditText = region.changeKind === 'removed'
+    ? ''
+    : targetAfterText.slice(ranges.after.start, ranges.after.end);
   const targetAfterMappedText = afterMappedText(targetBeforeMappedText, targetAfterEditText, ranges);
   const matchesBefore = sourceMappedText === targetBeforeMappedText;
   const matchesAfter = sourceMappedText === targetAfterMappedText;
@@ -48,7 +50,7 @@ export function exactSourceBackprojectionForMatch(match, context) {
     sourceMapMappingId: link.sourceMapMappingId,
     sourceEditSpan: { start: sourceEditRange.start, end: sourceEditRange.end, path: anchor.sourcePath },
     targetBeforeEditSpan: { start: ranges.before.start, end: ranges.before.end, path: region.sourcePath },
-    targetAfterEditSpan: { start: ranges.after.start, end: ranges.after.end, path: region.sourcePath },
+    targetAfterEditSpan: ranges.after ? { start: ranges.after.start, end: ranges.after.end, path: region.sourcePath } : undefined,
     sourceEditTextHash: hashSemanticValue(sourceEditText),
     targetBeforeEditTextHash: hashSemanticValue(targetBeforeEditText),
     targetAfterEditTextHash: hashSemanticValue(targetAfterEditText),
@@ -56,8 +58,9 @@ export function exactSourceBackprojectionForMatch(match, context) {
   });
 }
 
-function validRanges(ranges) {
-  return ranges.source && ranges.generated && ranges.before && ranges.after && containedRange(ranges.before, ranges.generated);
+function validRanges(ranges, changeKind) {
+  const hasAfter = changeKind === 'removed' || ranges.after;
+  return ranges.source && ranges.generated && ranges.before && hasAfter && containedRange(ranges.before, ranges.generated);
 }
 
 function afterMappedText(targetBeforeMappedText, targetAfterEditText, ranges) {

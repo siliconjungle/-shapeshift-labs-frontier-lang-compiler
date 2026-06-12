@@ -166,3 +166,45 @@ assert.equal(lineEndingStableApplyRecord.sourceEditReplay.status, 'accepted-clea
 assert.equal(lineEndingStableApplyRecord.sourceEditReplay.outputSourceText, lfEditedText);
 assert.equal(lineEndingStableApplyRecord.sourcePatchBundle.admission.status, 'admitted');
 assert.equal(lineEndingStableApplyRecord.roundtripEvidence.admission.action, 'admit-source-backprojection');
+
+const deletionSourceText = 'export function keep() { return 1; }\nexport function removeMe() { return 2; }\n';
+const deletionExpectedText = 'export function keep() { return 1; }\n';
+const deletionSourceImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/delete.ts',
+  sourceText: deletionSourceText
+});
+const deletionSymbol = deletionSourceImport.semanticIndex.symbols.find((symbol) => symbol.name === 'removeMe');
+const deletionMapping = deletionSourceImport.sourceMaps[0].mappings.find((mapping) => mapping.semanticSymbolId === deletionSymbol.id);
+const deletionRecord = createBidirectionalTargetChangeRecord({
+  id: 'counter_ts_target_change_delete_exact_source_map',
+  source: deletionSourceImport,
+  targetLanguage: 'typescript',
+  targetPath: 'dist/delete.ts',
+  baseTarget: { language: 'typescript', sourcePath: 'dist/delete.ts', sourceText: deletionSourceText },
+  editedTarget: { language: 'typescript', sourcePath: 'dist/delete.ts', sourceText: deletionExpectedText },
+  sourceMaps: [{
+    ...sourceMap,
+    id: 'source_map_delete_exact',
+    sourcePath: 'src/delete.ts',
+    sourceHash: deletionSourceImport.nativeSource.sourceHash,
+    targetPath: 'dist/delete.ts',
+    mappings: [{
+      ...sourceMap.mappings[0],
+      id: 'map_delete_remove_me',
+      semanticSymbolId: deletionSymbol.id,
+      nativeAstNodeId: deletionSymbol.nativeAstNodeId,
+      sourceSpan: deletionMapping.sourceSpan,
+      generatedSpan: { ...deletionMapping.sourceSpan, path: 'dist/delete.ts', target: 'typescript', targetPath: 'dist/delete.ts', generatedName: 'removeMe' },
+      generatedName: 'removeMe'
+    }]
+  }]
+});
+assert.equal(deletionRecord.sourceEditScript.admission.status, 'auto-merge-candidate');
+assert.equal(deletionRecord.sourceEditScript.summary.byKind.removeBody, 1);
+assert.equal(deletionRecord.sourceEditProjection.status, 'projected');
+assert.equal(deletionRecord.sourceEditProjection.sourceText, deletionExpectedText);
+assert.equal(deletionRecord.sourceEditProjection.edits.length, 1);
+assert.equal(deletionRecord.sourceEditReplay.status, 'accepted-clean');
+assert.equal(deletionRecord.sourcePatchBundle.admission.status, 'admitted');
+assert.equal(deletionRecord.roundtripEvidence.admission.status, 'ready');
