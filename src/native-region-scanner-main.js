@@ -1,4 +1,4 @@
-import { idFragment, uniqueStrings, upperFirst } from './native-import-utils.js';
+import { idFragment, upperFirst } from './native-import-utils.js';
 import {
   nativeDeclaration,
   nativeImportDeclaration,
@@ -161,47 +161,6 @@ function scanSwift(input) {
   return declarations;
 }
 
-function scanCSharp(input) {
-  const declarations = [];
-  const lines = sourceLines(input.sourceText);
-  for (const [index, { line, number }] of lines.entries()) {
-    const trimmed = line.trim();
-    let match;
-    if ((match = trimmed.match(/^using\s+([A-Za-z_]\w*)\s*=\s*(.+?)\s*;/))) {
-      declarations.push(nativeDeclaration(input, number, 'UsingAliasDirective', 'type', match[1], { target: match[2].trim() }, false));
-    } else if ((match = trimmed.match(/^using\s+(?:static\s+)?([A-Za-z_][\w.]*)\s*;/))) {
-      declarations.push(nativeImportDeclaration(input, number, match[1], 'UsingDirective', 'namespace'));
-    } else if ((match = trimmed.match(/^namespace\s+([A-Za-z_][\w.]*)/))) {
-      declarations.push(nativeDeclaration(input, number, 'NamespaceDeclaration', 'namespace', match[1], {}, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    } else if ((match = trimmed.match(/^(?:(?:public|protected|private|internal|static|unsafe|new)\s+)*delegate\s+(.+?)\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*;/))) {
-      declarations.push(nativeDeclaration(input, number, 'DelegateDeclaration', 'type', match[2], {
-        returnType: match[1].trim(),
-        parameters: splitParameters(match[3])
-      }, false));
-    } else if ((match = trimmed.match(/^(?:(?:public|protected|private|internal|abstract|sealed|static|partial|readonly|ref|unsafe)\s+)*(class|interface|struct|enum|record(?:\s+(?:class|struct))?)\s+([A-Za-z_]\w*)/))) {
-      declarations.push(nativeDeclaration(input, number, csharpDeclarationKind(match[1]), csharpSymbolKind(match[1]), match[2], { csharpKind: match[1].replace(/\s+/g, ' ') }, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    } else if ((match = trimmed.match(/^(?:(?:public|protected|private|internal|static|virtual|override|async|partial|sealed|abstract|extern|new|unsafe|readonly)\s+)*(?:[A-Za-z_][\w<>\[\].?,\s]*\??|void)\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?:=>.*|\{|;)?$/))) {
-      const parameters = splitParameters(match[2]);
-      const extensionReceiver = csharpExtensionReceiver(parameters);
-      declarations.push(nativeDeclaration(input, number, extensionReceiver ? 'ExtensionMethodDeclaration' : 'MethodDeclaration', 'method', match[1], {
-        parameters,
-        ...(extensionReceiver ? { extensionReceiver } : {})
-      }, trimmed.includes('{') || trimmed.includes('=>'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    } else if ((match = trimmed.match(/^(?:(?:public|protected|private|internal|static|virtual|override|abstract|sealed|new|unsafe)\s+)*event\s+(.+?)\s+([A-Za-z_]\w*)\s*(?:[;{=]|=>)/))) {
-      declarations.push(nativeDeclaration(input, number, 'EventDeclaration', 'event', match[2], {
-        eventType: match[1].trim(),
-        accessors: csharpAccessors(trimmed)
-      }, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    } else if ((match = trimmed.match(/^(?:(?:public|protected|private|internal|static|virtual|override|abstract|sealed|new|required|readonly|unsafe)\s+)*([A-Za-z_][\w<>\[\].?,\s]*\??)\s+([A-Za-z_]\w*)\s*(?:\{|=>)/))) {
-      declarations.push(nativeDeclaration(input, number, 'PropertyDeclaration', 'property', match[2], {
-        propertyType: match[1].trim(),
-        accessors: csharpAccessors(trimmed)
-      }, trimmed.includes('{') || trimmed.includes('=>'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    }
-  }
-  return declarations;
-}
-
 function parseGoReceiver(raw) {
   const value = String(raw ?? '').trim();
   const match = value.match(/^(?:(\w+)\s+)?(.+)$/);
@@ -257,33 +216,8 @@ function swiftSymbolKind(kind) {
   return 'class';
 }
 
-function csharpSymbolKind(kind) {
-  const normalized = String(kind).replace(/\s+/g, ' ');
-  if (normalized === 'interface') return 'interface';
-  if (normalized === 'struct' || normalized === 'enum' || normalized.startsWith('record')) return 'type';
-  return 'class';
-}
-
-function csharpDeclarationKind(kind) {
-  const normalized = String(kind).replace(/\s+/g, ' ');
-  if (normalized === 'record struct') return 'RecordStructDeclaration';
-  if (normalized === 'record class') return 'RecordClassDeclaration';
-  if (normalized === 'record') return 'RecordDeclaration';
-  return `${upperFirst(normalized)}Declaration`;
-}
-
-function csharpExtensionReceiver(parameters) {
-  const match = String(parameters?.[0] ?? '').match(/^this\s+(.+?)\s+([A-Za-z_]\w*)$/);
-  return match ? { type: match[1].trim(), name: match[2] } : undefined;
-}
-
-function csharpAccessors(source) {
-  return uniqueStrings([...String(source ?? '').matchAll(/\b(get|set|init|add|remove)\b/g)].map((match) => match[1]));
-}
-
 export {
   scanCLike,
-  scanCSharp,
   scanGo,
   scanJava,
   scanRust,

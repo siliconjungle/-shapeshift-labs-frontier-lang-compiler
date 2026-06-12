@@ -50,6 +50,7 @@ const smokeModules = [
   './smoke/semantic-edit-rust-replay.mjs',
   './smoke/semantic-edit-java-replay.mjs',
   './smoke/semantic-edit-csharp-replay.mjs',
+  './smoke/semantic-edit-csharp-methods.mjs',
   './smoke/semantic-edit-swift-replay.mjs',
   './smoke/semantic-edit-c-replay.mjs',
   './smoke/semantic-edit-go-replay.mjs',

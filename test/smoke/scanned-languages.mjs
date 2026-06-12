@@ -102,13 +102,14 @@ assert.equal(symbolByName(scannedCSharpImport, 'JsonMap').kind, 'type');
 assert.equal(nativeNodeForSymbol(scannedCSharpImport, 'JsonMap').fields.target, 'System.Collections.Generic.Dictionary<string, object>');
 assert.equal(symbolByName(scannedCSharpImport, 'TodoChanged').kind, 'type');
 assert.deepEqual(nativeNodeForSymbol(scannedCSharpImport, 'TodoChanged').fields.parameters, ['object sender', 'EventArgs args']);
-const scannedCSharpPropertyNode = nativeNodeForSymbol(scannedCSharpImport, 'Title');
+assert.equal(symbolByName(scannedCSharpImport, 'Todo.AddTodo').kind, 'method');
+const scannedCSharpPropertyNode = nativeNodeForSymbol(scannedCSharpImport, 'Todo.Title');
 assert.equal(scannedCSharpPropertyNode.kind, 'PropertyDeclaration');
 assert.deepEqual(scannedCSharpPropertyNode.fields.accessors, ['get', 'init']);
-const scannedCSharpEventNode = nativeNodeForSymbol(scannedCSharpImport, 'Changed');
+const scannedCSharpEventNode = nativeNodeForSymbol(scannedCSharpImport, 'Todo.Changed');
 assert.equal(scannedCSharpEventNode.kind, 'EventDeclaration');
 assert.equal(scannedCSharpEventNode.fields.eventType, 'EventHandler?');
-const scannedCSharpExtensionMethodNode = nativeNodeForSymbol(scannedCSharpImport, 'Label');
+const scannedCSharpExtensionMethodNode = nativeNodeForSymbol(scannedCSharpImport, 'Todo.extension.Label');
 assert.equal(scannedCSharpExtensionMethodNode.kind, 'ExtensionMethodDeclaration');
 assert.deepEqual(scannedCSharpExtensionMethodNode.fields.extensionReceiver, { type: 'Todo', name: 'todo' });
 const scannedPhpImport = importNativeSource({

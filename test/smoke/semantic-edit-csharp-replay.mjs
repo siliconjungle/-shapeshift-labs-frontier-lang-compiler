@@ -14,7 +14,7 @@ const csharpImport = importNativeSource({
   sourceText: csharpBase
 });
 assert.equal(csharpImport.semanticIndex.symbols.find((symbol) => symbol.name === 'Counter').definitionSpan.endLine, 5);
-assert.equal(csharpImport.semanticIndex.symbols.find((symbol) => symbol.name === 'Add').definitionSpan.endLine, 4);
+assert.equal(csharpImport.semanticIndex.symbols.find((symbol) => symbol.name === 'Counter.Add').definitionSpan.endLine, 4);
 
 const csharpScript = createSemanticEditScript({
   id: 'semantic_edit_csharp_multiline_body',
@@ -25,6 +25,7 @@ const csharpScript = createSemanticEditScript({
   headSourceText: csharpBase
 });
 assert.equal(csharpScript.admission.status, 'auto-merge-candidate');
+assert.equal(csharpScript.operations[0].anchor.symbolName, 'Counter.Add:controlFlow:exit#1');
 
 const csharpProjection = projectSemanticEditScriptToSource({
   id: 'semantic_edit_csharp_multiline_projection',
