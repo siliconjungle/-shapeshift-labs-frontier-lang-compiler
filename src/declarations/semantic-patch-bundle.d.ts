@@ -9,11 +9,11 @@ import type {
 import type { NativeSourceChangeKind, NativeSourceChangeSet } from './native-diff.js';
 import type { SemanticEditBundleAdmission } from './semantic-edit-bundle.js';
 import type { SemanticEditProjection, SemanticEditReplay, SemanticEditScript } from './semantic-edit-script.js';
-import type { SemanticPatchBundleRecordIndex } from './semantic-patch-bundle-index.js';
+import type { SemanticPatchBundleRecordIndex, SemanticPatchBundleRecordQueryIndexFilters } from './semantic-patch-bundle-index.js';
 import type { SemanticTransformIdentityRecord } from './semantic-transform-identity.js';
 import type { BidirectionalTargetPortabilityRecord } from './bidirectional-target-change.js';
 
-export type { SemanticPatchBundleRecordIndex } from './semantic-patch-bundle-index.js';
+export type { SemanticPatchBundleRecordIndex, SemanticPatchBundleRecordQueryIndexFilters } from './semantic-patch-bundle-index.js';
 
 export type SemanticPatchBundleAdmissionStatus = 'proposed' | 'queued' | 'admitted' | 'needs-review' | 'blocked' | 'rejected' | string;
 
@@ -78,6 +78,7 @@ export interface SemanticPatchBundleSourceMapLink {
   readonly precision?: string;
   readonly sourceSpan?: SourceSpan;
   readonly generatedSpan?: SourceMapMappingRecord['generatedSpan'];
+  readonly sourceReplacementText?: string; readonly sourceReplacementTextHash?: string;
   readonly regionKey?: string;
   readonly regionKind?: string;
 }
@@ -121,10 +122,12 @@ export interface SemanticPatchBundleTransformAdmission {
   readonly transformKeys?: readonly string[];
   readonly contentHashes?: readonly string[];
   readonly projectionIdentityHashes?: readonly string[];
+  readonly baseHashes?: readonly string[]; readonly targetHashes?: readonly string[];
   readonly sourceLanguages?: readonly string[];
   readonly targetLanguages?: readonly string[];
   readonly sourcePaths?: readonly string[];
   readonly targetPaths?: readonly string[];
+  readonly sourceMapIds?: readonly string[]; readonly sourceMapLinkIds?: readonly string[]; readonly sourceMapMappingIds?: readonly string[];
   readonly evidenceIds?: readonly string[];
 }
 
@@ -214,7 +217,7 @@ export interface CreateSemanticPatchBundleRecordOptions {
 
 export type CreateSemanticPatchBundleRecordInput = NativeSourceChangeSet | Partial<SemanticPatchBundleRecord> | Record<string, unknown>;
 
-export interface SemanticPatchBundleRecordQuery {
+export interface SemanticPatchBundleRecordQuery extends SemanticPatchBundleRecordQueryIndexFilters {
   readonly id?: string | readonly string[];
   readonly ids?: readonly string[];
   readonly patchId?: string | readonly string[];
@@ -312,7 +315,6 @@ export interface SemanticPatchBundleRecordQuery {
   readonly admissionStatus?: SemanticPatchBundleAdmissionStatus | readonly string[];
   readonly admissionStatuses?: readonly string[];
 }
-
 export declare const SemanticPatchBundleAdmissionStatuses: readonly SemanticPatchBundleAdmissionStatus[];
 export declare function createSemanticPatchBundleRecord(input?: CreateSemanticPatchBundleRecordInput, options?: CreateSemanticPatchBundleRecordOptions): SemanticPatchBundleRecord;
 export declare function querySemanticPatchBundleRecords(records: SemanticPatchBundleRecord | readonly SemanticPatchBundleRecord[], query?: SemanticPatchBundleRecordQuery): readonly SemanticPatchBundleRecord[];

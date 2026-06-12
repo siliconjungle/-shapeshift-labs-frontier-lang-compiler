@@ -11,6 +11,12 @@ export interface SemanticPatchBundleRecordIndex {
   readonly sourceMapLinkIds: readonly string[];
   readonly evidenceIds: readonly string[];
   readonly proofIds: readonly string[];
+  readonly lineageResolutionIds: readonly string[];
+  readonly lineageEventIds: readonly string[];
+  readonly lineageSourcePaths: readonly string[];
+  readonly lineageEvidenceIds: readonly string[];
+  readonly lineageProofIds: readonly string[];
+  readonly lineageReasonCodes: readonly string[];
   readonly historyIds: readonly string[];
   readonly semanticOperationIds: readonly string[];
   readonly semanticEditScriptIds: readonly string[];
@@ -34,12 +40,18 @@ export interface SemanticPatchBundleRecordIndex {
   readonly semanticTransformIdentityHashes: readonly string[];
   readonly semanticTransformContentHashes: readonly string[];
   readonly projectionIdentityHashes: readonly string[];
+  readonly transformBaseHashes: readonly string[];
+  readonly transformTargetHashes: readonly string[];
   readonly semanticTransformReadinesses: readonly string[];
   readonly semanticTransformEvidenceIds: readonly string[];
   readonly transformSourceLanguages: readonly string[];
   readonly transformTargetLanguages: readonly string[];
   readonly transformSourcePaths: readonly string[];
   readonly transformTargetPaths: readonly string[];
+  readonly transformCrossLanguages: readonly string[];
+  readonly transformSourceMapIds: readonly string[];
+  readonly transformSourceMapLinkIds: readonly string[];
+  readonly transformSourceMapMappingIds: readonly string[];
   readonly targetPortabilityStatuses: readonly string[];
   readonly targetPortabilityActions: readonly string[];
   readonly targetPortabilityReasonCodes: readonly string[];
@@ -47,4 +59,33 @@ export interface SemanticPatchBundleRecordIndex {
   readonly mergeCandidateIds: readonly string[];
   readonly readinesses: readonly string[];
   readonly admissionStatuses: readonly string[];
+}
+
+export interface SemanticPatchBundleRecordQueryIndexFilters {
+  readonly lineageResolutionId?: string | readonly string[];
+  readonly lineageResolutionIds?: readonly string[];
+  readonly lineageEventId?: string | readonly string[];
+  readonly lineageEventIds?: readonly string[];
+  readonly lineageSourcePath?: string | readonly string[];
+  readonly lineageSourcePaths?: readonly string[];
+  readonly lineageEvidenceId?: string | readonly string[];
+  readonly lineageEvidenceIds?: readonly string[];
+  readonly lineageProofId?: string | readonly string[];
+  readonly lineageProofIds?: readonly string[];
+  readonly lineageReasonCode?: string | readonly string[];
+  readonly lineageReasonCodes?: readonly string[];
+  readonly sourceBackprojectionMode?: string | readonly string[];
+  readonly sourceBackprojectionModes?: readonly string[];
+  readonly transformBaseHash?: string | readonly string[];
+  readonly transformBaseHashes?: readonly string[];
+  readonly transformTargetHash?: string | readonly string[];
+  readonly transformTargetHashes?: readonly string[];
+  readonly transformCrossLanguage?: boolean | string | readonly string[];
+  readonly transformCrossLanguages?: readonly string[];
+  readonly transformSourceMapId?: string | readonly string[];
+  readonly transformSourceMapIds?: readonly string[];
+  readonly transformSourceMapLinkId?: string | readonly string[];
+  readonly transformSourceMapLinkIds?: readonly string[];
+  readonly transformSourceMapMappingId?: string | readonly string[];
+  readonly transformSourceMapMappingIds?: readonly string[];
 }

@@ -5,6 +5,8 @@ const semanticTransformIdentity = compilerApi.createSemanticTransformIdentityRec
   targetLanguage: 'rust',
   sourcePath: 'src/example.ts',
   targetPath: 'src/example.rs',
+  sourceMapIds: ['source_map_example'],
+  sourceMapMappingIds: ['map_example'],
   semanticKey: 'semantic-edit:function:run',
   editContentHash: 'edit_hash'
 });
@@ -31,7 +33,12 @@ const semanticPatchBundleWithTransform = compilerApi.createSemanticPatchBundleRe
 const queriedSemanticTransformBundles: readonly compilerApi.SemanticPatchBundleRecord[] =
   compilerApi.querySemanticPatchBundleRecords([semanticPatchBundleWithTransform], {
     semanticTransformKey: semanticTransformFields.transformKey,
-    transformTargetLanguage: 'rust'
+    transformTargetLanguage: 'rust',
+    transformCrossLanguage: true,
+    transformSourceMapMappingId: 'map_example'
   });
+
+semanticPatchBundleWithTransform.admission.transformAdmission?.sourceMapMappingIds satisfies readonly string[] | undefined;
+semanticPatchBundleWithTransform.admission.transformAdmission?.baseHashes satisfies readonly string[] | undefined;
 
 void queriedSemanticTransformBundles;
