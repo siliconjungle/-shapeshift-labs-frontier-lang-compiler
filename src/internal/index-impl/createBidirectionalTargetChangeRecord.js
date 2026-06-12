@@ -11,6 +11,7 @@ import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
 import { attachBidirectionalMatchPortability, classifyBidirectionalTargetPortability } from './bidirectionalTargetPortability.js';
 import { createRoundtripEvidence, createSemanticMergeAdmissionEvidence, summarizeSourceMapBackprojection } from './bidirectionalTargetRoundtripEvidence.js';
 import { createBidirectionalSourceEditProjection } from './bidirectionalSourceEditProjection.js';
+import { createSameLanguageTargetSourceProjection } from './bidirectionalSameLanguageSourceProjection.js';
 import {
   anchorsFromSourceSidecar,
   classifyBidirectionalReadiness,
@@ -87,13 +88,19 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     ...array(targetPortability.reasonCodes),
     ...sourceAnchorMatches.flatMap((match) => match.reasonCodes)
   ]);
-  const sourceEditProjection = createBidirectionalSourceEditProjection({
+  const sourceMapEditProjection = createBidirectionalSourceEditProjection({
     id,
     source,
     targetChangeSet,
     sourceAnchorMatches,
     targetPortability,
     reasons
+  });
+  const sourceEditProjection = sourceMapEditProjection.sourceEditScript ? sourceMapEditProjection : createSameLanguageTargetSourceProjection({
+    id,
+    source,
+    targetChangeSet,
+    generatedAt: input.generatedAt
   });
   const evidenceId = input.evidenceId ?? `evidence_${idFragment(id)}_bidirectional_target_change`;
   const sourcePatchBundleId = input.sourcePatchBundleId ?? `semantic_patch_bundle_${idFragment(id)}_source_port`;

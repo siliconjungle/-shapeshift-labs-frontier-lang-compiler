@@ -49,6 +49,7 @@ const smokeModules = [
   './smoke/bidirectional-target-change.mjs',
   './smoke/bidirectional-target-change-already-applied.mjs',
   './smoke/bidirectional-target-change-addition-line-endings.mjs',
+  './smoke/bidirectional-target-change-same-language-insertions.mjs',
   './smoke/native-projection.mjs',
   './smoke-workbench.mjs',
   './smoke/roundtrip.mjs',
@@ -65,7 +66,8 @@ const semanticAutoMergeSmokeModules = [
   './smoke/semantic-edit-rename-move.mjs',
   './smoke/semantic-edit-bundle-auto-merge.mjs',
   './smoke/semantic-edit-bundle-admission.mjs',
-  './smoke/bidirectional-target-change-addition-line-endings.mjs'
+  './smoke/bidirectional-target-change-addition-line-endings.mjs',
+  './smoke/bidirectional-target-change-same-language-insertions.mjs'
 ];
 
 for (const modulePath of semanticAutoMergeSmokeModules) {

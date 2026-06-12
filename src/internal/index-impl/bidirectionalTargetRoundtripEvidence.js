@@ -61,12 +61,13 @@ export function createRoundtripEvidence(context) {
 
 function admissionRecord(context) {
   const verified = verifiedSourceBackprojection(context);
+  const verifiedReason = verifiedSourceBackprojectionReason(context);
   const action = sourceBackprojectionAction(context);
   return {
-    status: context.readiness === 'blocked' ? 'blocked' : verified ? 'ready' : 'needs-review',
+    status: verified ? 'ready' : context.readiness === 'blocked' ? 'blocked' : 'needs-review',
     readiness: verified ? 'ready' : context.readiness,
     action: verified ? action : context.targetPortability.action,
-    reasonCodes: uniqueStrings([...array(context.reasons), verified ? 'verified-source-map-backprojection' : undefined]),
+    reasonCodes: uniqueStrings([...array(context.reasons), verifiedReason]),
     conflictKeys: uniqueStrings([
       ...array(context.targetPortability.conflictKeys),
       ...context.sourceAnchorMatches.flatMap((match) => match.conflictKeys ?? [])
@@ -80,6 +81,7 @@ function admissionRecord(context) {
 
 export function createSemanticMergeAdmissionEvidence(context) {
   const verified = verifiedSourceBackprojection(context);
+  const verifiedReason = verifiedSourceBackprojectionReason(context);
   const action = sourceBackprojectionAction(context);
   return {
     schema: 'frontier.lang.bidirectionalTargetChangeSemanticMergeAdmission.v1',
@@ -92,9 +94,9 @@ export function createSemanticMergeAdmissionEvidence(context) {
     targetPatchId: context.targetChangeSet.patch?.id,
     targetMergeCandidateId: context.targetChangeSet.mergeCandidate?.id,
     readiness: verified ? 'ready' : context.readiness,
-    status: context.readiness === 'blocked' ? 'blocked' : verified ? 'ready' : 'needs-review',
+    status: verified ? 'ready' : context.readiness === 'blocked' ? 'blocked' : 'needs-review',
     action: verified ? action : context.targetPortability.action,
-    reasonCodes: uniqueStrings([...array(context.reasons), verified ? 'verified-source-map-backprojection' : undefined]),
+    reasonCodes: uniqueStrings([...array(context.reasons), verifiedReason]),
     conflictKeys: context.roundtripEvidence.admission.conflictKeys,
     sourceAnchorMatchIds: uniqueStrings(context.sourceAnchorMatches.map((match) => match.id)),
     sourceAnchorKeys: uniqueStrings(context.roundtripEvidence.sourceAnchors.map((anchor) => anchor.key)),
@@ -117,9 +119,20 @@ export function createSemanticMergeAdmissionEvidence(context) {
 }
 
 function verifiedSourceBackprojection(context) {
-  return context.sourceEditProjection?.sourceProjectionHint?.sourceBackprojectionMode === 'same-language-exact-source-map'
+  return verifiedSourceBackprojectionModes().includes(context.sourceEditProjection?.sourceProjectionHint?.sourceBackprojectionMode)
     && context.sourceEditProjection?.sourceEditProjection?.status === 'projected'
     && ['accepted-clean', 'already-applied'].includes(context.sourceEditProjection?.sourceEditReplay?.status);
+}
+
+function verifiedSourceBackprojectionModes() {
+  return ['same-language-exact-source-map', 'same-language-target-source-edit'];
+}
+
+function verifiedSourceBackprojectionReason(context) {
+  const mode = context.sourceEditProjection?.sourceProjectionHint?.sourceBackprojectionMode;
+  if (mode === 'same-language-target-source-edit' && verifiedSourceBackprojection(context)) return 'verified-same-language-target-source-edit';
+  if (mode === 'same-language-exact-source-map' && verifiedSourceBackprojection(context)) return 'verified-source-map-backprojection';
+  return undefined;
 }
 
 function sourceBackprojectionAction(context) {
