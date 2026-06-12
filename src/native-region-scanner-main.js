@@ -1,4 +1,4 @@
-import { idFragment, upperFirst } from './native-import-utils.js';
+import { idFragment } from './native-import-utils.js';
 import {
   nativeDeclaration,
   nativeImportDeclaration,
@@ -104,43 +104,6 @@ function scanGo(input) {
   return declarations;
 }
 
-function scanSwift(input) {
-  const declarations = [];
-  const protocols = new Set();
-  const lines = sourceLines(input.sourceText);
-  for (const [index, { line, number }] of lines.entries()) {
-    const trimmed = line.trim();
-    const declarationLine = trimmed.replace(/^(?:@[A-Za-z_][\w.]+(?:\([^)]*\))?\s+)*/, '');
-    let match;
-    if ((match = declarationLine.match(/^import\s+(?:(?:struct|class|enum|protocol|func|var)\s+)?([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)/))) {
-      declarations.push(nativeImportDeclaration(input, number, match[1], 'ImportDecl', 'module'));
-    } else if ((match = declarationLine.match(/^(?:(?:public|private(?:\([^)]*\))?|fileprivate|internal|open|final|indirect)\s+)*(struct|class|enum|protocol|actor)\s+([A-Za-z_]\w*)/))) {
-      if (match[1] === 'protocol') protocols.add(match[2]);
-      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Decl`, swiftSymbolKind(match[1]), match[2], {}, declarationLine.includes('{'), { span: declarationLine.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    } else if ((match = declarationLine.match(/^(?:(?:public|private(?:\([^)]*\))?|fileprivate|internal|open)\s+)*extension\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)(.*)$/))) {
-      const extensionFields = parseSwiftExtensionTail(match[2]);
-      const isProtocolExtension = protocols.has(match[1]) || /Protocol$/.test(match[1]);
-      declarations.push(nativeDeclaration(input, number, isProtocolExtension ? 'ProtocolExtensionDecl' : 'ExtensionDecl', 'implementation', `${match[1]}.${isProtocolExtension ? 'protocolExtension' : 'extension'}`, {
-        extendedType: match[1],
-        ...extensionFields
-      }, declarationLine.includes('{'), { span: declarationLine.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    } else if ((match = declarationLine.match(/^(?:(?:public|private(?:\([^)]*\))?|fileprivate|internal|open|static|class|mutating|nonmutating|override|required|convenience|isolated|nonisolated)\s+)*func\s+([A-Za-z_]\w*|`[^`]+`)(?:\s*<([^>]+)>)?\s*\(([^)]*)\)/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionDecl', 'function', unquoteSwiftIdentifier(match[1]), {
-        typeParameters: splitTypeParameters(match[2]),
-        parameters: splitParameters(match[3])
-      }, declarationLine.includes('{'), { span: declarationLine.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    } else if ((match = declarationLine.match(/^(?:(?:public|private(?:\([^)]*\))?|fileprivate|internal|open|static|class|final|lazy|weak|unowned|override|required|nonisolated)\s+)*(let|var)\s+([A-Za-z_]\w*)\b(?::\s*([^={]+))?/))) {
-      declarations.push(nativeDeclaration(input, number, 'PropertyDecl', 'property', match[2], {
-        binding: match[1],
-        valueType: match[3]?.trim()
-      }, declarationLine.includes('{') || declarationLine.includes('=>'), { span: declarationLine.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    } else if ((match = declarationLine.match(/^(?:(?:public|private(?:\([^)]*\))?|fileprivate|internal|open)\s+)*typealias\s+([A-Za-z_]\w*)\b(?:\s*=\s*(.+))?/))) {
-      declarations.push(nativeDeclaration(input, number, 'TypealiasDecl', 'type', match[1], { target: match[2]?.trim() }, false));
-    }
-  }
-  return declarations;
-}
-
 function parseGoReceiver(raw) {
   const value = String(raw ?? '').trim();
   const match = value.match(/^(?:(\w+)\s+)?(.+)$/);
@@ -165,34 +128,8 @@ function goReceiverMethodName(receiver, methodName) {
   return receiver?.type ? `${receiver.type}.${methodName}` : methodName;
 }
 
-function parseSwiftExtensionTail(rawTail) {
-  let tail = String(rawTail ?? '').split('{')[0].trim();
-  const fields = {};
-  const whereMatch = tail.match(/\bwhere\b(.+)$/);
-  if (whereMatch) {
-    fields.constraints = whereMatch[1].trim();
-    tail = tail.slice(0, whereMatch.index).trim();
-  }
-  if (tail.startsWith(':')) {
-    fields.conformances = tail.slice(1).split(',').map((part) => part.trim()).filter(Boolean);
-  }
-  return fields;
-}
-
-function unquoteSwiftIdentifier(identifier) {
-  return String(identifier).replace(/^`|`$/g, '');
-}
-
-function swiftSymbolKind(kind) {
-  if (kind === 'protocol') return 'protocol';
-  if (kind === 'extension') return 'implementation';
-  if (kind === 'struct' || kind === 'enum' || kind === 'actor') return 'type';
-  return 'class';
-}
-
 export {
   scanCLike,
   scanGo,
-  scanRust,
-  scanSwift
+  scanRust
 };

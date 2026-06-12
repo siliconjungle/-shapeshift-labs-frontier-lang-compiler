@@ -84,6 +84,7 @@ const scannedSwiftImport = importNativeSource({
 });
 assert.equal(scannedSwiftImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
 assert.equal(symbolByName(scannedSwiftImport, 'TodoRenderable').kind, 'protocol');
+assert.equal(symbolByName(scannedSwiftImport, 'TodoRenderable.protocolExtension.renderTodo').kind, 'method');
 const scannedSwiftProtocolExtensionNode = nativeNodeForSymbol(scannedSwiftImport, 'TodoRenderable.protocolExtension');
 assert.equal(scannedSwiftProtocolExtensionNode.kind, 'ProtocolExtensionDecl');
 assert.equal(scannedSwiftProtocolExtensionNode.fields.extendedType, 'TodoRenderable');
@@ -91,7 +92,8 @@ assert.equal(scannedSwiftProtocolExtensionNode.fields.constraints, 'Self: AnyObj
 const scannedSwiftExtensionNode = nativeNodeForSymbol(scannedSwiftImport, 'Todo.extension');
 assert.equal(scannedSwiftExtensionNode.kind, 'ExtensionDecl');
 assert.deepEqual(scannedSwiftExtensionNode.fields.conformances, ['Sendable']);
-const scannedSwiftPropertyNode = nativeNodeForSymbol(scannedSwiftImport, 'title');
+assert.equal(symbolByName(scannedSwiftImport, 'Todo.extension.static.empty').kind, 'property');
+const scannedSwiftPropertyNode = nativeNodeForSymbol(scannedSwiftImport, 'Todo.title');
 assert.equal(scannedSwiftPropertyNode.kind, 'PropertyDecl');
 assert.equal(scannedSwiftPropertyNode.fields.valueType, 'String');
 const scannedCSharpImport = importNativeSource({

@@ -14,7 +14,7 @@ const swiftImport = importNativeSource({
   sourceText: swiftBase
 });
 assert.equal(swiftImport.semanticIndex.symbols.find((symbol) => symbol.name === 'Counter').definitionSpan.endLine, 5);
-assert.equal(swiftImport.semanticIndex.symbols.find((symbol) => symbol.name === 'add').definitionSpan.endLine, 4);
+assert.equal(swiftImport.semanticIndex.symbols.find((symbol) => symbol.name === 'Counter.add').definitionSpan.endLine, 4);
 
 const swiftScript = createSemanticEditScript({
   id: 'semantic_edit_swift_multiline_body',
@@ -25,6 +25,7 @@ const swiftScript = createSemanticEditScript({
   headSourceText: swiftBase
 });
 assert.equal(swiftScript.admission.status, 'auto-merge-candidate');
+assert.equal(swiftScript.operations[0].anchor.symbolName, 'Counter.add:controlFlow:exit#1');
 
 const swiftProjection = projectSemanticEditScriptToSource({
   id: 'semantic_edit_swift_multiline_projection',
