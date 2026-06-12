@@ -35,6 +35,16 @@ assert.equal(sameContentAnchorReplay.outputSourceText, sameContentAnchorExpected
 assert.equal(sameContentAnchorReplay.edits[0].reasonCodes.includes('current-symbol-anchor-matches-deleted'), true);
 assert.equal(sameContentAnchorReplay.edits[0].reasonCodes.includes('offset-reanchored-by-symbol'), true);
 
+const sameContentAnchorDirectProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_same_content_anchor_direct_projection',
+  script: sameContentAnchorScript,
+  workerSourceText: sameContentAnchorWorker,
+  headSourceText: sameContentAnchorCurrent
+});
+assert.equal(sameContentAnchorDirectProjection.status, 'projected');
+assert.equal(sameContentAnchorDirectProjection.sourceText, sameContentAnchorExpected);
+assert.equal(sameContentAnchorDirectProjection.edits[0].symbolName, 'B.run:controlFlow:exit#1');
+
 const sameContentAnchorChanged = 'export class B {\n  run() { return 3; }\n}\nexport class A {\n  run() { return 1; }\n}\n';
 const sameContentAnchorConflict = replaySemanticEditProjection({
   id: 'semantic_edit_same_content_anchor_conflict',
