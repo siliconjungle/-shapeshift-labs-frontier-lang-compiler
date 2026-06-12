@@ -57,26 +57,6 @@ function scanCLike(input) {
   return declarations;
 }
 
-function scanJava(input) {
-  const declarations = [];
-  const lines = sourceLines(input.sourceText);
-  for (const [index, { line, number }] of lines.entries()) {
-    const trimmed = line.trim();
-    let match;
-    if ((match = trimmed.match(/^package\s+([A-Za-z_][\w.]*);/))) {
-      declarations.push(nativeDeclaration(input, number, 'PackageDeclaration', 'package', match[1], {}, false));
-    } else if ((match = trimmed.match(/^import\s+(?:static\s+)?([A-Za-z_][\w.*]*);/))) {
-      declarations.push(nativeImportDeclaration(input, number, match[1], 'ImportDeclaration', 'package'));
-    } else if ((match = trimmed.match(/^(?:(?:public|protected|private|abstract|final|static|sealed|non-sealed)\s+)*(class|interface|enum|record|@interface)\s+([A-Za-z_$][\w$]*)/))) {
-      const kind = match[1] === '@interface' ? 'AnnotationDeclaration' : `${upperFirst(match[1])}Declaration`;
-      declarations.push(nativeDeclaration(input, number, kind, javaSymbolKind(match[1]), match[2], {}, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    } else if ((match = trimmed.match(/^(?:(?:public|protected|private|abstract|final|static|synchronized|native)\s+)*(?:<[^>]+>\s+)?[A-Za-z_$][\w$<>\[\].?,\s]*\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*(?:throws\s+[^{]+)?(?:\{|;)?$/))) {
-      declarations.push(nativeDeclaration(input, number, 'MethodDeclaration', 'method', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
-    }
-  }
-  return declarations;
-}
-
 function scanGo(input) {
   const declarations = [];
   let inImportBlock = false;
@@ -203,12 +183,6 @@ function unquoteSwiftIdentifier(identifier) {
   return String(identifier).replace(/^`|`$/g, '');
 }
 
-function javaSymbolKind(kind) {
-  if (kind === 'interface' || kind === '@interface') return 'interface';
-  if (kind === 'enum' || kind === 'record') return 'type';
-  return 'class';
-}
-
 function swiftSymbolKind(kind) {
   if (kind === 'protocol') return 'protocol';
   if (kind === 'extension') return 'implementation';
@@ -219,7 +193,6 @@ function swiftSymbolKind(kind) {
 export {
   scanCLike,
   scanGo,
-  scanJava,
   scanRust,
   scanSwift
 };

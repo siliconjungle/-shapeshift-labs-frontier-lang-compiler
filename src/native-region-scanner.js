@@ -2,10 +2,10 @@ import { scanJavaScriptLike } from './native-region-scanner-js.js';
 import {
   scanCLike,
   scanGo,
-  scanJava,
   scanRust,
   scanSwift
 } from './native-region-scanner-main.js';
+import { scanJava } from './native-region-scanner-java.js';
 import { scanCSharp } from './native-region-scanner-csharp.js';
 import { scanPython } from './native-region-scanner-python.js';
 import { scanPhp } from './native-region-scanner-php.js';

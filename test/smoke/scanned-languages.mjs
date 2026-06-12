@@ -60,6 +60,8 @@ const scannedJavaImport = importNativeSource({
   sourceText: 'package demo;\nimport java.util.List;\npublic class Todo {\n  public void addTodo(String title) {}\n}\n'
 });
 assert.equal(scannedJavaImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Todo'), true);
+assert.equal(symbolByName(scannedJavaImport, 'Todo.addTodo').kind, 'method');
+assert.equal(nativeNodeForSymbol(scannedJavaImport, 'Todo.addTodo').fields.owner, 'Todo');
 const scannedGoImport = importNativeSource({
   language: 'go',
   sourcePath: 'todo.go',

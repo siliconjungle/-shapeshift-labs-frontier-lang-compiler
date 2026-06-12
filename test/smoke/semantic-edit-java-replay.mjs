@@ -14,7 +14,7 @@ const javaImport = importNativeSource({
   sourceText: javaBase
 });
 assert.equal(javaImport.semanticIndex.symbols.find((symbol) => symbol.name === 'Counter').definitionSpan.endLine, 5);
-assert.equal(javaImport.semanticIndex.symbols.find((symbol) => symbol.name === 'add').definitionSpan.endLine, 4);
+assert.equal(javaImport.semanticIndex.symbols.find((symbol) => symbol.name === 'Counter.add').definitionSpan.endLine, 4);
 
 const javaScript = createSemanticEditScript({
   id: 'semantic_edit_java_multiline_body',
@@ -25,6 +25,7 @@ const javaScript = createSemanticEditScript({
   headSourceText: javaBase
 });
 assert.equal(javaScript.admission.status, 'auto-merge-candidate');
+assert.equal(javaScript.operations[0].anchor.symbolName, 'Counter.add:controlFlow:exit#1');
 
 const javaProjection = projectSemanticEditScriptToSource({
   id: 'semantic_edit_java_multiline_projection',
