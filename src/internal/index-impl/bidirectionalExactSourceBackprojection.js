@@ -28,20 +28,22 @@ export function exactSourceBackprojectionForMatch(match, context) {
   const targetAfterMappedText = afterMappedText(targetBeforeMappedText, targetAfterEditText, ranges);
   const matchesBefore = sourceMappedText === targetBeforeMappedText;
   const matchesAfter = sourceMappedText === targetAfterMappedText;
-  const lineEndingStableAlreadyApplied = !matchesBefore && sameLineEndingStable(sourceMappedText, targetAfterMappedText);
-  if (!matchesBefore && !matchesAfter && !lineEndingStableAlreadyApplied) return undefined;
+  const lineEndingStableBefore = !matchesBefore && sameLineEndingStable(sourceMappedText, targetBeforeMappedText);
+  const lineEndingStableAfter = !matchesBefore && sameLineEndingStable(sourceMappedText, targetAfterMappedText);
+  if (!matchesBefore && !matchesAfter && !lineEndingStableBefore && !lineEndingStableAfter) return undefined;
   const alreadyApplied = matchesAfter && !matchesBefore;
-  const sourceEditRange = lineEndingStableAlreadyApplied
-    ? lineEndingStableSourceEditRange(sourceMappedText, targetAfterMappedText, ranges, targetAfterEditText)
+  const lineEndingStable = lineEndingStableBefore || lineEndingStableAfter;
+  const sourceEditRange = lineEndingStable
+    ? lineEndingStableSourceEditRange(sourceMappedText, lineEndingStableAfter ? targetAfterMappedText : targetBeforeMappedText, ranges, lineEndingStableAfter ? targetAfterEditText : targetBeforeEditText)
     : sourceEditRangeForMatch(ranges, alreadyApplied ? targetAfterEditText : targetBeforeEditText);
   if (!sourceEditRange) return undefined;
   const sourceEditText = sourceText.slice(sourceEditRange.start, sourceEditRange.end);
-  const expectedSourceEditText = alreadyApplied || lineEndingStableAlreadyApplied ? targetAfterEditText : targetBeforeEditText;
+  const expectedSourceEditText = alreadyApplied || lineEndingStableAfter ? targetAfterEditText : targetBeforeEditText;
   if (sourceEditText !== expectedSourceEditText && !sameLineEndingStable(sourceEditText, expectedSourceEditText)) return undefined;
   return compactRecord({
     mode: 'same-language-exact-source-map',
-    alreadyApplied: alreadyApplied || lineEndingStableAlreadyApplied,
-    lineEndingStable: lineEndingStableAlreadyApplied,
+    alreadyApplied: alreadyApplied || lineEndingStableAfter,
+    lineEndingStable,
     sourceMapLinkId: link.id,
     sourceMapMappingId: link.sourceMapMappingId,
     sourceEditSpan: { start: sourceEditRange.start, end: sourceEditRange.end, path: anchor.sourcePath },

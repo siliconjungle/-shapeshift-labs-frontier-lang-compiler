@@ -119,9 +119,12 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText, ord
   }
   if (reasons.length) return { ok: false, reasonCodes: reasons };
   const scoped = scopedBodyReplacement(operation, headSourceText, workerSourceText, headOffsets, workerOffsets);
-  const replacement = scoped
+  const rawReplacement = scoped
     ? workerSourceText.slice(scoped.worker.start, scoped.worker.end)
     : anchorReplacement;
+  const replacement = operation.metadata?.sourceBackprojection?.lineEndingStable
+    ? normalizeReplacementLineEndings(rawReplacement, anchorCurrent)
+    : rawReplacement;
   const current = scoped
     ? headSourceText.slice(scoped.head.start, scoped.head.end)
     : anchorCurrent;
@@ -196,6 +199,11 @@ function rangeHash(sourceText, range) {
 
 function sameRange(left, right) {
   return left?.start === right?.start && left?.end === right?.end;
+}
+
+function normalizeReplacementLineEndings(replacement, current) {
+  const newline = current.includes('\r\n') ? '\r\n' : current.includes('\r') ? '\r' : '\n';
+  return String(replacement ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, newline);
 }
 
 function insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order, context) {
