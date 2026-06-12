@@ -1,5 +1,5 @@
 import { assert, assertSemanticImportFixture } from './helpers.mjs';
-import { createSemanticImportSidecar } from './compiler-api.mjs';
+import { compactSemanticSidecarExample, createSemanticImportSidecar } from './compiler-api.mjs';
 
 const emptySemanticImport = {
   id: 'empty_expected_import',
@@ -8,6 +8,33 @@ const emptySemanticImport = {
   semanticIndex: { id: 'empty_expected_index', symbols: [] },
   evidence: []
 };
+
+assertSemanticImportFixture({
+  id: 'compact_sidecar_example_import',
+  language: 'typescript',
+  sourcePath: compactSemanticSidecarExample.headSource.path,
+  sourceHash: compactSemanticSidecarExample.headSource.hash,
+  semanticIndex: {
+    id: 'semantic_index_compact_sidecar_example',
+    symbols: compactSemanticSidecarExample.sidecar.symbols
+  },
+  sourceMaps: [],
+  evidence: compactSemanticSidecarExample.sidecar.evidence.ids.map((id) => ({ id, status: 'passed' }))
+}, {
+  sidecar: compactSemanticSidecarExample.sidecar,
+  expectedSymbols: ['compactSidecarExample'],
+  expectedRegionKinds: ['body'],
+  minSourceMapMappings: 0,
+  label: 'compact semantic sidecar schema example'
+});
+assert.equal(compactSemanticSidecarExample.sidecar.metadata.baseSource.hash, compactSemanticSidecarExample.baseSource.hash);
+assert.equal(compactSemanticSidecarExample.sidecar.metadata.headSource.hash, compactSemanticSidecarExample.headSource.hash);
+assert.equal(compactSemanticSidecarExample.sidecar.metadata.identityHashes.source, compactSemanticSidecarExample.identityHashes.source);
+assert.equal(compactSemanticSidecarExample.sidecar.imports[0].sourceHash, compactSemanticSidecarExample.headSource.hash);
+assert.equal(compactSemanticSidecarExample.sidecar.symbols[0].signatureHash, compactSemanticSidecarExample.identityHashes.signature);
+assert.equal(compactSemanticSidecarExample.sidecar.ownershipRegions[0].sourceHash, compactSemanticSidecarExample.headSource.hash);
+assert.equal(compactSemanticSidecarExample.sidecar.patchHints[0].sourceHash, compactSemanticSidecarExample.headSource.hash);
+assert.equal(compactSemanticSidecarExample.sidecar.patchHints[0].ownershipRegionId, compactSemanticSidecarExample.sidecar.ownershipRegions[0].id);
 
 const defaultSidecar = createSemanticImportSidecar(emptySemanticImport, { generatedAt: 129 });
 assert.equal(defaultSidecar.quality.expected, false);

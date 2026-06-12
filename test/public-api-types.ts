@@ -52,6 +52,7 @@ type ExpectedPublicRuntimeExport =
   | 'compileNativeSource'
   | 'compileFrontierDocument'
   | 'compileFrontierSource'
+  | 'compactSemanticSidecarExample'
   | 'createBabelNativeImporterAdapter'
   | 'createBidirectionalTargetChangeRecord'
   | 'createEstreeNativeImporterAdapter'

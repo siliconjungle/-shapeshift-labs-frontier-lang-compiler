@@ -29,6 +29,7 @@ export * from './declarations/bidirectional-target-change.js';
 export * from './declarations/bidirectional-target-change-source-edit.js';
 export * from './declarations/semantic-impact.js';
 export * from './declarations/semantic-sidecar.js';
+export * from './declarations/semantic-sidecar-example.js';
 export * from './declarations/native-diff.js';
 export * from './declarations/semantic-slice.js';
 export * from './declarations/semantic-slice-admission.js';

@@ -64,6 +64,7 @@ for (const requiredExport of [
   'decorateSemanticMergeCandidateForAdmission',
   'classifyNativeImportRoundtripReadiness',
   'compileNativeSource',
+  'compactSemanticSidecarExample',
   'createSemanticImportSidecar',
   'createSemanticSlice',
   'createSemanticSliceAdmissionRecord',

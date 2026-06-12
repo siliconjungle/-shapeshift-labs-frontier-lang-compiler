@@ -2,6 +2,7 @@ export * as compilerApi from '../../dist/index.js';
 export {
   attachUniversalDialectRegistry,
   compileFrontierSource,
+  compactSemanticSidecarExample,
   createBabelNativeImporterAdapter,
   createBidirectionalTargetChangeRecord,
   createEstreeNativeImporterAdapter,
