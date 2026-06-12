@@ -119,8 +119,11 @@ function scanHaskell(input) {
     } else if ((match = trimmed.match(/^class\s+(?:\([^)]*\)\s*=>\s*)?([A-Z][A-Za-z0-9_']*)\b/))) {
       declarations.push(nativeDeclaration(input, number, 'ClassDeclaration', 'type', match[1], {}, /\bwhere\b/.test(trimmed)));
     } else if ((match = trimmed.match(/^([a-z_][A-Za-z0-9_']*)\s*::\s*(.+)$/))) {
-      seenFunctions.add(match[1]);
-      declarations.push(nativeDeclaration(input, number, 'FunctionSignature', 'function', match[1], { signature: match[2].trim() }, false));
+      declarations.push(nativeDeclaration(input, number, 'FunctionSignature', 'function', match[1], { signature: match[2].trim() }, false, {
+        regionKind: 'declaration',
+        symbolId: `symbol:${input.language}:signature:${idFragment(match[1])}`,
+        metadata: { signatureOnly: true }
+      }));
     } else if ((match = trimmed.match(/^([a-z_][A-Za-z0-9_']*)\b[^=]*=/))) {
       if (!seenFunctions.has(match[1])) {
         seenFunctions.add(match[1]);

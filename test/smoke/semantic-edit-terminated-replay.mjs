@@ -24,6 +24,15 @@ const cases = [
     spanEndLine: 3
   },
   {
+    language: 'haskell',
+    sourcePath: 'src/CounterWithSignature.hs',
+    baseSourceText: 'add :: Int -> Int\nadd count =\n  count + 1\n',
+    workerSourceText: 'add :: Int -> Int\nadd count =\n  count + 2\n',
+    prefix: '-- prefix\n',
+    spanStartLine: 2,
+    spanEndLine: 4
+  },
+  {
     language: 'sql',
     sourcePath: 'schema/counter.sql',
     baseSourceText: 'CREATE FUNCTION add_count(count int) RETURNS int AS $$\n  SELECT count + 1;\n$$ LANGUAGE sql;\n',
@@ -41,7 +50,11 @@ for (const testCase of cases) {
     sourceText: testCase.baseSourceText
   });
   const symbolName = testCase.symbolName ?? 'add';
-  assert.equal(imported.semanticIndex.symbols.find((symbol) => symbol.name === symbolName).definitionSpan.endLine, testCase.spanEndLine);
+  const matchingSymbols = imported.semanticIndex.symbols.filter((symbol) => symbol.name === symbolName);
+  const matchedSymbol = testCase.spanStartLine
+    ? matchingSymbols.find((symbol) => symbol.definitionSpan.startLine === testCase.spanStartLine)
+    : matchingSymbols[0];
+  assert.equal(matchedSymbol.definitionSpan.endLine, testCase.spanEndLine);
 
   const script = createSemanticEditScript({
     id: `semantic_edit_${testCase.language}_terminated_body`,

@@ -200,9 +200,12 @@ const scannedHaskellImport = importNativeSource({
   sourcePath: 'src/Todo.hs',
   sourceText: "{-# LANGUAGE TemplateHaskell #-}\nmodule Todo where\nimport qualified Data.Text as T\ndata Todo = Todo Text\naddTodo :: Text -> Todo\naddTodo title = Todo title\n$(deriveJSON defaultOptions ''Todo)\n"
 });
-assert.equal(symbolByName(scannedHaskellImport, 'addTodo').id, 'symbol:haskell:addtodo');
+const scannedHaskellSymbols = scannedHaskellImport.semanticIndex.symbols.filter((symbol) => symbol.name === 'addTodo');
+assert.equal(scannedHaskellSymbols.some((symbol) => symbol.id === 'symbol:haskell:signature:addtodo'), true);
+assert.equal(scannedHaskellSymbols.some((symbol) => symbol.id === 'symbol:haskell:addtodo'), true);
 assert.equal(scannedHaskellImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
-assert.equal(mappedSymbol(scannedHaskellImport, 'symbol:haskell:addtodo').sourceSpan.startLine, 5);
+assert.equal(mappedSymbol(scannedHaskellImport, 'symbol:haskell:signature:addtodo').sourceSpan.startLine, 5);
+assert.equal(mappedSymbol(scannedHaskellImport, 'symbol:haskell:addtodo').sourceSpan.startLine, 6);
 assert.equal(scannedHaskellImport.losses.some((loss) => loss.kind === 'macroExpansion'), true);
 export const scannedRImport = importNativeSource({
   language: 'r',
