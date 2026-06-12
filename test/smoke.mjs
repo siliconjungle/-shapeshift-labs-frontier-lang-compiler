@@ -37,6 +37,7 @@ const smokeModules = [
   './smoke/semantic-edit-insertions.mjs',
   './smoke/semantic-edit-rename-move.mjs',
   './smoke/semantic-edit-script.mjs',
+  './smoke/semantic-edit-rust-replay.mjs',
   './smoke/semantic-edit-script-reanchor.mjs',
   './smoke/semantic-edit-replay-diagnostics.mjs',
   './smoke/semantic-edit-sibling-merge.mjs',

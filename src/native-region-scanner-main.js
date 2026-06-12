@@ -7,6 +7,7 @@ import {
   splitParameters,
   splitTypeParameters
 } from './native-region-scanner-core.js';
+import { braceBlockSpan, pythonBlockSpan } from './native-region-scanner-spans.js';
 
 function scanPython(input) {
   const declarations = [];
@@ -25,27 +26,14 @@ function scanPython(input) {
   return declarations;
 }
 
-function pythonBlockSpan(input, lines, index) {
-  const baseIndent = indentationLength(lines[index]?.line);
-  let end = index;
-  for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
-    const line = lines[cursor].line;
-    if (line.trim() && indentationLength(line) <= baseIndent) break;
-    end = cursor;
-  }
-  const endLine = lines[end] ?? lines[index];
-  return { sourceId: input.sourceHash, path: input.sourcePath, startLine: lines[index].number, endLine: endLine.number, startColumn: 1, endColumn: endLine.line.length + 1 };
-}
-
-function indentationLength(line) { return String(line ?? '').match(/^\s*/)?.[0].length ?? 0; }
-
 function scanRust(input) {
   const declarations = [];
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     if ((match = trimmed.match(/^(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/))) {
-      declarations.push(nativeDeclaration(input, number, 'ItemFn', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{')));
+      declarations.push(nativeDeclaration(input, number, 'ItemFn', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = trimmed.match(/^(?:pub(?:\([^)]*\))?\s+)?struct\s+([A-Za-z_]\w*)/))) {
       declarations.push(nativeDeclaration(input, number, 'ItemStruct', 'type', match[1], {}, trimmed.includes('{')));
     } else if ((match = trimmed.match(/^(?:pub(?:\([^)]*\))?\s+)?enum\s+([A-Za-z_]\w*)/))) {
