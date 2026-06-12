@@ -139,15 +139,16 @@ function scanLua(input) {
 
 function scanShell(input) {
   const declarations = [];
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     if ((match = trimmed.match(/^(?:source|\.)\s+(?:"([^"]+)"|'([^']+)'|([./A-Za-z0-9_-][\w./-]*))(?:\s|$)/))) {
       declarations.push(nativeImportDeclaration(input, number, match[1] ?? match[2] ?? match[3], 'SourceCommand', 'file'));
     } else if ((match = trimmed.match(/^function\s+([A-Za-z_][\w-]*)\s*(?:\(\s*\))?\s*(?:\{|$)/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionDefinition', 'function', match[1], {}, true));
+      declarations.push(nativeDeclaration(input, number, 'FunctionDefinition', 'function', match[1], {}, true, spanOptions(input, lines, index, trimmed.includes('{'))));
     } else if ((match = trimmed.match(/^([A-Za-z_][\w-]*)\s*\(\s*\)\s*(?:\{|$)/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionDefinition', 'function', match[1], {}, true));
+      declarations.push(nativeDeclaration(input, number, 'FunctionDefinition', 'function', match[1], {}, true, spanOptions(input, lines, index, trimmed.includes('{'))));
     } else if ((match = trimmed.match(/^(?:export\s+)?(?:readonly\s+)?([A-Za-z_]\w*)=/))) {
       declarations.push(nativeDeclaration(input, number, 'VariableAssignment', 'variable', match[1], {}, false));
     } else if ((match = trimmed.match(/^alias\s+([A-Za-z_][\w-]*)=/))) {

@@ -6,7 +6,7 @@ import {
   sourceLines,
   splitParameters
 } from './native-region-scanner-core.js';
-import { endKeywordBlockSpan } from './native-region-scanner-spans.js';
+import { braceBlockSpan, endKeywordBlockSpan } from './native-region-scanner-spans.js';
 
 function scanElixir(input) {
   const declarations = [];
@@ -44,6 +44,10 @@ function scanElixir(input) {
 
 function endSpanOptions(input, lines, index) {
   return { span: endKeywordBlockSpan(input, lines, index) };
+}
+
+function braceSpanOptions(input, lines, index, hasBraceBody) {
+  return hasBraceBody ? { span: braceBlockSpan(input, lines, index) } : {};
 }
 
 function scanErlang(input) {
@@ -127,7 +131,8 @@ function scanHaskell(input) {
 
 function scanR(input) {
   const declarations = [];
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     if ((match = trimmed.match(/^(?:library|require)\s*\(\s*["']?([A-Za-z_][\w.-]*)["']?/))) {
@@ -137,7 +142,7 @@ function scanR(input) {
     } else if ((match = trimmed.match(/^source\s*\(\s*["']([^"']+)["']/))) {
       declarations.push(nativeImportDeclaration(input, number, match[1], 'SourceCall', 'module'));
     } else if ((match = trimmed.match(/^([A-Za-z_][\w.]*)\s*(?:<-|=)\s*function\s*\(([^)]*)\)/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionAssignment', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{')));
+      declarations.push(nativeDeclaration(input, number, 'FunctionAssignment', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{'), braceSpanOptions(input, lines, index, trimmed.includes('{'))));
     } else if ((match = trimmed.match(/^([A-Za-z_][\w.]*)\s*<-\s*R6Class\s*\(\s*["']([^"']+)["']/))) {
       declarations.push(nativeDeclaration(input, number, 'R6ClassDeclaration', 'class', match[2] || match[1], { binding: match[1] }, true));
       declarations.push(nativeMacroLoss(input, number, trimmed, 'dynamicRuntime', match[2] || match[1]));
