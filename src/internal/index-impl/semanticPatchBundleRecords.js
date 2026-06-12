@@ -163,6 +163,9 @@ function recordIndex(parts){
     transformSourcePaths:semanticTransformIndex.transformSourcePaths,
     transformTargetPaths:semanticTransformIndex.transformTargetPaths,
     transformCrossLanguages:semanticTransformIndex.transformCrossLanguages,
+    transformSourceMapIds:semanticTransformIndex.transformSourceMapIds,
+    transformSourceMapLinkIds:semanticTransformIndex.transformSourceMapLinkIds,
+    transformSourceMapMappingIds:semanticTransformIndex.transformSourceMapMappingIds,
     targetPortabilityStatuses:uniqueStrings([parts.targetPortability?.status]),
     targetPortabilityActions:uniqueStrings([parts.targetPortability?.action]),
     targetPortabilityReasonCodes:uniqueStrings(parts.targetPortability?.reasonCodes),
@@ -225,6 +228,9 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.transformSourcePath,query.transformSourcePaths),index.transformSourcePaths)
     &&matchAny(queryValues(query.transformTargetPath,query.transformTargetPaths),index.transformTargetPaths)
     &&matchAny(queryValues(query.transformCrossLanguage,query.transformCrossLanguages),index.transformCrossLanguages)
+    &&matchAny(queryValues(query.transformSourceMapId,query.transformSourceMapIds),index.transformSourceMapIds)
+    &&matchAny(queryValues(query.transformSourceMapLinkId,query.transformSourceMapLinkIds),index.transformSourceMapLinkIds)
+    &&matchAny(queryValues(query.transformSourceMapMappingId,query.transformSourceMapMappingIds),index.transformSourceMapMappingIds)
     &&matchAny(queryValues(query.targetPortabilityStatus,query.targetPortabilityStatuses),index.targetPortabilityStatuses)
     &&matchAny(queryValues(query.targetPortabilityAction,query.targetPortabilityActions),index.targetPortabilityActions)
     &&matchAny(queryValues(query.targetPortabilityReasonCode,query.targetPortabilityReasonCodes),index.targetPortabilityReasonCodes)

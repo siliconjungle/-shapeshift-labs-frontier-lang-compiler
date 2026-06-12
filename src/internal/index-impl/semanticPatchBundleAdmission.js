@@ -78,6 +78,9 @@ function semanticTransformAdmission(context) {
     targetLanguages: strings(index.transformTargetLanguages),
     sourcePaths: strings(index.transformSourcePaths),
     targetPaths: strings(index.transformTargetPaths),
+    sourceMapIds: strings(index.transformSourceMapIds),
+    sourceMapLinkIds: strings(index.transformSourceMapLinkIds),
+    sourceMapMappingIds: strings(index.transformSourceMapMappingIds),
     evidenceIds: strings(index.semanticTransformEvidenceIds)
   });
 }

@@ -32,6 +32,9 @@ export function createSemanticTransformIdentityRecord(input = {}, options = {}) 
     merged.transformContentHash,
     operationContentHash || editContentHash ? hashSemanticValue(compactRecord({ transformIdentityHash, operationContentHash, editContentHash })) : undefined
   );
+  const sourceMapIds = uniqueStrings([...strings(merged.sourceMapIds), ...strings(merged.sourceMapId), ...strings(merged.metadata?.sourceMapIds), ...strings(merged.metadata?.sourceMapId)]);
+  const sourceMapLinkIds = uniqueStrings([...strings(merged.sourceMapLinkIds), ...strings(merged.sourceMapLinkId), ...strings(merged.metadata?.sourceMapLinkIds), ...strings(merged.metadata?.sourceMapLinkId)]);
+  const sourceMapMappingIds = uniqueStrings([...strings(merged.sourceMapMappingIds), ...strings(merged.sourceMapMappingId), ...strings(merged.metadata?.sourceMapMappingIds), ...strings(merged.metadata?.sourceMapMappingId)]);
   const id = merged.id && source.kind === 'frontier.lang.semanticTransformIdentityRecord'
     ? merged.id
     : firstString(merged.id, `semantic_transform_${idFragment(firstString(transformKey, semanticKey, sourcePath, targetPath, 'record'))}`);
@@ -55,6 +58,9 @@ export function createSemanticTransformIdentityRecord(input = {}, options = {}) 
     transformIdentityHash,
     projectionIdentityHash,
     transformContentHash,
+    sourceMapIds,
+    sourceMapLinkIds,
+    sourceMapMappingIds,
     readiness: firstString(merged.readiness),
     confidence: typeof merged.confidence === 'number' ? merged.confidence : undefined,
     evidenceIds: uniqueStrings(merged.evidenceIds),
@@ -119,7 +125,10 @@ export function semanticTransformRecordIndex(records, source = {}) {
     transformTargetLanguages: uniqueStrings([...strings(source.transformTargetLanguages), ...strings(index.transformTargetLanguages), ...records.map((record) => record.targetLanguage)]),
     transformSourcePaths: uniqueStrings([...strings(source.transformSourcePaths), ...strings(index.transformSourcePaths), ...records.map((record) => record.sourcePath)]),
     transformTargetPaths: uniqueStrings([...strings(source.transformTargetPaths), ...strings(index.transformTargetPaths), ...records.map((record) => record.targetPath)]),
-    transformCrossLanguages: uniqueStrings([...strings(source.transformCrossLanguages), ...strings(index.transformCrossLanguages), ...records.map(transformCrossLanguageFlag)])
+    transformCrossLanguages: uniqueStrings([...strings(source.transformCrossLanguages), ...strings(index.transformCrossLanguages), ...records.map(transformCrossLanguageFlag)]),
+    transformSourceMapIds: uniqueStrings([...strings(source.transformSourceMapIds), ...strings(index.transformSourceMapIds), ...records.flatMap((record) => record.sourceMapIds)]),
+    transformSourceMapLinkIds: uniqueStrings([...strings(source.transformSourceMapLinkIds), ...strings(index.transformSourceMapLinkIds), ...records.flatMap((record) => record.sourceMapLinkIds)]),
+    transformSourceMapMappingIds: uniqueStrings([...strings(source.transformSourceMapMappingIds), ...strings(index.transformSourceMapMappingIds), ...records.flatMap((record) => record.sourceMapMappingIds)])
   };
 }
 
@@ -136,7 +145,10 @@ export function semanticTransformSummary(index) {
     sourceLanguages: index.transformSourceLanguages,
     targetLanguages: index.transformTargetLanguages,
     targetPaths: index.transformTargetPaths,
-    crossLanguages: index.transformCrossLanguages
+    crossLanguages: index.transformCrossLanguages,
+    sourceMapIds: index.transformSourceMapIds,
+    sourceMapLinkIds: index.transformSourceMapLinkIds,
+    sourceMapMappingIds: index.transformSourceMapMappingIds
   });
 }
 
@@ -202,6 +214,9 @@ function transformRecordForScriptOperation(operation, script, input, options, sc
     targetPath: firstString(targetRegion.sourcePath, script.metadata?.targetPath, input.targetPath, options.targetPath),
     baseHash: firstString(operation.hashes?.baseSourceHash, script.baseHash, input.baseHash, options.baseHash),
     targetHash: firstString(targetRegion.sourceHash, operation.hashes?.workerSourceHash, input.targetHash, options.targetHash),
+    sourceMapIds: script.metadata?.sourceProjectionHint?.sourceMapIds,
+    sourceMapLinkIds: operation.metadata?.sourceMapLinkIds,
+    sourceMapMappingIds: operation.metadata?.sourceMapMappingIds,
     readiness: firstString(script.admission?.status, script.metadata?.sourceProjectionHint?.status),
     evidenceIds: uniqueStrings([
       ...strings(input.evidenceIds),
@@ -213,6 +228,8 @@ function transformRecordForScriptOperation(operation, script, input, options, sc
       sourceEditScriptId: script.id,
       sourceEditOperationId: operation.id,
       sourceProjectionHintId: script.metadata?.sourceProjectionHint?.id,
+      sourceMapIds: script.metadata?.sourceProjectionHint?.sourceMapIds,
+      sourceMapLinkIds: operation.metadata?.sourceMapLinkIds,
       sourceMapMappingIds: operation.metadata?.sourceMapMappingIds,
       reviewOnly: script.admission?.reviewRequired === true
     })
