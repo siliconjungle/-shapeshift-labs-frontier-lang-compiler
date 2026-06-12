@@ -4,10 +4,10 @@ import {
   scanCSharp,
   scanGo,
   scanJava,
-  scanPython,
   scanRust,
   scanSwift
 } from './native-region-scanner-main.js';
+import { scanPython } from './native-region-scanner-python.js';
 import {
   scanDart,
   scanKotlin,
