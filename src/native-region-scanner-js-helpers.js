@@ -71,13 +71,8 @@ function jsObjectRegionContext(name, declarationLine, lineNumber, regionKind) {
   if (initializerKind !== 'object' && initializerKind !== 'array') return undefined;
   const depth = jsContainerDelta(declarationLine);
   if (depth <= 0) return undefined;
-  return {
-    name,
-    regionKind: regionKind ?? jsRegionKindForDeclarationName(name, declarationLine),
-    initializerKind,
-    depth,
-    startLine: lineNumber
-  };
+  return { name, regionKind: regionKind ?? jsRegionKindForDeclarationName(name, declarationLine), initializerKind, depth, startLine: lineNumber,
+    arrayRecords: initializerKind === 'array' && /(?:define|create|make|build)\w*(?:tools?|actions?|handlers?|commands?|events?|effects?|workflows?)/i.test(declarationLine) };
 }
 
 function jsInitializerKind(line, name) {

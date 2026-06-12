@@ -21,19 +21,15 @@ import {
   jsVariableSymbolKind
 } from './native-region-scanner-js-helpers.js';
 import {
-  jsContextAllowsPropertyScan,
-  jsCurrentObjectContext,
-  jsInlineNestedObjectDeclarations,
-  jsNestedObjectContextFromDeclaration,
-  updateJsObjectContextStack
+  jsArrayObjectContextFromLine, jsContextAllowsPropertyScan, jsCurrentObjectContext,
+  jsInlineNestedObjectDeclarations, jsNestedObjectContextFromDeclaration,
+  updateJsArrayObjectContextName, updateJsObjectContextStack
 } from './native-region-scanner-js-nested.js';
 
 function scanJavaScriptLike(input) {
   const declarations = [];
   const lines = sourceLines(input.sourceText);
-  const pushDeclaration = (declaration) => {
-    if (declaration) declarations.push(jsDeclarationWithSourceSpan(input, declaration, lines));
-  };
+  const pushDeclaration = (declaration) => { if (declaration) declarations.push(jsDeclarationWithSourceSpan(input, declaration, lines)); };
   const pushDeclarations = (items) => {
     for (const declaration of items ?? []) pushDeclaration(declaration);
   };
@@ -53,10 +49,13 @@ function scanJavaScriptLike(input) {
     }
     const currentObject = jsCurrentObjectContext(objectStack);
     if (currentObject) {
+      const arrayItemContext = jsArrayObjectContextFromLine(currentObject, number, trimmed);
+      if (arrayItemContext) objectStack.push(arrayItemContext);
       const routeRecord = jsRouteRecordDeclaration(input, number, trimmed, currentObject);
       if (routeRecord) {
         pushDeclaration(routeRecord);
       } else if (jsContextAllowsPropertyScan(currentObject)) {
+        updateJsArrayObjectContextName(currentObject, trimmed);
         const property = jsObjectPropertyDeclaration(input, number, trimmed, currentObject);
         if (property) {
           pushDeclaration(property);

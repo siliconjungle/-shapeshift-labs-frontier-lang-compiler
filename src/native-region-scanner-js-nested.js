@@ -9,6 +9,21 @@ function jsContextAllowsPropertyScan(context) {
   return context?.initializerKind === 'object';
 }
 
+function jsArrayObjectContextFromLine(context, lineNumber, source) {
+  if (context?.initializerKind !== 'array' || context.arrayRecords !== true || !String(source ?? '').trim().startsWith('{')) return undefined;
+  const depth = jsContainerDelta(source);
+  if (depth <= 0) return undefined;
+  const index = (context.nextItemIndex ?? 0) + 1;
+  context.nextItemIndex = index;
+  return { name: `${context.name}.${index}`, ownerName: context.name, regionKind: context.regionKind, initializerKind: 'object', arrayItem: true, depth, startLine: lineNumber };
+}
+
+function updateJsArrayObjectContextName(context, source) {
+  if (!context?.arrayItem) return;
+  const match = String(source ?? '').trim().match(/^(?:name|id|key|slug|tool|command)\s*:\s*(['"`])([^'"`]+)\1/);
+  if (match) context.name = `${context.ownerName}.${match[2]}`;
+}
+
 function jsNestedObjectContextFromDeclaration(declaration, lineNumber, source) {
   const initializerKind = declaration?.fields?.initializerKind ?? declaration?.metadata?.initializerKind;
   if (initializerKind !== 'object' && initializerKind !== 'array') return undefined;
@@ -139,9 +154,11 @@ function nestedPropertyRegionKind(parentDeclaration, propertyName, value) {
 }
 
 export {
+  jsArrayObjectContextFromLine,
   jsContextAllowsPropertyScan,
   jsCurrentObjectContext,
   jsInlineNestedObjectDeclarations,
   jsNestedObjectContextFromDeclaration,
+  updateJsArrayObjectContextName,
   updateJsObjectContextStack
 };
