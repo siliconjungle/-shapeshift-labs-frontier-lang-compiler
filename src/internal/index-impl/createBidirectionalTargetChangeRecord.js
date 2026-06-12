@@ -110,7 +110,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     targetPortability,
     readiness,
     reasons,
-    sourceMapBackprojection
+    sourceMapBackprojection,
+    sourceEditProjection
   });
   const semanticMergeAdmission = createSemanticMergeAdmissionEvidence({
     id,
@@ -122,7 +123,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     targetPortability,
     readiness,
     reasons,
-    roundtripEvidence
+    roundtripEvidence,
+    sourceEditProjection
   });
   const bidirectionalEvidence = createBidirectionalEvidence({
     id,
@@ -141,6 +143,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       roundtripEvidenceId: roundtripEvidence.id,
       roundtripEvidence,
       semanticMergeAdmission,
+      sourceEditProjectionId: sourceEditProjection.sourceEditProjection?.id,
+      sourceEditReplayId: sourceEditProjection.sourceEditReplay?.id,
       sourceEditScriptId: sourceEditProjection.sourceEditScript?.id,
       sourceProjectionHintId: sourceEditProjection.sourceProjectionHint?.id,
       sourceProjectionHint: sourceEditProjection.sourceProjectionHint
@@ -214,7 +218,7 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       conflictKeys: targetChangeSet.mergeCandidate?.conflictKeys,
       metadata: { direction: 'target-to-source' }
     }] : [],
-    admission: { status: readiness === 'blocked' ? 'blocked' : 'needs-review', readiness, reasonCodes: reasons },
+    admission: { status: semanticMergeAdmission.status, readiness: semanticMergeAdmission.readiness, reasonCodes: semanticMergeAdmission.reasonCodes },
     replayLinks: targetChangeSet.patch ? [{
       id: `replay_${idFragment(targetChangeSet.patch.id)}`,
       kind: 'patch',
@@ -228,6 +232,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       sourceMapBackprojection,
       roundtripEvidenceId: roundtripEvidence.id,
       semanticMergeAdmission,
+      sourceEditProjectionId: sourceEditProjection.sourceEditProjection?.id,
+      sourceEditReplayId: sourceEditProjection.sourceEditReplay?.id,
       sourceEditScriptId: sourceEditProjection.sourceEditScript?.id,
       sourceProjectionHintId: sourceEditProjection.sourceProjectionHint?.id,
       sourceProjectionHint: sourceEditProjection.sourceProjectionHint,
@@ -278,7 +284,7 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     metadata: {
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
-      reviewRequired: true,
+      reviewRequired: sourcePatchBundle.admission.reviewRequired,
       targetPortability,
       roundtripEvidenceId: roundtripEvidence.id,
       semanticMergeAdmission,

@@ -233,6 +233,13 @@ assert.equal(sameLanguageRecord.sourcePatchBundle.admission.semanticEditAdmissio
 assert.equal(sameLanguageRecord.sourcePatchBundle.admission.evidenceAdmission.status, 'ready');
 assert.equal(sameLanguageRecord.sourcePatchBundle.summary.semanticEditProjections, 1);
 assert.equal(sameLanguageRecord.sourcePatchBundle.summary.semanticEditReplays, 1);
+assert.equal(sameLanguageRecord.roundtripEvidence.admission.status, 'ready');
+assert.equal(sameLanguageRecord.roundtripEvidence.admission.action, 'admit-source-backprojection');
+assert.equal(sameLanguageRecord.roundtripEvidence.admission.reviewRequired, false);
+assert.equal(sameLanguageRecord.evidence[0].metadata.semanticMergeAdmission.status, 'ready');
+assert.equal(sameLanguageRecord.evidence[0].metadata.semanticMergeAdmission.sourceEditReplayId, sameLanguageRecord.sourceEditReplay.id);
+assert.equal(sameLanguageRecord.historyRecord.admission.status, 'ready');
+assert.equal(sameLanguageRecord.metadata.reviewRequired, false);
 assert.equal(querySemanticPatchBundleRecords([sameLanguageRecord.sourcePatchBundle], { semanticEditAdmissionStatus: 'ready' }).length, 1);
 const sameLanguageSourceProjection = projectSemanticEditScriptToSource({
   script: sameLanguageRecord.sourceEditScript,

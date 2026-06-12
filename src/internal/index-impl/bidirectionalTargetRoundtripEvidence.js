@@ -52,27 +52,33 @@ export function createRoundtripEvidence(context) {
       reasonCodes: context.targetPortability.reasonCodes,
       conflictKeys: context.targetPortability.conflictKeys
     },
-    admission: {
-      status: context.readiness === 'blocked' ? 'blocked' : 'needs-review',
-      readiness: context.readiness,
-      action: context.targetPortability.action,
-      reasonCodes: context.reasons,
-      conflictKeys: uniqueStrings([
-        ...array(context.targetPortability.conflictKeys),
-        ...context.sourceAnchorMatches.flatMap((match) => match.conflictKeys ?? [])
-      ]),
-      evidenceIds: [context.evidenceId],
-      reviewRequired: true,
-      autoMergeClaim: false,
-      semanticEquivalenceClaim: false
-    },
-    reviewRequired: true,
+    admission: admissionRecord(context),
+    reviewRequired: !verifiedSourceBackprojection(context),
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false
+  };
+}
+
+function admissionRecord(context) {
+  const verified = verifiedSourceBackprojection(context);
+  return {
+    status: context.readiness === 'blocked' ? 'blocked' : verified ? 'ready' : 'needs-review',
+    readiness: verified ? 'ready' : context.readiness,
+    action: verified ? 'admit-source-backprojection' : context.targetPortability.action,
+    reasonCodes: uniqueStrings([...array(context.reasons), verified ? 'verified-source-map-backprojection' : undefined]),
+    conflictKeys: uniqueStrings([
+      ...array(context.targetPortability.conflictKeys),
+      ...context.sourceAnchorMatches.flatMap((match) => match.conflictKeys ?? [])
+    ]),
+    evidenceIds: uniqueStrings([context.evidenceId, ...array(context.sourceEditProjection?.evidence).map((record) => record.id)]),
+    reviewRequired: !verified,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   };
 }
 
 export function createSemanticMergeAdmissionEvidence(context) {
+  const verified = verifiedSourceBackprojection(context);
   return {
     schema: 'frontier.lang.bidirectionalTargetChangeSemanticMergeAdmission.v1',
     version: 1,
@@ -83,10 +89,10 @@ export function createSemanticMergeAdmissionEvidence(context) {
     targetChangeSetId: context.targetChangeSet.id,
     targetPatchId: context.targetChangeSet.patch?.id,
     targetMergeCandidateId: context.targetChangeSet.mergeCandidate?.id,
-    readiness: context.readiness,
-    status: context.readiness === 'blocked' ? 'blocked' : 'needs-review',
-    action: context.targetPortability.action,
-    reasonCodes: context.reasons,
+    readiness: verified ? 'ready' : context.readiness,
+    status: context.readiness === 'blocked' ? 'blocked' : verified ? 'ready' : 'needs-review',
+    action: verified ? 'admit-source-backprojection' : context.targetPortability.action,
+    reasonCodes: uniqueStrings([...array(context.reasons), verified ? 'verified-source-map-backprojection' : undefined]),
     conflictKeys: context.roundtripEvidence.admission.conflictKeys,
     sourceAnchorMatchIds: uniqueStrings(context.sourceAnchorMatches.map((match) => match.id)),
     sourceAnchorKeys: uniqueStrings(context.roundtripEvidence.sourceAnchors.map((anchor) => anchor.key)),
@@ -98,10 +104,20 @@ export function createSemanticMergeAdmissionEvidence(context) {
     targetProjectionSourceMapLinkIds: context.roundtripEvidence.sourceMapEvidence.targetProjectionSourceMapLinkIds,
     targetProjectionSourceMapMappingIds: context.roundtripEvidence.sourceMapEvidence.targetProjectionSourceMapMappingIds,
     lineageResolutionIds: context.roundtripEvidence.lineageEvidence.lineageResolutionIds,
-    reviewRequired: true,
+    sourceEditScriptId: context.sourceEditProjection?.sourceEditScript?.id,
+    sourceEditProjectionId: context.sourceEditProjection?.sourceEditProjection?.id,
+    sourceEditReplayId: context.sourceEditProjection?.sourceEditReplay?.id,
+    sourceBackprojectionMode: context.sourceEditProjection?.sourceProjectionHint?.sourceBackprojectionMode,
+    reviewRequired: !verified,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   };
+}
+
+function verifiedSourceBackprojection(context) {
+  return context.sourceEditProjection?.sourceProjectionHint?.sourceBackprojectionMode === 'same-language-exact-source-map'
+    && context.sourceEditProjection?.sourceEditProjection?.status === 'projected'
+    && context.sourceEditProjection?.sourceEditReplay?.status === 'accepted-clean';
 }
 
 function sourceIdentity(source) {
