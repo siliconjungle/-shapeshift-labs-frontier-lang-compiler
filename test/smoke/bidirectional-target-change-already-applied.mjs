@@ -70,3 +70,50 @@ assert.equal(record.evidence[0].metadata.semanticMergeAdmission.action, 'skip-so
 assert.equal(record.historyRecord.admission.status, 'ready');
 assert.equal(record.metadata.reviewRequired, false);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { semanticEditAdmissionStatus: 'already-applied' }).length, 1);
+
+const lfEditedText = 'export function add(count: number): number {\n  return count + 2;\n}\n';
+const crlfBaseTargetText = 'export function add(count: number): number {\r\n  return count + 1;\r\n}\r\n';
+const crlfEditedTargetText = 'export function add(count: number): number {\r\n  return count + 2;\r\n}\r\n';
+const lfSourceImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/counter-lf.ts',
+  sourceText: lfEditedText
+});
+const lfSourceSymbol = lfSourceImport.semanticIndex.symbols.find((symbol) => symbol.name === 'add');
+const lfSourceMapping = lfSourceImport.sourceMaps[0].mappings.find((mapping) => mapping.semanticSymbolId === lfSourceSymbol.id);
+const lineEndingStableRecord = createBidirectionalTargetChangeRecord({
+  id: 'counter_ts_target_change_already_applied_line_endings',
+  source: lfSourceImport,
+  targetLanguage: 'typescript',
+  targetPath: 'dist/counter-crlf.ts',
+  baseTarget: { language: 'typescript', sourcePath: 'dist/counter-crlf.ts', sourceText: crlfBaseTargetText },
+  editedTarget: { language: 'typescript', sourcePath: 'dist/counter-crlf.ts', sourceText: crlfEditedTargetText },
+  sourceMaps: [{
+    ...sourceMap,
+    id: 'source_map_counter_lf_to_dist_crlf_already_applied',
+    sourcePath: 'src/counter-lf.ts',
+    sourceHash: lfSourceImport.nativeSource.sourceHash,
+    targetPath: 'dist/counter-crlf.ts',
+    mappings: [{
+      ...sourceMap.mappings[0],
+      id: 'map_ts_lf_add_to_dist_crlf_add_already_applied',
+      semanticSymbolId: lfSourceSymbol.id,
+      nativeAstNodeId: lfSourceSymbol.nativeAstNodeId,
+      sourceSpan: lfSourceMapping.sourceSpan,
+      generatedSpan: {
+        path: 'dist/counter-crlf.ts',
+        target: 'typescript',
+        targetPath: 'dist/counter-crlf.ts',
+        startLine: 1,
+        startColumn: 1,
+        endLine: 3,
+        endColumn: 2,
+        generatedName: 'add'
+      }
+    }]
+  }]
+});
+assert.equal(lineEndingStableRecord.sourceEditScript.operations[0].status, 'already-applied');
+assert.equal(lineEndingStableRecord.sourceEditScript.operations[0].metadata.sourceBackprojection.lineEndingStable, true);
+assert.equal(lineEndingStableRecord.sourceEditReplay.status, 'already-applied');
+assert.equal(lineEndingStableRecord.roundtripEvidence.admission.action, 'skip-source-backprojection');

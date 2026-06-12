@@ -28,14 +28,20 @@ export function exactSourceBackprojectionForMatch(match, context) {
   const targetAfterMappedText = afterMappedText(targetBeforeMappedText, targetAfterEditText, ranges);
   const matchesBefore = sourceMappedText === targetBeforeMappedText;
   const matchesAfter = sourceMappedText === targetAfterMappedText;
-  if (!matchesBefore && !matchesAfter) return undefined;
+  const lineEndingStableAlreadyApplied = !matchesBefore && sameLineEndingStable(sourceMappedText, targetAfterMappedText);
+  if (!matchesBefore && !matchesAfter && !lineEndingStableAlreadyApplied) return undefined;
   const alreadyApplied = matchesAfter && !matchesBefore;
-  const sourceEditRange = sourceEditRangeForMatch(ranges, alreadyApplied ? targetAfterEditText : targetBeforeEditText);
+  const sourceEditRange = lineEndingStableAlreadyApplied
+    ? lineEndingStableSourceEditRange(sourceMappedText, targetAfterMappedText, ranges, targetAfterEditText)
+    : sourceEditRangeForMatch(ranges, alreadyApplied ? targetAfterEditText : targetBeforeEditText);
+  if (!sourceEditRange) return undefined;
   const sourceEditText = sourceText.slice(sourceEditRange.start, sourceEditRange.end);
-  if (sourceEditText !== (alreadyApplied ? targetAfterEditText : targetBeforeEditText)) return undefined;
+  const expectedSourceEditText = alreadyApplied || lineEndingStableAlreadyApplied ? targetAfterEditText : targetBeforeEditText;
+  if (sourceEditText !== expectedSourceEditText && !sameLineEndingStable(sourceEditText, expectedSourceEditText)) return undefined;
   return compactRecord({
     mode: 'same-language-exact-source-map',
-    alreadyApplied,
+    alreadyApplied: alreadyApplied || lineEndingStableAlreadyApplied,
+    lineEndingStable: lineEndingStableAlreadyApplied,
     sourceMapLinkId: link.id,
     sourceMapMappingId: link.sourceMapMappingId,
     sourceEditSpan: { start: sourceEditRange.start, end: sourceEditRange.end, path: anchor.sourcePath },
@@ -63,6 +69,20 @@ function sourceEditRangeForMatch(ranges, editText) {
   return { start, end: start + editText.length };
 }
 
+function lineEndingStableSourceEditRange(sourceMappedText, targetAfterMappedText, ranges, targetAfterEditText) {
+  const targetStart = ranges.before.start - ranges.generated.start;
+  const targetEnd = targetStart + targetAfterEditText.length;
+  const normalizedStart = normalizedPrefixLength(targetAfterMappedText, targetStart);
+  const normalizedEnd = normalizedPrefixLength(targetAfterMappedText, targetEnd);
+  const sourceStart = rawOffsetForNormalizedPrefix(sourceMappedText, normalizedStart);
+  const sourceEnd = rawOffsetForNormalizedPrefix(sourceMappedText, normalizedEnd);
+  if (sourceStart < 0 || sourceEnd < sourceStart) return undefined;
+  return {
+    start: ranges.source.start + sourceStart,
+    end: ranges.source.start + sourceEnd
+  };
+}
+
 function targetRegionForMatch(match, context) {
   return context.targetChangeSet.changedRegions.find((region) => region.id === match.targetRegion?.id)
     ?? match.targetRegion;
@@ -74,6 +94,28 @@ function sameLanguage(left, right) {
 
 function containedRange(inner, outer) {
   return Boolean(inner && outer && outer.start <= inner.start && inner.end <= outer.end);
+}
+
+function sameLineEndingStable(left, right) {
+  return normalizeLineEndings(left) === normalizeLineEndings(right);
+}
+
+function normalizeLineEndings(value) {
+  return String(value ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
+function normalizedPrefixLength(value, rawOffset) {
+  return normalizeLineEndings(String(value ?? '').slice(0, rawOffset)).length;
+}
+
+function rawOffsetForNormalizedPrefix(value, normalizedOffset) {
+  let normalized = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    if (normalized === normalizedOffset) return index;
+    if (value[index] === '\r' && value[index + 1] === '\n') index += 1;
+    normalized += 1;
+  }
+  return normalized === normalizedOffset ? value.length : -1;
 }
 
 function compactRecord(value) {
