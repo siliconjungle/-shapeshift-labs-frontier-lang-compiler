@@ -74,6 +74,16 @@ assert.ok(cleanProjection.edits[0].replacementSpanTextHash);
 assert.equal(cleanProjection.admission.status, 'auto-merge-candidate');
 assert.equal(cleanProjection.admission.autoMergeClaim, false);
 assert.equal(cleanProjection.admission.semanticEquivalenceClaim, false);
+const shiftedProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_shifted_projection',
+  script: cleanHead,
+  workerSourceText: workerSource,
+  headSourceText: '\n' + baseSource
+});
+assert.equal(shiftedProjection.status, 'projected');
+assert.equal(shiftedProjection.sourceText, '\n' + workerSource);
+assert.equal(shiftedProjection.edits[0].headStart, cleanProjection.edits[0].headStart + 1);
+assert.equal(shiftedProjection.edits[0].replacementText, cleanProjection.edits[0].replacementText);
 const cleanReplay = replaySemanticEditProjection({
   id: 'semantic_edit_clean_replay',
   projection: cleanProjection,

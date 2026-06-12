@@ -5,6 +5,7 @@ import { mapDiffSymbols } from './mapDiffSymbols.js';
 import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
 import { alreadyAppliedImportEditForOperation } from './semanticEditImportProjection.js';
 import { projectionEditRecord } from './semanticEditProjectionRecord.js';
+import { findCurrentSymbol } from './semanticEditReplayAnchors.js';
 import {
   insertionOffset,
   insertionReplacement,
@@ -99,10 +100,10 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText, ord
     return insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order, context);
   }
   if (operation.changeKind === 'removed' || String(operation.kind ?? '').startsWith('remove')) {
-    return removalEditForOperation(operation, identity, headSourceText, order);
+    return removalEditForOperation(operation, identity, headSourceText, order, context);
   }
   const workerOffsets = spanOffsets(workerSourceText, operation.spans?.worker);
-  const headOffsets = spanOffsets(headSourceText, operation.spans?.head ?? operation.spans?.base ?? operation.anchor?.sourceSpan);
+  const headOffsets = headOffsetsForOperation(operation, identity, headSourceText, context);
   const reasons = [];
   if (!workerOffsets) reasons.push(`worker-span-not-resolvable:${operation.id}`);
   if (!headOffsets) reasons.push(`head-span-not-resolvable:${operation.id}`);
@@ -147,8 +148,8 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText, ord
     }
   };
 }
-function removalEditForOperation(operation, identity, headSourceText, order) {
-  const headOffsets = spanOffsets(headSourceText, operation.spans?.head ?? operation.spans?.base ?? operation.anchor?.sourceSpan);
+function removalEditForOperation(operation, identity, headSourceText, order, context) {
+  const headOffsets = headOffsetsForOperation(operation, identity, headSourceText, context);
   const reasons = [];
   if (!headOffsets) reasons.push(`head-span-not-resolvable:${operation.id}`);
   if (reasons.length) return { ok: false, reasonCodes: reasons };
@@ -173,6 +174,30 @@ function removalEditForOperation(operation, identity, headSourceText, order) {
     }
   };
 }
+
+function headOffsetsForOperation(operation, identity, headSourceText, context) {
+  const span = operation.spans?.head ?? operation.spans?.base ?? operation.anchor?.sourceSpan;
+  const spanRange = spanOffsets(headSourceText, span);
+  const symbol = context.symbolIndexAvailable ? findCurrentSymbol(identity, context.headSymbols) : undefined;
+  const symbolRange = spanOffsets(headSourceText, symbol?.sourceSpan);
+  if (!symbolRange) return spanRange;
+  if (!spanRange || sameRange(spanRange, symbolRange)) return symbolRange;
+  const expectedHash = operation.hashes?.headTextHash ?? operation.hashes?.baseTextHash;
+  if (expectedHash && rangeHash(headSourceText, symbolRange) === expectedHash) return symbolRange;
+  if (expectedHash && rangeHash(headSourceText, spanRange) === expectedHash) return spanRange;
+  return spanRange;
+}
+
+function rangeHash(sourceText, range) {
+  return range && typeof sourceText === 'string'
+    ? hashSemanticValue(sourceText.slice(range.start, range.end))
+    : undefined;
+}
+
+function sameRange(left, right) {
+  return left?.start === right?.start && left?.end === right?.end;
+}
+
 function insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order, context) {
   const workerOffsets = spanOffsets(workerSourceText, operation.spans?.worker);
   const reasons = [];
