@@ -9,17 +9,18 @@ export function createSemanticPatchBundleAdmission(input = {}, context = {}) {
   const fallbackReadiness = fallbackAdmissionReadiness(transformAdmission, semanticEditAdmission, evidenceAdmission, context.readiness);
   const requestedReadiness = normalizeSemanticMergeReadiness(input.readiness) ?? input.readiness;
   const inputReadiness = fallbackReadiness === 'blocked' ? 'blocked' : requestedReadiness ?? fallbackReadiness;
-  const readiness = hasPositiveApplyAction(transformAdmission, semanticEditAdmission) && evidenceAdmission.action !== 'admit'
+  const positiveApply = !hasSkipReadyAction(semanticEditAdmission) && hasPositiveApplyAction(transformAdmission, semanticEditAdmission);
+  const readiness = positiveApply && evidenceAdmission.action !== 'admit'
     ? evidenceAdmission.readiness
     : inputReadiness;
   const computedStatus = admissionStatusForReadiness(readiness, transformAdmission, semanticEditAdmission, evidenceAdmission);
   const status = safePatchBundleStatus(input.status, computedStatus);
   const computedAutoApplyCandidate = status === 'admitted' &&
-    hasPositiveApplyAction(transformAdmission, semanticEditAdmission) &&
+    positiveApply &&
     evidenceAdmission.action === 'admit';
   const autoApplyCandidate = input.autoApplyCandidate === true ? computedAutoApplyCandidate : input.autoApplyCandidate ?? computedAutoApplyCandidate;
   const admittedWithoutPositiveProof = status === 'admitted' &&
-    hasPositiveApplyAction(transformAdmission, semanticEditAdmission) &&
+    positiveApply &&
     evidenceAdmission.action !== 'admit';
   return compactRecord({
     status,
@@ -109,8 +110,12 @@ function autoMergeEvidenceAdmission(context, admissions) {
     ...array(context.source?.semanticPatch?.evidence),
     ...array(context.mergeCandidate?.evidence)
   ]);
-  const positiveApply = hasPositiveApplyAttempt(admissions.transformAdmission, admissions.semanticEditAdmission);
-  if (!positiveApply) return { status: 'none', action: 'none', readiness: 'needs-review', reasonCodes: [], evidenceIds: evidenceIds(evidence) };
+  const skipReady = hasSkipReadyAction(admissions.semanticEditAdmission);
+  const positiveApply = !skipReady &&
+    hasPositiveApplyAttempt(admissions.transformAdmission, admissions.semanticEditAdmission);
+  if (!positiveApply) return skipReady
+    ? skipEvidenceAdmission(evidence)
+    : { status: 'none', action: 'none', readiness: 'needs-review', reasonCodes: [], evidenceIds: evidenceIds(evidence) };
   const summary = summarizeAutoMergeEvidence(evidence);
   const blocked = summary.failed > 0 || summary.conflict > 0;
   const ready = !blocked && summary.stale === 0 && summary.passed > 0;
@@ -120,6 +125,23 @@ function autoMergeEvidenceAdmission(context, admissions) {
     action: blocked ? 'block' : status === 'stale' ? 'rerun-semantic-import' : ready ? 'admit' : 'review',
     readiness: blocked ? 'blocked' : ready ? 'ready' : 'needs-review',
     reasonCodes: autoMergeEvidenceReasonCodes(summary, status),
+    evidenceIds: summary.evidenceIds,
+    passed: summary.passed,
+    failed: summary.failed,
+    conflict: summary.conflict,
+    stale: summary.stale
+  });
+}
+
+function skipEvidenceAdmission(evidence) {
+  const summary = summarizeAutoMergeEvidence(evidence);
+  const blocked = summary.failed > 0 || summary.conflict > 0;
+  const status = blocked ? 'blocked' : summary.stale > 0 ? 'stale' : summary.passed > 0 ? 'ready' : 'none';
+  return compactRecord({
+    status,
+    action: blocked ? 'block' : status === 'stale' ? 'rerun-semantic-import' : status === 'ready' ? 'skip' : 'none',
+    readiness: blocked ? 'blocked' : status === 'ready' ? 'ready' : 'needs-review',
+    reasonCodes: status === 'none' ? [] : autoMergeEvidenceReasonCodes(summary, status),
     evidenceIds: summary.evidenceIds,
     passed: summary.passed,
     failed: summary.failed,

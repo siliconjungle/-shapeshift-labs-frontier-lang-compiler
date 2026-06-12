@@ -4,7 +4,7 @@ import { semanticEditIdentityFields } from './semanticEditIdentityRecords.js';
 
 export function createSemanticTransformIdentityRecord(input = {}, options = {}) {
   const source = input?.transform ?? input;
-  const merged = { ...source, ...options };
+  const merged = { ...source, ...definedEntries(options) };
   const editIdentity = semanticEditIdentityFields(merged);
   const semanticKey = firstString(merged.semanticKey, editIdentity.semanticKey);
   const transformKey = firstString(merged.transformKey, semanticTransformKey({ ...merged, semanticKey }));
@@ -184,4 +184,5 @@ function array(value) { if (value === undefined || value === null) return []; re
 function strings(value) { return array(value).map((entry) => String(entry ?? '')).filter(Boolean); }
 function firstString(...values) { return values.map((value) => value === undefined || value === null ? '' : String(value)).find(Boolean); }
 function uniqueStrings(values) { return uniqueRawStrings((values ?? []).filter((entry) => entry !== undefined && entry !== null && String(entry) !== '')); }
+function definedEntries(value) { return Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined)); }
 function compactRecord(value) { return Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined && (!Array.isArray(entry) || entry.length > 0))); }
