@@ -81,7 +81,16 @@ function semanticFactRegionGroups(facts) {
     group.factKinds = uniqueStrings(group.facts.map((item) => item.value?.kind).filter(Boolean));
     groups.set(key, group);
   }
-  return [...groups.values()];
+  return [...groups.values()].flatMap(splitSemanticFactGroup);
+}
+
+function splitSemanticFactGroup(group) {
+  if (group.regionKind === 'effect') return [group];
+  return group.factKinds.map((factKind) => ({
+    ...group,
+    facts: group.facts.filter((fact) => fact.value?.kind === factKind),
+    factKinds: [factKind]
+  }));
 }
 
 function semanticFactRegionSignature(group) {

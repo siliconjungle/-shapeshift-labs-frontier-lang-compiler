@@ -155,6 +155,50 @@ assert.equal(nonOverlappingAdmission.reasonCodes.includes('head-anchor-matches-b
 assert.equal(nonOverlappingAdmission.reasonCodes.includes('head-offset-matches-deleted'), true);
 assert.equal(nonOverlappingAdmission.reasonCodes.includes('semantic-edit-positive-auto-merge-proof'), true);
 
+const sameLineBase = 'export function update(state) { if (!state.ready) state.ready = true; return state.ready; }\n';
+const sameLineWorker = 'export function update(state) { if (!state.ready) state.ready = false; return state.ready; }\n';
+const sameLineHead = 'export function update(state) { if (state.pending && !state.ready) state.ready = true; return state.ready; }\n';
+const sameLineExpected = 'export function update(state) { if (state.pending && !state.ready) state.ready = false; return state.ready; }\n';
+const sameLineFlow = semanticEditFlow({
+  id: 'bundle_same_line_semantic_independence',
+  sourcePath: 'src/same-line.js',
+  base: sameLineBase,
+  worker: sameLineWorker,
+  head: sameLineHead
+});
+const sameLineWorkerKeys = diffNativeSources({
+  id: 'bundle_same_line_worker_diff',
+  language: 'javascript',
+  sourcePath: 'src/same-line.js',
+  beforeSourceText: sameLineBase,
+  afterSourceText: sameLineWorker
+}).changedRegions.map((region) => region.conflictKey);
+const sameLineHeadKeys = diffNativeSources({
+  id: 'bundle_same_line_head_diff',
+  language: 'javascript',
+  sourcePath: 'src/same-line.js',
+  beforeSourceText: sameLineBase,
+  afterSourceText: sameLineHead
+}).changedRegions.map((region) => region.conflictKey);
+assert.deepEqual(sameLineWorkerKeys, ['region:source#src/same-line.js#mutation#update:mutation:assignment#1']);
+assert.deepEqual(sameLineHeadKeys, ['region:source#src/same-line.js#controlFlow#update:controlFlow:branch#1']);
+assert.deepEqual(sameLineWorkerKeys.filter((key) => sameLineHeadKeys.includes(key)), []);
+assert.equal(sameLineFlow.script.admission.status, 'auto-merge-candidate');
+assert.equal(sameLineFlow.script.operations[0].kind, 'replaceMutation');
+assert.equal(sameLineFlow.projection.status, 'projected');
+assert.equal(sameLineFlow.projection.sourceText, sameLineExpected);
+assert.equal(sameLineFlow.projection.edits[0].symbolName, 'update:mutation:assignment#1');
+assert.equal(sameLineFlow.replay.status, 'accepted-clean');
+assert.equal(sameLineFlow.replay.outputSourceText, sameLineExpected);
+const sameLineAdmission = createSemanticEditBundleAdmission({
+  semanticEditScripts: [sameLineFlow.script],
+  semanticEditProjections: [sameLineFlow.projection],
+  semanticEditReplays: [sameLineFlow.replay],
+  evidence: [{ id: 'evidence_same_line_independent_regions', kind: 'check', status: 'passed' }]
+});
+assert.equal(sameLineAdmission.status, 'ready');
+assert.equal(sameLineAdmission.autoApplyCandidate, true);
+
 const sameAnchorConflict = semanticEditFlow({
   id: 'bundle_same_anchor_conflict_guard',
   sourcePath: 'src/non-overlapping.js',
