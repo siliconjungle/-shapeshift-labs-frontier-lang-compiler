@@ -6,17 +6,19 @@ import {
   sourceLines,
   splitParameters
 } from './native-region-scanner-core.js';
+import { endKeywordBlockSpan } from './native-region-scanner-spans.js';
 
 function scanElixir(input) {
   const declarations = [];
   let currentModule;
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     let recordedMeta = false;
     if ((match = trimmed.match(/^defmodule\s+([A-Z]\w*(?:\.[A-Z]\w*)*)\s+do\b/))) {
       currentModule = match[1];
-      declarations.push(nativeDeclaration(input, number, 'ModuleDefinition', 'module', match[1], {}, true));
+      declarations.push(nativeDeclaration(input, number, 'ModuleDefinition', 'module', match[1], {}, true, endSpanOptions(input, lines, index)));
     } else if ((match = trimmed.match(/^(?:alias|import|require)\s+([A-Z]\w*(?:\.[A-Z]\w*)*)/))) {
       declarations.push(nativeImportDeclaration(input, number, match[1], 'ImportDirective', 'module'));
     } else if ((match = trimmed.match(/^use\s+([A-Z]\w*(?:\.[A-Z]\w*)*)/))) {
@@ -26,7 +28,8 @@ function scanElixir(input) {
       declarations.push(nativeMacroLoss(input, number, trimmed, 'macroExpansion', match[2]));
       recordedMeta = true;
     } else if ((match = trimmed.match(/^defp?\s+([A-Za-z_]\w*[!?]?)\s*(?:\(([^)]*)\)|([^,]*))?/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionDefinition', 'function', match[1], { parameters: splitParameters(match[2] ?? match[3]) }, /\bdo\b/.test(trimmed)));
+      const hasDoBlock = /\bdo\b/.test(trimmed);
+      declarations.push(nativeDeclaration(input, number, 'FunctionDefinition', 'function', match[1], { parameters: splitParameters(match[2] ?? match[3]) }, hasDoBlock, hasDoBlock ? endSpanOptions(input, lines, index) : {}));
     } else if (trimmed.startsWith('defstruct')) {
       declarations.push(nativeDeclaration(input, number, 'StructDefinition', 'type', currentModule ?? `struct_${number}`, {}, true));
     } else if ((match = trimmed.match(/^@(type|typep|opaque|callback)\s+([A-Za-z_]\w*[!?]?)/))) {
@@ -37,6 +40,10 @@ function scanElixir(input) {
     }
   }
   return declarations;
+}
+
+function endSpanOptions(input, lines, index) {
+  return { span: endKeywordBlockSpan(input, lines, index) };
 }
 
 function scanErlang(input) {

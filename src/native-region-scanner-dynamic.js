@@ -7,7 +7,7 @@ import {
   splitParameters,
   splitTypeParameters
 } from './native-region-scanner-core.js';
-import { braceBlockSpan } from './native-region-scanner-spans.js';
+import { braceBlockSpan, endKeywordBlockSpan } from './native-region-scanner-spans.js';
 
 function scanPhp(input) {
   const declarations = [];
@@ -30,17 +30,18 @@ function scanPhp(input) {
 
 function scanRuby(input) {
   const declarations = [];
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     if ((match = trimmed.match(/^(?:require|load)\s+['"]([^'"]+)['"]/))) {
       declarations.push(nativeImportDeclaration(input, number, match[1], 'Require', 'module'));
     } else if ((match = trimmed.match(/^module\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)/))) {
-      declarations.push(nativeDeclaration(input, number, 'Module', 'module', match[1], {}, true));
+      declarations.push(nativeDeclaration(input, number, 'Module', 'module', match[1], {}, true, endSpanOptions(input, lines, index)));
     } else if ((match = trimmed.match(/^class\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)/))) {
-      declarations.push(nativeDeclaration(input, number, 'Class', 'class', match[1], {}, true));
+      declarations.push(nativeDeclaration(input, number, 'Class', 'class', match[1], {}, true, endSpanOptions(input, lines, index)));
     } else if ((match = trimmed.match(/^def\s+(?:self\.)?([A-Za-z_]\w*[!?=]?)\s*(?:\(([^)]*)\)|([^#=]*))?/))) {
-      declarations.push(nativeDeclaration(input, number, 'Def', 'method', match[1], { parameters: splitParameters(match[2] ?? match[3]) }, true));
+      declarations.push(nativeDeclaration(input, number, 'Def', 'method', match[1], { parameters: splitParameters(match[2] ?? match[3]) }, true, endSpanOptions(input, lines, index)));
     }
   }
   return declarations;
@@ -119,15 +120,16 @@ function scanDart(input) {
 
 function scanLua(input) {
   const declarations = [];
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     if ((match = trimmed.match(/^(?:local\s+[A-Za-z_]\w*\s*=\s*)?require\s*\(?\s*['"]([^'"]+)['"]\s*\)?/))) {
       declarations.push(nativeImportDeclaration(input, number, match[1], 'RequireCall', 'module'));
     } else if ((match = trimmed.match(/^(?:local\s+)?function\s+([A-Za-z_]\w*(?:[.:][A-Za-z_]\w*)*)\s*\(([^)]*)\)/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, true));
+      declarations.push(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, true, endSpanOptions(input, lines, index)));
     } else if ((match = trimmed.match(/^(?:local\s+)?([A-Za-z_]\w*(?:[.:][A-Za-z_]\w*)*)\s*=\s*function\s*\(([^)]*)\)/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionAssignment', 'function', match[1], { parameters: splitParameters(match[2]) }, true));
+      declarations.push(nativeDeclaration(input, number, 'FunctionAssignment', 'function', match[1], { parameters: splitParameters(match[2]) }, true, endSpanOptions(input, lines, index)));
     } else if ((match = trimmed.match(/^local\s+([A-Za-z_]\w*)\s*=\s*(?:\{|\w+)/))) {
       declarations.push(nativeDeclaration(input, number, 'LocalDeclaration', 'variable', match[1], {}, false));
     }
@@ -198,6 +200,10 @@ function scanZig(input) {
 
 function spanOptions(input, lines, index, hasBraceBody) {
   return hasBraceBody ? { span: braceBlockSpan(input, lines, index) } : {};
+}
+
+function endSpanOptions(input, lines, index) {
+  return { span: endKeywordBlockSpan(input, lines, index) };
 }
 
 function phpSymbolKind(kind) {
