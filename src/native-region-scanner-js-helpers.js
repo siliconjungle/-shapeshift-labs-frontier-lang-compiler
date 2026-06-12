@@ -279,7 +279,7 @@ function jsContainerInitializerKind(initializer, name, source) {
 
 function jsContainerWrapperLooksSemantic(callee, name, source) {
   const signal = `${callee ?? ''} ${name ?? ''} ${source ?? ''}`.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
-  return /\b(define|create|make|build|object\.freeze)\b/.test(signal) && /\b(config|settings|options|routes?|router|content|docs?|schema|registry|manifest|catalog|menu|nav)\b/.test(signal);
+  return /\b(define|create|make|build|object\.freeze)\b/.test(signal) && /\b(actions?|handlers?|tools?|commands?|events?|effects?|workflows?|config|settings|options|routes?|router|content|docs?|schema|registry|manifest|catalog|menu|nav)\b/.test(signal);
 }
 
 function jsContainerDelta(source) {
