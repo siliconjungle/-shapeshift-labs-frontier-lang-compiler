@@ -95,7 +95,8 @@ function scanJava(input) {
 function scanGo(input) {
   const declarations = [];
   let inImportBlock = false;
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     if (inImportBlock) {
@@ -123,12 +124,12 @@ function scanGo(input) {
         receiver,
         typeParameters: splitTypeParameters(match[3]),
         parameters: splitParameters(match[4])
-      }, trimmed.includes('{')));
+      }, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = trimmed.match(/^func\s+([A-Za-z_]\w*)(?:\s*\[([^\]]+)\])?\s*\(([^)]*)\)/))) {
       declarations.push(nativeDeclaration(input, number, 'FuncDecl', 'function', match[1], {
         typeParameters: splitTypeParameters(match[2]),
         parameters: splitParameters(match[3])
-      }, trimmed.includes('{')));
+      }, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = trimmed.match(/^var\s+([A-Za-z_]\w*)\b/))) {
       declarations.push(nativeDeclaration(input, number, 'VarDecl', 'variable', match[1], {}, false));
     } else if ((match = trimmed.match(/^const\s+([A-Za-z_]\w*)\b/))) {
