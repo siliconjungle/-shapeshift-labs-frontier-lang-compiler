@@ -108,6 +108,7 @@ function addLightweightSemanticFacts(input, documentId, declaration, line, lineN
 function shouldScanRuntimeFacts(input, declaration) {
   if (!isJavaScriptLike(input)) return true;
   if (declaration?.fields?.typeKind) return false;
+  if (['object', 'array'].includes(declaration?.fields?.initializerKind)) return false;
   if (/^Type(?:Alias|Method|Property|FunctionProperty)/.test(String(declaration?.kind ?? ''))) return false;
   return !['interface', 'type'].includes(String(declaration?.symbolKind ?? '').toLowerCase());
 }

@@ -212,7 +212,7 @@ function jsObjectPropertyDeclaration(input, lineNumber, trimmed, context) {
       propertyName: methodMatch[2],
       parameters: splitParameters(methodMatch[3])
     }, true, {
-      regionKind: jsPropertyRegionKind(context, methodMatch[2], 'function'),
+      regionKind: 'body',
       metadata: { owner: context.name, propertyName: methodMatch[2], initializerKind: 'function' }
     });
   }
@@ -229,7 +229,7 @@ function jsObjectPropertyDeclaration(input, lineNumber, trimmed, context) {
     propertyName,
     initializerKind
   }, functionLike || initializerKind === 'object' || initializerKind === 'array', {
-    regionKind: jsPropertyRegionKind(context, propertyName, value),
+    regionKind: functionLike ? 'body' : jsPropertyRegionKind(context, propertyName, value),
     metadata: { owner: context.name, propertyName, initializerKind }
   });
 }
