@@ -61,10 +61,11 @@ export function createRoundtripEvidence(context) {
 
 function admissionRecord(context) {
   const verified = verifiedSourceBackprojection(context);
+  const action = sourceBackprojectionAction(context);
   return {
     status: context.readiness === 'blocked' ? 'blocked' : verified ? 'ready' : 'needs-review',
     readiness: verified ? 'ready' : context.readiness,
-    action: verified ? 'admit-source-backprojection' : context.targetPortability.action,
+    action: verified ? action : context.targetPortability.action,
     reasonCodes: uniqueStrings([...array(context.reasons), verified ? 'verified-source-map-backprojection' : undefined]),
     conflictKeys: uniqueStrings([
       ...array(context.targetPortability.conflictKeys),
@@ -79,6 +80,7 @@ function admissionRecord(context) {
 
 export function createSemanticMergeAdmissionEvidence(context) {
   const verified = verifiedSourceBackprojection(context);
+  const action = sourceBackprojectionAction(context);
   return {
     schema: 'frontier.lang.bidirectionalTargetChangeSemanticMergeAdmission.v1',
     version: 1,
@@ -91,7 +93,7 @@ export function createSemanticMergeAdmissionEvidence(context) {
     targetMergeCandidateId: context.targetChangeSet.mergeCandidate?.id,
     readiness: verified ? 'ready' : context.readiness,
     status: context.readiness === 'blocked' ? 'blocked' : verified ? 'ready' : 'needs-review',
-    action: verified ? 'admit-source-backprojection' : context.targetPortability.action,
+    action: verified ? action : context.targetPortability.action,
     reasonCodes: uniqueStrings([...array(context.reasons), verified ? 'verified-source-map-backprojection' : undefined]),
     conflictKeys: context.roundtripEvidence.admission.conflictKeys,
     sourceAnchorMatchIds: uniqueStrings(context.sourceAnchorMatches.map((match) => match.id)),
@@ -117,7 +119,13 @@ export function createSemanticMergeAdmissionEvidence(context) {
 function verifiedSourceBackprojection(context) {
   return context.sourceEditProjection?.sourceProjectionHint?.sourceBackprojectionMode === 'same-language-exact-source-map'
     && context.sourceEditProjection?.sourceEditProjection?.status === 'projected'
-    && context.sourceEditProjection?.sourceEditReplay?.status === 'accepted-clean';
+    && ['accepted-clean', 'already-applied'].includes(context.sourceEditProjection?.sourceEditReplay?.status);
+}
+
+function sourceBackprojectionAction(context) {
+  return context.sourceEditProjection?.sourceEditReplay?.status === 'already-applied'
+    ? 'skip-source-backprojection'
+    : 'admit-source-backprojection';
 }
 
 function sourceIdentity(source) {

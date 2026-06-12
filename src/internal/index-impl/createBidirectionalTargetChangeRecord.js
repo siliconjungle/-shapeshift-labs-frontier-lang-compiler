@@ -150,9 +150,12 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       sourceProjectionHint: sourceEditProjection.sourceProjectionHint
     }
   }, ...(sourceEditProjection.evidence ?? [])];
-  const sourcePatchAdmission = sourceEditProjection.sourceEditReplay?.status === 'accepted-clean'
+  const sourceReplayStatus = sourceEditProjection.sourceEditReplay?.status;
+  const sourcePatchAdmission = sourceReplayStatus === 'accepted-clean'
     ? { readiness: 'ready', reasonCodes: ['bidirectional-source-edit-replay-accepted-clean'] }
-    : { status: readiness === 'blocked' ? 'blocked' : 'needs-review', readiness };
+    : sourceReplayStatus === 'already-applied'
+      ? { status: 'admitted', readiness: 'ready', reasonCodes: ['bidirectional-source-edit-replay-already-applied'] }
+      : { status: readiness === 'blocked' ? 'blocked' : 'needs-review', readiness };
   const sourceChangedRegions = sourceAnchorMatches.flatMap((match) => sourceRegionsForMatch(match, readiness));
   const sourcePatchBundle = createSemanticPatchBundleRecord({
     id: `${id}_source_port_projection`,

@@ -47,6 +47,7 @@ const smokeModules = [
   './smoke/semantic-patch-bundle-overlaps.mjs',
   './smoke/semantic-patch-bundle-overlaps-same-file.mjs',
   './smoke/bidirectional-target-change.mjs',
+  './smoke/bidirectional-target-change-already-applied.mjs',
   './smoke/native-projection.mjs',
   './smoke-workbench.mjs',
   './smoke/roundtrip.mjs',

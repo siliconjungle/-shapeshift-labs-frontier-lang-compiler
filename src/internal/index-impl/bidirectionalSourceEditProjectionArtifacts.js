@@ -29,7 +29,8 @@ export function createBidirectionalSourceEditProjectionArtifacts(context = {}, s
 }
 
 function backprojectionEvidence(context, script, projection, replay) {
-  const passed = projection?.status === 'projected' && replay?.status === 'accepted-clean';
+  const replayReady = replay?.status === 'accepted-clean' || replay?.status === 'already-applied';
+  const passed = projection?.status === 'projected' && replayReady;
   return {
     id: `evidence_${idFragment(context.id)}_source_backprojection_replay`,
     kind: 'verification',
