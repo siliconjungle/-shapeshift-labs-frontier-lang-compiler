@@ -108,11 +108,14 @@ assert.equal(malformedBabelImport.evidence.some((record) => record.status === 'f
 assert.equal(malformedBabelImport.metadata.nativeImportLossSummary.semanticMergeReadiness, 'blocked');
 assert.equal(malformedBabelImport.mergeCandidates[0].readiness, 'blocked');
 assert.equal(malformedBabelImport.patch.risk, 'high');
+const tsCreateSourceFileCalls = [];
 export const tsMock = {
   ScriptTarget: { Latest: 99 },
-  ScriptKind: { TS: 3 },
+  ScriptKind: { JS: 1, JSX: 2, TS: 3, TSX: 4 },
   SyntaxKind: { 0: 'SourceFile', 1: 'FunctionDeclaration', 2: 'Identifier' },
-  createSourceFile(fileName, sourceText) {
+  createSourceFile(fileName, sourceText, scriptTarget, setParentNodes, scriptKind) {
+    tsCreateSourceFileCalls.push({ fileName, scriptTarget, setParentNodes, scriptKind });
+    const functionName = sourceText.includes('fromTsx') ? 'fromTsx' : 'fromTs';
     const sourceFile = {
       kind: 0,
       fileName,
@@ -126,7 +129,7 @@ export const tsMock = {
       kind: 1,
       pos: 0,
       end: sourceText.length,
-      name: { kind: 2, escapedText: 'fromTs' },
+      name: { kind: 2, escapedText: functionName },
       children: []
     }];
     return sourceFile;
@@ -141,6 +144,7 @@ export const tsAdapterImport = await runNativeImporterAdapter(createTypeScriptCo
   sourceText: tsFixtureSource
 });
 assert.equal(tsAdapterImport.adapter.parser, 'typescript-compiler-api');
+assert.equal(tsCreateSourceFileCalls.find((call) => call.fileName === 'src/ts.ts')?.scriptKind, tsMock.ScriptKind.TS);
 assert.equal(tsAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromTs'), true);
 const scannedTsFixtureImport = importNativeSource({
   language: 'typescript',
@@ -148,3 +152,16 @@ const scannedTsFixtureImport = importNativeSource({
   sourceText: tsFixtureSource
 });
 assertExactAdapterOutranksScanner(tsAdapterImport, scannedTsFixtureImport, 'fromTs');
+const tsxFixtureSource = 'export function fromTsx(): JSX.Element { return <div />; }\n';
+export const tsxAdapterImport = await runNativeImporterAdapter(createTypeScriptCompilerNativeImporterAdapter({ typescript: tsMock }), {
+  sourcePath: 'src/tsx.tsx',
+  sourceText: tsxFixtureSource
+});
+assert.equal(tsCreateSourceFileCalls.find((call) => call.fileName === 'src/tsx.tsx')?.scriptKind, tsMock.ScriptKind.TSX);
+assert.equal(tsxAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromTsx'), true);
+const scannedTsxFixtureImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/tsx.tsx',
+  sourceText: tsxFixtureSource
+});
+assertExactAdapterOutranksScanner(tsxAdapterImport, scannedTsxFixtureImport, 'fromTsx');

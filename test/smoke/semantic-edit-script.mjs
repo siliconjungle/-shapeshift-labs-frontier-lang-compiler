@@ -1,9 +1,7 @@
 import { assert } from './helpers.mjs';
 import { createSemanticEditScript, projectSemanticEditScriptToSource, replaySemanticEditProjection } from './compiler-api.mjs';
-
 const baseSource = 'export function step(value: number) { return value + 1; }\n';
 const workerSource = 'export function step(value: number) { return value + 2; }\n';
-
 const candidateOnly = createSemanticEditScript({
   id: 'semantic_edit_candidate_only',
   language: 'typescript',
@@ -19,7 +17,6 @@ assert.equal(candidateOnly.admission.status, 'needs-port');
 assert.equal(candidateOnly.operations[0].status, 'candidate');
 assert.equal(candidateOnly.admission.autoMergeClaim, false);
 assert.equal(candidateOnly.admission.semanticEquivalenceClaim, false);
-
 const cleanHead = createSemanticEditScript({
   id: 'semantic_edit_clean_head',
   language: 'typescript',
@@ -42,7 +39,6 @@ assert.deepEqual(cleanHead.summary.semanticKeys, [cleanHead.operations[0].semant
 assert.deepEqual(cleanHead.summary.operationContentHashes, [cleanHead.operations[0].operationContentHash]);
 assert.ok(cleanHead.operations[0].spans.worker);
 assert.ok(cleanHead.operations[0].hashes.headTextHash);
-
 const cleanProjection = projectSemanticEditScriptToSource({
   id: 'semantic_edit_clean_projection',
   script: cleanHead,
@@ -76,7 +72,6 @@ assert.ok(cleanProjection.edits[0].anchorReplacementTextHash);
 assert.equal(cleanProjection.admission.status, 'auto-merge-candidate');
 assert.equal(cleanProjection.admission.autoMergeClaim, false);
 assert.equal(cleanProjection.admission.semanticEquivalenceClaim, false);
-
 const cleanReplay = replaySemanticEditProjection({
   id: 'semantic_edit_clean_replay',
   projection: cleanProjection,
@@ -91,7 +86,6 @@ assert.equal(cleanReplay.admission.autoMergeClaim, false);
 assert.equal(cleanReplay.admission.semanticEquivalenceClaim, false);
 assert.deepEqual(cleanReplay.appliedOperations, [cleanHead.operations[0].id]);
 assert.equal(cleanReplay.edits[0].reasonCodes.includes('head-offset-matches-deleted'), true);
-
 const shiftedBaseSource = '\n\n' + baseSource;
 const shiftedWorkerSource = '\n\n' + workerSource;
 const shiftedReplay = replaySemanticEditProjection({
@@ -103,7 +97,6 @@ assert.equal(shiftedReplay.status, 'accepted-clean');
 assert.equal(shiftedReplay.outputSourceText, shiftedWorkerSource);
 assert.equal(shiftedReplay.edits[0].reasonCodes.includes('current-symbol-body-matches-deleted'), true);
 assert.equal(shiftedReplay.edits[0].reasonCodes.includes('offset-reanchored-by-symbol'), true);
-
 const shiftedSignatureSource = 'export function step(value: string | number) { return value + 1; }\n';
 const shiftedSignatureExpected = 'export function step(value: string | number) { return value + 2; }\n';
 const shiftedSignatureReplay = replaySemanticEditProjection({
@@ -115,7 +108,6 @@ assert.equal(shiftedSignatureReplay.status, 'accepted-clean');
 assert.equal(shiftedSignatureReplay.outputSourceText, '\n' + shiftedSignatureExpected);
 assert.equal(shiftedSignatureReplay.edits[0].reasonCodes.includes('current-symbol-body-matches-deleted'), true);
 assert.equal(shiftedSignatureReplay.edits[0].sourceRangeKind, 'body-content');
-
 const shiftedSignatureBodyConflict = replaySemanticEditProjection({
   id: 'semantic_edit_shifted_signature_body_conflict',
   projection: cleanProjection,
@@ -124,7 +116,6 @@ const shiftedSignatureBodyConflict = replaySemanticEditProjection({
 assert.equal(shiftedSignatureBodyConflict.status, 'conflict');
 assert.equal(shiftedSignatureBodyConflict.outputSourceText, undefined);
 assert.equal(shiftedSignatureBodyConflict.edits[0].reasonCodes.includes('current-symbol-body-content-mismatch'), true);
-
 const crlfBaseSource = 'export function crlf(value) {\r\n  return value + 1;\r\n}\r\n';
 const crlfWorkerSource = 'export function crlf(value) {\r\n  return value + 2;\r\n}\r\n';
 const crlfScript = createSemanticEditScript({
@@ -145,7 +136,59 @@ const crlfProjection = projectSemanticEditScriptToSource({
 });
 assert.equal(crlfProjection.status, 'projected');
 assert.equal(crlfProjection.sourceText, crlfWorkerSource);
-
+const crlfInsertionLine = 'export function existing() { return 1; }';
+const crlfInsertionBase = `${crlfInsertionLine}\r\n`;
+const crlfInsertionWorker = `${crlfInsertionLine}\r\nexport function added() { return 2; }\r\n`;
+const crlfInsertionScript = createSemanticEditScript({
+  id: 'semantic_edit_crlf_insertion',
+  language: 'typescript',
+  sourcePath: 'src/crlf-insertion.ts',
+  baseSourceText: crlfInsertionBase,
+  workerSourceText: crlfInsertionWorker,
+  headSourceText: crlfInsertionBase,
+  generatedAt: 26
+});
+assert.equal(crlfInsertionScript.admission.status, 'auto-merge-candidate');
+const crlfInsertionOperation = crlfInsertionScript.operations.find((operation) => operation.kind === 'addBody');
+assert.equal(crlfInsertionOperation.insertion.mode, 'after');
+assert.equal(crlfInsertionOperation.insertion.headSpan.startColumn, 1);
+assert.equal(crlfInsertionOperation.insertion.headSpan.endColumn, crlfInsertionLine.length + 1);
+const crlfInsertionProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_crlf_insertion_projection',
+  script: crlfInsertionScript,
+  workerSourceText: crlfInsertionWorker,
+  headSourceText: crlfInsertionBase
+});
+assert.equal(crlfInsertionProjection.status, 'projected');
+assert.equal(crlfInsertionProjection.sourceText, crlfInsertionWorker);
+assert.equal(crlfInsertionProjection.edits[0].headStart, crlfInsertionBase.length);
+assert.equal(crlfInsertionProjection.edits[0].replacementText.endsWith('\r\n'), true);
+const crlfRemovalKeepLine = 'export function keep() { return 1; }';
+const crlfRemovalRemovedLine = 'export function removed() { return 2; }';
+const crlfRemovalBase = `${crlfRemovalKeepLine}\r\n${crlfRemovalRemovedLine}\r\n`;
+const crlfRemovalWorker = `${crlfRemovalKeepLine}\r\n`;
+const crlfRemovalScript = createSemanticEditScript({
+  id: 'semantic_edit_crlf_removal',
+  language: 'typescript',
+  sourcePath: 'src/crlf-removal.ts',
+  baseSourceText: crlfRemovalBase,
+  workerSourceText: crlfRemovalWorker,
+  headSourceText: crlfRemovalBase,
+  generatedAt: 27
+});
+assert.equal(crlfRemovalScript.admission.status, 'auto-merge-candidate');
+const crlfRemovalOperation = crlfRemovalScript.operations.find((operation) => operation.kind === 'removeBody');
+assert.equal(crlfRemovalOperation.spans.head.startColumn, 1);
+assert.equal(crlfRemovalOperation.spans.head.endColumn, crlfRemovalRemovedLine.length + 1);
+const crlfRemovalProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_crlf_removal_projection',
+  script: crlfRemovalScript,
+  workerSourceText: crlfRemovalWorker,
+  headSourceText: crlfRemovalBase
+});
+assert.equal(crlfRemovalProjection.status, 'projected');
+assert.equal(crlfRemovalProjection.sourceText, crlfRemovalWorker);
+assert.equal(crlfRemovalProjection.edits[0].deletedBytes, `${crlfRemovalRemovedLine}\r\n`.length);
 const sameContentAnchorBase = 'export class A {\n  run() { return 1; }\n}\nexport class B {\n  run() { return 1; }\n}\n';
 const sameContentAnchorWorker = 'export class A {\n  run() { return 1; }\n}\nexport class B {\n  run() { return 2; }\n}\n';
 const sameContentAnchorCurrent = 'export class B {\n  run() { return 1; }\n}\nexport class A {\n  run() { return 1; }\n}\n';
@@ -176,7 +219,6 @@ assert.equal(sameContentAnchorReplay.status, 'accepted-clean');
 assert.equal(sameContentAnchorReplay.outputSourceText, sameContentAnchorExpected);
 assert.equal(sameContentAnchorReplay.edits[0].reasonCodes.includes('current-symbol-body-matches-deleted'), true);
 assert.equal(sameContentAnchorReplay.edits[0].reasonCodes.includes('offset-reanchored-by-symbol'), true);
-
 const sameContentAnchorChanged = 'export class B {\n  run() { return 3; }\n}\nexport class A {\n  run() { return 1; }\n}\n';
 const sameContentAnchorConflict = replaySemanticEditProjection({
   id: 'semantic_edit_same_content_anchor_conflict',
@@ -186,7 +228,6 @@ const sameContentAnchorConflict = replaySemanticEditProjection({
 assert.equal(sameContentAnchorConflict.status, 'conflict');
 assert.equal(sameContentAnchorConflict.outputSourceText, undefined);
 assert.equal(sameContentAnchorConflict.edits[0].reasonCodes.includes('current-symbol-body-content-mismatch'), true);
-
 const alreadyAppliedReplay = replaySemanticEditProjection({
   id: 'semantic_edit_already_applied_replay',
   projection: cleanProjection,
@@ -195,7 +236,6 @@ const alreadyAppliedReplay = replaySemanticEditProjection({
 assert.equal(alreadyAppliedReplay.status, 'already-applied');
 assert.equal(alreadyAppliedReplay.outputSourceText, workerSource);
 assert.equal(alreadyAppliedReplay.admission.action, 'skip');
-
 const conflictReplay = replaySemanticEditProjection({
   id: 'semantic_edit_conflict_replay',
   projection: cleanProjection,
@@ -204,7 +244,6 @@ const conflictReplay = replaySemanticEditProjection({
 assert.equal(conflictReplay.status, 'conflict');
 assert.equal(conflictReplay.outputSourceText, undefined);
 assert.equal(conflictReplay.summary.conflicts, 1);
-
 const conflictingHead = createSemanticEditScript({
   id: 'semantic_edit_conflicting_head',
   language: 'typescript',
@@ -225,7 +264,6 @@ const blockedProjection = projectSemanticEditScriptToSource({
 assert.equal(blockedProjection.status, 'blocked');
 assert.equal(blockedProjection.sourceText, undefined);
 assert.equal(blockedProjection.admission.reasonCodes.includes('script-not-auto-merge-candidate'), true);
-
 const movedHead = createSemanticEditScript({
   id: 'semantic_edit_moved_head',
   language: 'typescript',
@@ -241,7 +279,6 @@ assert.equal(movedHead.summary.portable, 1);
 assert.equal(movedHead.operations[0].reanchor.toAnchorKey.includes('src/runtime-core.ts'), true);
 assert.equal(movedHead.operations[0].reanchor.toSourcePath, 'src/runtime-core.ts');
 assert.equal(movedHead.operations[0].reasonCodes.includes('anchor-reanchored-head-matches-base'), true);
-
 const movedProjection = projectSemanticEditScriptToSource({
   id: 'semantic_edit_moved_projection',
   script: movedHead,

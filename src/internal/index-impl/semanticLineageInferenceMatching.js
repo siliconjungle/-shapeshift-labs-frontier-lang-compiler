@@ -1,4 +1,5 @@
 import { idFragment, uniqueStrings } from '../../native-import-utils.js';
+import { addIdentityHashEvidence, addSourceHashEvidence, hashEvidenceSummary } from './semanticLineageHashEvidence.js';
 import { createSemanticLineageEvent } from './semanticLineageRecords.js';
 
 export function matchExactAnchors(beforeSymbols, afterSymbols) {
@@ -88,6 +89,9 @@ export function symbolSummary(symbol) {
     language: symbol.language,
     sourcePath: symbol.anchor.sourcePath,
     sourceHash: symbol.anchor.sourceHash,
+    identityHash: firstString(symbol.identityHash, symbol.anchor.metadata?.identityHash),
+    semanticIdentityHash: firstString(symbol.semanticIdentityHash, symbol.anchor.metadata?.semanticIdentityHash),
+    sourceIdentityHash: firstString(symbol.sourceIdentityHash, symbol.anchor.metadata?.sourceIdentityHash),
     sourceSpan: symbol.anchor.sourceSpan,
     signatureHash: symbol.signatureHash,
     bodyHash: symbol.spanHash,
@@ -144,6 +148,7 @@ function inferredEvent(before, after, score, input) {
       inferred: true,
       algorithm: 'frontier.semantic-lineage-inference.v1',
       reasonCodes: score.reasons,
+      hashEvidence: hashEvidenceSummary(score.reasons),
       moved: pathChanged || spanMoved,
       renamed: nameChanged,
       recreated,
@@ -190,6 +195,7 @@ function inferredSplitEvent(before, candidates, input) {
       inferred: true,
       algorithm: 'frontier.semantic-lineage-inference.v1',
       reasonCodes: reasons,
+      hashEvidence: hashEvidenceSummary(reasons),
       split: true,
       targetCount: targets.length,
       candidateConfidences: candidates.map((candidate) => candidate.score.confidence),
@@ -210,10 +216,12 @@ function scoreLineagePair(before, after) {
   if (before.anchor.key && before.anchor.key === after.anchor.key) add(0.4, 'anchor-key-match');
   if (before.name && before.name === after.name) add(0.28, 'symbol-name-match');
   if (before.kind && before.kind === after.kind) add(0.12, 'symbol-kind-match');
+  addIdentityHashEvidence(before, after, add, note);
   if (before.signatureHash && before.signatureHash === after.signatureHash) add(0.52, 'signature-hash-match');
   if (before.spanHash && before.spanHash === after.spanHash) add(0.22, 'body-hash-match');
   if (before.anchor.kind && before.anchor.kind === after.anchor.kind) add(0.06, 'anchor-kind-match');
   if (before.anchor.sourcePath && before.anchor.sourcePath === after.anchor.sourcePath) add(0.04, 'source-path-match');
+  addSourceHashEvidence(before, after, add, note, reasons, sameSymbolSurface);
   if (sourceSpanRangeSame(before.anchor.sourceSpan, after.anchor.sourceSpan)) add(0.18, 'source-span-range-match');
   if (before.ownershipRegionKind && before.ownershipRegionKind === after.ownershipRegionKind) add(0.04, 'ownership-kind-match');
   if (before.nativeAstNodeId && before.nativeAstNodeId === after.nativeAstNodeId) add(0.06, 'native-node-id-match');

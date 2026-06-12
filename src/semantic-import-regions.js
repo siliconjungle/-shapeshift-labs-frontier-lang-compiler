@@ -20,20 +20,20 @@ function semanticOwnershipRegionForSymbol(imported, symbol, mapping, nativeNode,
   const language = symbol.language ?? imported?.language ?? imported?.nativeAst?.language ?? imported?.nativeSource?.language;
   const sourceSpan = mapping?.sourceSpan ?? symbol.definitionSpan ?? nativeNode?.span;
   const regionKind = semanticRegionKindForSymbol(symbol, mapping, nativeNode);
-  const key = [
+  const key = symbol?.metadata?.ownershipRegionKey ?? [
     options.regionPrefix ?? 'source',
     sourcePath ?? `${language}:memory`,
     regionKind,
     symbol.name ?? symbol.id
   ].map((part) => String(part).replace(/\s+/g, ' ').trim()).join('#');
   return {
-    id: `region_${caseSensitiveIdFragment(key)}`,
+    id: symbol?.metadata?.ownershipRegionId ?? `region_${caseSensitiveIdFragment(key)}`,
     key,
     regionKind,
     granularity: 'symbol',
     language,
     sourcePath,
-    sourceHash: imported?.nativeSource?.sourceHash ?? imported?.nativeAst?.sourceHash,
+    sourceHash: imported?.nativeSource?.sourceHash ?? imported?.nativeAst?.sourceHash ?? imported?.sourceHash,
     symbolId: symbol.id,
     symbolName: symbol.name,
     symbolKind: symbol.kind,
@@ -76,17 +76,19 @@ function semanticOwnershipRegionForDeclaration(input, declaration, documentId) {
 }
 
 function semanticPatchHintForRegion(region, readiness, options = {}) {
+  const supportedOperations = semanticRegionSupportedOperations(region);
   return {
     id: `hint_${idFragment(region.id)}`,
     kind: 'source-region-patch',
     ownershipRegionId: region.id,
     ownershipKey: region.key,
+    operation: supportedOperations[0] ?? 'replace-region',
     sourcePath: region.sourcePath,
     sourceHash: region.sourceHash,
     sourceSpan: region.sourceSpan,
     readiness,
     precision: region.precision,
-    supportedOperations: semanticRegionSupportedOperations(region),
+    supportedOperations,
     projection: {
       sourceLanguage: region.language,
       targetPath: options.targetPath ?? region.sourcePath,

@@ -90,7 +90,7 @@ export function querySemanticPatchBundleOverlaps(records,query={}){
 }
 
 function sharedIndex(left,right,options){
-  return{
+  const shared={
     operationContentHashes:intersect(left.operationContentHashes,right.operationContentHashes),
     editContentHashes:intersect(left.editContentHashes,right.editContentHashes),
     semanticEditKeys:intersect(left.semanticEditKeys,right.semanticEditKeys),
@@ -110,6 +110,28 @@ function sharedIndex(left,right,options){
     baseHashes:intersect(left.baseHashes,right.baseHashes),
     targetHashes:intersect(left.targetHashes,right.targetHashes)
   };
+  const scopedEdit=hasSharedEditScope(shared);
+  const scopedSource=hasSharedSourceScope(shared);
+  return{
+    ...shared,
+    operationContentHashes:scopedEdit?shared.operationContentHashes:[],
+    editContentHashes:scopedEdit?shared.editContentHashes:[],
+    semanticEditKeys:scopedSource?shared.semanticEditKeys:[],
+    semanticIdentityHashes:scopedSource?shared.semanticIdentityHashes:[],
+    semanticEditReplayCurrentHashes:scopedSource?shared.semanticEditReplayCurrentHashes:[],
+    semanticEditReplayOutputHashes:scopedEdit?shared.semanticEditReplayOutputHashes:[],
+    semanticTransformContentHashes:shared.projectionIdentityHashes.length?shared.semanticTransformContentHashes:[],
+    semanticTransformIdentityHashes:shared.projectionIdentityHashes.length?shared.semanticTransformIdentityHashes:[]
+  };
+}
+
+function hasSharedEditScope(shared){
+  return Boolean(shared.regionKeys.length||shared.conflictKeys.length||shared.sourceIdentityHashes.length
+    ||(shared.sourcePaths.length&&(shared.semanticEditKeys.length||shared.semanticIdentityHashes.length)));
+}
+
+function hasSharedSourceScope(shared){
+  return Boolean(shared.sourcePaths.length||shared.regionKeys.length||shared.conflictKeys.length||shared.sourceIdentityHashes.length);
 }
 
 function overlapAdmission(shared,{leftIndex,rightIndex,options}){

@@ -26,6 +26,7 @@ import {
   scanHaskell,
   scanR
 } from './native-region-scanner-functional.js';
+import { normalizeNativeLanguageId } from './native-import-utils.js';
 export { lightweightCoverageLosses } from './native-region-scanner-core.js';
 export {
   detectNewlineStyle,
@@ -34,7 +35,7 @@ export {
 } from './native-source-preservation-scanner.js';
 
 function scanNativeDeclarations(input) {
-  const language = String(input.language).toLowerCase();
+  const language = normalizeNativeLanguageId(input.language) || String(input.language).toLowerCase();
   if (language === 'javascript' || language === 'typescript') return scanJavaScriptLike(input);
   if (language === 'python') return scanPython(input);
   if (language === 'rust') return scanRust(input);

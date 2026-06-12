@@ -71,6 +71,21 @@ assert.equal(record.historyRecord.index.ownershipKeys.includes(movedKey), true);
 assert.equal(record.historyRecord.index.evidenceIds.includes(record.evidence[0].id), true);
 assert.equal(record.evidence[0].metadata.autoMergeClaim, false);
 assert.equal(record.evidence[0].metadata.semanticEquivalenceClaim, false);
+assert.equal(record.roundtripEvidence.schema, 'frontier.lang.bidirectionalTargetChangeRoundtripEvidence.v1');
+assert.equal(record.roundtripEvidence.source.importId, sourceImport.id);
+assert.equal(record.roundtripEvidence.target.changeSetId, record.targetChangeSet.id);
+assert.equal(record.roundtripEvidence.target.patchId, record.targetChangeSet.patch.id);
+assert.equal(record.roundtripEvidence.sourcePatchBundleId, record.sourcePatchBundle.id);
+assert.equal(record.roundtripEvidence.historyRecordId, record.historyRecord.id);
+assert.equal(record.roundtripEvidence.sourceAnchors[0].key, movedKey);
+assert.equal(record.roundtripEvidence.lineageEvidence.lineageResolutionIds.includes(record.sourceAnchorMatches[0].lineageResolutions[0].id), true);
+assert.equal(record.roundtripEvidence.admission.evidenceIds.includes(record.evidence[0].id), true);
+assert.equal(record.roundtripEvidence.admission.autoMergeClaim, false);
+assert.equal(record.summary.lineageResolutions, 1);
+assert.equal(record.evidence[0].metadata.roundtripEvidenceId, record.roundtripEvidence.id);
+assert.equal(record.evidence[0].metadata.semanticMergeAdmission.sourcePatchBundleId, record.sourcePatchBundle.id);
+assert.equal(record.sourcePatchBundle.metadata.roundtripEvidenceId, record.roundtripEvidence.id);
+assert.equal(record.historyRecord.metadata.roundtripEvidenceId, record.roundtripEvidence.id);
 
 const sourceSymbol = sourceImport.semanticIndex.symbols.find((symbol) => symbol.name === 'add');
 const sourceMapping = sourceImport.sourceMaps[0].mappings.find((mapping) => mapping.semanticSymbolId === sourceSymbol.id);
@@ -142,6 +157,15 @@ assert.equal(sourceMapRecord.sourcePatchBundle.changedRegions[0].metadata.bidire
 assert.equal(sourceMapRecord.sourcePatchBundle.metadata.targetPortability.status, 'portable');
 assert.equal(sourceMapRecord.historyRecord.metadata.targetPortability.status, 'portable');
 assert.equal(sourceMapRecord.evidence[0].metadata.targetPortabilityStatus, 'portable');
+assert.equal(sourceMapRecord.roundtripEvidence.sourceMapEvidence.sourceMapMappingIds.includes('map_ts_add_to_rust_add'), true);
+assert.equal(sourceMapRecord.roundtripEvidence.sourceMapEvidence.sourceMapLinkIds.includes(sourceMapRecord.sourceAnchorMatches[0].sourceMapLinks[0].id), true);
+assert.equal(sourceMapRecord.roundtripEvidence.targetRegions[0].afterIdentity.schema, 'frontier.lang.nativeChangeProjectionEndpointIdentity.v1');
+assert.equal(sourceMapRecord.roundtripEvidence.targetRegions[0].afterIdentity.sourceHash, sourceMapRecord.targetChangeSet.afterHash);
+assert.equal(sourceMapRecord.evidence[0].metadata.semanticMergeAdmission.sourceMapMappingIds.includes('map_ts_add_to_rust_add'), true);
+assert.equal(sourceMapRecord.sourcePatchBundle.metadata.semanticMergeAdmission.sourceMapMappingIds.includes('map_ts_add_to_rust_add'), true);
+assert.equal(sourceMapRecord.historyRecord.metadata.semanticMergeAdmission.sourceMapMappingIds.includes('map_ts_add_to_rust_add'), true);
+assert.equal(sourceMapRecord.summary.sourceMapLinks, 1);
+assert.equal(sourceMapRecord.summary.sourceMapMappingIds, 1);
 assert.equal(sourceMapRecord.historyRecord.index.ownershipKeys.includes(sourceKey), true);
 assert.equal(sourceMapRecord.evidence[0].metadata.sourceMapBackedMatches, 1);
 assert.equal(querySemanticPatchBundleRecords([sourceMapRecord.sourcePatchBundle], { targetPortabilityStatus: 'portable' }).length, 1);
@@ -171,6 +195,7 @@ const staleSourceMapRecord = createBidirectionalTargetChangeRecord({
 assert.equal(staleSourceMapRecord.targetPortability.status, 'stale');
 assert.equal(staleSourceMapRecord.sourceAnchorMatches[0].portability.status, 'stale');
 assert.equal(staleSourceMapRecord.targetPortability.staleSourceMapLinkIds.length, 1);
+assert.equal(staleSourceMapRecord.roundtripEvidence.sourceMapEvidence.staleSourceMapLinkIds.length, 1);
 
 const unmatched = createBidirectionalTargetChangeRecord({
   id: 'counter_unmatched_rust_target_change',
@@ -196,3 +221,5 @@ assert.equal(unmatched.sourceAnchorMatches[0].portability.status, 'blocked');
 assert.equal(unmatched.summary.sourceAnchorMatches, 0);
 assert.equal(unmatched.summary.unmatchedTargetRegions > 0, true);
 assert.equal(unmatched.sourceAnchorMatches[0].reasonCodes.includes('source-anchor-not-found'), true);
+assert.equal(unmatched.roundtripEvidence.admission.status, 'blocked');
+assert.equal(unmatched.evidence[0].metadata.semanticMergeAdmission.status, 'blocked');

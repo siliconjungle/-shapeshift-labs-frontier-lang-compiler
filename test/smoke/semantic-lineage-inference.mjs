@@ -5,8 +5,8 @@ import {
   importNativeSource,
   resolveSemanticLineage
 } from './compiler-api.mjs';
+import { matchLineageCandidates } from '../../src/internal/index-impl/semanticLineageInferenceMatching.js';
 import { parserImportFixture, parserImportMultiFixture } from './semantic-lineage-fixtures.mjs';
-
 const movedBefore = importNativeSource({
   language: 'typescript',
   sourcePath: 'src/runtime.ts',
@@ -32,6 +32,8 @@ assert.equal(movedInference.readiness, 'needs-review');
 const movedEvent = movedInference.events.find((event) => event.eventKind === 'moved');
 assert.ok(movedEvent);
 assert.equal(movedEvent.evidence.bodyHashMatch, true);
+assert.equal(movedEvent.metadata.reasonCodes.includes('source-hash-match'), true);
+assert.equal(movedEvent.metadata.hashEvidence.sourceHashMatch, true);
 assert.equal(movedEvent.metadata.autoMergeClaim, false);
 assert.equal(movedEvent.metadata.semanticEquivalenceClaim, false);
 const movedResolution = resolveSemanticLineage(movedInference.lineageMap, {
@@ -40,7 +42,8 @@ const movedResolution = resolveSemanticLineage(movedInference.lineageMap, {
 });
 assert.equal(movedResolution.status, 'resolved');
 assert.equal(movedResolution.currentAnchors[0].sourcePath, 'src/runtime-core.ts');
-
+assert.equal(movedResolution.reasonCodes.includes('source-hash-match'), true);
+assert.equal(movedResolution.currentAnchors[0].lineageReasonCodes.includes('source-hash-match'), true);
 const renamedInference = inferSemanticLineageEvents({
   id: 'lineage_inference_rename_smoke',
   before: parserImportFixture({
@@ -60,7 +63,86 @@ const renamedEvent = renamedInference.events.find((event) => event.eventKind ===
 assert.ok(renamedEvent);
 assert.equal(renamedEvent.evidence.signatureHashMatch, true);
 assert.equal(renamedEvent.metadata.renamed, true);
-
+const renamedResolution = resolveSemanticLineage(renamedInference.lineageMap, {
+  anchorKey: renamedEvent.from.key,
+  generatedAt: 21
+});
+assert.equal(renamedResolution.status, 'resolved');
+assert.equal(renamedResolution.reasonCodes.includes('signature-hash-match'), true);
+const identityMovedRenamed = matchLineageCandidates([
+  lineageCandidateSymbol({
+    key: 'source#src/runtime.ts#function#step',
+    name: 'step',
+    sourcePath: 'src/runtime.ts',
+    sourceHash: 'source_hash_before_identity_move',
+    sourceIdentityHash: 'source_identity_step_stable'
+  })
+], [
+  lineageCandidateSymbol({
+    key: 'source#src/runtime-core.ts#function#advance',
+    name: 'advance',
+    sourcePath: 'src/runtime-core.ts',
+    sourceHash: 'source_hash_after_identity_move',
+    sourceIdentityHash: 'source_identity_step_stable'
+  })
+], {
+  id: 'lineage_identity_hash_move_rename_smoke',
+  generatedAt: 22
+}, {
+  minConfidence: 0.74,
+  ambiguityMargin: 0.08
+});
+assert.equal(identityMovedRenamed.events.length, 1);
+assert.equal(identityMovedRenamed.ambiguous.length, 0);
+const identityMovedRenamedEvent = identityMovedRenamed.events[0];
+assert.equal(identityMovedRenamedEvent.eventKind, 'renamed');
+assert.equal(identityMovedRenamedEvent.metadata.moved, true);
+assert.equal(identityMovedRenamedEvent.metadata.reasonCodes.includes('source-identity-hash-match'), true);
+assert.equal(identityMovedRenamedEvent.metadata.reasonCodes.includes('source-hash-changed'), true);
+assert.equal(identityMovedRenamedEvent.metadata.hashEvidence.sourceIdentityHashMatch, true);
+const identityMovedRenamedResolution = resolveSemanticLineage(identityMovedRenamed.events, {
+  anchorKey: identityMovedRenamedEvent.from.key,
+  generatedAt: 23
+});
+assert.equal(identityMovedRenamedResolution.status, 'resolved');
+assert.equal(identityMovedRenamedResolution.reasonCodes.includes('source-identity-hash-match'), true);
+assert.equal(identityMovedRenamedResolution.currentAnchors[0].sourcePath, 'src/runtime-core.ts');
+const ambiguousIdentity = matchLineageCandidates([
+  lineageCandidateSymbol({
+    key: 'source#src/runtime.ts#function#load',
+    name: 'load',
+    sourcePath: 'src/runtime.ts',
+    sourceHash: 'source_hash_before_load',
+    sourceIdentityHash: 'source_identity_load_shared'
+  })
+], [
+  lineageCandidateSymbol({
+    key: 'source#src/runtime-core.ts#function#fetch',
+    name: 'fetch',
+    sourcePath: 'src/runtime-core.ts',
+    sourceHash: 'source_hash_after_fetch',
+    sourceIdentityHash: 'source_identity_load_shared'
+  }),
+  lineageCandidateSymbol({
+    key: 'source#src/runtime-extra.ts#function#read',
+    name: 'read',
+    sourcePath: 'src/runtime-extra.ts',
+    sourceHash: 'source_hash_after_read',
+    sourceIdentityHash: 'source_identity_load_shared'
+  })
+], {
+  id: 'lineage_identity_hash_ambiguous_smoke',
+  generatedAt: 24
+}, {
+  minConfidence: 0.74,
+  ambiguityMargin: 0.08
+});
+assert.equal(ambiguousIdentity.events.length, 0);
+assert.equal(ambiguousIdentity.ambiguous.length, 1);
+assert.equal(ambiguousIdentity.unmatchedBefore.length, 0);
+assert.equal(ambiguousIdentity.ambiguous[0].reasonCodes.includes('ambiguous-lineage-candidates'), true);
+assert.equal(ambiguousIdentity.ambiguous[0].candidates.length, 2);
+assert.equal(ambiguousIdentity.ambiguous[0].candidates.every((candidate) => candidate.reasons.includes('source-identity-hash-match')), true);
 const recreatedInference = inferSemanticLineageEvents({
   id: 'lineage_inference_recreate_smoke',
   before: parserImportFixture({
@@ -92,7 +174,6 @@ const recreatedResolution = resolveSemanticLineage(recreatedInference.lineageMap
 });
 assert.equal(recreatedResolution.status, 'recreated');
 assert.equal(recreatedResolution.currentAnchors[0].key, recreatedEvent.to[0].key);
-
 const splitInference = inferSemanticLineageEvents({
   id: 'lineage_inference_split_smoke',
   before: parserImportFixture({
@@ -131,7 +212,6 @@ const splitResolution = resolveSemanticLineage(splitInference.lineageMap, {
 assert.equal(splitResolution.status, 'ambiguous');
 assert.equal(splitResolution.reasonCodes.includes('anchor-split'), true);
 assert.equal(splitResolution.currentAnchors.length, 2);
-
 const ambiguousInference = inferSemanticLineageEvents({
   id: 'lineage_inference_ambiguous_move_smoke',
   before: parserImportFixture({
@@ -161,7 +241,6 @@ assert.equal(ambiguousInference.events.some((event) => event.eventKind === 'dele
 assert.equal(ambiguousInference.readiness, 'blocked');
 assert.equal(ambiguousInference.reasons.includes('lineage-inference-blocked'), true);
 assert.equal(ambiguousInference.unmatched.ambiguous[0].reasonCodes.includes('ambiguous-lineage-candidates'), true);
-
 const deletedInference = inferSemanticLineageEvents({
   id: 'lineage_inference_delete_smoke',
   before: importNativeSource({
@@ -182,7 +261,6 @@ assert.equal(deletedInference.reasons.includes('deleted-anchor-lineage-inferred'
 const deletedEvent = deletedInference.events.find((event) => event.eventKind === 'deleted');
 assert.equal(deletedEvent.confidence <= 0.8, true);
 assert.equal(deletedEvent.metadata.deletionEvidenceScope, 'same-source-file');
-
 const diffResult = diffNativeSources({
   id: 'lineage_inference_native_diff_smoke',
   language: 'typescript',
@@ -194,3 +272,46 @@ const diffResult = diffNativeSources({
 assert.equal(diffResult.lineageInference.kind, 'frontier.lang.semanticLineageInference');
 assert.equal(diffResult.metadata.semanticLineageInferenceSummary.beforeSymbols >= 1, true);
 assert.equal(diffResult.evidence.some((record) => record.metadata?.semanticLineageInferenceSummary), true);
+function lineageCandidateSymbol({
+  key,
+  name,
+  sourcePath,
+  sourceHash,
+  sourceIdentityHash,
+  semanticIdentityHash = undefined,
+  identityHash = undefined
+}) {
+  const sourceSpan = {
+    path: sourcePath,
+    startLine: 1,
+    startColumn: 1,
+    endLine: 1,
+    endColumn: 40
+  };
+  return {
+    id: `symbol:${sourceIdentityHash}:${name}`,
+    name,
+    kind: 'function',
+    language: 'typescript',
+    ownershipRegionKind: 'function',
+    sourceHash,
+    sourceIdentityHash,
+    semanticIdentityHash,
+    identityHash,
+    anchor: {
+      key,
+      id: `anchor:${key}`,
+      kind: 'function',
+      language: 'typescript',
+      sourcePath,
+      sourceHash,
+      symbolName: name,
+      sourceSpan,
+      metadata: {
+        sourceIdentityHash,
+        semanticIdentityHash,
+        identityHash
+      }
+    }
+  };
+}

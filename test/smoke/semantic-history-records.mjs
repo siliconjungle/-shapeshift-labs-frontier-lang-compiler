@@ -13,16 +13,15 @@ import {
   semanticHistoryRecordsConflict,
   semanticHistoryRecordsOverlap
 } from './compiler-api.mjs';
-
 assert.equal(SemanticHistoryAdmissionStatuses.includes('queued'), true);
 assert.equal(SemanticHistoryOverlapKinds.includes('ownership'), true);
 assert.equal(SemanticHistoryOverlapKinds.includes('semantic-anchor'), true);
 assert.equal(SemanticLineageResolutionStatuses.includes('resolved'), true);
-
 const stepKey = 'source#src/runtime.ts#function#step';
 const coreStepKey = 'source#src/runtime-core.ts#function#step';
 const renderKey = 'source#src/runtime.ts#function#render';
-
+const inactiveStepKey = 'source#src/runtime.ts#function#inactiveStep';
+const inactiveStepReplacementKey = 'source#src/runtime-active.ts#function#inactiveStep';
 const leftRecord = createSemanticHistoryRecord({
   id: 'history_left_step',
   createdAt: 1,
@@ -55,7 +54,6 @@ const leftRecord = createSemanticHistoryRecord({
   admission: { status: 'queued', readiness: 'needs-review', reasonCodes: ['awaiting-peer-history'] },
   replayLinks: [{ id: 'replay_left_patch', kind: 'patch', path: 'patches/left.json', hash: 'patch_hash_left' }]
 });
-
 const rightRecord = createSemanticHistoryRecord({
   id: 'history_right_step',
   createdAt: 2,
@@ -85,7 +83,6 @@ const rightRecord = createSemanticHistoryRecord({
   admission: { status: 'needs-review', readiness: 'needs-review', reasonCodes: ['parallel-region-touch'] },
   replayLinks: [{ id: 'replay_right_patch', kind: 'patch', path: 'patches/right.json' }]
 });
-
 const renderRecord = createSemanticHistoryRecord({
   id: 'history_render',
   createdAt: 3,
@@ -111,7 +108,6 @@ const renderRecord = createSemanticHistoryRecord({
   admission: { status: 'admitted', readiness: 'ready' },
   replayLinks: ['patches/render.json']
 });
-
 const movedLineage = createSemanticLineageEvent({
   id: 'lineage_step_move',
   createdAt: 1,
@@ -140,12 +136,10 @@ const movedLineage = createSemanticLineageEvent({
   pathMatch: false,
   bodyHashMatch: true
 });
-
 const lineageMap = createSemanticLineageMap([movedLineage], { id: 'lineage_map_runtime' });
 assert.equal(lineageMap.byAnchorKey[stepKey].includes('lineage_step_move'), true);
 assert.equal(querySemanticLineageEvents(lineageMap.events, { operationId: 'worker-17:4' }).length, 1);
 assert.equal(querySemanticLineageEvents(lineageMap.events, { sourcePath: 'src/runtime-core.ts' }).length, 1);
-
 const renameLineage = createSemanticLineageEvent({
   id: 'lineage_step_rename',
   createdAt: 2,
@@ -175,6 +169,21 @@ const deleteLineage = createSemanticLineageEvent({
   from: { key: 'source#src/runtime.ts#function#obsolete', sourcePath: 'src/runtime.ts', symbolName: 'obsolete' },
   confidence: 0.98
 });
+const inactiveDeleteLineage = createSemanticLineageEvent({
+  id: 'lineage_inactive_step_delete',
+  createdAt: 1,
+  eventKind: 'deleted',
+  from: { key: inactiveStepKey, sourcePath: 'src/runtime.ts', symbolName: 'inactiveStep' },
+  confidence: 0.93
+});
+const inactiveReplacementLineage = createSemanticLineageEvent({
+  id: 'lineage_inactive_step_reused',
+  createdAt: 2,
+  eventKind: 'moved',
+  from: { key: inactiveStepKey, sourcePath: 'src/runtime.ts', symbolName: 'inactiveStep' },
+  to: { key: inactiveStepReplacementKey, sourcePath: 'src/runtime-active.ts', symbolName: 'inactiveStep' },
+  confidence: 0.66
+});
 const recreateLineage = createSemanticLineageEvent({
   id: 'lineage_boot_recreate',
   createdAt: 1,
@@ -202,6 +211,8 @@ const extendedLineageMap = createSemanticLineageMap([
   renameLineage,
   splitLineage,
   deleteLineage,
+  inactiveDeleteLineage,
+  inactiveReplacementLineage,
   recreateLineage,
   cycleA,
   cycleB
@@ -214,30 +225,35 @@ assert.equal(stepResolution.traversedEventIds.join(','), 'lineage_step_move,line
 assert.equal(stepResolution.confidence, 0.87);
 assert.equal(stepResolution.crdtOperationIds.includes('worker-17:5'), true);
 assert.equal(stepResolution.evidenceIds.includes('evidence_rename_scan'), true);
-
 const splitResolution = resolveSemanticLineage(extendedLineageMap, { anchorKey: renderKey });
 assert.equal(splitResolution.status, 'ambiguous');
 assert.equal(splitResolution.currentAnchors.length, 2);
 assert.equal(splitResolution.reasonCodes.includes('anchor-split'), true);
-
 const deleteResolution = resolveSemanticLineage(extendedLineageMap, 'source#src/runtime.ts#function#obsolete');
 assert.equal(deleteResolution.status, 'deleted');
 assert.equal(deleteResolution.currentAnchors.length, 0);
 assert.equal(deleteResolution.terminalEventIds.includes('lineage_obsolete_delete'), true);
-
+const inactiveResolution = resolveSemanticLineage(extendedLineageMap, { anchorKey: inactiveStepKey, generatedAt: 42 });
+assert.equal(inactiveResolution.status, 'ambiguous');
+assert.equal(inactiveResolution.status === 'resolved', false);
+assert.equal(inactiveResolution.reasonCodes.includes('anchor-deleted'), true);
+assert.equal(inactiveResolution.reasonCodes.includes('inactive-anchor-has-active-candidates'), true);
+assert.equal(inactiveResolution.currentAnchors[0].key, inactiveStepReplacementKey);
+assert.equal(inactiveResolution.terminalEventIds.includes('lineage_inactive_step_delete'), true);
+const inactiveResolutionReordered = resolveSemanticLineage([inactiveReplacementLineage, inactiveDeleteLineage], { anchorKey: inactiveStepKey, generatedAt: 42 });
+assert.equal(inactiveResolutionReordered.status, inactiveResolution.status);
+assert.deepEqual(inactiveResolutionReordered.currentAnchors.map((anchor) => anchor.key), inactiveResolution.currentAnchors.map((anchor) => anchor.key));
+assert.deepEqual(inactiveResolutionReordered.traversedEventIds, inactiveResolution.traversedEventIds);
 const recreatedResolution = resolveSemanticLineage(extendedLineageMap, 'source#src/runtime.ts#function#boot');
 assert.equal(recreatedResolution.status, 'recreated');
 assert.equal(recreatedResolution.currentAnchors[0].sourcePath, 'src/bootstrap.ts');
-
 const cycleResolution = resolveSemanticLineage(extendedLineageMap, 'cycle#a');
 assert.equal(cycleResolution.status, 'cycle');
 assert.equal(cycleResolution.reasonCodes.includes('lineage-cycle'), true);
-
 const batchResolutions = resolveSemanticLineageBatch(extendedLineageMap, [stepKey, renderKey]);
 assert.equal(batchResolutions.length, 2);
 assert.equal(batchResolutions[0].status, 'resolved');
 assert.equal(batchResolutions[1].status, 'ambiguous');
-
 const annotationLineage = createSemanticLineageEvent({
   id: 'lineage_annotation',
   eventKind: 'unchanged',
@@ -245,7 +261,6 @@ const annotationLineage = createSemanticLineageEvent({
 });
 assert.equal(annotationLineage.crdt, undefined);
 assert.equal(querySemanticLineageEvents([annotationLineage], { operationId: 'lineage_annotation' }).length, 0);
-
 const lineageRecord = createSemanticHistoryRecord({
   id: 'history_lineage_move',
   baseHash: 'base_hash_a',
@@ -254,7 +269,6 @@ const lineageRecord = createSemanticHistoryRecord({
   lineageEvents: [movedLineage],
   admission: { status: 'queued', readiness: 'needs-review' }
 });
-
 assert.equal(leftRecord.kind, 'frontier.lang.semanticHistoryRecord');
 assert.equal(leftRecord.index.ownershipKeys.includes(stepKey), true);
 assert.equal(leftRecord.index.evidenceIds.includes('evidence_left_test'), true);
@@ -263,7 +277,6 @@ assert.equal(leftRecord.index.replayIds.includes('replay_left_patch'), true);
 assert.equal(lineageRecord.index.semanticAnchorKeys.includes(stepKey), true);
 assert.equal(lineageRecord.index.crdtOperationIds.includes('worker-17:4'), true);
 assert.equal(lineageRecord.index.evidenceIds.includes('evidence_lineage_scan'), true);
-
 const overlaps = querySemanticHistoryRecordOverlaps([leftRecord, rightRecord, renderRecord, lineageRecord], {
   includeReplay: true
 });
@@ -274,17 +287,14 @@ assert.equal(stepOverlap.overlap.ownership.includes(stepKey), true);
 assert.equal(stepOverlap.conflictReasons.includes('ownership-overlap'), true);
 assert.equal(stepOverlap.conflictReasons.includes('semantic-conflict-key-overlap'), true);
 assert.equal(stepOverlap.conflictReasons.includes('base-hash-mismatch'), true);
-
 const renderOverlap = overlaps.find((record) => record.leftId === 'history_left_step' && record.rightId === 'history_render');
 assert.ok(renderOverlap);
 assert.equal(renderOverlap.overlap['source-path'].includes('src/runtime.ts'), true);
 assert.equal(renderOverlap.conflict, false);
-
 const lineageOverlap = overlaps.find((record) => record.leftId === 'history_left_step' && record.rightId === 'history_lineage_move');
 assert.ok(lineageOverlap);
 assert.equal(lineageOverlap.overlap['semantic-anchor'].includes(stepKey), true);
 assert.equal(lineageOverlap.conflictReasons.includes('semantic-anchor-overlap'), true);
-
 assert.equal(semanticHistoryRecordsOverlap(leftRecord, rightRecord), true);
 assert.equal(semanticHistoryRecordsConflict(leftRecord, rightRecord), true);
 assert.equal(semanticHistoryRecordsConflict(leftRecord, renderRecord), false);

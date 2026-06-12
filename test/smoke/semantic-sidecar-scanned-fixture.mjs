@@ -1,0 +1,92 @@
+import { assert, assertSemanticImportFixture } from './helpers.mjs';
+import { scannedJsImport } from './scanned-js.mjs';
+import { createSemanticImportSidecar, NativeImportRegionTaxonomyKinds } from './compiler-api.mjs';
+
+const scannedJsSidecar = createSemanticImportSidecar(scannedJsImport, { generatedAt: 123, targetPath: 'dist/scanned.js' });
+assertSemanticImportFixture(scannedJsImport, {
+  sidecar: scannedJsSidecar,
+  expectedSymbols: ['addTodo', 'TodoStore.save'],
+  expectedRegionKinds: ['body', 'route', 'content', 'config', 'property'],
+  expectedReadiness: 'needs-review',
+  expectedWarningCodes: ['external-tool-proof-obligations', 'open-proof-obligations'],
+  expectEligible: true
+});
+assert.equal(scannedJsSidecar.kind, 'frontier.lang.semanticImportSidecar');
+assert.equal(scannedJsSidecar.generatedAt, 123);
+assert.equal(scannedJsSidecar.summary.emptySemanticIndex, false);
+assert.ok(scannedJsSidecar.summary.symbols >= 4);
+assert.ok(scannedJsSidecar.ownershipRegions.length >= 4);
+assert.equal(NativeImportRegionTaxonomyKinds.includes('import'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('import'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('body') || scannedJsSidecar.regionTaxonomy.presentKinds.includes('type'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('route'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('content'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('config'), true);
+assert.equal(scannedJsSidecar.regionTaxonomy.presentKinds.includes('property'), true);
+assert.equal(scannedJsSidecar.summary.regionKinds >= 2, true);
+assert.equal(scannedJsSidecar.symbols.some((symbol) => symbol.name === 'TodoStore.save' && symbol.ownershipRegionId), true);
+assert.equal(scannedJsSidecar.symbols.some((symbol) => symbol.ownershipRegionKind), true);
+assert.equal(scannedJsSidecar.imports.some((entry) => entry.regionTaxonomy?.presentKinds?.length), true);
+assert.equal(scannedJsSidecar.imports[0].sourcePreservationRecordCount >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsSidecar.imports[0].sourcePreservationLevels.includes('exact'), true);
+assert.equal(scannedJsImport.universalAst.layers.semanticSymbols.semanticSymbolIds.length >= scannedJsImport.semanticIndex.symbols.length, true);
+assert.equal(scannedJsImport.universalAst.layers.projectionEvidence.sourceMapMappingIds.length >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsSidecar.imports[0].universalAstLayerCount > 0, true);
+assert.equal(scannedJsSidecar.imports[0].universalAstLayerNames.includes('semanticSymbols'), true);
+assert.equal(scannedJsSidecar.universalAstLayers.names.includes('projectionEvidence'), true);
+assert.equal(scannedJsSidecar.summary.universalAstLayers, scannedJsSidecar.universalAstLayers.total);
+assert.equal(scannedJsSidecar.proofSpec.empty, false);
+assert.equal(scannedJsSidecar.proofSpec.obligations >= 2, true);
+assert.equal(scannedJsSidecar.proofSpec.open >= 1, true);
+assert.equal(scannedJsSidecar.proofSpec.externalToolRequired >= 1, true);
+assert.equal(scannedJsSidecar.summary.proofSpecRecords, scannedJsSidecar.proofSpec.total);
+assert.equal(scannedJsSidecar.paradigmSemantics.empty, false);
+assert.equal(scannedJsSidecar.paradigmSemantics.bindings >= scannedJsImport.semanticIndex.symbols.length, true);
+assert.equal(scannedJsSidecar.paradigmSemantics.loweringRecords >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsSidecar.paradigmSemantics.hasLowering, true);
+assert.equal(scannedJsSidecar.sourcePreservation.total >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsSidecar.sourcePreservation.exact >= 1, true);
+assert.equal((scannedJsSidecar.sourcePreservation.byLevel.declaration ?? 0) + (scannedJsSidecar.sourcePreservation.byLevel.estimated ?? 0) >= 1, true);
+assert.equal(scannedJsSidecar.sourcePreservation.byCompilerRecord.sourceMapMapping >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsSidecar.sourcePreservation.byPrecision.declaration >= 1, true);
+assert.equal(scannedJsSidecar.sourcePreservation.bySourceMapOrigin['native-import'] >= scannedJsImport.sourceMaps[0].mappings.length, true);
+assert.equal(scannedJsSidecar.sourcePreservation.byOwnershipRegionKind.body >= 1, true);
+assert.equal(scannedJsSidecar.sourcePreservation.declarationMappingIds.some((id) => id.includes('addtodo')), true);
+assert.equal(scannedJsSidecar.sourcePreservation.records.some((record) => record.sourceMapMappingId && record.sourceRange?.startLine && record.ownershipRegionKind), true);
+assert.equal(scannedJsSidecar.sourcePreservation.queryKeys.includes('compiler-record:sourceMapMapping'), true);
+assert.equal(scannedJsImport.metadata.sourcePreservation.summary.triviaByKind.comment, 1);
+assert.equal(scannedJsImport.metadata.sourcePreservation.summary.directiveKinds.includes('module-directive'), true);
+assert.equal(scannedJsSidecar.summary.sourcePreservationRecords, scannedJsSidecar.sourcePreservation.total);
+assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.supportedOperations.includes('replace-import')), true);
+assert.equal(scannedJsSidecar.patchHints.every((hint) => hint.operation && hint.supportedOperations.includes(hint.operation)), true);
+const scannedBodyPatchHint = scannedJsSidecar.patchHints.find((hint) => hint.operation === 'replace-body' && hint.sourceSpan && hint.ownershipKey);
+assert.ok(scannedBodyPatchHint, 'expected a source-addressable replace-body patch hint');
+assert.equal(scannedBodyPatchHint.ownershipKey.includes('#body#'), true);
+assert.equal(typeof scannedBodyPatchHint.sourceSpan.startLine, 'number');
+assert.equal(scannedJsSidecar.imports[0].patchHintCount, scannedJsSidecar.imports[0].patchHints.length);
+assert.equal(scannedJsSidecar.imports[0].patchHintOperations.includes('replace-body'), true);
+assert.equal(scannedJsSidecar.patchHints.some((hint) => hint.sourcePath === 'src/scanned.js' && hint.projection.targetPath === 'dist/scanned.js'), true);
+assert.equal(scannedJsSidecar.quality.imported, true);
+assert.equal(scannedJsSidecar.quality.eligible, true);
+assert.equal(scannedJsSidecar.quality.record.classification, 'useful');
+assert.equal(scannedJsSidecar.admission.record.classification, 'useful');
+assert.equal(scannedJsSidecar.imports[0].qualityRecord.classification, 'useful');
+assert.equal(scannedJsSidecar.quality.emptyEvidenceWarnings.length, 0);
+assert.equal(scannedJsSidecar.quality.symbolCount, scannedJsSidecar.summary.symbols);
+assert.equal(scannedJsSidecar.admission.counts.patchHints, scannedJsSidecar.patchHints.length);
+assert.equal(['admit', 'review', 'review-proof-obligations'].includes(scannedJsSidecar.admission.action), true);
+assert.equal(scannedJsSidecar.summary.patchHints, scannedJsSidecar.patchHints.length);
+assert.equal(scannedJsSidecar.summary.evidenceWarnings, 0);
+assert.equal(scannedJsSidecar.summary.semanticImportRecordClassification, 'useful');
+assert.equal(scannedJsSidecar.summary.semanticImportRecordAction, 'use-semantic-import-evidence');
+assert.equal(scannedJsSidecar.semanticImpact.kind, 'frontier.lang.semanticImpact');
+assert.equal(scannedJsSidecar.semanticImpact.records.length, scannedJsSidecar.ownershipRegions.length);
+assert.equal(scannedJsSidecar.summary.semanticImpactRecords, scannedJsSidecar.semanticImpact.summary.total);
+assert.equal(scannedJsSidecar.semanticImpact.summary.patchHints, scannedJsSidecar.patchHints.length);
+assert.equal(scannedJsSidecar.semanticImpact.summary.dependencyRelations, scannedJsSidecar.dependencies.total);
+assert.equal(scannedJsSidecar.semanticImpact.summary.loweringRecords >= scannedJsSidecar.ownershipRegions.length, true);
+assert.equal(scannedJsSidecar.semanticImpact.summary.verificationPlans.includes('dependency-review'), true);
+assert.equal(scannedJsSidecar.semanticImpact.records.some((record) => record.dependencyRelationIds.length > 0 && record.conflictKeys.some((key) => key.startsWith('dependency:'))), true);
+assert.equal(scannedJsSidecar.semanticImpact.records.some((record) => record.sourceMapMappingIds.length > 0 && record.patchHintIds.length > 0), true);
+assert.equal(scannedJsSidecar.semanticImpact.records.every((record) => record.readiness === 'needs-review'), true);
+assert.equal(scannedJsSidecar.semanticImpact.records.every((record) => record.affectedSymbolIds.every((id) => scannedJsSidecar.symbols.some((symbol) => symbol.id === id))), true);

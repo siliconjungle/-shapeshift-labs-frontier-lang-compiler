@@ -1,6 +1,20 @@
 import { assert } from './helpers.mjs';
 import { createSemanticImportSidecar, importNativeSource } from './compiler-api.mjs';
 
+function scannedSymbol(importResult, name, kind) {
+  const symbol = importResult.semanticIndex.symbols.find((entry) => entry.name === name && entry.kind === kind);
+  assert.ok(symbol, `expected scanned ${kind} symbol ${name}`);
+  return symbol;
+}
+
+function assertSourceMappedSymbol(importResult, symbol) {
+  assert.equal(symbol.definitionSpan?.startLine >= 1, true);
+  assert.equal(symbol.definitionSpan?.endLine >= symbol.definitionSpan?.startLine, true);
+  assert.equal(importResult.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId === symbol.id
+    && mapping.sourceSpan?.startLine === symbol.definitionSpan.startLine
+    && mapping.sourceSpan?.endLine === symbol.definitionSpan.endLine), true);
+}
+
 const scannedDefaultClassImport = importNativeSource({
   language: 'typescript',
   sourcePath: 'src/default-class.tsx',
@@ -8,6 +22,7 @@ const scannedDefaultClassImport = importNativeSource({
 });
 assert.equal(scannedDefaultClassImport.semanticIndex.symbols.some((symbol) => symbol.name === 'RuntimeHost' && symbol.kind === 'class'), true);
 assert.equal(scannedDefaultClassImport.sourceMaps[0].mappings.some((mapping) => mapping.ownershipRegionId), true);
+assertSourceMappedSymbol(scannedDefaultClassImport, scannedSymbol(scannedDefaultClassImport, 'RuntimeHost', 'class'));
 
 const scannedAnonymousDefaultClassImport = importNativeSource({
   language: 'typescript',
@@ -16,6 +31,21 @@ const scannedAnonymousDefaultClassImport = importNativeSource({
 });
 assert.equal(scannedAnonymousDefaultClassImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default' && symbol.kind === 'class'), true);
 assert.equal(scannedAnonymousDefaultClassImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default.render' && symbol.kind === 'method'), true);
+assertSourceMappedSymbol(scannedAnonymousDefaultClassImport, scannedSymbol(scannedAnonymousDefaultClassImport, 'default', 'class'));
+
+const scannedNamedDefaultFunctionImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/default-function.ts',
+  sourceText: 'export default async function loadUser(id: string) { return id; }\n'
+});
+assertSourceMappedSymbol(scannedNamedDefaultFunctionImport, scannedSymbol(scannedNamedDefaultFunctionImport, 'loadUser', 'function'));
+
+const scannedAnonymousDefaultFunctionImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/anonymous-default-function.ts',
+  sourceText: 'export default function (props: Props) { return props.title; }\n'
+});
+assertSourceMappedSymbol(scannedAnonymousDefaultFunctionImport, scannedSymbol(scannedAnonymousDefaultFunctionImport, 'default', 'function'));
 
 const scannedWrapperImport = importNativeSource({
   language: 'typescript',
@@ -38,6 +68,25 @@ const scannedDefaultForwardRefImport = importNativeSource({
   sourceText: 'export default forwardRef<HTMLButtonElement, Props>((props, ref) => props.kind);\n'
 });
 assert.equal(scannedDefaultForwardRefImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default' && symbol.kind === 'function'), true);
+
+const scannedDefaultClassWrapperImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/default-class-wrapper.tsx',
+  sourceText: 'export default React.memo(class Card extends React.Component { render() { return null; } });\n'
+});
+assertSourceMappedSymbol(scannedDefaultClassWrapperImport, scannedSymbol(scannedDefaultClassWrapperImport, 'Card', 'class'));
+assert.equal(scannedDefaultClassWrapperImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Card'
+  && symbol.metadata.ownershipRegionKind === 'type'), true);
+
+const scannedDefaultObjectFunctionWrapperImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/default-object-function-wrapper.ts',
+  sourceText: 'export default Object.freeze(function makePlugin(input: PluginInput) { return input; });\n'
+});
+assertSourceMappedSymbol(
+  scannedDefaultObjectFunctionWrapperImport,
+  scannedSymbol(scannedDefaultObjectFunctionWrapperImport, 'makePlugin', 'function')
+);
 
 const scannedDefaultAliasImport = importNativeSource({
   language: 'typescript',

@@ -1,4 +1,5 @@
 import{uniqueRecordsById,uniqueStrings}from'../../native-import-utils.js';
+import{targetProjectionCoverageSignals}from'./projectImportAdmissionProjectionCoverage.js';
 
 const scoreWeights=Object.freeze({
   semanticEvidence:22,
@@ -95,15 +96,35 @@ function sourcePreservationScore(input){
 
 function sourceFreshnessScore(input){
   const sourceCount=Math.max(input.sourceCount??0,input.sourcePreservation.total,1);
-  const fresh=Math.max(0,sourceCount-input.sourcePreservation.stale);
+  const sourceStaleness=input.sourceStaleness??{};
+  const stale=sourceStaleness.stale??input.sourcePreservation.stale;
+  const contentHashStale=sourceStaleness.contentHashStale??input.sourcePreservation.contentHashStale??0;
+  const baseHashStale=sourceStaleness.baseHashStale??input.sourcePreservation.baseHashStale??0;
+  const dirtyWorkspace=sourceStaleness.dirtyWorkspace??input.sourcePreservation.dirtyWorkspace??0;
+  const fresh=Math.max(0,sourceCount-stale);
   const score=roundScore(fresh*100/sourceCount);
   return scoreComponent('sourceFreshness',score,[
-    ...(input.sourcePreservation.stale?[
-      `Project import has stale source hashes for ${input.sourcePreservation.stale} source(s).`
+    ...(contentHashStale?[
+      `Project import has stale content hashes for ${contentHashStale} source(s).`
+    ]:[]),
+    ...(baseHashStale?[
+      `Project import has stale base hashes for ${baseHashStale} source(s).`
+    ]:[]),
+    ...(!contentHashStale&&!baseHashStale&&stale?[
+      `Project import has stale source hashes for ${stale} source(s).`
+    ]:[]),
+    ...(dirtyWorkspace&&!stale?[
+      `Project workspace is marked dirty for ${dirtyWorkspace} source(s), but no content or base hash staleness was detected.`
     ]:[])
   ],{
-    stale:input.sourcePreservation.stale,
-    staleSourcePaths:input.sourcePreservation.staleSourcePaths,
+    stale,
+    contentHashStale,
+    baseHashStale,
+    dirtyWorkspace,
+    staleSourcePaths:sourceStaleness.staleSourcePaths??input.sourcePreservation.staleSourcePaths,
+    contentHashStaleSourcePaths:sourceStaleness.contentHashStaleSourcePaths??input.sourcePreservation.contentHashStaleSourcePaths??[],
+    baseHashStaleSourcePaths:sourceStaleness.baseHashStaleSourcePaths??input.sourcePreservation.baseHashStaleSourcePaths??[],
+    dirtyWorkspaceSourcePaths:sourceStaleness.dirtyWorkspaceSourcePaths??input.sourcePreservation.dirtyWorkspaceSourcePaths??[],
     checkedSources:sourceCount
   });
 }
@@ -184,75 +205,6 @@ function targetProjectionCoverageScore(input){
     ...(coverage.missingAdapters?[`${coverage.missingAdapters} target projection adapter(s) are missing.`]:[]),
     ...(coverage.unsupportedTargetFeatures?[`${coverage.unsupportedTargetFeatures} target projection target(s) have unsupported features.`]:[])
   ],coverage);
-}
-
-function targetProjectionCoverageSignals(input){
-  const entries=targetProjectionEntries(input.projectResult,input.imports);
-  const matrices=projectionMatrices(input.projectResult,input.imports);
-  for(const matrix of matrices){
-    for(const language of matrix?.languages??[]) entries.push(...(language?.targets??[]));
-  }
-  const sourceMapSummary=input.contract?.sourceMaps??{};
-  const summary=matrices.reduce((current,matrix)=>{
-    current.exactSourceProjection+=matrix?.summary?.exactSourceProjection??0;
-    current.targetAdapterProjection+=matrix?.summary?.targetAdapterProjection??0;
-    current.missingAdapters+=matrix?.summary?.missingAdapters??0;
-    current.unsupportedTargetFeatures+=matrix?.summary?.unsupportedTargetFeatures??0;
-    return current;
-  },{exactSourceProjection:0,targetAdapterProjection:0,missingAdapters:0,unsupportedTargetFeatures:0});
-  const targetEntries=entries.length;
-  const supportedTargets=entries.filter((entry)=>entry?.supported===true).length;
-  const adapterProjectionTargets=entries.filter((entry)=>
-    entry?.lossClass==='targetAdapterProjection'||entry?.lossClass==='exactSourceProjection'||entry?.adapter||entry?.adapterKind==='targetProjection'
-  ).length+summary.targetAdapterProjection+summary.exactSourceProjection;
-  const readinessValues=entries.map((entry)=>readinessScore[entry?.readiness]??45);
-  const readinessAverage=readinessValues.length?readinessValues.reduce((sum,value)=>sum+value,0)/readinessValues.length:0;
-  return {
-    targetEntries,
-    supportedTargets,
-    adapterProjectionTargets,
-    exactSourceProjection:Math.max(summary.exactSourceProjection,input.sourcePreservation.exactSourceAvailable??0),
-    targetAdapterProjection:summary.targetAdapterProjection,
-    missingAdapters:summary.missingAdapters+entries.filter((entry)=>entry?.lossClass==='missingAdapter'||entry?.supported===false).length,
-    unsupportedTargetFeatures:summary.unsupportedTargetFeatures+entries.filter((entry)=>entry?.lossClass==='unsupportedTargetFeatures').length,
-    readinessScore:roundScore(readinessAverage),
-    sourceMapMappings:sourceMapSummary.mappingCount??0,
-    generatedRangeMappings:sourceMapSummary.generatedRangeMappings??0,
-    targetPaths:sourceMapSummary.targetPaths?.length??0,
-    adapterGeneratedRanges:input.contract?.adapterCoverage?.generatedRanges??0
-  };
-}
-
-function targetProjectionEntries(projectResult,imports){
-  return [
-    projectResult?.targetCoverage,
-    projectResult?.metadata?.targetCoverage,
-    projectResult?.metadata?.targetProjectionCoverage,
-    ...(projectResult?.targetCoverages??[]),
-    ...(projectResult?.metadata?.targetCoverages??[]),
-    ...(imports??[]).flatMap((imported)=>[
-      imported?.targetCoverage,
-      imported?.metadata?.targetCoverage,
-      imported?.metadata?.targetProjectionCoverage,
-      ...(imported?.targetCoverages??[]),
-      ...(imported?.metadata?.targetCoverages??[])
-    ])
-  ].flatMap((entry)=>Array.isArray(entry)?entry:[entry]).filter((entry)=>entry&&typeof entry==='object'&&(entry.target||entry.lossClass||entry.supported!==undefined));
-}
-
-function projectionMatrices(projectResult,imports){
-  return [
-    projectResult?.projectionMatrix,
-    projectResult?.metadata?.projectionMatrix,
-    ...(projectResult?.projectionMatrices??[]),
-    ...(projectResult?.metadata?.projectionMatrices??[]),
-    ...(imports??[]).flatMap((imported)=>[
-      imported?.projectionMatrix,
-      imported?.metadata?.projectionMatrix,
-      ...(imported?.projectionMatrices??[]),
-      ...(imported?.metadata?.projectionMatrices??[])
-    ])
-  ].filter((matrix)=>matrix?.kind==='frontier.lang.projectionTargetLossMatrix'||Array.isArray(matrix?.languages));
 }
 
 function admissionEvidenceRecords(projectResult,imports){

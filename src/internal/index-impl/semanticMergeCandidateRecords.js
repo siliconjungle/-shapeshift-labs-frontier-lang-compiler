@@ -1,6 +1,7 @@
 import{idFragment,normalizeSemanticMergeReadiness,uniqueStrings}from'../../native-import-utils.js';
 import{semanticMergeConflictRiskScore}from'./semanticMergeConflicts.js';
 import{inferProjectionRisk,internalOverlaps,normalizeChangedSemanticRegions,normalizeProjectionRisk,projectionRiskRank,queryAdmissionOverlaps,summarizeOverlaps}from'./semanticMergeCandidateRecordInternals.js';
+import{semanticMergeCandidateScoreFacets}from'./semanticMergeCandidateScoreFacets.js';
 
 export const SemanticMergeCandidateProjectionRisks=Object.freeze(['low','medium','high','unknown']);
 
@@ -74,6 +75,21 @@ export function createSemanticMergeCandidateAdmissionRecord(input={},options={})
   const projectionRisk=normalizeProjectionRisk(options.projectionRisk??candidate.projectionRisk??candidate.risk)
     ??inferProjectionRisk({readiness,candidate,patch,changedSemanticRegions,conflictKeys});
   const overlaps=internalOverlaps(changedSemanticRegions);
+  const conflictRiskScore=semanticMergeConflictRiskScore(candidate);
+  const scoreFacets=semanticMergeCandidateScoreFacets({
+    source,
+    candidate,
+    patch,
+    readiness,
+    projectionRisk,
+    evidenceRecords,
+    evidenceIds,
+    proofIds,
+    changedSemanticRegions,
+    conflictKeys,
+    overlaps,
+    conflictRiskScore
+  });
   const readinessSortKey=semanticMergeCandidateReadinessSortKey({
     readiness,
     projectionRisk,
@@ -106,11 +122,13 @@ export function createSemanticMergeCandidateAdmissionRecord(input={},options={})
     evidenceIds,
     proofIds,
     overlapSummary:summarizeOverlaps(overlaps),
+    scoreFacets,
     admission:{
       readiness,
       reviewRequired:readiness!=='ready'||projectionRisk!=='low'||overlaps.length>0,
       action:admissionAction({readiness,projectionRisk,overlaps}),
       sortKey:readinessSortKey,
+      scoreFacets,
       reasonCodes:uniqueStrings([
         ...strings(options.reasonCodes),
         ...strings(source.reasons),
@@ -145,11 +163,12 @@ export function createSemanticMergeCandidateAdmissionRecord(input={},options={})
       overlaps:overlaps.length,
       readiness,
       projectionRisk,
-      reviewRequired:readiness!=='ready'||projectionRisk!=='low'||overlaps.length>0
+      reviewRequired:readiness!=='ready'||projectionRisk!=='low'||overlaps.length>0,
+      scoreFacets:scoreFacets.summary
     },
     metadata:compactRecord({
       sourceChangeSetId:source.kind==='frontier.lang.nativeSourceChangeSet'?source.id:undefined,
-      conflictRiskScore:semanticMergeConflictRiskScore(candidate),
+      conflictRiskScore,
       conflictSummary:candidate.conflictSummary??candidate.metadata?.conflictSummary??source.metadata?.semanticMergeConflictSummary,
       changedRegionProjectionSummary:source.metadata?.changedRegionProjectionSummary??candidate.metadata?.changedRegionProjectionSummary,
       compact:true,
@@ -170,6 +189,7 @@ export function decorateSemanticMergeCandidateForAdmission(input={},options={}){
     proofIds:admissionRecord.proofIds,
     projectionRisk:admissionRecord.projectionRisk,
     readinessSortKey:admissionRecord.readinessSortKey,
+    scoreFacets:admissionRecord.scoreFacets,
     mergeAdmission:admissionRecord
   };
 }

@@ -36,7 +36,12 @@ export function resolveSemanticLineage(eventsOrMap = [], query = {}, options = {
     state.status = 'max-depth';
     state.reasonCodes.push('max-depth');
   }
-  if (!state.cycle && !state.maxDepthHit) state.status = classifyResolutionStatus(state);
+  if (!state.cycle && !state.maxDepthHit) {
+    state.status = classifyResolutionStatus(state);
+    if (state.status === 'ambiguous' && state.terminal.length > 0 && state.current.length > 0) {
+      state.reasonCodes.push('inactive-anchor-has-active-candidates');
+    }
+  }
   return buildResolutionRecord(state, start, maxDepth, resolutionQuery, options);
 }
 
@@ -105,6 +110,7 @@ function applyLineageEvent(state, event, visitedEvents) {
   state.operationIds.push(event.crdt?.operationId);
   state.heads.push(...(event.crdt?.heads ?? []));
   state.eventKinds.push(event.eventKind);
+  state.reasonCodes.push(...lineageEventReasonCodes(event));
   state.sourcePaths.push(event.from?.sourcePath, ...event.to.map((anchor) => anchor.sourcePath));
   if (event.confidence !== undefined) state.confidence = state.confidence === undefined ? event.confidence : Math.min(state.confidence, event.confidence);
   const matched = state.current.filter((anchor) => anchorsMatch(anchor, event.from));
@@ -142,6 +148,7 @@ function nextLineageEvents(anchors, byFromKey, byFromId) {
 
 function classifyResolutionStatus(state) {
   if (state.current.length === 0 && state.traversed.length > 0) return 'deleted';
+  if (state.terminal.length > 0 && state.current.length > 0) return 'ambiguous';
   if (state.eventKinds.includes('recreated')) return 'recreated';
   if (state.current.length > 1 || state.eventKinds.includes('split') || state.eventKinds.includes('merged')) return 'ambiguous';
   if (state.traversed.length > 0) return 'resolved';
@@ -203,6 +210,16 @@ function lineageSourcePaths(state, start, query, anchors = []) {
     ...state.sourcePaths,
     ...array(anchors).map((anchor) => anchor?.sourcePath),
     ...array(anchors).flatMap((anchor) => anchor?.lineageSourcePaths ?? [])
+  ]);
+}
+function lineageEventReasonCodes(event) {
+  return uniqueStrings([
+    ...array(event.reasonCodes),
+    ...array(event.metadata?.reasonCodes),
+    event.evidence?.signatureHashMatch ? 'signature-hash-match' : undefined,
+    event.evidence?.bodyHashMatch ? 'body-hash-match' : undefined,
+    event.evidence?.pathMatch ? 'source-path-match' : undefined,
+    event.evidence?.sourceSpanMoved ? 'source-span-moved' : undefined
   ]);
 }
 function positiveInteger(value, fallback) {

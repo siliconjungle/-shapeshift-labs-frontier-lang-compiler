@@ -1,3 +1,5 @@
+import { semanticImportSidecarQualityRecord } from '../../semantic-import-sidecar-entry.js';
+
 function sidecarSourcePaths(importEntries) {
   return [...new Set(importEntries.map((entry) => entry.sourcePath).filter(Boolean))];
 }
@@ -15,10 +17,19 @@ function sidecarQualityWarning(code, message, action, sourcePaths) {
 export function createSemanticImportSidecarQuality(input) {
   const { importEntries, symbols, ownershipRegions, patchHints, proofSpec, evidence, readiness } = input;
   const expected = input.expected === true;
+  const expectedEmpty = input.expectedEmpty === true || input.semanticImportExpectedEmpty === true;
   const sourcePaths = sidecarSourcePaths(importEntries);
   const importCount = importEntries.length;
+  const record = semanticImportSidecarQualityRecord({
+    expected,
+    expectedEmpty,
+    importCount,
+    symbolCount: symbols.length,
+    sourcePaths
+  });
+  const expectedEmptySatisfied = record.classification === 'expected-empty';
   const warnings = [];
-  if (expected && importCount === 0) warnings.push(sidecarQualityWarning(
+  if ((expected || expectedEmpty) && importCount === 0) warnings.push(sidecarQualityWarning(
     'expected-semantic-import-missing',
     'Semantic import was expected but no import entries were selected.',
     'check-semantic-import-include-globs-and-workspace-paths',
@@ -30,31 +41,31 @@ export function createSemanticImportSidecarQuality(input) {
     'run-native-import',
     sourcePaths
   ));
-  if (expected && importCount > 0 && symbols.length === 0) warnings.push(sidecarQualityWarning(
+  if (!expectedEmptySatisfied && expected && importCount > 0 && symbols.length === 0) warnings.push(sidecarQualityWarning(
     'expected-semantic-import-empty',
     'Semantic import was expected but selected imports produced zero semantic symbols.',
     'rerun-importer-with-semantic-source-selection',
     sourcePaths
   ));
-  if (importCount > 0 && symbols.length === 0) warnings.push(sidecarQualityWarning(
+  if (!expectedEmptySatisfied && importCount > 0 && symbols.length === 0) warnings.push(sidecarQualityWarning(
     'empty-semantic-index',
     'Semantic sidecar has import entries but no semantic symbols.',
     'rerun-importer-with-semantic-index',
     sourcePaths
   ));
-  if (importCount > 0 && ownershipRegions.length === 0) warnings.push(sidecarQualityWarning(
+  if (!expectedEmptySatisfied && importCount > 0 && ownershipRegions.length === 0) warnings.push(sidecarQualityWarning(
     'missing-ownership-regions',
     'Semantic sidecar has no ownership regions for safe merge ownership.',
     'rerun-sidecar-generation-with-ownership-regions',
     sourcePaths
   ));
-  if (importCount > 0 && patchHints.length === 0) warnings.push(sidecarQualityWarning(
+  if (!expectedEmptySatisfied && importCount > 0 && patchHints.length === 0) warnings.push(sidecarQualityWarning(
     'missing-patch-hints',
     'Semantic sidecar has no patch hints.',
     'generate-semantic-patch-hints',
     sourcePaths
   ));
-  if (importCount > 0 && evidence.length === 0) warnings.push(sidecarQualityWarning(
+  if (!expectedEmptySatisfied && importCount > 0 && evidence.length === 0) warnings.push(sidecarQualityWarning(
     'empty-evidence',
     'Semantic sidecar has no evidence records.',
     'attach-semantic-import-evidence',
@@ -116,16 +127,18 @@ export function createSemanticImportSidecarQuality(input) {
     warning.code === 'missing-ownership-regions' ||
     warning.code === 'missing-patch-hints'
   ));
-  const expectedMissingReasonCodes = expected
-    ? emptyEvidenceWarnings.map((warning) => warning.code)
-    : [];
-  const expectedSatisfied = !expected || (
+  const expectedSatisfied = expectedEmpty
+    ? expectedEmptySatisfied
+    : !expected || (
     importCount > 0 &&
     symbols.length > 0 &&
     ownershipRegions.length > 0 &&
     patchHints.length > 0 &&
     evidence.length > 0
   );
+  const expectedMissingReasonCodes = (expected || expectedEmpty) && !expectedSatisfied
+    ? emptyEvidenceWarnings.map((warning) => warning.code)
+    : [];
   const proofSummary = {
     total: proofSpec.total,
     obligations: proofSpec.obligations,
@@ -143,12 +156,14 @@ export function createSemanticImportSidecarQuality(input) {
   return {
     schema: 'frontier.lang.semanticSidecarQuality.v1',
     expected,
+    expectedEmpty,
     expectedSatisfied,
     expectedMissingReasonCodes,
     selected: importCount > 0,
-    eligible: importCount > 0 && emptyEvidenceWarnings.length === 0 && proofSpec.failed === 0 && readiness !== 'blocked',
+    eligible: record.classification === 'useful' && emptyEvidenceWarnings.length === 0 && proofSpec.failed === 0 && readiness !== 'blocked',
     imported: importCount > 0,
     importCount,
+    record,
     symbolCount: symbols.length,
     ownershipRegionCount: ownershipRegions.length,
     patchHintCount: patchHints.length,
@@ -164,6 +179,7 @@ export function createSemanticImportSidecarAdmission(quality, readiness) {
   return {
     schema: 'frontier.lang.semanticSidecarAdmission.v1',
     expected: quality.expected,
+    expectedEmpty: quality.expectedEmpty,
     expectedSatisfied: quality.expectedSatisfied,
     expectedMissingReasonCodes: quality.expectedMissingReasonCodes,
     selected: quality.selected,
@@ -172,6 +188,7 @@ export function createSemanticImportSidecarAdmission(quality, readiness) {
     importCount: quality.importCount,
     readiness,
     action: sidecarAdmissionAction(quality, readiness),
+    record: quality.record,
     counts: {
       symbols: quality.symbolCount,
       ownershipRegions: quality.ownershipRegionCount,
@@ -191,6 +208,7 @@ function sidecarAdmissionAction(quality, readiness) {
   if (!quality.imported) return 'reject-missing-imports';
   if (readiness === 'blocked') return 'reject-blocked';
   if (quality.proofSummary.failed > 0) return 'reject-failed-proof';
+  if (quality.record?.classification === 'expected-empty') return 'skip-expected-empty';
   if (quality.emptyEvidenceWarnings.length > 0) return 'reject-empty-evidence';
   if (!quality.eligible) return 'reject-quality';
   if (sidecarProofReviewObligations(quality.proofSummary) > 0) return 'review-proof-obligations';

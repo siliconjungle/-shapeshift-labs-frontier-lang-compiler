@@ -1,9 +1,21 @@
 import type { EvidenceRecord, FrontierSourceLanguage, SemanticMergeReadiness, SourceSpan } from '@shapeshift-labs/frontier-lang-kernel';
 import type { ImportNativeSourceOptions, NativeSourceImportResult } from './import-adapter-core.js';
-
+import type { SemanticEditReplayDiagnostic } from './semantic-edit-replay-diagnostics.js';
+export type * from './semantic-edit-replay-diagnostics.js';
 export type SemanticEditScriptOperationStatus = 'candidate' | 'portable' | 'already-applied' | 'covered' | 'needs-port' | 'conflict' | 'stale' | 'blocked';
 export type SemanticEditScriptAdmissionStatus = 'auto-merge-candidate' | 'needs-port' | 'conflict' | 'stale' | 'blocked' | 'evidence-only';
-
+export interface SemanticEditInsertionAnchorCandidate {
+  readonly mode?: 'before' | 'after' | 'file-start' | 'file-end' | string;
+  readonly anchorKey?: string;
+  readonly anchorSymbolId?: string;
+  readonly anchorSymbolName?: string;
+  readonly anchorSymbolKind?: string;
+  readonly baseSpan?: SourceSpan;
+  readonly workerAnchorSpan?: SourceSpan;
+  readonly headSpan?: SourceSpan;
+  readonly sourcePath?: string;
+  readonly reasonCodes?: readonly string[];
+}
 export interface SemanticEditScriptOperation {
   readonly id: string;
   readonly kind: string;
@@ -19,6 +31,7 @@ export interface SemanticEditScriptOperation {
     readonly mode?: 'before' | 'after' | 'file-start' | 'file-end' | string;
     readonly anchorKey?: string; readonly anchorSymbolId?: string; readonly anchorSymbolName?: string; readonly anchorSymbolKind?: string;
     readonly baseSpan?: SourceSpan; readonly workerAnchorSpan?: SourceSpan; readonly headSpan?: SourceSpan; readonly sourcePath?: string;
+    readonly anchorCandidates?: readonly SemanticEditInsertionAnchorCandidate[];
     readonly insertedSymbolId?: string; readonly insertedSymbolName?: string; readonly insertedSymbolKind?: string;
     readonly insertedSourceSpan?: SourceSpan; readonly insertedSourcePath?: string;
     readonly reasonCodes?: readonly string[];
@@ -52,7 +65,6 @@ export interface SemanticEditScriptOperation {
   readonly evidenceIds?: readonly string[];
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface SemanticEditScriptSummary {
   readonly operations: number;
   readonly byStatus: Readonly<Record<string, number>>;
@@ -71,7 +83,6 @@ export interface SemanticEditScriptSummary {
   readonly sourceIdentityHashes?: readonly string[];
   readonly operationContentHashes?: readonly string[];
 }
-
 export interface SemanticEditScriptAdmission {
   readonly status: SemanticEditScriptAdmissionStatus;
   readonly action: 'run-gates-and-apply' | 'reanchor-or-human-port' | 'record-evidence' | 'block' | string;
@@ -83,7 +94,6 @@ export interface SemanticEditScriptAdmission {
   readonly conflictKeys: readonly string[];
   readonly evidenceIds: readonly string[];
 }
-
 export interface SemanticEditScript {
   readonly kind: 'frontier.lang.semanticEditScript';
   readonly version: 1;
@@ -105,7 +115,6 @@ export interface SemanticEditScript {
   readonly evidence: readonly EvidenceRecord[];
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface SemanticEditProjectionEdit {
   readonly operationId?: string;
   readonly status: 'applied' | 'already-applied';
@@ -143,9 +152,9 @@ export interface SemanticEditProjectionEdit {
   readonly insertionAnchorKey?: string;
   readonly insertionAnchorSymbolName?: string;
   readonly insertionAnchorSymbolKind?: string;
+  readonly insertionAnchorCandidates?: readonly SemanticEditInsertionAnchorCandidate[];
   readonly replacementText?: string;
 }
-
 export interface SemanticEditProjection {
   readonly kind: 'frontier.lang.semanticEditProjection';
   readonly version: 1;
@@ -171,9 +180,7 @@ export interface SemanticEditProjection {
   };
   readonly metadata?: Record<string, unknown>;
 }
-
 export type SemanticEditReplayStatus = 'accepted-clean' | 'already-applied' | 'conflict' | 'stale' | 'blocked' | 'needs-port' | 'evidence-only';
-
 export interface SemanticEditReplayEdit {
   readonly operationId?: string;
   readonly semanticKey?: string;
@@ -181,6 +188,8 @@ export interface SemanticEditReplayEdit {
   readonly sourceIdentityHash?: string;
   readonly editContentHash?: string;
   readonly editKind?: 'replace' | 'insert' | 'delete' | string;
+  readonly editOrder?: number;
+  readonly sourceRangeKind?: string;
   readonly sourcePath?: string;
   readonly symbolName?: string;
   readonly symbolKind?: string;
@@ -190,8 +199,8 @@ export interface SemanticEditReplayEdit {
   readonly replacementBytes?: number;
   readonly replacementText?: string;
   readonly reasonCodes: readonly string[];
+  readonly diagnostics?: readonly SemanticEditReplayDiagnostic[];
 }
-
 export interface SemanticEditReplay {
   readonly kind: 'frontier.lang.semanticEditReplay';
   readonly version: 1;
@@ -209,6 +218,7 @@ export interface SemanticEditReplay {
   readonly edits: readonly SemanticEditReplayEdit[];
   readonly appliedOperations: readonly string[];
   readonly skippedOperations: readonly string[];
+  readonly diagnostics?: readonly SemanticEditReplayDiagnostic[];
   readonly admission: {
     readonly status: SemanticEditReplayStatus;
     readonly action: 'apply' | 'skip' | 'rerun-semantic-import' | 'human-review' | 'block' | string;
@@ -230,7 +240,6 @@ export interface SemanticEditReplay {
   };
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface ProjectSemanticEditScriptToSourceOptions {
   readonly id?: string;
   readonly script: SemanticEditScript;
@@ -239,7 +248,6 @@ export interface ProjectSemanticEditScriptToSourceOptions {
   readonly headSourcePath?: string;
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface ReplaySemanticEditProjectionOptions {
   readonly id?: string;
   readonly projection?: SemanticEditProjection;
@@ -253,7 +261,6 @@ export interface ReplaySemanticEditProjectionOptions {
   readonly parser?: string;
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface CreateSemanticEditScriptOptions {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage | string;
@@ -296,11 +303,9 @@ export interface CreateSemanticEditScriptOptions {
   readonly evidenceId?: string;
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface CreateSemanticEditScriptRuntimeOptions {
   readonly metadata?: Record<string, unknown>;
 }
-
 export declare const SemanticEditScriptAdmissionStatuses: readonly SemanticEditScriptAdmissionStatus[];
 export declare function createSemanticEditScript(input?: CreateSemanticEditScriptOptions, options?: CreateSemanticEditScriptRuntimeOptions): SemanticEditScript;
 export declare function projectSemanticEditScriptToSource(input: ProjectSemanticEditScriptToSourceOptions): SemanticEditProjection;

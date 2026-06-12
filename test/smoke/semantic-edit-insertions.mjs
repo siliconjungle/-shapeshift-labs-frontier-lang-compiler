@@ -22,6 +22,21 @@ assert.equal(addImportOperation.insertion.anchorSymbolName, 'existing');
 assert.equal(addBodyOperation.insertion.mode, 'after');
 assert.equal(addBodyOperation.insertion.anchorSymbolName, 'existing');
 
+const siblingAnchorBase = 'export function alpha() { return 1; }\nexport function omega() { return 3; }\n';
+const siblingAnchorWorker = 'export function alpha() { return 1; }\nexport function beta() { return 2; }\nexport function omega() { return 3; }\n';
+const siblingAnchorScript = createSemanticEditScript({
+  id: 'semantic_edit_sibling_anchor_candidates',
+  language: 'typescript',
+  sourcePath: 'src/siblings.ts',
+  baseSourceText: siblingAnchorBase,
+  workerSourceText: siblingAnchorWorker,
+  headSourceText: siblingAnchorBase,
+  generatedAt: 52
+});
+const betaInsertion = siblingAnchorScript.operations.find((operation) => operation.anchor.symbolName === 'beta');
+assert.equal(betaInsertion.insertion.anchorCandidates.some((candidate) => candidate.mode === 'after' && candidate.anchorSymbolName === 'alpha'), true);
+assert.equal(betaInsertion.insertion.anchorCandidates.some((candidate) => candidate.mode === 'before' && candidate.anchorSymbolName === 'omega'), true);
+
 const insertionProjection = projectSemanticEditScriptToSource({
   id: 'semantic_edit_insertions_projection',
   script: insertionScript,
@@ -70,6 +85,38 @@ const shiftedAlreadyAppliedInsertionReplay = replaySemanticEditProjection({
 assert.equal(shiftedAlreadyAppliedInsertionReplay.status, 'already-applied');
 assert.equal(shiftedAlreadyAppliedInsertionReplay.outputSourceText, shiftedAlreadyAppliedInsertionSource);
 assert.equal(shiftedAlreadyAppliedInsertionReplay.edits.some((edit) => edit.reasonCodes.includes('current-inserted-symbol-matches-replacement-span')), true);
+
+const shiftedAnchorBase = "export function buildRoutes(app) {\n  app.get('/ready', ready);\n}\n";
+const shiftedAnchorWorker = "export function buildRoutes(app) {\n  app.get('/ready', ready);\n}\nexport function installHealthRoutes(app) {\n  app.get('/healthz', healthz);\n}\n";
+const shiftedAnchorHead = "import { metrics } from './metrics.js';\n\nexport function buildRoutes(app) {\n  metrics.count('routes:init');\n  app.get('/ready', ready);\n}\n";
+const shiftedAnchorExpected = "import { metrics } from './metrics.js';\n\nexport function buildRoutes(app) {\n  metrics.count('routes:init');\n  app.get('/ready', ready);\n}\nexport function installHealthRoutes(app) {\n  app.get('/healthz', healthz);\n}\n";
+const shiftedAnchorScript = createSemanticEditScript({
+  id: 'semantic_edit_shifted_semantic_anchor_projection',
+  language: 'typescript',
+  sourcePath: 'src/server.ts',
+  baseSourceText: shiftedAnchorBase,
+  workerSourceText: shiftedAnchorWorker,
+  headSourceText: shiftedAnchorBase,
+  generatedAt: 58
+});
+const shiftedAnchorProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_shifted_semantic_anchor_projection',
+  script: shiftedAnchorScript,
+  workerSourceText: shiftedAnchorWorker,
+  headSourceText: shiftedAnchorHead
+});
+assert.equal(shiftedAnchorProjection.status, 'projected');
+assert.equal(shiftedAnchorProjection.sourceText, shiftedAnchorExpected);
+assert.equal(shiftedAnchorProjection.edits[0].insertionAnchorSymbolName, 'buildRoutes');
+assert.equal(Array.isArray(shiftedAnchorProjection.edits[0].insertionAnchorCandidates), true);
+const shiftedAnchorReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_shifted_semantic_anchor_replay',
+  projection: shiftedAnchorProjection,
+  currentSourceText: shiftedAnchorHead
+});
+assert.equal(shiftedAnchorReplay.status, 'accepted-clean');
+assert.equal(shiftedAnchorReplay.outputSourceText, shiftedAnchorExpected);
+assert.equal(shiftedAnchorReplay.edits.some((edit) => edit.reasonCodes.includes('current-insertion-anchor')), true);
 
 const changedInsertedSymbolSource = "export function existing() { return 1; }\nexport function added() { return 'changed'; }\n";
 const changedInsertedSymbolReplay = replaySemanticEditProjection({

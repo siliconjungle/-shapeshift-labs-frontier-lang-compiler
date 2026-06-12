@@ -1,4 +1,4 @@
-import{idFragment}from'../../native-import-utils.js';import{detectNewlineStyle,scanPreservedSourceDirectives,scanPreservedSourceTokens}from'../../native-region-scanner.js';import{hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
+import{countBy,idFragment,uniqueStrings}from'../../native-import-utils.js';import{detectNewlineStyle,scanPreservedSourceDirectives,scanPreservedSourceTokens}from'../../native-region-scanner.js';import{hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
 export function createNativeSourcePreservation(options) {
   if (!options || typeof options.sourceText !== 'string') {
     throw new Error('createNativeSourcePreservation requires sourceText');
@@ -26,6 +26,16 @@ export function createNativeSourcePreservation(options) {
       maxDirectives: options.maxDirectives
     });
   const directives = directiveScan.directives;
+  const triviaByKind = countBy(tokensAndTrivia.trivia.map((entry) => entry.kind ?? 'unknown'));
+  const directivesByKind = countBy(directives.map((entry) => entry.kind ?? 'directive'));
+  const directiveKinds = uniqueStrings(directives.map((entry) => entry.kind ?? 'directive'));
+  const commentSpanIds = tokensAndTrivia.trivia
+    .filter((entry) => entry.kind === 'comment')
+    .map((entry) => entry.id)
+    .filter(Boolean);
+  const directiveSpanIds = directives
+    .map((entry) => entry.id)
+    .filter(Boolean);
   const newline = detectNewlineStyle(sourceText);
   return {
     kind: 'frontier.lang.nativeSourcePreservation',
@@ -48,6 +58,11 @@ export function createNativeSourcePreservation(options) {
       directives: directives.length,
       comments: tokensAndTrivia.trivia.filter((entry) => entry.kind === 'comment').length,
       whitespace: tokensAndTrivia.trivia.filter((entry) => entry.kind === 'whitespace' || entry.kind === 'newline').length,
+      triviaByKind,
+      directivesByKind,
+      directiveKinds,
+      commentSpanIds,
+      directiveSpanIds,
       exactSourceAvailable: options.includeSourceText !== false,
       truncated: tokensAndTrivia.truncated || directiveScan.truncated
     },

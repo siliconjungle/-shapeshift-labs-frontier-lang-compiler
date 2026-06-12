@@ -137,12 +137,17 @@ function resolveIndexKeys(values, resolutions, options) {
     const key = String(value);
     const resolution = resolutions.get(key);
     if (!resolution) return [key];
+    const current = resolution.currentAnchors.map((anchor) => anchor.key).filter(Boolean);
     if (resolution.status === 'deleted' && options.keepDeletedAnchors !== true) return [];
     if (resolution.status === 'cycle' && options.keepBlockedAnchors !== true) return [];
     if (resolution.status === 'max-depth' && options.keepBlockedAnchors !== true) return [];
     if (resolution.status === 'not-found' && options.keepUnresolvedAnchors !== true) return [];
+    if (resolution.status === 'ambiguous' && resolutionHasInactiveTerminal(resolution)) {
+      if (options.keepCandidateAnchors === true) return current.length ? current : [key];
+      if (options.keepDeletedAnchors === true || options.keepInactiveAnchors === true) return [key];
+      return [];
+    }
     if (resolution.status === 'ambiguous' && options.keepCandidateAnchors === false) return [];
-    const current = resolution.currentAnchors.map((anchor) => anchor.key).filter(Boolean);
     return current.length ? current : [key];
   }));
 }
@@ -193,7 +198,10 @@ function createAnchorInventory(resolutions) {
     const current = resolution.currentAnchors.map((anchor) => anchorEntry(anchor, resolution));
     if (resolution.status === 'ambiguous') {
       inventory.candidate.push(...current);
-      if (start) inventory.inactive.push(start);
+      if (start) {
+        inventory.inactive.push(start);
+        if (resolutionHasDeletedTerminal(resolution)) inventory.deleted.push(start);
+      }
       continue;
     }
     if (resolution.status === 'deleted') {
@@ -252,6 +260,17 @@ function anchorEntry(anchor, resolution) {
     confidence: resolution.confidence,
     reasonCodes: uniqueStrings(resolution.reasonCodes)
   });
+}
+
+function resolutionHasInactiveTerminal(resolution) {
+  return array(resolution.terminalEventIds).length > 0
+    || resolutionHasDeletedTerminal(resolution)
+    || array(resolution.reasonCodes).some((code) => code === 'lineage-event-without-target-anchor' || code === 'inactive-anchor-has-active-candidates');
+}
+
+function resolutionHasDeletedTerminal(resolution) {
+  return array(resolution.lineageEventKinds).includes('deleted')
+    || array(resolution.reasonCodes).includes('anchor-deleted');
 }
 
 function queryAnchor(resolution) {

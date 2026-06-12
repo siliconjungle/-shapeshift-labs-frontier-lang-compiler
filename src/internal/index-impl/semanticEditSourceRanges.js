@@ -24,7 +24,7 @@ export function spanOffsets(sourceText, span) {
   const endLineStart = lineStarts[endLine - 1];
   if (start === undefined || endLineStart === undefined) return undefined;
   const startColumn = Math.max(1, span.startColumn ?? 1) - 1;
-  const lineEnd = lineStarts[endLine] === undefined ? sourceText.length : lineStarts[endLine] - 1;
+  const lineEnd = lineContentEndOffset(sourceText, lineStarts[endLine]);
   const endColumn = span.endColumn === undefined ? lineEnd - endLineStart : Math.max(1, span.endColumn) - 1;
   return { start: start + startColumn, end: endLineStart + endColumn };
 }
@@ -49,36 +49,41 @@ export function bodyContentRange(sourceText, range) {
   return pair ? { start: pair.open + 1, end: pair.close } : undefined;
 }
 
-export function insertionOffset(sourceText, insertion) {
+export function insertionOffset(sourceText, insertion, context = {}) {
   if (typeof sourceText !== 'string') return { ok: false, reasonCodes: ['missing-head-source-text'] };
   const mode = insertion?.mode;
   if (mode === 'file-start') return { ok: true, offset: 0 };
   if (mode === 'file-end') return { ok: true, offset: sourceText.length };
-  const range = spanOffsets(sourceText, insertion?.headSpan);
-  if (!range) return { ok: false, reasonCodes: ['insertion-anchor-not-resolvable'] };
-  if (mode === 'before') return { ok: true, offset: range.start };
-  if (mode === 'after') return { ok: true, offset: afterLineOffset(sourceText, range.end) };
+  const resolved = insertionAnchorResolution(sourceText, insertion, context);
+  if (!resolved?.range) return { ok: false, reasonCodes: ['insertion-anchor-not-resolvable'] };
+  if (resolved.mode === 'before') return { ok: true, offset: resolved.range.start };
+  if (resolved.mode === 'after') return { ok: true, offset: afterLineOffset(sourceText, resolved.range.end) };
   return { ok: false, reasonCodes: ['insertion-mode-unsupported'] };
 }
 
 export function removalRange(sourceText, span) {
   const range = { ...span };
-  if (range.end < sourceText.length && sourceText[range.end] === '\n') range.end += 1;
-  else if (range.start > 0 && sourceText[range.start - 1] === '\n') range.start -= 1;
+  const next = lineBreakEndOffset(sourceText, range.end);
+  if (next !== range.end) range.end = next;
+  else {
+    const previous = previousLineBreakStartOffset(sourceText, range.start);
+    if (previous !== range.start) range.start = previous;
+  }
   return range;
 }
 
 export function insertionReplacement(text, sourceText, offset) {
   let replacement = String(text ?? '');
-  if (offset > 0 && sourceText[offset - 1] !== '\n') replacement = `\n${replacement}`;
-  if (offset < sourceText.length && !replacement.endsWith('\n')) replacement += '\n';
-  if (offset === sourceText.length && sourceText && !sourceText.endsWith('\n')) replacement = `\n${replacement}`;
-  if (offset === sourceText.length && !replacement.endsWith('\n')) replacement += '\n';
+  const newline = sourceLineEnding(sourceText);
+  if (offset > 0 && !isLineBreak(sourceText[offset - 1])) replacement = `${newline}${replacement}`;
+  if (offset < sourceText.length && !endsWithLineBreak(replacement)) replacement += newline;
+  if (offset === sourceText.length && sourceText && !endsWithLineBreak(sourceText)) replacement = `${newline}${replacement}`;
+  if (offset === sourceText.length && !endsWithLineBreak(replacement)) replacement += newline;
   return replacement;
 }
 
 export function afterLineOffset(sourceText, offset) {
-  return sourceText[offset] === '\n' ? offset + 1 : offset;
+  return lineBreakEndOffset(sourceText, offset);
 }
 
 function isProjectionCoverableContainer(operation) {
@@ -112,13 +117,87 @@ function containedRange(inner, outer) {
 
 function insertionRemovalRange(sourceText, span, container) {
   const range = { ...span };
-  if (range.end < container.end && sourceText[range.end] === '\n') range.end += 1;
-  else if (range.start > container.start && sourceText[range.start - 1] === '\n') range.start -= 1;
+  const next = lineBreakEndOffset(sourceText, range.end);
+  if (next !== range.end && next <= container.end) range.end = next;
+  else {
+    const previous = previousLineBreakStartOffset(sourceText, range.start);
+    if (previous !== range.start && previous >= container.start) range.start = previous;
+  }
   return range;
+}
+
+function lineContentEndOffset(sourceText, nextLineStart) {
+  if (nextLineStart === undefined) return sourceText.length;
+  const lineBreakStart = sourceText[nextLineStart - 2] === '\r' ? nextLineStart - 2 : nextLineStart - 1;
+  return Math.max(0, lineBreakStart);
+}
+
+function lineBreakEndOffset(sourceText, offset) {
+  if (sourceText[offset] === '\r' && sourceText[offset + 1] === '\n') return offset + 2;
+  if (isLineBreak(sourceText[offset])) return offset + 1;
+  return offset;
+}
+
+function previousLineBreakStartOffset(sourceText, offset) {
+  if (sourceText[offset - 1] === '\n') return sourceText[offset - 2] === '\r' ? offset - 2 : offset - 1;
+  if (sourceText[offset - 1] === '\r') return offset - 1;
+  return offset;
+}
+
+function sourceLineEnding(sourceText) {
+  if (sourceText.includes('\r\n')) return '\r\n';
+  return sourceText.includes('\r') ? '\r' : '\n';
+}
+
+function endsWithLineBreak(value) {
+  return isLineBreak(value[value.length - 1]);
+}
+
+function isLineBreak(char) {
+  return char === '\n' || char === '\r';
 }
 
 function isBodyReplacement(operation) {
   return operation.changeKind === 'modified' && (operation.kind === 'replaceBody' || operation.anchor?.regionKind === 'body');
+}
+
+function insertionAnchorResolution(sourceText, insertion, context) {
+  const candidates = insertionAnchorCandidates(insertion);
+  for (const candidate of candidates) {
+    const symbol = insertionAnchorSymbol(candidate, context.symbols);
+    const range = spanOffsets(sourceText, symbol?.sourceSpan);
+    if (range) return { mode: candidate.mode, range };
+  }
+  for (const candidate of candidates) {
+    const range = spanOffsets(sourceText, candidate.headSpan);
+    if (range) return { mode: candidate.mode, range };
+  }
+  return undefined;
+}
+
+function insertionAnchorCandidates(insertion) {
+  const seen = new Set();
+  const result = [];
+  for (const candidate of [insertion, ...(Array.isArray(insertion?.anchorCandidates) ? insertion.anchorCandidates : [])]) {
+    if (!candidate || (candidate.mode !== 'before' && candidate.mode !== 'after')) continue;
+    const key = [candidate.mode, candidate.anchorKey, candidate.anchorSymbolId, candidate.anchorSymbolName, candidate.anchorSymbolKind].join('\0');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(candidate);
+  }
+  return result;
+}
+
+function insertionAnchorSymbol(candidate, symbols) {
+  const symbolList = Array.isArray(symbols)
+    ? symbols
+    : symbols?.values
+      ? [...symbols.values()]
+      : [];
+  const keys = [candidate.anchorKey, candidate.anchorSymbolId].filter(Boolean);
+  const exact = symbolList.find((symbol) => [symbol.ownershipKey, symbol.key, symbol.id].some((key) => key && keys.includes(key)));
+  if (exact) return exact;
+  return symbolList.find((symbol) => symbol.name === candidate.anchorSymbolName && (!candidate.anchorSymbolKind || symbol.kind === candidate.anchorSymbolKind));
 }
 
 function trailingBodyCloseOffset(sourceText, range) {

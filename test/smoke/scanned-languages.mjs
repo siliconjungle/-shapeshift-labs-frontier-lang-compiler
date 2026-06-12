@@ -1,5 +1,34 @@
 import { assert, assertScannedSymbol, mappedSymbol, nativeNodeForSymbol, symbolByName } from './helpers.mjs';
-import { importNativeSource } from './compiler-api.mjs';
+import { importNativeSource, NativeImportLanguageProfiles } from './compiler-api.mjs';
+
+const javascriptProfile = NativeImportLanguageProfiles.find((profile) => profile.language === 'javascript');
+assert.equal(javascriptProfile.aliases.includes('jsx'), true);
+assert.equal(javascriptProfile.extensions.includes('.jsx'), true);
+assert.equal(javascriptProfile.notes.some((note) => note.includes('.jsx sources are classified as javascript')), true);
+const typescriptProfile = NativeImportLanguageProfiles.find((profile) => profile.language === 'typescript');
+assert.equal(typescriptProfile.aliases.includes('tsx'), true);
+assert.equal(typescriptProfile.extensions.includes('.tsx'), true);
+assert.equal(typescriptProfile.notes.some((note) => note.includes('.tsx sources are classified as typescript')), true);
+
+export const scannedJsxImport = importNativeSource({
+  language: 'jsx',
+  sourcePath: 'TodoView.jsx',
+  sourceText: 'import React from "react";\nexport function TodoView({ title }) { return <div>{title}</div>; }\n'
+});
+assertScannedSymbol(scannedJsxImport, 'TodoView', 'todoview');
+assert.equal(nativeNodeForSymbol(scannedJsxImport, 'TodoView').kind, 'FunctionDeclaration');
+assert.equal(scannedJsxImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+
+export const scannedTsxImport = importNativeSource({
+  language: 'tsx',
+  sourcePath: 'TodoCard.tsx',
+  sourceText: 'import type { Todo } from "./types.js";\ninterface TodoProps { title: string; }\nexport function TodoCard(props: TodoProps) { return <span>{props.title}</span>; }\n'
+});
+assertScannedSymbol(scannedTsxImport, 'TodoProps', 'todoprops');
+assertScannedSymbol(scannedTsxImport, 'TodoCard', 'todocard');
+assert.equal(nativeNodeForSymbol(scannedTsxImport, 'TodoProps').kind, 'InterfaceDeclaration');
+assert.equal(nativeNodeForSymbol(scannedTsxImport, 'TodoCard').kind, 'FunctionDeclaration');
+assert.equal(scannedTsxImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
 
 export const scannedPythonImport = importNativeSource({
   language: 'python',

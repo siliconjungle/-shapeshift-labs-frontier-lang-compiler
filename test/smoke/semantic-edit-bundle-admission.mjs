@@ -9,15 +9,12 @@ import {
   replaySemanticEditProjection,
   SemanticEditBundleAdmissionStatuses
 } from './compiler-api.mjs';
-
 assert.equal(SemanticEditBundleAdmissionStatuses.includes('ready'), true);
-
 const emptyAdmission = createSemanticEditBundleAdmission({});
 assert.equal(emptyAdmission.status, 'none');
 assert.equal(emptyAdmission.action, 'none');
 assert.equal(emptyAdmission.reviewRequired, false);
 assert.equal(emptyAdmission.autoApplyCandidate, false);
-
 function semanticEditFlow(input) {
   const script = createSemanticEditScript({
     id: `${input.id}_script`,
@@ -41,7 +38,6 @@ function semanticEditFlow(input) {
   });
   return { script, projection, replay };
 }
-
 const passedAutoMergeProof = {
   id: 'evidence_semantic_edit_bundle_auto_merge_tests',
   kind: 'test',
@@ -63,7 +59,6 @@ const conflictAutoMergeEvidence = {
   scope: 'semantic-edit:auto-merge',
   reasonCodes: ['semantic-conflict-evidence']
 };
-
 const first = semanticEditFlow({
   id: 'bundle_first',
   sourcePath: 'src/a.js',
@@ -82,7 +77,6 @@ const readyAdmission = createSemanticEditBundleAdmission({
   semanticEditReplays: [first.replay, second.replay],
   evidence: [passedAutoMergeProof]
 });
-
 assert.equal(readyAdmission.status, 'ready');
 assert.equal(readyAdmission.action, 'admit');
 assert.equal(readyAdmission.autoApplyCandidate, true);
@@ -97,7 +91,6 @@ assert.equal(readyAdmission.summary.conflictEvidence, 0);
 assert.equal(readyAdmission.summary.staleEvidence, 0);
 assert.equal(readyAdmission.reasonCodes.includes('semantic-edit-replay-accepted-clean'), true);
 assert.equal(readyAdmission.reasonCodes.includes('semantic-edit-positive-auto-merge-proof'), true);
-
 const missingTestAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [first.script, second.script],
   semanticEditProjections: [first.projection, second.projection],
@@ -106,7 +99,6 @@ const missingTestAdmission = createSemanticEditBundleAdmission({
 assert.equal(missingTestAdmission.status, 'needs-review');
 assert.equal(missingTestAdmission.autoApplyCandidate, false);
 assert.equal(missingTestAdmission.reasonCodes.includes('semantic-edit-tests-passed-evidence-missing'), true);
-
 const forcedReadyWithoutProof = createSemanticEditBundleAdmission({
   status: 'ready',
   action: 'admit',
@@ -120,14 +112,12 @@ assert.equal(forcedReadyWithoutProof.status, 'needs-review');
 assert.equal(forcedReadyWithoutProof.action, 'review');
 assert.equal(forcedReadyWithoutProof.autoApplyCandidate, false);
 assert.equal(forcedReadyWithoutProof.reviewRequired, true);
-
 const evidenceOnlyFailedAdmission = createSemanticEditBundleAdmission({
   evidence: [{ id: 'evidence_only_failed', kind: 'test', status: 'failed' }]
 });
 assert.equal(evidenceOnlyFailedAdmission.status, 'blocked');
 assert.equal(evidenceOnlyFailedAdmission.action, 'block');
 assert.equal(evidenceOnlyFailedAdmission.reviewRequired, true);
-
 const unportableProjectionAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [first.script],
   semanticEditProjections: [{
@@ -140,7 +130,6 @@ const unportableProjectionAdmission = createSemanticEditBundleAdmission({
 assert.equal(unportableProjectionAdmission.status, 'needs-review');
 assert.equal(unportableProjectionAdmission.autoApplyCandidate, false);
 assert.equal(unportableProjectionAdmission.reasonCodes.includes('semantic-edit-projection-not-portable'), true);
-
 const staleEvidenceAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [first.script],
   semanticEditProjections: [first.projection],
@@ -150,7 +139,6 @@ const staleEvidenceAdmission = createSemanticEditBundleAdmission({
 assert.equal(staleEvidenceAdmission.status, 'stale');
 assert.equal(staleEvidenceAdmission.autoApplyCandidate, false);
 assert.equal(staleEvidenceAdmission.reasonCodes.includes('semantic-edit-stale-evidence'), true);
-
 const conflictEvidenceAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [first.script],
   semanticEditProjections: [first.projection],
@@ -160,7 +148,6 @@ const conflictEvidenceAdmission = createSemanticEditBundleAdmission({
 assert.equal(conflictEvidenceAdmission.status, 'conflict');
 assert.equal(conflictEvidenceAdmission.autoApplyCandidate, false);
 assert.equal(conflictEvidenceAdmission.reasonCodes.includes('semantic-edit-conflict-evidence'), true);
-
 const changeSet = diffNativeSources({
   id: 'semantic_edit_bundle_change',
   language: 'javascript',
@@ -175,7 +162,6 @@ const readyBundle = createSemanticPatchBundleRecord(changeSet, {
   semanticEditReplays: [first.replay, second.replay],
   evidence: [passedAutoMergeProof]
 });
-
 assert.equal(readyBundle.admission.status, 'admitted');
 assert.equal(readyBundle.admission.semanticEditAdmission.status, 'ready');
 assert.equal(readyBundle.admission.evidenceAdmission.status, 'ready');
@@ -193,7 +179,6 @@ assert.equal(querySemanticPatchBundleRecords([readyBundleWithoutIndex], { semant
 assert.equal(querySemanticPatchBundleRecords([readyBundleWithoutIndex], { semanticEditAdmissionAction: 'admit' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([readyBundleWithoutIndex], { semanticEditAdmissionReadiness: 'ready' }).length, 1);
 void readyBundleIndex;
-
 const missingTestBundle = createSemanticPatchBundleRecord(changeSet, {
   id: 'semantic_edit_bundle_missing_tests',
   semanticEditScripts: [first.script, second.script],
@@ -205,7 +190,6 @@ assert.equal(missingTestBundle.admission.autoApplyCandidate, false);
 assert.equal(missingTestBundle.admission.semanticEditAdmission.status, 'needs-review');
 assert.equal(missingTestBundle.admission.evidenceAdmission.status, 'needs-review');
 assert.equal(missingTestBundle.admission.reasonCodes.includes('auto-merge-tests-passed-evidence-missing'), true);
-
 const conflictEvidenceBundle = createSemanticPatchBundleRecord(changeSet, {
   id: 'semantic_edit_bundle_conflict_evidence',
   semanticEditScripts: [first.script],
@@ -217,7 +201,6 @@ assert.equal(conflictEvidenceBundle.admission.status, 'blocked');
 assert.equal(conflictEvidenceBundle.admission.autoApplyCandidate, false);
 assert.equal(conflictEvidenceBundle.admission.evidenceAdmission.status, 'blocked');
 assert.equal(conflictEvidenceBundle.admission.reasonCodes.includes('auto-merge-conflict-evidence'), true);
-
 const already = semanticEditFlow({
   id: 'bundle_already',
   sourcePath: 'src/c.js',
@@ -236,7 +219,6 @@ assert.equal(alreadyAdmission.readiness, 'ready');
 assert.equal(alreadyAdmission.reviewRequired, false);
 assert.equal(alreadyAdmission.autoApplyCandidate, false);
 assert.equal(alreadyAdmission.reasonCodes.includes('semantic-edit-replay-already-applied'), true);
-
 const mixedAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [first.script, already.script],
   semanticEditProjections: [first.projection, already.projection],
@@ -246,7 +228,6 @@ const mixedAdmission = createSemanticEditBundleAdmission({
 assert.equal(mixedAdmission.status, 'ready');
 assert.equal(mixedAdmission.summary.acceptedClean, 1);
 assert.equal(mixedAdmission.summary.alreadyApplied, 1);
-
 const alreadyChangeSet = diffNativeSources({
   id: 'semantic_edit_bundle_already_change',
   language: 'javascript',
@@ -267,7 +248,6 @@ assert.equal(alreadyBundle.admission.autoApplyCandidate, false);
 assert.equal(alreadyBundle.admission.semanticEditAdmission.status, 'already-applied');
 assert.equal(querySemanticPatchBundleRecords([alreadyBundle], { semanticEditAdmissionStatus: 'already-applied' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([alreadyBundle], { semanticEditAdmissionAction: 'skip' }).length, 1);
-
 const stale = semanticEditFlow({
   id: 'bundle_stale',
   sourcePath: 'src/d.js',
@@ -284,7 +264,6 @@ const conflict = semanticEditFlow({
 });
 assert.equal(createSemanticEditBundleAdmission({ semanticEditReplays: [stale.replay] }).status, 'stale');
 assert.equal(createSemanticEditBundleAdmission({ semanticEditReplays: [conflict.replay] }).status, 'conflict');
-
 const blockedAdmission = createSemanticEditBundleAdmission({
   semanticEditProjections: [{
     id: 'bundle_blocked_projection',
@@ -296,7 +275,6 @@ assert.equal(blockedAdmission.status, 'blocked');
 assert.equal(blockedAdmission.action, 'block');
 assert.equal(blockedAdmission.readiness, 'blocked');
 assert.equal(blockedAdmission.reasonCodes.includes('semantic-edit-blocked'), true);
-
 const missingReplayAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [first.script],
   semanticEditProjections: [first.projection]

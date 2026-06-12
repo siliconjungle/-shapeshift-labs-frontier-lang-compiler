@@ -17,13 +17,21 @@ export const NativeImportLanguageProfiles = Object.freeze([
     aliases: ['js', 'mjs', 'cjs', 'jsx'],
     extensions: ['.js', '.mjs', '.cjs', '.jsx'],
     parserAdapters: ['estree', 'babel', 'tree-sitter'],
-    lossKinds: ['declarationOnlyCoverage', 'opaqueNative', 'sourceMapApproximation', 'sourcePreservation', 'dynamicRuntime']
+    lossKinds: ['declarationOnlyCoverage', 'opaqueNative', 'sourceMapApproximation', 'sourcePreservation', 'dynamicRuntime'],
+    notes: [
+      'lightweight scanner records declarations only; exact parser adapters must be injected by the host',
+      '.jsx sources are classified as javascript for declaration scanning; JSX element trees remain opaque without host parser evidence'
+    ]
   }),
   nativeImportLanguageProfile('typescript', {
     aliases: ['ts', 'tsx'],
     extensions: ['.ts', '.tsx'],
     parserAdapters: ['typescript-compiler-api', 'babel', 'tree-sitter'],
-    lossKinds: ['declarationOnlyCoverage', 'opaqueNative', 'sourceMapApproximation', 'sourcePreservation', 'unsupportedSyntax']
+    lossKinds: ['declarationOnlyCoverage', 'opaqueNative', 'sourceMapApproximation', 'sourcePreservation', 'unsupportedSyntax'],
+    notes: [
+      'lightweight scanner records declarations only; exact parser adapters must be injected by the host',
+      '.tsx sources are classified as typescript for declaration scanning; JSX element trees remain opaque without host parser evidence'
+    ]
   }),
   nativeImportLanguageProfile('python', {
     aliases: ['py'],

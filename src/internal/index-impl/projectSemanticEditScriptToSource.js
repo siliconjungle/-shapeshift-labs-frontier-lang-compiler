@@ -1,5 +1,8 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
-import { idFragment, uniqueStrings } from '../../native-import-utils.js';
+import { idFragment, normalizeNativeLanguageId, uniqueStrings } from '../../native-import-utils.js';
+import { createSemanticImportSidecar } from './createSemanticImportSidecar.js';
+import { mapDiffSymbols } from './mapDiffSymbols.js';
+import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
 import { semanticEditIdentityFields } from './semanticEditIdentityRecords.js';
 import {
   insertionOffset,
@@ -10,7 +13,6 @@ import {
   spanOffsets
 } from './semanticEditSourceRanges.js';
 import { applySourceEdits, dedupeSourceEdits, validateSourceEdits } from './semanticSourceEditDedupe.js';
-
 export function projectSemanticEditScriptToSource(input = {}) {
   const script = input.script;
   const workerSourceText = input.workerSourceText;
@@ -19,6 +21,15 @@ export function projectSemanticEditScriptToSource(input = {}) {
   if (!script) throw new Error('projectSemanticEditScriptToSource requires a script');
   if (typeof workerSourceText !== 'string') reasonCodes.push('missing-worker-source-text');
   if (typeof headSourceText !== 'string') reasonCodes.push('missing-head-source-text');
+  const language = normalizeNativeLanguageId(script.language);
+  const headSymbols = typeof headSourceText === 'string' && isJavaScriptLike(language)
+    ? sourceSymbolIndex({
+      sourceText: headSourceText,
+      sourcePath: input.headSourcePath ?? script.sourcePath,
+      language,
+      parser: input.parser
+    })
+    : [];
   const edits = [];
   const coveredOperationIds = [];
   const projectionCoveredOperationIds = projectionCoveredContainerOperationIds(script.operations ?? [], workerSourceText);
@@ -27,7 +38,10 @@ export function projectSemanticEditScriptToSource(input = {}) {
       coveredOperationIds.push(operation.id);
       continue;
     }
-    const edit = sourceEditForOperation(operation, workerSourceText, headSourceText, index, input.headSourcePath);
+    const edit = sourceEditForOperation(operation, workerSourceText, headSourceText, index, {
+      headSourcePath: input.headSourcePath,
+      headSymbols
+    });
     if (edit.ok) edits.push(edit.value);
     else reasonCodes.push(...edit.reasonCodes);
   }
@@ -67,20 +81,20 @@ export function projectSemanticEditScriptToSource(input = {}) {
       appliedEditCount: deduped.edits.filter((edit) => !edit.alreadyApplied).length,
       alreadyAppliedEditCount: deduped.edits.filter((edit) => edit.alreadyApplied).length,
       dedupedEditCount: deduped.skippedOperationIds.length,
+      anchorMode: headSymbols.length ? 'javascript-like-symbols' : 'offsets',
       ...input.metadata
     })
   };
   return { ...core, hash: hashSemanticValue(core) };
 }
-
-function sourceEditForOperation(operation, workerSourceText, headSourceText, order, headSourcePath) {
-  const identity = projectionIdentity(operation, headSourcePath);
+function sourceEditForOperation(operation, workerSourceText, headSourceText, order, context) {
+  const identity = projectionIdentity(operation, context.headSourcePath);
   if (operation.status === 'already-applied') {
     return { ok: true, value: { ...identity, operationId: operation.id, order, start: 0, end: 0, replacement: '', current: '', alreadyApplied: true } };
   }
   if (operation.status !== 'portable') return { ok: false, reasonCodes: [`operation-not-portable:${operation.id}`] };
   if (operation.changeKind === 'added' || String(operation.kind ?? '').startsWith('add')) {
-    return insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order);
+    return insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order, context);
   }
   if (operation.changeKind === 'removed' || String(operation.kind ?? '').startsWith('remove')) {
     return removalEditForOperation(operation, identity, headSourceText, order);
@@ -131,7 +145,6 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText, ord
     }
   };
 }
-
 function removalEditForOperation(operation, identity, headSourceText, order) {
   const headOffsets = spanOffsets(headSourceText, operation.spans?.head ?? operation.spans?.base ?? operation.anchor?.sourceSpan);
   const reasons = [];
@@ -158,12 +171,11 @@ function removalEditForOperation(operation, identity, headSourceText, order) {
     }
   };
 }
-
-function insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order) {
+function insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order, context) {
   const workerOffsets = spanOffsets(workerSourceText, operation.spans?.worker);
   const reasons = [];
   if (!workerOffsets) reasons.push(`worker-span-not-resolvable:${operation.id}`);
-  const insertion = insertionOffset(headSourceText, operation.insertion);
+  const insertion = insertionOffset(headSourceText, operation.insertion, { symbols: context.headSymbols });
   if (!insertion.ok) reasons.push(...insertion.reasonCodes.map((reason) => `${reason}:${operation.id}`));
   if (reasons.length) return { ok: false, reasonCodes: reasons };
   const spanText = workerSourceText.slice(workerOffsets.start, workerOffsets.end);
@@ -189,7 +201,6 @@ function insertionEditForOperation(operation, identity, workerSourceText, headSo
     }
   };
 }
-
 function projectionIdentity(operation, headSourcePath) {
   const identity = semanticEditIdentity(operation);
   const sourcePath = operation.reanchor?.toSourcePath ?? headSourcePath ?? operation.insertion?.sourcePath ?? identity.sourcePath;
@@ -201,7 +212,6 @@ function projectionIdentity(operation, headSourcePath) {
     : identity.targetSourcePath;
   return { ...identity, sourcePath, originalSourcePath, targetSourcePath };
 }
-
 function projectionEditRecord(edit) {
   const deletedTextHash = hashSemanticValue(edit.current);
   const replacementTextHash = hashSemanticValue(edit.replacement);
@@ -255,8 +265,23 @@ function projectionEditRecord(edit) {
     insertionAnchorKey: edit.insertion?.anchorKey,
     insertionAnchorSymbolName: edit.insertion?.anchorSymbolName,
     insertionAnchorSymbolKind: edit.insertion?.anchorSymbolKind,
+    insertionAnchorCandidates: edit.insertion?.anchorCandidates,
     replacementText: edit.replacement
   });
+}
+
+function sourceSymbolIndex(input) {
+  try {
+    const imported = normalizeNativeDiffImport({
+      language: input.language,
+      sourcePath: input.sourcePath,
+      sourceText: input.sourceText,
+      parser: input.parser
+    }, input, 'head');
+    return [...mapDiffSymbols(imported, createSemanticImportSidecar(imported)).values()];
+  } catch {
+    return [];
+  }
 }
 
 function semanticEditIdentity(operation) {
@@ -288,6 +313,7 @@ function projectedSourcePath(script, edits) {
   return edits.map((edit) => edit.sourcePath).find(Boolean) ?? script.sourcePath;
 }
 
+function isJavaScriptLike(language) { return language === 'javascript' || language === 'typescript'; }
 function compactRecord(value) {
   return Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined && (!Array.isArray(entry) || entry.length > 0)));
 }

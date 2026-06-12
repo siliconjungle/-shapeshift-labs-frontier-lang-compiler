@@ -8,6 +8,16 @@ export interface SemanticImportSidecarQualityWarning {
   readonly sourcePaths: readonly string[];
 }
 
+export type SemanticImportSidecarRecordClassification = 'useful' | 'expected-empty' | 'unexpectedly-empty' | 'missing' | string;
+
+export interface SemanticImportSidecarQualityRecord {
+  readonly classification: SemanticImportSidecarRecordClassification;
+  readonly reasonCode: string;
+  readonly message: string;
+  readonly action: string;
+  readonly sourcePaths: readonly string[];
+}
+
 export interface SemanticImportSidecarProofAdmissionSummary {
   readonly total: number;
   readonly obligations: number;
@@ -26,12 +36,14 @@ export interface SemanticImportSidecarProofAdmissionSummary {
 export interface SemanticImportSidecarQuality {
   readonly schema: 'frontier.lang.semanticSidecarQuality.v1';
   readonly expected: boolean;
+  readonly expectedEmpty: boolean;
   readonly expectedSatisfied: boolean;
   readonly expectedMissingReasonCodes: readonly string[];
   readonly selected: boolean;
   readonly eligible: boolean;
   readonly imported: boolean;
   readonly importCount: number;
+  readonly record: SemanticImportSidecarQualityRecord;
   readonly symbolCount: number;
   readonly ownershipRegionCount: number;
   readonly patchHintCount: number;
@@ -45,6 +57,7 @@ export interface SemanticImportSidecarQuality {
 export interface SemanticImportSidecarAdmission {
   readonly schema: 'frontier.lang.semanticSidecarAdmission.v1';
   readonly expected: boolean;
+  readonly expectedEmpty: boolean;
   readonly expectedSatisfied: boolean;
   readonly expectedMissingReasonCodes: readonly string[];
   readonly selected: boolean;
@@ -53,6 +66,7 @@ export interface SemanticImportSidecarAdmission {
   readonly importCount: number;
   readonly readiness: SemanticMergeReadiness;
   readonly action: string;
+  readonly record: SemanticImportSidecarQualityRecord;
   readonly counts: {
     readonly symbols: number;
     readonly ownershipRegions: number;

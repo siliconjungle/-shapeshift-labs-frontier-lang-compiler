@@ -9,6 +9,41 @@ import type { NativeSourceChangeKind, NativeSourceChangeSet } from './native-dif
 import type { SemanticMergeConflictSummary } from './semantic-merge-conflicts.js';
 
 export type SemanticMergeCandidateProjectionRisk = 'low' | 'medium' | 'high' | 'unknown';
+export type SemanticMergeCandidateScoreFacetKey =
+  | 'ownership'
+  | 'staleStatus'
+  | 'testEvidence'
+  | 'overlap'
+  | 'size'
+  | 'semanticSidecarQuality';
+export type SemanticMergeCandidateScoreFacetStatus = 'strong' | 'partial' | 'weak' | 'blocked';
+
+export interface SemanticMergeCandidateScoreFacet {
+  readonly key: SemanticMergeCandidateScoreFacetKey;
+  readonly score: number;
+  readonly weight: number;
+  readonly weightedScore: number;
+  readonly status: SemanticMergeCandidateScoreFacetStatus;
+  readonly reasonCodes: readonly string[];
+  readonly signals: Record<string, unknown>;
+}
+
+export interface SemanticMergeCandidateScoreFacets {
+  readonly schema: 'frontier.lang.semanticMergeCandidateScoreFacets.v1';
+  readonly version: 1;
+  readonly higherIsBetter: true;
+  readonly value: number;
+  readonly risk: 'low' | 'medium' | 'high';
+  readonly components: Record<SemanticMergeCandidateScoreFacetKey, SemanticMergeCandidateScoreFacet>;
+  readonly summary: {
+    readonly value: number;
+    readonly risk: 'low' | 'medium' | 'high';
+    readonly lowestScore: number;
+    readonly weakFacets: readonly SemanticMergeCandidateScoreFacetKey[];
+    readonly blockedFacets: readonly SemanticMergeCandidateScoreFacetKey[];
+    readonly availableFacets: readonly SemanticMergeCandidateScoreFacetKey[];
+  };
+}
 
 export interface SemanticMergeCandidateChangedRegion {
   readonly id?: string;
@@ -88,11 +123,13 @@ export interface SemanticMergeCandidateAdmissionRecord {
     readonly conflictKeys: readonly string[];
     readonly pairs: readonly SemanticMergeCandidateOverlapRecord[];
   };
+  readonly scoreFacets: SemanticMergeCandidateScoreFacets;
   readonly admission: {
     readonly readiness: SemanticMergeReadiness | string;
     readonly reviewRequired: boolean;
     readonly action: 'admit' | 'prioritize-review' | 'block' | string;
     readonly sortKey: number;
+    readonly scoreFacets: SemanticMergeCandidateScoreFacets;
     readonly reasonCodes: readonly string[];
     readonly conflictKeys: readonly string[];
   };
@@ -122,6 +159,7 @@ export interface SemanticMergeCandidateAdmissionRecord {
     readonly readiness: SemanticMergeReadiness | string;
     readonly projectionRisk: SemanticMergeCandidateProjectionRisk;
     readonly reviewRequired: boolean;
+    readonly scoreFacets: SemanticMergeCandidateScoreFacets['summary'];
   };
   readonly metadata?: Record<string, unknown> & {
     readonly conflictSummary?: SemanticMergeConflictSummary;
@@ -166,6 +204,7 @@ export type SemanticMergeCandidateWithAdmission = SemanticMergeCandidateRecord &
   readonly proofIds?: readonly string[];
   readonly projectionRisk?: SemanticMergeCandidateProjectionRisk;
   readonly readinessSortKey?: number;
+  readonly scoreFacets?: SemanticMergeCandidateScoreFacets;
   readonly mergeAdmission?: SemanticMergeCandidateAdmissionRecord;
 };
 

@@ -44,8 +44,11 @@ assert.equal(emittedCandidate.evidenceIds.includes('evidence_semantic_merge_cand
 assert.equal(emittedCandidate.conflictKeys.length > 0, true);
 assert.equal(SemanticMergeCandidateProjectionRisks.includes(emittedCandidate.projectionRisk), true);
 assert.equal(typeof emittedCandidate.readinessSortKey, 'number');
+assert.equal(emittedCandidate.scoreFacets.schema, 'frontier.lang.semanticMergeCandidateScoreFacets.v1');
+assert.equal(emittedCandidate.scoreFacets.components.ownership.signals.changedSemanticRegions, emittedCandidate.changedSemanticRegions.length);
 assert.equal(emittedCandidate.mergeAdmission.kind, 'frontier.lang.semanticMergeCandidateAdmissionRecord');
 assert.equal(emittedCandidate.mergeAdmission.changedSemanticRegions.length, emittedCandidate.changedSemanticRegions.length);
+assert.equal(emittedCandidate.mergeAdmission.scoreFacets.summary.value, emittedCandidate.scoreFacets.summary.value);
 
 const readyRecord = createSemanticMergeCandidateAdmissionRecord(changeSet, {
   id: 'admission_candidate_ready',
@@ -120,6 +123,59 @@ assert.equal(overlaps.length > 0, true);
 assert.equal(overlaps.some((overlap) => overlap.candidateIds.includes('candidate_ready') && overlap.candidateIds.includes('candidate_overlap')), true);
 assert.equal(overlaps.some((overlap) => overlap.candidateIds.includes('candidate_non_overlap')), false);
 assert.equal(querySemanticMergeCandidateAdmissionOverlaps([readyRecord, overlappingRecord], { conflictKey: readyRecord.conflictKeys[0] }).length > 0, true);
+
+const scoreFacetRegions = Array.from({ length: 5 }, (_, index) => ({
+  id: `region_score_facet_${index + 1}`,
+  key: `source#src/score-facets.js#function#shared${index + 1}`,
+  conflictKey: 'source#src/score-facets.js#function#shared',
+  regionKind: 'function',
+  sourcePath: 'src/score-facets.js',
+  sourceSpan: { startLine: index + 1, startColumn: 1, endLine: index + 3, endColumn: 1 }
+}));
+const scoreFacetRecord = createSemanticMergeCandidateAdmissionRecord({
+  id: 'candidate_score_facets',
+  language: 'javascript',
+  sourcePath: 'src/score-facets.js',
+  baseHash: 'base_score_facets',
+  targetHash: 'target_score_facets',
+  readiness: 'ready',
+  changedSemanticRegions: scoreFacetRegions,
+  evidence: [{
+    id: 'evidence_score_facets_stale_test',
+    kind: 'test',
+    status: 'stale'
+  }],
+  metadata: {
+    semanticSidecarQuality: {
+      schema: 'frontier.lang.semanticSidecarQuality.v1',
+      selected: true,
+      imported: true,
+      eligible: false,
+      importCount: 1,
+      symbolCount: 4,
+      ownershipRegionCount: 0,
+      patchHintCount: 0,
+      evidenceCount: 1,
+      warningCount: 2,
+      warnings: [
+        { code: 'missing-ownership-regions' },
+        { code: 'missing-patch-hints' }
+      ],
+      proofSummary: { failed: 0, stale: 1, open: 0, assumed: 0, externalToolRequired: 0, unknown: 0 }
+    }
+  }
+});
+assert.equal(scoreFacetRecord.scoreFacets.components.ownership.signals.keyedRegions, scoreFacetRegions.length);
+assert.equal(scoreFacetRecord.scoreFacets.components.staleStatus.status, 'weak');
+assert.equal(scoreFacetRecord.scoreFacets.components.testEvidence.reasonCodes.includes('stale-evidence'), true);
+assert.equal(scoreFacetRecord.scoreFacets.components.overlap.status, 'blocked');
+assert.equal(scoreFacetRecord.scoreFacets.components.size.score < 100, true);
+assert.equal(scoreFacetRecord.scoreFacets.components.semanticSidecarQuality.signals.available, true);
+assert.equal(scoreFacetRecord.scoreFacets.components.semanticSidecarQuality.reasonCodes.includes('missing-ownership-regions'), true);
+assert.equal(scoreFacetRecord.scoreFacets.risk, 'high');
+assert.equal(scoreFacetRecord.scoreFacets.summary.blockedFacets.includes('overlap'), true);
+assert.equal(scoreFacetRecord.scoreFacets.summary.weakFacets.includes('staleStatus'), true);
+assert.equal(scoreFacetRecord.summary.scoreFacets.value, scoreFacetRecord.scoreFacets.value);
 
 const projectAdmission = createProjectImportAdmissionRecord({
   id: 'project_semantic_merge_candidate_records',

@@ -72,7 +72,12 @@ assert.equal(duplicateOverlap.shared.operationContentHashes.length, 1);
 assert.equal(duplicateOverlap.shared.editContentHashes.length, 1);
 assert.equal(duplicateOverlap.shared.semanticEditReplayIds.includes(replay.id), true);
 assert.equal(duplicateOverlap.shared.semanticEditReplayOutputHashes.includes(replay.outputHash), true);
+assert.equal(duplicateOverlap.shared.regionKeys.length > 0, true);
+assert.equal(duplicateOverlap.shared.conflictKeys.length > 0, true);
+assert.equal(duplicateOverlap.shared.sourceIdentityHashes.length, 1);
 assert.equal(duplicateOverlap.admission.reasonCodes.includes('same-replay-output'), true);
+assert.equal(duplicateOverlap.admission.reasonCodes.includes('same-region-key'), true);
+assert.equal(duplicateOverlap.admission.reasonCodes.includes('same-conflict-key'), true);
 assert.equal(duplicateOverlap.score >= 100, true);
 
 const alternateChangeSet = diffNativeSources({
@@ -174,9 +179,13 @@ const sameContentDifferentFileBundle = createSemanticPatchBundleRecord(sameConte
   semanticEditReplays: [sameContentDifferentFileReplay]
 });
 const sameContentDifferentFileOverlap = compareSemanticPatchBundleRecords(duplicateA, sameContentDifferentFileBundle);
-assert.equal(sameContentDifferentFileOverlap.admission.status, 'semantic-overlap');
-assert.equal(sameContentDifferentFileOverlap.overlapKinds.includes('operation-content'), true);
-assert.equal(sameContentDifferentFileOverlap.admission.reasonCodes.includes('same-operation-content'), true);
+assert.equal(sameContentDifferentFileOverlap.admission.status, 'independent');
+assert.equal(sameContentDifferentFileOverlap.admission.reviewRequired, false);
+assert.equal(sameContentDifferentFileOverlap.overlapKinds.includes('operation-content'), false);
+assert.equal(sameContentDifferentFileOverlap.overlapKinds.includes('edit-content'), false);
+assert.equal(sameContentDifferentFileOverlap.overlapKinds.includes('replay-current'), false);
+assert.equal(sameContentDifferentFileOverlap.admission.reasonCodes.includes('same-operation-content'), false);
+assert.equal(querySemanticPatchBundleOverlaps([duplicateA, sameContentDifferentFileBundle]).length, 0);
 
 const independentBundle = createSemanticPatchBundleRecord({
   id: 'score_overlap_independent_change',

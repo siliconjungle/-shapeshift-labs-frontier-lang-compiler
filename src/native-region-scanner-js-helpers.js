@@ -4,7 +4,6 @@ import {
   splitParameters
 } from './native-region-scanner-core.js';
 import { jsImportDeclarations } from './native-region-scanner-js-imports.js';
-
 function jsCommentOnlyLine(trimmed) {
   return trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*');
 }
@@ -128,7 +127,7 @@ function jsExportedContainerDeclaration(input, lineNumber, trimmed) {
 }
 
 function jsExportedFunctionWrapperDeclaration(input, lineNumber, trimmed) {
-  const match = trimmed.match(/^export\s+default\s+((?:React\.)?(?:forwardRef|memo|lazy|observer))\s*(?:<[^>]+>)?\s*\(\s*(.+)$/);
+  const match = trimmed.match(/^export\s+default\s+((?:React\.)?(?:forwardRef|memo|lazy|observer)|Object\.freeze)\s*(?:<[^>]+>)?\s*\(\s*(.+)$/);
   if (!match) return undefined;
   const wrapper = match[1];
   const argument = match[2].trim();
@@ -146,6 +145,13 @@ function jsExportedFunctionWrapperDeclaration(input, lineNumber, trimmed) {
       exportDefault: true,
       wrapper,
       parameters: splitParameters(functionMatch[1] ?? functionMatch[2])
+    }, true);
+  }
+  const classMatch = argument.match(/^(?:abstract\s+)?class\b(?:\s+(?!(?:extends|implements)\b)([A-Za-z_$][\w$]*))?/);
+  if (classMatch) {
+    return nativeDeclaration(input, lineNumber, 'ExportDefaultClassWrapperDeclaration', 'class', classMatch[1] ?? 'default', {
+      exportDefault: true,
+      wrapper
     }, true);
   }
   const aliasMatch = argument.match(/^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*(?:[,)]|$)/);

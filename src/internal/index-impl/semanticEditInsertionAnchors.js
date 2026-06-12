@@ -7,13 +7,16 @@ export function semanticEditInsertionAnchor(region, context) {
     .filter((symbol) => hasSymbol(context.baseSymbols, symbol));
   const before = nearestBefore(workers, workerSymbol);
   const after = nearestAfter(workers, workerSymbol);
-  const anchor = before
-    ? insertionFromSymbol('after', before, context, 'nearest-previous-base-symbol')
-    : after
-      ? insertionFromSymbol('before', after, context, 'nearest-next-base-symbol')
-      : fallbackInsertion(region, context, 'no-neighbor-base-symbol');
+  const anchorCandidates = [
+    before ? insertionFromSymbol('after', before, context, 'nearest-previous-base-symbol') : undefined,
+    after ? insertionFromSymbol('before', after, context, 'nearest-next-base-symbol') : undefined
+  ].filter(Boolean);
+  const anchor = anchorCandidates.find((candidate) => candidate.headSpan)
+    ?? anchorCandidates[0]
+    ?? fallbackInsertion(region, context, 'no-neighbor-base-symbol');
   return compactRecord({
     ...anchor,
+    anchorCandidates,
     insertedSymbolId: workerSymbol.id,
     insertedSymbolName: workerSymbol.name,
     insertedSymbolKind: workerSymbol.kind,

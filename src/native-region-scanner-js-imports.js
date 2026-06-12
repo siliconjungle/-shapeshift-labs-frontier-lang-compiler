@@ -44,6 +44,13 @@ export function jsImportDeclarations(input, lineNumber, trimmed) {
     importedName: 'default',
     importKind: trimmed.includes('import') ? 'dynamic-import-binding' : 'commonjs-require'
   }]);
+  const sideEffectRequireMatch = trimmed.match(/^require\s*\(\s*(['"])([^'"]+)\1\s*\)\s*;?$/);
+  if (sideEffectRequireMatch) {
+    return jsImportModuleDeclarations(input, lineNumber, sideEffectRequireMatch[2], 'CommonJsSideEffectRequireDeclaration', [], {
+      sideEffectOnly: true,
+      importKind: 'commonjs-require'
+    });
+  }
   return [];
 }
 

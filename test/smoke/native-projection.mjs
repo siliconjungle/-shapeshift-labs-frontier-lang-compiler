@@ -132,6 +132,9 @@ assert.equal(rustNativeCompileEmitted.sourceMap.kind, 'frontier.lang.sourceMap')
 assert.equal(rustNativeCompileEmitted.sourceMap.targetPath, 'src/scanned.rs');
 assert.equal(rustNativeCompileEmitted.sourceMap.mappings.some((mapping) => mapping.semanticSymbolId?.includes('addtodo') && mapping.precision === 'declaration'), true);
 assert.equal(rustNativeCompileEmitted.sourceMap.mappings.some((mapping) => mapping.generatedSpan?.targetPath === 'src/scanned.rs'), true);
+const rustGeneratedDeclarationMapping = rustNativeCompileEmitted.sourceMap.mappings.find((mapping) => mapping.generatedSpan?.targetPath === 'src/scanned.rs' && mapping.metadata?.sourceMapOrigin === 'declaration-stub');
+assert.equal(typeof rustGeneratedDeclarationMapping?.generatedSpan?.startLine, 'number');
+assert.equal(rustGeneratedDeclarationMapping.generatedSpan.generatedName, rustGeneratedDeclarationMapping.generatedName);
 const handledProjectionLossKinds = [
   'macroExpansion',
   'macroHygiene',

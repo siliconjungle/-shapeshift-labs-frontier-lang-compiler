@@ -2,131 +2,23 @@ import type {
   EvidenceRecord,
   FrontierSourceLanguage,
   SemanticMergeReadiness,
-  SourceMapMappingRecord,
-  SourceMapRecord,
-  SourceSpan
+  SourceMapRecord
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { ImportNativeSourceOptions, NativeSourceImportResult } from './import-adapter-core.js';
-import type { NativeSourceChangeRegion, NativeSourceChangeSet } from './native-diff.js';
+import type { NativeSourceChangeSet } from './native-diff.js';
 import type { SemanticHistoryRecord } from './semantic-history.js';
-import type { SemanticLineageEvent, SemanticLineageResolution } from './semantic-lineage.js';
+import type { SemanticLineageEvent } from './semantic-lineage.js';
 import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
+import type {
+  BidirectionalTargetChangeRoundtripEvidence,
+  BidirectionalTargetChangeSemanticMergeAdmissionEvidence,
+  BidirectionalTargetChangeSourceAnchorMapping,
+  BidirectionalTargetChangeSourceAnchorMatch,
+  BidirectionalTargetPortabilityRecord,
+  BidirectionalTargetPortabilityStatus
+} from './bidirectional-target-change-evidence.js';
 
-export type BidirectionalTargetChangeAnchorStatus = 'matched' | 'unmatched' | 'ambiguous' | 'deleted' | string;
-export type BidirectionalTargetPortabilityStatus = 'portable' | 'needs-port' | 'stale' | 'conflict' | 'blocked' | 'evidence-only' | string;
-export type BidirectionalTargetPortabilityAction =
-  | 'port-with-source-map-review'
-  | 'human-port'
-  | 'refresh-source-map'
-  | 'resolve-anchor-conflict'
-  | 'block'
-  | 'record-evidence'
-  | string;
-
-export interface BidirectionalTargetChangeSourceAnchorMapping {
-  readonly targetAnchorKey?: string;
-  readonly targetRegionKey?: string;
-  readonly targetConflictKey?: string;
-  readonly targetKey?: string;
-  readonly targetSymbolName?: string;
-  readonly targetSymbolId?: string;
-  readonly sourceAnchorKey?: string;
-  readonly sourceRegionKey?: string;
-  readonly sourceConflictKey?: string;
-  readonly sourceKey?: string;
-  readonly sourceSymbolName?: string;
-  readonly sourceSymbolId?: string;
-}
-
-export interface BidirectionalTargetChangeSourceMapLink {
-  readonly id: string;
-  readonly sourceMapId?: string;
-  readonly sourceMapMappingId?: string;
-  readonly sourcePath?: string;
-  readonly sourceHash?: string;
-  readonly targetPath?: string;
-  readonly targetHash?: string;
-  readonly semanticSymbolId?: string;
-  readonly semanticOccurrenceId?: string;
-  readonly semanticNodeId?: string;
-  readonly nativeSourceId?: string;
-  readonly nativeAstNodeId?: string;
-  readonly precision?: string;
-  readonly sourceSpan?: SourceSpan;
-  readonly generatedSpan?: SourceMapMappingRecord['generatedSpan'];
-  readonly regionKey?: string;
-  readonly regionKind?: string;
-}
-
-export interface BidirectionalTargetChangeAnchor {
-  readonly id?: string;
-  readonly key?: string;
-  readonly kind?: string;
-  readonly language?: FrontierSourceLanguage | string;
-  readonly sourcePath?: string;
-  readonly sourceHash?: string;
-  readonly symbolId?: string;
-  readonly symbolName?: string;
-  readonly sourceSpan?: SourceSpan;
-  readonly metadata?: Record<string, unknown>;
-}
-
-export interface BidirectionalTargetMatchPortability {
-  readonly status: BidirectionalTargetPortabilityStatus;
-  readonly action: BidirectionalTargetPortabilityAction;
-  readonly readiness: SemanticMergeReadiness | string;
-  readonly confidence?: number;
-  readonly reviewRequired: true;
-  readonly autoMergeClaim: false;
-  readonly semanticEquivalenceClaim: false;
-  readonly reasonCodes: readonly string[];
-  readonly sourceMapLinkIds: readonly string[];
-  readonly sourceMapMappingIds: readonly string[];
-  readonly staleSourceMapLinkIds: readonly string[];
-}
-
-export interface BidirectionalTargetChangeSourceAnchorMatch {
-  readonly kind: 'frontier.lang.bidirectionalTargetChangeSourceAnchorMatch';
-  readonly version: 1;
-  readonly id: string;
-  readonly targetRegion: Partial<NativeSourceChangeRegion>;
-  readonly sourceAnchors: readonly BidirectionalTargetChangeAnchor[];
-  readonly lineageResolutions: readonly SemanticLineageResolution[];
-  readonly sourceMapLinks: readonly BidirectionalTargetChangeSourceMapLink[];
-  readonly portability?: BidirectionalTargetMatchPortability;
-  readonly status: BidirectionalTargetChangeAnchorStatus;
-  readonly confidence?: number;
-  readonly reasonCodes: readonly string[];
-  readonly reviewRequired: true;
-  readonly autoMergeClaim: false;
-  readonly semanticEquivalenceClaim: false;
-  readonly conflictKeys: readonly string[];
-}
-
-export interface BidirectionalTargetPortabilityRecord {
-  readonly kind: 'frontier.lang.bidirectionalTargetPortability';
-  readonly version: 1;
-  readonly id?: string;
-  readonly status: BidirectionalTargetPortabilityStatus;
-  readonly action: BidirectionalTargetPortabilityAction;
-  readonly readiness: SemanticMergeReadiness | string;
-  readonly confidence?: number;
-  readonly reviewRequired: true;
-  readonly autoMergeClaim: false;
-  readonly semanticEquivalenceClaim: false;
-  readonly reasonCodes: readonly string[];
-  readonly conflictKeys: readonly string[];
-  readonly sourceAnchorMatchIds: readonly string[];
-  readonly sourceMapLinkIds: readonly string[];
-  readonly sourceMapMappingIds: readonly string[];
-  readonly staleSourceMapLinkIds: readonly string[];
-  readonly targetChangedRegions: number;
-  readonly matchedTargetRegions: number;
-  readonly sourceMapBackedRegions: number;
-  readonly unmatchedTargetRegions: number;
-  readonly ambiguousTargetRegions: number;
-  readonly deletedSourceAnchors: number;
-}
+export type * from './bidirectional-target-change-evidence.js';
 
 export interface CreateBidirectionalTargetChangeRecordOptions {
   readonly id?: string;
@@ -180,6 +72,7 @@ export interface BidirectionalTargetChangeRecord {
   readonly targetChangeSet: NativeSourceChangeSet;
   readonly sourceAnchorMatches: readonly BidirectionalTargetChangeSourceAnchorMatch[];
   readonly targetPortability: BidirectionalTargetPortabilityRecord;
+  readonly roundtripEvidence: BidirectionalTargetChangeRoundtripEvidence;
   readonly sourcePatchBundle: SemanticPatchBundleRecord;
   readonly historyRecord: SemanticHistoryRecord;
   readonly evidence: readonly EvidenceRecord[];
@@ -193,6 +86,9 @@ export interface BidirectionalTargetChangeRecord {
     readonly deletedSourceAnchors: number;
     readonly sourceChangedRegions: number;
     readonly sourceMapBackedMatches: number;
+    readonly sourceMapLinks: number;
+    readonly sourceMapMappingIds: number;
+    readonly lineageResolutions: number;
     readonly targetPortabilityStatus: BidirectionalTargetPortabilityStatus;
     readonly portableTargetRegions: number;
     readonly staleTargetRegions: number;
@@ -202,6 +98,9 @@ export interface BidirectionalTargetChangeRecord {
     readonly autoMergeClaim: false;
     readonly semanticEquivalenceClaim: false;
     readonly reviewRequired: true;
+    readonly targetPortability?: BidirectionalTargetPortabilityRecord;
+    readonly roundtripEvidenceId?: string;
+    readonly semanticMergeAdmission?: BidirectionalTargetChangeSemanticMergeAdmissionEvidence;
     readonly [key: string]: unknown;
   };
 }

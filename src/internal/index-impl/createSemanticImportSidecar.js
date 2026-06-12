@@ -29,6 +29,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
   const patchHints = ownershipRegions.map((region) => semanticPatchHintForRegion(region, readiness, options));
   const quality = createSemanticImportSidecarQuality({
     expected: options.expected === true || options.semanticImportExpected === true,
+    expectedEmpty: options.expectedEmpty === true || options.semanticImportExpectedEmpty === true,
     importEntries,
     symbols,
     ownershipRegions,
@@ -130,8 +131,12 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       patchHints: patchHints.length,
       evidenceWarnings: quality.emptyEvidenceWarnings.length,
       semanticImportExpected: quality.expected,
+      semanticImportExpectedEmpty: quality.expectedEmpty,
       semanticImportExpectedSatisfied: quality.expectedSatisfied,
       semanticImportExpectedMissingReasonCodes: quality.expectedMissingReasonCodes,
+      semanticImportRecordClassification: quality.record.classification,
+      semanticImportRecordReasonCode: quality.record.reasonCode,
+      semanticImportRecordAction: quality.record.action,
       readiness,
       emptySemanticIndex: symbols.length === 0
     },

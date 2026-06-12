@@ -9,6 +9,7 @@ import { createSemanticHistoryRecord } from './semanticHistoryRecords.js';
 import { diffNativeSourceImports } from './diffNativeSourceImports.js';
 import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
 import { attachBidirectionalMatchPortability, classifyBidirectionalTargetPortability } from './bidirectionalTargetPortability.js';
+import { createRoundtripEvidence, createSemanticMergeAdmissionEvidence, summarizeSourceMapBackprojection } from './bidirectionalTargetRoundtripEvidence.js';
 import {
   anchorsFromSourceSidecar,
   classifyBidirectionalReadiness,
@@ -85,16 +86,54 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     ...array(targetPortability.reasonCodes),
     ...sourceAnchorMatches.flatMap((match) => match.reasonCodes)
   ]);
-  const evidence = [createBidirectionalEvidence({
+  const evidenceId = input.evidenceId ?? `evidence_${idFragment(id)}_bidirectional_target_change`;
+  const sourcePatchBundleId = input.sourcePatchBundleId ?? `semantic_patch_bundle_${idFragment(id)}_source_port`;
+  const historyRecordId = input.historyRecordId ?? `semantic_history_${idFragment(id)}_target_change`;
+  const sourceMapBackprojection = summarizeSourceMapBackprojection(sourceAnchorMatches);
+  const roundtripEvidence = createRoundtripEvidence({
     id,
-    input,
+    evidenceId,
+    sourcePatchBundleId,
+    historyRecordId,
+    source,
+    targetChangeSet,
+    sourceAnchorMatches,
+    targetPortability,
+    readiness,
+    reasons,
+    sourceMapBackprojection
+  });
+  const semanticMergeAdmission = createSemanticMergeAdmissionEvidence({
+    id,
+    evidenceId,
+    sourcePatchBundleId,
+    historyRecordId,
+    targetChangeSet,
+    sourceAnchorMatches,
+    targetPortability,
+    readiness,
+    reasons,
+    roundtripEvidence
+  });
+  const bidirectionalEvidence = createBidirectionalEvidence({
+    id,
+    input: { ...input, evidenceId },
     source,
     targetChangeSet,
     sourceAnchorMatches,
     targetPortability,
     readiness,
     reasons
-  })];
+  });
+  const evidence = [{
+    ...bidirectionalEvidence,
+    metadata: {
+      ...bidirectionalEvidence.metadata,
+      roundtripEvidenceId: roundtripEvidence.id,
+      roundtripEvidence,
+      semanticMergeAdmission
+    }
+  }];
   const sourceChangedRegions = sourceAnchorMatches.flatMap((match) => sourceRegionsForMatch(match, readiness));
   const sourcePatchBundle = createSemanticPatchBundleRecord({
     id: `${id}_source_port_projection`,
@@ -112,22 +151,30 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       targetPatchId: targetChangeSet.patch?.id,
       targetMergeCandidateId: targetChangeSet.mergeCandidate?.id,
       targetPortability,
-      sourceMapBackprojection: summarizeSourceMapBackprojection(sourceAnchorMatches)
+      sourceMapBackprojection,
+      roundtripEvidenceId: roundtripEvidence.id,
+      semanticMergeAdmission
     }
   }, {
-    id: input.sourcePatchBundleId ?? `semantic_patch_bundle_${idFragment(id)}_source_port`,
+    id: sourcePatchBundleId,
     patchId: targetChangeSet.patch?.id,
     mergeCandidateId: targetChangeSet.mergeCandidate?.id,
     admission: { status: readiness === 'blocked' ? 'blocked' : 'needs-review', readiness },
     metadata: {
       source: 'createBidirectionalTargetChangeRecord',
+      targetChangeSetId: targetChangeSet.id,
+      targetPatchId: targetChangeSet.patch?.id,
+      targetMergeCandidateId: targetChangeSet.mergeCandidate?.id,
       targetPortability,
+      sourceMapBackprojection,
+      roundtripEvidenceId: roundtripEvidence.id,
+      semanticMergeAdmission,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     }
   });
   const historyRecord = createSemanticHistoryRecord({
-    id: input.historyRecordId ?? `semantic_history_${idFragment(id)}_target_change`,
+    id: historyRecordId,
     importResult: source,
     language: source?.language,
     sourcePath: source?.sourcePath,
@@ -155,7 +202,9 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       sourcePatchBundleId: sourcePatchBundle.id,
       targetChangeSetId: targetChangeSet.id,
       targetPortability,
-      sourceMapBackprojection: summarizeSourceMapBackprojection(sourceAnchorMatches),
+      sourceMapBackprojection,
+      roundtripEvidenceId: roundtripEvidence.id,
+      semanticMergeAdmission,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     }
@@ -172,6 +221,7 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     targetChangeSet,
     sourceAnchorMatches,
     targetPortability,
+    roundtripEvidence,
     sourcePatchBundle,
     historyRecord,
     evidence,
@@ -185,6 +235,9 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       deletedSourceAnchors: sourceAnchorMatches.filter((match) => match.status === 'deleted').length,
       sourceChangedRegions: sourceChangedRegions.length,
       sourceMapBackedMatches: sourceAnchorMatches.filter((match) => match.sourceMapLinks.length > 0).length,
+      sourceMapLinks: sourceMapBackprojection.sourceMapLinks,
+      sourceMapMappingIds: sourceMapBackprojection.sourceMapMappingIds.length,
+      lineageResolutions: roundtripEvidence.lineageEvidence.lineageResolutionIds.length,
       targetPortabilityStatus: targetPortability.status,
       portableTargetRegions: targetPortability.status === 'portable' ? targetPortability.targetChangedRegions : 0,
       staleTargetRegions: targetPortability.status === 'stale' ? targetPortability.targetChangedRegions : 0,
@@ -195,18 +248,10 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       semanticEquivalenceClaim: false,
       reviewRequired: true,
       targetPortability,
+      roundtripEvidenceId: roundtripEvidence.id,
+      semanticMergeAdmission,
       ...input.metadata
     }
-  };
-}
-
-function summarizeSourceMapBackprojection(matches) {
-  const links = matches.flatMap((match) => match.sourceMapLinks ?? []);
-  return {
-    sourceMapBackedMatches: matches.filter((match) => (match.sourceMapLinks ?? []).length > 0).length,
-    sourceMapLinks: links.length,
-    sourceMapIds: uniqueStrings(links.map((link) => link.sourceMapId)),
-    sourceMapMappingIds: uniqueStrings(links.map((link) => link.sourceMapMappingId))
   };
 }
 

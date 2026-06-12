@@ -1,9 +1,7 @@
 import type { EvidenceRecord, FrontierSourceLanguage, SemanticMergeReadiness, SourceSpan } from '@shapeshift-labs/frontier-lang-kernel';
 import type { ImportNativeSourceOptions, NativeSourceImportResult } from './import-adapter-core.js';
-
 export type SemanticLineageEventKind = 'unchanged' | 'moved' | 'renamed' | 'split' | 'merged' | 'deleted' | 'recreated' | 'unknown' | string;
 export type SemanticLineageResolutionStatus = 'unchanged' | 'resolved' | 'ambiguous' | 'deleted' | 'recreated' | 'cycle' | 'max-depth' | 'not-found' | string;
-
 export interface SemanticAnchor {
   readonly id?: string; readonly key?: string; readonly kind?: string;
   readonly language?: FrontierSourceLanguage | string; readonly sourcePath?: string; readonly sourceHash?: string;
@@ -17,7 +15,6 @@ export interface SemanticAnchor {
   readonly lineageEventKinds?: readonly SemanticLineageEventKind[]; readonly lineageReasonCodes?: readonly string[];
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface CreateSemanticAnchorInput extends SemanticAnchor {
   readonly ownershipKey?: string;
   readonly conflictKey?: string;
@@ -30,7 +27,6 @@ export interface CreateSemanticAnchorInput extends SemanticAnchor {
   readonly hash?: string;
   readonly span?: SourceSpan;
 }
-
 export interface SemanticLineageCrdtClock {
   readonly operationId?: string;
   readonly actor?: string;
@@ -40,7 +36,6 @@ export interface SemanticLineageCrdtClock {
   readonly stateVector?: Record<string, number>;
   readonly versionFrame?: Record<string, unknown>;
 }
-
 export interface SemanticLineageCrdtClockInput {
   readonly operationId?: string;
   readonly id?: string;
@@ -53,7 +48,6 @@ export interface SemanticLineageCrdtClockInput {
   readonly versionFrame?: Record<string, unknown>;
   readonly frame?: Record<string, unknown>;
 }
-
 export interface SemanticLineageEvidence {
   readonly pathMatch?: boolean;
   readonly signatureHashMatch?: boolean;
@@ -63,11 +57,9 @@ export interface SemanticLineageEvidence {
   readonly confidence?: number;
   readonly command?: string;
 }
-
 export interface SemanticLineageEvidenceInput extends SemanticLineageEvidence {
   readonly id?: string;
 }
-
 export interface SemanticLineageActor {
   readonly id?: string;
   readonly role?: string;
@@ -76,11 +68,9 @@ export interface SemanticLineageActor {
   readonly runId?: string;
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface SemanticLineageActorInput extends SemanticLineageActor {
   readonly actorId?: string;
 }
-
 export interface SemanticLineageEvent {
   readonly kind: 'frontier.lang.semanticLineageEvent';
   readonly version: 1;
@@ -100,7 +90,6 @@ export interface SemanticLineageEvent {
   readonly conflictKeys: readonly string[];
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface CreateSemanticLineageEventInput {
   readonly id?: string; readonly hash?: string; readonly createdAt?: number | string;
   readonly eventKind?: SemanticLineageEventKind; readonly event?: SemanticLineageEventKind; readonly kind?: SemanticLineageEventKind;
@@ -136,7 +125,6 @@ export interface CreateSemanticLineageEventInput {
   readonly conflictKeys?: readonly string[] | string;
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface SemanticLineageMap {
   readonly kind: 'frontier.lang.semanticLineageMap';
   readonly version: 1;
@@ -154,7 +142,6 @@ export interface SemanticLineageMap {
     readonly eventKinds: readonly string[];
   };
 }
-
 export interface SemanticLineageResolutionQuery {
   readonly id?: string;
   readonly anchor?: SemanticAnchor | string;
@@ -168,7 +155,6 @@ export interface SemanticLineageResolutionQuery {
   readonly generatedAt?: number | string;
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface SemanticLineageResolution {
   readonly kind: 'frontier.lang.semanticLineageResolution';
   readonly version: 1;
@@ -199,7 +185,6 @@ export interface SemanticLineageResolution {
   readonly reasonCodes: readonly string[];
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface SemanticLineageQuery {
   readonly eventKind?: SemanticLineageEventKind | readonly string[];
   readonly anchorKey?: string | readonly string[];
@@ -211,7 +196,6 @@ export interface SemanticLineageQuery {
   readonly conflictKey?: string | readonly string[];
   readonly evidenceId?: string | readonly string[];
 }
-
 export interface SemanticLineageInferredAnchorSummary {
   readonly key?: string;
   readonly id?: string;
@@ -220,24 +204,24 @@ export interface SemanticLineageInferredAnchorSummary {
   readonly language?: FrontierSourceLanguage | string;
   readonly sourcePath?: string;
   readonly sourceHash?: string;
+  readonly identityHash?: string;
+  readonly semanticIdentityHash?: string;
+  readonly sourceIdentityHash?: string;
   readonly sourceSpan?: SourceSpan;
   readonly signatureHash?: string;
   readonly bodyHash?: string;
   readonly ownershipRegionKind?: string;
 }
-
 export interface SemanticLineageAmbiguousCandidate {
   readonly after: SemanticLineageInferredAnchorSummary;
   readonly confidence: number;
   readonly reasons: readonly string[];
 }
-
 export interface SemanticLineageAmbiguousMatch {
   readonly before: SemanticLineageInferredAnchorSummary;
   readonly candidates: readonly SemanticLineageAmbiguousCandidate[];
   readonly reasonCodes: readonly string[];
 }
-
 export interface SemanticLineageInferenceResult {
   readonly kind: 'frontier.lang.semanticLineageInference';
   readonly version: 1;
@@ -280,7 +264,6 @@ export interface SemanticLineageInferenceResult {
     readonly [key: string]: unknown;
   };
 }
-
 export interface InferSemanticLineageEventsOptions {
   readonly id?: string;
   readonly before?: NativeSourceImportResult | ImportNativeSourceOptions;
@@ -306,7 +289,6 @@ export interface InferSemanticLineageEventsOptions {
   readonly stateVector?: Record<string, number>;
   readonly metadata?: Record<string, unknown>;
 }
-
 export declare const SemanticLineageEventKinds: readonly SemanticLineageEventKind[];
 export declare const SemanticLineageResolutionStatuses: readonly SemanticLineageResolutionStatus[];
 export declare function createSemanticAnchor(input?: CreateSemanticAnchorInput | string, defaults?: Partial<SemanticAnchor>): SemanticAnchor | undefined;

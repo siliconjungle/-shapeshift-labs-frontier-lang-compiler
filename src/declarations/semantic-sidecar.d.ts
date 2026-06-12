@@ -24,7 +24,7 @@ import type {
   UniversalAstLayerMap,
   UniversalAstLayerRecord
 } from '@shapeshift-labs/frontier-lang-kernel';
-import type { SemanticImportSidecarAdmission, SemanticImportSidecarQuality } from './semantic-sidecar-admission.js';
+import type { SemanticImportSidecarAdmission, SemanticImportSidecarQuality, SemanticImportSidecarQualityRecord } from './semantic-sidecar-admission.js';
 import type { SemanticMergeCandidateAdmissionRecord, SemanticMergeCandidateProjectionRisk } from './semantic-merge-candidates.js';
 import type { SemanticMergeConflictClass, SemanticMergeConflictSummary } from './semantic-merge-conflicts.js';
 import type { SemanticImportImpactSummary } from './semantic-impact.js';
@@ -52,7 +52,6 @@ import type { JavaAstNativeImporterAdapterOptions, KotlinPsiNativeImporterAdapte
 import type { NativeTargetProjectionAdapterCoverageInput, NativeTargetProjectionAdapterSummary, NativeTargetProjectionAdapterInput, NativeTargetProjectionAdapterResult, NativeTargetProjectionAdapter, NativeTargetProjectionAdapterResolverInput, NativeTargetProjectionResult } from './target-adapters.js';
 import type { NativeProjectSourceInput, ImportNativeProjectOptions, NativeProjectImportResult, NativeSourceProjectionMode, ProjectNativeImportToSourceOptions, NativeSourceProjectionDeclaration, NativeSourceProjectionResult, NativeSourceCompileOutputMode, CompileNativeSourceOptions, NativeSourceCompileResult } from './native-project.js';
 import type { NativeImportRoundtripReadinessStatus, NativeImportRoundtripReadinessOptions, NativeImportRoundtripReadinessClassification } from './roundtrip.js';
-
 export interface SemanticImportOwnershipRegion {
   readonly id: string;
   readonly key: string;
@@ -71,7 +70,6 @@ export interface SemanticImportOwnershipRegion {
   readonly mergePolicy?: string;
   readonly metadata?: Record<string, unknown>;
 }
-
 export interface SemanticImportSidecarSymbol {
   readonly id: string;
   readonly name?: string;
@@ -87,7 +85,6 @@ export interface SemanticImportSidecarSymbol {
   readonly ownershipRegionKind?: NativeImportRegionTaxonomyKind;
   readonly readiness: SemanticMergeReadiness;
 }
-
 export interface SemanticImportRegionTaxonomySummary {
   readonly kinds: readonly NativeImportRegionTaxonomyKind[];
   readonly presentKinds: readonly NativeImportRegionTaxonomyKind[];
@@ -95,12 +92,12 @@ export interface SemanticImportRegionTaxonomySummary {
   readonly keys: readonly string[];
   readonly keysByKind: Readonly<Record<string, readonly string[]>>;
 }
-
 export interface SemanticImportPatchHint {
   readonly id: string;
   readonly kind: 'source-region-patch' | string;
   readonly ownershipRegionId: string;
   readonly ownershipKey: string;
+  readonly operation: string;
   readonly sourcePath?: string;
   readonly sourceHash?: string;
   readonly sourceSpan?: SourceSpan;
@@ -113,7 +110,6 @@ export interface SemanticImportPatchHint {
     readonly requiresSourceMap: boolean;
   };
 }
-
 export interface SemanticImportSidecarImportEntry {
   readonly id: string;
   readonly language?: FrontierSourceLanguage | string;
@@ -135,11 +131,17 @@ export interface SemanticImportSidecarImportEntry {
   readonly proofSpec: SemanticImportSidecarProofSpecSummary;
   readonly paradigmSemantics: SemanticImportSidecarParadigmSemanticsSummary;
   readonly dependencyRelationCount: number; readonly dependencyPredicates: readonly string[];
+  readonly semanticFactCount?: number;
+  readonly semanticFactPredicates?: readonly string[];
+  readonly semanticFactSummary?: Readonly<Record<string, number>>;
+  readonly patchHintCount?: number;
+  readonly patchHintOperations?: readonly string[];
+  readonly patchHints?: readonly SemanticImportPatchHint[];
   readonly readiness: SemanticMergeReadiness;
   readonly emptySemanticIndex: boolean;
+  readonly qualityRecord: SemanticImportSidecarQualityRecord;
   readonly regionTaxonomy?: SemanticImportRegionTaxonomySummary;
 }
-
 export interface SemanticImportSidecarSourcePreservationRecord {
   readonly id: string;
   readonly level: SourcePreservationLevel;
@@ -157,7 +159,6 @@ export interface SemanticImportSidecarSourcePreservationRecord {
   readonly evidenceIds: readonly string[];
   readonly reasons: readonly string[];
 }
-
 export interface SemanticImportSidecarUniversalAstLayerSummary {
   readonly total: number;
   readonly names: readonly string[];
@@ -165,7 +166,6 @@ export interface SemanticImportSidecarUniversalAstLayerSummary {
   readonly byName: Readonly<Record<string, number>>;
   readonly empty: boolean;
 }
-
 export interface SemanticImportSidecarProofSpecSummary {
   readonly total: number;
   readonly ids: readonly string[];
@@ -194,7 +194,6 @@ export interface SemanticImportSidecarProofSpecSummary {
   readonly byArtifactKind: Readonly<Record<string, number>>;
   readonly empty: boolean;
 }
-
 export interface SemanticImportSidecarParadigmSemanticsSummary {
   readonly total: number;
   readonly ids: readonly string[];
@@ -230,14 +229,12 @@ export interface SemanticImportSidecarParadigmSemanticsSummary {
   readonly hasLowering: boolean;
   readonly empty: boolean;
 }
-
 export interface SemanticImportDependencySummary {
   readonly total: number; readonly calls: number; readonly uses: number; readonly references: number;
   readonly imports: number; readonly extends: number; readonly implements: number; readonly includes: number; readonly requires: number;
   readonly byPredicate: Readonly<Record<string, number>>; readonly predicates: readonly string[];
   readonly ids: readonly string[]; readonly sourceSymbolIds: readonly string[]; readonly targetSymbolIds: readonly string[];
 }
-
 export interface SemanticImportSidecar {
   readonly kind: 'frontier.lang.semanticImportSidecar';
   readonly version: 1;
@@ -313,8 +310,9 @@ export interface SemanticImportSidecar {
     readonly semanticImpactRecords: number; readonly semanticImpactHighRiskRecords: number; readonly semanticImpactRequiredVerificationSteps: number;
     readonly patchHints: number;
     readonly evidenceWarnings: number;
-    readonly semanticImportExpected: boolean; readonly semanticImportExpectedSatisfied: boolean; readonly semanticImportExpectedMissingReasonCodes: readonly string[];
+    readonly semanticImportExpected: boolean; readonly semanticImportExpectedEmpty: boolean; readonly semanticImportExpectedSatisfied: boolean; readonly semanticImportExpectedMissingReasonCodes: readonly string[];
+    readonly semanticImportRecordClassification: string; readonly semanticImportRecordReasonCode: string; readonly semanticImportRecordAction: string;
     readonly readiness: SemanticMergeReadiness; readonly emptySemanticIndex: boolean;
   };
   readonly metadata?: Record<string, unknown>; }
-export interface SemanticImportSidecarOptions { readonly id?: string; readonly generatedAt?: number; readonly regionPrefix?: string; readonly targetPath?: string; readonly expected?: boolean; readonly semanticImportExpected?: boolean; readonly metadata?: Record<string, unknown>; }
+export interface SemanticImportSidecarOptions { readonly id?: string; readonly generatedAt?: number; readonly regionPrefix?: string; readonly targetPath?: string; readonly expected?: boolean; readonly semanticImportExpected?: boolean; readonly expectedEmpty?: boolean; readonly semanticImportExpectedEmpty?: boolean; readonly metadata?: Record<string, unknown>; }

@@ -167,6 +167,27 @@ assert.equal(richSidecar.summary.symbols >= 10, true);
 assert.equal(richSidecar.ownershipRegions.some((region) => region.symbolName === 'TodoPanel.render' && region.regionKind === 'body'), true);
 assert.equal(richSidecar.ownershipRegions.some((region) => region.symbolName === 'memoize' && region.regionKind === 'import'), true);
 assert.equal(richSidecar.patchHints.some((hint) => hint.ownershipKey.includes('formatTitle') && hint.sourceSpan.endLine === 8), true);
+const scannedPrivateClassImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/private-class.js',
+  sourceText: 'export class TokenBucket {\n  #tokens = 0;\n  static #capacity = 10;\n  get size() {\n    return this.#tokens;\n  }\n  #refill(amount) {\n    this.#tokens += amount;\n  }\n}\n'
+});
+const privateClassNames = new Set(scannedPrivateClassImport.semanticIndex.symbols.map((symbol) => symbol.name));
+for (const expectedName of ['TokenBucket', 'TokenBucket.#tokens', 'TokenBucket.#capacity', 'TokenBucket.size', 'TokenBucket.#refill']) {
+  assert.equal(privateClassNames.has(expectedName), true);
+}
+const privateFieldSymbol = scannedPrivateClassImport.semanticIndex.symbols.find((symbol) => symbol.name === 'TokenBucket.#tokens');
+assert.equal(privateFieldSymbol.kind, 'property');
+assert.equal(privateFieldSymbol.definitionSpan.startLine, 2);
+assert.equal(privateFieldSymbol.definitionSpan.endLine, 2);
+assert.equal(privateFieldSymbol.metadata.ownershipRegionKind, 'property');
+const privateMethodSymbol = scannedPrivateClassImport.semanticIndex.symbols.find((symbol) => symbol.name === 'TokenBucket.#refill');
+assert.equal(privateMethodSymbol.kind, 'method');
+assert.equal(privateMethodSymbol.definitionSpan.startLine, 7);
+assert.equal(privateMethodSymbol.definitionSpan.endLine, 9);
+const privateClassSidecar = createSemanticImportSidecar(scannedPrivateClassImport, { generatedAt: 136, targetPath: 'dist/private-class.js' });
+assert.equal(privateClassSidecar.ownershipRegions.some((region) => region.symbolName === 'TokenBucket.#tokens' && region.regionKind === 'property'), true);
+assert.equal(privateClassSidecar.patchHints.some((hint) => hint.ownershipKey.includes('TokenBucket.#refill') && hint.sourceSpan.endLine === 9), true);
 const caseSensitiveImport = importNativeSource({
   language: 'typescript',
   sourcePath: 'src/case-sensitive.ts',
@@ -184,6 +205,16 @@ const destructuredRequireSidecar = createSemanticImportSidecar(destructuredRequi
 assert.equal(destructuredRequireSidecar.summary.emptySemanticIndex, false);
 assert.equal(destructuredRequireSidecar.symbols.some((symbol) => symbol.name === 'readFile'), true);
 assert.equal(destructuredRequireSidecar.ownershipRegions.some((region) => region.symbolName === 'writeFileAsync' && region.regionKind === 'import'), true);
+const sideEffectRequireImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/side-effect-require.js',
+  sourceText: 'require("source-map-support/register");\nconst fixture = "require(\\"not-a-module\\")";\n'
+});
+const sideEffectRequireSymbol = sideEffectRequireImport.semanticIndex.symbols.find((symbol) => symbol.name === 'source-map-support/register');
+assert.equal(Boolean(sideEffectRequireSymbol), true);
+assert.equal(sideEffectRequireImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'
+  && relation.targetId === sideEffectRequireSymbol.id), true);
+assert.equal(sideEffectRequireImport.semanticIndex.symbols.some((symbol) => symbol.name === 'not-a-module'), false);
 const scannedTypeShapeImport = importNativeSource({
   language: 'typescript',
   sourcePath: 'src/type-shape.ts',
