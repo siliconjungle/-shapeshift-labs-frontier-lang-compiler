@@ -4,6 +4,7 @@ import { createSemanticImportSidecar } from './createSemanticImportSidecar.js';
 import { mapDiffSymbols } from './mapDiffSymbols.js';
 import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
 import { alreadyAppliedImportEditForOperation } from './semanticEditImportProjection.js';
+import { explicitSourceReplacementEditForOperation } from './semanticEditExplicitSourceReplacement.js';
 import { projectionEditRecord } from './semanticEditProjectionRecord.js';
 import { findCurrentSymbol } from './semanticEditReplayAnchors.js';
 import {
@@ -96,6 +97,8 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText, ord
     return { ok: true, value: { ...identity, operationId: operation.id, order, start: 0, end: 0, replacement: '', current: '', alreadyApplied: true } };
   }
   if (operation.status !== 'portable') return { ok: false, reasonCodes: [`operation-not-portable:${operation.id}`] };
+  const explicit = explicitSourceReplacementEditForOperation(operation, identity, headSourceText, order);
+  if (explicit) return explicit;
   if (operation.changeKind === 'added' || String(operation.kind ?? '').startsWith('add')) {
     return insertionEditForOperation(operation, identity, workerSourceText, headSourceText, order, context);
   }

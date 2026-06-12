@@ -184,6 +184,8 @@ function sourceMapLinkForMapping(sourceMap, mapping) {
     precision: mapping.precision,
     sourceSpan: mapping.sourceSpan,
     generatedSpan: mapping.generatedSpan,
+    sourceReplacementText: mapping.sourceReplacementText,
+    sourceReplacementTextHash: mapping.sourceReplacementTextHash ?? mapping.sourceReplacementHash,
     regionKey: mapping.ownershipRegionKey,
     regionKind: mapping.ownershipRegionKind
   });

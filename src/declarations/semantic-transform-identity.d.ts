@@ -20,6 +20,9 @@ export interface SemanticTransformIdentityRecord {
   readonly transformIdentityHash?: string;
   readonly projectionIdentityHash?: string;
   readonly transformContentHash?: string;
+  readonly sourceMapIds?: readonly string[];
+  readonly sourceMapLinkIds?: readonly string[];
+  readonly sourceMapMappingIds?: readonly string[];
   readonly readiness?: string;
   readonly confidence?: number;
   readonly evidenceIds?: readonly string[];

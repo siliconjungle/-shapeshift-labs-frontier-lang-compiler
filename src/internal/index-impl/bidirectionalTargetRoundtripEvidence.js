@@ -125,11 +125,12 @@ function verifiedSourceBackprojection(context) {
 }
 
 function verifiedSourceBackprojectionModes() {
-  return ['same-language-exact-source-map', 'same-language-target-source-edit'];
+  return ['same-language-exact-source-map', 'same-language-target-source-edit', 'cross-language-explicit-source-replacement'];
 }
 
 function verifiedSourceBackprojectionReason(context) {
   const mode = context.sourceEditProjection?.sourceProjectionHint?.sourceBackprojectionMode;
+  if (mode === 'cross-language-explicit-source-replacement' && verifiedSourceBackprojection(context)) return 'verified-cross-language-explicit-source-replacement';
   if (mode === 'same-language-target-source-edit' && verifiedSourceBackprojection(context)) return 'verified-same-language-target-source-edit';
   if (mode === 'same-language-exact-source-map' && verifiedSourceBackprojection(context)) return 'verified-source-map-backprojection';
   return undefined;

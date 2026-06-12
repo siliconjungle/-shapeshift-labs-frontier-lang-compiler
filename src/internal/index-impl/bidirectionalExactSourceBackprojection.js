@@ -4,7 +4,9 @@ import { nativeImportSourceText } from './nativeImportSourceText.js';
 import { spanOffsets } from './semanticEditSourceRanges.js';
 
 export function exactSourceBackprojectionForMatch(match, context) {
-  if (!sameLanguage(context.source?.language, context.targetChangeSet?.language)) return undefined;
+  if (!sameLanguage(context.source?.language, context.targetChangeSet?.language)) {
+    return explicitSourceReplacementBackprojection(match, context);
+  }
   const anchor = match.sourceAnchors[0];
   const link = match.sourceMapLinks.find((entry) => entry.precision === 'exact');
   const region = targetRegionForMatch(match, context);
@@ -55,6 +57,37 @@ export function exactSourceBackprojectionForMatch(match, context) {
     sourceEditTextHash: hashSemanticValue(sourceEditText),
     targetBeforeEditTextHash: hashSemanticValue(targetBeforeEditText),
     targetAfterEditTextHash: hashSemanticValue(targetAfterEditText),
+    targetAfterSourceHash: context.targetChangeSet.afterHash
+  });
+}
+
+function explicitSourceReplacementBackprojection(match, context) {
+  const anchor = match.sourceAnchors[0];
+  const link = match.sourceMapLinks.find((entry) => typeof sourceReplacementText(entry) === 'string');
+  const replacement = sourceReplacementText(link);
+  const sourceText = nativeImportSourceText(context.source);
+  const targetAfterText = nativeImportSourceText(context.targetChangeSet?.after);
+  const region = targetRegionForMatch(match, context);
+  const ranges = {
+    source: spanOffsets(sourceText, link?.sourceSpan ?? anchor?.sourceSpan),
+    after: spanOffsets(targetAfterText, region?.metadata?.changedRegionProjection?.after?.sourceSpan ?? region?.sourceSpan)
+  };
+  if (!anchor || !link || link.precision !== 'exact' || typeof replacement !== 'string' || !ranges.source) return undefined;
+  const sourceEditText = sourceText.slice(ranges.source.start, ranges.source.end);
+  const replacementHash = sourceReplacementHash(link) ?? hashSemanticValue(replacement);
+  if (replacementHash !== hashSemanticValue(replacement)) return undefined;
+  const targetAfterEditText = ranges.after ? targetAfterText.slice(ranges.after.start, ranges.after.end) : undefined;
+  return compactRecord({
+    mode: 'cross-language-explicit-source-replacement',
+    alreadyApplied: sourceEditText === replacement,
+    sourceMapLinkId: link.id,
+    sourceMapMappingId: link.sourceMapMappingId,
+    sourceEditSpan: { start: ranges.source.start, end: ranges.source.end, path: anchor.sourcePath },
+    targetAfterEditSpan: ranges.after ? { start: ranges.after.start, end: ranges.after.end, path: region.sourcePath } : undefined,
+    sourceEditTextHash: hashSemanticValue(sourceEditText),
+    sourceReplacementText: replacement,
+    sourceReplacementTextHash: replacementHash,
+    targetAfterEditTextHash: targetAfterEditText === undefined ? undefined : hashSemanticValue(targetAfterEditText),
     targetAfterSourceHash: context.targetChangeSet.afterHash
   });
 }
@@ -125,6 +158,14 @@ function targetRegionForMatch(match, context) {
 
 function sameLanguage(left, right) {
   return normalizeNativeLanguageId(left) && normalizeNativeLanguageId(left) === normalizeNativeLanguageId(right);
+}
+
+function sourceReplacementText(link) {
+  return link?.sourceReplacementText ?? link?.sourceEditText ?? link?.metadata?.sourceReplacementText;
+}
+
+function sourceReplacementHash(link) {
+  return link?.sourceReplacementTextHash ?? link?.sourceReplacementHash ?? link?.metadata?.sourceReplacementTextHash;
 }
 
 function containedRange(inner, outer) {

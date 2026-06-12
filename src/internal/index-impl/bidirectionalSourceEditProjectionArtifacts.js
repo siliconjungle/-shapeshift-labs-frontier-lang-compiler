@@ -12,7 +12,15 @@ export function createBidirectionalSourceEditProjectionArtifacts(context = {}, s
     id: `semantic_edit_projection_${idFragment(context.id)}_source_backprojection`,
     script: sourceEditScript,
     workerSourceText,
-    headSourceText: sourceText
+    headSourceText: sourceText,
+    metadata: {
+      targetLanguage: context.targetChangeSet.language,
+      targetPath: context.targetChangeSet.sourcePath,
+      targetHash: context.targetChangeSet.afterHash,
+      sourceMapIds: sourceEditScript.metadata?.sourceProjectionHint?.sourceMapIds,
+      sourceMapLinkIds: sourceEditScript.metadata?.sourceProjectionHint?.sourceMapLinkIds,
+      sourceMapMappingIds: sourceEditScript.metadata?.sourceProjectionHint?.sourceMapMappingIds
+    }
   });
   const replay = projection.status === 'projected'
     ? replaySemanticEditProjection({
@@ -37,8 +45,8 @@ function backprojectionEvidence(context, script, projection, replay) {
     status: passed ? 'passed' : 'failed',
     path: script.sourcePath,
     summary: passed
-      ? 'Verified exact same-language source-map backprojection by projecting and replaying the source edit.'
-      : 'Exact same-language source-map backprojection did not project and replay cleanly.',
+      ? 'Verified exact source-map backprojection by projecting and replaying the source edit.'
+      : 'Exact source-map backprojection did not project and replay cleanly.',
     metadata: {
       schema: 'frontier.lang.bidirectionalSourceBackprojectionEvidence.v1',
       bidirectionalTargetChangeId: context.id,
@@ -55,5 +63,5 @@ function backprojectionEvidence(context, script, projection, replay) {
 
 function isExactBackprojectionScript(script) {
   return script?.admission?.status === 'auto-merge-candidate'
-    && script?.metadata?.sourceBackprojectionMode === 'same-language-exact-source-map';
+    && ['same-language-exact-source-map', 'cross-language-explicit-source-replacement'].includes(script?.metadata?.sourceBackprojectionMode);
 }

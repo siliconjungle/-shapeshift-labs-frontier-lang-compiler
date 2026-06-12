@@ -186,9 +186,9 @@ function semanticEditScriptInputs(input) {
 
 function transformRecordForProjectionEdit(edit, projection, input, options, projectionIndex, editIndex) {
   const sourceLanguage = firstString(edit.sourceLanguage, edit.language, input.sourceLanguage, options.sourceLanguage, projection.sourceLanguage, projection.language);
-  const targetLanguage = firstString(edit.targetLanguage, edit.projectedLanguage, input.targetLanguage, options.targetLanguage, projection.targetLanguage, projection.projectedLanguage, projection.language);
+  const targetLanguage = firstString(edit.targetLanguage, edit.projectedLanguage, input.targetLanguage, options.targetLanguage, projection.metadata?.targetLanguage, projection.targetLanguage, projection.projectedLanguage, projection.language);
   const sourcePath = firstString(edit.originalSourcePath, edit.sourcePath, input.sourcePath, options.sourcePath, projection.sourcePath);
-  const targetPath = firstString(edit.targetPath, edit.targetSourcePath, input.targetPath, options.targetPath, projection.targetPath, projection.projectedSourcePath, projection.sourcePath);
+  const targetPath = firstString(edit.targetPath, edit.targetSourcePath, input.targetPath, options.targetPath, projection.metadata?.targetPath, projection.targetPath, projection.projectedSourcePath, projection.sourcePath);
   const transformId = [projection.id, edit.operationId, projectionIndex, editIndex].filter((entry) => entry !== undefined && entry !== null).join(':');
   return createSemanticTransformIdentityRecord(edit, {
     id: `semantic_transform_${idFragment(transformId)}`,
@@ -197,7 +197,10 @@ function transformRecordForProjectionEdit(edit, projection, input, options, proj
     sourcePath,
     targetPath,
     baseHash: firstString(edit.baseHash, projection.baseHash, input.baseHash, options.baseHash),
-    targetHash: firstString(edit.targetHash, projection.projectedHash, projection.targetHash, input.targetHash, options.targetHash),
+    targetHash: firstString(edit.targetHash, projection.metadata?.targetHash, projection.projectedHash, projection.targetHash, input.targetHash, options.targetHash),
+    sourceMapIds: projection.metadata?.sourceMapIds,
+    sourceMapLinkIds: projection.metadata?.sourceMapLinkIds,
+    sourceMapMappingIds: projection.metadata?.sourceMapMappingIds,
     readiness: firstString(edit.readiness, projection.admission?.status, projection.status),
     evidenceIds: uniqueStrings([...strings(input.evidenceIds), ...strings(options.evidenceIds), ...strings(projection.evidenceIds), ...strings(edit.evidenceIds)]),
     metadata: compactRecord({

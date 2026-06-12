@@ -6,6 +6,8 @@ import { nativeImportSourceText } from './nativeImportSourceText.js';
 import { summarizeSemanticEditOperations } from './semanticEditScriptClassification.js';
 import { projectionCoveredContainerOperationIds, spanOffsets } from './semanticEditSourceRanges.js';
 
+const exactSourceBackprojectionModes = ['same-language-exact-source-map', 'cross-language-explicit-source-replacement'];
+
 export function createBidirectionalSourceEditProjection(context = {}) {
   const source = context.source;
   const targetChangeSet = context.targetChangeSet;
@@ -19,7 +21,7 @@ export function createBidirectionalSourceEditProjection(context = {}) {
   const sourceMapLinks = uniqueRecordsById(matches.flatMap((match) => match.sourceMapLinks));
   const coveredOperationIds = projectionCoveredContainerOperationIds(operations, nativeImportSourceText(targetChangeSet.after));
   const exactBackprojection = operations.length > 0 && operations.every((operation) => (
-    operation.metadata?.sourceBackprojection?.mode === 'same-language-exact-source-map' ||
+    exactSourceBackprojectionModes.includes(operation.metadata?.sourceBackprojection?.mode) ||
     operation.status === 'covered' ||
     coveredOperationIds.has(operation.id) ||
     operationCoveredByExactSourceRange(operation, operations, sourceText)
@@ -65,7 +67,7 @@ export function createBidirectionalSourceEditProjection(context = {}) {
       targetPortabilityAction: context.targetPortability?.action,
       sourceMapBacked: true,
       singleSourceAnchor: true,
-      sourceBackprojectionMode: exactBackprojection ? 'same-language-exact-source-map' : 'review-only'
+      sourceBackprojectionMode: sourceProjectionHint.sourceBackprojectionMode
     }
   };
   const sourceEditScript = { ...core, hash: hashSemanticValue(core) };
@@ -153,7 +155,7 @@ function sourceProjectionHintRecord(input) {
   const source = context.source;
   const targetChangeSet = context.targetChangeSet;
   const exactBackprojection = operations.length > 0 && operations.every((operation) => (
-    operation.metadata?.sourceBackprojection?.mode === 'same-language-exact-source-map' || operation.status === 'covered'
+    exactSourceBackprojectionModes.includes(operation.metadata?.sourceBackprojection?.mode) || operation.status === 'covered'
   ));
   const core = {
     schema: 'frontier.lang.bidirectionalTargetChangeSourceEditProjectionHint.v1',
@@ -180,7 +182,7 @@ function sourceProjectionHintRecord(input) {
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
     reasonCodes: sourceEditAdmissionReasonCodes(context, matches, exactBackprojection),
-    sourceBackprojectionMode: exactBackprojection ? 'same-language-exact-source-map' : 'review-only'
+    sourceBackprojectionMode: exactBackprojection ? firstBackprojectionMode(operations) : 'review-only'
   };
   return { ...core, hash: hashSemanticValue(core) };
 }
@@ -274,7 +276,7 @@ function sourceEditAdmissionReasonCodes(context, matches, exactBackprojection) {
   return uniqueStrings([
     'source-edit-script-projection-hint',
     'target-change-source-map-portable',
-    'same-language-exact-source-map-backprojection',
+    'source-map-backprojection-verified',
     ...array(context.targetPortability?.reasonCodes).filter((reason) => !reviewOnlyReason(reason)),
     ...matches.flatMap((match) => [...array(match.reasonCodes), ...array(match.portability?.reasonCodes)])
       .filter((reason) => !reviewOnlyReason(reason))
@@ -303,13 +305,14 @@ function sourceHash(source) {
 }
 
 function reviewOnlyReason(reason) {
-  return ['target-edit-requires-source-review', 'source-port-review-required', 'human-source-port-required']
-    .includes(reason);
+  return ['target-edit-requires-source-review', 'source-port-review-required', 'human-source-port-required'].includes(reason);
 }
 
-function array(value) {
-  return value === undefined || value === null ? [] : Array.isArray(value) ? value : [value];
+function firstBackprojectionMode(operations) {
+  return operations.find((operation) => exactSourceBackprojectionModes.includes(operation.metadata?.sourceBackprojection?.mode))
+    ?.metadata?.sourceBackprojection?.mode;
 }
+function array(value) { return value === undefined || value === null ? [] : Array.isArray(value) ? value : [value]; }
 
 function compactRecord(value) {
   return Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined && (!Array.isArray(entry) || entry.length > 0)));

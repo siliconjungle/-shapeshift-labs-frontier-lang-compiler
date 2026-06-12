@@ -102,6 +102,8 @@ export function normalizeSourceMapLinks(links) {
       precision: link.precision,
       sourceSpan: link.sourceSpan,
       generatedSpan: link.generatedSpan,
+      sourceReplacementText: link.sourceReplacementText,
+      sourceReplacementTextHash: link.sourceReplacementTextHash,
       regionKey: link.ownershipRegionKey,
       regionKind: link.ownershipRegionKind
     }));

@@ -23,6 +23,8 @@ export function nativeChangeProjectionSourceMapLinks(imported, side, region, sym
         precision: mapping.precision,
         sourceSpan: mapping.sourceSpan,
         generatedSpan: mapping.generatedSpan,
+        sourceReplacementText: mapping.sourceReplacementText,
+        sourceReplacementTextHash: mapping.sourceReplacementTextHash ?? mapping.sourceReplacementHash,
         ownershipRegionId: mapping.ownershipRegionId,
         ownershipRegionKey: mapping.ownershipRegionKey,
         ownershipRegionKind: mapping.ownershipRegionKind
