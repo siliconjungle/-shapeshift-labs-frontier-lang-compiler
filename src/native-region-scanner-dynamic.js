@@ -8,25 +8,6 @@ import {
 } from './native-region-scanner-core.js';
 import { braceBlockSpan, endKeywordBlockSpan, sqlStatementSpan } from './native-region-scanner-spans.js';
 
-function scanPhp(input) {
-  const declarations = [];
-  const lines = sourceLines(input.sourceText);
-  for (const [index, { line, number }] of lines.entries()) {
-    const trimmed = line.trim().replace(/^<\?php\s*/, '');
-    let match;
-    if ((match = trimmed.match(/^namespace\s+([A-Za-z_][\w\\]*)\s*;/))) {
-      declarations.push(nativeDeclaration(input, number, 'NamespaceDefinition', 'namespace', match[1], {}, false));
-    } else if ((match = trimmed.match(/^use\s+([A-Za-z_][\w\\]*)(?:\s+as\s+([A-Za-z_]\w*))?\s*;/))) {
-      declarations.push(nativeImportDeclaration(input, number, match[1], 'UseDeclaration', 'namespace'));
-    } else if ((match = trimmed.match(/^(?:(?:abstract|final|readonly)\s+)*(class|interface|trait|enum)\s+([A-Za-z_]\w*)/))) {
-      declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Declaration`, phpSymbolKind(match[1]), match[2], {}, trimmed.includes('{'), spanOptions(input, lines, index, trimmed.includes('{'))));
-    } else if ((match = trimmed.match(/^(?:(?:public|protected|private|static|final|abstract)\s+)*function\s+&?\s*([A-Za-z_]\w*)\s*\(([^)]*)\)/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{'), spanOptions(input, lines, index, trimmed.includes('{'))));
-    }
-  }
-  return declarations;
-}
-
 function scanScala(input) {
   const declarations = [];
   const lines = sourceLines(input.sourceText);
@@ -165,13 +146,6 @@ function endSpanOptions(input, lines, index) {
   return { span: endKeywordBlockSpan(input, lines, index) };
 }
 
-function phpSymbolKind(kind) {
-  if (kind === 'interface') return 'interface';
-  if (kind === 'trait') return 'trait';
-  if (kind === 'enum') return 'type';
-  return 'class';
-}
-
 function scalaSymbolKind(kind) {
   if (kind === 'trait') return 'trait';
   if (kind === 'object') return 'module';
@@ -211,7 +185,6 @@ function zigMetaName(source) {
 export {
   scanDart,
   scanLua,
-  scanPhp,
   scanScala,
   scanShell,
   scanSql,

@@ -8,11 +8,11 @@ import {
   scanSwift
 } from './native-region-scanner-main.js';
 import { scanPython } from './native-region-scanner-python.js';
+import { scanPhp } from './native-region-scanner-php.js';
 import { scanKotlin } from './native-region-scanner-kotlin.js';
 import {
   scanDart,
   scanLua,
-  scanPhp,
   scanScala,
   scanShell,
   scanSql,

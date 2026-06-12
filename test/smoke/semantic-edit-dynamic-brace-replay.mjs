@@ -17,7 +17,8 @@ const cases = [
     workerSourceText: phpWorker,
     movedSourceText: phpBase.replace('<?php\n', '<?php\n// prefix\n'),
     movedOutputText: phpWorker.replace('<?php\n', '<?php\n// prefix\n'),
-    spans: { Counter: 6, add: 5 }
+    operationAnchor: 'Counter.add:controlFlow:exit#1',
+    spans: { Counter: 6, 'Counter.add': 5 }
   },
   {
     language: 'kotlin',
