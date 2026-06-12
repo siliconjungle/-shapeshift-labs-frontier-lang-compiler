@@ -1,6 +1,7 @@
 import { assert } from './helpers.mjs';
 import {
   createBidirectionalTargetChangeRecord,
+  createSemanticPatchBundleRecord,
   importNativeSource,
   querySemanticPatchBundleRecords,
   replaySemanticEditProjection
@@ -151,6 +152,11 @@ const movedSourceReplay = replaySemanticEditProjection({
 assert.equal(movedSourceReplay.status, 'accepted-clean');
 assert.equal(movedSourceReplay.outputSourceText, `const untouched = 0;\n${exactTsSource.replace('count + 1', 'count + 2')}`);
 assert.equal(movedSourceReplay.edits[0].reasonCodes.includes('current-symbol-explicit-source-replacement-deleted-text'), true);
+const movedSourceBundle = createSemanticPatchBundleRecord(exactRecord.sourcePatchBundle, {
+  semanticEditReplays: [movedSourceReplay]
+});
+assert.equal(movedSourceBundle.index.semanticEditReplayReasonCodes.includes('current-symbol-explicit-source-replacement-deleted-text'), true);
+assert.equal(querySemanticPatchBundleRecords([movedSourceBundle], { semanticEditReplayReasonCode: 'current-symbol-explicit-source-replacement-deleted-text' }).length, 1);
 
 const shiftedSignatureSource = 'export function add(count: number, step = 1): number { return count + 1; }\n';
 const shiftedSignatureReplay = replaySemanticEditProjection({

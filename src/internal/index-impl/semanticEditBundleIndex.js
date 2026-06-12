@@ -15,6 +15,7 @@ export function semanticEditRecordIndex(scripts, projections, replays, source = 
     semanticEditReplayEditCount: replayEdits.length,
     semanticEditReplayStatuses: uniqueStrings([...strings(source.semanticEditReplayStatuses), ...strings(index.semanticEditReplayStatuses), ...strings(summary.replayStatuses), ...replays.map((replay) => replay.status)]),
     semanticEditReplayActions: uniqueStrings([...strings(source.semanticEditReplayActions), ...strings(index.semanticEditReplayActions), ...strings(summary.replayActions), ...replays.map((replay) => replay.admission?.action)]),
+    semanticEditReplayReasonCodes: uniqueStrings([...strings(source.semanticEditReplayReasonCodes), ...strings(index.semanticEditReplayReasonCodes), ...strings(summary.replayReasonCodes), ...replays.flatMap(replayReasonCodes)]),
     semanticEditReplayCurrentHashes: uniqueStrings([...strings(source.semanticEditReplayCurrentHashes), ...strings(index.semanticEditReplayCurrentHashes), ...strings(summary.replayCurrentHashes), ...strings(summary.semanticEditReplayCurrentHashes), ...replays.map((replay) => replay.currentHash)]),
     semanticEditReplayOutputHashes: uniqueStrings([...strings(source.semanticEditReplayOutputHashes), ...strings(index.semanticEditReplayOutputHashes), ...strings(summary.replayOutputHashes), ...strings(summary.semanticEditReplayOutputHashes), ...replays.map((replay) => replay.outputHash)]),
     sourceBackprojectionModes: uniqueStrings([...strings(source.sourceBackprojectionModes), ...strings(index.sourceBackprojectionModes), ...strings(summary.sourceBackprojectionModes), ...scripts.flatMap(scriptBackprojectionModes), ...projections.map((projection) => projection.metadata?.sourceBackprojectionMode), ...replays.map((replay) => replay.metadata?.sourceBackprojectionMode)]),
@@ -37,6 +38,7 @@ export function semanticEditSummary(index) {
     replayIds: index.semanticEditReplayIds,
     replayStatuses: index.semanticEditReplayStatuses,
     replayActions: index.semanticEditReplayActions,
+    replayReasonCodes: index.semanticEditReplayReasonCodes,
     replayCurrentHashes: index.semanticEditReplayCurrentHashes,
     replayOutputHashes: index.semanticEditReplayOutputHashes,
     sourceBackprojectionModes: index.sourceBackprojectionModes,
@@ -58,6 +60,14 @@ function replayOperationIds(replays) {
     ...array(replay.skippedOperations),
     ...array(replay.edits).map((edit) => edit.operationId)
   ]);
+}
+function replayReasonCodes(replay) {
+  return [
+    ...array(replay.admission?.reasonCodes),
+    ...array(replay.summary?.reasonCodes),
+    ...array(replay.diagnostics).flatMap((diagnostic) => array(diagnostic.reasonCodes)),
+    ...array(replay.edits).flatMap((edit) => array(edit.reasonCodes))
+  ];
 }
 function scriptBackprojectionModes(script) {
   return [

@@ -141,6 +141,7 @@ function recordIndex(parts){
     semanticEditReplayIds:editIndex.semanticEditReplayIds,
     semanticEditReplayStatuses:editIndex.semanticEditReplayStatuses,
     semanticEditReplayActions:editIndex.semanticEditReplayActions,
+    semanticEditReplayReasonCodes:editIndex.semanticEditReplayReasonCodes,
     semanticEditAdmissionStatuses:uniqueStrings([editAdmission.status]),
     semanticEditAdmissionActions:uniqueStrings([editAdmission.action]),
     semanticEditAdmissionReadinesses:uniqueStrings([editAdmission.readiness]),
@@ -209,6 +210,7 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.semanticEditReplayId,query.semanticEditReplayIds),index.semanticEditReplayIds)
     &&matchAny(queryValues(query.semanticEditReplayStatus,query.semanticEditReplayStatuses),index.semanticEditReplayStatuses)
     &&matchAny(queryValues(query.semanticEditReplayAction,query.semanticEditReplayActions),index.semanticEditReplayActions)
+    &&matchAny(queryValues(query.semanticEditReplayReasonCode,query.semanticEditReplayReasonCodes),index.semanticEditReplayReasonCodes)
     &&matchAny(queryValues(query.semanticEditAdmissionStatus,query.semanticEditAdmissionStatuses),index.semanticEditAdmissionStatuses)
     &&matchAny(queryValues(query.semanticEditAdmissionAction,query.semanticEditAdmissionActions),index.semanticEditAdmissionActions)
     &&matchAny(queryValues(query.semanticEditAdmissionReadiness,query.semanticEditAdmissionReadinesses),index.semanticEditAdmissionReadinesses)

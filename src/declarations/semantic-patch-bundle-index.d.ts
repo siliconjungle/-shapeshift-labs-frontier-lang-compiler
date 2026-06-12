@@ -24,6 +24,7 @@ export interface SemanticPatchBundleRecordIndex {
   readonly semanticEditReplayIds: readonly string[];
   readonly semanticEditReplayStatuses: readonly string[];
   readonly semanticEditReplayActions: readonly string[];
+  readonly semanticEditReplayReasonCodes: readonly string[];
   readonly semanticEditAdmissionStatuses: readonly string[];
   readonly semanticEditAdmissionActions: readonly string[];
   readonly semanticEditAdmissionReadinesses: readonly string[];
@@ -76,6 +77,8 @@ export interface SemanticPatchBundleRecordQueryIndexFilters {
   readonly lineageReasonCodes?: readonly string[];
   readonly sourceBackprojectionMode?: string | readonly string[];
   readonly sourceBackprojectionModes?: readonly string[];
+  readonly semanticEditReplayReasonCode?: string | readonly string[];
+  readonly semanticEditReplayReasonCodes?: readonly string[];
   readonly transformBaseHash?: string | readonly string[];
   readonly transformBaseHashes?: readonly string[];
   readonly transformTargetHash?: string | readonly string[];
