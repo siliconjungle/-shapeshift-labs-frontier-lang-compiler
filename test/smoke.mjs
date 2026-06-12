@@ -43,6 +43,7 @@ const smokeModules = [
   './smoke/semantic-edit-swift-replay.mjs',
   './smoke/semantic-edit-c-replay.mjs',
   './smoke/semantic-edit-go-replay.mjs',
+  './smoke/semantic-edit-dynamic-brace-replay.mjs',
   './smoke/semantic-edit-script-reanchor.mjs',
   './smoke/semantic-edit-replay-diagnostics.mjs',
   './smoke/semantic-edit-sibling-merge.mjs',
