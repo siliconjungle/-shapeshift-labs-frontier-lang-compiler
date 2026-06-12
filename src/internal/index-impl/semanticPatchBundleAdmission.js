@@ -74,6 +74,8 @@ function semanticTransformAdmission(context) {
     transformKeys: strings(index.semanticTransformKeys),
     contentHashes: strings(index.semanticTransformContentHashes),
     projectionIdentityHashes: strings(index.projectionIdentityHashes),
+    baseHashes: strings(index.transformBaseHashes),
+    targetHashes: strings(index.transformTargetHashes),
     sourceLanguages: strings(index.transformSourceLanguages),
     targetLanguages: strings(index.transformTargetLanguages),
     sourcePaths: strings(index.transformSourcePaths),

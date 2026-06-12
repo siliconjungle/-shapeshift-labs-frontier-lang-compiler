@@ -57,6 +57,8 @@ assert.deepEqual(record.sourcePatchBundle.index.transformCrossLanguages, ['true'
 assert.deepEqual(record.sourcePatchBundle.index.transformSourceMapIds, ['source_map_counter_ts_to_rust']);
 assert.equal(record.sourcePatchBundle.index.transformSourceMapLinkIds.length, 1);
 assert.deepEqual(record.sourcePatchBundle.index.transformSourceMapMappingIds, ['map_ts_add_to_rust_add']);
+assert.equal(record.sourcePatchBundle.index.transformBaseHashes.length, 1);
+assert.equal(record.sourcePatchBundle.index.transformTargetHashes.length, 1);
 assert.equal(record.sourcePatchBundle.index.semanticTransformReadinesses.includes('needs-port'), true);
 assert.equal(record.sourcePatchBundle.index.semanticTransformContentHashes.length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformSourceLanguage: 'typescript' }).length, 1);
@@ -65,4 +67,6 @@ assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { trans
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformSourceMapId: 'source_map_counter_ts_to_rust' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformSourceMapLinkId: record.sourcePatchBundle.index.transformSourceMapLinkIds[0] }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformSourceMapMappingId: 'map_ts_add_to_rust_add' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformBaseHash: record.sourcePatchBundle.index.transformBaseHashes[0] }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformTargetHash: record.sourcePatchBundle.index.transformTargetHashes[0] }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { semanticTransformReadiness: 'needs-port' }).length, 1);

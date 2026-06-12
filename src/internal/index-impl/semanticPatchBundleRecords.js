@@ -156,6 +156,8 @@ function recordIndex(parts){
     semanticTransformIdentityHashes:semanticTransformIndex.semanticTransformIdentityHashes,
     semanticTransformContentHashes:semanticTransformIndex.semanticTransformContentHashes,
     projectionIdentityHashes:semanticTransformIndex.projectionIdentityHashes,
+    transformBaseHashes:semanticTransformIndex.transformBaseHashes,
+    transformTargetHashes:semanticTransformIndex.transformTargetHashes,
     semanticTransformReadinesses:semanticTransformIndex.semanticTransformReadinesses,
     semanticTransformEvidenceIds:semanticTransformIndex.semanticTransformEvidenceIds,
     transformSourceLanguages:semanticTransformIndex.transformSourceLanguages,
@@ -221,6 +223,8 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.semanticTransformIdentityHash,query.semanticTransformIdentityHashes),index.semanticTransformIdentityHashes)
     &&matchAny(queryValues(query.semanticTransformContentHash,query.semanticTransformContentHashes),index.semanticTransformContentHashes)
     &&matchAny(queryValues(query.projectionIdentityHash,query.projectionIdentityHashes),index.projectionIdentityHashes)
+    &&matchAny(queryValues(query.transformBaseHash,query.transformBaseHashes),index.transformBaseHashes)
+    &&matchAny(queryValues(query.transformTargetHash,query.transformTargetHashes),index.transformTargetHashes)
     &&matchAny(queryValues(query.semanticTransformReadiness,query.semanticTransformReadinesses),index.semanticTransformReadinesses)
     &&matchAny(queryValues(query.semanticTransformEvidenceId,query.semanticTransformEvidenceIds),index.semanticTransformEvidenceIds)
     &&matchAny(queryValues(query.transformSourceLanguage,query.transformSourceLanguages),index.transformSourceLanguages)
