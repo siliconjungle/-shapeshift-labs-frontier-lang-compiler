@@ -3,7 +3,8 @@ import {
   createSemanticEditScript,
   createSemanticImportSidecar,
   importNativeSource,
-  projectSemanticEditScriptToSource
+  projectSemanticEditScriptToSource,
+  replaySemanticEditProjection
 } from './compiler-api.mjs';
 
 const baseSource = [
@@ -80,6 +81,49 @@ assert.equal(projection.status, 'projected');
 assert.equal(projection.sourceText, workerSource);
 assert.equal(projection.edits.length, 1);
 assert.equal(projection.edits[0].kind, 'replaceEffect');
+
+const sameLineEffectBase = 'export function sync(api) { fetch(api); localStorage.setItem("k", api); return api; }\n';
+const sameLineEffectWorker = 'export function sync(api) { fetch(api, { cache: "reload" }); localStorage.setItem("k", api); return api; }\n';
+const sameLineEffectHead = 'export function sync(api) { fetch(api); localStorage.setItem("k2", api); return api; }\n';
+const sameLineEffectExpected = 'export function sync(api) { fetch(api, { cache: "reload" }); localStorage.setItem("k2", api); return api; }\n';
+const sameLineEffectSidecar = createSemanticImportSidecar(importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/same-line-effects.ts',
+  sourceText: sameLineEffectBase
+}), { generatedAt: 202 });
+const sameLineEffectRegions = sameLineEffectSidecar.ownershipRegions.filter((region) => region.regionKind === 'effect');
+assert.deepEqual(sameLineEffectRegions.map((region) => region.symbolName), [
+  'sync:effect:network#1',
+  'sync:effect:storage#1'
+]);
+assert.equal(sourceTextForSpan(sameLineEffectBase, sameLineEffectRegions[0].sourceSpan), 'fetch(api)');
+assert.equal(sourceTextForSpan(sameLineEffectBase, sameLineEffectRegions[1].sourceSpan), 'localStorage.setItem("k", api);');
+const sameLineEffectScript = createSemanticEditScript({
+  id: 'semantic_same_line_effect_independence',
+  language: 'typescript',
+  sourcePath: 'src/same-line-effects.ts',
+  baseSourceText: sameLineEffectBase,
+  workerSourceText: sameLineEffectWorker,
+  headSourceText: sameLineEffectHead,
+  generatedAt: 203
+});
+assert.equal(sameLineEffectScript.admission.status, 'auto-merge-candidate');
+assert.equal(sameLineEffectScript.operations[0].anchor.symbolName, 'sync:effect:network#1');
+const sameLineEffectProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_same_line_effect_projection',
+  script: sameLineEffectScript,
+  workerSourceText: sameLineEffectWorker,
+  headSourceText: sameLineEffectHead
+});
+assert.equal(sameLineEffectProjection.status, 'projected');
+assert.equal(sameLineEffectProjection.sourceText, sameLineEffectExpected);
+const sameLineEffectReplay = replaySemanticEditProjection({
+  id: 'semantic_same_line_effect_replay',
+  projection: sameLineEffectProjection,
+  currentSourceText: sameLineEffectHead
+});
+assert.equal(sameLineEffectReplay.status, 'accepted-clean');
+assert.equal(sameLineEffectReplay.outputSourceText, sameLineEffectExpected);
 
 function sourceTextForSpan(sourceText, span) {
   const line = String(sourceText).split(/\r\n|\n|\r/)[span.startLine - 1];

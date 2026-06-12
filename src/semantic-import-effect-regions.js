@@ -85,11 +85,22 @@ function semanticFactRegionGroups(facts) {
 }
 
 function splitSemanticFactGroup(group) {
-  if (group.regionKind === 'effect') return [group];
+  if (group.regionKind === 'effect') return splitEffectFactGroup(group);
   return group.factKinds.map((factKind) => ({
     ...group,
     facts: group.facts.filter((fact) => fact.value?.kind === factKind),
     factKinds: [factKind]
+  }));
+}
+
+function splitEffectFactGroup(group) {
+  const concreteKinds = group.factKinds.filter((kind) => kind !== 'async');
+  if (!concreteKinds.length) return [group];
+  return concreteKinds.map((factKind, index) => ({
+    ...group,
+    facts: group.facts.filter((fact) => fact.value?.kind === factKind
+      || (index === 0 && fact.value?.kind === 'async')),
+    factKinds: uniqueStrings([factKind, index === 0 && group.factKinds.includes('async') ? 'async' : undefined])
   }));
 }
 
