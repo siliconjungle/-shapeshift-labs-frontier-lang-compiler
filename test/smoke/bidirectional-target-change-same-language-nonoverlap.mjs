@@ -58,3 +58,5 @@ assert.deepEqual(record.sourcePatchBundle.index.transformTargetLanguages, ['java
 assert.equal(record.sourcePatchBundle.admission.semanticEditAdmission.status, 'ready');
 assert.equal(record.metadata.reviewRequired, false);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { semanticEditAdmissionStatus: 'ready' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformSourceLanguage: 'javascript' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformTargetLanguage: 'javascript' }).length, 1);
