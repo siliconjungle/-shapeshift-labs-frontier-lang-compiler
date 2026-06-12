@@ -10,19 +10,34 @@ import {
 
 function scanPython(input) {
   const declarations = [];
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     if ((match = trimmed.match(/^(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*:/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionDef', 'function', match[1], { parameters: splitParameters(match[2]) }, true));
+      declarations.push(nativeDeclaration(input, number, 'FunctionDef', 'function', match[1], { parameters: splitParameters(match[2]) }, true, { span: pythonBlockSpan(input, lines, index) }));
     } else if ((match = trimmed.match(/^class\s+([A-Za-z_]\w*)/))) {
-      declarations.push(nativeDeclaration(input, number, 'ClassDef', 'class', match[1], {}, true));
+      declarations.push(nativeDeclaration(input, number, 'ClassDef', 'class', match[1], {}, true, { span: pythonBlockSpan(input, lines, index) }));
     } else if ((match = trimmed.match(/^(?:from\s+([A-Za-z_][\w.]*)\s+import\s+.+|import\s+([A-Za-z_][\w.]*))/))) {
       declarations.push(nativeImportDeclaration(input, number, match[1] ?? match[2], 'Import', 'module'));
     }
   }
   return declarations;
 }
+
+function pythonBlockSpan(input, lines, index) {
+  const baseIndent = indentationLength(lines[index]?.line);
+  let end = index;
+  for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+    const line = lines[cursor].line;
+    if (line.trim() && indentationLength(line) <= baseIndent) break;
+    end = cursor;
+  }
+  const endLine = lines[end] ?? lines[index];
+  return { sourceId: input.sourceHash, path: input.sourcePath, startLine: lines[index].number, endLine: endLine.number, startColumn: 1, endColumn: endLine.line.length + 1 };
+}
+
+function indentationLength(line) { return String(line ?? '').match(/^\s*/)?.[0].length ?? 0; }
 
 function scanRust(input) {
   const declarations = [];

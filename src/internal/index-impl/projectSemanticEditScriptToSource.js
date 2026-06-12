@@ -25,7 +25,7 @@ export function projectSemanticEditScriptToSource(input = {}) {
   if (typeof workerSourceText !== 'string') reasonCodes.push('missing-worker-source-text');
   if (typeof headSourceText !== 'string') reasonCodes.push('missing-head-source-text');
   const language = normalizeNativeLanguageId(script.language);
-  const headSymbols = typeof headSourceText === 'string' && isJavaScriptLike(language)
+  const headSymbols = typeof headSourceText === 'string' && language
     ? sourceSymbolIndex({
       sourceText: headSourceText,
       sourcePath: input.headSourcePath ?? script.sourcePath,
@@ -44,7 +44,7 @@ export function projectSemanticEditScriptToSource(input = {}) {
     const edit = sourceEditForOperation(operation, workerSourceText, headSourceText, index, {
       headSourcePath: input.headSourcePath,
       headSymbols,
-      symbolIndexAvailable: isJavaScriptLike(language)
+      symbolIndexAvailable: headSymbols.length > 0
     });
     if (edit.ok) edits.push(edit.value);
     else reasonCodes.push(...edit.reasonCodes);
@@ -299,7 +299,6 @@ function projectedSourcePath(script, edits) {
   return edits.map((edit) => edit.sourcePath).find(Boolean) ?? script.sourcePath;
 }
 
-function isJavaScriptLike(language) { return language === 'javascript' || language === 'typescript'; }
 function compactRecord(value) {
   return Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined && (!Array.isArray(entry) || entry.length > 0)));
 }

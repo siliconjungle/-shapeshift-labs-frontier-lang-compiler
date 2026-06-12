@@ -222,3 +222,58 @@ assert.equal(staleSourceMapRecord.sourcePatchBundle.admission.autoApplyCandidate
 assert.deepEqual(staleSourceMapRecord.sourcePatchBundle.index.sourceBackprojectionModes, []);
 assert.equal(querySemanticPatchBundleRecords([staleSourceMapRecord.sourcePatchBundle], { targetPortabilityStatus: 'stale' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([staleSourceMapRecord.sourcePatchBundle], { admissionStatus: 'admitted' }).length, 0);
+
+const pythonSource = 'def add(count):\n    return count + 1\n';
+const pythonImport = importNativeSource({
+  language: 'python',
+  sourcePath: 'src/exact_counter.py',
+  sourceText: pythonSource
+});
+const pythonSymbol = pythonImport.semanticIndex.symbols.find((symbol) => symbol.name === 'add');
+const pythonExpressionStart = pythonSource.indexOf('count + 1');
+const pythonRecord = createBidirectionalTargetChangeRecord({
+  id: 'counter_python_to_rust_explicit_source_replacement',
+  source: pythonImport,
+  targetLanguage: 'rust',
+  targetPath: 'src/exact-counter.rs',
+  baseTarget: { language: 'rust', sourcePath: 'src/exact-counter.rs', sourceText: exactRustBase },
+  editedTarget: { language: 'rust', sourcePath: 'src/exact-counter.rs', sourceText: exactRustEdited },
+  sourceMaps: [{
+    kind: 'frontier.lang.sourceMap',
+    version: 1,
+    id: 'source_map_exact_counter_python_to_rust',
+    sourcePath: 'src/exact_counter.py',
+    sourceHash: pythonImport.nativeSource.sourceHash,
+    target: 'rust',
+    targetPath: 'src/exact-counter.rs',
+    mappings: [{
+      id: 'map_python_add_expr_to_rust_add_expr',
+      semanticSymbolId: pythonSymbol.id,
+      sourceSpan: { path: 'src/exact_counter.py', start: pythonExpressionStart, end: pythonExpressionStart + 'count + 1'.length },
+      generatedSpan: { path: 'src/exact-counter.rs', targetPath: 'src/exact-counter.rs', start: targetExpressionStart, end: targetExpressionStart + 'count + 1'.length, generatedName: 'add' },
+      target: 'rust',
+      generatedName: 'add',
+      precision: 'exact',
+      preservation: 'expression',
+      sourceReplacementText: 'count + 2'
+    }]
+  }]
+});
+assert.equal(pythonRecord.sourceEditReplay.status, 'accepted-clean');
+
+const movedPythonReplay = replaySemanticEditProjection({
+  id: 'counter_python_to_rust_moved_source_replay',
+  projection: pythonRecord.sourceEditProjection,
+  currentSourceText: `VALUE = 0\n${pythonSource}`
+});
+assert.equal(movedPythonReplay.status, 'accepted-clean');
+assert.equal(movedPythonReplay.outputSourceText, `VALUE = 0\n${pythonSource.replace('count + 1', 'count + 2')}`);
+assert.equal(movedPythonReplay.edits[0].reasonCodes.includes('current-symbol-explicit-source-replacement-deleted-text'), true);
+
+const shiftedPythonReplay = replaySemanticEditProjection({
+  id: 'counter_python_to_rust_shifted_signature_replay',
+  projection: pythonRecord.sourceEditProjection,
+  currentSourceText: 'def add(count, step=1):\n    return count + 1\n'
+});
+assert.equal(shiftedPythonReplay.status, 'accepted-clean');
+assert.equal(shiftedPythonReplay.outputSourceText, 'def add(count, step=1):\n    return count + 2\n');

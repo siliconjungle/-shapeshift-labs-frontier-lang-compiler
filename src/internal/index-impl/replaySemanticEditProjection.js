@@ -23,14 +23,14 @@ export function replaySemanticEditProjection(input = {}) {
   const reasonCodes = baseReasonCodes(projection, currentSourceText);
   const currentHash = typeof currentSourceText === 'string' ? hashSemanticValue(currentSourceText) : undefined;
   if (input.currentSourceHash && currentHash !== input.currentSourceHash) reasonCodes.push('current-source-hash-mismatch');
-  const currentSymbols = currentSourceText && isJavaScriptLike(language)
+  const currentSymbols = currentSourceText && language
     ? currentSymbolIndex({ currentSourceText, sourcePath, language, parser: input.parser })
     : [];
   const replayedEdits = projection.status === 'projected' && typeof currentSourceText === 'string'
     ? (projection.edits ?? []).map((edit, index) => replayProjectionEdit(projectionEditWithOrder(edit, index), {
       currentSourceText,
       currentSymbols,
-      symbolIndexAvailable: isJavaScriptLike(language)
+      symbolIndexAvailable: currentSymbols.length > 0
     }))
     : [];
   const edits = replayEditsWithOverlapDiagnostics(replayedEdits);
@@ -180,13 +180,17 @@ function replayEditRecord(edit, status, range, reasonCodes, sourceText) {
 }
 
 function currentSymbolIndex(input) {
-  const imported = normalizeNativeDiffImport({
-    language: input.language,
-    sourcePath: input.sourcePath,
-    sourceText: input.currentSourceText,
-    parser: input.parser
-  }, input, 'current');
-  return [...mapDiffSymbols(imported, createSemanticImportSidecar(imported)).values()];
+  try {
+    const imported = normalizeNativeDiffImport({
+      language: input.language,
+      sourcePath: input.sourcePath,
+      sourceText: input.currentSourceText,
+      parser: input.parser
+    }, input, 'current');
+    return [...mapDiffSymbols(imported, createSemanticImportSidecar(imported)).values()];
+  } catch {
+    return [];
+  }
 }
 
 function currentSymbolEditRange(edit, symbolRange, sourceText) {
@@ -284,7 +288,6 @@ function containedRange(inner, outer) {
   return Boolean(inner && outer && outer.start <= inner.start && inner.end <= outer.end);
 }
 
-function isJavaScriptLike(language) { return language === 'javascript' || language === 'typescript'; }
 function reasonList(values) { return uniqueStrings((values ?? []).filter(Boolean)); }
 function lineEndingStableText(value) {
   if (typeof value !== 'string') return undefined;
