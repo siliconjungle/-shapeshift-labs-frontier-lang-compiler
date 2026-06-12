@@ -178,7 +178,8 @@ function scanSwift(input) {
 
 function scanCSharp(input) {
   const declarations = [];
-  for (const { line, number } of sourceLines(input.sourceText)) {
+  const lines = sourceLines(input.sourceText);
+  for (const [index, { line, number }] of lines.entries()) {
     const trimmed = line.trim();
     let match;
     if ((match = trimmed.match(/^using\s+([A-Za-z_]\w*)\s*=\s*(.+?)\s*;/))) {
@@ -186,31 +187,31 @@ function scanCSharp(input) {
     } else if ((match = trimmed.match(/^using\s+(?:static\s+)?([A-Za-z_][\w.]*)\s*;/))) {
       declarations.push(nativeImportDeclaration(input, number, match[1], 'UsingDirective', 'namespace'));
     } else if ((match = trimmed.match(/^namespace\s+([A-Za-z_][\w.]*)/))) {
-      declarations.push(nativeDeclaration(input, number, 'NamespaceDeclaration', 'namespace', match[1], {}, trimmed.includes('{')));
+      declarations.push(nativeDeclaration(input, number, 'NamespaceDeclaration', 'namespace', match[1], {}, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = trimmed.match(/^(?:(?:public|protected|private|internal|static|unsafe|new)\s+)*delegate\s+(.+?)\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*;/))) {
       declarations.push(nativeDeclaration(input, number, 'DelegateDeclaration', 'type', match[2], {
         returnType: match[1].trim(),
         parameters: splitParameters(match[3])
       }, false));
     } else if ((match = trimmed.match(/^(?:(?:public|protected|private|internal|abstract|sealed|static|partial|readonly|ref|unsafe)\s+)*(class|interface|struct|enum|record(?:\s+(?:class|struct))?)\s+([A-Za-z_]\w*)/))) {
-      declarations.push(nativeDeclaration(input, number, csharpDeclarationKind(match[1]), csharpSymbolKind(match[1]), match[2], { csharpKind: match[1].replace(/\s+/g, ' ') }, trimmed.includes('{')));
+      declarations.push(nativeDeclaration(input, number, csharpDeclarationKind(match[1]), csharpSymbolKind(match[1]), match[2], { csharpKind: match[1].replace(/\s+/g, ' ') }, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = trimmed.match(/^(?:(?:public|protected|private|internal|static|virtual|override|async|partial|sealed|abstract|extern|new|unsafe|readonly)\s+)*(?:[A-Za-z_][\w<>\[\].?,\s]*\??|void)\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?:=>.*|\{|;)?$/))) {
       const parameters = splitParameters(match[2]);
       const extensionReceiver = csharpExtensionReceiver(parameters);
       declarations.push(nativeDeclaration(input, number, extensionReceiver ? 'ExtensionMethodDeclaration' : 'MethodDeclaration', 'method', match[1], {
         parameters,
         ...(extensionReceiver ? { extensionReceiver } : {})
-      }, trimmed.includes('{') || trimmed.includes('=>')));
+      }, trimmed.includes('{') || trimmed.includes('=>'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = trimmed.match(/^(?:(?:public|protected|private|internal|static|virtual|override|abstract|sealed|new|unsafe)\s+)*event\s+(.+?)\s+([A-Za-z_]\w*)\s*(?:[;{=]|=>)/))) {
       declarations.push(nativeDeclaration(input, number, 'EventDeclaration', 'event', match[2], {
         eventType: match[1].trim(),
         accessors: csharpAccessors(trimmed)
-      }, trimmed.includes('{')));
+      }, trimmed.includes('{'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     } else if ((match = trimmed.match(/^(?:(?:public|protected|private|internal|static|virtual|override|abstract|sealed|new|required|readonly|unsafe)\s+)*([A-Za-z_][\w<>\[\].?,\s]*\??)\s+([A-Za-z_]\w*)\s*(?:\{|=>)/))) {
       declarations.push(nativeDeclaration(input, number, 'PropertyDeclaration', 'property', match[2], {
         propertyType: match[1].trim(),
         accessors: csharpAccessors(trimmed)
-      }, trimmed.includes('{') || trimmed.includes('=>')));
+      }, trimmed.includes('{') || trimmed.includes('=>'), { span: trimmed.includes('{') ? braceBlockSpan(input, lines, index) : undefined }));
     }
   }
   return declarations;
