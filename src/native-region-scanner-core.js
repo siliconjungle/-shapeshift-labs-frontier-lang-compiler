@@ -18,6 +18,20 @@ function nativeDeclaration(input, lineNumber, languageKind, symbolKind, name, fi
   };
 }
 
+function nativeSignatureDeclaration(input, lineNumber, languageKind, symbolKind, name, fields = {}, _hasBody = false, options = {}) {
+  const signatureKey = idFragment([name, fields.signature, ...(fields.parameters ?? [])].filter(Boolean).join(':') || `${name}:${lineNumber}`);
+  const sourcePath = input.sourcePath ?? `${input.language}:memory`;
+  return nativeDeclaration(input, lineNumber, languageKind, symbolKind, name, fields, false, {
+    regionKind: options.regionKind ?? 'declaration',
+    symbolId: options.symbolId ?? `symbol:${input.language}:signature:${idFragment(name)}:${signatureKey}`,
+    metadata: {
+      signatureOnly: true,
+      ownershipRegionKey: options.ownershipRegionKey ?? `source#${sourcePath}#declaration#${name}#${signatureKey}`,
+      ...options.metadata
+    }
+  });
+}
+
 function nativeImportDeclaration(input, lineNumber, importPath, languageKind, symbolKind, options = {}) {
   const name = String(options.name ?? importPath);
   const nodeId = `native_${idFragment(languageKind)}_${lineNumber}_${idFragment(name)}`;
@@ -220,6 +234,7 @@ export {
   nativeImportDeclaration,
   nativeImportBindingDeclaration,
   nativeMacroLoss,
+  nativeSignatureDeclaration,
   sourceLines,
   splitParameters,
   splitTypeParameters

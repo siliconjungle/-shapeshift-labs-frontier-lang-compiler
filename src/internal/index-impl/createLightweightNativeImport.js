@@ -53,6 +53,7 @@ export function createLightweightNativeImport(input) {
         signatureHash: hashSemanticValue([input.language, declaration.kind, declaration.name, declaration.fields ?? {}]),
         definitionSpan: declaration.span,
         metadata: {
+          ...declaration.metadata,
           ownershipRegionId: ownershipRegion.id,
           ownershipRegionKey: ownershipRegion.key,
           ownershipRegionKind: ownershipRegion.regionKind

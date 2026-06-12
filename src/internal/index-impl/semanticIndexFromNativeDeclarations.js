@@ -35,6 +35,7 @@ export function semanticIndexFromNativeDeclarations(declarations, input, options
       signatureHash: hashSemanticValue([input.language, declaration.nativeNode.kind, declaration.name, declaration.nativeNode.fields ?? {}]),
       definitionSpan: declaration.nativeNode.span,
       metadata: {
+        ...declaration.nativeNode.metadata,
         ownershipRegionId: ownershipRegion.id,
         ownershipRegionKey: ownershipRegion.key,
         ownershipRegionKind: ownershipRegion.regionKind

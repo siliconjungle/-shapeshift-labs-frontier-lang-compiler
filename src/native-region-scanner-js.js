@@ -3,12 +3,12 @@ import {
   jsControlKeyword,
   nativeDeclaration,
   nativeImportDeclaration,
+  nativeSignatureDeclaration,
   sourceLines,
   splitParameters
 } from './native-region-scanner-core.js';
 import {
   jsCommentOnlyLine,
-  jsContainerDelta,
   jsDeclarationScanLine,
   jsExportAliasDeclaration, jsExportDeclarations,
   jsExportedContainerDeclaration,
@@ -74,7 +74,8 @@ function scanJavaScriptLike(input) {
     } else if ((match = trimmed.match(/^import\s*\(\s*['"]([^'"]+)['"]\s*\)/))) {
       pushDeclaration(nativeImportDeclaration(input, number, match[1], 'DynamicImportExpression', 'module'));
     } else if ((match = declarationLine.match(/^(?:async\s+)?function\*?\s+([A-Za-z_$][\w$]*)\s*(?:<[^({;]+>)?\s*\(([^)]*)\)\s*(?::\s*[^={]+)?/))) {
-      pushDeclaration(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, declarationLine.includes('{')));
+      const hasBody = declarationLine.includes('{');
+      pushDeclaration((hasBody ? nativeDeclaration : nativeSignatureDeclaration)(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, hasBody));
     } else if ((match = trimmed.match(/^export\s+default\s+(?:async\s+)?function\*?\s*([A-Za-z_$][\w$]*)?\s*(?:<[^({;]+>)?\s*\(([^)]*)\)\s*(?::\s*[^={]+)?/))) {
       pushDeclaration(nativeDeclaration(input, number, 'ExportDefaultFunctionDeclaration', 'function', match[1] ?? 'default', { parameters: splitParameters(match[2]), exportDefault: true }, trimmed.includes('{')));
     } else if ((match = trimmed.match(/^export\s+default\s+(?:async\s*)?(?:<[^=]+>\s*)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*(?::\s*[^=]+)?=>/))) {

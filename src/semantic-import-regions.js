@@ -55,9 +55,10 @@ function semanticOwnershipRegionForDeclaration(input, declaration, documentId) {
   const kind = declaration.symbolKind ?? declaration.kind ?? declaration.nativeNode?.kind ?? 'symbol';
   const sourcePath = declaration.span?.path ?? declaration.nativeNode?.span?.path ?? input.sourcePath ?? `${input.language}:memory`;
   const regionKind = semanticRegionKindForDeclaration(declaration);
-  const key = ['source', sourcePath, regionKind, name].map((part) => String(part).replace(/\s+/g, ' ').trim()).join('#');
+  const key = declaration.metadata?.ownershipRegionKey
+    ?? ['source', sourcePath, regionKind, name].map((part) => String(part).replace(/\s+/g, ' ').trim()).join('#');
   return {
-    id: `region_${caseSensitiveIdFragment(key)}`,
+    id: declaration.metadata?.ownershipRegionId ?? `region_${caseSensitiveIdFragment(key)}`,
     key,
     regionKind,
     granularity: 'symbol',
