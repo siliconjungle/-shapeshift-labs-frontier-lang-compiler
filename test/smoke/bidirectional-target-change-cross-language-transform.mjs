@@ -2,7 +2,8 @@ import { assert } from './helpers.mjs';
 import {
   createBidirectionalTargetChangeRecord,
   importNativeSource,
-  querySemanticPatchBundleRecords
+  querySemanticPatchBundleRecords,
+  replaySemanticEditProjection
 } from './compiler-api.mjs';
 
 const sourceImport = importNativeSource({
@@ -141,6 +142,34 @@ assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { 
 assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { transformTargetLanguage: 'rust' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { semanticTransformReadiness: 'auto-merge-candidate' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { sourceBackprojectionMode: 'cross-language-explicit-source-replacement' }).length, 1);
+
+const movedSourceReplay = replaySemanticEditProjection({
+  id: 'counter_ts_to_rust_moved_source_replay',
+  projection: exactRecord.sourceEditProjection,
+  currentSourceText: `const untouched = 0;\n${exactTsSource}`
+});
+assert.equal(movedSourceReplay.status, 'accepted-clean');
+assert.equal(movedSourceReplay.outputSourceText, `const untouched = 0;\n${exactTsSource.replace('count + 1', 'count + 2')}`);
+assert.equal(movedSourceReplay.edits[0].reasonCodes.includes('current-symbol-explicit-source-replacement-deleted-text'), true);
+
+const shiftedSignatureSource = 'export function add(count: number, step = 1): number { return count + 1; }\n';
+const shiftedSignatureReplay = replaySemanticEditProjection({
+  id: 'counter_ts_to_rust_shifted_signature_replay',
+  projection: exactRecord.sourceEditProjection,
+  currentSourceText: shiftedSignatureSource
+});
+assert.equal(shiftedSignatureReplay.status, 'accepted-clean');
+assert.equal(shiftedSignatureReplay.outputSourceText, shiftedSignatureSource.replace('count + 1', 'count + 2'));
+assert.equal(shiftedSignatureReplay.edits[0].reasonCodes.includes('current-symbol-explicit-source-replacement-deleted-text'), true);
+
+const replacementElsewhereSource = 'export function add(count: number): number { const marker = "count + 2"; return count + 3; }\n';
+const replacementElsewhereReplay = replaySemanticEditProjection({
+  id: 'counter_ts_to_rust_replacement_elsewhere_replay',
+  projection: exactRecord.sourceEditProjection,
+  currentSourceText: replacementElsewhereSource
+});
+assert.equal(replacementElsewhereReplay.status, 'conflict');
+assert.equal(replacementElsewhereReplay.outputSourceText, undefined);
 
 const badReplacementHashRecord = createExactReplacementRecord({
   id: 'counter_ts_to_rust_bad_source_replacement_hash',

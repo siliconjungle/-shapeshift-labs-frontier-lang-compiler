@@ -142,13 +142,13 @@ export interface SemanticEditProjectionEdit {
   readonly sourceIdentitySourcePath?: string; readonly targetIdentitySourcePath?: string;
   readonly operationContentHash?: string;
   readonly editContentHash?: string;
-  readonly headStart: number;
-  readonly headEnd: number;
-  readonly workerStart?: number;
-  readonly workerEnd?: number;
+  readonly headStart: number; readonly headEnd: number;
+  readonly workerStart?: number; readonly workerEnd?: number;
+  readonly headAnchorStart?: number; readonly headAnchorEnd?: number;
   readonly deletedBytes: number;
   readonly replacementBytes: number;
   readonly deletedTextHash?: string;
+  readonly deletedText?: string;
   readonly replacementTextHash?: string;
   readonly deletedTextLineEndingStableHash?: string;
   readonly replacementTextLineEndingStableHash?: string;

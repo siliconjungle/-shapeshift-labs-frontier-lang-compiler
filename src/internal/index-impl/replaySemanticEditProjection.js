@@ -4,6 +4,7 @@ import { createSemanticImportSidecar } from './createSemanticImportSidecar.js';
 import { mapDiffSymbols } from './mapDiffSymbols.js';
 import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
 import { replayDiagnostics, replayEditDiagnostics, replayEditsWithOverlapDiagnostics } from './semanticEditReplayDiagnostics.js';
+import { explicitSourceReplacementReplayRange } from './semanticEditReplaySourceReplacement.js';
 import {
   findCurrentSymbol,
   findInsertionAnchor,
@@ -80,10 +81,13 @@ function replayProjectionEdit(edit, context) {
   const headRange = { start: edit.headStart, end: edit.headEnd };
   const offset = checkRange(edit, headRange, context.currentSourceText, 'head-offset');
   const symbol = findCurrentSymbol(edit, context.currentSymbols);
-  const spanRange = currentSymbolEditRange(edit, spanOffsets(context.currentSourceText, symbol?.sourceSpan), context.currentSourceText);
+  const symbolRange = spanOffsets(context.currentSourceText, symbol?.sourceSpan);
+  const explicitRange = explicitSourceReplacementReplayRange(edit, symbolRange, context.currentSourceText);
+  const spanRange = explicitRange?.range ?? currentSymbolEditRange(edit, symbolRange, context.currentSourceText);
+  const reanchorReason = explicitRange?.reasonCode ?? 'offset-reanchored-by-symbol';
   if (symbol && spanRange && !sameRange(headRange, spanRange)) {
     const moved = checkRange(edit, spanRange, context.currentSourceText, currentSymbolRangeLabel(edit));
-    if (moved) return replayEditRecord(edit, moved.status, replayAppliedRange(edit, moved.range, context.currentSourceText), [moved.reason, 'offset-reanchored-by-symbol'], context.currentSourceText);
+    if (moved) return replayEditRecord(edit, moved.status, replayAppliedRange(edit, moved.range, context.currentSourceText), [moved.reason, reanchorReason], context.currentSourceText);
     if (offset && containedRange(headRange, spanRange)) {
       return replayEditRecord(edit, offset.status, offset.range, [offset.reason, 'offset-contained-in-current-symbol'], context.currentSourceText);
     }
@@ -94,7 +98,7 @@ function replayProjectionEdit(edit, context) {
   }
   if (offset) return replayEditRecord(edit, offset.status, offset.range, [offset.reason], context.currentSourceText);
   const anchored = checkRange(edit, spanRange, context.currentSourceText, currentSymbolRangeLabel(edit));
-  if (anchored) return replayEditRecord(edit, anchored.status, replayAppliedRange(edit, anchored.range, context.currentSourceText), [anchored.reason, 'offset-reanchored-by-symbol'], context.currentSourceText);
+  if (anchored) return replayEditRecord(edit, anchored.status, replayAppliedRange(edit, anchored.range, context.currentSourceText), [anchored.reason, reanchorReason], context.currentSourceText);
   return replayEditRecord(edit, symbol ? 'conflict' : 'stale', spanRange, [
     symbol ? `${currentSymbolRangeLabel(edit)}-content-mismatch` : 'current-symbol-anchor-missing'
   ], context.currentSourceText);
@@ -190,6 +194,7 @@ function currentSymbolEditRange(edit, symbolRange, sourceText) {
 }
 
 function currentSymbolRangeLabel(edit) {
+  if (edit.sourceRangeKind === 'cross-language-explicit-source-replacement') return 'current-symbol-explicit-source-replacement';
   return edit.sourceRangeKind === 'body-content' ? 'current-symbol-body' : 'current-symbol-anchor';
 }
 

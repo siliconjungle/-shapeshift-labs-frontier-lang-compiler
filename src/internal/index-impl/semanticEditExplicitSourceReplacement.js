@@ -6,6 +6,7 @@ export function explicitSourceReplacementEditForOperation(operation, identity, h
   if (backprojection?.mode !== 'cross-language-explicit-source-replacement') return undefined;
   const replacement = backprojection.sourceReplacementText;
   const range = spanOffsets(headSourceText, backprojection.sourceEditSpan ?? operation.spans?.head ?? operation.spans?.base);
+  const anchorRange = spanOffsets(headSourceText, operation.anchor?.sourceSpan);
   const reasons = [];
   if (typeof replacement !== 'string') reasons.push(`source-replacement-text-missing:${operation.id}`);
   if (!range) reasons.push(`head-span-not-resolvable:${operation.id}`);
@@ -29,6 +30,8 @@ export function explicitSourceReplacementEditForOperation(operation, identity, h
       sourceRangeKind: 'cross-language-explicit-source-replacement',
       start: range.start,
       end: range.end,
+      headAnchorStart: anchorRange?.start,
+      headAnchorEnd: anchorRange?.end,
       replacement,
       replacementSpanText: replacement,
       current

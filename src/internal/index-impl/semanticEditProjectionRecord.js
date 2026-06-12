@@ -54,6 +54,7 @@ export function projectionEditRecord(edit) {
     replacementBytes: edit.replacement.length,
     deletedTextHash,
     replacementTextHash,
+    deletedText: deletedTextForEdit(edit),
     deletedTextLineEndingStableHash: lineEndingStableTextHash(edit.current),
     replacementTextLineEndingStableHash: lineEndingStableTextHash(edit.replacement),
     anchorDeletedTextHash: edit.anchorDeletedTextHash,
@@ -67,6 +68,10 @@ export function projectionEditRecord(edit) {
     insertionAnchorCandidates: edit.insertion?.anchorCandidates,
     replacementText: edit.replacement
   });
+}
+
+function deletedTextForEdit(edit) {
+  return edit.sourceRangeKind === 'cross-language-explicit-source-replacement' ? edit.current : undefined;
 }
 
 function sourceIdentityAnchorFields(edit) {
