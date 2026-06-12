@@ -202,8 +202,8 @@ for (const fixture of memberInsertionFixtures) {
   assert.equal(projection.sourceText, fixture.worker);
   assert.equal(projection.skippedOperations.length, fixture.skippedKind === undefined ? 0 : 1);
   assert.equal(projection.edits.length, 1);
-  assert.equal(projection.edits[0].editKind, 'insert');
-  assert.equal(projection.edits[0].symbolName, fixture.insertedName);
+  assert.equal(projection.edits.some((edit) => edit.editKind === 'insert'
+    && edit.symbolName === fixture.insertedName), true);
   const replay = replaySemanticEditProjection({ projection, currentSourceText: fixture.base });
   assert.equal(replay.status, 'accepted-clean');
   assert.equal(replay.outputSourceText, fixture.worker);

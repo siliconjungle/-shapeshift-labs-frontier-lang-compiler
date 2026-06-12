@@ -1,4 +1,5 @@
 import { uniqueRecordsById, uniqueStrings } from './native-import-utils.js';
+import { semanticCallsiteRecordsForImport } from './semantic-import-callsite-regions.js';
 import { summarizeSemanticImportDependencyRelations } from './semantic-import-dependencies.js';
 import { semanticOwnershipRegionForSymbol, semanticPatchHintForRegion, summarizeSemanticImportRegionTaxonomy } from './semantic-import-regions.js';
 import { collectKernelSourcePreservationFromImport } from './semantic-import-source-preservation.js';
@@ -23,6 +24,7 @@ function semanticImportSidecarEntry(imported, index, options) {
   const dependencies = summarizeSemanticImportDependencyRelations(semanticIndex?.relations ?? []);
   const factSummary = summarizeSemanticFacts(semanticFacts);
   const readiness = semanticImportEntryReadiness(imported);
+  const callsites = semanticCallsiteRecordsForImport(imported, semanticIndex, options);
   const mappingsBySymbolId = new Map();
   for (const mapping of sourceMapMappings) {
     if (mapping.semanticSymbolId && !mappingsBySymbolId.has(mapping.semanticSymbolId)) {
@@ -59,6 +61,8 @@ function semanticImportSidecarEntry(imported, index, options) {
   for (const [regionIndex, region] of importedOwnershipRegions.entries()) {
     regions.push(normalizeImportedOwnershipRegion(imported, region, regionIndex, options));
   }
+  regions.push(...callsites.ownershipRegions);
+  symbols.push(...callsites.symbols.map((symbol) => ({ ...symbol, readiness })));
   const ownershipRegions = uniqueRecordsById(regions);
   const regionTaxonomy = summarizeSemanticImportRegionTaxonomy(ownershipRegions);
   const patchHints = ownershipRegions.map((region) => semanticPatchHintForRegion(region, readiness, options));

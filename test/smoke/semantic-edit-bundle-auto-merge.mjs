@@ -98,8 +98,7 @@ assert.deepEqual(workerConflictKeys, [
   'region:source#src/non-overlapping.js#export#portable'
 ]);
 assert.deepEqual(headConflictKeys, [
-  'region:source#src/non-overlapping.js#body#untouched',
-  'region:source#src/non-overlapping.js#export#untouched'
+  'region:source#src/non-overlapping.js#body#untouched'
 ]);
 assert.deepEqual(workerConflictKeys.filter((key) => headConflictKeys.includes(key)), []);
 assert.equal(nonOverlappingWorkerEdit.status, 'portable');

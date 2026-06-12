@@ -8,7 +8,7 @@ export function projectionCoveredContainerOperationIds(operations, workerSourceT
     if (workerContainerCoveredByInsertedChildren(operation, operations, workerSourceText)) result.add(operation.id);
   }
   for (const operation of operations ?? []) {
-    if (exportOperationCoveredByBody(operation, operations, workerSourceText)) result.add(operation.id);
+    if (operationCoveredByBody(operation, operations, workerSourceText)) result.add(operation.id);
   }
   return result;
 }
@@ -114,18 +114,19 @@ function workerContainerCoveredByInsertedChildren(container, operations, workerS
   return hashSemanticValue(stripped) === container.hashes.baseTextHash;
 }
 
-function exportOperationCoveredByBody(operation, operations, workerSourceText) {
-  if (operation.anchor?.regionKind !== 'export') return false;
+function operationCoveredByBody(operation, operations, workerSourceText) {
+  const kind = operation.anchor?.regionKind;
+  if (kind !== 'export' && kind !== 'call') return false;
   if (!['added', 'modified'].includes(operation.changeKind)) return false;
-  const exportRange = spanOffsets(workerSourceText, operation.spans?.worker);
-  if (!exportRange) return false;
+  const range = spanOffsets(workerSourceText, operation.spans?.worker);
+  if (!range) return false;
   return (operations ?? []).some((candidate) => (
     candidate.id !== operation.id
     && ['portable', 'already-applied'].includes(candidate.status)
     && candidate.anchor?.regionKind === 'body'
-    && candidate.anchor?.symbolName === operation.anchor?.symbolName
+    && (kind === 'call' || candidate.anchor?.symbolName === operation.anchor?.symbolName)
     && sameOperationSourcePath(candidate, operation)
-    && containedRange(exportRange, spanOffsets(workerSourceText, candidate.spans?.worker))
+    && containedRange(range, spanOffsets(workerSourceText, candidate.spans?.worker))
   ));
 }
 

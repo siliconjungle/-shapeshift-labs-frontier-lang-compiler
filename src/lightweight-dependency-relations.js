@@ -119,6 +119,10 @@ function isJavaScriptLike(input) {
 function isIgnoredDependencyOccurrence(input, line, startIndex, name) {
   if (!isJavaScriptLike(input)) return false;
   const endIndex = startIndex + String(name).length;
+  const beforeText = line.slice(0, startIndex);
+  if (/\b(?:async\s+)?function\*?\s*$/.test(beforeText) || /\bclass\s*$/.test(beforeText)) return true;
+  const afterText = line.slice(endIndex);
+  if (/^\s*\([^)]*\)\s*\{/.test(afterText) && /^\s*(?:async\s+)?(?:get\s+|set\s+)?$/.test(beforeText)) return true;
   const previous = previousNonSpace(line, startIndex - 1);
   const next = nextNonSpace(line, endIndex);
   return previous === '.' || next === ':';
@@ -280,7 +284,9 @@ function addDependencyRecord(input, documentId, caller, target, occurrence, reco
       confidence: 'lexical-reference',
       sourceDocumentId: documentId,
       sourceName: caller.name,
-      targetName: target.name
+      targetName: target.name,
+      occurrenceId,
+      sourceSpan: span
     }
   });
   records.occurrences.push({

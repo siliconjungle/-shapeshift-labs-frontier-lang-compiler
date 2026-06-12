@@ -59,7 +59,7 @@ function nativeDiffSymbolHasOwnChange(symbol) {
 
 function nativeDiffSymbolIsMorePreciseNestedChange(candidate, container) {
   if (candidate.changeKind === 'unchanged') return false;
-  if (nativeDiffSymbolIsContainer(candidate)) return false;
+  if (nativeDiffSymbolIsContainer(candidate) && !nativeDiffSymbolIsMember(candidate)) return false;
   if ((candidate.ownershipKey ?? '') === (container.ownershipKey ?? '')) return false;
   if (!nativeDiffAnySpanContains(container, candidate)) return false;
   return nativeDiffNestedSymbolName(candidate, container) || nativeDiffSymbolIsMember(candidate);
@@ -118,5 +118,5 @@ function nativeDiffKind(value) {
   return String(value ?? '').toLowerCase();
 }
 
-const nativeDiffContainerKinds = new Set(['type', 'class', 'interface', 'trait', 'protocol', 'struct', 'enum', 'record']);
-const nativeDiffMemberKinds = new Set(['body', 'method', 'function', 'property', 'declaration']);
+const nativeDiffContainerKinds = new Set(['type', 'class', 'interface', 'trait', 'protocol', 'struct', 'enum', 'record', 'body', 'function', 'method', 'export']);
+const nativeDiffMemberKinds = new Set(['body', 'method', 'function', 'property', 'declaration', 'call']);
