@@ -84,34 +84,40 @@ const exactSourceImport = importNativeSource({
 const exactSourceSymbol = exactSourceImport.semanticIndex.symbols.find((symbol) => symbol.name === 'add');
 const sourceExpressionStart = exactTsSource.indexOf('count + 1');
 const targetExpressionStart = exactRustBase.indexOf('count + 1');
-const exactRecord = createBidirectionalTargetChangeRecord({
-  id: 'counter_ts_to_rust_explicit_source_replacement',
-  source: exactSourceImport,
-  targetLanguage: 'rust',
-  targetPath: 'src/exact-counter.rs',
-  baseTarget: { language: 'rust', sourcePath: 'src/exact-counter.rs', sourceText: exactRustBase },
-  editedTarget: { language: 'rust', sourcePath: 'src/exact-counter.rs', sourceText: exactRustEdited },
-  sourceMaps: [{
-    kind: 'frontier.lang.sourceMap',
-    version: 1,
-    id: 'source_map_exact_counter_ts_to_rust',
-    sourcePath: 'src/exact-counter.ts',
-    sourceHash: exactSourceImport.nativeSource.sourceHash,
-    target: 'rust',
+
+function createExactReplacementRecord(input = {}) {
+  return createBidirectionalTargetChangeRecord({
+    id: input.id ?? 'counter_ts_to_rust_explicit_source_replacement',
+    source: exactSourceImport,
+    targetLanguage: 'rust',
     targetPath: 'src/exact-counter.rs',
-    mappings: [{
-      id: 'map_ts_add_expr_to_rust_add_expr',
-      semanticSymbolId: exactSourceSymbol.id,
-      sourceSpan: { path: 'src/exact-counter.ts', start: sourceExpressionStart, end: sourceExpressionStart + 'count + 1'.length },
-      generatedSpan: { path: 'src/exact-counter.rs', targetPath: 'src/exact-counter.rs', start: targetExpressionStart, end: targetExpressionStart + 'count + 1'.length, generatedName: 'add' },
+    baseTarget: { language: 'rust', sourcePath: 'src/exact-counter.rs', sourceText: exactRustBase },
+    editedTarget: { language: 'rust', sourcePath: 'src/exact-counter.rs', sourceText: exactRustEdited },
+    sourceMaps: [{
+      kind: 'frontier.lang.sourceMap',
+      version: 1,
+      id: 'source_map_exact_counter_ts_to_rust',
+      sourcePath: 'src/exact-counter.ts',
+      sourceHash: input.sourceHash ?? exactSourceImport.nativeSource.sourceHash,
       target: 'rust',
-      generatedName: 'add',
-      precision: 'exact',
-      preservation: 'expression',
-      sourceReplacementText: 'count + 2'
+      targetPath: 'src/exact-counter.rs',
+      mappings: [{
+        id: 'map_ts_add_expr_to_rust_add_expr',
+        semanticSymbolId: exactSourceSymbol.id,
+        sourceSpan: { path: 'src/exact-counter.ts', start: sourceExpressionStart, end: sourceExpressionStart + 'count + 1'.length },
+        generatedSpan: { path: 'src/exact-counter.rs', targetPath: 'src/exact-counter.rs', start: targetExpressionStart, end: targetExpressionStart + 'count + 1'.length, generatedName: 'add' },
+        target: 'rust',
+        generatedName: 'add',
+        precision: 'exact',
+        preservation: 'expression',
+        sourceReplacementText: input.sourceReplacementText ?? 'count + 2',
+        sourceReplacementTextHash: input.sourceReplacementTextHash
+      }]
     }]
-  }]
-});
+  });
+}
+
+const exactRecord = createExactReplacementRecord();
 
 assert.equal(exactRecord.targetPortability.status, 'portable');
 assert.equal(exactRecord.sourceProjectionHint.sourceBackprojectionMode, 'cross-language-explicit-source-replacement');
@@ -135,3 +141,29 @@ assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { 
 assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { transformTargetLanguage: 'rust' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { semanticTransformReadiness: 'auto-merge-candidate' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([exactRecord.sourcePatchBundle], { sourceBackprojectionMode: 'cross-language-explicit-source-replacement' }).length, 1);
+
+const badReplacementHashRecord = createExactReplacementRecord({
+  id: 'counter_ts_to_rust_bad_source_replacement_hash',
+  sourceReplacementTextHash: 'fnv1a32:not_the_hash'
+});
+assert.equal(badReplacementHashRecord.targetPortability.status, 'portable');
+assert.equal(badReplacementHashRecord.sourceProjectionHint.sourceBackprojectionMode, 'review-only');
+assert.equal(badReplacementHashRecord.sourceEditScript.admission.status, 'needs-port');
+assert.equal(badReplacementHashRecord.sourceEditProjection, undefined);
+assert.equal(badReplacementHashRecord.sourcePatchBundle.admission.status, 'needs-review');
+assert.equal(badReplacementHashRecord.sourcePatchBundle.admission.autoApplyCandidate, false);
+assert.equal(querySemanticPatchBundleRecords([badReplacementHashRecord.sourcePatchBundle], { admissionStatus: 'admitted' }).length, 0);
+assert.equal(querySemanticPatchBundleRecords([badReplacementHashRecord.sourcePatchBundle], { sourceBackprojectionMode: 'review-only' }).length, 1);
+
+const staleSourceMapRecord = createExactReplacementRecord({
+  id: 'counter_ts_to_rust_stale_source_map',
+  sourceHash: 'fnv1a32:stale'
+});
+assert.equal(staleSourceMapRecord.targetPortability.status, 'stale');
+assert.equal(staleSourceMapRecord.sourceEditScript, undefined);
+assert.equal(staleSourceMapRecord.sourceProjectionHint, undefined);
+assert.equal(staleSourceMapRecord.sourcePatchBundle.admission.status, 'needs-review');
+assert.equal(staleSourceMapRecord.sourcePatchBundle.admission.autoApplyCandidate, false);
+assert.deepEqual(staleSourceMapRecord.sourcePatchBundle.index.sourceBackprojectionModes, []);
+assert.equal(querySemanticPatchBundleRecords([staleSourceMapRecord.sourcePatchBundle], { targetPortabilityStatus: 'stale' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([staleSourceMapRecord.sourcePatchBundle], { admissionStatus: 'admitted' }).length, 0);
