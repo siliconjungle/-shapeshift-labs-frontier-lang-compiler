@@ -145,4 +145,5 @@ const crlfWhitespaceConflictReplay = replaySemanticEditProjection({
 });
 assert.equal(crlfWhitespaceConflictReplay.status, 'conflict');
 assert.equal(crlfWhitespaceConflictReplay.outputSourceText, undefined);
-assert.equal(crlfWhitespaceConflictReplay.edits[0].diagnostics.some((diagnostic) => diagnostic.category === 'projection-mismatch' && diagnostic.code === 'current-symbol-body-content-mismatch'), true);
+assert.equal(crlfWhitespaceConflictReplay.edits[0].diagnostics.some((diagnostic) => diagnostic.category === 'projection-mismatch'
+  && diagnostic.code === 'current-symbol-anchor-content-mismatch'), true);

@@ -119,4 +119,4 @@ function nativeDiffKind(value) {
 }
 
 const nativeDiffContainerKinds = new Set(['type', 'class', 'interface', 'trait', 'protocol', 'struct', 'enum', 'record', 'body', 'function', 'method', 'export']);
-const nativeDiffMemberKinds = new Set(['body', 'method', 'function', 'property', 'declaration', 'call']);
+const nativeDiffMemberKinds = new Set(['body', 'method', 'function', 'property', 'declaration', 'call', 'effect', 'controlflow', 'mutation']);

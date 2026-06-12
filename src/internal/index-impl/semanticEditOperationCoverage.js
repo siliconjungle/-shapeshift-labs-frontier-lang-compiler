@@ -7,14 +7,16 @@ export function markCoveredSemanticEditOperations(operations, context) {
     worker: nativeImportSourceText(context.worker)
   };
   return (operations ?? []).map((operation) => {
-    const coveredBy = coveredByChildOperations(operation, operations, sourceText);
+    const childCoverage = coveredByChildOperations(operation, operations, sourceText);
+    const parentCoverage = childCoverage.length ? [] : coveredByParentOperations(operation, operations, sourceText);
+    const coveredBy = childCoverage.length ? childCoverage : parentCoverage;
     if (!coveredBy.length) return operation;
     return {
       ...operation,
       status: 'covered',
       readiness: 'ready',
       confidence: Math.max(operation.confidence ?? 0, 0.82),
-      reasonCodes: uniqueStrings([...(operation.reasonCodes ?? []), 'container-covered-by-child-edits']),
+      reasonCodes: uniqueStrings([...(operation.reasonCodes ?? []), coverageReason(childCoverage)]),
       evidenceIds: uniqueStrings(operation.evidenceIds ?? []),
       metadata: {
         ...(operation.metadata ?? {}),
@@ -22,6 +24,10 @@ export function markCoveredSemanticEditOperations(operations, context) {
       }
     };
   });
+}
+
+function coverageReason(childCoverage) {
+  return childCoverage.length ? 'container-covered-by-child-edits' : 'child-covered-by-container-edit';
 }
 
 function coveredByChildOperations(container, operations, sourceText) {
@@ -43,7 +49,31 @@ function isCoverableContainer(operation) {
   if (operation.changeKind !== 'modified') return false;
   if (!operation.spans?.base || !operation.spans?.worker) return false;
   const kind = String(operation.anchor?.regionKind ?? operation.regionKind ?? '');
-  return kind === 'type' || kind === 'config' || kind === 'content' || kind === 'route' || kind === 'property';
+  return ['type', 'config', 'content', 'route', 'property', 'controlFlow', 'effect', 'mutation'].includes(kind);
+}
+
+function coveredByParentOperations(child, operations, sourceText) {
+  if (child.changeKind !== 'added' && child.changeKind !== 'removed') return [];
+  if (!isSemanticFactRegion(child)) return [];
+  const side = child.changeKind === 'removed' ? 'base' : 'worker';
+  const childRange = spanOffsets(sourceText[side], child.spans?.[side]);
+  if (!childRange) return [];
+  return (operations ?? []).filter((parent) => parent.id !== child.id
+    && parent.changeKind === child.changeKind
+    && ['portable', 'already-applied'].includes(parent.status)
+    && parent.anchor?.regionKind === 'body'
+    && sameSourcePath(parent, child)
+    && contained(childRange, spanOffsets(sourceText[side], parent.spans?.[side])));
+}
+
+function isSemanticFactRegion(operation) {
+  return ['controlFlow', 'effect', 'mutation', 'call'].includes(String(operation.anchor?.regionKind ?? ''));
+}
+
+function sameSourcePath(left, right) {
+  const leftPath = left.anchor?.sourcePath ?? left.insertion?.sourcePath;
+  const rightPath = right.anchor?.sourcePath ?? right.insertion?.sourcePath;
+  return !leftPath || !rightPath || leftPath === rightPath;
 }
 
 function childEdit(operation, sourceText, containerBase) {

@@ -73,11 +73,11 @@ const classMemberChangeSet = diffNativeSources({
   beforeSourceText: classMemberBeforeSourceText,
   afterSourceText: classMemberAfterSourceText
 });
-const classMemberKey = 'source#src/class-member-precision.js#body#TodoStore.save';
+const classMemberKey = 'source#src/class-member-precision.js#controlFlow#TodoStore.save:controlFlow:exit#1';
 const classContainerKey = 'source#src/class-member-precision.js#type#TodoStore';
 const classMemberConflictKey = `region:${classMemberKey}`;
 const classContainerConflictKey = `region:${classContainerKey}`;
-assert.equal(classMemberChangeSet.changedSymbols.some((symbol) => symbol.name === 'TodoStore.save'), true);
+assert.equal(classMemberChangeSet.changedSymbols.some((symbol) => symbol.name === 'TodoStore.save:controlFlow:exit#1'), true);
 assert.equal(classMemberChangeSet.changedSymbols.some((symbol) => symbol.name === 'TodoStore'), false);
 assert.equal(classMemberChangeSet.changedRegions.some((region) => region.key === classMemberKey), true);
 assert.equal(classMemberChangeSet.changedRegions.some((region) => region.key === classContainerKey), false);

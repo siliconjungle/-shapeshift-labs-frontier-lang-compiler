@@ -33,6 +33,7 @@ const smokeModules = [
   './smoke/semantic-history-lineage-resolution.mjs',
   './smoke/semantic-lineage-inference.mjs',
   './smoke/semantic-callsite-regions.mjs',
+  './smoke/semantic-effect-regions.mjs',
   './smoke/semantic-edit-insertions.mjs',
   './smoke/semantic-edit-rename-move.mjs',
   './smoke/semantic-edit-script.mjs',

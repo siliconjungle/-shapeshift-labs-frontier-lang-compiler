@@ -9,7 +9,7 @@ const fixtures = [
     head: 'export class Store {\n  get() {\n    return 1;\n  }\n  set(value) {\n    return value + 1;\n  }\n}\n',
     expected: 'export class Store {\n  get() {\n    return 2;\n  }\n  set(value) {\n    return value + 1;\n  }\n}\n',
     coveredKind: undefined,
-    portableSymbol: 'Store.get'
+    portableSymbol: 'Store.get:controlFlow:exit#1'
   },
   {
     id: 'interface_property_sibling',
@@ -35,7 +35,8 @@ const fixtures = [
     worker: 'export class Store {\n  get() {\n    return 1;\n  }\n  reset() {\n    return 0;\n  }\n}\n',
     head: 'export class Store {\n  get() {\n    return 2;\n  }\n}\n',
     expected: 'export class Store {\n  get() {\n    return 2;\n  }\n  reset() {\n    return 0;\n  }\n}\n',
-    coveredKind: undefined,
+    coveredKind: 'addControlFlow',
+    coveredReason: 'child-covered-by-container-edit',
     portableSymbol: 'Store.reset'
   },
   {
@@ -44,7 +45,8 @@ const fixtures = [
     worker: 'export class Store {\n  get() {\n    return 1;\n  }\n}\n',
     head: 'export class Store {\n  get() {\n    return 2;\n  }\n  reset() {\n    return 0;\n  }\n}\n',
     expected: 'export class Store {\n  get() {\n    return 2;\n  }\n}\n',
-    coveredKind: undefined,
+    coveredKind: 'removeControlFlow',
+    coveredReason: 'child-covered-by-container-edit',
     portableSymbol: 'Store.reset'
   }
 ];
@@ -63,7 +65,7 @@ for (const fixture of fixtures) {
   assert.equal(script.summary.covered >= 1, fixture.coveredKind !== undefined, fixture.id);
   assert.equal(script.operations.some((operation) => operation.kind === fixture.coveredKind && operation.status === 'covered'), fixture.coveredKind !== undefined, fixture.id);
   assert.equal(script.operations.some((operation) => operation.anchor.symbolName === fixture.portableSymbol && operation.status === 'portable'), true, fixture.id);
-  assert.equal(script.operations.some((operation) => operation.reasonCodes.includes('container-covered-by-child-edits')), fixture.coveredKind !== undefined, fixture.id);
+  assert.equal(script.operations.some((operation) => operation.reasonCodes.includes(fixture.coveredReason ?? 'container-covered-by-child-edits')), fixture.coveredKind !== undefined, fixture.id);
 
   const projection = projectSemanticEditScriptToSource({ script, workerSourceText: fixture.worker, headSourceText: fixture.head });
   assert.equal(projection.status, 'projected', fixture.id);
@@ -239,7 +241,7 @@ assert.equal(sameAnchorProjection.edits.length, 2);
 assert.equal(sameAnchorProjection.edits.every((edit) => edit.editKind === 'insert'), true);
 assert.deepEqual(sameAnchorProjection.edits.map((edit) => edit.symbolName), ['Store.reset', 'Store.clear']);
 assert.deepEqual(sameAnchorProjection.edits.map((edit) => edit.editOrder), [0, 1]);
-assert.equal(sameAnchorProjection.skippedOperations.length, 0);
+assert.equal(sameAnchorProjection.skippedOperations.length, 2);
 assert.equal(sameAnchorProjection.admission.reasonCodes.includes('script-not-auto-merge-candidate'), false);
 const sameAnchorReplay = replaySemanticEditProjection({ projection: sameAnchorProjection, currentSourceText: sameAnchorHead });
 assert.equal(sameAnchorReplay.status, 'accepted-clean');

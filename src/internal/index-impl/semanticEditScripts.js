@@ -227,6 +227,9 @@ function semanticEditOperationKind(region) {
   if (kind === 'type') return `${prefix}TypeDeclaration`;
   if (kind === 'property') return `${prefix}Property`;
   if (kind === 'call') return `${prefix}Callsite`;
+  if (kind === 'controlFlow') return `${prefix}ControlFlow`;
+  if (kind === 'effect') return `${prefix}Effect`;
+  if (kind === 'mutation') return `${prefix}Mutation`;
   return `${prefix}Region`;
 }
 

@@ -8,7 +8,9 @@ const NativeImportRegionTaxonomyKinds = Object.freeze([
   'body',
   'call',
   'type',
+  'controlFlow',
   'effect',
+  'mutation',
   'property',
   'config',
   'content',
@@ -132,7 +134,9 @@ function semanticRegionMergePolicy(regionKind) {
   if (regionKind === 'body') return 'implementation-single-writer-review-required';
   if (regionKind === 'call') return 'callsite-overlap-review-required';
   if (regionKind === 'type') return 'type-surface-review-required';
+  if (regionKind === 'controlFlow') return 'control-flow-review-required';
   if (regionKind === 'effect') return 'effect-boundary-review-required';
+  if (regionKind === 'mutation') return 'mutation-boundary-review-required';
   if (regionKind === 'generatedOutput') return 'generated-output-source-map-review-required';
   return 'single-writer-review-required';
 }
@@ -143,7 +147,9 @@ function semanticRegionSupportedOperations(region) {
   if (region.regionKind === 'body') return ['replace-body', 'insert-before-body', 'insert-after-body'];
   if (region.regionKind === 'call') return ['replace-callsite', 'review-callsite'];
   if (region.regionKind === 'type') return ['replace-type-declaration', 'merge-type-members', 'replace-region'];
+  if (region.regionKind === 'controlFlow') return ['replace-control-flow', 'review-control-flow'];
   if (region.regionKind === 'effect') return ['route-effect', 'replace-effect-boundary', 'review-effect-policy'];
+  if (region.regionKind === 'mutation') return ['replace-mutation', 'review-mutation'];
   if (region.regionKind === 'generatedOutput') return ['replace-generated-output', 'attach-generated-source-map', 'review-generator-input'];
   return ['replace-region', 'insert-before-region', 'insert-after-region'];
 }

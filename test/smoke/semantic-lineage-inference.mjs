@@ -24,7 +24,7 @@ const movedInference = inferSemanticLineageEvents({
   generatedAt: 10
 });
 assert.equal(movedInference.kind, 'frontier.lang.semanticLineageInference');
-assert.equal(movedInference.summary.moved, 2);
+assert.equal(movedInference.summary.moved, 3);
 assert.equal(movedInference.summary.renamed, 0);
 assert.equal(movedInference.metadata.autoMergeClaim, false);
 assert.equal(movedInference.metadata.semanticEquivalenceClaim, false);
@@ -33,6 +33,8 @@ const movedEvent = movedInference.events.find((event) => event.eventKind === 'mo
 assert.ok(movedEvent);
 const movedExportEvent = movedInference.events.find((event) => event.eventKind === 'moved' && event.from.key.includes('#export#step'));
 assert.ok(movedExportEvent);
+const movedControlFlowEvent = movedInference.events.find((event) => event.eventKind === 'moved' && event.from.key.includes('#controlFlow#step:controlFlow:exit#1'));
+assert.ok(movedControlFlowEvent);
 assert.equal(movedEvent.evidence.bodyHashMatch, true);
 assert.equal(movedEvent.metadata.reasonCodes.includes('source-hash-match'), true);
 assert.equal(movedEvent.metadata.hashEvidence.sourceHashMatch, true);
@@ -257,12 +259,14 @@ const deletedInference = inferSemanticLineageEvents({
   }),
   generatedAt: 30
 });
-assert.equal(deletedInference.summary.deleted, 2);
+assert.equal(deletedInference.summary.deleted, 3);
 assert.equal(deletedInference.events.some((event) => event.eventKind === 'deleted'), true);
 assert.equal(deletedInference.reasons.includes('deleted-anchor-lineage-inferred'), true);
 const deletedEvent = deletedInference.events.find((event) => event.eventKind === 'deleted' && event.from.key.includes('#body#obsolete'));
 const deletedExportEvent = deletedInference.events.find((event) => event.eventKind === 'deleted' && event.from.key.includes('#export#obsolete'));
+const deletedControlFlowEvent = deletedInference.events.find((event) => event.eventKind === 'deleted' && event.from.key.includes('#controlFlow#obsolete:controlFlow:exit#1'));
 assert.ok(deletedExportEvent);
+assert.ok(deletedControlFlowEvent);
 assert.equal(deletedEvent.confidence <= 0.8, true);
 assert.equal(deletedEvent.metadata.deletionEvidenceScope, 'same-source-file');
 const diffResult = diffNativeSources({

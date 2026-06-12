@@ -32,7 +32,7 @@ const sameContentAnchorReplay = replaySemanticEditProjection({
 
 assert.equal(sameContentAnchorReplay.status, 'accepted-clean');
 assert.equal(sameContentAnchorReplay.outputSourceText, sameContentAnchorExpected);
-assert.equal(sameContentAnchorReplay.edits[0].reasonCodes.includes('current-symbol-body-matches-deleted'), true);
+assert.equal(sameContentAnchorReplay.edits[0].reasonCodes.includes('current-symbol-anchor-matches-deleted'), true);
 assert.equal(sameContentAnchorReplay.edits[0].reasonCodes.includes('offset-reanchored-by-symbol'), true);
 
 const sameContentAnchorChanged = 'export class B {\n  run() { return 3; }\n}\nexport class A {\n  run() { return 1; }\n}\n';
@@ -44,4 +44,4 @@ const sameContentAnchorConflict = replaySemanticEditProjection({
 
 assert.equal(sameContentAnchorConflict.status, 'conflict');
 assert.equal(sameContentAnchorConflict.outputSourceText, undefined);
-assert.equal(sameContentAnchorConflict.edits[0].reasonCodes.includes('current-symbol-body-content-mismatch'), true);
+assert.equal(sameContentAnchorConflict.edits[0].reasonCodes.includes('current-symbol-anchor-content-mismatch'), true);

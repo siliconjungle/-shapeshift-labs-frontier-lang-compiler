@@ -150,7 +150,8 @@ assert.equal(jsChangeSet.kind, 'frontier.lang.nativeSourceChangeSet');
 assert.equal(jsChangeSet.summary.sourceChanged, true);
 assert.equal(jsChangeSet.summary.modifiedSymbols >= 1, true);
 assert.equal(jsChangeSet.summary.addedSymbols, 2);
-assert.equal(jsChangeSet.changedSymbols.some((symbol) => symbol.name === 'addTodo' && symbol.changeKind === 'modified'), true);
+assert.equal(jsChangeSet.changedSymbols.some((symbol) => symbol.name === 'addTodo:controlFlow:exit#1'
+  && symbol.ownershipRegionKind === 'controlFlow' && symbol.changeKind === 'modified'), true);
 assert.equal(jsChangeSet.changedSymbols.some((symbol) => symbol.name === 'TODO_LIMIT' && symbol.kind === 'variable' && symbol.changeKind === 'added'), true);
 assert.equal(jsChangeSet.changedSymbols.some((symbol) => symbol.name === 'TODO_LIMIT' && symbol.kind === 'export' && symbol.changeKind === 'added'), true);
 assert.equal(jsChangeSet.changedRegions.length >= 2, true);
@@ -189,9 +190,10 @@ assert.equal(unchangedDeclarationChangeSet.summary.sourceChanged, true);
 assert.equal(unchangedDeclarationChangeSet.summary.symbols, 1);
 assert.equal(unchangedDeclarationChangeSet.summary.regions, 1);
 assert.equal(unchangedDeclarationChangeSet.summary.modifiedSymbols, 1);
-assert.equal(unchangedDeclarationChangeSet.changedSymbols.some((symbol) => symbol.name === 'bodyOnly' && symbol.changeKind === 'modified' && symbol.sourceSpan.endLine === 3), true);
-assert.equal(unchangedDeclarationChangeSet.changedRegions[0].granularity, 'symbol');
-assert.equal(unchangedDeclarationChangeSet.changedRegions[0].regionKind, 'body');
+assert.equal(unchangedDeclarationChangeSet.changedSymbols.some((symbol) => symbol.name === 'bodyOnly:controlFlow:exit#1'
+  && symbol.changeKind === 'modified' && symbol.sourceSpan.endLine === 2), true);
+assert.equal(unchangedDeclarationChangeSet.changedRegions[0].granularity, 'semantic-fact-line');
+assert.equal(unchangedDeclarationChangeSet.changedRegions[0].regionKind, 'controlFlow');
 assert.equal(unchangedDeclarationChangeSet.reasons.some((reason) => reason.includes('1 symbol(s)')), true);
 assert.equal(unchangedDeclarationChangeSet.changedRegions[0].metadata.changedRegionProjection.admission.action, 'review-port');
 assert.equal(unchangedDeclarationChangeSet.changedRegions[0].metadata.changedRegionProjection.autoMergeClaim, false);

@@ -1,5 +1,7 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 
+const nestedBodyCoveredKinds = new Set(['export', 'call', 'controlFlow', 'effect', 'mutation']);
+
 export function projectionCoveredContainerOperationIds(operations, workerSourceText) {
   if (typeof workerSourceText !== 'string') return new Set();
   const result = new Set();
@@ -116,7 +118,7 @@ function workerContainerCoveredByInsertedChildren(container, operations, workerS
 
 function operationCoveredByBody(operation, operations, workerSourceText) {
   const kind = operation.anchor?.regionKind;
-  if (kind !== 'export' && kind !== 'call') return false;
+  if (!nestedBodyCoveredKinds.has(kind)) return false;
   if (!['added', 'modified'].includes(operation.changeKind)) return false;
   const range = spanOffsets(workerSourceText, operation.spans?.worker);
   if (!range) return false;
@@ -124,7 +126,7 @@ function operationCoveredByBody(operation, operations, workerSourceText) {
     candidate.id !== operation.id
     && ['portable', 'already-applied'].includes(candidate.status)
     && candidate.anchor?.regionKind === 'body'
-    && (kind === 'call' || candidate.anchor?.symbolName === operation.anchor?.symbolName)
+    && (kind !== 'export' || candidate.anchor?.symbolName === operation.anchor?.symbolName)
     && sameOperationSourcePath(candidate, operation)
     && containedRange(range, spanOffsets(workerSourceText, candidate.spans?.worker))
   ));

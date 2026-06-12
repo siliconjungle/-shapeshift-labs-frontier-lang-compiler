@@ -166,6 +166,7 @@ const memberInsertionFixtures = [
     base: 'export class Store {\n  get() {\n    return 1;\n  }\n}\n',
     worker: 'export class Store {\n  get() {\n    return 1;\n  }\n  set(value) {\n    return value;\n  }\n}\n',
     skippedKind: undefined,
+    expectedSkipped: 1,
     insertedName: 'Store.set'
   },
   {
@@ -173,6 +174,7 @@ const memberInsertionFixtures = [
     base: 'export interface User {\n  id: string;\n}\n',
     worker: 'export interface User {\n  id: string;\n  name: string;\n}\n',
     skippedKind: undefined,
+    expectedSkipped: 0,
     insertedName: 'User.name'
   },
   {
@@ -180,6 +182,7 @@ const memberInsertionFixtures = [
     base: "export const config = {\n  mode: 'a',\n};\n",
     worker: "export const config = {\n  mode: 'a',\n  flag: true,\n};\n",
     skippedKind: 'replaceRegion',
+    expectedSkipped: 1,
     insertedName: 'config.flag'
   }
 ];
@@ -200,7 +203,7 @@ for (const fixture of memberInsertionFixtures) {
   const projection = projectSemanticEditScriptToSource({ script, workerSourceText: fixture.worker, headSourceText: fixture.base });
   assert.equal(projection.status, 'projected');
   assert.equal(projection.sourceText, fixture.worker);
-  assert.equal(projection.skippedOperations.length, fixture.skippedKind === undefined ? 0 : 1);
+  assert.equal(projection.skippedOperations.length, fixture.expectedSkipped);
   assert.equal(projection.edits.length, 1);
   assert.equal(projection.edits.some((edit) => edit.editKind === 'insert'
     && edit.symbolName === fixture.insertedName), true);
