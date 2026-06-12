@@ -98,6 +98,7 @@ export type NativeImportRegionTaxonomyKind =
   | 'symbol'
   | 'declaration'
   | 'import'
+  | 'export'
   | 'body'
   | 'call'
   | 'type'

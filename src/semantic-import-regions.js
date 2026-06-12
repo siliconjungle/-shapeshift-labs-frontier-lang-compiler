@@ -4,6 +4,7 @@ const NativeImportRegionTaxonomyKinds = Object.freeze([
   'symbol',
   'declaration',
   'import',
+  'export',
   'body',
   'call',
   'type',
@@ -138,6 +139,7 @@ function semanticRegionMergePolicy(regionKind) {
 
 function semanticRegionSupportedOperations(region) {
   if (region.regionKind === 'import') return ['replace-import', 'insert-import-before', 'insert-import-after', 'replace-region'];
+  if (region.regionKind === 'export') return ['replace-export', 'insert-export-before', 'insert-export-after', 'replace-region'];
   if (region.regionKind === 'body') return ['replace-body', 'insert-before-body', 'insert-after-body'];
   if (region.regionKind === 'call') return ['replace-callsite', 'review-callsite'];
   if (region.regionKind === 'type') return ['replace-type-declaration', 'merge-type-members', 'replace-region'];

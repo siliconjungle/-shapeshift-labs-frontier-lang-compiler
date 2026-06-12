@@ -154,3 +154,23 @@ const commonJsAssignmentSidecar = createSemanticImportSidecar(scannedCommonJsAss
 assert.equal(commonJsAssignmentSidecar.ownershipRegions.some((region) => region.symbolName === 'module.exports.runtimeConfig.limits.todos' && region.key.includes('#config#module.exports.runtimeConfig.limits.todos')), true);
 assert.equal(commonJsAssignmentSidecar.patchHints.some((hint) => hint.ownershipKey.includes('#route#module.exports.appRoutes./todos')), true);
 assert.equal(commonJsAssignmentSidecar.patchHints.some((hint) => hint.ownershipKey.includes('#content#exports.docsContent.docs.title')), true);
+
+const scannedExportRegionImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/export-regions.ts',
+  sourceText: 'import { helper } from "./helper.js";\nexport { helper as publicHelper };\nexport * from "./more.js";\nexport function run() { return helper(); }\nexport default run;\n'
+});
+const exportRegionSymbols = scannedExportRegionImport.semanticIndex.symbols;
+const exportRegionSymbolIds = exportRegionSymbols.map((symbol) => symbol.id);
+assert.equal(exportRegionSymbolIds.length, new Set(exportRegionSymbolIds).size);
+assert.equal(exportRegionSymbols.some((symbol) => symbol.name === 'publicHelper' && symbol.kind === 'export' && symbol.metadata.ownershipRegionKind === 'export'), true);
+assert.equal(exportRegionSymbols.some((symbol) => symbol.name === '* from ./more.js' && symbol.kind === 'module' && symbol.metadata.ownershipRegionKind === 'export'), true);
+assert.equal(exportRegionSymbols.some((symbol) => symbol.name === 'run' && symbol.kind === 'export' && symbol.metadata.ownershipRegionKind === 'export'), true);
+assert.equal(exportRegionSymbols.some((symbol) => symbol.name === 'run' && symbol.kind === 'function' && symbol.metadata.ownershipRegionKind === 'body'), true);
+assert.equal(exportRegionSymbols.some((symbol) => symbol.name === 'default' && symbol.kind === 'export' && symbol.metadata.ownershipRegionKind === 'export'), true);
+const exportRegionSidecar = createSemanticImportSidecar(scannedExportRegionImport);
+assert.equal(exportRegionSidecar.ownershipRegions.some((region) => region.symbolName === 'publicHelper' && region.regionKind === 'export'), true);
+assert.equal(exportRegionSidecar.ownershipRegions.some((region) => region.symbolName === 'run' && region.regionKind === 'body'), true);
+assert.equal(exportRegionSidecar.patchHints.some((hint) => hint.ownershipKey.includes('#export#publicHelper') && hint.supportedOperations.includes('replace-export')), true);
+assert.equal(exportRegionSidecar.patchHints.some((hint) => hint.ownershipKey.includes('#export#default') && hint.supportedOperations.includes('replace-export')), true);
+assert.equal(exportRegionSidecar.patchHints.some((hint) => hint.ownershipKey.includes('#body#run') && hint.supportedOperations.includes('replace-body')), true);

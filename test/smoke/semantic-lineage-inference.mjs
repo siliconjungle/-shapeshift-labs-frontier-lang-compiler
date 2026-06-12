@@ -24,13 +24,15 @@ const movedInference = inferSemanticLineageEvents({
   generatedAt: 10
 });
 assert.equal(movedInference.kind, 'frontier.lang.semanticLineageInference');
-assert.equal(movedInference.summary.moved, 1);
+assert.equal(movedInference.summary.moved, 2);
 assert.equal(movedInference.summary.renamed, 0);
 assert.equal(movedInference.metadata.autoMergeClaim, false);
 assert.equal(movedInference.metadata.semanticEquivalenceClaim, false);
 assert.equal(movedInference.readiness, 'needs-review');
-const movedEvent = movedInference.events.find((event) => event.eventKind === 'moved');
+const movedEvent = movedInference.events.find((event) => event.eventKind === 'moved' && event.from.key.includes('#body#step'));
 assert.ok(movedEvent);
+const movedExportEvent = movedInference.events.find((event) => event.eventKind === 'moved' && event.from.key.includes('#export#step'));
+assert.ok(movedExportEvent);
 assert.equal(movedEvent.evidence.bodyHashMatch, true);
 assert.equal(movedEvent.metadata.reasonCodes.includes('source-hash-match'), true);
 assert.equal(movedEvent.metadata.hashEvidence.sourceHashMatch, true);
@@ -255,10 +257,12 @@ const deletedInference = inferSemanticLineageEvents({
   }),
   generatedAt: 30
 });
-assert.equal(deletedInference.summary.deleted, 1);
+assert.equal(deletedInference.summary.deleted, 2);
 assert.equal(deletedInference.events.some((event) => event.eventKind === 'deleted'), true);
 assert.equal(deletedInference.reasons.includes('deleted-anchor-lineage-inferred'), true);
-const deletedEvent = deletedInference.events.find((event) => event.eventKind === 'deleted');
+const deletedEvent = deletedInference.events.find((event) => event.eventKind === 'deleted' && event.from.key.includes('#body#obsolete'));
+const deletedExportEvent = deletedInference.events.find((event) => event.eventKind === 'deleted' && event.from.key.includes('#export#obsolete'));
+assert.ok(deletedExportEvent);
 assert.equal(deletedEvent.confidence <= 0.8, true);
 assert.equal(deletedEvent.metadata.deletionEvidenceScope, 'same-source-file');
 const diffResult = diffNativeSources({
@@ -281,13 +285,7 @@ function lineageCandidateSymbol({
   semanticIdentityHash = undefined,
   identityHash = undefined
 }) {
-  const sourceSpan = {
-    path: sourcePath,
-    startLine: 1,
-    startColumn: 1,
-    endLine: 1,
-    endColumn: 40
-  };
+  const sourceSpan = { path: sourcePath, startLine: 1, startColumn: 1, endLine: 1, endColumn: 40 };
   return {
     id: `symbol:${sourceIdentityHash}:${name}`,
     name,

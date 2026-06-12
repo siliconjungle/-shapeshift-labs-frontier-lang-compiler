@@ -8,11 +8,16 @@ export function applySourceEdits(sourceText, edits) {
 }
 
 export function dedupeSourceEdits(edits) {
-  const exact = dedupeExactInsertions(edits);
-  const covered = removeCoveredContainerReplacements(exact.edits);
+  const exact = dedupeExactEdits(edits);
+  const noops = removeNoopReplacements(exact.edits);
+  const covered = removeCoveredContainerReplacements(noops.edits);
   return {
     edits: covered.edits,
-    skippedOperationIds: [...exact.skippedOperationIds, ...covered.skippedOperationIds]
+    skippedOperationIds: [
+      ...exact.skippedOperationIds,
+      ...noops.skippedOperationIds,
+      ...covered.skippedOperationIds
+    ]
   };
 }
 
@@ -27,7 +32,7 @@ export function validateSourceEdits(edits) {
   return uniqueStrings(reasons);
 }
 
-function dedupeExactInsertions(edits) {
+function dedupeExactEdits(edits) {
   const seen = new Map();
   const result = [];
   const skippedOperationIds = [];
@@ -38,6 +43,19 @@ function dedupeExactInsertions(edits) {
       continue;
     }
     if (key) seen.set(key, edit.operationId);
+    result.push(edit);
+  }
+  return { edits: result, skippedOperationIds };
+}
+
+function removeNoopReplacements(edits) {
+  const skippedOperationIds = [];
+  const result = [];
+  for (const edit of edits) {
+    if (edit.editKind === 'replace' && !edit.alreadyApplied && edit.current === edit.replacement) {
+      skippedOperationIds.push(edit.operationId);
+      continue;
+    }
     result.push(edit);
   }
   return { edits: result, skippedOperationIds };
@@ -77,14 +95,23 @@ function containedInsertions(container, edits) {
 }
 
 function duplicateEditKey(edit) {
-  if (edit.editKind !== 'insert') return undefined;
+  if (edit.alreadyApplied) return undefined;
+  if (edit.editKind === 'insert') {
+    return [
+      'insert',
+      edit.start,
+      edit.end,
+      edit.insertion?.mode,
+      edit.insertion?.anchorKey,
+      hashSemanticValue(edit.replacementSpanText ?? edit.replacement)
+    ].join(':');
+  }
   return [
-    'insert',
+    edit.editKind,
     edit.start,
     edit.end,
-    edit.insertion?.mode,
-    edit.insertion?.anchorKey,
-    hashSemanticValue(edit.replacementSpanText ?? edit.replacement)
+    hashSemanticValue(edit.current),
+    hashSemanticValue(edit.replacement)
   ].join(':');
 }
 

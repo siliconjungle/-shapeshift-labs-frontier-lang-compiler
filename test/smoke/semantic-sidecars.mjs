@@ -149,9 +149,10 @@ const jsChangeSet = diffNativeSources({
 assert.equal(jsChangeSet.kind, 'frontier.lang.nativeSourceChangeSet');
 assert.equal(jsChangeSet.summary.sourceChanged, true);
 assert.equal(jsChangeSet.summary.modifiedSymbols >= 1, true);
-assert.equal(jsChangeSet.summary.addedSymbols, 1);
+assert.equal(jsChangeSet.summary.addedSymbols, 2);
 assert.equal(jsChangeSet.changedSymbols.some((symbol) => symbol.name === 'addTodo' && symbol.changeKind === 'modified'), true);
-assert.equal(jsChangeSet.changedSymbols.some((symbol) => symbol.name === 'TODO_LIMIT' && symbol.changeKind === 'added'), true);
+assert.equal(jsChangeSet.changedSymbols.some((symbol) => symbol.name === 'TODO_LIMIT' && symbol.kind === 'variable' && symbol.changeKind === 'added'), true);
+assert.equal(jsChangeSet.changedSymbols.some((symbol) => symbol.name === 'TODO_LIMIT' && symbol.kind === 'export' && symbol.changeKind === 'added'), true);
 assert.equal(jsChangeSet.changedRegions.length >= 2, true);
 assert.equal(jsChangeSet.patch.operations.some((operation) => operation.op === 'upsertNode'), true);
 assert.equal(jsChangeSet.patch.operations.some((operation) => operation.op === 'addEvidence'), true);

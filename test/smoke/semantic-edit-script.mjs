@@ -11,10 +11,12 @@ const candidateOnly = createSemanticEditScript({
   generatedAt: 10
 });
 assert.equal(candidateOnly.kind, 'frontier.lang.semanticEditScript');
-assert.equal(candidateOnly.summary.operations, 1);
-assert.equal(candidateOnly.summary.candidates, 1);
+assert.equal(candidateOnly.summary.operations, 2);
+assert.equal(candidateOnly.summary.candidates, 2);
 assert.equal(candidateOnly.admission.status, 'needs-port');
 assert.equal(candidateOnly.operations[0].status, 'candidate');
+assert.equal(candidateOnly.operations[1].anchor.regionKind, 'export');
+assert.equal(candidateOnly.operations[1].status, 'candidate');
 assert.equal(candidateOnly.admission.autoMergeClaim, false);
 assert.equal(candidateOnly.admission.semanticEquivalenceClaim, false);
 const cleanHead = createSemanticEditScript({
@@ -28,15 +30,16 @@ const cleanHead = createSemanticEditScript({
 });
 assert.equal(cleanHead.admission.status, 'auto-merge-candidate');
 assert.equal(cleanHead.admission.autoApplyCandidate, true);
-assert.equal(cleanHead.summary.autoMergeCandidates, 1);
+assert.equal(cleanHead.summary.autoMergeCandidates, 2);
 assert.equal(cleanHead.operations[0].status, 'portable');
 assert.equal(cleanHead.operations[0].reasonCodes.includes('head-source-matches-base'), true);
 assert.equal(cleanHead.operations[0].semanticKey, 'semantic-edit:replaceBody:modified:function:step');
+assert.equal(cleanHead.operations[1].semanticKey, 'semantic-edit:replaceRegion:modified:export:step');
 assert.ok(cleanHead.operations[0].semanticIdentityHash);
 assert.ok(cleanHead.operations[0].sourceIdentityHash);
 assert.ok(cleanHead.operations[0].operationContentHash);
-assert.deepEqual(cleanHead.summary.semanticKeys, [cleanHead.operations[0].semanticKey]);
-assert.deepEqual(cleanHead.summary.operationContentHashes, [cleanHead.operations[0].operationContentHash]);
+assert.deepEqual(cleanHead.summary.semanticKeys, cleanHead.operations.map((operation) => operation.semanticKey));
+assert.deepEqual(cleanHead.summary.operationContentHashes, cleanHead.operations.map((operation) => operation.operationContentHash));
 assert.ok(cleanHead.operations[0].spans.worker);
 assert.ok(cleanHead.operations[0].hashes.headTextHash);
 const cleanProjection = projectSemanticEditScriptToSource({
@@ -49,6 +52,7 @@ assert.equal(cleanProjection.kind, 'frontier.lang.semanticEditProjection');
 assert.equal(cleanProjection.status, 'projected');
 assert.equal(cleanProjection.sourceText, workerSource);
 assert.deepEqual(cleanProjection.appliedOperations, [cleanHead.operations[0].id]);
+assert.deepEqual(cleanProjection.skippedOperations, [cleanHead.operations[1].id]);
 assert.equal(cleanProjection.edits.length, 1);
 assert.equal(cleanProjection.edits[0].operationId, cleanHead.operations[0].id);
 assert.equal(cleanProjection.edits[0].status, 'applied');
@@ -241,8 +245,10 @@ const conflictingHead = createSemanticEditScript({
   generatedAt: 30
 });
 assert.equal(conflictingHead.admission.status, 'conflict');
-assert.equal(conflictingHead.summary.conflicts, 1);
+assert.equal(conflictingHead.summary.conflicts, 2);
 assert.equal(conflictingHead.operations[0].reasonCodes.includes('head-anchor-changed-since-base'), true);
+assert.equal(conflictingHead.operations[1].anchor.regionKind, 'export');
+assert.equal(conflictingHead.operations[1].reasonCodes.includes('head-anchor-changed-since-base'), true);
 const blockedProjection = projectSemanticEditScriptToSource({
   script: conflictingHead,
   workerSourceText: workerSource,
@@ -262,10 +268,12 @@ const movedHead = createSemanticEditScript({
   generatedAt: 40
 });
 assert.equal(movedHead.admission.status, 'auto-merge-candidate');
-assert.equal(movedHead.summary.portable, 1);
+assert.equal(movedHead.summary.portable, 2);
 assert.equal(movedHead.operations[0].reanchor.toAnchorKey.includes('src/runtime-core.ts'), true);
 assert.equal(movedHead.operations[0].reanchor.toSourcePath, 'src/runtime-core.ts');
 assert.equal(movedHead.operations[0].reasonCodes.includes('anchor-reanchored-head-matches-base'), true);
+assert.equal(movedHead.operations[1].reanchor.toAnchorKey.includes('src/runtime-core.ts'), true);
+assert.equal(movedHead.operations[1].anchor.regionKind, 'export');
 const movedProjection = projectSemanticEditScriptToSource({
   id: 'semantic_edit_moved_projection',
   script: movedHead,

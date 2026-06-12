@@ -10,7 +10,7 @@ import {
   jsCommentOnlyLine,
   jsContainerDelta,
   jsDeclarationScanLine,
-  jsExportAliasDeclaration,
+  jsExportAliasDeclaration, jsExportDeclarations,
   jsExportedContainerDeclaration,
   jsExportedFunctionWrapperDeclaration,
   jsInitializerKind,
@@ -172,6 +172,7 @@ function scanJavaScriptLike(input) {
         valueType: match[2]?.trim()
       }, false, { regionKind: 'property' }));
     }
+    pushDeclarations(jsExportDeclarations(input, number, trimmed));
     if (currentClass) {
       classDepth += braceDelta(trimmed);
       if (classDepth <= 0) {

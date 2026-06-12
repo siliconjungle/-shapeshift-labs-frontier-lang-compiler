@@ -3,7 +3,7 @@ import {
   nativeDeclaration,
   splitParameters
 } from './native-region-scanner-core.js';
-import { jsImportDeclarations } from './native-region-scanner-js-imports.js';
+import { jsExportDeclarations, jsImportDeclarations } from './native-region-scanner-js-imports.js';
 function jsCommentOnlyLine(trimmed) {
   return trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*');
 }
@@ -316,5 +316,5 @@ function findUnescapedBacktick(text, startIndex) {
 
 export { jsCommentOnlyLine, jsContainerDelta, jsDeclarationScanLine };
 export { jsExportAliasDeclaration, jsExportedContainerDeclaration, jsExportedFunctionWrapperDeclaration };
-export { jsInitializerKind, jsImportDeclarations, jsObjectPropertyDeclaration, jsObjectRegionContext };
+export { jsExportDeclarations, jsInitializerKind, jsImportDeclarations, jsObjectPropertyDeclaration, jsObjectRegionContext };
 export { jsRegionKindForDeclarationName, jsRouteRecordDeclaration, jsVariableHasBody, jsVariableSymbolKind };

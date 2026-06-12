@@ -93,8 +93,14 @@ const focusedAutoMergeProof = {
     replayStatus: nonOverlapping.replay.status
   }
 };
-assert.deepEqual(workerConflictKeys, ['region:source#src/non-overlapping.js#body#portable']);
-assert.deepEqual(headConflictKeys, ['region:source#src/non-overlapping.js#body#untouched']);
+assert.deepEqual(workerConflictKeys, [
+  'region:source#src/non-overlapping.js#body#portable',
+  'region:source#src/non-overlapping.js#export#portable'
+]);
+assert.deepEqual(headConflictKeys, [
+  'region:source#src/non-overlapping.js#body#untouched',
+  'region:source#src/non-overlapping.js#export#untouched'
+]);
 assert.deepEqual(workerConflictKeys.filter((key) => headConflictKeys.includes(key)), []);
 assert.equal(nonOverlappingWorkerEdit.status, 'portable');
 assert.equal(nonOverlappingWorkerEdit.readiness, 'ready');
@@ -163,8 +169,10 @@ const sameAnchorConflict = semanticEditFlow({
 });
 assert.equal(sameAnchorConflict.script.admission.status, 'conflict');
 assert.equal(sameAnchorConflict.script.admission.autoApplyCandidate, false);
-assert.equal(sameAnchorConflict.script.summary.conflicts, 1);
+assert.equal(sameAnchorConflict.script.summary.conflicts, 2);
 assert.equal(sameAnchorConflict.script.operations[0].reasonCodes.includes('head-anchor-changed-since-base'), true);
+assert.equal(sameAnchorConflict.script.operations[1].anchor.regionKind, 'export');
+assert.equal(sameAnchorConflict.script.operations[1].reasonCodes.includes('head-anchor-changed-since-base'), true);
 const sameAnchorConflictAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [sameAnchorConflict.script],
   evidence: [focusedAutoMergeProof]

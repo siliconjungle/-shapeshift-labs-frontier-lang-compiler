@@ -8,7 +8,7 @@ function nativeDeclaration(input, lineNumber, languageKind, symbolKind, name, fi
     languageKind: `${input.language}.${languageKind}`,
     name,
     symbolKind,
-    symbolId: `symbol:${input.language}:${idFragment(name)}`,
+    symbolId: options.symbolId ?? `symbol:${input.language}:${idFragment(name)}`,
     span: options.span ?? spanForLine(input, lineNumber),
     fields,
     metadata: { scan: 'lightweight-declaration', hasBody, ...options.metadata },
@@ -62,6 +62,20 @@ function nativeImportBindingDeclaration(input, lineNumber, importPath, binding, 
       ...(binding.typeOnly ? { typeOnly: true } : {}),
       ...options.metadata
     }
+  });
+}
+
+function nativeExportDeclaration(input, lineNumber, exportedName, languageKind = 'ExportDeclaration', fields = {}, options = {}) {
+  const name = String(options.name ?? exportedName ?? 'default');
+  return nativeDeclaration(input, lineNumber, languageKind, options.symbolKind ?? 'export', name, {
+    exportedName: String(exportedName ?? name),
+    ...fields
+  }, false, {
+    role: options.role ?? 'export',
+    regionKind: options.regionKind ?? 'export',
+    span: options.span,
+    symbolId: options.symbolId ?? `symbol:${input.language}:export:${idFragment(name)}`,
+    metadata: { scan: 'lightweight-export', ...options.metadata }
   });
 }
 
@@ -202,6 +216,7 @@ export {
   jsControlKeyword,
   lightweightCoverageLosses,
   nativeDeclaration,
+  nativeExportDeclaration,
   nativeImportDeclaration,
   nativeImportBindingDeclaration,
   nativeMacroLoss,

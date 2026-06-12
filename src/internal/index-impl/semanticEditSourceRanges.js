@@ -7,6 +7,9 @@ export function projectionCoveredContainerOperationIds(operations, workerSourceT
     if (!isProjectionCoverableContainer(operation)) continue;
     if (workerContainerCoveredByInsertedChildren(operation, operations, workerSourceText)) result.add(operation.id);
   }
+  for (const operation of operations ?? []) {
+    if (exportOperationCoveredByBody(operation, operations, workerSourceText)) result.add(operation.id);
+  }
   return result;
 }
 
@@ -109,6 +112,27 @@ function workerContainerCoveredByInsertedChildren(container, operations, workerS
     .sort((left, right) => right.start - left.start || right.end - left.end)
     .reduce((text, range) => text.slice(0, range.start - containerWorker.start) + text.slice(range.end - containerWorker.start), workerSourceText.slice(containerWorker.start, containerWorker.end));
   return hashSemanticValue(stripped) === container.hashes.baseTextHash;
+}
+
+function exportOperationCoveredByBody(operation, operations, workerSourceText) {
+  if (operation.anchor?.regionKind !== 'export') return false;
+  if (!['added', 'modified'].includes(operation.changeKind)) return false;
+  const exportRange = spanOffsets(workerSourceText, operation.spans?.worker);
+  if (!exportRange) return false;
+  return (operations ?? []).some((candidate) => (
+    candidate.id !== operation.id
+    && ['portable', 'already-applied'].includes(candidate.status)
+    && candidate.anchor?.regionKind === 'body'
+    && candidate.anchor?.symbolName === operation.anchor?.symbolName
+    && sameOperationSourcePath(candidate, operation)
+    && containedRange(exportRange, spanOffsets(workerSourceText, candidate.spans?.worker))
+  ));
+}
+
+function sameOperationSourcePath(left, right) {
+  const leftPath = left.anchor?.sourcePath ?? left.insertion?.sourcePath;
+  const rightPath = right.anchor?.sourcePath ?? right.insertion?.sourcePath;
+  return !leftPath || !rightPath || leftPath === rightPath;
 }
 
 function containedRange(inner, outer) {

@@ -8,7 +8,7 @@ import { resolveSemanticLineage } from './semanticLineageResolutionRecords.js';
 
 export function matchTargetRegion(context) {
   const explicit = explicitMappingForRegion(context.region, context.mappings);
-  const mapped = explicit ? { anchors: sourceAnchorsForMapping(explicit, context.sourceAnchors), links: [] }
+  const mapped = explicit ? { anchors: sourceAnchorsForMapping(explicit, context.sourceAnchors, context.region), links: [] }
     : sourceMapAnchorsForRegion(context.region, context.sourceMaps, context.sourceAnchors);
   const candidateAnchors = mapped.anchors.length ? mapped.anchors : sourceAnchorsByName(context.region, context.sourceAnchors);
   const resolvedAnchors = candidateAnchors.flatMap((anchor) => resolveAnchor(anchor, context.lineage));
@@ -222,19 +222,29 @@ function explicitMappingForRegion(region, mappings) {
   });
 }
 
-function sourceAnchorsForMapping(mapping, sourceAnchors) {
+function sourceAnchorsForMapping(mapping, sourceAnchors, region) {
   const keys = uniqueStrings([mapping.sourceAnchorKey, mapping.sourceRegionKey, mapping.sourceConflictKey, mapping.sourceKey]);
   const matches = sourceAnchors.filter((anchor) => keys.includes(anchor.key) || keys.includes(anchor.id));
   if (matches.length) return matches;
-  if (mapping.sourceSymbolName) return sourceAnchors.filter((anchor) => anchor.symbolName === mapping.sourceSymbolName);
-  if (mapping.sourceSymbolId) return sourceAnchors.filter((anchor) => anchor.symbolId === mapping.sourceSymbolId);
+  const compatible = sourceAnchors.filter((anchor) => sourceAnchorCompatibleWithRegion(anchor, region));
+  if (mapping.sourceSymbolName) return compatible.filter((anchor) => anchor.symbolName === mapping.sourceSymbolName);
+  if (mapping.sourceSymbolId) return compatible.filter((anchor) => anchor.symbolId === mapping.sourceSymbolId);
   return [];
 }
 
 function sourceAnchorsByName(region, sourceAnchors) {
   const names = namesForRegion(region);
   if (names.length === 0) return [];
-  return sourceAnchors.filter((anchor) => names.includes(anchor.symbolName));
+  return sourceAnchors
+    .filter((anchor) => sourceAnchorCompatibleWithRegion(anchor, region))
+    .filter((anchor) => names.includes(anchor.symbolName));
+}
+
+function sourceAnchorCompatibleWithRegion(anchor, region) {
+  const sourceKind = String(anchor?.kind ?? '').toLowerCase();
+  const targetKind = String(region?.regionKind ?? '').toLowerCase();
+  if (sourceKind !== 'export') return true;
+  return targetKind === 'export' || targetKind === 'module';
 }
 
 function namesForRegion(region) {

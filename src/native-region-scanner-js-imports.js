@@ -1,7 +1,9 @@
 import {
+  nativeExportDeclaration,
   nativeImportBindingDeclaration,
   nativeImportDeclaration
 } from './native-region-scanner-core.js';
+import { idFragment } from './native-import-utils.js';
 
 export function jsImportDeclarations(input, lineNumber, trimmed) {
   const importEquals = trimmed.match(/^import\s+(type\s+)?([A-Za-z_$][\w$]*)\s*=\s*require\s*\(\s*(['"])([^'"]+)\3\s*\)/);
@@ -28,7 +30,10 @@ export function jsImportDeclarations(input, lineNumber, trimmed) {
       : exportMatch[4]
         ? jsNamedImportBindings(exportMatch[4], { typeOnly, reexport: true })
         : [];
-    return jsImportModuleDeclarations(input, lineNumber, importPath, 'ExportFromDeclaration', bindings, { typeOnly, reexport: true, exportStar: Boolean(exportMatch[2]) });
+    return [
+      ...jsImportModuleDeclarations(input, lineNumber, importPath, 'ExportFromDeclaration', bindings, { typeOnly, reexport: true, exportStar: Boolean(exportMatch[2]) }),
+      ...jsExportModuleDeclarations(input, lineNumber, importPath, bindings, { typeOnly, exportStar: Boolean(exportMatch[2]) })
+    ];
   }
   const destructuredRequireMatch = trimmed.match(/^(?:const|let|var)\s+\{([^}]+)\}\s*=\s*(?:await\s+)?(require|import)\s*\(\s*(['"])([^'"]+)\3\s*\)/);
   if (destructuredRequireMatch) {
@@ -52,6 +57,34 @@ export function jsImportDeclarations(input, lineNumber, trimmed) {
     });
   }
   return [];
+}
+
+export function jsExportDeclarations(input, lineNumber, trimmed) {
+  if (/^export\s+(?:type\s+)?(?:\*|\{[^}]+\}\s+from\b)/.test(trimmed)) return [];
+  const named = trimmed.match(/^export\s+(type\s+)?\{([^}]+)\}\s*;?$/);
+  if (named) return jsLocalExportDeclarations(input, lineNumber, named[2], { typeOnly: Boolean(named[1]) });
+  const namespace = trimmed.match(/^export\s+as\s+namespace\s+([A-Za-z_$][\w$]*)\s*;?$/);
+  if (namespace) return [nativeExportDeclaration(input, lineNumber, namespace[1], 'ExportNamespaceDeclaration', {
+    exportKind: 'namespace'
+  })];
+  const assignment = trimmed.match(/^export\s*=\s*([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*;?$/);
+  if (assignment) return [nativeExportDeclaration(input, lineNumber, 'module.exports', 'ExportAssignment', {
+    exportKind: 'assignment',
+    localName: assignment[1]
+  }, { name: 'module.exports' })];
+  if (!trimmed.startsWith('export ')) return [];
+  const defaultMatch = trimmed.match(/^export\s+default\s+(.+)$/);
+  if (defaultMatch) return [nativeExportDeclaration(input, lineNumber, 'default', 'ExportDefaultDeclaration', {
+    exportDefault: true,
+    localName: jsExportedDeclarationName(defaultMatch[1])
+  }, { name: 'default' })];
+  const declarationSource = trimmed.replace(/^export\s+(?:declare\s+)?/, '');
+  if (!jsExportedDeclarationLooksComplete(declarationSource)) return [];
+  const exportedName = jsExportedDeclarationName(declarationSource);
+  if (!exportedName) return [];
+  return [nativeExportDeclaration(input, lineNumber, exportedName, 'ExportNamedDeclaration', {
+    declarationKind: jsExportedDeclarationKind(declarationSource)
+  })];
 }
 
 function jsDestructuredImportBindings(raw, importKind) {
@@ -100,6 +133,47 @@ function jsImportModuleDeclarations(input, lineNumber, importPath, languageKind,
   ];
 }
 
+function jsExportModuleDeclarations(input, lineNumber, importPath, bindings = [], metadata = {}) {
+  const exports = bindings.map((binding) => ({
+    localName: binding.importedName,
+    exportedName: binding.exportedName ?? binding.localName,
+    exportKind: binding.importKind,
+    ...(binding.typeOnly ? { typeOnly: true } : {})
+  }));
+  const statementName = metadata.exportStar
+    ? `* from ${importPath}`
+    : exports.length
+      ? `{${exports.map((binding) => binding.exportedName).join(',')}} from ${importPath}`
+      : `from ${importPath}`;
+  return [
+    nativeExportDeclaration(input, lineNumber, statementName, 'ExportFromDeclaration', {
+      importPath: String(importPath),
+      exportBindings: exports,
+      ...(metadata.typeOnly ? { typeOnly: true } : {}),
+      ...(metadata.exportStar ? { exportStar: true } : {})
+    }, { symbolKind: 'module', metadata }),
+    ...exports.map((binding) => nativeExportDeclaration(input, lineNumber, binding.exportedName, 'ExportBinding', {
+      ...binding,
+      importPath: String(importPath)
+    }, { metadata: { ...binding, importPath: String(importPath) } }))
+  ];
+}
+
+function jsLocalExportDeclarations(input, lineNumber, raw, options = {}) {
+  const bindings = jsNamedExportBindings(raw, options);
+  if (!bindings.length) return [];
+  return [
+    nativeExportDeclaration(input, lineNumber, `{${bindings.map((binding) => binding.exportedName).join(',')}}`, 'ExportNamedDeclaration', {
+      exportBindings: bindings,
+      ...(options.typeOnly ? { typeOnly: true } : {})
+    }, {
+      symbolId: `symbol:${input.language}:export:statement:${idFragment(bindings.map((binding) => binding.exportedName).join('_'))}`,
+      metadata: { bindingCount: bindings.length, ...(options.typeOnly ? { typeOnly: true } : {}) }
+    }),
+    ...bindings.map((binding) => nativeExportDeclaration(input, lineNumber, binding.exportedName, 'ExportBinding', binding, { metadata: binding }))
+  ];
+}
+
 function jsImportBindingsFromClause(clause, options = {}) {
   const source = String(clause ?? '').trim();
   if (!source) return [];
@@ -141,4 +215,50 @@ function jsNamedImportBinding(raw, options = {}) {
     importKind: options.reexport ? 'reexport' : typeOnly ? 'type-named' : 'named',
     typeOnly
   };
+}
+
+function jsNamedExportBindings(raw, options = {}) {
+  return String(raw ?? '').split(',').map((part) => jsNamedExportBinding(part, options)).filter(Boolean);
+}
+
+function jsNamedExportBinding(raw, options = {}) {
+  let text = String(raw ?? '').trim();
+  if (!text) return undefined;
+  let typeOnly = Boolean(options.typeOnly);
+  if (text.startsWith('type ')) {
+    typeOnly = true;
+    text = text.slice(5).trim();
+  }
+  const match = text.match(/^([A-Za-z_$][\w$]*|\*)\s*(?:as\s+([A-Za-z_$][\w$]*|\*))?$/);
+  if (!match) return undefined;
+  const localName = match[1];
+  return { localName, exportedName: match[2] ?? localName, exportKind: typeOnly ? 'type-named' : 'named', typeOnly };
+}
+
+function jsExportedDeclarationName(source) {
+  const text = String(source ?? '').trim();
+  return text.match(/^(?:async\s+)?function\*?\s+([A-Za-z_$][\w$]*)/)?.[1]
+    ?? text.match(/^(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/)?.[1]
+    ?? text.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)/)?.[1]
+    ?? text.match(/^type\s+([A-Za-z_$][\w$]*)/)?.[1]
+    ?? text.match(/^interface\s+([A-Za-z_$][\w$]*)/)?.[1]
+    ?? text.match(/^(?:const\s+)?enum\s+([A-Za-z_$][\w$]*)/)?.[1]
+    ?? text.match(/^([A-Za-z_$][\w$]*)\b/)?.[1]
+    ?? 'default';
+}
+
+function jsExportedDeclarationKind(source) {
+  const text = String(source ?? '').trim();
+  if (/^(?:async\s+)?function/.test(text)) return 'function';
+  if (/^(?:abstract\s+)?class/.test(text)) return 'class';
+  if (/^interface\b|^type\b|^(?:const\s+)?enum\b/.test(text)) return 'type';
+  if (/^(?:const|let|var)\b/.test(text)) return 'variable';
+  return 'value';
+}
+
+function jsExportedDeclarationLooksComplete(source) {
+  const text = String(source ?? '').trim();
+  if (/^(?:async\s+)?function/.test(text)) return text.includes(')') && /[;{]/.test(text);
+  if (/^(?:abstract\s+)?class/.test(text)) return text.includes('{') || text.endsWith(';');
+  return true;
 }
