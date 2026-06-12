@@ -4,18 +4,64 @@ export function explicitSourceReplacementReplayRange(edit, symbolRange, sourceTe
   }
   const deleted = uniqueTextRange(sourceText, symbolRange, edit.deletedText, 'deleted-text');
   if (deleted) return deleted;
+  const replacement = uniqueTextRange(sourceText, symbolRange, edit.replacementText, 'replacement-text');
+  if (replacement) return replacement;
   return relativeAnchorRange(edit, symbolRange);
 }
 
 function uniqueTextRange(sourceText, symbolRange, needle, label) {
   if (typeof needle !== 'string' || needle.length === 0) return undefined;
   const symbolText = sourceText.slice(symbolRange.start, symbolRange.end);
-  const first = symbolText.indexOf(needle);
-  if (first < 0 || symbolText.indexOf(needle, first + 1) >= 0) return undefined;
+  const matches = [];
+  for (let index = symbolText.indexOf(needle); index >= 0; index = symbolText.indexOf(needle, index + 1)) {
+    const start = symbolRange.start + index;
+    if (isCodeOffset(sourceText, start)) matches.push(start);
+  }
+  if (matches.length !== 1) return undefined;
+  const first = matches[0] - symbolRange.start;
   return {
     range: { start: symbolRange.start + first, end: symbolRange.start + first + needle.length },
     reasonCode: `current-symbol-explicit-source-replacement-${label}`
   };
+}
+
+function isCodeOffset(sourceText, offset) {
+  let state = 'code';
+  for (let index = 0; index < offset; index += 1) {
+    const char = sourceText[index];
+    const next = sourceText[index + 1];
+    if (state === 'line-comment') {
+      if (char === '\n' || char === '\r') state = 'code';
+      continue;
+    }
+    if (state === 'block-comment') {
+      if (char === '*' && next === '/') {
+        index += 1;
+        state = 'code';
+      }
+      continue;
+    }
+    if (state === 'single' || state === 'double' || state === 'template') {
+      if (char === '\\') {
+        index += 1;
+        continue;
+      }
+      if ((state === 'single' && char === "'") || (state === 'double' && char === '"') || (state === 'template' && char === '`')) state = 'code';
+      continue;
+    }
+    if (char === '/' && next === '/') {
+      index += 1;
+      state = 'line-comment';
+    } else if (char === '#') {
+      state = 'line-comment';
+    } else if (char === '/' && next === '*') {
+      index += 1;
+      state = 'block-comment';
+    } else if (char === "'") state = 'single';
+    else if (char === '"') state = 'double';
+    else if (char === '`') state = 'template';
+  }
+  return state === 'code';
 }
 
 function relativeAnchorRange(edit, symbolRange) {

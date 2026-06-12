@@ -168,6 +168,16 @@ assert.equal(shiftedSignatureReplay.status, 'accepted-clean');
 assert.equal(shiftedSignatureReplay.outputSourceText, shiftedSignatureSource.replace('count + 1', 'count + 2'));
 assert.equal(shiftedSignatureReplay.edits[0].reasonCodes.includes('current-symbol-explicit-source-replacement-deleted-text'), true);
 
+const shiftedSignatureAlreadyAppliedSource = 'export function add(count: number, step = 1): number { return count + 2; }\n';
+const shiftedSignatureAlreadyAppliedReplay = replaySemanticEditProjection({
+  id: 'counter_ts_to_rust_shifted_signature_already_applied_replay',
+  projection: exactRecord.sourceEditProjection,
+  currentSourceText: shiftedSignatureAlreadyAppliedSource
+});
+assert.equal(shiftedSignatureAlreadyAppliedReplay.status, 'already-applied');
+assert.equal(shiftedSignatureAlreadyAppliedReplay.outputSourceText, shiftedSignatureAlreadyAppliedSource);
+assert.equal(shiftedSignatureAlreadyAppliedReplay.edits[0].reasonCodes.includes('current-symbol-explicit-source-replacement-replacement-text'), true);
+
 const replacementElsewhereSource = 'export function add(count: number): number { const marker = "count + 2"; return count + 3; }\n';
 const replacementElsewhereReplay = replaySemanticEditProjection({
   id: 'counter_ts_to_rust_replacement_elsewhere_replay',
