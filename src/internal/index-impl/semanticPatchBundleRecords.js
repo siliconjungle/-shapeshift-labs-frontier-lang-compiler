@@ -2,6 +2,8 @@ import{idFragment,normalizeSemanticMergeReadiness,uniqueStrings}from'../../nativ
 import{createSemanticEditBundleAdmission}from'./semanticEditBundleAdmission.js';
 import{createSemanticPatchBundleAdmission}from'./semanticPatchBundleAdmission.js';
 import{semanticEditRecordIndex,semanticEditSummary}from'./semanticEditBundleIndex.js';
+import{lineageLinkInputs,linkAdmissionLineage,normalizeLineageResolutionLinks,semanticLineageLinkIndex}from'./semanticPatchBundleLineageLinks.js';
+import{normalizeRegions,normalizeSourceMapLinks,normalizeSources,sourceRef}from'./semanticPatchBundleSourceRecords.js';
 import{normalizeSemanticTransformIdentityRecords,semanticTransformInputs,semanticTransformRecordIndex,semanticTransformSummary}from'./semanticTransformIdentityRecords.js';
 
 export const SemanticPatchBundleAdmissionStatuses=Object.freeze(['proposed','queued','admitted','needs-review','blocked','rejected']);
@@ -13,8 +15,10 @@ export function createSemanticPatchBundleRecord(input={},options={}){
   const semanticEditScripts=array(options.semanticEditScripts??source.semanticEditScripts??source.semanticEditScript);
   const semanticEditProjections=array(options.semanticEditProjections??source.semanticEditProjections??source.semanticEditProjection);
   const semanticEditReplays=array(options.semanticEditReplays??source.semanticEditReplays??source.semanticEditReplay);
+  const evidenceRecords=[...array(options.evidence??source.evidence),...array(patch?.evidence),...array(mergeCandidate?.evidence),...semanticEditScripts.flatMap((script)=>array(script.evidence))];
   const editAdmission=createSemanticEditBundleAdmission({
     semanticEditScripts,semanticEditProjections,semanticEditReplays,
+    evidence:evidenceRecords,
     ...(source.metadata?.semanticEditAdmission??{}),
     ...(source.semanticEditAdmission??{}),
     ...(options.semanticEditAdmission??{})
@@ -35,15 +39,16 @@ export function createSemanticPatchBundleRecord(input={},options={}){
     sourceRef(source.before,'before',source.beforeHash),
     sourceRef(source.after,'after',source.afterHash)
   ],source);
-  const evidenceRecords=[...array(options.evidence??source.evidence),...array(patch?.evidence),...array(mergeCandidate?.evidence),...semanticEditScripts.flatMap((script)=>array(script.evidence))];
   const patchId=firstString(options.patchId,source.patchId,patch?.id,mergeCandidate?.patchId);
   const mergeCandidateId=firstString(options.mergeCandidateId,source.mergeCandidateId,mergeCandidate?.id);
   const baseHash=firstString(options.baseHash,source.baseHash,source.beforeHash,patch?.baseHash,mergeCandidate?.baseHash,...sources.map((item)=>item.baseHash));
   const targetHash=firstString(options.targetHash,source.targetHash,source.afterHash,patch?.targetHash,mergeCandidate?.targetHash,...sources.map((item)=>item.targetHash));
   const readiness=normalizeSemanticMergeReadiness(firstString(options.readiness,source.readiness,source.admission?.readiness,mergeCandidate?.readiness))
     ?? firstString(options.readiness,source.readiness,source.admission?.readiness,mergeCandidate?.readiness,'needs-review');
-  const evidenceIds=uniqueStrings([...strings(options.evidenceIds),...strings(source.evidenceIds),...evidenceRecords.map((record)=>record?.id),...strings(mergeCandidate?.evidenceIds)]);
-  const proofIds=uniqueStrings([...strings(options.proofIds),...strings(source.proofIds),...evidenceRecords.filter((record)=>record?.kind==='proof').map((record)=>record.id),...strings(mergeCandidate?.proofIds)]);
+  const lineageLinks=normalizeLineageResolutionLinks(lineageLinkInputs(source,options,changedRegions,targetPortability));
+  const lineageIndex=semanticLineageLinkIndex(lineageLinks,changedRegions,targetPortability);
+  const evidenceIds=uniqueStrings([...strings(options.evidenceIds),...strings(source.evidenceIds),...evidenceRecords.map((record)=>record?.id),...strings(mergeCandidate?.evidenceIds),...lineageIndex.evidenceIds]);
+  const proofIds=uniqueStrings([...strings(options.proofIds),...strings(source.proofIds),...evidenceRecords.filter((record)=>record?.kind==='proof').map((record)=>record.id),...strings(mergeCandidate?.proofIds),...lineageIndex.proofIds]);
   const historyIds=uniqueStrings([...strings(options.historyIds),...strings(options.historyId),...strings(source.historyIds),...strings(source.historyId)]);
   const semanticOperationIds=uniqueStrings([...strings(options.semanticOperationIds),...strings(options.semanticOperationId),...strings(source.semanticOperationIds),...strings(source.semanticOperationId),...strings(patch?.semanticOperationIds),...strings(mergeCandidate?.semanticOperationIds),...editIndex.semanticEditOperationIds]);
   const conflictKeys=uniqueStrings([
@@ -53,12 +58,12 @@ export function createSemanticPatchBundleRecord(input={},options={}){
     ...changedRegions.flatMap((region)=>[region.conflictKey,...array(region.admission?.conflictKeys)]),
     ...(source.metadata?.semanticMergeConflictSummary?.conflictKeys??[])
   ]);
-  const admission=createSemanticPatchBundleAdmission(options.admission??source.admission,{readiness,conflictKeys,source,mergeCandidate,semanticTransformIndex,semanticTransformIdentities,semanticEditAdmission:editAdmission});
+  const admission=linkAdmissionLineage(createSemanticPatchBundleAdmission(options.admission??source.admission,{readiness,conflictKeys,source,mergeCandidate,evidenceRecords,semanticTransformIndex,semanticTransformIdentities,semanticEditAdmission:editAdmission}),lineageLinks);
   const id=options.id??(source.kind==='frontier.lang.semanticPatchBundleRecord'?source.id:undefined)
     ??`semantic_patch_bundle_${idFragment(firstString(source.id,patchId,mergeCandidateId,source.sourcePath,source.language,'record'))}`;
   const language=options.language??source.language??mergeCandidate?.language??sources.find((item)=>item.language)?.language;
   const sourcePath=options.sourcePath??source.sourcePath??mergeCandidate?.sourcePath??sources.find((item)=>item.sourcePath)?.sourcePath;
-  const index=recordIndex({baseHash,targetHash,sources,changedRegions,sourceMapLinks,evidenceIds,proofIds,historyIds,semanticOperationIds,patchId,mergeCandidateId,admission,semanticEditAdmission:editAdmission,semanticEditIndex:editIndex,semanticTransformIndex,targetPortability});
+  const index=recordIndex({baseHash,targetHash,sources,changedRegions,sourceMapLinks,evidenceIds,proofIds,historyIds,semanticOperationIds,patchId,mergeCandidateId,admission,semanticEditAdmission:editAdmission,semanticEditIndex:editIndex,semanticTransformIndex,targetPortability,lineageLinks});
   return{
     kind:'frontier.lang.semanticPatchBundleRecord',
     version:1,
@@ -95,6 +100,7 @@ export function createSemanticPatchBundleRecord(input={},options={}){
       semanticEditAdmission:editAdmission,
       semanticTransformSummary:semanticTransformSummary(semanticTransformIndex),
       targetPortability,
+      semanticLineageResolutionLinks:lineageLinks,
       ...options.metadata
     })
   };
@@ -104,118 +110,30 @@ export function querySemanticPatchBundleRecords(records,query={}){
   return array(records).filter(Boolean).filter((record)=>matchesRecord(record,query)).sort((left,right)=>String(left.id).localeCompare(String(right.id)));
 }
 
-function normalizeSources(entries,context){
-  return entries.filter(Boolean).map((entry,index)=>compactRecord({
-    id:entry.id??entry.sourceId,
-    side:entry.side,
-    importId:entry.importId??entry.importResultId,
-    language:entry.language??context.language,
-    sourcePath:entry.sourcePath??context.sourcePath,
-    sourceHash:entry.sourceHash??entry.hash,
-    baseHash:entry.baseHash??entry.beforeHash??context.baseHash??context.beforeHash,
-    targetHash:entry.targetHash??entry.afterHash??context.targetHash??context.afterHash,
-    nativeSourceId:entry.nativeSourceId,
-    nativeAstId:entry.nativeAstId,
-    semanticIndexId:entry.semanticIndexId,
-    universalAstId:entry.universalAstId,
-    sourceMapIds:uniqueStrings(entry.sourceMapIds),
-    ordinal:index
-  })).filter((entry)=>entry.importId||entry.sourcePath||entry.sourceHash||entry.baseHash||entry.targetHash);
-}
-
-function sourceRef(importResult,side,sourceHash){
-  if(!importResult)return undefined;
-  return compactRecord({
-    id:`${side}_${importResult.id??idFragment(importResult.sourcePath??'source')}`,side,importId:importResult.id,
-    language:importResult.language,
-    sourcePath:importResult.sourcePath,
-    sourceHash:sourceHash??importResult.nativeSource?.sourceHash??importResult.nativeAst?.sourceHash??importResult.sourceHash,
-    nativeSourceId:importResult.nativeSource?.id,
-    nativeAstId:importResult.nativeAst?.id,
-    semanticIndexId:importResult.semanticIndex?.id,
-    universalAstId:importResult.universalAst?.id,
-    sourceMapIds:uniqueStrings((importResult.sourceMaps??[]).map((map)=>map.id))
-  });
-}
-
-function normalizeRegions(regions,context){
-  return regions.filter(Boolean).map((region,index)=>{
-    const projection=region.metadata?.changedRegionProjection??region.projection;
-    const projected=projection?.region??{};
-    const key=firstString(region.key,region.ownershipKey,projected.key,region.conflictKey,region.id);
-    const conflictKey=firstString(region.conflictKey,projection?.conflictKey,key);
-    const links=array(projection?.sourceMapLinks??region.sourceMapLinks);
-    return compactRecord({
-      id:region.id??projected.id??`changed_region_${index+1}`,
-      key,
-      conflictKey,
-      changeKind:region.changeKind??projection?.changeKind,
-      regionKind:region.regionKind??region.ownershipRegionKind??projected.kind,
-      granularity:region.granularity??projected.granularity,
-      precision:region.precision??projected.precision,
-      language:region.language??projection?.language??context.language,
-      sourcePath:region.sourcePath??projection?.sourcePath??context.sourcePath,
-      sourceHash:region.sourceHash??projection?.after?.sourceHash??projection?.before?.sourceHash,
-      symbolId:region.symbolId??projected.symbolId,
-      symbolName:region.symbolName??region.name??projected.symbolName,
-      symbolKind:region.symbolKind??projected.symbolKind,
-      sourceSpan:region.sourceSpan??projected.sourceSpan,
-      sourceMapLinkIds:uniqueStrings([...strings(region.sourceMapLinkIds),...links.map((link)=>link.id)]),
-      sourceMapIds:uniqueStrings([...strings(region.sourceMapIds),...links.map((link)=>link.sourceMapId)]),
-      sourceMapMappingIds:uniqueStrings([...strings(region.sourceMapMappingIds),...links.map((link)=>link.sourceMapMappingId)]),
-      admission:compactRecord({
-        readiness:projection?.admission?.readiness??region.admission?.readiness,
-        action:projection?.admission?.action??region.admission?.action,
-        reasonCodes:uniqueStrings([...strings(region.admission?.reasonCodes),...strings(projection?.admission?.reasons)]),
-        conflictKeys:uniqueStrings([...strings(region.admission?.conflictKeys),...strings(projection?.admission?.conflictKeys)])
-      }),
-      metadata:region.metadata
-    });
-  });
-}
-
-function normalizeSourceMapLinks(links){
-  const seen=new Set();
-  const result=[];
-  for(const link of links.filter(Boolean)){
-    const id=link.id??`source_map_link_${result.length+1}`;
-    if(seen.has(id))continue;
-    seen.add(id);
-    result.push(compactRecord({
-      id,side:link.side,sourceMapId:link.sourceMapId,sourceMapMappingId:link.sourceMapMappingId,
-      sourcePath:link.sourcePath,sourceHash:link.sourceHash,targetPath:link.targetPath,targetHash:link.targetHash,
-      semanticSymbolId:link.semanticSymbolId,
-      semanticOccurrenceId:link.semanticOccurrenceId,
-      semanticNodeId:link.semanticNodeId,
-      nativeSourceId:link.nativeSourceId,
-      nativeAstNodeId:link.nativeAstNodeId,
-      precision:link.precision,
-      sourceSpan:link.sourceSpan,
-      generatedSpan:link.generatedSpan,
-      regionKey:link.ownershipRegionKey,
-      regionKind:link.ownershipRegionKind
-    }));
-  }
-  return result;
-}
-
 function recordIndex(parts){
   const editIndex=parts.semanticEditIndex??semanticEditRecordIndex([],[],[],parts);
   const editAdmission=parts.semanticEditAdmission??{};
   const semanticTransformIndex=parts.semanticTransformIndex??semanticTransformRecordIndex([],parts);
+  const lineageIndex=semanticLineageLinkIndex(parts.lineageLinks,parts.changedRegions,parts.targetPortability,parts.admission);
   return{
     baseHashes:uniqueStrings([parts.baseHash,...parts.sources.map((item)=>item.baseHash)]),
     targetHashes:uniqueStrings([parts.targetHash,...parts.sources.map((item)=>item.targetHash)]),
     sourceHashes:uniqueStrings(parts.sources.map((item)=>item.sourceHash)),
-    sourcePaths:uniqueStrings([...parts.sources.map((item)=>item.sourcePath),...strings(editAdmission.sourcePaths),...editIndex.projectedSourcePaths,...semanticTransformIndex.transformSourcePaths,...semanticTransformIndex.transformTargetPaths]),
+    sourcePaths:uniqueStrings([...parts.sources.map((item)=>item.sourcePath),...strings(editAdmission.sourcePaths),...editIndex.projectedSourcePaths,...semanticTransformIndex.transformSourcePaths,...semanticTransformIndex.transformTargetPaths,...lineageIndex.sourcePaths]),
     regionKeys:uniqueStrings([...parts.changedRegions.map((region)=>region.key),...editIndex.anchorKeys]),
     regionKinds:uniqueStrings(parts.changedRegions.map((region)=>region.regionKind)),
     conflictKeys:uniqueStrings([...parts.changedRegions.flatMap((region)=>[region.conflictKey,...array(region.admission?.conflictKeys)]),...editIndex.conflictKeys]),
     sourceMapIds:uniqueStrings([...parts.sourceMapLinks.map((link)=>link.sourceMapId),...parts.changedRegions.flatMap((region)=>region.sourceMapIds??[])]),
     sourceMapMappingIds:uniqueStrings([...parts.sourceMapLinks.map((link)=>link.sourceMapMappingId),...parts.changedRegions.flatMap((region)=>region.sourceMapMappingIds??[])]),
     sourceMapLinkIds:uniqueStrings(parts.sourceMapLinks.map((link)=>link.id)),
-    evidenceIds:parts.evidenceIds,
-    proofIds:parts.proofIds,
+    evidenceIds:uniqueStrings([...parts.evidenceIds,...lineageIndex.evidenceIds]),
+    proofIds:uniqueStrings([...parts.proofIds,...lineageIndex.proofIds]),
+    lineageResolutionIds:lineageIndex.lineageResolutionIds,
+    lineageEventIds:lineageIndex.lineageEventIds,
+    lineageSourcePaths:lineageIndex.sourcePaths,
+    lineageEvidenceIds:lineageIndex.evidenceIds,
+    lineageProofIds:lineageIndex.proofIds,
+    lineageReasonCodes:lineageIndex.reasonCodes,
     historyIds:parts.historyIds,
     semanticOperationIds:uniqueStrings(parts.semanticOperationIds),
     semanticEditScriptIds:editIndex.semanticEditScriptIds,
@@ -255,7 +173,7 @@ function recordIndex(parts){
 }
 
 function matchesRecord(record,query){
-  const index=record.index??recordIndex({...record,baseHash:record.baseHash,targetHash:record.targetHash,sources:record.sources??[],changedRegions:record.changedRegions??[],sourceMapLinks:record.sourceMapLinks??[],evidenceIds:record.evidenceIds??[],proofIds:record.proofIds??[],historyIds:record.historyIds??[],semanticOperationIds:record.semanticOperationIds??[],patchId:record.patchId,mergeCandidateId:record.mergeCandidateId,admission:record.admission??{},semanticEditAdmission:record.admission?.semanticEditAdmission??record.metadata?.semanticEditAdmission,targetPortability:record.metadata?.targetPortability});
+  const index=record.index??recordIndex({...record,baseHash:record.baseHash,targetHash:record.targetHash,sources:record.sources??[],changedRegions:record.changedRegions??[],sourceMapLinks:record.sourceMapLinks??[],evidenceIds:record.evidenceIds??[],proofIds:record.proofIds??[],historyIds:record.historyIds??[],semanticOperationIds:record.semanticOperationIds??[],patchId:record.patchId,mergeCandidateId:record.mergeCandidateId,admission:record.admission??{},semanticEditAdmission:record.admission?.semanticEditAdmission??record.metadata?.semanticEditAdmission,targetPortability:record.metadata?.targetPortability,lineageLinks:normalizeLineageResolutionLinks([...array(record.metadata?.semanticLineageResolutionLinks),...array(record.admission?.metadata?.semanticLineageResolutionLinks)])});
   return matchAny(queryValues(query.id,query.ids),[record.id])
     &&matchAny(queryValues(query.patchId,query.patchIds),index.patchIds)
     &&matchAny(queryValues(query.mergeCandidateId,query.mergeCandidateIds),index.mergeCandidateIds)
@@ -271,6 +189,12 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.sourceMapLinkId,query.sourceMapLinkIds),index.sourceMapLinkIds)
     &&matchAny(queryValues(query.evidenceId,query.evidenceIds),index.evidenceIds)
     &&matchAny(queryValues(query.proofId,query.proofIds),index.proofIds)
+    &&matchAny(queryValues(query.lineageResolutionId,query.lineageResolutionIds,query.semanticLineageResolutionId,query.semanticLineageResolutionIds),index.lineageResolutionIds)
+    &&matchAny(queryValues(query.lineageEventId,query.lineageEventIds),index.lineageEventIds)
+    &&matchAny(queryValues(query.lineageSourcePath,query.lineageSourcePaths),index.lineageSourcePaths)
+    &&matchAny(queryValues(query.lineageEvidenceId,query.lineageEvidenceIds),index.lineageEvidenceIds)
+    &&matchAny(queryValues(query.lineageProofId,query.lineageProofIds),index.lineageProofIds)
+    &&matchAny(queryValues(query.lineageReasonCode,query.lineageReasonCodes),index.lineageReasonCodes)
     &&matchAny(queryValues(query.historyId,query.historyIds),index.historyIds)
     &&matchAny(queryValues(query.semanticOperationId,query.semanticOperationIds),index.semanticOperationIds)
     &&matchAny(queryValues(query.semanticEditScriptId,query.semanticEditScriptIds),index.semanticEditScriptIds)

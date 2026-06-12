@@ -1,24 +1,34 @@
-import type { FrontierSourceLanguage, SourceSpan } from '@shapeshift-labs/frontier-lang-kernel';
-import type { EvidenceRecord, SemanticMergeReadiness } from '@shapeshift-labs/frontier-lang-kernel';
+import type { EvidenceRecord, FrontierSourceLanguage, SemanticMergeReadiness, SourceSpan } from '@shapeshift-labs/frontier-lang-kernel';
 import type { ImportNativeSourceOptions, NativeSourceImportResult } from './import-adapter-core.js';
 
 export type SemanticLineageEventKind = 'unchanged' | 'moved' | 'renamed' | 'split' | 'merged' | 'deleted' | 'recreated' | 'unknown' | string;
 export type SemanticLineageResolutionStatus = 'unchanged' | 'resolved' | 'ambiguous' | 'deleted' | 'recreated' | 'cycle' | 'max-depth' | 'not-found' | string;
 
 export interface SemanticAnchor {
-  readonly id?: string;
-  readonly key?: string;
-  readonly kind?: string;
-  readonly language?: FrontierSourceLanguage | string;
-  readonly sourcePath?: string;
-  readonly sourceHash?: string;
-  readonly symbolId?: string;
-  readonly symbolName?: string;
+  readonly id?: string; readonly key?: string; readonly kind?: string;
+  readonly language?: FrontierSourceLanguage | string; readonly sourcePath?: string; readonly sourceHash?: string;
+  readonly symbolId?: string; readonly symbolName?: string;
   readonly semanticPath?: readonly string[];
-  readonly signatureHash?: string;
-  readonly bodyHash?: string;
+  readonly signatureHash?: string; readonly bodyHash?: string;
   readonly sourceSpan?: SourceSpan;
+  readonly lineageEventIds?: readonly string[]; readonly terminalLineageEventIds?: readonly string[];
+  readonly lineageSourcePaths?: readonly string[]; readonly evidenceIds?: readonly string[];
+  readonly proofIds?: readonly string[]; readonly crdtOperationIds?: readonly string[]; readonly crdtHeads?: readonly string[];
+  readonly lineageEventKinds?: readonly SemanticLineageEventKind[]; readonly lineageReasonCodes?: readonly string[];
   readonly metadata?: Record<string, unknown>;
+}
+
+export interface CreateSemanticAnchorInput extends SemanticAnchor {
+  readonly ownershipKey?: string;
+  readonly conflictKey?: string;
+  readonly semanticKey?: string;
+  readonly anchorKind?: string;
+  readonly regionKind?: string;
+  readonly symbolKind?: string;
+  readonly pathSegments?: readonly string[];
+  readonly name?: string;
+  readonly hash?: string;
+  readonly span?: SourceSpan;
 }
 
 export interface SemanticLineageCrdtClock {
@@ -31,6 +41,19 @@ export interface SemanticLineageCrdtClock {
   readonly versionFrame?: Record<string, unknown>;
 }
 
+export interface SemanticLineageCrdtClockInput {
+  readonly operationId?: string;
+  readonly id?: string;
+  readonly actor?: string;
+  readonly actorId?: string;
+  readonly seq?: number;
+  readonly deps?: readonly string[] | string;
+  readonly heads?: readonly string[] | string;
+  readonly stateVector?: Record<string, number>;
+  readonly versionFrame?: Record<string, unknown>;
+  readonly frame?: Record<string, unknown>;
+}
+
 export interface SemanticLineageEvidence {
   readonly pathMatch?: boolean;
   readonly signatureHashMatch?: boolean;
@@ -41,6 +64,10 @@ export interface SemanticLineageEvidence {
   readonly command?: string;
 }
 
+export interface SemanticLineageEvidenceInput extends SemanticLineageEvidence {
+  readonly id?: string;
+}
+
 export interface SemanticLineageActor {
   readonly id?: string;
   readonly role?: string;
@@ -48,6 +75,10 @@ export interface SemanticLineageActor {
   readonly taskId?: string;
   readonly runId?: string;
   readonly metadata?: Record<string, unknown>;
+}
+
+export interface SemanticLineageActorInput extends SemanticLineageActor {
+  readonly actorId?: string;
 }
 
 export interface SemanticLineageEvent {
@@ -71,32 +102,27 @@ export interface SemanticLineageEvent {
 }
 
 export interface CreateSemanticLineageEventInput {
-  readonly id?: string;
-  readonly hash?: string;
-  readonly createdAt?: number | string;
-  readonly eventKind?: SemanticLineageEventKind;
-  readonly event?: SemanticLineageEventKind;
-  readonly kind?: SemanticLineageEventKind;
-  readonly from?: SemanticAnchor | string;
-  readonly fromAnchor?: SemanticAnchor | string;
-  readonly before?: SemanticAnchor | string;
-  readonly to?: readonly (SemanticAnchor | string)[] | SemanticAnchor | string;
-  readonly toAnchors?: readonly (SemanticAnchor | string)[] | SemanticAnchor | string;
-  readonly after?: readonly (SemanticAnchor | string)[] | SemanticAnchor | string;
-  readonly confidence?: number;
-  readonly actor?: SemanticLineageActor | string;
-  readonly actorId?: string;
-  readonly actorRole?: string;
-  readonly crdt?: SemanticLineageCrdtClock;
-  readonly clock?: SemanticLineageCrdtClock;
-  readonly operation?: SemanticLineageCrdtClock;
+  readonly id?: string; readonly hash?: string; readonly createdAt?: number | string;
+  readonly eventKind?: SemanticLineageEventKind; readonly event?: SemanticLineageEventKind; readonly kind?: SemanticLineageEventKind;
+  readonly from?: CreateSemanticAnchorInput | string;
+  readonly fromAnchor?: CreateSemanticAnchorInput | string;
+  readonly before?: CreateSemanticAnchorInput | string;
+  readonly to?: readonly (CreateSemanticAnchorInput | string)[] | CreateSemanticAnchorInput | string;
+  readonly toAnchors?: readonly (CreateSemanticAnchorInput | string)[] | CreateSemanticAnchorInput | string;
+  readonly after?: readonly (CreateSemanticAnchorInput | string)[] | CreateSemanticAnchorInput | string;
+  readonly confidence?: number; readonly actor?: SemanticLineageActorInput | string;
+  readonly actorId?: string; readonly actorRole?: string;
+  readonly crdt?: SemanticLineageCrdtClockInput;
+  readonly clock?: SemanticLineageCrdtClockInput;
+  readonly operation?: SemanticLineageCrdtClockInput;
   readonly operationId?: string;
   readonly seq?: number;
   readonly deps?: readonly string[] | string;
   readonly heads?: readonly string[] | string;
   readonly stateVector?: Record<string, number>;
   readonly versionFrame?: Record<string, unknown>;
-  readonly evidence?: SemanticLineageEvidence | readonly { readonly id?: string }[];
+  readonly frame?: Record<string, unknown>;
+  readonly evidence?: SemanticLineageEvidenceInput | readonly SemanticLineageEvidenceInput[];
   readonly pathMatch?: boolean;
   readonly signatureHashMatch?: boolean;
   readonly bodyHashMatch?: boolean;
@@ -161,6 +187,7 @@ export interface SemanticLineageResolution {
   readonly currentAnchors: readonly SemanticAnchor[];
   readonly traversedEventIds: readonly string[];
   readonly terminalEventIds: readonly string[];
+  readonly sourcePaths: readonly string[];
   readonly status: SemanticLineageResolutionStatus;
   readonly confidence?: number;
   readonly conflictKeys: readonly string[];
@@ -236,6 +263,8 @@ export interface SemanticLineageInferenceResult {
     readonly inferredEvents: number;
     readonly moved: number;
     readonly renamed: number;
+    readonly split: number;
+    readonly recreated: number;
     readonly deleted: number;
     readonly ambiguous: number;
     readonly unmatchedAdded: number;
@@ -280,8 +309,8 @@ export interface InferSemanticLineageEventsOptions {
 
 export declare const SemanticLineageEventKinds: readonly SemanticLineageEventKind[];
 export declare const SemanticLineageResolutionStatuses: readonly SemanticLineageResolutionStatus[];
-export declare function createSemanticAnchor(input?: SemanticAnchor | string, defaults?: Partial<SemanticAnchor>): SemanticAnchor | undefined;
-export declare function createSemanticLineageEvent(input?: CreateSemanticLineageEventInput, options?: { readonly id?: string; readonly createdAt?: number | string; readonly actor?: SemanticLineageActor | string; readonly actorId?: string; readonly actorRole?: string }): SemanticLineageEvent;
+export declare function createSemanticAnchor(input?: CreateSemanticAnchorInput | string, defaults?: Partial<SemanticAnchor>): SemanticAnchor | undefined;
+export declare function createSemanticLineageEvent(input?: CreateSemanticLineageEventInput, options?: { readonly id?: string; readonly createdAt?: number | string; readonly actor?: SemanticLineageActorInput | string; readonly actorId?: string; readonly actorRole?: string }): SemanticLineageEvent;
 export declare function createSemanticLineageMap(events?: readonly (SemanticLineageEvent | CreateSemanticLineageEventInput)[], options?: { readonly id?: string; readonly generatedAt?: number | string }): SemanticLineageMap;
 export declare function inferSemanticLineageEvents(input?: InferSemanticLineageEventsOptions, options?: { readonly metadata?: Record<string, unknown>; readonly deletedConfidence?: number }): SemanticLineageInferenceResult;
 export declare function querySemanticLineageEvents(events: SemanticLineageEvent | readonly SemanticLineageEvent[], query?: SemanticLineageQuery): readonly SemanticLineageEvent[];

@@ -90,12 +90,25 @@ export interface SemanticPatchBundleAdmission {
   readonly autoApplyCandidate?: boolean;
   readonly transformAdmission?: SemanticPatchBundleTransformAdmission;
   readonly semanticEditAdmission?: SemanticEditBundleAdmission;
+  readonly evidenceAdmission?: SemanticPatchBundleEvidenceAdmission;
   readonly reasonCodes?: readonly string[];
   readonly conflictKeys?: readonly string[];
   readonly admittedAt?: number | string;
   readonly reviewerId?: string;
   readonly evidenceIds?: readonly string[];
   readonly metadata?: Record<string, unknown>;
+}
+
+export interface SemanticPatchBundleEvidenceAdmission {
+  readonly status: 'none' | 'ready' | 'needs-review' | 'stale' | 'blocked' | string;
+  readonly action: 'none' | 'admit' | 'review' | 'rerun-semantic-import' | 'block' | string;
+  readonly readiness: SemanticMergeReadiness | string;
+  readonly reasonCodes?: readonly string[];
+  readonly evidenceIds?: readonly string[];
+  readonly passed?: number;
+  readonly failed?: number;
+  readonly conflict?: number;
+  readonly stale?: number;
 }
 
 export interface SemanticPatchBundleTransformAdmission {

@@ -10,7 +10,9 @@ import {
   jsCommentOnlyLine,
   jsContainerDelta,
   jsDeclarationScanLine,
+  jsExportAliasDeclaration,
   jsExportedContainerDeclaration,
+  jsExportedFunctionWrapperDeclaration,
   jsInitializerKind,
   jsImportDeclarations,
   jsObjectPropertyDeclaration,
@@ -75,11 +77,13 @@ function scanJavaScriptLike(input) {
       pushDeclaration(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, declarationLine.includes('{')));
     } else if ((match = trimmed.match(/^export\s+default\s+(?:async\s+)?function\*?\s*([A-Za-z_$][\w$]*)?\s*(?:<[^({;]+>)?\s*\(([^)]*)\)\s*(?::\s*[^={]+)?/))) {
       pushDeclaration(nativeDeclaration(input, number, 'ExportDefaultFunctionDeclaration', 'function', match[1] ?? 'default', { parameters: splitParameters(match[2]), exportDefault: true }, trimmed.includes('{')));
-    } else if ((match = declarationLine.match(/^(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/))) {
-      pushDeclaration(nativeDeclaration(input, number, declarationLine.startsWith('default ') ? 'ExportDefaultClassDeclaration' : 'ClassDeclaration', 'class', match[1], { exportDefault: declarationLine.startsWith('default ') || undefined }, declarationLine.includes('{')));
-      pushDeclarations(jsInlineClassMemberDeclarations(input, number, declarationLine, match[1]));
+    } else if ((match = declarationLine.match(/^(default\s+)?(?:abstract\s+)?class\b(?:\s+(?!(?:extends|implements)\b)([A-Za-z_$][\w$]*))?/)) && (match[1] || match[2])) {
+      const className = match[2] ?? 'default';
+      const exportDefault = Boolean(match[1]);
+      pushDeclaration(nativeDeclaration(input, number, exportDefault ? 'ExportDefaultClassDeclaration' : 'ClassDeclaration', 'class', className, { exportDefault: exportDefault || undefined }, declarationLine.includes('{')));
+      pushDeclarations(jsInlineClassMemberDeclarations(input, number, declarationLine, className));
       if (jsStructureDelta(declarationLine).value > 0) {
-        currentClass = match[1];
+        currentClass = className;
         classDepth = 0;
       }
     } else if ((match = declarationLine.match(/^interface\s+([A-Za-z_$][\w$]*)/))) {
@@ -109,10 +113,14 @@ function scanJavaScriptLike(input) {
       pushDeclarations(jsInlineNestedObjectDeclarations(input, number, declarationLine, declarations[declarations.length - 1]));
       const objectContext = jsObjectRegionContext(match[1], declarationLine, number, regionKind);
       if (objectContext) objectStack.push(objectContext);
+    } else if ((match = jsExportedFunctionWrapperDeclaration(input, number, trimmed))) {
+      pushDeclaration(match);
     } else if ((match = jsExportedContainerDeclaration(input, number, trimmed))) {
       pushDeclaration(match.declaration);
       pushDeclarations(jsInlineNestedObjectDeclarations(input, number, trimmed, match.declaration));
       if (match.context) objectStack.push(match.context);
+    } else if ((match = jsExportAliasDeclaration(input, number, trimmed))) {
+      pushDeclaration(match);
     } else if ((match = trimmed.match(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function\*?\s*\(([^)]*)\)/))) {
       pushDeclaration(nativeDeclaration(input, number, 'CommonJsFunctionExport', 'function', match[1], { parameters: splitParameters(match[2]) }, true));
     } else if ((match = trimmed.match(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=/))) {

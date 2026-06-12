@@ -1,28 +1,8 @@
-import type {
-  EvidenceRecord,
-  FrontierSourceLanguage,
-  SemanticMergeReadiness,
-  SourceSpan
-} from '@shapeshift-labs/frontier-lang-kernel';
+import type { EvidenceRecord, FrontierSourceLanguage, SemanticMergeReadiness, SourceSpan } from '@shapeshift-labs/frontier-lang-kernel';
 import type { ImportNativeSourceOptions, NativeSourceImportResult } from './import-adapter-core.js';
 
-export type SemanticEditScriptOperationStatus =
-  | 'candidate'
-  | 'portable'
-  | 'already-applied'
-  | 'covered'
-  | 'needs-port'
-  | 'conflict'
-  | 'stale'
-  | 'blocked';
-
-export type SemanticEditScriptAdmissionStatus =
-  | 'auto-merge-candidate'
-  | 'needs-port'
-  | 'conflict'
-  | 'stale'
-  | 'blocked'
-  | 'evidence-only';
+export type SemanticEditScriptOperationStatus = 'candidate' | 'portable' | 'already-applied' | 'covered' | 'needs-port' | 'conflict' | 'stale' | 'blocked';
+export type SemanticEditScriptAdmissionStatus = 'auto-merge-candidate' | 'needs-port' | 'conflict' | 'stale' | 'blocked' | 'evidence-only';
 
 export interface SemanticEditScriptOperation {
   readonly id: string;
@@ -130,7 +110,7 @@ export interface SemanticEditProjectionEdit {
   readonly operationId?: string;
   readonly status: 'applied' | 'already-applied';
   readonly kind?: string;
-  readonly editKind?: 'replace' | 'insert' | string;
+  readonly editKind?: 'replace' | 'insert' | 'delete' | string;
   readonly changeKind?: string;
   readonly anchorKey?: string;
   readonly conflictKey?: string;
@@ -192,14 +172,7 @@ export interface SemanticEditProjection {
   readonly metadata?: Record<string, unknown>;
 }
 
-export type SemanticEditReplayStatus =
-  | 'accepted-clean'
-  | 'already-applied'
-  | 'conflict'
-  | 'stale'
-  | 'blocked'
-  | 'needs-port'
-  | 'evidence-only';
+export type SemanticEditReplayStatus = 'accepted-clean' | 'already-applied' | 'conflict' | 'stale' | 'blocked' | 'needs-port' | 'evidence-only';
 
 export interface SemanticEditReplayEdit {
   readonly operationId?: string;
@@ -207,7 +180,7 @@ export interface SemanticEditReplayEdit {
   readonly semanticIdentityHash?: string;
   readonly sourceIdentityHash?: string;
   readonly editContentHash?: string;
-  readonly editKind?: 'replace' | 'insert' | string;
+  readonly editKind?: 'replace' | 'insert' | 'delete' | string;
   readonly sourcePath?: string;
   readonly symbolName?: string;
   readonly symbolKind?: string;
@@ -269,9 +242,12 @@ export interface ProjectSemanticEditScriptToSourceOptions {
 
 export interface ReplaySemanticEditProjectionOptions {
   readonly id?: string;
-  readonly projection: SemanticEditProjection;
-  readonly currentSourceText: string;
+  readonly projection?: SemanticEditProjection;
+  readonly semanticEditProjection?: SemanticEditProjection;
+  readonly currentSourceText?: string;
+  readonly headSourceText?: string;
   readonly currentSourcePath?: string;
+  readonly headSourcePath?: string;
   readonly currentSourceHash?: string;
   readonly language?: FrontierSourceLanguage | string;
   readonly parser?: string;
@@ -294,17 +270,38 @@ export interface CreateSemanticEditScriptOptions {
   readonly workerSourceText?: string;
   readonly afterSourceText?: string;
   readonly headSourceText?: string;
+  readonly baseSourcePath?: string;
+  readonly beforeSourcePath?: string;
+  readonly workerSourcePath?: string;
+  readonly afterSourcePath?: string;
   readonly headSourcePath?: string;
   readonly currentSourceText?: string;
+  readonly currentSourcePath?: string;
   readonly baseSourceHash?: string;
+  readonly beforeSourceHash?: string;
   readonly workerSourceHash?: string;
+  readonly afterSourceHash?: string;
   readonly headSourceHash?: string;
-  readonly generatedAt?: number;
+  readonly currentSourceHash?: string;
+  readonly baseMetadata?: Record<string, unknown>;
+  readonly beforeMetadata?: Record<string, unknown>;
+  readonly workerMetadata?: Record<string, unknown>;
+  readonly afterMetadata?: Record<string, unknown>;
+  readonly headMetadata?: Record<string, unknown>;
+  readonly currentMetadata?: Record<string, unknown>;
+  readonly workerChangeSetId?: string;
+  readonly headChangeSetId?: string;
+  readonly lineageInferenceId?: string;
+  readonly generatedAt?: number | string;
   readonly evidenceId?: string;
   readonly metadata?: Record<string, unknown>;
 }
 
+export interface CreateSemanticEditScriptRuntimeOptions {
+  readonly metadata?: Record<string, unknown>;
+}
+
 export declare const SemanticEditScriptAdmissionStatuses: readonly SemanticEditScriptAdmissionStatus[];
-export declare function createSemanticEditScript(input?: CreateSemanticEditScriptOptions): SemanticEditScript;
+export declare function createSemanticEditScript(input?: CreateSemanticEditScriptOptions, options?: CreateSemanticEditScriptRuntimeOptions): SemanticEditScript;
 export declare function projectSemanticEditScriptToSource(input: ProjectSemanticEditScriptToSourceOptions): SemanticEditProjection;
 export declare function replaySemanticEditProjection(input: ReplaySemanticEditProjectionOptions): SemanticEditReplay;

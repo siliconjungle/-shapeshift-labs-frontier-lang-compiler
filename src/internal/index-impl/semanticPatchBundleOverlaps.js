@@ -113,8 +113,12 @@ function sharedIndex(left,right,options){
 }
 
 function overlapAdmission(shared,{leftIndex,rightIndex,options}){
-  const duplicate=shared.operationContentHashes.length||shared.editContentHashes.length||shared.semanticTransformContentHashes.length||shared.semanticEditReplayIds.length||shared.semanticEditReplayOutputHashes.length;
-  const semantic=shared.semanticEditKeys.length||shared.semanticIdentityHashes.length||shared.sourceIdentityHashes.length||shared.semanticTransformIdentityHashes.length||shared.projectionIdentityHashes.length;
+  const hashMismatch=disjointNonEmpty(leftIndex.baseHashes,rightIndex.baseHashes)||disjointNonEmpty(leftIndex.targetHashes,rightIndex.targetHashes);
+  const sourceRelated=shared.sourcePaths.length||shared.regionKeys.length||shared.conflictKeys.length||shared.sourceIdentityHashes.length;
+  const editContent=shared.operationContentHashes.length||shared.editContentHashes.length||shared.semanticEditReplayOutputHashes.length;
+  const transformContent=shared.semanticTransformContentHashes.length&&shared.projectionIdentityHashes.length;
+  const duplicate=(transformContent||shared.semanticEditReplayIds.length||(editContent&&sourceRelated))&&!hashMismatch;
+  const semantic=editContent||shared.semanticEditKeys.length||shared.semanticIdentityHashes.length||shared.sourceIdentityHashes.length||shared.semanticTransformIdentityHashes.length||shared.projectionIdentityHashes.length;
   const source=shared.regionKeys.length||shared.conflictKeys.length||shared.sourcePaths.length||shared.semanticEditReplayCurrentHashes.length;
   const status=duplicate?'duplicate':semantic?'semantic-overlap':source?'source-overlap':'independent';
   const reasonCodes=uniqueStrings([

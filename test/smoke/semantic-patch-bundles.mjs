@@ -53,8 +53,11 @@ assert.equal(bundle.historyIds.includes('history_counter_patch_bundle'), true);
 assert.equal(bundle.semanticOperationIds.includes('semantic_operation_counter_patch'), true);
 assert.equal(bundle.index.semanticOperationIds.includes('semantic_operation_counter_patch'), true);
 assert.equal(bundle.admission.status, 'queued');
+assert.equal(bundle.admission.semanticEditAdmission.status, 'none');
+assert.equal(bundle.admission.semanticEditAdmission.action, 'none');
 assert.equal(bundle.admission.autoMergeClaim, false);
 assert.equal(bundle.summary.reviewRequired, true);
+assert.equal(bundle.summary.semanticEditBundleStatus, 'none');
 assert.equal(bundle.sources.every((source) => source.sourceText === undefined && source.document === undefined), true);
 assert.equal(Object.hasOwn(bundle, 'before'), false);
 assert.equal(Object.hasOwn(bundle, 'after'), false);
@@ -82,6 +85,7 @@ assert.equal(querySemanticPatchBundleRecords(records, { historyId: 'history_coun
 assert.equal(querySemanticPatchBundleRecords(records, { semanticOperationId: 'semantic_operation_counter_patch' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords(records, { readiness: changeSet.readiness }).length, 1);
 assert.equal(querySemanticPatchBundleRecords(records, { admissionStatus: 'queued' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords(records, { semanticEditAdmissionStatus: 'none' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords(records, { sourceHash: 'not_present' }).length, 0);
 
 const semanticEditScript = createSemanticEditScript({
@@ -107,11 +111,19 @@ const semanticEditReplay = replaySemanticEditProjection({
   currentSourceText: beforeSourceText,
   currentSourcePath: 'src/counter-core.js'
 });
+const semanticEditAutoMergeProof = {
+  id: 'evidence_counter_semantic_edit_auto_merge',
+  kind: 'test',
+  status: 'passed',
+  scope: 'semantic-edit:auto-merge',
+  summary: 'Semantic edit replay gate passed for counter patch.'
+};
 const semanticBundle = createSemanticPatchBundleRecord(changeSet, {
   id: 'bundle_counter_patch_semantic_edit',
   semanticEditScripts: [semanticEditScript],
   semanticEditProjections: [semanticEditProjection],
   semanticEditReplays: [semanticEditReplay],
+  evidence: [semanticEditAutoMergeProof],
   admission: { status: 'queued', readiness: changeSet.readiness }
 });
 const semanticOperation = semanticEditScript.operations[0];
@@ -124,8 +136,13 @@ assert.equal(semanticBundle.index.operationContentHashes.includes(semanticOperat
 assert.equal(semanticBundle.index.editContentHashes.includes(semanticEdit.editContentHash), true);
 assert.equal(semanticBundle.index.semanticEditReplayStatuses.includes('accepted-clean'), true);
 assert.equal(semanticBundle.index.semanticEditReplayActions.includes('apply'), true);
+assert.equal(semanticBundle.index.semanticEditAdmissionStatuses.includes('ready'), true);
+assert.equal(semanticBundle.index.semanticEditAdmissionActions.includes('admit'), true);
+assert.equal(semanticBundle.index.semanticEditAdmissionReadinesses.includes('ready'), true);
+assert.equal(semanticBundle.index.conflictKeys.includes(semanticOperation.anchor.conflictKey), true);
 assert.equal(semanticBundle.index.semanticEditReplayOutputHashes.includes(semanticEditReplay.outputHash), true);
 assert.equal(semanticBundle.index.sourcePaths.includes('src/counter-core.js'), true);
+assert.equal(semanticBundle.metadata.semanticEditSummary.conflictKeys.includes(semanticOperation.anchor.conflictKey), true);
 assert.equal(semanticBundle.summary.semanticEditScripts, 1);
 assert.equal(semanticBundle.summary.semanticEditProjections, 1);
 assert.equal(semanticBundle.summary.semanticEditReplays, 1);
@@ -140,6 +157,18 @@ assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditRep
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditReplayOutputHash: semanticEditReplay.outputHash }).length, 1);
 const { index: semanticBundleIndex, ...semanticBundleWithoutIndex } = semanticBundle;
 assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { semanticEditReplayStatus: 'accepted-clean' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { semanticEditReplayAction: 'apply' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { semanticEditAdmissionStatus: 'ready' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { semanticEditAdmissionAction: 'admit' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { semanticEditAdmissionReadiness: 'ready' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { semanticEditReplayCurrentHash: semanticEditReplay.currentHash }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { semanticEditReplayOutputHash: semanticEditReplay.outputHash }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { semanticEditKey: semanticOperation.semanticKey }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { operationContentHash: semanticOperation.operationContentHash }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { editContentHash: semanticEdit.editContentHash }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([semanticBundleWithoutIndex], { sourcePath: 'src/counter-core.js' }).length, 1);
+const semanticBundleSummaryOnly = { ...semanticBundleWithoutIndex, changedRegions: [] };
+assert.equal(querySemanticPatchBundleRecords([semanticBundleSummaryOnly], { conflictKey: semanticOperation.anchor.conflictKey }).length, 1);
 void semanticBundleIndex;
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { semanticEditKey: semanticOperation.semanticKey }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([semanticBundle], { operationContentHash: semanticOperation.operationContentHash }).length, 1);
@@ -157,11 +186,19 @@ assert.equal(derivedTransforms[0].targetLanguage, 'rust');
 assert.equal(derivedTransforms[0].targetPath, 'src/counter-core.js');
 assert.equal(derivedTransforms[0].editContentHash, semanticEdit.editContentHash);
 
+const autoTransformProof = {
+  id: 'evidence_counter_transform_projection',
+  kind: 'proof',
+  status: 'passed',
+  scope: 'auto-merge:semantic-transform',
+  summary: 'Semantic transform projection gate passed.'
+};
 const autoTransformBundle = createSemanticPatchBundleRecord(changeSet, {
   id: 'bundle_counter_patch_transform_auto',
   semanticEditProjections: [semanticEditProjection],
   targetLanguage: 'rust',
-  evidenceIds: ['evidence_counter_transform_projection']
+  evidenceIds: ['evidence_counter_transform_projection'],
+  evidence: [autoTransformProof]
 });
 assert.equal(autoTransformBundle.admission.status, 'admitted');
 assert.equal(autoTransformBundle.admission.reviewRequired, false);
@@ -169,7 +206,9 @@ assert.equal(autoTransformBundle.admission.autoApplyCandidate, true);
 assert.equal(autoTransformBundle.admission.autoMergeClaim, false);
 assert.equal(autoTransformBundle.admission.transformAdmission.action, 'admit');
 assert.equal(autoTransformBundle.admission.transformAdmission.crossLanguage, true);
+assert.equal(autoTransformBundle.admission.evidenceAdmission.status, 'ready');
 assert.equal(autoTransformBundle.admission.reasonCodes.includes('transform-auto-apply-candidate'), true);
+assert.equal(autoTransformBundle.admission.reasonCodes.includes('auto-merge-positive-proof'), true);
 assert.equal(autoTransformBundle.admission.evidenceIds.includes('evidence_counter_transform_projection'), true);
 assert.equal(querySemanticPatchBundleRecords([autoTransformBundle], { semanticTransformReadiness: 'auto-merge-candidate' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([autoTransformBundle], { semanticTransformEvidenceId: 'evidence_counter_transform_projection' }).length, 1);

@@ -3,7 +3,9 @@ import {
   createSemanticHistoryRecord,
   createSemanticLineageEvent,
   createSemanticLineageMap,
+  createSemanticPatchBundleRecord,
   querySemanticHistoryRecordOverlaps,
+  querySemanticPatchBundleRecords,
   resolveSemanticHistoryRecordLineage,
   resolveSemanticHistoryRecordsLineage,
   semanticHistoryRecordsConflict
@@ -90,15 +92,57 @@ assert.equal(resolvedOld.summary.resolved, 1);
 assert.equal(resolvedOld.summary.currentAnchorKeys.includes(currentKey), true);
 assert.equal(resolvedOld.summary.activeAnchorKeys.includes(currentKey), true);
 assert.equal(resolvedOld.anchorInventory.active[0].key, currentKey);
+assert.equal(resolvedOld.resolutions[0].sourcePaths.includes('src/runtime.ts'), true);
+assert.equal(resolvedOld.resolutions[0].sourcePaths.includes('src/runtime-core.ts'), true);
+assert.equal(resolvedOld.resolutions[0].currentAnchors[0].evidenceIds.includes('evidence_move'), true);
+assert.equal(resolvedOld.resolutions[0].currentAnchors[0].evidenceIds.includes('evidence_rename'), true);
+assert.equal(resolvedOld.anchorInventory.active[0].evidenceIds.includes('evidence_rename'), true);
+assert.equal(resolvedOld.anchorInventory.active[0].sourcePaths.includes('src/runtime.ts'), true);
+assert.equal(resolvedOld.summary.lineageResolutionIds.includes(resolvedOld.resolutions[0].id), true);
 assert.equal(resolvedOld.resolvedRecord.index.ownershipKeys.includes(currentKey), true);
 assert.equal(resolvedOld.resolvedRecord.index.ownershipKeys.includes(oldKey), false);
+assert.equal(resolvedOld.resolvedRecord.index.lineageResolutionIds.includes(resolvedOld.resolutions[0].id), true);
 assert.equal(resolvedOld.resolvedRecord.index.evidenceIds.includes('evidence_rename'), true);
+assert.equal(resolvedOld.resolvedRecord.metadata.semanticHistoryLineageResolution.evidenceIds.includes('evidence_move'), true);
+assert.equal(resolvedOld.resolvedRecord.metadata.semanticHistoryLineageResolution.sourcePaths.includes('src/runtime-core.ts'), true);
 assert.equal(resolvedOld.resolvedRecord.metadata.semanticHistoryLineageResolution.anchorSummary.activeAnchorKeys.includes(currentKey), true);
 
 const currentOverlap = querySemanticHistoryRecordOverlaps([resolvedOld.resolvedRecord, currentWorker])[0];
 assert.equal(currentOverlap.conflict, true);
 assert.equal(currentOverlap.overlap.ownership.includes(currentKey), true);
 assert.equal(semanticHistoryRecordsConflict(resolvedOld.resolvedRecord, currentWorker), true);
+
+const lineageBundle = createSemanticPatchBundleRecord({
+  id: 'bundle_lineage_resolved_history',
+  language: 'typescript',
+  sourcePath: 'src/runtime.ts',
+  baseHash: oldWorker.baseHash,
+  targetHash: oldWorker.targetHash,
+  changedRegions: [{
+    id: 'region_lineage_resolved_history',
+    key: currentKey,
+    sourcePath: 'src/runtime-core.ts',
+    metadata: {
+      semanticHistoryLineageResolution: resolvedOld.resolvedRecord.metadata.semanticHistoryLineageResolution
+    }
+  }],
+  metadata: {
+    semanticHistoryLineageResolution: resolvedOld.resolvedRecord.metadata.semanticHistoryLineageResolution
+  },
+  admission: { status: 'needs-review', readiness: 'needs-review' }
+});
+assert.equal(lineageBundle.index.lineageResolutionIds.includes(resolvedOld.resolutions[0].id), true);
+assert.equal(lineageBundle.index.lineageEventIds.includes('lineage_step_rename'), true);
+assert.equal(lineageBundle.index.evidenceIds.includes('evidence_move'), true);
+assert.equal(lineageBundle.index.lineageEvidenceIds.includes('evidence_rename'), true);
+assert.equal(lineageBundle.index.sourcePaths.includes('src/runtime-core.ts'), true);
+assert.equal(lineageBundle.admission.evidenceIds.includes('evidence_rename'), true);
+assert.equal(lineageBundle.admission.reasonCodes.includes('semantic-lineage-resolution-linked'), true);
+assert.equal(querySemanticPatchBundleRecords([lineageBundle], { lineageResolutionId: resolvedOld.resolutions[0].id }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([lineageBundle], { lineageEventId: 'lineage_step_rename' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([lineageBundle], { lineageEvidenceId: 'evidence_move' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([lineageBundle], { evidenceId: 'evidence_rename' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([lineageBundle], { sourcePath: 'src/runtime-core.ts' }).length, 1);
 
 const resolvedRender = resolveSemanticHistoryRecordLineage(renderWorker, lineage);
 assert.equal(resolvedRender.summary.ambiguous, 1);

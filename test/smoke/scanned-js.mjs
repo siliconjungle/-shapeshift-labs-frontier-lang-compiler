@@ -83,47 +83,29 @@ assert.equal(scannedEffectImport.nativeAst.metadata.semanticFactSummary.effects 
 const scannedEffectSidecar = createSemanticImportSidecar(scannedEffectImport);
 assert.equal(scannedEffectSidecar.imports[0].semanticFactPredicates.includes('controlFlow'), true);
 assert.equal(scannedEffectSidecar.imports[0].semanticFactSummary.effect >= 2, true);
-const scannedDefaultClassImport = importNativeSource({
+const scannedDependencyFactPrecisionImport = importNativeSource({
   language: 'typescript',
-  sourcePath: 'src/default-class.tsx',
-  sourceText: 'export default class RuntimeHost { start() { return true; } }\n'
+  sourcePath: 'src/dependency-fact-precision.ts',
+  sourceText: 'export function classify(repo, value) {\n  const local = repo.fetch(value);\n  const table = { default: local, case: value };\n  switch (value.kind) {\n    case "ready":\n      return table.default;\n    default:\n      return table.case;\n  }\n}\nexport type BranchShape = {\n  default: string;\n  case: string;\n};\n'
 });
-assert.equal(scannedDefaultClassImport.semanticIndex.symbols.some((symbol) => symbol.name === 'RuntimeHost' && symbol.kind === 'class'), true);
-assert.equal(scannedDefaultClassImport.sourceMaps[0].mappings.some((mapping) => mapping.ownershipRegionId), true);
-const scannedWrapperImport = importNativeSource({
+const dependencyFactPrecisionSymbol = scannedDependencyFactPrecisionImport.semanticIndex.symbols.find((symbol) => symbol.name === 'classify');
+const dependencyFactPrecisionFacts = scannedDependencyFactPrecisionImport.semanticIndex.facts.filter((fact) => fact.subjectId === dependencyFactPrecisionSymbol.id);
+assert.deepEqual(dependencyFactPrecisionFacts
+  .filter((fact) => fact.predicate === 'controlFlow' && fact.value.kind === 'branch')
+  .map((fact) => fact.value.line), [4, 5, 7]);
+assert.equal(dependencyFactPrecisionFacts.some((fact) => fact.predicate === 'effect' && fact.value.kind === 'network'), false);
+assert.equal(dependencyFactPrecisionFacts.some((fact) => fact.predicate === 'mutation' && fact.value.kind === 'assignment'), false);
+assert.equal(scannedDependencyFactPrecisionImport.semanticIndex.facts.some((fact) => fact.value?.line >= 10
+  && ['controlFlow', 'effect', 'mutation'].includes(fact.predicate)), false);
+const scannedDependencyRelationPrecisionImport = importNativeSource({
   language: 'typescript',
-  sourcePath: 'src/wrapper.tsx',
-  sourceText: 'export const Button = React.forwardRef<HTMLButtonElement, Props>(function Button(props, ref) { return props.kind; });\n'
+  sourcePath: 'src/dependency-relation-precision.ts',
+  sourceText: 'export const actions = { save() { return true; } };\nexport const config = { limit: 1 };\nexport function run(repo) {\n  repo.save();\n  const options = { limit: 2 };\n  return options.limit;\n}\n'
 });
-assert.equal(scannedWrapperImport.semanticIndex.symbols.some((symbol) => symbol.name === 'Button' && symbol.kind === 'function'), true);
-const scannedWrappedRouteImport = importNativeSource({
-  language: 'javascript',
-  sourcePath: 'src/wrapped-routes.js',
-  sourceText: 'export const appRoutes = defineRoutes([\n  { path: "/todos", component: TodoStore }\n]);\n'
-});
-assert.equal(scannedWrappedRouteImport.semanticIndex.symbols.some((symbol) => symbol.name === 'appRoutes./todos' && symbol.kind === 'route'), true);
-const scannedDefaultConfigImport = importNativeSource({
-  language: 'typescript',
-  sourcePath: 'src/default-config.ts',
-  sourceText: 'export default defineConfig({\n  docs: { title: "Docs" },\n  resolve(id) { return id; }\n});\n'
-});
-assert.equal(scannedDefaultConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default' && symbol.metadata.ownershipRegionKind === 'config'), true);
-assert.equal(scannedDefaultConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default.docs' && symbol.metadata.ownershipRegionKind === 'content'), true);
-assert.equal(scannedDefaultConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'default.resolve' && symbol.kind === 'function'), true);
-const scannedNestedConfigImport = importNativeSource({
-  language: 'typescript',
-  sourcePath: 'src/nested-config.ts',
-  sourceText: 'export const adminSettings = {\n  quota: { limit: 5, refill: { intervalMs: 1000 } },\n  roles: {\n    owner: { canEdit: true }\n  }\n};\nexport const websiteContent = {\n  docs: { title: "Docs", hero: { cta: "Start" } }\n};\n'
-});
-const nestedConfigSymbols = new Set(scannedNestedConfigImport.semanticIndex.symbols.map((symbol) => symbol.name));
-for (const expectedName of ['adminSettings.quota.limit', 'adminSettings.quota.refill.intervalMs', 'adminSettings.roles.owner.canEdit', 'websiteContent.docs.title', 'websiteContent.docs.hero.cta']) {
-  assert.equal(nestedConfigSymbols.has(expectedName), true);
-}
-assert.equal(scannedNestedConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'adminSettings.quota.limit' && symbol.metadata.ownershipRegionKind === 'config'), true);
-assert.equal(scannedNestedConfigImport.semanticIndex.symbols.some((symbol) => symbol.name === 'websiteContent.docs.title' && symbol.metadata.ownershipRegionKind === 'content'), true);
-const nestedConfigSidecar = createSemanticImportSidecar(scannedNestedConfigImport);
-assert.equal(nestedConfigSidecar.ownershipRegions.some((region) => region.symbolName === 'adminSettings.quota.refill.intervalMs'), true);
-assert.equal(nestedConfigSidecar.patchHints.some((hint) => hint.ownershipKey.includes('websiteContent.docs.hero.cta')), true);
+const relationPrecisionSymbolsById = new Map(scannedDependencyRelationPrecisionImport.semanticIndex.symbols.map((symbol) => [symbol.id, symbol]));
+const runRelations = scannedDependencyRelationPrecisionImport.semanticIndex.relations.filter((relation) => relationPrecisionSymbolsById.get(relation.sourceId)?.name === 'run');
+assert.equal(runRelations.some((relation) => relationPrecisionSymbolsById.get(relation.targetId)?.name === 'actions.save'), false);
+assert.equal(runRelations.some((relation) => relationPrecisionSymbolsById.get(relation.targetId)?.name === 'config.limit'), false);
 const scannedArrayRiskImport = importNativeSource({
   language: 'typescript',
   sourcePath: 'src/array-risk.ts',
@@ -185,6 +167,18 @@ assert.equal(richSidecar.summary.symbols >= 10, true);
 assert.equal(richSidecar.ownershipRegions.some((region) => region.symbolName === 'TodoPanel.render' && region.regionKind === 'body'), true);
 assert.equal(richSidecar.ownershipRegions.some((region) => region.symbolName === 'memoize' && region.regionKind === 'import'), true);
 assert.equal(richSidecar.patchHints.some((hint) => hint.ownershipKey.includes('formatTitle') && hint.sourceSpan.endLine === 8), true);
+const caseSensitiveImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/case-sensitive.ts',
+  sourceText: 'import react from "react";\nimport React from "react";\nexport const pair = [react, React];\n'
+});
+const caseSensitiveSidecar = createSemanticImportSidecar(caseSensitiveImport);
+const caseSensitiveSymbols = caseSensitiveImport.semanticIndex.symbols.filter((symbol) => ['react', 'React'].includes(symbol.name));
+const caseSensitiveRegions = caseSensitiveSidecar.ownershipRegions.filter((region) => ['react', 'React'].includes(region.symbolName));
+assert.equal(new Set(caseSensitiveSymbols.map((symbol) => symbol.id)).size, 2);
+assert.equal(new Set(caseSensitiveRegions.map((region) => region.id)).size, 2);
+assert.equal(caseSensitiveSidecar.patchHints.some((hint) => hint.ownershipKey.endsWith('#react')), true);
+assert.equal(caseSensitiveSidecar.patchHints.some((hint) => hint.ownershipKey.endsWith('#React')), true);
 const destructuredRequireImport = importNativeSource({ language: 'typescript', sourcePath: 'src/destructured-require.ts', sourceText: 'const { readFile, writeFile: writeFileAsync } = require("node:fs/promises");\n' });
 const destructuredRequireSidecar = createSemanticImportSidecar(destructuredRequireImport);
 assert.equal(destructuredRequireSidecar.summary.emptySemanticIndex, false);

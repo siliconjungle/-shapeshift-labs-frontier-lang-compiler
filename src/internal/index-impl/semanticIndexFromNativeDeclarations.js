@@ -1,4 +1,4 @@
-import{idFragment}from'../../native-import-utils.js';import{semanticOwnershipRegionForDeclaration}from'../../semantic-import-regions.js';import{createSemanticIndexRecord,hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
+import{idFragment,caseSensitiveIdFragment}from'../../native-import-utils.js';import{semanticOwnershipRegionForDeclaration}from'../../semantic-import-regions.js';import{createSemanticIndexRecord,hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
 import{relationPredicateForDeclaration}from'./relationPredicateForDeclaration.js';
 export function semanticIndexFromNativeDeclarations(declarations, input, options) {
   const documentId = `doc_${idFragment(input.sourcePath ?? input.language)}_${idFragment(input.sourceHash)}`;
@@ -9,7 +9,7 @@ export function semanticIndexFromNativeDeclarations(declarations, input, options
   const facts = [];
   const mappings = [];
   for (const declaration of declarations) {
-    const symbolId = declaration.symbolId ?? `symbol:${input.language}:${declaration.role === 'import' ? 'import:' : ''}${idFragment(declaration.name)}`;
+    const symbolId = declaration.symbolId ?? `symbol:${input.language}:${declaration.role === 'import' ? 'import:' : ''}${caseSensitiveIdFragment(declaration.name)}`;
     const occurrenceId = `occ_${idFragment(declaration.nativeNode.id)}_${declaration.role ?? 'definition'}`;
     const ownershipRegion = semanticOwnershipRegionForDeclaration(input, {
       ...declaration,

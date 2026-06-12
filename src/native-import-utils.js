@@ -1,5 +1,5 @@
 export function uniqueStrings(values) {
-  return [...new Set((values ?? []).map((value) => String(value)).filter(Boolean))];
+  return [...new Set((values ?? []).filter((value) => value !== undefined && value !== null).map((value) => String(value)).filter(Boolean))];
 }
 
 export function uniqueRecordsById(records) {
@@ -140,4 +140,18 @@ export function idFragment(value) {
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 80) || 'native';
+}
+
+export function caseSensitiveIdFragment(value) {
+  const text = String(value ?? 'native');
+  return `${idFragment(text)}_${caseSensitiveHash(text)}`;
+}
+
+function caseSensitiveHash(value) {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
 }

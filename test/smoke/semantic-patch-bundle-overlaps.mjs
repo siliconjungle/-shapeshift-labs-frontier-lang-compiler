@@ -139,6 +139,45 @@ assert.equal(querySemanticPatchBundleOverlaps([duplicateA, replayCurrentBundle],
   semanticEditReplayCurrentHash: replay.currentHash
 }).length, 1);
 
+const sameContentDifferentFileScript = createSemanticEditScript({
+  id: 'same_content_different_file_script',
+  language: 'javascript',
+  sourcePath: 'src/other-score.js',
+  baseSourceText: baseSource,
+  workerSourceText: workerSource,
+  headSourceText: baseSource,
+  generatedAt: 22
+});
+const sameContentDifferentFileProjection = projectSemanticEditScriptToSource({
+  id: 'same_content_different_file_projection',
+  script: sameContentDifferentFileScript,
+  workerSourceText: workerSource,
+  headSourceText: baseSource,
+  headSourcePath: 'src/other-score.js'
+});
+const sameContentDifferentFileReplay = replaySemanticEditProjection({
+  id: 'same_content_different_file_replay',
+  projection: sameContentDifferentFileProjection,
+  currentSourceText: baseSource
+});
+const sameContentDifferentFileChangeSet = diffNativeSources({
+  id: 'same_content_different_file_change',
+  language: 'javascript',
+  sourcePath: 'src/other-score.js',
+  beforeSourceText: baseSource,
+  afterSourceText: workerSource
+});
+const sameContentDifferentFileBundle = createSemanticPatchBundleRecord(sameContentDifferentFileChangeSet, {
+  id: 'same_content_different_file_bundle',
+  semanticEditScripts: [sameContentDifferentFileScript],
+  semanticEditProjections: [sameContentDifferentFileProjection],
+  semanticEditReplays: [sameContentDifferentFileReplay]
+});
+const sameContentDifferentFileOverlap = compareSemanticPatchBundleRecords(duplicateA, sameContentDifferentFileBundle);
+assert.equal(sameContentDifferentFileOverlap.admission.status, 'semantic-overlap');
+assert.equal(sameContentDifferentFileOverlap.overlapKinds.includes('operation-content'), true);
+assert.equal(sameContentDifferentFileOverlap.admission.reasonCodes.includes('same-operation-content'), true);
+
 const independentBundle = createSemanticPatchBundleRecord({
   id: 'score_overlap_independent_change',
   language: 'javascript',

@@ -49,6 +49,7 @@ function createResolutionState(start) {
     current: start ? [start] : [],
     traversed: [],
     terminal: [],
+    sourcePaths: strings(start?.sourcePath),
     conflictKeys: [],
     evidenceIds: [],
     proofIds: [],
@@ -64,14 +65,16 @@ function createResolutionState(start) {
 }
 
 function buildResolutionRecord(state, start, maxDepth, query, options) {
+  const currentAnchors = uniqueAnchors(state.current).map((anchor) => anchorWithLineageLinks(anchor, state, start, query));
   const core = {
     kind: 'frontier.lang.semanticLineageResolution',
     version: 1,
     query: compactRecord({ anchorKey: start?.key, anchorId: start?.id, sourcePath: start?.sourcePath, symbolName: start?.symbolName, maxDepth }),
     startAnchor: start,
-    currentAnchors: uniqueAnchors(state.current),
+    currentAnchors,
     traversedEventIds: uniqueStrings(state.traversed),
     terminalEventIds: uniqueStrings(state.terminal),
+    sourcePaths: lineageSourcePaths(state, start, query, currentAnchors),
     status: state.status,
     confidence: clampConfidence(state.confidence),
     conflictKeys: uniqueStrings(state.conflictKeys),
@@ -102,6 +105,7 @@ function applyLineageEvent(state, event, visitedEvents) {
   state.operationIds.push(event.crdt?.operationId);
   state.heads.push(...(event.crdt?.heads ?? []));
   state.eventKinds.push(event.eventKind);
+  state.sourcePaths.push(event.from?.sourcePath, ...event.to.map((anchor) => anchor.sourcePath));
   if (event.confidence !== undefined) state.confidence = state.confidence === undefined ? event.confidence : Math.min(state.confidence, event.confidence);
   const matched = state.current.filter((anchor) => anchorsMatch(anchor, event.from));
   const unmatched = state.current.filter((anchor) => !anchorsMatch(anchor, event.from));
@@ -177,6 +181,29 @@ function uniqueEvents(events) {
     seen.add(event.id);
     return true;
   });
+}
+function anchorWithLineageLinks(anchor, state, start, query) {
+  return compactRecord({
+    ...anchor,
+    lineageEventIds: uniqueStrings(state.traversed),
+    terminalLineageEventIds: uniqueStrings(state.terminal),
+    lineageSourcePaths: lineageSourcePaths(state, start, query, [anchor]),
+    evidenceIds: uniqueStrings(state.evidenceIds),
+    proofIds: uniqueStrings(state.proofIds),
+    crdtOperationIds: uniqueStrings(state.operationIds),
+    crdtHeads: uniqueStrings(state.heads),
+    lineageEventKinds: uniqueStrings(state.eventKinds),
+    lineageReasonCodes: uniqueStrings(state.reasonCodes)
+  });
+}
+function lineageSourcePaths(state, start, query, anchors = []) {
+  return uniqueStrings([
+    query?.sourcePath,
+    start?.sourcePath,
+    ...state.sourcePaths,
+    ...array(anchors).map((anchor) => anchor?.sourcePath),
+    ...array(anchors).flatMap((anchor) => anchor?.lineageSourcePaths ?? [])
+  ]);
 }
 function positiveInteger(value, fallback) {
   const number = Number(value);

@@ -1,4 +1,4 @@
-import { idFragment, uniqueStrings } from './native-import-utils.js';
+import { caseSensitiveIdFragment, idFragment, uniqueStrings } from './native-import-utils.js';
 
 const NativeImportRegionTaxonomyKinds = Object.freeze([
   'symbol',
@@ -27,7 +27,7 @@ function semanticOwnershipRegionForSymbol(imported, symbol, mapping, nativeNode,
     symbol.name ?? symbol.id
   ].map((part) => String(part).replace(/\s+/g, ' ').trim()).join('#');
   return {
-    id: `region_${idFragment(key)}`,
+    id: `region_${caseSensitiveIdFragment(key)}`,
     key,
     regionKind,
     granularity: 'symbol',
@@ -54,7 +54,7 @@ function semanticOwnershipRegionForDeclaration(input, declaration, documentId) {
   const regionKind = semanticRegionKindForDeclaration(declaration);
   const key = ['source', sourcePath, regionKind, name].map((part) => String(part).replace(/\s+/g, ' ').trim()).join('#');
   return {
-    id: `region_${idFragment(key)}`,
+    id: `region_${caseSensitiveIdFragment(key)}`,
     key,
     regionKind,
     granularity: 'symbol',

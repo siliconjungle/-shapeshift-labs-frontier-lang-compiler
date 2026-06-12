@@ -1,4 +1,4 @@
-import type { SemanticMergeReadiness } from '@shapeshift-labs/frontier-lang-kernel';
+import type { EvidenceRecord, SemanticMergeReadiness } from '@shapeshift-labs/frontier-lang-kernel';
 import type { SemanticEditProjection, SemanticEditReplay, SemanticEditScript } from './semantic-edit-script.js';
 
 export type SemanticEditBundleAdmissionStatus =
@@ -16,6 +16,8 @@ export interface SemanticEditBundleAdmissionSummary {
   readonly projections: number;
   readonly replays: number;
   readonly files: number;
+  readonly portableScripts: number;
+  readonly portableProjections: number;
   readonly acceptedClean: number;
   readonly alreadyApplied: number;
   readonly conflicts: number;
@@ -32,6 +34,11 @@ export interface SemanticEditBundleAdmissionSummary {
   readonly scriptIds: readonly string[];
   readonly projectionIds: readonly string[];
   readonly replayIds: readonly string[];
+  readonly evidenceIds: readonly string[];
+  readonly passedTestEvidence: number;
+  readonly failedTestEvidence: number;
+  readonly conflictEvidence: number;
+  readonly staleEvidence: number;
   readonly reasonCodes: readonly string[];
 }
 
@@ -68,6 +75,11 @@ export interface CreateSemanticEditBundleAdmissionInput {
   readonly semanticEditReplay?: SemanticEditReplay;
   readonly semanticEditReplays?: readonly SemanticEditReplay[] | SemanticEditReplay;
   readonly replays?: readonly SemanticEditReplay[] | SemanticEditReplay;
+  readonly evidence?: readonly EvidenceRecord[] | EvidenceRecord;
+  readonly testEvidence?: readonly EvidenceRecord[] | EvidenceRecord;
+  readonly testResults?: readonly EvidenceRecord[] | EvidenceRecord;
+  readonly gateEvidence?: readonly EvidenceRecord[] | EvidenceRecord;
+  readonly proofEvidence?: readonly EvidenceRecord[] | EvidenceRecord;
   readonly metadata?: Record<string, unknown>;
 }
 

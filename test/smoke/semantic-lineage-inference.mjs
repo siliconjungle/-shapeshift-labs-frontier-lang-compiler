@@ -5,6 +5,7 @@ import {
   importNativeSource,
   resolveSemanticLineage
 } from './compiler-api.mjs';
+import { parserImportFixture, parserImportMultiFixture } from './semantic-lineage-fixtures.mjs';
 
 const movedBefore = importNativeSource({
   language: 'typescript',
@@ -60,6 +61,107 @@ assert.ok(renamedEvent);
 assert.equal(renamedEvent.evidence.signatureHashMatch, true);
 assert.equal(renamedEvent.metadata.renamed, true);
 
+const recreatedInference = inferSemanticLineageEvents({
+  id: 'lineage_inference_recreate_smoke',
+  before: parserImportFixture({
+    id: 'parser_before_boot_legacy',
+    symbolName: 'boot',
+    sourceText: 'export function boot() { return "ready"; }\n',
+    signatureHash: 'fixture_signature_boot',
+    ownershipRegionKind: 'legacyBody'
+  }),
+  after: parserImportFixture({
+    id: 'parser_after_boot_recreated',
+    symbolName: 'boot',
+    sourceText: 'export function boot() { return "ready"; }\n',
+    signatureHash: 'fixture_signature_boot',
+    ownershipRegionKind: 'body'
+  }),
+  generatedAt: 25
+});
+assert.equal(recreatedInference.summary.recreated, 1);
+assert.equal(recreatedInference.summary.deleted, 0);
+assert.equal(recreatedInference.readiness, 'needs-review');
+assert.equal(recreatedInference.reasons.includes('recreated-anchor-lineage-inferred'), true);
+const recreatedEvent = recreatedInference.events.find((event) => event.eventKind === 'recreated');
+assert.ok(recreatedEvent);
+assert.equal(recreatedEvent.metadata.reasonCodes.includes('delete-recreate-candidate'), true);
+const recreatedResolution = resolveSemanticLineage(recreatedInference.lineageMap, {
+  anchorKey: recreatedEvent.from.key,
+  generatedAt: 26
+});
+assert.equal(recreatedResolution.status, 'recreated');
+assert.equal(recreatedResolution.currentAnchors[0].key, recreatedEvent.to[0].key);
+
+const splitInference = inferSemanticLineageEvents({
+  id: 'lineage_inference_split_smoke',
+  before: parserImportFixture({
+    id: 'parser_before_render',
+    symbolName: 'render',
+    sourceText: 'export function render() { return "view"; }\n',
+    signatureHash: 'fixture_signature_render'
+  }),
+  after: parserImportMultiFixture({
+    id: 'parser_after_render_split',
+    sourceText: [
+      'export function renderCanvas() { return "view"; }',
+      'export function renderDebug() { return "view"; }',
+      ''
+    ].join('\n'),
+    symbols: [
+      { symbolName: 'renderCanvas', signatureHash: 'fixture_signature_render', line: 1 },
+      { symbolName: 'renderDebug', signatureHash: 'fixture_signature_render', line: 2 }
+    ]
+  }),
+  generatedAt: 27
+});
+assert.equal(splitInference.summary.split, 1);
+assert.equal(splitInference.summary.deleted, 0);
+assert.equal(splitInference.summary.ambiguous, 0);
+assert.equal(splitInference.readiness, 'needs-review');
+assert.equal(splitInference.reasons.includes('split-anchor-lineage-inferred'), true);
+const splitEvent = splitInference.events.find((event) => event.eventKind === 'split');
+assert.ok(splitEvent);
+assert.equal(splitEvent.to.length, 2);
+assert.equal(splitEvent.metadata.reasonCodes.includes('split-lineage-candidate'), true);
+const splitResolution = resolveSemanticLineage(splitInference.lineageMap, {
+  anchorKey: splitEvent.from.key,
+  generatedAt: 28
+});
+assert.equal(splitResolution.status, 'ambiguous');
+assert.equal(splitResolution.reasonCodes.includes('anchor-split'), true);
+assert.equal(splitResolution.currentAnchors.length, 2);
+
+const ambiguousInference = inferSemanticLineageEvents({
+  id: 'lineage_inference_ambiguous_move_smoke',
+  before: parserImportFixture({
+    id: 'parser_before_load',
+    symbolName: 'load',
+    sourceText: '\n\nexport function load() { return "data"; }\n',
+    signatureHash: 'fixture_signature_load',
+    line: 3
+  }),
+  after: parserImportMultiFixture({
+    id: 'parser_after_load_ambiguous',
+    sourceText: [
+      'export function fetch() { return "data"; }',
+      'export function read() { return "data"; }',
+      ''
+    ].join('\n'),
+    symbols: [
+      { symbolName: 'fetch', signatureHash: 'fixture_signature_load', line: 1 },
+      { symbolName: 'read', signatureHash: 'fixture_signature_load', line: 2 }
+    ]
+  }),
+  generatedAt: 29
+});
+assert.equal(ambiguousInference.summary.ambiguous, 1);
+assert.equal(ambiguousInference.summary.deleted, 0);
+assert.equal(ambiguousInference.events.some((event) => event.eventKind === 'deleted'), false);
+assert.equal(ambiguousInference.readiness, 'blocked');
+assert.equal(ambiguousInference.reasons.includes('lineage-inference-blocked'), true);
+assert.equal(ambiguousInference.unmatched.ambiguous[0].reasonCodes.includes('ambiguous-lineage-candidates'), true);
+
 const deletedInference = inferSemanticLineageEvents({
   id: 'lineage_inference_delete_smoke',
   before: importNativeSource({
@@ -92,71 +194,3 @@ const diffResult = diffNativeSources({
 assert.equal(diffResult.lineageInference.kind, 'frontier.lang.semanticLineageInference');
 assert.equal(diffResult.metadata.semanticLineageInferenceSummary.beforeSymbols >= 1, true);
 assert.equal(diffResult.evidence.some((record) => record.metadata?.semanticLineageInferenceSummary), true);
-
-function parserImportFixture({ id, symbolName, sourceText }) {
-  const sourcePath = 'src/runtime.ts';
-  const sourceHash = `fixture_hash_${id}`;
-  const span = {
-    path: sourcePath,
-    startLine: 1,
-    startColumn: 1,
-    endLine: 1,
-    endColumn: sourceText.length + 1
-  };
-  const symbol = {
-    id: `symbol_${symbolName}`,
-    name: symbolName,
-    kind: 'function',
-    language: 'typescript',
-    nativeAstNodeId: `node_${symbolName}`,
-    definitionSpan: span,
-    signatureHash: 'fixture_signature_step_body'
-  };
-  return {
-    kind: 'frontier.lang.importResult',
-    version: 1,
-    id,
-    language: 'typescript',
-    sourcePath,
-    nativeSource: {
-      id: `native_source_${id}`,
-      language: 'typescript',
-      sourcePath,
-      sourceHash,
-      metadata: { sourcePreservation: { sourceText } }
-    },
-    nativeAst: {
-      id: `native_ast_${id}`,
-      language: 'typescript',
-      sourcePath,
-      sourceHash,
-      nodes: {
-        [`node_${symbolName}`]: {
-          id: `node_${symbolName}`,
-          kind: 'function',
-          name: symbolName,
-          span
-        }
-      },
-      metadata: { sourcePreservation: { sourceText } }
-    },
-    semanticIndex: {
-      id: `semantic_index_${id}`,
-      symbols: [symbol],
-      relations: [],
-      occurrences: [],
-      facts: []
-    },
-    sourceMaps: [{
-      id: `source_map_${id}`,
-      mappings: [{
-        id: `mapping_${id}`,
-        semanticSymbolId: symbol.id,
-        nativeAstNodeId: symbol.nativeAstNodeId,
-        sourceSpan: span,
-        precision: 'declaration'
-      }]
-    }],
-    evidence: []
-  };
-}

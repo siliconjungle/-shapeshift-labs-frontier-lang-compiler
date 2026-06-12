@@ -74,6 +74,8 @@ export function inferSemanticLineageEvents(input = {}, options = {}) {
       inferredEvents: events.length,
       moved: events.filter((event) => event.eventKind === 'moved').length,
       renamed: events.filter((event) => event.eventKind === 'renamed').length,
+      split: events.filter((event) => event.eventKind === 'split').length,
+      recreated: events.filter((event) => event.eventKind === 'recreated').length,
       deleted: deleted.length,
       ambiguous: candidates.ambiguous.length,
       unmatchedAdded: candidates.unmatchedAfter.length,
@@ -169,6 +171,10 @@ function lineageInferenceEvidence(input) {
       language: input.language,
       unchangedAnchors: input.exact.matched.length,
       inferredEvents: input.events.length,
+      moved: input.events.filter((event) => event.eventKind === 'moved').length,
+      renamed: input.events.filter((event) => event.eventKind === 'renamed').length,
+      split: input.events.filter((event) => event.eventKind === 'split').length,
+      recreated: input.events.filter((event) => event.eventKind === 'recreated').length,
       deleted: input.deleted.length,
       ambiguous: input.candidates.ambiguous.length,
       unmatchedAdded: input.candidates.unmatchedAfter.length,
@@ -188,6 +194,8 @@ function inferenceReadiness(input, options) {
 function inferenceReasons(input) {
   return uniqueStrings([
     input.events.length ? 'semantic-lineage-inferred' : undefined,
+    input.events.some((event) => event.eventKind === 'split') ? 'split-anchor-lineage-inferred' : undefined,
+    input.events.some((event) => event.eventKind === 'recreated') ? 'recreated-anchor-lineage-inferred' : undefined,
     input.deleted.length ? 'deleted-anchor-lineage-inferred' : undefined,
     input.added.length ? 'unmatched-added-anchor-review' : undefined,
     input.ambiguous.length ? 'ambiguous-lineage-candidates' : undefined,

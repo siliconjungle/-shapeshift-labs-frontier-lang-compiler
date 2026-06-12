@@ -3,6 +3,7 @@ import { idFragment, normalizeNativeLanguageId, uniqueStrings } from '../../nati
 import { createSemanticImportSidecar } from './createSemanticImportSidecar.js';
 import { mapDiffSymbols } from './mapDiffSymbols.js';
 import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
+import { afterLineOffset, bodyContentRange, spanOffsets } from './semanticEditSourceRanges.js';
 
 export function replaySemanticEditProjection(input = {}) {
   const projection = input.projection ?? input.semanticEditProjection;
@@ -17,7 +18,7 @@ export function replaySemanticEditProjection(input = {}) {
     ? currentSymbolIndex({ currentSourceText, sourcePath, language, parser: input.parser })
     : [];
   const edits = projection.status === 'projected' && typeof currentSourceText === 'string'
-    ? (projection.edits ?? []).map((edit) => replayProjectionEdit(edit, { currentSourceText, currentSymbols }))
+    ? (projection.edits ?? []).map((edit, index) => replayProjectionEdit(projectionEditWithOrder(edit, index), { currentSourceText, currentSymbols }))
     : [];
   const status = replayStatus(reasonCodes, edits, projection);
   const outputSourceText = replayOutputSource(status, currentSourceText, edits);
@@ -54,14 +55,23 @@ function replayProjectionEdit(edit, context) {
   if (edit.status === 'already-applied') return replayEditRecord(edit, 'already-applied', undefined, ['projection-edit-already-applied']);
   if (typeof edit.replacementText !== 'string') return replayEditRecord(edit, 'blocked', undefined, ['missing-replacement-text']);
   if (edit.editKind === 'insert') return replayInsertionEdit(edit, context);
-  const offset = checkRange(edit, { start: edit.headStart, end: edit.headEnd }, context.currentSourceText, 'head-offset');
-  if (offset) return replayEditRecord(edit, offset.status, offset.range, [offset.reason]);
+  const headRange = { start: edit.headStart, end: edit.headEnd };
+  const offset = checkRange(edit, headRange, context.currentSourceText, 'head-offset');
   const symbol = findCurrentSymbol(edit, context.currentSymbols);
-  const spanRange = spanOffsets(context.currentSourceText, symbol?.sourceSpan);
-  const anchored = checkRange(edit, spanRange, context.currentSourceText, 'current-symbol-anchor');
+  const spanRange = currentSymbolEditRange(edit, spanOffsets(context.currentSourceText, symbol?.sourceSpan), context.currentSourceText);
+  if (symbol && spanRange && !sameRange(headRange, spanRange)) {
+    const moved = checkRange(edit, spanRange, context.currentSourceText, currentSymbolRangeLabel(edit));
+    if (moved) return replayEditRecord(edit, moved.status, moved.range, [moved.reason, 'offset-reanchored-by-symbol']);
+    if (edit.editKind === 'delete' && offset && rangesOverlap(headRange, spanRange)) {
+      return replayEditRecord(edit, offset.status, offset.range, [offset.reason]);
+    }
+    return replayEditRecord(edit, 'conflict', spanRange, [`${currentSymbolRangeLabel(edit)}-content-mismatch`]);
+  }
+  if (offset) return replayEditRecord(edit, offset.status, offset.range, [offset.reason]);
+  const anchored = checkRange(edit, spanRange, context.currentSourceText, currentSymbolRangeLabel(edit));
   if (anchored) return replayEditRecord(edit, anchored.status, anchored.range, [anchored.reason, 'offset-reanchored-by-symbol']);
   return replayEditRecord(edit, symbol ? 'conflict' : 'stale', spanRange, [
-    symbol ? 'current-symbol-anchor-content-mismatch' : 'current-symbol-anchor-missing'
+    symbol ? `${currentSymbolRangeLabel(edit)}-content-mismatch` : 'current-symbol-anchor-missing'
   ]);
 }
 
@@ -70,6 +80,9 @@ function replayInsertionEdit(edit, context) {
   const insertedRange = spanOffsets(context.currentSourceText, inserted?.sourceSpan);
   const already = checkRange(edit, insertedRange, context.currentSourceText, 'current-inserted-symbol');
   if (already?.status === 'already-applied') return replayEditRecord(edit, 'already-applied', already.range, [already.reason]);
+  if (inserted && insertedRange) {
+    return replayEditRecord(edit, 'conflict', insertedRange, ['current-inserted-symbol-content-mismatch']);
+  }
   const anchor = findInsertionAnchorSymbol(edit, context.currentSymbols);
   const range = insertionRange(edit, anchor, context.currentSourceText);
   if (range) return replayEditRecord(edit, 'applied', range, [anchor ? 'current-insertion-anchor' : `current-${edit.insertionMode}`]);
@@ -97,6 +110,8 @@ function replayEditRecord(edit, status, range, reasonCodes) {
     sourceIdentityHash: edit.sourceIdentityHash,
     editContentHash: edit.editContentHash,
     editKind: edit.editKind,
+    editOrder: edit.editOrder,
+    sourceRangeKind: edit.sourceRangeKind,
     sourcePath: edit.targetSourcePath ?? edit.sourcePath,
     symbolName: edit.targetSymbolName ?? edit.symbolName,
     symbolKind: edit.targetSymbolKind ?? edit.symbolKind,
@@ -143,10 +158,19 @@ function insertionRange(edit, anchor, sourceText) {
   if (!anchorRange) return undefined;
   if (edit.insertionMode === 'before') return { start: anchorRange.start, end: anchorRange.start };
   if (edit.insertionMode === 'after') {
-    const offset = sourceText[anchorRange.end] === '\n' ? anchorRange.end + 1 : anchorRange.end;
-    return { start: offset, end: offset };
+    return { start: afterLineOffset(sourceText, anchorRange.end), end: afterLineOffset(sourceText, anchorRange.end) };
   }
   return undefined;
+}
+
+function currentSymbolEditRange(edit, symbolRange, sourceText) {
+  if (!symbolRange) return undefined;
+  if (edit.sourceRangeKind === 'body-content') return bodyContentRange(sourceText, symbolRange);
+  return symbolRange;
+}
+
+function currentSymbolRangeLabel(edit) {
+  return edit.sourceRangeKind === 'body-content' ? 'current-symbol-body' : 'current-symbol-anchor';
 }
 
 function replayStatus(reasonCodes, edits, projection) {
@@ -189,8 +213,23 @@ function replayOutputSource(status, sourceText, edits) {
   if (status === 'already-applied') return sourceText;
   if (status !== 'accepted-clean') return undefined;
   return edits.filter((edit) => edit.status === 'applied')
-    .sort((left, right) => right.start - left.start)
+    .sort(replaySourceEditSort)
     .reduce((text, edit) => text.slice(0, edit.start) + editReplacement(edit, edits) + text.slice(edit.end), sourceText);
+}
+
+function replaySourceEditSort(left, right) {
+  return right.start - left.start || right.end - left.end || (right.editOrder ?? 0) - (left.editOrder ?? 0);
+}
+
+function projectionEditWithOrder(edit, index) {
+  return {
+    ...edit,
+    editOrder: typeof edit.editOrder === 'number'
+      ? edit.editOrder
+      : typeof edit.order === 'number'
+        ? edit.order
+        : index
+  };
 }
 
 function editReplacement(edit, edits) {
@@ -205,19 +244,12 @@ function baseReasonCodes(projection, currentSourceText) {
   ]);
 }
 
-function spanOffsets(sourceText, span) {
-  if (typeof sourceText !== 'string' || !span) return undefined;
-  if (typeof span.start === 'number' && typeof span.end === 'number' && span.end >= span.start) return { start: span.start, end: span.end };
-  if (typeof span.startLine !== 'number') return undefined;
-  const starts = [0];
-  for (let index = 0; index < sourceText.length; index += 1) if (sourceText[index] === '\n') starts.push(index + 1);
-  const startLine = Math.max(1, span.startLine);
-  const endLine = Math.max(startLine, typeof span.endLine === 'number' ? span.endLine : startLine);
-  const lineStart = starts[startLine - 1];
-  const endLineStart = starts[endLine - 1];
-  if (lineStart === undefined || endLineStart === undefined) return undefined;
-  const lineEnd = starts[endLine] === undefined ? sourceText.length : starts[endLine] - 1;
-  return { start: lineStart + Math.max(0, (span.startColumn ?? 1) - 1), end: endLineStart + (span.endColumn === undefined ? lineEnd - endLineStart : Math.max(0, span.endColumn - 1)) };
+function sameRange(left, right) {
+  return left?.start === right?.start && left?.end === right?.end;
+}
+
+function rangesOverlap(left, right) {
+  return Boolean(left && right && left.start < right.end && right.start < left.end);
 }
 
 function isJavaScriptLike(language) { return language === 'javascript' || language === 'typescript'; }

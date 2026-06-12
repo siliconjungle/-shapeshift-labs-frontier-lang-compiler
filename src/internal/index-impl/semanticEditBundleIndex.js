@@ -15,16 +15,16 @@ export function semanticEditRecordIndex(scripts, projections, replays, source = 
     semanticEditReplayEditCount: replayEdits.length,
     semanticEditReplayStatuses: uniqueStrings([...strings(source.semanticEditReplayStatuses), ...strings(index.semanticEditReplayStatuses), ...strings(summary.replayStatuses), ...replays.map((replay) => replay.status)]),
     semanticEditReplayActions: uniqueStrings([...strings(source.semanticEditReplayActions), ...strings(index.semanticEditReplayActions), ...strings(summary.replayActions), ...replays.map((replay) => replay.admission?.action)]),
-    semanticEditReplayCurrentHashes: uniqueStrings([...strings(source.semanticEditReplayCurrentHashes), ...strings(index.semanticEditReplayCurrentHashes), ...replays.map((replay) => replay.currentHash)]),
-    semanticEditReplayOutputHashes: uniqueStrings([...strings(source.semanticEditReplayOutputHashes), ...strings(index.semanticEditReplayOutputHashes), ...replays.map((replay) => replay.outputHash)]),
-    semanticEditKeys: uniqueStrings([...strings(source.semanticEditKeys), ...strings(index.semanticEditKeys), ...operations.map((operation) => operation.semanticKey), ...edits.map((edit) => edit.semanticKey), ...replayEdits.map((edit) => edit.semanticKey)]),
-    semanticIdentityHashes: uniqueStrings([...strings(source.semanticIdentityHashes), ...strings(index.semanticIdentityHashes), ...operations.map((operation) => operation.semanticIdentityHash), ...edits.map((edit) => edit.semanticIdentityHash), ...replayEdits.map((edit) => edit.semanticIdentityHash)]),
-    sourceIdentityHashes: uniqueStrings([...strings(source.sourceIdentityHashes), ...strings(index.sourceIdentityHashes), ...operations.map((operation) => operation.sourceIdentityHash), ...edits.map((edit) => edit.sourceIdentityHash), ...replayEdits.map((edit) => edit.sourceIdentityHash)]),
-    operationContentHashes: uniqueStrings([...strings(source.operationContentHashes), ...strings(index.operationContentHashes), ...operations.map((operation) => operation.operationContentHash), ...edits.map((edit) => edit.operationContentHash)]),
-    editContentHashes: uniqueStrings([...strings(source.editContentHashes), ...strings(index.editContentHashes), ...edits.map((edit) => edit.editContentHash), ...replayEdits.map((edit) => edit.editContentHash)]),
-    anchorKeys: uniqueStrings([...operations.map((operation) => operation.anchor?.key), ...edits.map((edit) => edit.anchorKey)]),
-    conflictKeys: uniqueStrings([...operations.map((operation) => operation.anchor?.conflictKey), ...edits.map((edit) => edit.conflictKey)]),
-    projectedSourcePaths: uniqueStrings([...projections.map((projection) => projection.sourcePath), ...edits.flatMap((edit) => [edit.sourcePath, edit.targetSourcePath]), ...replays.map((replay) => replay.sourcePath), ...replayEdits.map((edit) => edit.sourcePath)])
+    semanticEditReplayCurrentHashes: uniqueStrings([...strings(source.semanticEditReplayCurrentHashes), ...strings(index.semanticEditReplayCurrentHashes), ...strings(summary.replayCurrentHashes), ...strings(summary.semanticEditReplayCurrentHashes), ...replays.map((replay) => replay.currentHash)]),
+    semanticEditReplayOutputHashes: uniqueStrings([...strings(source.semanticEditReplayOutputHashes), ...strings(index.semanticEditReplayOutputHashes), ...strings(summary.replayOutputHashes), ...strings(summary.semanticEditReplayOutputHashes), ...replays.map((replay) => replay.outputHash)]),
+    semanticEditKeys: uniqueStrings([...strings(source.semanticEditKeys), ...strings(index.semanticEditKeys), ...strings(summary.semanticEditKeys), ...operations.map((operation) => operation.semanticKey), ...edits.map((edit) => edit.semanticKey), ...replayEdits.map((edit) => edit.semanticKey)]),
+    semanticIdentityHashes: uniqueStrings([...strings(source.semanticIdentityHashes), ...strings(index.semanticIdentityHashes), ...strings(summary.semanticIdentityHashes), ...operations.map((operation) => operation.semanticIdentityHash), ...edits.map((edit) => edit.semanticIdentityHash), ...replayEdits.map((edit) => edit.semanticIdentityHash)]),
+    sourceIdentityHashes: uniqueStrings([...strings(source.sourceIdentityHashes), ...strings(index.sourceIdentityHashes), ...strings(summary.sourceIdentityHashes), ...operations.map((operation) => operation.sourceIdentityHash), ...edits.map((edit) => edit.sourceIdentityHash), ...replayEdits.map((edit) => edit.sourceIdentityHash)]),
+    operationContentHashes: uniqueStrings([...strings(source.operationContentHashes), ...strings(index.operationContentHashes), ...strings(summary.operationContentHashes), ...operations.map((operation) => operation.operationContentHash), ...edits.map((edit) => edit.operationContentHash), ...replayEdits.map((edit) => edit.operationContentHash)]),
+    editContentHashes: uniqueStrings([...strings(source.editContentHashes), ...strings(index.editContentHashes), ...strings(summary.editContentHashes), ...edits.map((edit) => edit.editContentHash), ...replayEdits.map((edit) => edit.editContentHash)]),
+    anchorKeys: uniqueStrings([...strings(source.anchorKeys), ...strings(index.anchorKeys), ...strings(summary.anchorKeys), ...operations.map((operation) => operation.anchor?.key), ...edits.map((edit) => edit.anchorKey), ...replayEdits.map((edit) => edit.anchorKey)]),
+    conflictKeys: uniqueStrings([...strings(source.conflictKeys), ...strings(index.conflictKeys), ...strings(summary.conflictKeys), ...operations.map((operation) => operation.anchor?.conflictKey), ...edits.map((edit) => edit.conflictKey), ...replayEdits.map((edit) => edit.conflictKey)]),
+    projectedSourcePaths: uniqueStrings([...strings(source.projectedSourcePaths), ...strings(index.projectedSourcePaths), ...strings(summary.projectedSourcePaths), ...projections.map((projection) => projection.sourcePath), ...edits.flatMap((edit) => [edit.sourcePath, edit.targetSourcePath]), ...replays.map((replay) => replay.sourcePath), ...replayEdits.map((edit) => edit.sourcePath)])
   };
 }
 
@@ -36,9 +36,15 @@ export function semanticEditSummary(index) {
     replayIds: index.semanticEditReplayIds,
     replayStatuses: index.semanticEditReplayStatuses,
     replayActions: index.semanticEditReplayActions,
+    replayCurrentHashes: index.semanticEditReplayCurrentHashes,
+    replayOutputHashes: index.semanticEditReplayOutputHashes,
     semanticEditKeys: index.semanticEditKeys,
+    semanticIdentityHashes: index.semanticIdentityHashes,
+    sourceIdentityHashes: index.sourceIdentityHashes,
     operationContentHashes: index.operationContentHashes,
     editContentHashes: index.editContentHashes,
+    anchorKeys: index.anchorKeys,
+    conflictKeys: index.conflictKeys,
     projectedSourcePaths: index.projectedSourcePaths,
     replayEditCount: index.semanticEditReplayEditCount
   });

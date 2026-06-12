@@ -121,10 +121,64 @@ function jsRegionKindForDeclarationName(name, source = '') {
 function jsExportedContainerDeclaration(input, lineNumber, trimmed) {
   let match = trimmed.match(/^export\s+default\s+(.+)$/);
   if (match) return jsContainerExport(input, lineNumber, 'ExportDefaultContainer', 'default', match[1], { exportDefault: true });
-  match = trimmed.match(/^(?:module\.)?exports(?:\.([A-Za-z_$][\w$]*))?\s*=\s*(.+)$/);
+  match = trimmed.match(/^(module\.exports|exports)(?:\.([A-Za-z_$][\w$]*))?\s*=\s*(.+)$/);
   if (!match) return undefined;
-  const name = match[1] ? `exports.${match[1]}` : 'module.exports';
-  return jsContainerExport(input, lineNumber, 'CommonJsContainerExport', name, match[2], { export: 'commonjs' });
+  const name = match[2] ? `${match[1]}.${match[2]}` : 'module.exports';
+  return jsContainerExport(input, lineNumber, 'CommonJsContainerExport', name, match[3], { export: 'commonjs' });
+}
+
+function jsExportedFunctionWrapperDeclaration(input, lineNumber, trimmed) {
+  const match = trimmed.match(/^export\s+default\s+((?:React\.)?(?:forwardRef|memo|lazy|observer))\s*(?:<[^>]+>)?\s*\(\s*(.+)$/);
+  if (!match) return undefined;
+  const wrapper = match[1];
+  const argument = match[2].trim();
+  let functionMatch = argument.match(/^(?:async\s+)?function\*?\s*([A-Za-z_$][\w$]*)?\s*(?:<[^({;]+>)?\s*\(([^)]*)\)/);
+  if (functionMatch) {
+    return nativeDeclaration(input, lineNumber, 'ExportDefaultFunctionWrapperDeclaration', 'function', functionMatch[1] ?? 'default', {
+      exportDefault: true,
+      wrapper,
+      parameters: splitParameters(functionMatch[2])
+    }, true);
+  }
+  functionMatch = argument.match(/^(?:async\s*)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*(?::\s*[^=]+)?=>/);
+  if (functionMatch) {
+    return nativeDeclaration(input, lineNumber, 'ExportDefaultFunctionWrapperDeclaration', 'function', 'default', {
+      exportDefault: true,
+      wrapper,
+      parameters: splitParameters(functionMatch[1] ?? functionMatch[2])
+    }, true);
+  }
+  const aliasMatch = argument.match(/^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*(?:[,)]|$)/);
+  if (!aliasMatch) return undefined;
+  return nativeDeclaration(input, lineNumber, 'ExportDefaultWrappedAlias', 'variable', 'default', {
+    exportDefault: true,
+    wrapper,
+    alias: aliasMatch[1],
+    initializerKind: 'function-wrapper'
+  }, false, {
+    metadata: { exportDefault: true, wrapper, alias: aliasMatch[1], initializerKind: 'function-wrapper' }
+  });
+}
+
+function jsExportAliasDeclaration(input, lineNumber, trimmed) {
+  let match = trimmed.match(/^export\s+default\s+([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*;?$/);
+  if (match) return jsAliasExport(input, lineNumber, 'ExportDefaultAlias', 'default', match[1], { exportDefault: true }, trimmed);
+  match = trimmed.match(/^module\.exports\s*=\s*([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*;?$/);
+  if (match) return jsAliasExport(input, lineNumber, 'CommonJsAliasExport', 'module.exports', match[1], { export: 'commonjs' }, trimmed);
+  match = trimmed.match(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*;?$/);
+  if (!match) return undefined;
+  return jsAliasExport(input, lineNumber, 'CommonJsAliasExport', match[1], match[2], { export: 'commonjs' }, trimmed);
+}
+
+function jsAliasExport(input, lineNumber, languageKind, name, alias, fields, source) {
+  const regionKind = jsRegionKindForDeclarationName(name, source);
+  return nativeDeclaration(input, lineNumber, languageKind, 'variable', name, {
+    ...fields,
+    alias
+  }, false, {
+    regionKind,
+    metadata: { ...fields, alias }
+  });
 }
 
 function jsContainerExport(input, lineNumber, languageKind, name, initializer, fields) {
@@ -254,17 +308,7 @@ function findUnescapedBacktick(text, startIndex) {
   return -1;
 }
 
-export {
-  jsCommentOnlyLine,
-  jsContainerDelta,
-  jsDeclarationScanLine,
-  jsExportedContainerDeclaration,
-  jsInitializerKind,
-  jsImportDeclarations,
-  jsObjectPropertyDeclaration,
-  jsObjectRegionContext,
-  jsRegionKindForDeclarationName,
-  jsRouteRecordDeclaration,
-  jsVariableHasBody,
-  jsVariableSymbolKind
-};
+export { jsCommentOnlyLine, jsContainerDelta, jsDeclarationScanLine };
+export { jsExportAliasDeclaration, jsExportedContainerDeclaration, jsExportedFunctionWrapperDeclaration };
+export { jsInitializerKind, jsImportDeclarations, jsObjectPropertyDeclaration, jsObjectRegionContext };
+export { jsRegionKindForDeclarationName, jsRouteRecordDeclaration, jsVariableHasBody, jsVariableSymbolKind };

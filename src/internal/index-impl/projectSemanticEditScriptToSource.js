@@ -1,6 +1,14 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { idFragment, uniqueStrings } from '../../native-import-utils.js';
 import { semanticEditIdentityFields } from './semanticEditIdentityRecords.js';
+import {
+  insertionOffset,
+  insertionReplacement,
+  projectionCoveredContainerOperationIds,
+  removalRange,
+  scopedBodyReplacement,
+  spanOffsets
+} from './semanticEditSourceRanges.js';
 import { applySourceEdits, dedupeSourceEdits, validateSourceEdits } from './semanticSourceEditDedupe.js';
 
 export function projectSemanticEditScriptToSource(input = {}) {
@@ -9,22 +17,25 @@ export function projectSemanticEditScriptToSource(input = {}) {
   const headSourceText = input.headSourceText;
   const reasonCodes = [];
   if (!script) throw new Error('projectSemanticEditScriptToSource requires a script');
-  if (script.admission?.status !== 'auto-merge-candidate') reasonCodes.push('script-not-auto-merge-candidate');
   if (typeof workerSourceText !== 'string') reasonCodes.push('missing-worker-source-text');
   if (typeof headSourceText !== 'string') reasonCodes.push('missing-head-source-text');
   const edits = [];
   const coveredOperationIds = [];
+  const projectionCoveredOperationIds = projectionCoveredContainerOperationIds(script.operations ?? [], workerSourceText);
   for (const [index, operation] of (script.operations ?? []).entries()) {
-    if (operation.status === 'covered') {
+    if (operation.status === 'covered' || projectionCoveredOperationIds.has(operation.id)) {
       coveredOperationIds.push(operation.id);
       continue;
     }
-    const edit = sourceEditForOperation(operation, workerSourceText, headSourceText, index);
+    const edit = sourceEditForOperation(operation, workerSourceText, headSourceText, index, input.headSourcePath);
     if (edit.ok) edits.push(edit.value);
     else reasonCodes.push(...edit.reasonCodes);
   }
   const deduped = dedupeSourceEdits(edits);
   reasonCodes.push(...validateSourceEdits(deduped.edits));
+  if (script.admission?.status !== 'auto-merge-candidate' && (reasonCodes.length > 0 || (!edits.length && !coveredOperationIds.length))) {
+    reasonCodes.push('script-not-auto-merge-candidate');
+  }
   const blocked = reasonCodes.length > 0;
   const sourceText = blocked ? undefined : applySourceEdits(headSourceText, deduped.edits);
   const core = {
@@ -62,8 +73,8 @@ export function projectSemanticEditScriptToSource(input = {}) {
   return { ...core, hash: hashSemanticValue(core) };
 }
 
-function sourceEditForOperation(operation, workerSourceText, headSourceText, order) {
-  const identity = projectionIdentity(operation);
+function sourceEditForOperation(operation, workerSourceText, headSourceText, order, headSourcePath) {
+  const identity = projectionIdentity(operation, headSourcePath);
   if (operation.status === 'already-applied') {
     return { ok: true, value: { ...identity, operationId: operation.id, order, start: 0, end: 0, replacement: '', current: '', alreadyApplied: true } };
   }
@@ -80,16 +91,23 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText, ord
   if (!workerOffsets) reasons.push(`worker-span-not-resolvable:${operation.id}`);
   if (!headOffsets) reasons.push(`head-span-not-resolvable:${operation.id}`);
   if (reasons.length) return { ok: false, reasonCodes: reasons };
-  const replacement = workerSourceText.slice(workerOffsets.start, workerOffsets.end);
-  const current = headSourceText.slice(headOffsets.start, headOffsets.end);
-  if (operation.hashes?.workerTextHash && hashSemanticValue(replacement) !== operation.hashes.workerTextHash) {
+  const anchorReplacement = workerSourceText.slice(workerOffsets.start, workerOffsets.end);
+  const anchorCurrent = headSourceText.slice(headOffsets.start, headOffsets.end);
+  if (operation.hashes?.workerTextHash && hashSemanticValue(anchorReplacement) !== operation.hashes.workerTextHash) {
     reasons.push(`worker-span-hash-mismatch:${operation.id}`);
   }
   const expectedHeadHash = operation.hashes?.headTextHash ?? operation.hashes?.baseTextHash;
-  if (expectedHeadHash && hashSemanticValue(current) !== expectedHeadHash) {
+  if (expectedHeadHash && hashSemanticValue(anchorCurrent) !== expectedHeadHash) {
     reasons.push(`head-span-hash-mismatch:${operation.id}`);
   }
   if (reasons.length) return { ok: false, reasonCodes: reasons };
+  const scoped = scopedBodyReplacement(operation, headSourceText, workerSourceText, headOffsets, workerOffsets);
+  const replacement = scoped
+    ? workerSourceText.slice(scoped.worker.start, scoped.worker.end)
+    : anchorReplacement;
+  const current = scoped
+    ? headSourceText.slice(scoped.head.start, scoped.head.end)
+    : anchorCurrent;
   return {
     ok: true,
     value: {
@@ -97,10 +115,17 @@ function sourceEditForOperation(operation, workerSourceText, headSourceText, ord
       order,
       ...identity,
       editKind: 'replace',
-      start: headOffsets.start,
-      end: headOffsets.end,
-      workerStart: workerOffsets.start,
-      workerEnd: workerOffsets.end,
+      sourceRangeKind: scoped?.sourceRangeKind,
+      start: scoped?.head.start ?? headOffsets.start,
+      end: scoped?.head.end ?? headOffsets.end,
+      workerStart: scoped?.worker.start ?? workerOffsets.start,
+      workerEnd: scoped?.worker.end ?? workerOffsets.end,
+      headAnchorStart: scoped ? headOffsets.start : undefined,
+      headAnchorEnd: scoped ? headOffsets.end : undefined,
+      workerAnchorStart: scoped ? workerOffsets.start : undefined,
+      workerAnchorEnd: scoped ? workerOffsets.end : undefined,
+      anchorDeletedTextHash: scoped ? hashSemanticValue(anchorCurrent) : undefined,
+      anchorReplacementTextHash: scoped ? hashSemanticValue(anchorReplacement) : undefined,
       replacement,
       current
     }
@@ -165,9 +190,16 @@ function insertionEditForOperation(operation, identity, workerSourceText, headSo
   };
 }
 
-function projectionIdentity(operation) {
+function projectionIdentity(operation, headSourcePath) {
   const identity = semanticEditIdentity(operation);
-  return { ...identity, sourcePath: operation.reanchor?.toSourcePath ?? identity.sourcePath };
+  const sourcePath = operation.reanchor?.toSourcePath ?? headSourcePath ?? operation.insertion?.sourcePath ?? identity.sourcePath;
+  const originalSourcePath = sourcePath && identity.sourcePath && sourcePath !== identity.sourcePath
+    ? identity.sourcePath
+    : identity.originalSourcePath;
+  const targetSourcePath = sourcePath && sourcePath !== identity.sourcePath
+    ? sourcePath
+    : identity.targetSourcePath;
+  return { ...identity, sourcePath, originalSourcePath, targetSourcePath };
 }
 
 function projectionEditRecord(edit) {
@@ -197,18 +229,27 @@ function projectionEditRecord(edit) {
     operationContentHash: edit.operationContentHash,
     editContentHash: hashSemanticValue(compactRecord({
       semanticIdentityHash: identity.semanticIdentityHash,
+      sourceRangeKind: edit.sourceRangeKind,
       deletedTextHash,
       replacementTextHash,
       status: edit.alreadyApplied ? 'already-applied' : 'applied'
     })),
+    sourceRangeKind: edit.sourceRangeKind,
     headStart: edit.start,
     headEnd: edit.end,
     workerStart: edit.workerStart,
     workerEnd: edit.workerEnd,
+    editOrder: edit.order,
+    headAnchorStart: edit.headAnchorStart,
+    headAnchorEnd: edit.headAnchorEnd,
+    workerAnchorStart: edit.workerAnchorStart,
+    workerAnchorEnd: edit.workerAnchorEnd,
     deletedBytes: edit.current.length,
     replacementBytes: edit.replacement.length,
     deletedTextHash,
     replacementTextHash,
+    anchorDeletedTextHash: edit.anchorDeletedTextHash,
+    anchorReplacementTextHash: edit.anchorReplacementTextHash,
     replacementSpanTextHash: hashSemanticValue(edit.replacementSpanText ?? edit.replacement),
     insertionMode: edit.insertion?.mode,
     insertionAnchorKey: edit.insertion?.anchorKey,
@@ -245,55 +286,6 @@ function semanticEditIdentity(operation) {
 
 function projectedSourcePath(script, edits) {
   return edits.map((edit) => edit.sourcePath).find(Boolean) ?? script.sourcePath;
-}
-
-function spanOffsets(sourceText, span) {
-  if (typeof sourceText !== 'string' || !span) return undefined;
-  if (typeof span.start === 'number' && typeof span.end === 'number' && span.end >= span.start) return { start: span.start, end: span.end };
-  if (typeof span.startLine !== 'number') return undefined;
-  const lineStarts = [0];
-  for (let index = 0; index < sourceText.length; index += 1) if (sourceText[index] === '\n') lineStarts.push(index + 1);
-  const startLine = Math.max(1, span.startLine);
-  const endLine = Math.max(startLine, typeof span.endLine === 'number' ? span.endLine : startLine);
-  const start = lineStarts[startLine - 1];
-  const endLineStart = lineStarts[endLine - 1];
-  if (start === undefined || endLineStart === undefined) return undefined;
-  const startColumn = Math.max(1, span.startColumn ?? 1) - 1;
-  const lineEnd = lineStarts[endLine] === undefined ? sourceText.length : lineStarts[endLine] - 1;
-  const endColumn = span.endColumn === undefined ? lineEnd - endLineStart : Math.max(1, span.endColumn) - 1;
-  return { start: start + startColumn, end: endLineStart + endColumn };
-}
-
-function insertionOffset(sourceText, insertion) {
-  if (typeof sourceText !== 'string') return { ok: false, reasonCodes: ['missing-head-source-text'] };
-  const mode = insertion?.mode;
-  if (mode === 'file-start') return { ok: true, offset: 0 };
-  if (mode === 'file-end') return { ok: true, offset: sourceText.length };
-  const range = spanOffsets(sourceText, insertion?.headSpan);
-  if (!range) return { ok: false, reasonCodes: ['insertion-anchor-not-resolvable'] };
-  if (mode === 'before') return { ok: true, offset: range.start };
-  if (mode === 'after') return { ok: true, offset: afterLineOffset(sourceText, range.end) };
-  return { ok: false, reasonCodes: ['insertion-mode-unsupported'] };
-}
-
-function removalRange(sourceText, span) {
-  const range = { ...span };
-  if (range.end < sourceText.length && sourceText[range.end] === '\n') range.end += 1;
-  else if (range.start > 0 && sourceText[range.start - 1] === '\n') range.start -= 1;
-  return range;
-}
-
-function insertionReplacement(text, sourceText, offset) {
-  let replacement = String(text ?? '');
-  if (offset > 0 && sourceText[offset - 1] !== '\n') replacement = `\n${replacement}`;
-  if (offset < sourceText.length && !replacement.endsWith('\n')) replacement += '\n';
-  if (offset === sourceText.length && sourceText && !sourceText.endsWith('\n')) replacement = `\n${replacement}`;
-  if (offset === sourceText.length && !replacement.endsWith('\n')) replacement += '\n';
-  return replacement;
-}
-
-function afterLineOffset(sourceText, offset) {
-  return sourceText[offset] === '\n' ? offset + 1 : offset;
 }
 
 function compactRecord(value) {

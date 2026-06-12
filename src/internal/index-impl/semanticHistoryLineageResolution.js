@@ -22,7 +22,11 @@ export function resolveSemanticHistoryRecordLineage(record = {}, eventsOrMap = [
     semanticAnchorKeys: resolveIndexKeys(sourceIndex.semanticAnchorKeys, byAnchorKey, options),
     sourcePaths: uniqueStrings([
       ...array(sourceIndex.sourcePaths),
-      ...resolutions.flatMap((resolution) => resolution.currentAnchors.map((anchor) => anchor.sourcePath))
+      ...resolutions.flatMap((resolution) => resolutionSourcePaths(resolution))
+    ]),
+    lineageResolutionIds: uniqueStrings([
+      ...array(sourceIndex.lineageResolutionIds),
+      ...resolutions.map((resolution) => resolution.id)
     ]),
     lineageEventIds: uniqueStrings([
       ...array(sourceIndex.lineageEventIds),
@@ -105,6 +109,13 @@ function createResolvedHistoryRecord(record, index, resolution) {
           inactiveAnchorKeys: resolution.summary.inactiveAnchorKeys,
           blockedAnchorKeys: resolution.summary.blockedAnchorKeys
         },
+        lineageResolutionIds: resolution.summary.lineageResolutionIds,
+        lineageEventIds: resolution.summary.traversedEventIds,
+        terminalEventIds: resolution.summary.terminalEventIds,
+        sourcePaths: resolution.summary.sourcePaths,
+        evidenceIds: resolution.summary.evidenceIds,
+        proofIds: resolution.summary.proofIds,
+        reasonCodes: resolution.summary.reasonCodes,
         autoMergeClaim: false,
         semanticEquivalenceClaim: false
       }
@@ -159,8 +170,11 @@ function summarizeSemanticHistoryLineageResolutions(resolutions, index, anchorIn
     deletedAnchorKeys: uniqueStrings(anchorInventory.deleted.map((anchor) => anchor.key)),
     unresolvedAnchorKeys: uniqueStrings(anchorInventory.unresolved.map((anchor) => anchor.key)),
     blockedAnchorKeys: uniqueStrings(anchorInventory.blocked.map((anchor) => anchor.key)),
+    lineageResolutionIds: uniqueStrings(resolutions.map((resolution) => resolution.id)),
     traversedEventIds: uniqueStrings(resolutions.flatMap((resolution) => resolution.traversedEventIds)),
     terminalEventIds: uniqueStrings(resolutions.flatMap((resolution) => resolution.terminalEventIds)),
+    evidenceIds: uniqueStrings(resolutions.flatMap((resolution) => resolution.evidenceIds)),
+    proofIds: uniqueStrings(resolutions.flatMap((resolution) => resolution.proofIds)),
     reasonCodes: uniqueStrings(resolutions.flatMap((resolution) => resolution.reasonCodes))
   };
 }
@@ -225,8 +239,17 @@ function anchorEntry(anchor, resolution) {
     sourcePath: anchor.sourcePath,
     symbolId: anchor.symbolId,
     symbolName: anchor.symbolName,
+    sourcePaths: resolutionSourcePaths(resolution, anchor),
+    lineageEventIds: uniqueStrings(resolution.traversedEventIds),
+    terminalEventIds: uniqueStrings(resolution.terminalEventIds),
+    evidenceIds: uniqueStrings(resolution.evidenceIds),
+    proofIds: uniqueStrings(resolution.proofIds),
+    crdtOperationIds: uniqueStrings(resolution.crdtOperationIds),
+    crdtHeads: uniqueStrings(resolution.crdtHeads),
+    lineageEventKinds: uniqueStrings(resolution.lineageEventKinds),
     status: resolution.status,
     resolutionId: resolution.id,
+    confidence: resolution.confidence,
     reasonCodes: uniqueStrings(resolution.reasonCodes)
   });
 }
@@ -248,6 +271,17 @@ function uniqueAnchorEntries(entries) {
     seen.add(key);
     return true;
   });
+}
+
+function resolutionSourcePaths(resolution, anchor) {
+  return uniqueStrings([
+    anchor?.sourcePath,
+    ...array(anchor?.lineageSourcePaths),
+    resolution.query?.sourcePath,
+    resolution.startAnchor?.sourcePath,
+    ...array(resolution.sourcePaths),
+    ...resolution.currentAnchors.flatMap((entry) => [entry.sourcePath, ...array(entry.lineageSourcePaths)])
+  ]);
 }
 
 function array(value) { return value === undefined || value === null ? [] : Array.isArray(value) ? value : [value]; }
