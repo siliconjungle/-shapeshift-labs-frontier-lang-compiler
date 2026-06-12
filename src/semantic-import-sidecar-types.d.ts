@@ -37,6 +37,8 @@ export interface SemanticImportSidecarSymbol {
   readonly sourceMapMappingId?: string;
   readonly sourceSpan?: SourceSpan;
   readonly signatureHash?: string;
+  readonly signatureOnly?: boolean;
+  readonly hasBody?: boolean;
   readonly ownershipRegionId: string;
   readonly ownershipKey: string;
   readonly ownershipRegionKind?: NativeImportRegionTaxonomyKind;

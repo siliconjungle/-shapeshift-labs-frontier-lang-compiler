@@ -28,15 +28,19 @@ function semanticImportSidecarEntry(imported, index, options) {
   const callsites = semanticCallsiteRecordsForImport(imported, semanticIndex, options);
   const effectRegions = semanticEffectRegionRecordsForImport(imported, semanticIndex, options);
   const mappingsBySymbolId = new Map();
+  const mappingsBySymbolAndNode = new Map();
   for (const mapping of sourceMapMappings) {
     if (mapping.semanticSymbolId && !mappingsBySymbolId.has(mapping.semanticSymbolId)) {
       mappingsBySymbolId.set(mapping.semanticSymbolId, mapping);
+    }
+    if (mapping.semanticSymbolId && mapping.nativeAstNodeId) {
+      mappingsBySymbolAndNode.set(`${mapping.semanticSymbolId}\0${mapping.nativeAstNodeId}`, mapping);
     }
   }
   const symbols = [];
   const regions = [];
   for (const symbol of semanticSymbols) {
-    const mapping = mappingsBySymbolId.get(symbol.id);
+    const mapping = mappingsBySymbolAndNode.get(`${symbol.id}\0${symbol.nativeAstNodeId}`) ?? mappingsBySymbolId.get(symbol.id);
     const nativeNode = symbol.nativeAstNodeId ? nativeAst?.nodes?.[symbol.nativeAstNodeId] : undefined;
     const generatedRegion = semanticOwnershipRegionForSymbol(imported, symbol, mapping, nativeNode, options);
     const region = mergeSemanticOwnershipRegion(
@@ -52,8 +56,10 @@ function semanticImportSidecarEntry(imported, index, options) {
       nativeAstNodeId: symbol.nativeAstNodeId,
       semanticOccurrenceId: mapping?.semanticOccurrenceId,
       sourceMapMappingId: mapping?.id,
-      sourceSpan: region.sourceSpan ?? mapping?.sourceSpan ?? symbol.definitionSpan ?? nativeNode?.span,
+      sourceSpan: mapping?.sourceSpan ?? symbol.definitionSpan ?? nativeNode?.span ?? region.sourceSpan,
       signatureHash: symbol.signatureHash,
+      signatureOnly: symbol.metadata?.signatureOnly === true || undefined,
+      hasBody: typeof symbol.metadata?.hasBody === 'boolean' ? symbol.metadata.hasBody : undefined,
       ownershipRegionId: region.id,
       ownershipKey: region.key,
       ownershipRegionKind: region.regionKind,

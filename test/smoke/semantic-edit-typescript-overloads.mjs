@@ -30,6 +30,8 @@ assert.equal(bodySymbol.definitionSpan.endLine, 5);
 const sidecar = createSemanticImportSidecar(imported);
 assert.equal(sidecar.ownershipRegions.filter((region) => region.regionKind === 'declaration' && region.symbolName === 'parse').length, 2);
 assert.equal(sidecar.ownershipRegions.some((region) => region.regionKind === 'body' && region.symbolName === 'parse'), true);
+assert.deepEqual(sidecar.symbols.filter((symbol) => symbol.name === 'parse' && symbol.signatureOnly).map((symbol) => symbol.sourceSpan.startLine), [1, 2]);
+assert.deepEqual(sidecar.symbols.filter((symbol) => symbol.id === 'symbol:typescript:export:parse').map((symbol) => symbol.sourceSpan.startLine), [1, 2, 3]);
 
 const script = createSemanticEditScript({
   id: 'semantic_edit_typescript_overload_body',
@@ -73,6 +75,7 @@ assert.equal(methodBody.definitionSpan.endLine, 6);
 const classSidecar = createSemanticImportSidecar(classImport);
 assert.equal(classSidecar.ownershipRegions.filter((region) => region.regionKind === 'declaration' && region.symbolName === 'Parser.parse').length, 2);
 assert.equal(classSidecar.ownershipRegions.some((region) => region.regionKind === 'body' && region.symbolName === 'Parser.parse'), true);
+assert.deepEqual(classSidecar.symbols.filter((symbol) => symbol.name === 'Parser.parse' && symbol.signatureOnly).map((symbol) => symbol.sourceSpan.startLine), [2, 3]);
 
 const classScript = createSemanticEditScript({
   id: 'semantic_edit_typescript_method_overload_body',
