@@ -19,14 +19,16 @@ function nativeDeclaration(input, lineNumber, languageKind, symbolKind, name, fi
 }
 
 function nativeSignatureDeclaration(input, lineNumber, languageKind, symbolKind, name, fields = {}, _hasBody = false, options = {}) {
-  const signatureKey = idFragment([name, fields.signature, ...(fields.parameters ?? [])].filter(Boolean).join(':') || `${name}:${lineNumber}`);
+  const signatureParts = [name, fields.signature, fields.returnType, fields.valueType, ...(fields.parameters ?? [])];
+  const signatureKey = idFragment(signatureParts.filter(Boolean).join(':') || `${name}:${lineNumber}`);
   const sourcePath = input.sourcePath ?? `${input.language}:memory`;
+  const regionKind = options.regionKind ?? 'declaration';
   return nativeDeclaration(input, lineNumber, languageKind, symbolKind, name, fields, false, {
-    regionKind: options.regionKind ?? 'declaration',
+    regionKind,
     symbolId: options.symbolId ?? `symbol:${input.language}:signature:${idFragment(name)}:${signatureKey}`,
     metadata: {
       signatureOnly: true,
-      ownershipRegionKey: options.ownershipRegionKey ?? `source#${sourcePath}#declaration#${name}#${signatureKey}`,
+      ownershipRegionKey: options.ownershipRegionKey ?? `source#${sourcePath}#${regionKind}#${name}#${signatureKey}`,
       ...options.metadata
     }
   });

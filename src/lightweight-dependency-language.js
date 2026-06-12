@@ -41,12 +41,23 @@ export function isDependencyIdentifier(value) {
 export function dependencyScanRanges(input, declarations, lines) {
   const ordered = [...(declarations ?? [])].sort((left, right) => (left.span?.startLine ?? 0) - (right.span?.startLine ?? 0));
   return ordered
-    .filter((declaration) => declaration?.symbolId && declaration.role !== 'import')
+    .filter((declaration) => declaration?.symbolId && declaration.role !== 'import' && shouldScanDependencyDeclaration(input, declaration))
     .map((declaration, index) => ({
       declaration,
       startLine: declaration.span?.startLine ?? 1,
       endLine: dependencyScanEndLine(input, declaration, lines, ordered[index + 1]?.span?.startLine)
     }));
+}
+
+function shouldScanDependencyDeclaration(input, declaration) {
+  if (!isJavaScriptLikeLanguage(input)) return true;
+  if (declaration.metadata?.signatureOnly || declaration.fields?.typeKind) return false;
+  if (/^Type(?:Alias|Method|Property|FunctionProperty)/.test(String(declaration?.kind ?? ''))) return false;
+  return !['interface', 'type'].includes(String(declaration?.symbolKind ?? '').toLowerCase());
+}
+
+function isJavaScriptLikeLanguage(input) {
+  return ['javascript', 'typescript'].includes(String(input?.language ?? '').toLowerCase());
 }
 
 export function maskDependencyLine(input, line, state) {

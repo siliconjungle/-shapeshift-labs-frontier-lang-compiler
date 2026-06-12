@@ -269,7 +269,7 @@ function jsTypeMemberDeclaration(input, lineNumber, declarationLine, context) {
   if (!text || /^[}\])]/.test(text) || text.startsWith('//')) return undefined;
   let match = text.match(/^(?:readonly\s+)?(['"]?)([A-Za-z_$][\w$-]*)\1\??\s*(?:<[^({;]+>)?\s*\(([^)]*)\)\s*(?::\s*([^;,]+))?[;,]?$/);
   if (match && !jsControlKeyword(match[2])) {
-    return nativeDeclaration(input, lineNumber, 'TypeMethodSignature', 'method', `${context.name}.${match[2]}`, {
+    return nativeSignatureDeclaration(input, lineNumber, 'TypeMethodSignature', 'method', `${context.name}.${match[2]}`, {
       owner: context.name,
       propertyName: match[2],
       parameters: splitParameters(match[3]),
@@ -284,7 +284,7 @@ function jsTypeMemberDeclaration(input, lineNumber, declarationLine, context) {
   if (!match || jsControlKeyword(match[2])) return undefined;
   const valueType = match[3].trim();
   const functionLike = /=>/.test(valueType) || /^\([^)]*\)\s*=>/.test(valueType);
-  return nativeDeclaration(input, lineNumber, functionLike ? 'TypeFunctionPropertySignature' : 'TypePropertySignature', functionLike ? 'function' : 'property', `${context.name}.${match[2]}`, {
+  return (functionLike ? nativeSignatureDeclaration : nativeDeclaration)(input, lineNumber, functionLike ? 'TypeFunctionPropertySignature' : 'TypePropertySignature', functionLike ? 'function' : 'property', `${context.name}.${match[2]}`, {
     owner: context.name,
     propertyName: match[2],
     valueType,
@@ -296,7 +296,7 @@ function jsTypeMemberDeclaration(input, lineNumber, declarationLine, context) {
 }
 
 function jsTypeMemberRegionKind(context, propertyName, source) {
-  return jsRegionKindForDeclarationName(propertyName, source) ?? (context.regionKind === 'type' ? 'property' : context.regionKind) ?? 'property';
+  return jsRegionKindForDeclarationName(propertyName) ?? (context.regionKind === 'type' ? 'property' : context.regionKind) ?? 'property';
 }
 
 function jsInlineClassMemberDeclarations(input, lineNumber, declarationLine, className) {

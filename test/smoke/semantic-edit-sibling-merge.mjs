@@ -17,7 +17,7 @@ const fixtures = [
     worker: 'export interface User {\n  id: number;\n  name: string;\n}\n',
     head: 'export interface User {\n  id: string;\n  name: string | null;\n}\n',
     expected: 'export interface User {\n  id: number;\n  name: string | null;\n}\n',
-    coveredKind: 'replaceProperty',
+    coveredKind: undefined,
     portableSymbol: 'User.id'
   },
   {

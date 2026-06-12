@@ -96,3 +96,18 @@ assert.equal(classProjection.sourceText, classExpectedSource);
 const classReplay = replaySemanticEditProjection({ projection: classProjection, currentSourceText: classHeadSource });
 assert.equal(classReplay.status, 'accepted-clean');
 assert.equal(classReplay.outputSourceText, classExpectedSource);
+
+const typeOnlySource = 'export interface TypeParser {\n  parse(value: string): string;\n  format: (value: string) => string;\n}\nexport type Runner = {\n  run(value: string): string;\n};\n';
+const typeOnlyImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/type-only.ts',
+  sourceText: typeOnlySource
+});
+const typeOnlySymbols = typeOnlyImport.semanticIndex.symbols.filter((symbol) => ['TypeParser.parse', 'TypeParser.format', 'Runner.run'].includes(symbol.name));
+assert.deepEqual(typeOnlySymbols.map((symbol) => symbol.metadata.ownershipRegionKind), ['property', 'property', 'property']);
+assert.deepEqual(typeOnlySymbols.map((symbol) => symbol.metadata.signatureOnly), [true, true, true]);
+assert.equal(typeOnlyImport.semanticIndex.relations.some((relation) => relation.predicate === 'calls'), false);
+
+const typeOnlySidecar = createSemanticImportSidecar(typeOnlyImport);
+assert.deepEqual(typeOnlySidecar.symbols.filter((symbol) => ['TypeParser.parse', 'TypeParser.format', 'Runner.run'].includes(symbol.name)).map((symbol) => symbol.signatureOnly), [true, true, true]);
+assert.equal(typeOnlySidecar.symbols.some((symbol) => symbol.kind === 'call'), false);
