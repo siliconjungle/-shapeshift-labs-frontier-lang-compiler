@@ -235,6 +235,8 @@ const alreadyAppliedReplay = replaySemanticEditProjection({
 assert.equal(alreadyAppliedReplay.status, 'already-applied');
 assert.equal(alreadyAppliedReplay.outputSourceText, workerSource);
 assert.equal(alreadyAppliedReplay.admission.action, 'skip');
+assert.equal(alreadyAppliedReplay.admission.reviewRequired, false);
+assert.equal(alreadyAppliedReplay.admission.autoApplyCandidate, false);
 const conflictReplay = replaySemanticEditProjection({
   id: 'semantic_edit_conflict_replay',
   projection: cleanProjection,

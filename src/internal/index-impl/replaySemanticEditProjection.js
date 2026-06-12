@@ -205,10 +205,11 @@ function replayStatus(reasonCodes, edits, projection) {
 
 function replayAdmission(status, reasonCodes, edits) {
   const apply = status === 'accepted-clean';
+  const skip = status === 'already-applied';
   return {
     status,
-    action: apply ? 'apply' : status === 'already-applied' ? 'skip' : status === 'stale' ? 'rerun-semantic-import' : status === 'blocked' ? 'block' : 'human-review',
-    reviewRequired: !apply,
+    action: apply ? 'apply' : skip ? 'skip' : status === 'stale' ? 'rerun-semantic-import' : status === 'blocked' ? 'block' : 'human-review',
+    reviewRequired: !(apply || skip),
     autoApplyCandidate: apply,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
