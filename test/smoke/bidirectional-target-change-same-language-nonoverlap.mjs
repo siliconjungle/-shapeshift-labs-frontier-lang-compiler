@@ -55,8 +55,10 @@ assert.equal(record.sourcePatchBundle.admission.transformAdmission.status, 'read
 assert.equal(record.sourcePatchBundle.admission.transformAdmission.action, 'admit');
 assert.deepEqual(record.sourcePatchBundle.index.transformSourceLanguages, ['javascript']);
 assert.deepEqual(record.sourcePatchBundle.index.transformTargetLanguages, ['javascript']);
+assert.deepEqual(record.sourcePatchBundle.index.transformCrossLanguages, ['false']);
 assert.equal(record.sourcePatchBundle.admission.semanticEditAdmission.status, 'ready');
 assert.equal(record.metadata.reviewRequired, false);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { semanticEditAdmissionStatus: 'ready' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformSourceLanguage: 'javascript' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformTargetLanguage: 'javascript' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformCrossLanguage: false }).length, 1);

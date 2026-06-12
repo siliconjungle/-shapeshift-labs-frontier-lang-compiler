@@ -52,8 +52,10 @@ assert.deepEqual(record.sourcePatchBundle.index.transformSourceLanguages, ['type
 assert.deepEqual(record.sourcePatchBundle.index.transformTargetLanguages, ['rust']);
 assert.deepEqual(record.sourcePatchBundle.index.transformSourcePaths, ['src/counter.ts']);
 assert.deepEqual(record.sourcePatchBundle.index.transformTargetPaths, ['src/counter.rs']);
+assert.deepEqual(record.sourcePatchBundle.index.transformCrossLanguages, ['true']);
 assert.equal(record.sourcePatchBundle.index.semanticTransformReadinesses.includes('needs-port'), true);
 assert.equal(record.sourcePatchBundle.index.semanticTransformContentHashes.length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformSourceLanguage: 'typescript' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformTargetLanguage: 'rust' }).length, 1);
+assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { transformCrossLanguage: true }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { semanticTransformReadiness: 'needs-port' }).length, 1);

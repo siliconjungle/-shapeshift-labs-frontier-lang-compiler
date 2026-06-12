@@ -162,6 +162,7 @@ function recordIndex(parts){
     transformTargetLanguages:semanticTransformIndex.transformTargetLanguages,
     transformSourcePaths:semanticTransformIndex.transformSourcePaths,
     transformTargetPaths:semanticTransformIndex.transformTargetPaths,
+    transformCrossLanguages:semanticTransformIndex.transformCrossLanguages,
     targetPortabilityStatuses:uniqueStrings([parts.targetPortability?.status]),
     targetPortabilityActions:uniqueStrings([parts.targetPortability?.action]),
     targetPortabilityReasonCodes:uniqueStrings(parts.targetPortability?.reasonCodes),
@@ -223,6 +224,7 @@ function matchesRecord(record,query){
     &&matchAny(queryValues(query.transformTargetLanguage,query.transformTargetLanguages),index.transformTargetLanguages)
     &&matchAny(queryValues(query.transformSourcePath,query.transformSourcePaths),index.transformSourcePaths)
     &&matchAny(queryValues(query.transformTargetPath,query.transformTargetPaths),index.transformTargetPaths)
+    &&matchAny(queryValues(query.transformCrossLanguage,query.transformCrossLanguages),index.transformCrossLanguages)
     &&matchAny(queryValues(query.targetPortabilityStatus,query.targetPortabilityStatuses),index.targetPortabilityStatuses)
     &&matchAny(queryValues(query.targetPortabilityAction,query.targetPortabilityActions),index.targetPortabilityActions)
     &&matchAny(queryValues(query.targetPortabilityReasonCode,query.targetPortabilityReasonCodes),index.targetPortabilityReasonCodes)

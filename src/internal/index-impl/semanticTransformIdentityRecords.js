@@ -118,7 +118,8 @@ export function semanticTransformRecordIndex(records, source = {}) {
     transformSourceLanguages: uniqueStrings([...strings(source.transformSourceLanguages), ...strings(index.transformSourceLanguages), ...records.map((record) => record.sourceLanguage)]),
     transformTargetLanguages: uniqueStrings([...strings(source.transformTargetLanguages), ...strings(index.transformTargetLanguages), ...records.map((record) => record.targetLanguage)]),
     transformSourcePaths: uniqueStrings([...strings(source.transformSourcePaths), ...strings(index.transformSourcePaths), ...records.map((record) => record.sourcePath)]),
-    transformTargetPaths: uniqueStrings([...strings(source.transformTargetPaths), ...strings(index.transformTargetPaths), ...records.map((record) => record.targetPath)])
+    transformTargetPaths: uniqueStrings([...strings(source.transformTargetPaths), ...strings(index.transformTargetPaths), ...records.map((record) => record.targetPath)]),
+    transformCrossLanguages: uniqueStrings([...strings(source.transformCrossLanguages), ...strings(index.transformCrossLanguages), ...records.map(transformCrossLanguageFlag)])
   };
 }
 
@@ -134,8 +135,13 @@ export function semanticTransformSummary(index) {
     evidenceIds: index.semanticTransformEvidenceIds,
     sourceLanguages: index.transformSourceLanguages,
     targetLanguages: index.transformTargetLanguages,
-    targetPaths: index.transformTargetPaths
+    targetPaths: index.transformTargetPaths,
+    crossLanguages: index.transformCrossLanguages
   });
+}
+
+function transformCrossLanguageFlag(record) {
+  return record.sourceLanguage && record.targetLanguage && record.sourceLanguage !== record.targetLanguage ? 'true' : 'false';
 }
 
 function semanticTransformKey(record) {
