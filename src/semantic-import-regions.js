@@ -1,4 +1,4 @@
-import { caseSensitiveIdFragment, idFragment, uniqueStrings } from './native-import-utils.js';
+import { caseSensitiveIdFragment, idFragment, uniqueRecordsById, uniqueStrings } from './native-import-utils.js';
 
 const NativeImportRegionTaxonomyKinds = Object.freeze([
   'symbol',
@@ -172,9 +172,20 @@ function summarizeSemanticImportRegionTaxonomy(regions) {
   };
 }
 
+function semanticOwnershipRegionsFromSemanticIndex(semanticIndex) {
+  const factRegions = (semanticIndex?.facts ?? [])
+    .filter((fact) => fact?.predicate === 'semanticOwnershipRegion' && fact.value && typeof fact.value === 'object')
+    .map((fact) => fact.value);
+  return uniqueRecordsById([
+    ...(Array.isArray(semanticIndex?.ownershipRegions) ? semanticIndex.ownershipRegions : []),
+    ...factRegions
+  ]);
+}
+
 export {
   NativeImportRegionTaxonomyKinds,
   semanticOwnershipRegionForDeclaration,
+  semanticOwnershipRegionsFromSemanticIndex,
   semanticOwnershipRegionForSymbol,
   semanticPatchHintForRegion,
   semanticRegionKindForSymbol,

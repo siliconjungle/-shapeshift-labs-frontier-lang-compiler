@@ -98,6 +98,10 @@ export interface ImportNativeSourceOptions {
   readonly targetPath?: string;
   readonly targetHash?: string;
   readonly semanticIndex?: SemanticIndexRecord;
+  readonly ownershipRegions?: readonly SemanticImportOwnershipRegion[];
+  readonly semanticOwnershipRegions?: readonly SemanticImportOwnershipRegion[];
+  readonly patchHints?: readonly SemanticImportPatchHint[];
+  readonly semanticPatchHints?: readonly SemanticImportPatchHint[];
   readonly sourceMapId?: string;
   readonly sourceMaps?: readonly SourceMapRecord[];
   readonly universalAstId?: string;
@@ -112,6 +116,8 @@ export interface ImportNativeSourceOptions {
 export type NativeSourceImportResult = Omit<LanguageImportResult, 'metadata'> & {
   readonly nativeSource: NativeSourceNode;
   readonly semanticIndex?: SemanticIndexRecord;
+  readonly ownershipRegions: readonly SemanticImportOwnershipRegion[];
+  readonly patchHints: readonly SemanticImportPatchHint[];
   readonly universalAst: FrontierUniversalAstEnvelope;
   readonly metadata?: Record<string, unknown> & {
     readonly sourcePreservationRecords?: readonly SourcePreservationRecord[];

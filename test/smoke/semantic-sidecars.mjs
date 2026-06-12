@@ -80,6 +80,16 @@ assert.equal(importedRegionSidecar.ownershipRegions.length, 1);
 assert.equal(importedRegionSidecar.ownershipRegions[0].id, 'region_imported_source_exact');
 assert.equal(importedRegionSidecar.ownershipRegions[0].precision, 'exact');
 assert.equal(importedRegionSidecar.symbols[0].ownershipRegionId, 'region_imported_source_exact');
+const nativeResultOwnershipImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/native-result-ownership.js',
+  sourceText: 'export function nativeResultOwner(value) {\n  return value;\n}\n'
+});
+assert.equal(nativeResultOwnershipImport.semanticIndex.ownershipRegions.length > 0, true);
+assert.equal(nativeResultOwnershipImport.semanticIndex.patchHints.length, nativeResultOwnershipImport.semanticIndex.ownershipRegions.length);
+assert.equal(nativeResultOwnershipImport.ownershipRegions.length, nativeResultOwnershipImport.semanticIndex.ownershipRegions.length);
+assert.equal(nativeResultOwnershipImport.patchHints.length, nativeResultOwnershipImport.semanticIndex.patchHints.length);
+assert.equal(nativeResultOwnershipImport.semanticIndex.ownershipRegions.some((region) => region.symbolName === 'nativeResultOwner'), true);
 const nativeLossSummaryOnlyImport = {
   ...scannedJsImport,
   id: 'import_scanned_js_native_loss_summary_only',

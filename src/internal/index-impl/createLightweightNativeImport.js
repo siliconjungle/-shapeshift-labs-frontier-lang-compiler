@@ -1,4 +1,4 @@
-import{idFragment}from'../../native-import-utils.js';import{lightweightDependencyRelations}from'../../lightweight-dependency-relations.js';import{lightweightCoverageLosses,scanNativeDeclarations}from'../../native-region-scanner.js';import{semanticOwnershipRegionForDeclaration}from'../../semantic-import-regions.js';import{createSemanticIndexRecord,hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
+import{idFragment,uniqueRecordsById}from'../../native-import-utils.js';import{lightweightDependencyRelations}from'../../lightweight-dependency-relations.js';import{lightweightCoverageLosses,scanNativeDeclarations}from'../../native-region-scanner.js';import{semanticOwnershipRegionForDeclaration,semanticPatchHintForRegion}from'../../semantic-import-regions.js';import{createSemanticIndexRecord,hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
 export function createLightweightNativeImport(input) {
   const parser = input.parser ?? `${input.language}.lightweight-declaration-scan`;
   const rootId = 'native_root';
@@ -19,11 +19,13 @@ export function createLightweightNativeImport(input) {
   const relations = [];
   const facts = [];
   const mappings = [];
+  const ownershipRegions = [];
   const evidenceId = `evidence_${idFragment(input.sourcePath ?? input.language)}_lightweight_scan`;
   const dependencies = lightweightDependencyRelations(input, declarations, documentId);
 
   for (const declaration of declarations) {
     const ownershipRegion = semanticOwnershipRegionForDeclaration(input, declaration, documentId);
+    ownershipRegions.push(ownershipRegion);
     nodes[rootId].children.push(declaration.nodeId);
     nodes[declaration.nodeId] = {
       id: declaration.nodeId,
@@ -122,6 +124,8 @@ export function createLightweightNativeImport(input) {
     });
   }
   losses.push(...lightweightCoverageLosses(input, declarations, input.sourcePreservation));
+  const semanticOwnershipRegions = uniqueRecordsById(ownershipRegions);
+  const semanticPatchHints = semanticOwnershipRegions.map((region) => semanticPatchHintForRegion(region, 'needs-review'));
 
   const semanticIndex = createSemanticIndexRecord({
     id: `index_${idFragment(input.sourcePath ?? input.language)}`,
@@ -135,6 +139,8 @@ export function createLightweightNativeImport(input) {
     occurrences,
     relations,
     facts,
+    ownershipRegions: semanticOwnershipRegions,
+    patchHints: semanticPatchHints,
     evidence: [{
       id: evidenceId,
       kind: 'import',
@@ -162,6 +168,8 @@ export function createLightweightNativeImport(input) {
     losses,
     semanticIndex,
     mappings,
+    ownershipRegions: semanticOwnershipRegions,
+    patchHints: semanticPatchHints,
     metadata: {
       parser,
       scanKind: 'lightweight-declaration-scan',

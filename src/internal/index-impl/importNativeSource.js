@@ -1,17 +1,14 @@
 import{commonGeneratedTargetPath,idFragment}from'../../native-import-utils.js';import{inferSourceMapMappings,normalizeSourceMapMappings,normalizeSourceMaps}from'../../native-source-maps.js';import{createKernelSourcePreservationRecords,summarizeKernelSourcePreservationRecords}from'../../semantic-import-source-preservation.js';import{createDocument,createImportResult,createNativeAstRecord,createPatch,createSourceMapRecord,createUniversalAstEnvelope,hashSemanticValue,nativeSourceNode}from'@shapeshift-labs/frontier-lang-kernel';
 import{attachInputUniversalDialectRegistry}from'../../universal-dialect-registry.js';
 import{createLightweightSemanticLayers}from'./createLightweightSemanticLayers.js';
-import{attachNativeImportLossSummary}from'./attachNativeImportLossSummary.js';import{createLightweightNativeImport}from'./createLightweightNativeImport.js';import{createNativeSourcePreservation}from'./createNativeSourcePreservation.js';import{hasNativeExactAstEvidence}from'./hasNativeExactAstEvidence.js';import{normalizeNativeLossRecords}from'./normalizeNativeLossRecords.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';import{unverifiedNativeAstLosses}from'./unverifiedNativeAstLosses.js';import{withNativeImportReadiness}from'./withNativeImportReadiness.js';
+import{attachNativeImportLossSummary}from'./attachNativeImportLossSummary.js';import{createLightweightNativeImport}from'./createLightweightNativeImport.js';import{createNativeSourcePreservation}from'./createNativeSourcePreservation.js';import{hasNativeExactAstEvidence}from'./hasNativeExactAstEvidence.js';import{createNativeImportSemanticIndex}from'./nativeImportSemanticIndex.js';import{normalizeNativeLossRecords}from'./normalizeNativeLossRecords.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';import{unverifiedNativeAstLosses}from'./unverifiedNativeAstLosses.js';import{withNativeImportReadiness}from'./withNativeImportReadiness.js';
 export function importNativeSource(input) {
   const language = input.language ?? input.nativeAst?.language;
   if (!language) throw new Error('importNativeSource requires a language or nativeAst.language');
   const sourcePath = input.sourcePath ?? input.nativeAst?.sourcePath;
   const declaredSourceHash = input.sourceHash ?? input.nativeAst?.sourceHash;
-  const sourceHash = typeof input.sourceText === 'string'
-    ? hashSemanticValue(input.sourceText)
-    : declaredSourceHash ?? hashSemanticValue(input.nativeAst?.nodes ?? input.nativeAst ?? {});
-  const targetPath = input.targetPath ?? input.target?.emitPath;
-  const targetHash = input.targetHash;
+  const sourceHash = typeof input.sourceText === 'string' ? hashSemanticValue(input.sourceText) : declaredSourceHash ?? hashSemanticValue(input.nativeAst?.nodes ?? input.nativeAst ?? {});
+  const targetPath = input.targetPath ?? input.target?.emitPath; const targetHash = input.targetHash;
   const importIdPart = idFragment(input.id ?? input.nativeSourceId ?? sourcePath ?? language);
   const sourcePreservation = input.sourcePreservation ?? (typeof input.sourceText === 'string'
     ? createNativeSourcePreservation({
@@ -146,6 +143,7 @@ export function importNativeSource(input) {
   });
   const evidence = attachNativeImportLossSummary(baseEvidence, lossSummary);
   const semanticIndex = input.semanticIndex ?? lightweight?.semanticIndex;
+  const { ownershipRegions, patchHints, semanticIndexForResult } = createNativeImportSemanticIndex(input, lightweight, semanticIndex);
   const sourceMapMappings = normalizeSourceMapMappings(
     input.mappings ?? lightweight?.mappings ?? inferSourceMapMappings({
       semanticIndex,
@@ -174,7 +172,7 @@ export function importNativeSource(input) {
       target: input.target,
       targetPath: inferredTargetPath,
       targetHash,
-      semanticIndexId: semanticIndex?.id,
+      semanticIndexId: semanticIndexForResult?.id,
       nativeAstId: nativeAst.id,
       nativeSourceId: nativeSource.id,
       mappings: sourceMapMappings,
@@ -191,7 +189,7 @@ export function importNativeSource(input) {
     nativeSources: [nativeSource],
     nativeAst,
     nativeSource,
-    semanticIndex,
+    semanticIndex: semanticIndexForResult,
     evidence,
     losses,
     sourcePreservation,
@@ -213,16 +211,16 @@ export function importNativeSource(input) {
     evidence,
     nativeSource,
     nativeAst,
-    semanticIndex
+    semanticIndex: semanticIndexForResult
   });
   const kernelSourcePreservationSummary = summarizeKernelSourcePreservationRecords(sourcePreservationRecords);
   const resultSourceMapMappings = sourceMaps.flatMap((sourceMap) => sourceMap.mappings ?? []);
-  const semanticLayers=input.semanticLayers??createLightweightSemanticLayers({importIdPart,language,sourcePath,sourceHash,nativeSource,nativeAst,semanticIndex,sourceMaps,losses,evidence,sourcePreservationRecords});
+  const semanticLayers=input.semanticLayers??createLightweightSemanticLayers({importIdPart,language,sourcePath,sourceHash,nativeSource,nativeAst,semanticIndex:semanticIndexForResult,sourceMaps,losses,evidence,sourcePreservationRecords});
   let universalAst = createUniversalAstEnvelope({
     id: input.universalAstId ?? `universal_ast_${importIdPart}`,
     document,
     nativeSources: [nativeSource],
-    semanticIndex,
+    semanticIndex: semanticIndexForResult,
     sourceMaps,
     losses,
     evidence,
@@ -262,7 +260,7 @@ export function importNativeSource(input) {
     metadata: {
       sourceLanguage: language,
       sourcePath,
-      semanticIndexId: semanticIndex?.id,
+      semanticIndexId: semanticIndexForResult?.id,
       universalAstId: universalAst.id,
       sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id),
       ...(sourcePreservation ? {
@@ -287,14 +285,16 @@ export function importNativeSource(input) {
     document,
     patch,
     nativeAst,
-    semanticIndex,
+    semanticIndex: semanticIndexForResult,
     universalAst,
     sourceMaps,
+    ownershipRegions,
+    patchHints: semanticIndexForResult?.patchHints ?? patchHints,
     losses,
     evidence,
     metadata: {
       nativeSourceId: nativeSource.id,
-      semanticIndexId: semanticIndex?.id,
+      semanticIndexId: semanticIndexForResult?.id,
       universalAstId: universalAst.id,
       sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id),
       semanticStatus,
