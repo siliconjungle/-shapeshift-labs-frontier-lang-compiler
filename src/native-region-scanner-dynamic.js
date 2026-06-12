@@ -4,8 +4,7 @@ import {
   nativeImportDeclaration,
   nativeMacroLoss,
   sourceLines,
-  splitParameters,
-  splitTypeParameters
+  splitParameters
 } from './native-region-scanner-core.js';
 import { braceBlockSpan, endKeywordBlockSpan, sqlStatementSpan } from './native-region-scanner-spans.js';
 
@@ -23,29 +22,6 @@ function scanPhp(input) {
       declarations.push(nativeDeclaration(input, number, `${upperFirst(match[1])}Declaration`, phpSymbolKind(match[1]), match[2], {}, trimmed.includes('{'), spanOptions(input, lines, index, trimmed.includes('{'))));
     } else if ((match = trimmed.match(/^(?:(?:public|protected|private|static|final|abstract)\s+)*function\s+&?\s*([A-Za-z_]\w*)\s*\(([^)]*)\)/))) {
       declarations.push(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{'), spanOptions(input, lines, index, trimmed.includes('{'))));
-    }
-  }
-  return declarations;
-}
-
-function scanKotlin(input) {
-  const declarations = [];
-  const lines = sourceLines(input.sourceText);
-  for (const [index, { line, number }] of lines.entries()) {
-    const trimmed = line.trim();
-    let match;
-    if ((match = trimmed.match(/^package\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)/))) {
-      declarations.push(nativeDeclaration(input, number, 'PackageHeader', 'package', match[1], {}, false));
-    } else if ((match = trimmed.match(/^import\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*(?:\.\*)?)(?:\s+as\s+[A-Za-z_]\w*)?$/))) {
-      declarations.push(nativeImportDeclaration(input, number, match[1], 'ImportDirective', 'package'));
-    } else if ((match = trimmed.match(/^(?:(?:public|private|protected|internal|expect|actual|open|final|abstract|sealed|data|value)\s+)*(?:(enum|annotation)\s+)?(class|interface|object)\s+([A-Za-z_]\w*)/))) {
-      declarations.push(nativeDeclaration(input, number, kotlinDeclarationKind(match[2], match[1]), kotlinSymbolKind(match[2], match[1]), match[3], {}, trimmed.includes('{'), spanOptions(input, lines, index, trimmed.includes('{'))));
-    } else if ((match = trimmed.match(/^(?:(?:public|private|protected|internal|expect|actual|open|final|abstract|inline|tailrec|operator|infix|external|suspend|override)\s+)*fun\s+(?:<[^>]+>\s*)?(?:[A-Za-z_][\w.<>?]*\.)?([A-Za-z_]\w*)\s*\(([^)]*)\)/))) {
-      declarations.push(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, trimmed.includes('{') || trimmed.includes('='), spanOptions(input, lines, index, trimmed.includes('{'))));
-    } else if ((match = trimmed.match(/^(?:(?:public|private|protected|internal|expect|actual)\s+)*typealias\s+([A-Za-z_]\w*)\s*=/))) {
-      declarations.push(nativeDeclaration(input, number, 'TypeAliasDeclaration', 'type', match[1], {}, false));
-    } else if ((match = trimmed.match(/^(?:(?:public|private|protected|internal|expect|actual|open|final|abstract|override|const|lateinit)\s+)*(?:val|var)\s+([A-Za-z_]\w*)\b/))) {
-      declarations.push(nativeDeclaration(input, number, 'PropertyDeclaration', 'variable', match[1], {}, false));
     }
   }
   return declarations;
@@ -196,19 +172,6 @@ function phpSymbolKind(kind) {
   return 'class';
 }
 
-function kotlinDeclarationKind(kind, prefix) {
-  if (prefix === 'enum') return 'EnumClassDeclaration';
-  if (prefix === 'annotation') return 'AnnotationClassDeclaration';
-  return `${upperFirst(kind)}Declaration`;
-}
-
-function kotlinSymbolKind(kind, prefix) {
-  if (kind === 'interface') return 'interface';
-  if (kind === 'object') return 'module';
-  if (prefix === 'enum' || prefix === 'annotation') return 'type';
-  return 'class';
-}
-
 function scalaSymbolKind(kind) {
   if (kind === 'trait') return 'trait';
   if (kind === 'object') return 'module';
@@ -247,7 +210,6 @@ function zigMetaName(source) {
 
 export {
   scanDart,
-  scanKotlin,
   scanLua,
   scanPhp,
   scanScala,

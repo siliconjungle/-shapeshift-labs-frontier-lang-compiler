@@ -130,6 +130,13 @@ const scannedKotlinImport = importNativeSource({
 });
 assertScannedSymbol(scannedKotlinImport, 'addTodo', 'addtodo');
 assert.equal(scannedKotlinImport.semanticIndex.relations.some((relation) => relation.predicate === 'imports'), true);
+const scannedKotlinMethodImport = importNativeSource({
+  language: 'kotlin',
+  sourcePath: 'Store.kt',
+  sourceText: 'class Store {\n  fun save(title: String): String { return title }\n}\nfun Store.label(): String { return "store" }\n'
+});
+assert.equal(symbolByName(scannedKotlinMethodImport, 'Store.save').kind, 'method');
+assert.equal(nativeNodeForSymbol(scannedKotlinMethodImport, 'Store.extension.label').fields.receiverKind, 'extension');
 const scannedScalaImport = importNativeSource({
   language: 'scala',
   sourcePath: 'Todo.scala',

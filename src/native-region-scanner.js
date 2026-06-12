@@ -8,9 +8,9 @@ import {
   scanSwift
 } from './native-region-scanner-main.js';
 import { scanPython } from './native-region-scanner-python.js';
+import { scanKotlin } from './native-region-scanner-kotlin.js';
 import {
   scanDart,
-  scanKotlin,
   scanLua,
   scanPhp,
   scanScala,
