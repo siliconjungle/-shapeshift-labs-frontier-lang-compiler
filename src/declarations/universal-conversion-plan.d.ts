@@ -9,6 +9,7 @@ import type { NativeParserFeatureCategory } from './native-parser-features.js';
 import type { ProjectionSourceProjectionCoverage, ProjectionTargetCoverageEntry } from './projection-coverage.js';
 import type { ProjectionReadinessTargetCell } from './projection-readiness.js';
 import type { UniversalCapabilityMatrix, UniversalCapabilityMatrixOptions } from './universal-capability.js';
+import type { UniversalRepresentationCoverage, UniversalRepresentationCoverageQuery } from './universal-representation-coverage.js';
 import type {
   UniversalRuntimeAdapterRequirement,
   UniversalRuntimeCapabilityKind,
@@ -40,6 +41,7 @@ export type UniversalConversionScoreComponentKey =
   | 'importEvidence'
   | 'parserEvidence'
   | 'semanticIndex'
+  | 'representationCoverage'
   | 'projectionPath'
   | 'proofEvidence';
 
@@ -145,6 +147,7 @@ export interface UniversalConversionRoute {
   readonly runtime: UniversalConversionRouteRuntime;
   readonly runtimeAdapterRequirements: readonly UniversalRuntimeAdapterRequirement[];
   readonly evidence: UniversalConversionRouteEvidence;
+  readonly representation: UniversalRepresentationCoverage;
   readonly missingEvidence: readonly string[];
   readonly blockers: readonly string[];
   readonly review: readonly string[];
@@ -237,7 +240,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly evidence?: readonly EvidenceRecord[];
 }
 
-export interface UniversalConversionPlanQuery {
+export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery {
   readonly sourceLanguage?: FrontierSourceLanguage | string;
   readonly language?: FrontierSourceLanguage | string;
   readonly target?: FrontierCompileTarget | string;

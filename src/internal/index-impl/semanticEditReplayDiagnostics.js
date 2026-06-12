@@ -8,6 +8,7 @@ export function replayEditDiagnostics(edit, status, range, reasonCodes, sourceTe
     status,
     operationId: edit.operationId,
     sourcePath: edit.targetSourcePath ?? edit.sourcePath,
+    ...sourceIdentityDiagnosticContext(edit),
     symbolName: edit.targetSymbolName ?? edit.symbolName,
     symbolKind: edit.targetSymbolKind ?? edit.symbolKind,
     editKind: edit.editKind,
@@ -64,6 +65,7 @@ function appendOverlapDiagnostic(overlapDiagnostics, edit, code, operationIds) {
     status: 'conflict',
     operationId: edit.operationId,
     sourcePath: edit.sourcePath,
+    ...sourceIdentityDiagnosticContext(edit),
     symbolName: edit.symbolName,
     symbolKind: edit.symbolKind,
     editKind: edit.editKind,
@@ -93,6 +95,18 @@ function replayDiagnostic(code, context) {
     status: context.status,
     operationId: context.operationId,
     sourcePath: context.sourcePath,
+    originalSourcePath: context.originalSourcePath,
+    targetSourcePath: context.targetSourcePath,
+    anchorKey: context.anchorKey,
+    targetAnchorKey: context.targetAnchorKey,
+    sourceIdentityStatus: context.sourceIdentityStatus,
+    sourceIdentityAnchorKey: context.sourceIdentityAnchorKey,
+    targetIdentityAnchorKey: context.targetIdentityAnchorKey,
+    sourceIdentitySourcePath: context.sourceIdentitySourcePath,
+    targetIdentitySourcePath: context.targetIdentitySourcePath,
+    semanticIdentityHash: context.semanticIdentityHash,
+    sourceIdentityHash: context.sourceIdentityHash,
+    editContentHash: context.editContentHash,
     symbolName: context.symbolName,
     symbolKind: context.symbolKind,
     editKind: context.editKind,
@@ -102,6 +116,31 @@ function replayDiagnostic(code, context) {
     actualHash: context.actualHash,
     replacementHash: context.replacementHash,
     overlapOperationIds: context.overlapOperationIds
+  });
+}
+
+function sourceIdentityDiagnosticContext(edit) {
+  const sourceIdentityAnchorKey = edit.sourceIdentityAnchorKey ?? edit.anchorKey;
+  const targetIdentityAnchorKey = edit.targetIdentityAnchorKey ?? edit.targetAnchorKey ?? sourceIdentityAnchorKey;
+  const sourceIdentitySourcePath = edit.sourceIdentitySourcePath ?? edit.originalSourcePath ?? edit.sourcePath;
+  const targetIdentitySourcePath = edit.targetIdentitySourcePath ?? edit.targetSourcePath ?? edit.sourcePath;
+  const moved = Boolean(
+    (sourceIdentityAnchorKey && targetIdentityAnchorKey && sourceIdentityAnchorKey !== targetIdentityAnchorKey)
+    || (sourceIdentitySourcePath && targetIdentitySourcePath && sourceIdentitySourcePath !== targetIdentitySourcePath)
+  );
+  return compactRecord({
+    originalSourcePath: edit.originalSourcePath,
+    targetSourcePath: edit.targetSourcePath,
+    anchorKey: edit.anchorKey,
+    targetAnchorKey: edit.targetAnchorKey,
+    sourceIdentityStatus: edit.sourceIdentityStatus ?? (moved ? 'moved-source' : 'same-source'),
+    sourceIdentityAnchorKey,
+    targetIdentityAnchorKey,
+    sourceIdentitySourcePath,
+    targetIdentitySourcePath,
+    semanticIdentityHash: edit.semanticIdentityHash,
+    sourceIdentityHash: edit.sourceIdentityHash,
+    editContentHash: edit.editContentHash
   });
 }
 

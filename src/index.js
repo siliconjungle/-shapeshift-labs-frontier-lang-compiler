@@ -30,6 +30,7 @@ export { createTreeSitterNativeImporterAdapter } from './internal/index-impl/cre
 export { createTypeScriptCompilerNativeImporterAdapter } from './internal/index-impl/createTypeScriptCompilerNativeImporterAdapter.js';
 export { createUniversalAstFromDocument } from './internal/index-impl/createUniversalAstFromDocument.js';
 export { createUniversalCapabilityMatrix } from './internal/index-impl/createUniversalCapabilityMatrix.js';
+export { createUniversalRepresentationCoverage, representationCoverageMatches, UniversalRepresentationConstructKinds } from './universal-representation-coverage.js';
 export { createUniversalConversionArtifacts } from './internal/index-impl/createUniversalConversionArtifacts.js';
 export { queryUniversalConversionArtifacts } from './universal-conversion-artifacts.js';
 export { createUniversalConversionPlan } from './internal/index-impl/createUniversalConversionPlan.js';

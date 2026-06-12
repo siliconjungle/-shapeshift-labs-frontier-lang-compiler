@@ -14,11 +14,12 @@ const componentWeights = Object.freeze({
   importEvidence: 22,
   parserEvidence: 18,
   semanticIndex: 18,
+  representationCoverage: 18,
   projectionPath: 24,
   proofEvidence: 18
 });
 
-export function conversionScoreComponents(language, targetCell, readiness, mode, evidence) {
+export function conversionScoreComponents(language, targetCell, readiness, mode, evidence, representation) {
   return {
     importEvidence: scoreComponent('importEvidence', readinessScore[language.imports.readiness] ?? 48, [
       ...(language.imports.total ? [] : ['No source import evidence.']),
@@ -32,6 +33,16 @@ export function conversionScoreComponents(language, targetCell, readiness, mode,
       ...(language.imports.symbols ? [] : ['No semantic symbols were imported.']),
       ...(language.imports.sourceMapMappings ? [] : ['No source-map mappings were imported.'])
     ], { symbols: language.imports.symbols, sourceMapMappings: language.imports.sourceMapMappings }),
+    representationCoverage: scoreComponent('representationCoverage', representationScore(representation), [
+      ...(representation?.missing ?? []).map((item) => `Missing representation evidence: ${item}.`),
+      ...(representation?.blockers ?? [])
+    ], {
+      constructKinds: representation?.constructKinds ?? [],
+      representedConstructs: representation?.summary?.representedConstructs ?? 0,
+      missing: representation?.summary?.missing ?? 0,
+      runtimeCapabilities: representation?.surfaces?.runtime?.requiredCapabilities ?? [],
+      sourceMapPrecisions: representation?.surfaces?.sourceMaps?.precisions ?? []
+    }),
     projectionPath: scoreComponent('projectionPath', projectionPathScore(targetCell, mode, readiness), projectionPathReasons(targetCell, mode), {
       mode,
       lossClass: targetCell?.lossClass,
@@ -82,6 +93,15 @@ function semanticIndexScore(language) {
   const mappings = language.imports.sourceMapMappings ?? 0;
   if (!symbols) return 0;
   return Math.min(100, 62 + Math.min(22, symbols * 3) + Math.min(16, mappings * 2));
+}
+
+function representationScore(representation) {
+  if (!representation) return 0;
+  const summary = representation.summary ?? {};
+  const represented = Number(summary.representedConstructs ?? 0);
+  const missing = Number(summary.missing ?? 0);
+  const blockers = Number(summary.blockers ?? 0);
+  return Math.max(0, Math.min(100, 44 + represented * 8 - missing * 5 - blockers * 18));
 }
 
 function projectionPathScore(targetCell, mode, readiness) {

@@ -77,6 +77,11 @@ function scanJavaScriptLike(input) {
       pushDeclaration(nativeDeclaration(input, number, 'FunctionDeclaration', 'function', match[1], { parameters: splitParameters(match[2]) }, declarationLine.includes('{')));
     } else if ((match = trimmed.match(/^export\s+default\s+(?:async\s+)?function\*?\s*([A-Za-z_$][\w$]*)?\s*(?:<[^({;]+>)?\s*\(([^)]*)\)\s*(?::\s*[^={]+)?/))) {
       pushDeclaration(nativeDeclaration(input, number, 'ExportDefaultFunctionDeclaration', 'function', match[1] ?? 'default', { parameters: splitParameters(match[2]), exportDefault: true }, trimmed.includes('{')));
+    } else if ((match = trimmed.match(/^export\s+default\s+(?:async\s*)?(?:<[^=]+>\s*)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*(?::\s*[^=]+)?=>/))) {
+      pushDeclaration(nativeDeclaration(input, number, 'ExportDefaultArrowFunctionDeclaration', 'function', 'default', {
+        parameters: splitParameters(match[1] ?? match[2]),
+        exportDefault: true
+      }, true));
     } else if ((match = declarationLine.match(/^(default\s+)?(?:abstract\s+)?class\b(?:\s+(?!(?:extends|implements)\b)([A-Za-z_$][\w$]*))?/)) && (match[1] || match[2])) {
       const className = match[2] ?? 'default';
       const exportDefault = Boolean(match[1]);
@@ -121,8 +126,36 @@ function scanJavaScriptLike(input) {
       if (match.context) objectStack.push(match.context);
     } else if ((match = jsExportAliasDeclaration(input, number, trimmed))) {
       pushDeclaration(match);
+    } else if ((match = trimmed.match(/^module\.exports\s*=\s*(?:async\s+)?function\*?\s*([A-Za-z_$][\w$]*)?\s*(?:<[^({;]+>)?\s*\(([^)]*)\)/))) {
+      pushDeclaration(nativeDeclaration(input, number, 'CommonJsDefaultFunctionExport', 'function', match[1] ?? 'module.exports', {
+        export: 'commonjs',
+        parameters: splitParameters(match[2])
+      }, true));
+    } else if ((match = trimmed.match(/^module\.exports\s*=\s*(?:async\s*)?(?:<[^=]+>\s*)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*(?::\s*[^=]+)?=>/))) {
+      pushDeclaration(nativeDeclaration(input, number, 'CommonJsDefaultArrowFunctionExport', 'function', 'module.exports', {
+        export: 'commonjs',
+        parameters: splitParameters(match[1] ?? match[2])
+      }, true));
+    } else if ((match = trimmed.match(/^module\.exports\s*=\s*(?:abstract\s+)?class\b(?:\s+(?!(?:extends|implements)\b)([A-Za-z_$][\w$]*))?/))) {
+      const className = match[1] ?? 'module.exports';
+      pushDeclaration(nativeDeclaration(input, number, 'CommonJsDefaultClassExport', 'class', className, { export: 'commonjs' }, trimmed.includes('{')));
+      pushDeclarations(jsInlineClassMemberDeclarations(input, number, trimmed, className));
+      if (jsStructureDelta(trimmed).value > 0) {
+        currentClass = className;
+        classDepth = 0;
+      }
     } else if ((match = trimmed.match(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function\*?\s*\(([^)]*)\)/))) {
       pushDeclaration(nativeDeclaration(input, number, 'CommonJsFunctionExport', 'function', match[1], { parameters: splitParameters(match[2]) }, true));
+    } else if ((match = trimmed.match(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:<[^=]+>\s*)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*(?::\s*[^=]+)?=>/))) {
+      pushDeclaration(nativeDeclaration(input, number, 'CommonJsFunctionExport', 'function', match[1], { parameters: splitParameters(match[2] ?? match[3]) }, true));
+    } else if ((match = trimmed.match(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=\s*(?:abstract\s+)?class\b(?:\s+(?!(?:extends|implements)\b)([A-Za-z_$][\w$]*))?/))) {
+      const className = match[2] ?? match[1];
+      pushDeclaration(nativeDeclaration(input, number, 'CommonJsClassExport', 'class', className, { export: 'commonjs', exportName: match[1] }, trimmed.includes('{')));
+      pushDeclarations(jsInlineClassMemberDeclarations(input, number, trimmed, className));
+      if (jsStructureDelta(trimmed).value > 0) {
+        currentClass = className;
+        classDepth = 0;
+      }
     } else if ((match = trimmed.match(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=/))) {
       const regionKind = jsRegionKindForDeclarationName(match[1], trimmed);
       pushDeclaration(nativeDeclaration(input, number, 'CommonJsExport', 'variable', match[1], { export: 'commonjs' }, false, { regionKind }));

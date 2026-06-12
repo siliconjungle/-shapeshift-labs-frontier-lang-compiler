@@ -143,6 +143,19 @@ assert.equal(sourceMapRecord.targetPortability.reviewRequired, true);
 assert.equal(sourceMapRecord.summary.targetPortabilityStatus, 'portable');
 assert.equal(sourceMapRecord.summary.portableTargetRegions, sourceMapRecord.summary.targetChangedRegions);
 assert.equal(sourceMapRecord.summary.sourceMapBackedMatches, 1);
+assert.equal(sourceMapRecord.summary.sourceEditScripts, 1);
+assert.equal(sourceMapRecord.summary.sourceProjectionHints, 1);
+assert.equal(sourceMapRecord.sourceEditScript.kind, 'frontier.lang.semanticEditScript');
+assert.equal(sourceMapRecord.sourceEditScript.admission.status, 'needs-port');
+assert.equal(sourceMapRecord.sourceEditScript.admission.autoMergeClaim, false);
+assert.equal(sourceMapRecord.sourceEditScript.summary.portable, 1);
+assert.equal(sourceMapRecord.sourceProjectionHint.schema, 'frontier.lang.bidirectionalTargetChangeSourceEditProjectionHint.v1');
+assert.equal(sourceMapRecord.sourceProjectionHint.status, 'portable');
+assert.equal(sourceMapRecord.sourceProjectionHint.autoMergeClaim, false);
+assert.equal(sourceMapRecord.sourceProjectionHint.sourceMapMappingIds.includes('map_ts_add_to_rust_add'), true);
+assert.equal(sourceMapRecord.evidence.some((record) => record.id === sourceMapRecord.sourceEditScript.evidence[0].id), true);
+assert.equal(sourceMapRecord.metadata.sourceEditScriptId, sourceMapRecord.sourceEditScript.id);
+assert.equal(sourceMapRecord.metadata.sourceProjectionHintId, sourceMapRecord.sourceProjectionHint.id);
 assert.equal(sourceMapRecord.sourceAnchorMatches[0].status, 'matched');
 assert.equal(sourceMapRecord.sourceAnchorMatches[0].portability.status, 'portable');
 assert.equal(sourceMapRecord.sourceAnchorMatches[0].portability.sourceMapMappingIds.includes('map_ts_add_to_rust_add'), true);
@@ -196,6 +209,8 @@ assert.equal(staleSourceMapRecord.targetPortability.status, 'stale');
 assert.equal(staleSourceMapRecord.sourceAnchorMatches[0].portability.status, 'stale');
 assert.equal(staleSourceMapRecord.targetPortability.staleSourceMapLinkIds.length, 1);
 assert.equal(staleSourceMapRecord.roundtripEvidence.sourceMapEvidence.staleSourceMapLinkIds.length, 1);
+assert.equal(staleSourceMapRecord.sourceEditScript, undefined);
+assert.equal(staleSourceMapRecord.summary.sourceProjectionHints, 0);
 
 const unmatched = createBidirectionalTargetChangeRecord({
   id: 'counter_unmatched_rust_target_change',

@@ -283,6 +283,7 @@ function routeAdmissionMetadata(route, planId) {
     admissionAction: route.admissionAction,
     priority: route.priority,
     mergeScore: route.mergeScore,
+    representation: routeRepresentationMetadata(route),
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   };
@@ -295,11 +296,23 @@ function routeRecordMetadata(route, planId, metadata) {
     target: route.target,
     mode: route.mode,
     routeAction: route.routeAction,
+    representation: routeRepresentationMetadata(route),
     missingEvidence: route.missingEvidence ?? [],
     blockers: route.blockers ?? [],
     review: route.review ?? [],
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
     ...metadata
+  };
+}
+
+function routeRepresentationMetadata(route) {
+  return {
+    constructKinds: route.representation?.constructKinds ?? [],
+    runtimeCapabilities: route.representation?.surfaces?.runtime?.requiredCapabilities ?? [],
+    sourceMapPrecisions: route.representation?.surfaces?.sourceMaps?.precisions ?? [],
+    transformIdentityHashes: route.representation?.surfaces?.mergeRefs?.transformIdentityHashes ?? [],
+    missing: route.representation?.missing ?? [],
+    blockers: route.representation?.blockers ?? []
   };
 }

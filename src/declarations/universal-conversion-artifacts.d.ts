@@ -17,6 +17,7 @@ import type {
   UniversalConversionMergeScore,
   UniversalConversionRisk
 } from './universal-conversion-plan.js';
+import type { UniversalRepresentationCoverageQuery } from './universal-representation-coverage.js';
 
 export type UniversalConversionArtifactAdmissionStatus = 'queued' | 'needs-review' | 'blocked' | string;
 export type UniversalConversionArtifactAdmissionBucket =
@@ -151,6 +152,10 @@ export interface UniversalConversionArtifactIndex {
   readonly proofIds: readonly string[];
   readonly semanticOperationIds: readonly string[];
   readonly semanticOperationKinds: readonly string[];
+  readonly representationConstructKinds: readonly string[];
+  readonly runtimeCapabilities: readonly string[];
+  readonly sourceMapPrecisions: readonly string[];
+  readonly transformIdentityHashes: readonly string[];
 }
 
 export interface UniversalConversionArtifacts {
@@ -217,7 +222,7 @@ export type CreateUniversalConversionArtifactsInput =
   | UniversalConversionRoute
   | UniversalConversionPlanOptions;
 
-export interface UniversalConversionArtifactQuery {
+export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery {
   readonly routeId?: string | readonly string[];
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];
@@ -240,6 +245,7 @@ export interface UniversalConversionArtifactQuery {
   readonly proofId?: string | readonly string[];
   readonly semanticOperationId?: string | readonly string[];
   readonly semanticOperationKind?: string | readonly string[];
+  readonly representationConstructKind?: string | readonly string[];
 }
 
 export declare function createUniversalConversionArtifacts(

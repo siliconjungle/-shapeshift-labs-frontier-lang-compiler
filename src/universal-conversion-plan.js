@@ -22,6 +22,10 @@ import {
   conversionScoreComponents
 } from './universal-conversion-plan-scoring.js';
 import { conversionPlanSummary } from './universal-conversion-plan-summary.js';
+import {
+  createUniversalRepresentationCoverage,
+  representationCoverageMatches
+} from './universal-representation-coverage.js';
 
 export function createUniversalConversionPlan(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
@@ -81,6 +85,7 @@ export function queryUniversalConversionPlan(planOrInput = {}, query = {}, conte
     if (query.mode && route.mode !== query.mode) return false;
     if (query.readiness && route.readiness !== query.readiness) return false;
     if (query.admissionAction && route.admissionAction !== query.admissionAction) return false;
+    if (!representationCoverageMatches(route.representation, query)) return false;
     return true;
   });
   return {
@@ -113,10 +118,26 @@ function conversionRoute(language, target, input, planId) {
   const readiness = blockers.length
     ? 'blocked'
     : maxSemanticMergeReadiness(language.readiness, targetCell?.readiness ?? readinessCell?.readiness ?? 'needs-review');
-  const components = conversionScoreComponents(language, targetCell, readiness, mode, input.evidence);
-  const mergeScore = conversionMergeScore({ readiness, mode, components, blockers, review });
   const id = `conversion_${idFragment(language.language)}_to_${idFragment(target)}`;
   const routeImports = importsForConversionLanguage(input.imports, language);
+  const mergeRefs = conversionMergeRefs({
+    planId,
+    routeId: id,
+    imports: routeImports,
+    readiness,
+    admissionStatus: 'pending'
+  });
+  const representation = createUniversalRepresentationCoverage({
+    language,
+    target,
+    targetCell,
+    runtime,
+    mergeRefs,
+    evidence: input.evidence
+  });
+  const components = conversionScoreComponents(language, targetCell, readiness, mode, input.evidence, representation);
+  const mergeScore = conversionMergeScore({ readiness, mode, components, blockers, review });
+  const admissionStatus = mergeScore.action;
   return {
     id,
     sourceLanguage: language.language,
@@ -135,18 +156,13 @@ function conversionRoute(language, target, input, planId) {
     runtime,
     runtimeAdapterRequirements: runtime.adapterRequirements,
     evidence: conversionEvidence(language, targetCell),
+    representation,
     missingEvidence: conversionMissingEvidence(language, targetCell, mode),
     blockers,
     review,
     tasks: conversionTasks(language, target, mode, blockers, review),
     mergeScore,
-    mergeRefs: conversionMergeRefs({
-      planId,
-      routeId: id,
-      imports: routeImports,
-      readiness,
-      admissionStatus: mergeScore.action
-    }),
+    mergeRefs: { ...mergeRefs, admissionStatus },
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
     metadata: {

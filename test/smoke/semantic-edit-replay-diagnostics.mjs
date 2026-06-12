@@ -18,6 +18,9 @@ const cleanProjection = projectSemanticEditScriptToSource({
   workerSourceText: workerSource,
   headSourceText: baseSource
 });
+assert.equal(cleanProjection.edits[0].sourceIdentityStatus, 'same-source');
+assert.equal(cleanProjection.edits[0].sourceIdentityAnchorKey, cleanProjection.edits[0].anchorKey);
+assert.equal(cleanProjection.edits[0].targetIdentityAnchorKey, cleanProjection.edits[0].anchorKey);
 const conflictReplay = replaySemanticEditProjection({
   id: 'semantic_edit_conflict_replay_diagnostics',
   projection: cleanProjection,
@@ -37,6 +40,56 @@ assert.equal(staleAnchorReplay.status, 'stale');
 assert.equal(staleAnchorReplay.outputSourceText, undefined);
 assert.equal(staleAnchorReplay.edits[0].diagnostics.some((diagnostic) => diagnostic.category === 'stale-anchor' && diagnostic.code === 'current-symbol-anchor-missing'), true);
 assert.equal(staleAnchorReplay.diagnostics.some((diagnostic) => diagnostic.scope === 'edit' && diagnostic.category === 'stale-anchor'), true);
+const staleAnchorDiagnostic = staleAnchorReplay.edits[0].diagnostics.find((diagnostic) => diagnostic.code === 'current-symbol-anchor-missing');
+assert.equal(staleAnchorDiagnostic.sourceIdentityStatus, 'same-source');
+assert.equal(staleAnchorDiagnostic.sourceIdentityHash, cleanProjection.edits[0].sourceIdentityHash);
+assert.equal(staleAnchorDiagnostic.semanticIdentityHash, cleanProjection.edits[0].semanticIdentityHash);
+assert.equal(staleAnchorDiagnostic.sourceIdentityAnchorKey, cleanProjection.edits[0].anchorKey);
+assert.equal(staleAnchorDiagnostic.targetIdentityAnchorKey, cleanProjection.edits[0].anchorKey);
+assert.equal(staleAnchorDiagnostic.sourceIdentitySourcePath, 'src/runtime.ts');
+assert.equal(staleAnchorDiagnostic.targetIdentitySourcePath, 'src/runtime.ts');
+const movedSourceScript = createSemanticEditScript({
+  id: 'semantic_edit_moved_source_replay_diagnostics',
+  language: 'typescript',
+  sourcePath: 'src/runtime.ts',
+  baseSourceText: baseSource,
+  workerSourceText: workerSource,
+  headSourcePath: 'src/runtime-core.ts',
+  headSourceText: baseSource,
+  generatedAt: 55
+});
+const movedSourceProjection = projectSemanticEditScriptToSource({
+  id: 'semantic_edit_moved_source_replay_diagnostics_projection',
+  script: movedSourceScript,
+  workerSourceText: workerSource,
+  headSourceText: baseSource,
+  headSourcePath: 'src/runtime-core.ts'
+});
+assert.equal(movedSourceProjection.edits[0].sourceIdentityStatus, 'moved-source');
+assert.equal(movedSourceProjection.edits[0].sourceIdentityAnchorKey, movedSourceProjection.edits[0].anchorKey);
+assert.equal(movedSourceProjection.edits[0].targetIdentityAnchorKey, movedSourceProjection.edits[0].targetAnchorKey);
+assert.equal(movedSourceProjection.edits[0].sourceIdentitySourcePath, 'src/runtime.ts');
+assert.equal(movedSourceProjection.edits[0].targetIdentitySourcePath, 'src/runtime-core.ts');
+const movedSourceStaleReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_moved_source_stale_replay',
+  projection: movedSourceProjection,
+  currentSourcePath: 'src/runtime-core.ts',
+  currentSourceText: 'export function other(value: number) { return value + 3; }\n'
+});
+assert.equal(movedSourceStaleReplay.status, 'stale');
+assert.equal(movedSourceStaleReplay.outputSourceText, undefined);
+const movedSourceStaleDiagnostic = movedSourceStaleReplay.edits[0].diagnostics.find((diagnostic) => diagnostic.code === 'current-symbol-anchor-missing');
+assert.equal(movedSourceStaleDiagnostic.sourceIdentityStatus, 'moved-source');
+assert.equal(movedSourceStaleDiagnostic.sourceIdentityHash, movedSourceProjection.edits[0].sourceIdentityHash);
+assert.equal(movedSourceStaleDiagnostic.semanticIdentityHash, movedSourceProjection.edits[0].semanticIdentityHash);
+assert.equal(movedSourceStaleDiagnostic.anchorKey, movedSourceProjection.edits[0].anchorKey);
+assert.equal(movedSourceStaleDiagnostic.targetAnchorKey, movedSourceProjection.edits[0].targetAnchorKey);
+assert.equal(movedSourceStaleDiagnostic.sourceIdentityAnchorKey, movedSourceProjection.edits[0].anchorKey);
+assert.equal(movedSourceStaleDiagnostic.targetIdentityAnchorKey, movedSourceProjection.edits[0].targetAnchorKey);
+assert.equal(movedSourceStaleDiagnostic.sourceIdentitySourcePath, 'src/runtime.ts');
+assert.equal(movedSourceStaleDiagnostic.targetIdentitySourcePath, 'src/runtime-core.ts');
+assert.equal(movedSourceStaleDiagnostic.originalSourcePath, 'src/runtime.ts');
+assert.equal(movedSourceStaleDiagnostic.targetSourcePath, 'src/runtime-core.ts');
 const missingSourceReplay = replaySemanticEditProjection({
   id: 'semantic_edit_missing_source_replay',
   projection: cleanProjection

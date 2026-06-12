@@ -10,6 +10,7 @@ import { diffNativeSourceImports } from './diffNativeSourceImports.js';
 import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
 import { attachBidirectionalMatchPortability, classifyBidirectionalTargetPortability } from './bidirectionalTargetPortability.js';
 import { createRoundtripEvidence, createSemanticMergeAdmissionEvidence, summarizeSourceMapBackprojection } from './bidirectionalTargetRoundtripEvidence.js';
+import { createBidirectionalSourceEditProjection } from './bidirectionalSourceEditProjection.js';
 import {
   anchorsFromSourceSidecar,
   classifyBidirectionalReadiness,
@@ -86,6 +87,14 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     ...array(targetPortability.reasonCodes),
     ...sourceAnchorMatches.flatMap((match) => match.reasonCodes)
   ]);
+  const sourceEditProjection = createBidirectionalSourceEditProjection({
+    id,
+    source,
+    targetChangeSet,
+    sourceAnchorMatches,
+    targetPortability,
+    reasons
+  });
   const evidenceId = input.evidenceId ?? `evidence_${idFragment(id)}_bidirectional_target_change`;
   const sourcePatchBundleId = input.sourcePatchBundleId ?? `semantic_patch_bundle_${idFragment(id)}_source_port`;
   const historyRecordId = input.historyRecordId ?? `semantic_history_${idFragment(id)}_target_change`;
@@ -131,9 +140,12 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       ...bidirectionalEvidence.metadata,
       roundtripEvidenceId: roundtripEvidence.id,
       roundtripEvidence,
-      semanticMergeAdmission
+      semanticMergeAdmission,
+      sourceEditScriptId: sourceEditProjection.sourceEditScript?.id,
+      sourceProjectionHintId: sourceEditProjection.sourceProjectionHint?.id,
+      sourceProjectionHint: sourceEditProjection.sourceProjectionHint
     }
-  }];
+  }, ...(sourceEditProjection.evidence ?? [])];
   const sourceChangedRegions = sourceAnchorMatches.flatMap((match) => sourceRegionsForMatch(match, readiness));
   const sourcePatchBundle = createSemanticPatchBundleRecord({
     id: `${id}_source_port_projection`,
@@ -169,6 +181,9 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       sourceMapBackprojection,
       roundtripEvidenceId: roundtripEvidence.id,
       semanticMergeAdmission,
+      sourceEditScriptId: sourceEditProjection.sourceEditScript?.id,
+      sourceProjectionHintId: sourceEditProjection.sourceProjectionHint?.id,
+      sourceProjectionHint: sourceEditProjection.sourceProjectionHint,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     }
@@ -205,6 +220,9 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       sourceMapBackprojection,
       roundtripEvidenceId: roundtripEvidence.id,
       semanticMergeAdmission,
+      sourceEditScriptId: sourceEditProjection.sourceEditScript?.id,
+      sourceProjectionHintId: sourceEditProjection.sourceProjectionHint?.id,
+      sourceProjectionHint: sourceEditProjection.sourceProjectionHint,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     }
@@ -222,6 +240,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
     sourceAnchorMatches,
     targetPortability,
     roundtripEvidence,
+    sourceEditScript: sourceEditProjection.sourceEditScript,
+    sourceProjectionHint: sourceEditProjection.sourceProjectionHint,
     sourcePatchBundle,
     historyRecord,
     evidence,
@@ -237,6 +257,8 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       sourceMapBackedMatches: sourceAnchorMatches.filter((match) => match.sourceMapLinks.length > 0).length,
       sourceMapLinks: sourceMapBackprojection.sourceMapLinks,
       sourceMapMappingIds: sourceMapBackprojection.sourceMapMappingIds.length,
+      sourceEditScripts: sourceEditProjection.sourceEditScript ? 1 : 0,
+      sourceProjectionHints: sourceEditProjection.sourceProjectionHint ? 1 : 0,
       lineageResolutions: roundtripEvidence.lineageEvidence.lineageResolutionIds.length,
       targetPortabilityStatus: targetPortability.status,
       portableTargetRegions: targetPortability.status === 'portable' ? targetPortability.targetChangedRegions : 0,
@@ -250,6 +272,9 @@ export function createBidirectionalTargetChangeRecord(input = {}, options = {}) 
       targetPortability,
       roundtripEvidenceId: roundtripEvidence.id,
       semanticMergeAdmission,
+      sourceEditScriptId: sourceEditProjection.sourceEditScript?.id,
+      sourceProjectionHintId: sourceEditProjection.sourceProjectionHint?.id,
+      sourceProjectionHint: sourceEditProjection.sourceProjectionHint,
       ...input.metadata
     }
   };

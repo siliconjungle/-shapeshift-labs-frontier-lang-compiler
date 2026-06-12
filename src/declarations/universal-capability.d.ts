@@ -49,6 +49,7 @@ import type { JavaAstNativeImporterAdapterOptions, KotlinPsiNativeImporterAdapte
 import type { NativeTargetProjectionAdapterCoverageInput, NativeTargetProjectionAdapterSummary, NativeTargetProjectionAdapterInput, NativeTargetProjectionAdapterResult, NativeTargetProjectionAdapter, NativeTargetProjectionAdapterResolverInput, NativeTargetProjectionResult } from './target-adapters.js';
 import type { NativeProjectSourceInput, ImportNativeProjectOptions, NativeProjectImportResult, NativeSourceProjectionMode, ProjectNativeImportToSourceOptions, NativeSourceProjectionDeclaration, NativeSourceProjectionResult, NativeSourceCompileOutputMode, CompileNativeSourceOptions, NativeSourceCompileResult } from './native-project.js';
 import type { NativeImportRoundtripReadinessStatus, NativeImportRoundtripReadinessOptions, NativeImportRoundtripReadinessClassification } from './roundtrip.js';
+import type { UniversalRepresentationCoverage } from './universal-representation-coverage.js';
 
 export interface UniversalCapabilityLanguageRow {
   readonly language: FrontierSourceLanguage | string;
@@ -89,6 +90,7 @@ export interface UniversalCapabilityLanguageRow {
     readonly knownLossKinds: readonly NativeImportKnownLossKind[];
     readonly sourceMapMappings: number;
   };
+  readonly representation: UniversalRepresentationCoverage;
   readonly blockers: readonly string[];
   readonly review: readonly string[];
 }
@@ -111,6 +113,8 @@ export interface UniversalCapabilityMatrix {
     readonly unsupportedTargetFeatures: number;
     readonly exactSourceProjection: number;
     readonly nativeSourceStubs: number;
+    readonly representationConstructs: number;
+    readonly representationMissing: number;
     readonly blockers: number;
     readonly reviewReasons: number;
     readonly readyLanguages: number;

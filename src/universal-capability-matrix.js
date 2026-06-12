@@ -11,6 +11,7 @@ import { createNativeParserAstFormatMatrix } from './native-parser-ast-format-ma
 import { createNativeParserFeatureMatrix } from './native-parser-feature-matrix.js';
 import { createProjectionReadinessMatrix } from './projection-readiness-matrix.js';
 import { createProjectionTargetLossMatrix } from './projection-target-loss-matrix.js';
+import { createUniversalRepresentationCoverage } from './universal-representation-coverage.js';
 
 export function createUniversalCapabilityMatrix(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
@@ -110,6 +111,21 @@ function universalCapabilityLanguageRow(importCoverage, context) {
     unsupportedTargets,
     readiness
   });
+  const representation = createUniversalRepresentationCoverage({
+    sourceLanguage: importCoverage.language,
+    imports: importCoverage.imports,
+    parser: {
+      rows: parserRows.length,
+      mergeReadyParsers: parserRows.filter((row) => row.merge?.mergeReady).map((row) => row.parser),
+      reviewFeatures: parserReviewFeatures
+    },
+    projection: {
+      sourceProjection: projection?.sourceProjection,
+      targets: projection?.targets ?? [],
+      missingTargets,
+      unsupportedTargets
+    }
+  });
   return {
     language: importCoverage.language,
     aliases: importCoverage.aliases,
@@ -156,6 +172,7 @@ function universalCapabilityLanguageRow(importCoverage, context) {
       knownLossKinds: importCoverage.knownLossKinds,
       sourceMapMappings: importCoverage.imports.sourceMapMappings
     },
+    representation,
     blockers,
     review
   };
@@ -225,6 +242,8 @@ function universalCapabilityMatrixSummary(rows) {
   let unsupportedTargetFeatures = 0;
   let exactSourceProjection = 0;
   let nativeSourceStubs = 0;
+  let representationConstructs = 0;
+  let representationMissing = 0;
   let blockers = 0;
   let reviewReasons = 0;
   for (const row of rows) {
@@ -243,6 +262,8 @@ function universalCapabilityMatrixSummary(rows) {
     unsupportedTargetFeatures += row.projection.unsupportedTargets.length;
     exactSourceProjection += row.projection.summary.byLossClass?.exactSourceProjection ?? 0;
     nativeSourceStubs += row.projection.summary.byLossClass?.nativeSourceStubs ?? 0;
+    representationConstructs += row.representation?.summary?.representedConstructs ?? 0;
+    representationMissing += row.representation?.summary?.missing ?? 0;
     blockers += row.blockers.length;
     reviewReasons += row.review.length;
   }
@@ -259,6 +280,8 @@ function universalCapabilityMatrixSummary(rows) {
     unsupportedTargetFeatures,
     exactSourceProjection,
     nativeSourceStubs,
+    representationConstructs,
+    representationMissing,
     blockers,
     reviewReasons,
     readyLanguages: rows.filter((row) => row.readiness === 'ready').length,

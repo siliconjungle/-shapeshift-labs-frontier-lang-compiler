@@ -27,7 +27,11 @@ export function artifactIndex(routeArtifacts) {
     evidenceIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.evidenceIds)),
     proofIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.proofIds)),
     semanticOperationIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []).map((operation) => operation.id)),
-    semanticOperationKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []).map((operation) => operation.operationKind))
+    semanticOperationKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []).map((operation) => operation.operationKind)),
+    representationConstructKinds: uniqueStrings(routeArtifacts.flatMap(artifactConstructKinds)),
+    runtimeCapabilities: uniqueStrings(routeArtifacts.flatMap(artifactRuntimeCapabilities)),
+    sourceMapPrecisions: uniqueStrings(routeArtifacts.flatMap(artifactSourceMapPrecisions)),
+    transformIdentityHashes: uniqueStrings(routeArtifacts.flatMap(artifactTransformIdentityHashes))
   };
 }
 
@@ -59,7 +63,43 @@ function matchesArtifact(record, query) {
     && match(query.evidenceId, record.history.evidenceIds)
     && match(query.proofId, record.history.proofIds)
     && match(query.semanticOperationId, (record.semanticOperations?.operations ?? []).map((operation) => operation.id))
-    && match(query.semanticOperationKind, (record.semanticOperations?.operations ?? []).map((operation) => operation.operationKind));
+    && match(query.semanticOperationKind, (record.semanticOperations?.operations ?? []).map((operation) => operation.operationKind))
+    && match(query.constructKind ?? query.representationConstructKind, artifactConstructKinds(record))
+    && match(query.runtimeCapability, artifactRuntimeCapabilities(record))
+    && match(query.sourceMapPrecision, artifactSourceMapPrecisions(record))
+    && match(query.transformIdentityHash, artifactTransformIdentityHashes(record));
+}
+
+function artifactConstructKinds(record) {
+  return uniqueStrings([
+    ...(record.metadata?.representation?.constructKinds ?? []),
+    ...(record.mergeScore?.components?.representationCoverage?.signals?.constructKinds ?? []),
+    ...(record.semanticOperations?.operations ?? []).flatMap((operation) => operation.metadata?.representation?.constructKinds ?? [])
+  ]);
+}
+
+function artifactRuntimeCapabilities(record) {
+  return uniqueStrings([
+    ...(record.metadata?.representation?.runtimeCapabilities ?? []),
+    ...(record.mergeScore?.components?.representationCoverage?.signals?.runtimeCapabilities ?? []),
+    ...(record.semanticOperations?.operations ?? []).flatMap((operation) => operation.metadata?.representation?.runtimeCapabilities ?? [])
+  ]);
+}
+
+function artifactSourceMapPrecisions(record) {
+  return uniqueStrings([
+    ...(record.metadata?.representation?.sourceMapPrecisions ?? []),
+    ...(record.mergeScore?.components?.representationCoverage?.signals?.sourceMapPrecisions ?? []),
+    ...(record.semanticOperations?.operations ?? []).flatMap((operation) => operation.metadata?.representation?.sourceMapPrecisions ?? [])
+  ]);
+}
+
+function artifactTransformIdentityHashes(record) {
+  return uniqueStrings([
+    ...(record.metadata?.representation?.transformIdentityHashes ?? []),
+    ...(record.patchBundle?.index?.transformIdentityHashes ?? []),
+    ...(record.history?.index?.transformIdentityHashes ?? [])
+  ]);
 }
 
 function match(filter, values) {

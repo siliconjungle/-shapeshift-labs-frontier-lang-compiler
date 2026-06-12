@@ -12,6 +12,18 @@ export interface SemanticEditReplayDiagnostic {
   readonly status?: SemanticEditReplayStatus | string;
   readonly operationId?: string;
   readonly sourcePath?: string;
+  readonly originalSourcePath?: string;
+  readonly targetSourcePath?: string;
+  readonly anchorKey?: string;
+  readonly targetAnchorKey?: string;
+  readonly sourceIdentityStatus?: 'same-source' | 'moved-source' | string;
+  readonly sourceIdentityAnchorKey?: string;
+  readonly targetIdentityAnchorKey?: string;
+  readonly sourceIdentitySourcePath?: string;
+  readonly targetIdentitySourcePath?: string;
+  readonly semanticIdentityHash?: string;
+  readonly sourceIdentityHash?: string;
+  readonly editContentHash?: string;
   readonly symbolName?: string;
   readonly symbolKind?: string;
   readonly editKind?: 'replace' | 'insert' | 'delete' | string;

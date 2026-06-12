@@ -8,7 +8,9 @@ import type { ImportNativeSourceOptions, NativeSourceImportResult } from './impo
 import type { NativeSourceChangeSet } from './native-diff.js';
 import type { SemanticHistoryRecord } from './semantic-history.js';
 import type { SemanticLineageEvent } from './semantic-lineage.js';
+import type { SemanticEditScript } from './semantic-edit-script.js';
 import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
+import type { BidirectionalTargetChangeSourceEditProjectionHint } from './bidirectional-target-change-source-edit.js';
 import type {
   BidirectionalTargetChangeRoundtripEvidence,
   BidirectionalTargetChangeSemanticMergeAdmissionEvidence,
@@ -19,6 +21,7 @@ import type {
 } from './bidirectional-target-change-evidence.js';
 
 export type * from './bidirectional-target-change-evidence.js';
+export type * from './bidirectional-target-change-source-edit.js';
 
 export interface CreateBidirectionalTargetChangeRecordOptions {
   readonly id?: string;
@@ -73,6 +76,8 @@ export interface BidirectionalTargetChangeRecord {
   readonly sourceAnchorMatches: readonly BidirectionalTargetChangeSourceAnchorMatch[];
   readonly targetPortability: BidirectionalTargetPortabilityRecord;
   readonly roundtripEvidence: BidirectionalTargetChangeRoundtripEvidence;
+  readonly sourceEditScript?: SemanticEditScript;
+  readonly sourceProjectionHint?: BidirectionalTargetChangeSourceEditProjectionHint;
   readonly sourcePatchBundle: SemanticPatchBundleRecord;
   readonly historyRecord: SemanticHistoryRecord;
   readonly evidence: readonly EvidenceRecord[];
@@ -88,6 +93,8 @@ export interface BidirectionalTargetChangeRecord {
     readonly sourceMapBackedMatches: number;
     readonly sourceMapLinks: number;
     readonly sourceMapMappingIds: number;
+    readonly sourceEditScripts: number;
+    readonly sourceProjectionHints: number;
     readonly lineageResolutions: number;
     readonly targetPortabilityStatus: BidirectionalTargetPortabilityStatus;
     readonly portableTargetRegions: number;
@@ -101,6 +108,9 @@ export interface BidirectionalTargetChangeRecord {
     readonly targetPortability?: BidirectionalTargetPortabilityRecord;
     readonly roundtripEvidenceId?: string;
     readonly semanticMergeAdmission?: BidirectionalTargetChangeSemanticMergeAdmissionEvidence;
+    readonly sourceEditScriptId?: string;
+    readonly sourceProjectionHintId?: string;
+    readonly sourceProjectionHint?: BidirectionalTargetChangeSourceEditProjectionHint;
     readonly [key: string]: unknown;
   };
 }

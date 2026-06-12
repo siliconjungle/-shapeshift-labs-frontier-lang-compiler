@@ -47,6 +47,13 @@ function routeOperationMetadata(route, source, sourceMapLinks) {
     sourcePath: source.sourcePath,
     sourceHash: source.sourceHash,
     sourceMapLinkIds: sourceMapLinks.map((link) => link.id),
+    representation: {
+      constructKinds: route.representation?.constructKinds ?? [],
+      runtimeCapabilities: route.representation?.surfaces?.runtime?.requiredCapabilities ?? [],
+      sourceMapPrecisions: route.representation?.surfaces?.sourceMaps?.precisions ?? [],
+      missing: route.representation?.missing ?? [],
+      blockers: route.representation?.blockers ?? []
+    },
     targetLossKinds: route.evidence?.targetLossKinds ?? [],
     missingEvidence: route.missingEvidence ?? [],
     blockers: route.blockers ?? [],

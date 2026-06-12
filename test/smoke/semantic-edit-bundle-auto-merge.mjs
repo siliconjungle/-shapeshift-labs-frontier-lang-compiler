@@ -2,6 +2,7 @@ import { assert } from './helpers.mjs';
 import {
   createSemanticEditBundleAdmission,
   createSemanticEditScript,
+  diffNativeSources,
   projectSemanticEditScriptToSource,
   replaySemanticEditProjection
 } from './compiler-api.mjs';
@@ -30,14 +31,6 @@ function semanticEditFlow(input) {
   return { script, projection, replay };
 }
 
-const focusedAutoMergeProof = {
-  id: 'evidence_semantic_edit_bundle_focused_checks',
-  kind: 'check',
-  status: 'passed',
-  scope: 'semantic-edit:focused-checks',
-  summary: 'Focused semantic edit checks passed for a non-overlapping portable edit.',
-  reasonCodes: ['focused-semantic-edit-checks-passed']
-};
 const nonOverlappingBase = [
   'export function untouched(value) { return value + 1; }\n',
   'export function portable(value) { return value * 2; }\n'
@@ -62,6 +55,59 @@ const nonOverlapping = semanticEditFlow({
   head: nonOverlappingHead,
   current: nonOverlappingHead
 });
+const nonOverlappingWorkerDiff = diffNativeSources({
+  id: 'bundle_non_overlapping_portable_worker_diff',
+  language: 'javascript',
+  sourcePath: 'src/non-overlapping.js',
+  beforeSourceText: nonOverlappingBase,
+  afterSourceText: nonOverlappingWorker
+});
+const nonOverlappingHeadDiff = diffNativeSources({
+  id: 'bundle_non_overlapping_portable_head_diff',
+  language: 'javascript',
+  sourcePath: 'src/non-overlapping.js',
+  beforeSourceText: nonOverlappingBase,
+  afterSourceText: nonOverlappingHead
+});
+const workerConflictKeys = nonOverlappingWorkerDiff.changedRegions.map((region) => region.conflictKey);
+const headConflictKeys = nonOverlappingHeadDiff.changedRegions.map((region) => region.conflictKey);
+const nonOverlappingWorkerEdit = nonOverlapping.script.operations[0];
+const nonOverlappingReplayEdit = nonOverlapping.replay.edits[0];
+const focusedAutoMergeProof = {
+  id: 'evidence_semantic_edit_bundle_focused_checks',
+  kind: 'check',
+  status: 'passed',
+  scope: 'semantic-edit:focused-checks',
+  summary: 'Focused semantic edit checks passed because the worker and head touched different semantic conflict keys and replay matched the preserved head anchor.',
+  reasonCodes: [
+    'focused-semantic-edit-checks-passed',
+    'semantic-keys-do-not-overlap',
+    'head-anchor-matches-base',
+    'head-offset-matches-deleted'
+  ],
+  metadata: {
+    workerConflictKeys,
+    headConflictKeys,
+    workerReasonCodes: nonOverlappingWorkerEdit.reasonCodes,
+    replayReasonCodes: nonOverlapping.replay.summary.reasonCodes,
+    replayStatus: nonOverlapping.replay.status
+  }
+};
+assert.deepEqual(workerConflictKeys, ['region:source#src/non-overlapping.js#body#portable']);
+assert.deepEqual(headConflictKeys, ['region:source#src/non-overlapping.js#body#untouched']);
+assert.deepEqual(workerConflictKeys.filter((key) => headConflictKeys.includes(key)), []);
+assert.equal(nonOverlappingWorkerEdit.status, 'portable');
+assert.equal(nonOverlappingWorkerEdit.readiness, 'ready');
+assert.equal(nonOverlappingWorkerEdit.anchor.conflictKey, workerConflictKeys[0]);
+assert.notEqual(nonOverlappingWorkerEdit.anchor.conflictKey, headConflictKeys[0]);
+assert.equal(nonOverlappingWorkerEdit.reasonCodes.includes('head-anchor-matches-base'), true);
+assert.equal(nonOverlappingWorkerEdit.hashes.headSpanHash, nonOverlappingWorkerEdit.hashes.baseSpanHash);
+assert.notEqual(nonOverlappingWorkerEdit.hashes.workerSpanHash, nonOverlappingWorkerEdit.hashes.baseSpanHash);
+assert.equal(nonOverlappingReplayEdit.status, 'applied');
+assert.equal(nonOverlappingReplayEdit.sourceRangeKind, 'body-content');
+assert.equal(nonOverlappingReplayEdit.reasonCodes.includes('head-offset-matches-deleted'), true);
+assert.equal(focusedAutoMergeProof.metadata.workerReasonCodes.includes('head-anchor-matches-base'), true);
+assert.equal(focusedAutoMergeProof.metadata.replayReasonCodes.includes('head-offset-matches-deleted'), true);
 assert.equal(nonOverlapping.script.admission.status, 'auto-merge-candidate');
 assert.equal(nonOverlapping.script.admission.autoApplyCandidate, true);
 assert.equal(nonOverlapping.projection.status, 'projected');
@@ -100,4 +146,50 @@ assert.equal(nonOverlappingAdmission.summary.acceptedClean, 1);
 assert.equal(nonOverlappingAdmission.summary.conflictEvidence, 0);
 assert.equal(nonOverlappingAdmission.summary.staleEvidence, 0);
 assert.equal(nonOverlappingAdmission.reasonCodes.includes('focused-semantic-edit-checks-passed'), true);
+assert.equal(nonOverlappingAdmission.reasonCodes.includes('semantic-keys-do-not-overlap'), true);
+assert.equal(nonOverlappingAdmission.reasonCodes.includes('head-anchor-matches-base'), true);
+assert.equal(nonOverlappingAdmission.reasonCodes.includes('head-offset-matches-deleted'), true);
 assert.equal(nonOverlappingAdmission.reasonCodes.includes('semantic-edit-positive-auto-merge-proof'), true);
+
+const sameAnchorConflict = semanticEditFlow({
+  id: 'bundle_same_anchor_conflict_guard',
+  sourcePath: 'src/non-overlapping.js',
+  base: nonOverlappingBase,
+  worker: nonOverlappingWorker,
+  head: [
+    'export function untouched(value) { return value + 1; }\n',
+    'export function portable(value) { return value * 4; }\n'
+  ].join('')
+});
+assert.equal(sameAnchorConflict.script.admission.status, 'conflict');
+assert.equal(sameAnchorConflict.script.admission.autoApplyCandidate, false);
+assert.equal(sameAnchorConflict.script.summary.conflicts, 1);
+assert.equal(sameAnchorConflict.script.operations[0].reasonCodes.includes('head-anchor-changed-since-base'), true);
+const sameAnchorConflictAdmission = createSemanticEditBundleAdmission({
+  semanticEditScripts: [sameAnchorConflict.script],
+  evidence: [focusedAutoMergeProof]
+});
+assert.equal(sameAnchorConflictAdmission.status, 'conflict');
+assert.equal(sameAnchorConflictAdmission.autoApplyCandidate, false);
+assert.equal(sameAnchorConflictAdmission.reasonCodes.includes('semantic-edit-conflict'), true);
+assert.equal(sameAnchorConflictAdmission.reasonCodes.includes('semantic-edit-positive-auto-merge-proof'), false);
+
+const missingHeadNeedsPort = createSemanticEditScript({
+  id: 'bundle_missing_head_needs_port_guard_script',
+  language: 'javascript',
+  sourcePath: 'src/non-overlapping.js',
+  baseSourceText: nonOverlappingBase,
+  workerSourceText: nonOverlappingWorker,
+  generatedAt: 80
+});
+assert.equal(missingHeadNeedsPort.admission.status, 'needs-port');
+assert.equal(missingHeadNeedsPort.admission.autoApplyCandidate, false);
+assert.equal(missingHeadNeedsPort.operations[0].reasonCodes.includes('head-source-not-provided'), true);
+const missingHeadNeedsPortAdmission = createSemanticEditBundleAdmission({
+  semanticEditScripts: [missingHeadNeedsPort],
+  evidence: [focusedAutoMergeProof]
+});
+assert.equal(missingHeadNeedsPortAdmission.status, 'needs-review');
+assert.equal(missingHeadNeedsPortAdmission.autoApplyCandidate, false);
+assert.equal(missingHeadNeedsPortAdmission.reasonCodes.includes('semantic-edit-script-not-portable'), true);
+assert.equal(missingHeadNeedsPortAdmission.reasonCodes.includes('semantic-edit-positive-auto-merge-proof'), false);

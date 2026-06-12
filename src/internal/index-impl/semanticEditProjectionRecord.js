@@ -6,6 +6,7 @@ export function projectionEditRecord(edit) {
   const replacementTextHash = hashSemanticValue(edit.replacement);
   const replacementSpanText = edit.replacementSpanText ?? edit.replacement;
   const identity = semanticEditIdentityFields(edit);
+  const sourceIdentity = sourceIdentityAnchorFields(edit);
   return compactRecord({
     operationId: edit.operationId,
     status: edit.alreadyApplied ? 'already-applied' : 'applied',
@@ -26,9 +27,14 @@ export function projectionEditRecord(edit) {
     symbolName: edit.symbolName,
     symbolKind: edit.symbolKind,
     ...identity,
+    ...sourceIdentity,
     operationContentHash: edit.operationContentHash,
     editContentHash: hashSemanticValue(compactRecord({
       semanticIdentityHash: identity.semanticIdentityHash,
+      sourceIdentityHash: identity.sourceIdentityHash,
+      sourceIdentityStatus: sourceIdentity.sourceIdentityStatus,
+      sourceIdentityAnchorKey: sourceIdentity.sourceIdentityAnchorKey,
+      targetIdentityAnchorKey: sourceIdentity.targetIdentityAnchorKey,
       sourceRangeKind: edit.sourceRangeKind,
       deletedTextHash,
       replacementTextHash,
@@ -60,6 +66,24 @@ export function projectionEditRecord(edit) {
     insertionAnchorSymbolKind: edit.insertion?.anchorSymbolKind,
     insertionAnchorCandidates: edit.insertion?.anchorCandidates,
     replacementText: edit.replacement
+  });
+}
+
+function sourceIdentityAnchorFields(edit) {
+  const sourceIdentityAnchorKey = edit.sourceIdentityAnchorKey ?? edit.anchorKey;
+  const targetIdentityAnchorKey = edit.targetIdentityAnchorKey ?? edit.targetAnchorKey ?? sourceIdentityAnchorKey;
+  const sourceIdentitySourcePath = edit.sourceIdentitySourcePath ?? edit.originalSourcePath ?? edit.sourcePath;
+  const targetIdentitySourcePath = edit.targetIdentitySourcePath ?? edit.targetSourcePath ?? edit.sourcePath;
+  const moved = Boolean(
+    (sourceIdentityAnchorKey && targetIdentityAnchorKey && sourceIdentityAnchorKey !== targetIdentityAnchorKey)
+    || (sourceIdentitySourcePath && targetIdentitySourcePath && sourceIdentitySourcePath !== targetIdentitySourcePath)
+  );
+  return compactRecord({
+    sourceIdentityStatus: edit.sourceIdentityStatus ?? (moved ? 'moved-source' : 'same-source'),
+    sourceIdentityAnchorKey,
+    targetIdentityAnchorKey,
+    sourceIdentitySourcePath,
+    targetIdentitySourcePath
   });
 }
 

@@ -137,6 +137,9 @@ export interface SemanticEditProjectionEdit {
   readonly semanticKey?: string;
   readonly semanticIdentityHash?: string;
   readonly sourceIdentityHash?: string;
+  readonly sourceIdentityStatus?: 'same-source' | 'moved-source' | string;
+  readonly sourceIdentityAnchorKey?: string; readonly targetIdentityAnchorKey?: string;
+  readonly sourceIdentitySourcePath?: string; readonly targetIdentitySourcePath?: string;
   readonly operationContentHash?: string;
   readonly editContentHash?: string;
   readonly headStart: number;

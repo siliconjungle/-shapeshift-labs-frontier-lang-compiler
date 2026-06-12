@@ -22,6 +22,7 @@ import {
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
   diffNativeSources,
+  queryUniversalConversionArtifacts,
   queryUniversalConversionPlan,
   sortSemanticMergeCandidateAdmissionRecords,
   summarizeNativeImportLosses
@@ -91,6 +92,12 @@ assert.equal(universalFixturePlan.summary.autoMergeClaims, 0);
 assert.equal(universalFixturePlan.summary.semanticEquivalenceClaims, 0);
 assert.equal(universalFixturePlan.summary.targetAdapterRoutes >= 2, true);
 assert.equal(universalFixturePlan.summary.semanticIndexOnlyRoutes >= 1, true);
+assert.equal(universalFixturePlan.matrices.universalCapability.summary.representationConstructs > 0, true);
+assert.equal(universalFixturePlan.matrices.universalCapability.summary.representationMissing >= 0, true);
+const matrixJsLanguage = universalFixturePlan.matrices.universalCapability.languages.find((row) => row.language === 'javascript');
+assert.equal(matrixJsLanguage.representation.kind, 'frontier.lang.universalRepresentationCoverage');
+assert.equal(matrixJsLanguage.representation.constructKinds.includes('semantic-symbol'), true);
+assert.equal(matrixJsLanguage.representation.autoMergeClaim, false);
 const matrixJsToRust = queryUniversalConversionPlan(universalFixturePlan, {
   sourceLanguage: 'javascript',
   target: 'rust'
@@ -110,12 +117,25 @@ assert.equal(matrixRToRust.admissionAction, 'reject');
 assert.equal(matrixJsToRust.mergeScore.schema, 'frontier.lang.semanticMergeScore.v1');
 assert.equal(Boolean(matrixJsToRust.adapter), true);
 assert.equal(matrixJsToRust.mergeScore.sortKey > matrixRToRust.mergeScore.sortKey, true);
+assert.equal(matrixJsToRust.representation.constructKinds.includes('target-adapter'), true);
+assert.equal(matrixJsToRust.mergeScore.components.representationCoverage.key, 'representationCoverage');
+assert.equal(matrixJsToRust.mergeScore.components.representationCoverage.signals.constructKinds.includes('target-adapter'), true);
 assert.equal(matrixJsToRust.autoMergeClaim, false);
 assert.equal(matrixJsToRust.semanticEquivalenceClaim, false);
+assert.equal(queryUniversalConversionPlan(universalFixturePlan, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  constructKind: 'target-adapter'
+}).bestRoute.id, matrixJsToRust.id);
 const universalFixtureArtifacts = createUniversalConversionArtifacts(universalFixturePlan, { generatedAt: 655 });
 assert.equal(universalFixtureArtifacts.summary.routes, universalFixturePlan.routes.length);
 assert.equal(universalFixtureArtifacts.summary.admissionRecords, universalFixturePlan.routes.length);
 assert.equal(universalFixtureArtifacts.summary.autoMergeClaims, 0);
+assert.equal(universalFixtureArtifacts.index.representationConstructKinds.includes('target-adapter'), true);
+assert.equal(queryUniversalConversionArtifacts(universalFixtureArtifacts, {
+  routeId: matrixJsToRust.id,
+  constructKind: 'target-adapter'
+})[0].routeId, matrixJsToRust.id);
 const universalFixtureLossSummaries = universalFixtureImports.map((imported) => summarizeNativeImportLosses(imported.losses, {
   evidence: imported.evidence,
   exactAst: imported.metadata?.nativeImportLossSummary?.exactAst
