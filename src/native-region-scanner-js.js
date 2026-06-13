@@ -25,6 +25,10 @@ import {
   jsInlineNestedObjectDeclarations, jsNestedObjectContextFromDeclaration,
   updateJsArrayObjectContextName, updateJsObjectContextStack
 } from './native-region-scanner-js-nested.js';
+import {
+  jsClassMemberDeclaration,
+  jsInlineClassMemberDeclarations
+} from './native-region-scanner-js-class.js';
 
 function scanJavaScriptLike(input) {
   const declarations = [];
@@ -157,22 +161,8 @@ function scanJavaScriptLike(input) {
     } else if ((match = trimmed.match(/^(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=/))) {
       const regionKind = jsRegionKindForDeclarationName(match[1], trimmed);
       pushDeclaration(nativeDeclaration(input, number, 'CommonJsExport', 'variable', match[1], { export: 'commonjs' }, false, { regionKind }));
-    } else if (currentClass && (match = declarationLine.match(/^(?:(?:public|private|protected|static|async|override|readonly|abstract|accessor|get|set)\s+)*(?:async\s+)?(?:get\s+|set\s+)?(#?[A-Za-z_$][\w$]*)\??\s*(?:<[^({;]+>)?\s*\(([^)]*)\)\s*(?::\s*[^={]+)?(?:\{|=>|$)/)) && !jsControlKeyword(match[1])) {
-      const hasBody = declarationLine.includes('{') || declarationLine.includes('=>');
-      pushDeclaration((hasBody ? nativeDeclaration : nativeSignatureDeclaration)(input, number, 'MethodDefinition', 'method', `${currentClass}.${match[1]}`, {
-        methodName: match[1],
-        owner: currentClass,
-        parameters: splitParameters(match[2])
-      }, hasBody));
-    } else if (currentClass && (match = declarationLine.match(/^(?:(?:public|private|protected|static|readonly|declare|accessor)\s+)*(#?[A-Za-z_$][\w$]*)[?!]?\s*(?::\s*([^=;{]+))?(?:[=;]|$)/))) {
-      const initializerKind = jsInitializerKind(declarationLine, match[1]);
-      const hasBody = jsVariableHasBody(initializerKind, declarationLine);
-      pushDeclaration(nativeDeclaration(input, number, 'PropertyDefinition', initializerKind === 'function' ? 'function' : 'property', `${currentClass}.${match[1]}`, {
-        propertyName: match[1],
-        owner: currentClass,
-        valueType: match[2]?.trim(),
-        initializerKind
-      }, hasBody, { regionKind: initializerKind === 'function' ? 'body' : 'property', metadata: { initializerKind } }));
+    } else if (currentClass) {
+      pushDeclaration(jsClassMemberDeclaration(input, number, declarationLine, currentClass));
     }
     pushDeclarations(jsExportDeclarations(input, number, trimmed));
     if (currentClass) {
@@ -298,22 +288,5 @@ function jsTypeMemberDeclaration(input, lineNumber, declarationLine, context) {
 }
 
 function jsTypeMemberRegionKind(context, propertyName) { return jsRegionKindForDeclarationName(propertyName) ?? (context.regionKind === 'type' ? 'property' : context.regionKind) ?? 'property'; }
-
-function jsInlineClassMemberDeclarations(input, lineNumber, declarationLine, className) {
-  const open = declarationLine.indexOf('{');
-  const close = declarationLine.lastIndexOf('}');
-  if (open < 0 || close <= open) return [];
-  const body = declarationLine.slice(open + 1, close);
-  const declarations = [];
-  for (const match of body.matchAll(/(?:(?:public|private|protected|static|async|override|readonly|abstract|accessor|get|set)\s+)*(?:async\s+)?(?:get\s+|set\s+)?(#?[A-Za-z_$][\w$]*)\??\s*(?:<[^({;]+>)?\s*\(([^)]*)\)\s*(?::\s*[^={;]+)?\s*(?:\{|=>)/g)) {
-    if (jsControlKeyword(match[1])) continue;
-    declarations.push(nativeDeclaration(input, lineNumber, 'MethodDefinition', 'method', `${className}.${match[1]}`, {
-      methodName: match[1],
-      owner: className,
-      parameters: splitParameters(match[2])
-    }, true));
-  }
-  return declarations;
-}
 
 export { scanJavaScriptLike };

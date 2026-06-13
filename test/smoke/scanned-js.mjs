@@ -175,7 +175,7 @@ const scannedPrivateClassImport = importNativeSource({
   sourceText: 'export class TokenBucket {\n  #tokens = 0;\n  static #capacity = 10;\n  get size() {\n    return this.#tokens;\n  }\n  #refill(amount) {\n    this.#tokens += amount;\n  }\n}\n'
 });
 const privateClassNames = new Set(scannedPrivateClassImport.semanticIndex.symbols.map((symbol) => symbol.name));
-for (const expectedName of ['TokenBucket', 'TokenBucket.#tokens', 'TokenBucket.#capacity', 'TokenBucket.size', 'TokenBucket.#refill']) {
+for (const expectedName of ['TokenBucket', 'TokenBucket.#tokens', 'TokenBucket.static.#capacity', 'TokenBucket.size', 'TokenBucket.#refill']) {
   assert.equal(privateClassNames.has(expectedName), true);
 }
 const privateFieldSymbol = scannedPrivateClassImport.semanticIndex.symbols.find((symbol) => symbol.name === 'TokenBucket.#tokens');
