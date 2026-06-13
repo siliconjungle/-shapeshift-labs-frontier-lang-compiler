@@ -128,10 +128,10 @@ function splitTopLevelEntries(body) {
 }
 
 function parseObjectEntry(entry) {
-  if (!entry || entry.startsWith('...') || entry.startsWith('[')) return undefined;
-  const match = entry.match(/^(?:(['"])([^'"]+)\1|([A-Za-z_$][\w$-]*))\s*:\s*(.+)$/s);
+  if (!entry || entry.startsWith('...')) return undefined;
+  const match = entry.match(/^(?:\[\s*(['"`])([^'"`]+)\1\s*\]|(['"`])([^'"`]+)\3|([A-Za-z_$][\w$-]*))\s*:\s*(.+)$/s);
   if (!match) return undefined;
-  return { key: match[2] ?? match[3], value: match[4].trim() };
+  return { key: match[2] ?? match[4] ?? match[5], value: match[6].trim() };
 }
 
 function nestedInitializerKind(value) {

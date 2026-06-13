@@ -124,3 +124,42 @@ assert.equal(arrayProjection.sourceText, arrayExpectedSource);
 const arrayReplay = replaySemanticEditProjection({ projection: arrayProjection, currentSourceText: arrayHeadSource });
 assert.equal(arrayReplay.status, 'accepted-clean');
 assert.equal(arrayReplay.outputSourceText, arrayExpectedSource);
+
+const computedBaseSource = 'export const actions = {\n  ["save-action"]: (ctx) => {\n    return ctx.title.trim();\n  },\n  `reset-action`: {\n    run(ctx) {\n      return ctx.empty();\n    }\n  }\n};\n';
+const computedWorkerSource = computedBaseSource.replace('ctx.title.trim()', 'ctx.title.trim().toUpperCase()');
+const computedHeadSource = `// coordinator moved this file\n${computedBaseSource}`;
+const computedExpectedSource = `// coordinator moved this file\n${computedWorkerSource}`;
+const computedImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/computed-actions.ts',
+  sourceText: computedBaseSource
+});
+assert.equal(computedImport.semanticIndex.symbols.some((symbol) => symbol.name === 'actions.save-action' && symbol.kind === 'function'), true);
+assert.equal(computedImport.semanticIndex.symbols.some((symbol) => symbol.name === 'actions.reset-action' && symbol.kind === 'property'), true);
+assert.equal(computedImport.semanticIndex.symbols.some((symbol) => symbol.name === 'actions.reset-action.run' && symbol.kind === 'function'), true);
+
+const computedSidecar = createSemanticImportSidecar(computedImport);
+assert.equal(computedSidecar.symbols.some((symbol) => symbol.name === 'actions.save-action:controlFlow:exit#1'), true);
+assert.equal(computedSidecar.ownershipRegions.some((region) => region.regionKind === 'body' && region.symbolName === 'actions.reset-action.run'), true);
+
+const computedScript = createSemanticEditScript({
+  id: 'semantic_edit_typescript_computed_object_function',
+  language: 'typescript',
+  sourcePath: 'src/computed-actions.ts',
+  baseSourceText: computedBaseSource,
+  workerSourceText: computedWorkerSource,
+  headSourceText: computedHeadSource,
+  generatedAt: 221
+});
+assert.equal(computedScript.admission.status, 'auto-merge-candidate');
+assert.equal(computedScript.operations.length, 1);
+assert.equal(computedScript.operations[0].kind, 'replaceControlFlow');
+assert.equal(computedScript.operations[0].anchor.symbolName, 'actions.save-action:controlFlow:exit#1');
+
+const computedProjection = projectSemanticEditScriptToSource({ script: computedScript, workerSourceText: computedWorkerSource, headSourceText: computedHeadSource });
+assert.equal(computedProjection.status, 'projected');
+assert.equal(computedProjection.sourceText, computedExpectedSource);
+
+const computedReplay = replaySemanticEditProjection({ projection: computedProjection, currentSourceText: computedHeadSource });
+assert.equal(computedReplay.status, 'accepted-clean');
+assert.equal(computedReplay.outputSourceText, computedExpectedSource);

@@ -199,23 +199,24 @@ function jsContainerExport(input, lineNumber, languageKind, name, initializer, f
 
 function jsObjectPropertyDeclaration(input, lineNumber, trimmed, context) {
   if (/^[}\])]/.test(trimmed) || trimmed.startsWith('...')) return undefined;
-  const methodMatch = trimmed.match(/^(?:(?:async|get|set)\s+)?(['"]?)([A-Za-z_$][\w$-]*)\1\s*\(([^)]*)\)\s*(?:[:\w\s<>\[\]]*)?(?:\{|=>|,|$)/);
-  if (methodMatch && !jsControlKeyword(methodMatch[2])) {
-    const name = `${context.name}.${methodMatch[2]}`;
+  const methodMatch = trimmed.match(/^(?:(?:async|get|set)\s+)?(?:\[\s*(['"`])([^'"`]+)\1\s*\]|(['"`]?)([A-Za-z_$][\w$-]*)\3)\s*\(([^)]*)\)\s*(?:[:\w\s<>\[\]]*)?(?:\{|=>|,|$)/);
+  const methodName = methodMatch?.[2] ?? methodMatch?.[4];
+  if (methodMatch && !jsControlKeyword(methodName)) {
+    const name = `${context.name}.${methodName}`;
     return nativeDeclaration(input, lineNumber, 'ObjectMethod', 'function', name, {
       owner: context.name,
-      propertyName: methodMatch[2],
-      parameters: splitParameters(methodMatch[3])
+      propertyName: methodName,
+      parameters: splitParameters(methodMatch[5])
     }, true, {
       regionKind: 'body',
-      metadata: { owner: context.name, propertyName: methodMatch[2], initializerKind: 'function' }
+      metadata: { owner: context.name, propertyName: methodName, initializerKind: 'function' }
     });
   }
-  const propertyMatch = trimmed.match(/^(?:(['"])([^'"]+)\1|([A-Za-z_$][\w$-]*))\s*:\s*(.+?)(?:,)?$/);
+  const propertyMatch = trimmed.match(/^(?:\[\s*(['"`])([^'"`]+)\1\s*\]|(['"`])([^'"`]+)\3|([A-Za-z_$][\w$-]*))\s*:\s*(.+?)(?:,)?$/);
   if (!propertyMatch) return undefined;
-  const propertyName = propertyMatch[2] ?? propertyMatch[3];
+  const propertyName = propertyMatch[2] ?? propertyMatch[4] ?? propertyMatch[5];
   if (!propertyName || jsControlKeyword(propertyName)) return undefined;
-  const value = propertyMatch[4].trim();
+  const value = propertyMatch[6].trim();
   const initializerKind = jsPropertyInitializerKind(value);
   const functionLike = initializerKind === 'function';
   const name = `${context.name}.${propertyName}`;
