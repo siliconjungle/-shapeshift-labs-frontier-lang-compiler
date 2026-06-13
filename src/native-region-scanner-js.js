@@ -1,6 +1,5 @@
 import {
   braceDelta,
-  jsControlKeyword,
   nativeDeclaration, nativeImportDeclaration, nativeSignatureDeclaration,
   sourceLines,
   splitParameters
@@ -13,16 +12,23 @@ import {
   jsExportedFunctionWrapperDeclaration,
   jsInitializerKind,
   jsImportDeclarations,
-  jsObjectPropertyDeclaration,
   jsObjectRegionContext,
   jsRegionKindForDeclarationName,
-  jsRouteRecordDeclaration,
   jsVariableHasBody,
   jsVariableSymbolKind
 } from './native-region-scanner-js-helpers.js';
+import { jsStructureDelta } from './native-region-scanner-js-structure.js';
+import {
+  jsCurrentTypeMemberContext,
+  jsNestedTypeMemberContextFromDeclaration,
+  jsTypeMemberDeclaration,
+  jsTypeRegionContext,
+  updateJsTypeRegionContext
+} from './native-region-scanner-js-types.js';
 import {
   jsArrayObjectContextFromLine, jsContextAllowsPropertyScan, jsCurrentObjectContext,
   jsInlineNestedObjectDeclarations, jsNestedObjectContextFromDeclaration,
+  jsObjectPropertyDeclaration, jsRouteRecordDeclaration,
   updateJsArrayObjectContextName, updateJsObjectContextStack
 } from './native-region-scanner-js-nested.js';
 import {
@@ -33,7 +39,12 @@ import {
 function scanJavaScriptLike(input) {
   const declarations = [];
   const lines = sourceLines(input.sourceText);
-  const pushDeclaration = (declaration) => { if (declaration) declarations.push(jsDeclarationWithSourceSpan(input, declaration, lines)); };
+  const pushDeclaration = (declaration) => {
+    if (!declaration) return undefined;
+    const declarationWithSpan = jsDeclarationWithSourceSpan(input, declaration, lines);
+    declarations.push(declarationWithSpan);
+    return declarationWithSpan;
+  };
   const pushDeclarations = (items) => {
     for (const declaration of items ?? []) pushDeclaration(declaration);
   };
@@ -49,7 +60,12 @@ function scanJavaScriptLike(input) {
     const declarationLine = trimmed.replace(/^(?:export\s+)?(?:declare\s+)?/, '');
     let match;
     if (currentType && number !== currentType.startLine) {
-      pushDeclaration(jsTypeMemberDeclaration(input, number, declarationLine, currentType));
+      const typeContext = jsCurrentTypeMemberContext(currentType);
+      if (!typeContext.suppressMembers) {
+        const typeMember = pushDeclaration(jsTypeMemberDeclaration(input, number, declarationLine, typeContext));
+        const nestedTypeContext = jsNestedTypeMemberContextFromDeclaration(typeMember, number, declarationLine, typeContext);
+        if (nestedTypeContext) currentType.memberStack.push(nestedTypeContext);
+      }
     }
     const currentObject = jsCurrentObjectContext(objectStack);
     if (currentObject) {
@@ -173,7 +189,7 @@ function scanJavaScriptLike(input) {
       }
     }
     if (currentType) {
-      if (number !== currentType.startLine) currentType.depth += jsStructureDelta(trimmed).value;
+      if (number !== currentType.startLine) updateJsTypeRegionContext(currentType, number, trimmed);
       if (currentType.depth <= 0) currentType = undefined;
     }
     updateJsObjectContextStack(objectStack, number, trimmed);
@@ -217,76 +233,5 @@ function jsBalancedDeclarationEndLine(input, lines, startLine) {
   }
   return startLine;
 }
-
-function jsStructureDelta(source) {
-  let value = 0;
-  let opened = false;
-  let quote;
-  let escaped = false;
-  for (const char of String(source ?? '')) {
-    if (quote) {
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === quote) quote = undefined;
-      continue;
-    }
-    if (char === '\'' || char === '"' || char === '`') {
-      quote = char;
-      continue;
-    }
-    if (char === '{' || char === '[' || char === '(') {
-      value += 1;
-      opened = true;
-    } else if (char === '}' || char === ']' || char === ')') {
-      value -= 1;
-    }
-  }
-  return { value, opened };
-}
-
-function jsTypeRegionContext(name, declarationLine, lineNumber, regionKind, typeKind) {
-  const depth = jsStructureDelta(declarationLine).value;
-  if (depth <= 0) return undefined;
-  return {
-    name,
-    typeKind,
-    regionKind,
-    depth,
-    startLine: lineNumber
-  };
-}
-
-function jsTypeMemberDeclaration(input, lineNumber, declarationLine, context) {
-  const text = String(declarationLine ?? '').trim();
-  if (!text || /^[}\])]/.test(text) || text.startsWith('//')) return undefined;
-  let match = text.match(/^(?:readonly\s+)?(['"]?)([A-Za-z_$][\w$-]*)\1\??\s*(?:<[^({;]+>)?\s*\(([^)]*)\)\s*(?::\s*([^;,]+))?[;,]?$/);
-  if (match && !jsControlKeyword(match[2])) {
-    return nativeSignatureDeclaration(input, lineNumber, 'TypeMethodSignature', 'method', `${context.name}.${match[2]}`, {
-      owner: context.name,
-      propertyName: match[2],
-      parameters: splitParameters(match[3]),
-      returnType: match[4]?.trim(),
-      typeKind: context.typeKind
-    }, false, {
-      regionKind: jsTypeMemberRegionKind(context, match[2], text),
-      metadata: { owner: context.name, propertyName: match[2], typeKind: context.typeKind }
-    });
-  }
-  match = text.match(/^(?:readonly\s+)?(['"]?)([A-Za-z_$][\w$-]*)\1\??\s*:\s*(.+?)[;,]?$/);
-  if (!match || jsControlKeyword(match[2])) return undefined;
-  const valueType = match[3].trim();
-  const functionLike = /=>/.test(valueType) || /^\([^)]*\)\s*=>/.test(valueType);
-  return (functionLike ? nativeSignatureDeclaration : nativeDeclaration)(input, lineNumber, functionLike ? 'TypeFunctionPropertySignature' : 'TypePropertySignature', functionLike ? 'function' : 'property', `${context.name}.${match[2]}`, {
-    owner: context.name,
-    propertyName: match[2],
-    valueType,
-    typeKind: context.typeKind
-  }, false, {
-    regionKind: jsTypeMemberRegionKind(context, match[2], text),
-    metadata: { owner: context.name, propertyName: match[2], typeKind: context.typeKind }
-  });
-}
-
-function jsTypeMemberRegionKind(context, propertyName) { return jsRegionKindForDeclarationName(propertyName) ?? (context.regionKind === 'type' ? 'property' : context.regionKind) ?? 'property'; }
 
 export { scanJavaScriptLike };

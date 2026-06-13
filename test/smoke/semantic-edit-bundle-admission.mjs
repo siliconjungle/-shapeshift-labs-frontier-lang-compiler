@@ -59,6 +59,15 @@ const conflictAutoMergeEvidence = {
   scope: 'semantic-edit:auto-merge',
   reasonCodes: ['semantic-conflict-evidence']
 };
+const compactSidecarQuality = {
+  schema: 'frontier.lang.semanticSidecarQuality.v1', imported: true, eligible: false,
+  symbolCount: 2,
+  ownershipRegionCount: 1,
+  patchHintCount: 0,
+  warningCount: 1,
+  warnings: [{ code: 'missing-patch-hints' }],
+  emptyEvidenceWarnings: [{ code: 'missing-patch-hints' }]
+};
 const first = semanticEditFlow({
   id: 'bundle_first',
   sourcePath: 'src/a.js',
@@ -91,6 +100,23 @@ assert.equal(readyAdmission.summary.conflictEvidence, 0);
 assert.equal(readyAdmission.summary.staleEvidence, 0);
 assert.equal(readyAdmission.reasonCodes.includes('semantic-edit-replay-accepted-clean'), true);
 assert.equal(readyAdmission.reasonCodes.includes('semantic-edit-positive-auto-merge-proof'), true);
+const sidecarQualityScript = {
+  ...first.script,
+  metadata: { ...first.script.metadata, semanticSidecarQuality: compactSidecarQuality }
+};
+const sidecarQualityAdmission = createSemanticEditBundleAdmission({
+  semanticEditScripts: [sidecarQualityScript],
+  semanticEditProjections: [first.projection],
+  semanticEditReplays: [first.replay],
+  evidence: [passedAutoMergeProof]
+});
+assert.equal(sidecarQualityAdmission.summary.semanticSidecarQuality.records, 1);
+assert.equal(sidecarQualityAdmission.summary.semanticSidecarQuality.symbols, 2);
+assert.equal(sidecarQualityAdmission.summary.semanticSidecarQuality.ownershipRegions, 1);
+assert.equal(sidecarQualityAdmission.summary.semanticSidecarQuality.patchHints, 0);
+assert.equal(sidecarQualityAdmission.summary.semanticSidecarQuality.zeroRecordWarnings, 1);
+assert.equal(sidecarQualityAdmission.summary.semanticSidecarQuality.zeroRecordWarningCodes.includes('missing-patch-hints'), true);
+assert.equal(sidecarQualityAdmission.reasonCodes.includes('missing-patch-hints'), true);
 const missingTestAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [first.script, second.script],
   semanticEditProjections: [first.projection, second.projection],
@@ -179,6 +205,16 @@ assert.equal(querySemanticPatchBundleRecords([readyBundleWithoutIndex], { semant
 assert.equal(querySemanticPatchBundleRecords([readyBundleWithoutIndex], { semanticEditAdmissionAction: 'admit' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([readyBundleWithoutIndex], { semanticEditAdmissionReadiness: 'ready' }).length, 1);
 void readyBundleIndex;
+const sidecarQualityBundle = createSemanticPatchBundleRecord(changeSet, {
+  id: 'semantic_edit_bundle_sidecar_quality',
+  semanticEditScripts: [sidecarQualityScript],
+  semanticEditProjections: [first.projection],
+  semanticEditReplays: [first.replay],
+  evidence: [passedAutoMergeProof]
+});
+assert.equal(sidecarQualityBundle.admission.semanticEditAdmission.summary.semanticSidecarQuality.records, 1);
+assert.equal(sidecarQualityBundle.admission.semanticEditAdmission.summary.semanticSidecarQuality.symbols, 2);
+assert.equal(sidecarQualityBundle.admission.reasonCodes.includes('missing-patch-hints'), true);
 const missingTestBundle = createSemanticPatchBundleRecord(changeSet, {
   id: 'semantic_edit_bundle_missing_tests',
   semanticEditScripts: [first.script, second.script],

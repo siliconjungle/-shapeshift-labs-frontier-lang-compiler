@@ -9,10 +9,18 @@ import {
 
 const baseSource = 'export class Store {\n  static save(title: string) {\n    return title.trim();\n  }\n\n  save(title: string) {\n    return title.trim();\n  }\n\n  static make = (title: string) => {\n    return title.trim();\n  };\n\n  label = (title: string) => {\n    return title.trim();\n  };\n\n  get summary() {\n    return this.label("x");\n  }\n}\n';
 const workerSource = baseSource.replace('return title.trim();\n  }\n\n  save', 'return title.trim().toUpperCase();\n  }\n\n  save');
+const memberWorkerSource = baseSource.replace(
+  '  save(title: string) {\n    return title.trim();\n  }',
+  '  save(title: string) {\n    return title.trim().toLowerCase();\n  }'
+);
 const headSource = `// coordinator moved this file\n${baseSource}`;
 const expectedSource = `// coordinator moved this file\n${workerSource}`;
 const laterHeadSource = `// later coordinator note\n${headSource}`;
 const laterExpectedSource = `// later coordinator note\n${expectedSource}`;
+const staticAndMemberExpectedSource = workerSource.replace(
+  '  save(title: string) {\n    return title.trim();\n  }',
+  '  save(title: string) {\n    return title.trim().toLowerCase();\n  }'
+);
 
 const imported = importNativeSource({
   language: 'typescript',
@@ -69,6 +77,74 @@ const replay = replaySemanticEditProjection({ projection, currentSourceText: lat
 assert.equal(replay.status, 'accepted-clean');
 assert.equal(replay.outputSourceText, laterExpectedSource);
 assert.equal(replay.edits[0].reasonCodes.includes('offset-reanchored-by-symbol'), true);
+
+const memberScript = createSemanticEditScript({
+  id: 'semantic_edit_typescript_member_class_method_static_head',
+  language: 'typescript',
+  sourcePath: 'src/store.ts',
+  baseSourceText: baseSource,
+  workerSourceText: memberWorkerSource,
+  headSourceText: workerSource,
+  generatedAt: 221
+});
+assert.equal(memberScript.admission.status, 'auto-merge-candidate');
+assert.equal(memberScript.operations.length, 1);
+assert.equal(memberScript.operations[0].kind, 'replaceControlFlow');
+assert.equal(memberScript.operations[0].anchor.symbolName, 'Store.save:controlFlow:exit#1');
+assert.notEqual(memberScript.operations[0].anchor.conflictKey, script.operations[0].anchor.conflictKey);
+
+const memberProjection = projectSemanticEditScriptToSource({
+  script: memberScript,
+  workerSourceText: memberWorkerSource,
+  headSourceText: workerSource
+});
+assert.equal(memberProjection.status, 'projected');
+assert.equal(memberProjection.sourceText, staticAndMemberExpectedSource);
+
+const memberReplay = replaySemanticEditProjection({
+  projection: memberProjection,
+  currentSourceText: workerSource
+});
+assert.equal(memberReplay.status, 'accepted-clean');
+assert.equal(memberReplay.outputSourceText, staticAndMemberExpectedSource);
+
+const splitReceiverHeadSource = baseSource.replace(
+  'return title.trim();\n  }\n\n  static make',
+  'return title.trim().toLowerCase();\n  }\n\n  static make'
+);
+const splitReceiverExpectedSource = workerSource.replace(
+  'return title.trim();\n  }\n\n  static make',
+  'return title.trim().toLowerCase();\n  }\n\n  static make'
+);
+const splitReceiverScript = createSemanticEditScript({
+  id: 'semantic_edit_typescript_static_instance_same_name_sibling',
+  language: 'typescript',
+  sourcePath: 'src/store.ts',
+  baseSourceText: baseSource,
+  workerSourceText: workerSource,
+  headSourceText: splitReceiverHeadSource,
+  generatedAt: 222
+});
+assert.equal(splitReceiverScript.admission.status, 'auto-merge-candidate');
+assert.equal(splitReceiverScript.operations.length, 1);
+assert.equal(splitReceiverScript.operations[0].kind, 'replaceControlFlow');
+assert.equal(splitReceiverScript.operations[0].anchor.symbolName, 'Store.static.save:controlFlow:exit#1');
+assert.equal(splitReceiverScript.operations[0].reasonCodes.includes('head-anchor-matches-base'), true);
+
+const splitReceiverProjection = projectSemanticEditScriptToSource({
+  script: splitReceiverScript,
+  workerSourceText: workerSource,
+  headSourceText: splitReceiverHeadSource
+});
+assert.equal(splitReceiverProjection.status, 'projected');
+assert.equal(splitReceiverProjection.sourceText, splitReceiverExpectedSource);
+
+const splitReceiverReplay = replaySemanticEditProjection({
+  projection: splitReceiverProjection,
+  currentSourceText: splitReceiverHeadSource
+});
+assert.equal(splitReceiverReplay.status, 'accepted-clean');
+assert.equal(splitReceiverReplay.outputSourceText, splitReceiverExpectedSource);
 
 const jsImport = importNativeSource({
   language: 'javascript',

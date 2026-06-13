@@ -125,6 +125,44 @@ const sameLineEffectReplay = replaySemanticEditProjection({
 assert.equal(sameLineEffectReplay.status, 'accepted-clean');
 assert.equal(sameLineEffectReplay.outputSourceText, sameLineEffectExpected);
 
+const runtimeApiEffectSource = [
+  'export function connectRuntime(url, key, timer) {',
+  '  const socket = new WebSocket(url);',
+  '  const worker = new Worker(url);',
+  '  localStorage.setItem(key, socket.url);',
+  '  indexedDB.open(key);',
+  '  clearTimeout(timer);',
+  '  return worker;',
+  '}',
+  ''
+].join('\n');
+const runtimeApiEffectImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/runtime-effects.ts',
+  sourceText: runtimeApiEffectSource
+});
+const runtimeApiEffectSymbol = runtimeApiEffectImport.semanticIndex.symbols.find((symbol) => symbol.name === 'connectRuntime');
+const runtimeApiEffectFacts = runtimeApiEffectImport.semanticIndex.facts
+  .filter((fact) => fact.subjectId === runtimeApiEffectSymbol.id && fact.predicate === 'effect')
+  .map((fact) => `${fact.value.kind}:${fact.value.line}`);
+assert.deepEqual(runtimeApiEffectFacts, [
+  'network:2',
+  'browser:3',
+  'storage:4',
+  'storage:5',
+  'scheduler:6'
+]);
+const runtimeApiEffectSidecar = createSemanticImportSidecar(runtimeApiEffectImport, { generatedAt: 204 });
+const runtimeApiEffectRegions = runtimeApiEffectSidecar.ownershipRegions.filter((region) => region.regionKind === 'effect');
+assert.deepEqual(runtimeApiEffectRegions.map((region) => region.symbolName), [
+  'connectRuntime:effect:network#1',
+  'connectRuntime:effect:browser#1',
+  'connectRuntime:effect:storage#1',
+  'connectRuntime:effect:storage#2',
+  'connectRuntime:effect:scheduler#1'
+]);
+assert.equal(runtimeApiEffectRegions.every((region) => region.mergePolicy === 'effect-boundary-review-required'), true);
+
 function sourceTextForSpan(sourceText, span) {
   const line = String(sourceText).split(/\r\n|\n|\r/)[span.startLine - 1];
   return line.slice(span.startColumn - 1, span.endColumn - 1);

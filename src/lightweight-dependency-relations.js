@@ -7,6 +7,7 @@ import {
   isDependencyIdentifier,
   maskDependencyLine
 } from './lightweight-dependency-language.js';
+import { lightweightEffectKinds } from './lightweight-dependency-effects.js';
 import { sourceLines } from './native-region-scanner-core.js';
 
 export function lightweightDependencyRelations(input, declarations, documentId) {
@@ -153,17 +154,6 @@ function lightweightControlFlowKinds(line, state = {}) {
   return kinds;
 }
 
-function lightweightEffectKinds(line) {
-  const kinds = [];
-  if (/\bawait\b|import\s*\(/.test(line)) kinds.push('async');
-  if (hasGlobalNetworkCall(line)) kinds.push('network');
-  if (/\b(localStorage|sessionStorage|indexedDB|caches|cookie)\b/.test(line)) kinds.push('storage');
-  if (/\b(setTimeout|setInterval|requestAnimationFrame|queueMicrotask)\s*\(/.test(line)) kinds.push('scheduler');
-  if (/\b(console|process|Deno|Bun)\s*\./.test(line)) kinds.push('host');
-  if (/\b(document|window|navigator|location|history)\s*\./.test(line)) kinds.push('browser');
-  return kinds;
-}
-
 function lightweightMutationKinds(line) {
   const kinds = [];
   if (/\bdelete\s+[A-Za-z_$][\w$.[\]]*/.test(line)) kinds.push('delete');
@@ -202,19 +192,6 @@ function blockBraceDelta(line) {
     else if (char === '}') delta -= 1;
   }
   return delta;
-}
-
-function hasGlobalNetworkCall(line) {
-  return hasBareCall(line, ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource'])
-    || hasGlobalPropertyCall(line, ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource']);
-}
-
-function hasBareCall(line, names) {
-  return names.some((name) => new RegExp(`(?:^|[^\\w$.])${name}\\s*\\(`).test(line));
-}
-
-function hasGlobalPropertyCall(line, names) {
-  return names.some((name) => new RegExp(`\\b(?:window|globalThis|self)\\s*\\.\\s*${name}\\s*\\(`).test(line));
 }
 
 function hasRuntimeAssignment(line) {
@@ -314,4 +291,7 @@ function addDependencyRecord(input, documentId, caller, target, occurrence, reco
   });
 }
 
-function isCallReference(line, afterIdentifierIndex) { return /^\s*\(/.test(String(line ?? '').slice(afterIdentifierIndex)); }
+function isCallReference(line, afterIdentifierIndex) {
+  const rest = String(line ?? '').slice(afterIdentifierIndex);
+  return /^\s*(?:\(|\?\.\s*\(|\?\.\s*(?:[A-Za-z_$][\w$]*|\[[^\]]+\])(?:\s*(?:\.|\?\.)\s*(?:[A-Za-z_$][\w$]*|\[[^\]]+\]))*\s*(?:\?\.)?\s*\()/.test(rest);
+}

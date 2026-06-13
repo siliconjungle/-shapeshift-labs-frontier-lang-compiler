@@ -125,7 +125,7 @@ const arrayReplay = replaySemanticEditProjection({ projection: arrayProjection, 
 assert.equal(arrayReplay.status, 'accepted-clean');
 assert.equal(arrayReplay.outputSourceText, arrayExpectedSource);
 
-const computedBaseSource = 'export const actions = {\n  ["save-action"]: (ctx) => {\n    return ctx.title.trim();\n  },\n  `reset-action`: {\n    run(ctx) {\n      return ctx.empty();\n    }\n  }\n};\n';
+const computedBaseSource = 'export const actions = {\n  ["run-task"]() {\n    return "run";\n  },\n  [`save-action`](ctx) {\n    return ctx.title.trim();\n  },\n  [`reset-action`]: {\n    run(ctx) {\n      return ctx.empty();\n    }\n  }\n};\n';
 const computedWorkerSource = computedBaseSource.replace('ctx.title.trim()', 'ctx.title.trim().toUpperCase()');
 const computedHeadSource = `// coordinator moved this file\n${computedBaseSource}`;
 const computedExpectedSource = `// coordinator moved this file\n${computedWorkerSource}`;
@@ -135,6 +135,7 @@ const computedImport = importNativeSource({
   sourceText: computedBaseSource
 });
 assert.equal(computedImport.semanticIndex.symbols.some((symbol) => symbol.name === 'actions.save-action' && symbol.kind === 'function'), true);
+assert.equal(computedImport.semanticIndex.symbols.some((symbol) => symbol.name === 'actions.run-task' && symbol.kind === 'function'), true);
 assert.equal(computedImport.semanticIndex.symbols.some((symbol) => symbol.name === 'actions.reset-action' && symbol.kind === 'property'), true);
 assert.equal(computedImport.semanticIndex.symbols.some((symbol) => symbol.name === 'actions.reset-action.run' && symbol.kind === 'function'), true);
 
@@ -163,3 +164,18 @@ assert.equal(computedProjection.sourceText, computedExpectedSource);
 const computedReplay = replaySemanticEditProjection({ projection: computedProjection, currentSourceText: computedHeadSource });
 assert.equal(computedReplay.status, 'accepted-clean');
 assert.equal(computedReplay.outputSourceText, computedExpectedSource);
+
+const inlineComputedBaseSource = 'export const actions = {\n  inline: { ["run-task"]() { return "run"; }, [`save-action`](ctx) { return ctx.title.trim(); } }\n};\n';
+const inlineComputedImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/inline-computed-actions.ts',
+  sourceText: inlineComputedBaseSource
+});
+assert.equal(inlineComputedImport.semanticIndex.symbols.some((symbol) => symbol.name === 'actions.inline.run-task'
+  && symbol.kind === 'function'
+  && symbol.metadata.ownershipRegionKind === 'body'), true);
+assert.equal(inlineComputedImport.semanticIndex.symbols.some((symbol) => symbol.name === 'actions.inline.save-action'
+  && symbol.kind === 'function'
+  && symbol.metadata.ownershipRegionKind === 'body'), true);
+const inlineComputedSidecar = createSemanticImportSidecar(inlineComputedImport);
+assert.equal(inlineComputedSidecar.symbols.some((symbol) => symbol.name === 'actions.inline.save-action:controlFlow:exit#1'), true);

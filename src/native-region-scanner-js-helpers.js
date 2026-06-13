@@ -1,5 +1,4 @@
 import {
-  jsControlKeyword,
   nativeDeclaration,
   splitParameters
 } from './native-region-scanner-core.js';
@@ -122,15 +121,17 @@ function jsExportedContainerDeclaration(input, lineNumber, trimmed) {
 }
 
 function jsExportedFunctionWrapperDeclaration(input, lineNumber, trimmed) {
-  const match = trimmed.match(/^export\s+default\s+((?:React\.)?(?:forwardRef|memo|lazy|observer)|Object\.freeze)\s*(?:<[^>]+>)?\s*\(\s*(.+)$/);
+  const match = trimmed.match(/^export\s+default\s+(.+)$/);
   if (!match) return undefined;
-  const wrapper = match[1];
-  const argument = match[2].trim();
+  const unwrapped = jsUnwrapFunctionWrapperArgument(match[1]);
+  if (!unwrapped) return undefined;
+  const { wrapper, wrappers, argument } = unwrapped;
+  const wrapperFields = { wrapper, ...(wrappers.length > 1 ? { wrappers } : {}) };
   let functionMatch = argument.match(/^(?:async\s+)?function\*?\s*([A-Za-z_$][\w$]*)?\s*(?:<[^({;]+>)?\s*\(([^)]*)\)/);
   if (functionMatch) {
     return nativeDeclaration(input, lineNumber, 'ExportDefaultFunctionWrapperDeclaration', 'function', functionMatch[1] ?? 'default', {
       exportDefault: true,
-      wrapper,
+      ...wrapperFields,
       parameters: splitParameters(functionMatch[2])
     }, true);
   }
@@ -138,7 +139,7 @@ function jsExportedFunctionWrapperDeclaration(input, lineNumber, trimmed) {
   if (functionMatch) {
     return nativeDeclaration(input, lineNumber, 'ExportDefaultFunctionWrapperDeclaration', 'function', 'default', {
       exportDefault: true,
-      wrapper,
+      ...wrapperFields,
       parameters: splitParameters(functionMatch[1] ?? functionMatch[2])
     }, true);
   }
@@ -146,19 +147,31 @@ function jsExportedFunctionWrapperDeclaration(input, lineNumber, trimmed) {
   if (classMatch) {
     return nativeDeclaration(input, lineNumber, 'ExportDefaultClassWrapperDeclaration', 'class', classMatch[1] ?? 'default', {
       exportDefault: true,
-      wrapper
+      ...wrapperFields
     }, true);
   }
   const aliasMatch = argument.match(/^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*(?:[,)]|$)/);
   if (!aliasMatch) return undefined;
   return nativeDeclaration(input, lineNumber, 'ExportDefaultWrappedAlias', 'variable', 'default', {
     exportDefault: true,
-    wrapper,
+    ...wrapperFields,
     alias: aliasMatch[1],
     initializerKind: 'function-wrapper'
   }, false, {
-    metadata: { exportDefault: true, wrapper, alias: aliasMatch[1], initializerKind: 'function-wrapper' }
+    metadata: { exportDefault: true, ...wrapperFields, alias: aliasMatch[1], initializerKind: 'function-wrapper' }
   });
+}
+
+function jsUnwrapFunctionWrapperArgument(source) {
+  const wrappers = [];
+  let argument = String(source ?? '').trim();
+  let match;
+  while ((match = argument.match(/^((?:React\.)?(?:forwardRef|memo|lazy|observer)|Object\.freeze)\s*(?:<[^>]+>)?\s*\(\s*(.+)$/))) {
+    wrappers.push(match[1]);
+    argument = match[2].trim();
+  }
+  if (!wrappers.length) return undefined;
+  return { wrapper: wrappers[0], wrappers, argument };
 }
 
 function jsExportAliasDeclaration(input, lineNumber, trimmed) {
@@ -195,73 +208,6 @@ function jsContainerExport(input, lineNumber, languageKind, name, initializer, f
   });
   const context = jsObjectRegionContext(name, `const ${name} = ${initializer}`, lineNumber, regionKind);
   return { declaration, context };
-}
-
-function jsObjectPropertyDeclaration(input, lineNumber, trimmed, context) {
-  if (/^[}\])]/.test(trimmed) || trimmed.startsWith('...')) return undefined;
-  const methodMatch = trimmed.match(/^(?:(?:async|get|set)\s+)?(?:\[\s*(['"`])([^'"`]+)\1\s*\]|(['"`]?)([A-Za-z_$][\w$-]*)\3)\s*\(([^)]*)\)\s*(?:[:\w\s<>\[\]]*)?(?:\{|=>|,|$)/);
-  const methodName = methodMatch?.[2] ?? methodMatch?.[4];
-  if (methodMatch && !jsControlKeyword(methodName)) {
-    const name = `${context.name}.${methodName}`;
-    return nativeDeclaration(input, lineNumber, 'ObjectMethod', 'function', name, {
-      owner: context.name,
-      propertyName: methodName,
-      parameters: splitParameters(methodMatch[5])
-    }, true, {
-      regionKind: 'body',
-      metadata: { owner: context.name, propertyName: methodName, initializerKind: 'function' }
-    });
-  }
-  const propertyMatch = trimmed.match(/^(?:\[\s*(['"`])([^'"`]+)\1\s*\]|(['"`])([^'"`]+)\3|([A-Za-z_$][\w$-]*))\s*:\s*(.+?)(?:,)?$/);
-  if (!propertyMatch) return undefined;
-  const propertyName = propertyMatch[2] ?? propertyMatch[4] ?? propertyMatch[5];
-  if (!propertyName || jsControlKeyword(propertyName)) return undefined;
-  const value = propertyMatch[6].trim();
-  const initializerKind = jsPropertyInitializerKind(value);
-  const functionLike = initializerKind === 'function';
-  const name = `${context.name}.${propertyName}`;
-  return nativeDeclaration(input, lineNumber, functionLike ? 'ObjectFunctionProperty' : 'ObjectProperty', functionLike ? 'function' : 'property', name, {
-    owner: context.name,
-    propertyName,
-    initializerKind
-  }, functionLike || initializerKind === 'object' || initializerKind === 'array', {
-    regionKind: functionLike ? 'body' : jsPropertyRegionKind(context, propertyName, value),
-    metadata: { owner: context.name, propertyName, initializerKind }
-  });
-}
-
-function jsRouteRecordDeclaration(input, lineNumber, trimmed, context) {
-  if (context.regionKind !== 'route') return undefined;
-  const match = trimmed.match(/^(?:\{\s*)?(?:path|route|href|url)\s*:\s*(['"`])([^'"`]+)\1/);
-  if (!match) return undefined;
-  const routePath = match[2];
-  return nativeDeclaration(input, lineNumber, 'RouteRecord', 'route', `${context.name}.${routePath}`, {
-    owner: context.name,
-    routePath
-  }, true, {
-    regionKind: 'route',
-    metadata: { owner: context.name, routePath, initializerKind: 'object' }
-  });
-}
-
-function jsPropertyInitializerKind(value) {
-  const text = String(value ?? '').trim();
-  if (/^(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/.test(text)) return 'function';
-  const containerKind = jsContainerInitializerKind(text, undefined, text);
-  if (containerKind) return containerKind;
-  if (/^['"`]/.test(text)) return 'string';
-  if (/^(?:true|false)\b/.test(text)) return 'boolean';
-  if (/^[0-9]/.test(text)) return 'number';
-  return 'expression';
-}
-
-function jsPropertyRegionKind(context, propertyName, value) {
-  const named = jsRegionKindForDeclarationName(propertyName, value);
-  if (named) return named;
-  if (context.regionKind === 'route') return 'route';
-  if (context.regionKind === 'content') return 'content';
-  if (context.regionKind === 'config') return 'config';
-  return 'property';
 }
 
 function jsContainerInitializerKind(initializer, name, source) {
@@ -312,5 +258,5 @@ function findUnescapedBacktick(text, startIndex) {
 
 export { jsCommentOnlyLine, jsContainerDelta, jsDeclarationScanLine };
 export { jsExportAliasDeclaration, jsExportedContainerDeclaration, jsExportedFunctionWrapperDeclaration };
-export { jsExportDeclarations, jsInitializerKind, jsImportDeclarations, jsObjectPropertyDeclaration, jsObjectRegionContext };
-export { jsRegionKindForDeclarationName, jsRouteRecordDeclaration, jsVariableHasBody, jsVariableSymbolKind };
+export { jsContainerInitializerKind, jsExportDeclarations, jsInitializerKind, jsImportDeclarations, jsObjectRegionContext };
+export { jsRegionKindForDeclarationName, jsVariableHasBody, jsVariableSymbolKind };

@@ -1,4 +1,5 @@
 import { normalizeSemanticMergeReadiness, uniqueStrings } from '../../native-import-utils.js';
+import { summarizeSemanticSidecarQuality } from './semanticSidecarQuality.js';
 
 export const SemanticEditBundleAdmissionStatuses = Object.freeze([
   'none',
@@ -15,7 +16,7 @@ export function createSemanticEditBundleAdmission(input = {}, options = {}) {
   const projections = array(input.semanticEditProjections ?? input.projections ?? input.semanticEditProjection);
   const replays = array(input.semanticEditReplays ?? input.replays ?? input.semanticEditReplay);
   const evidence = evidenceRecords(input, options);
-  const summary = summarizeSemanticEditBundle(scripts, projections, replays, evidence);
+  const summary = summarizeSemanticEditBundle(scripts, projections, replays, evidence, input, options);
   const computedStatus = semanticEditBundleStatus(summary);
   const status = safeStatus(input.status ?? options.status, computedStatus, summary);
   const readiness = normalizeSemanticMergeReadiness(input.readiness ?? options.readiness ?? readinessForStatus(status))
@@ -45,7 +46,7 @@ export function createSemanticEditBundleAdmission(input = {}, options = {}) {
   });
 }
 
-function summarizeSemanticEditBundle(scripts, projections, replays, evidence) {
+function summarizeSemanticEditBundle(scripts, projections, replays, evidence, input, options) {
   const scriptStatusEntries = scripts.map((script) => script.admission?.status);
   const projectionStatusEntries = projections.flatMap((projection) => [projection.status, projection.admission?.status]);
   const replayStatusEntries = replays.map((replay) => replay.status);
@@ -54,6 +55,7 @@ function summarizeSemanticEditBundle(scripts, projections, replays, evidence) {
   const replayStatuses = uniqueStrings(strings(replayStatusEntries));
   const replayActions = uniqueStrings(strings(replays.map((replay) => replay.admission?.action)));
   const evidenceSummary = summarizeEvidence(evidence);
+  const sidecarQuality = summarizeSemanticSidecarQuality([input, options, ...scripts, ...projections, ...replays]);
   return {
     scripts: scripts.length,
     projections: projections.length,
@@ -82,11 +84,13 @@ function summarizeSemanticEditBundle(scripts, projections, replays, evidence) {
     failedTestEvidence: evidenceSummary.failed,
     conflictEvidence: evidenceSummary.conflict,
     staleEvidence: evidenceSummary.stale,
+    semanticSidecarQuality: sidecarQuality,
     reasonCodes: uniqueStrings([
       ...scripts.flatMap((script) => strings(script.admission?.reasonCodes)),
       ...projections.flatMap((projection) => strings(projection.admission?.reasonCodes)),
       ...replays.flatMap((replay) => strings(replay.admission?.reasonCodes)),
-      ...evidenceSummary.reasonCodes
+      ...evidenceSummary.reasonCodes,
+      ...sidecarQuality.warningCodes
     ])
   };
 }

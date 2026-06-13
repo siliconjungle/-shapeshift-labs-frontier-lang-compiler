@@ -3,6 +3,7 @@ import { idFragment, normalizeNativeLanguageId, uniqueStrings } from '../../nati
 import { createSemanticImportSidecar } from './createSemanticImportSidecar.js';
 import { mapDiffSymbols } from './mapDiffSymbols.js';
 import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
+import { replayReplacementText } from './replaySemanticEditLineEndings.js';
 import { replayDiagnostics, replayEditDiagnostics, replayEditsWithOverlapDiagnostics } from './semanticEditReplayDiagnostics.js';
 import { explicitSourceReplacementReplayRange } from './semanticEditReplaySourceReplacement.js';
 import {
@@ -157,6 +158,7 @@ function checkRange(edit, range, sourceText, label) {
 
 function replayEditRecord(edit, status, range, reasonCodes, sourceText) {
   const normalizedReasonCodes = reasonList(reasonCodes);
+  const replacementText = replayReplacementText(edit, status, range, sourceText);
   return compactRecord({
     operationId: edit.operationId,
     semanticKey: edit.semanticKey,
@@ -172,8 +174,8 @@ function replayEditRecord(edit, status, range, reasonCodes, sourceText) {
     status,
     start: range?.start,
     end: range?.end,
-    replacementBytes: edit.replacementBytes,
-    replacementText: edit.replacementText,
+    replacementBytes: typeof replacementText === 'string' ? replacementText.length : edit.replacementBytes,
+    replacementText,
     reasonCodes: normalizedReasonCodes,
     diagnostics: replayEditDiagnostics(edit, status, range, normalizedReasonCodes, sourceText)
   });

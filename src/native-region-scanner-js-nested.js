@@ -1,5 +1,5 @@
-import { nativeDeclaration } from './native-region-scanner-core.js';
-import { jsContainerDelta, jsRegionKindForDeclarationName } from './native-region-scanner-js-helpers.js';
+import { jsControlKeyword, nativeDeclaration, splitParameters } from './native-region-scanner-core.js';
+import { jsContainerDelta, jsContainerInitializerKind, jsRegionKindForDeclarationName } from './native-region-scanner-js-helpers.js';
 
 function jsCurrentObjectContext(stack) {
   return stack[stack.length - 1];
@@ -47,9 +47,9 @@ function jsInlineNestedObjectDeclarations(input, lineNumber, source, parentDecla
   for (const entry of splitTopLevelEntries(body)) {
     const parsed = parseObjectEntry(entry);
     if (!parsed) continue;
-    const initializerKind = nestedInitializerKind(parsed.value);
+    const initializerKind = parsed.method ? 'function' : nestedInitializerKind(parsed.value);
     const name = `${parentDeclaration.name}.${parsed.key}`;
-    const regionKind = nestedPropertyRegionKind(parentDeclaration, parsed.key, parsed.value);
+    const regionKind = initializerKind === 'function' ? 'body' : nestedPropertyRegionKind(parentDeclaration, parsed.key, parsed.value);
     const declaration = nativeDeclaration(input, lineNumber, initializerKind === 'function' ? 'NestedObjectFunctionProperty' : 'NestedObjectProperty', initializerKind === 'function' ? 'function' : 'property', name, {
       owner: parentDeclaration.name,
       propertyName: parsed.key,
@@ -70,6 +70,73 @@ function updateJsObjectContextStack(stack, lineNumber, source) {
     if (context.startLine !== lineNumber) context.depth += delta;
   }
   while (stack.length && stack[stack.length - 1].depth <= 0) stack.pop();
+}
+
+function jsObjectPropertyDeclaration(input, lineNumber, trimmed, context) {
+  if (/^[}\])]/.test(trimmed) || trimmed.startsWith('...')) return undefined;
+  const methodMatch = trimmed.match(/^(?:(?:async|get|set)\s+)?(?:\[\s*(['"`])([^'"`]+)\1\s*\]|(['"`]?)([A-Za-z_$][\w$-]*)\3)\s*\(([^)]*)\)\s*(?:[:\w\s<>\[\]]*)?(?:\{|=>|,|$)/);
+  const methodName = methodMatch?.[2] ?? methodMatch?.[4];
+  if (methodMatch && !jsControlKeyword(methodName)) {
+    const name = `${context.name}.${methodName}`;
+    return nativeDeclaration(input, lineNumber, 'ObjectMethod', 'function', name, {
+      owner: context.name,
+      propertyName: methodName,
+      parameters: splitParameters(methodMatch[5])
+    }, true, {
+      regionKind: 'body',
+      metadata: { owner: context.name, propertyName: methodName, initializerKind: 'function' }
+    });
+  }
+  const propertyMatch = trimmed.match(/^(?:\[\s*(['"`])([^'"`]+)\1\s*\]|(['"`])([^'"`]+)\3|([A-Za-z_$][\w$-]*))\s*:\s*(.+?)(?:,)?$/);
+  if (!propertyMatch) return undefined;
+  const propertyName = propertyMatch[2] ?? propertyMatch[4] ?? propertyMatch[5];
+  if (!propertyName || jsControlKeyword(propertyName)) return undefined;
+  const value = propertyMatch[6].trim();
+  const initializerKind = jsPropertyInitializerKind(value);
+  const functionLike = initializerKind === 'function';
+  const name = `${context.name}.${propertyName}`;
+  return nativeDeclaration(input, lineNumber, functionLike ? 'ObjectFunctionProperty' : 'ObjectProperty', functionLike ? 'function' : 'property', name, {
+    owner: context.name,
+    propertyName,
+    initializerKind
+  }, functionLike || initializerKind === 'object' || initializerKind === 'array', {
+    regionKind: functionLike ? 'body' : jsPropertyRegionKind(context, propertyName, value),
+    metadata: { owner: context.name, propertyName, initializerKind }
+  });
+}
+
+function jsRouteRecordDeclaration(input, lineNumber, trimmed, context) {
+  if (context.regionKind !== 'route') return undefined;
+  const match = trimmed.match(/^(?:\{\s*)?(?:path|route|href|url)\s*:\s*(['"`])([^'"`]+)\1/);
+  if (!match) return undefined;
+  const routePath = match[2];
+  return nativeDeclaration(input, lineNumber, 'RouteRecord', 'route', `${context.name}.${routePath}`, {
+    owner: context.name,
+    routePath
+  }, true, {
+    regionKind: 'route',
+    metadata: { owner: context.name, routePath, initializerKind: 'object' }
+  });
+}
+
+function jsPropertyInitializerKind(value) {
+  const text = String(value ?? '').trim();
+  if (/^(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/.test(text)) return 'function';
+  const containerKind = jsContainerInitializerKind(text, undefined, text);
+  if (containerKind) return containerKind;
+  if (/^['"`]/.test(text)) return 'string';
+  if (/^(?:true|false)\b/.test(text)) return 'boolean';
+  if (/^[0-9]/.test(text)) return 'number';
+  return 'expression';
+}
+
+function jsPropertyRegionKind(context, propertyName, value) {
+  const named = jsRegionKindForDeclarationName(propertyName, value);
+  if (named) return named;
+  if (context.regionKind === 'route') return 'route';
+  if (context.regionKind === 'content') return 'content';
+  if (context.regionKind === 'config') return 'config';
+  return 'property';
 }
 
 function inlineObjectBody(source) {
@@ -130,8 +197,10 @@ function splitTopLevelEntries(body) {
 function parseObjectEntry(entry) {
   if (!entry || entry.startsWith('...')) return undefined;
   const match = entry.match(/^(?:\[\s*(['"`])([^'"`]+)\1\s*\]|(['"`])([^'"`]+)\3|([A-Za-z_$][\w$-]*))\s*:\s*(.+)$/s);
-  if (!match) return undefined;
-  return { key: match[2] ?? match[4] ?? match[5], value: match[6].trim() };
+  if (match) return { key: match[2] ?? match[4] ?? match[5], value: match[6].trim() };
+  const methodMatch = entry.match(/^(?:(?:async|get|set)\s+)?(?:\[\s*(['"`])([^'"`]+)\1\s*\]|(['"`]?)([A-Za-z_$][\w$-]*)\3)\s*\(([^)]*)\)\s*(?:[:\w\s<>\[\]]*)?(?:\{|=>|$)/s);
+  if (!methodMatch) return undefined;
+  return { key: methodMatch[2] ?? methodMatch[4], value: entry.trim(), method: true };
 }
 
 function nestedInitializerKind(value) {
@@ -159,6 +228,8 @@ export {
   jsCurrentObjectContext,
   jsInlineNestedObjectDeclarations,
   jsNestedObjectContextFromDeclaration,
+  jsObjectPropertyDeclaration,
+  jsRouteRecordDeclaration,
   updateJsArrayObjectContextName,
   updateJsObjectContextStack
 };

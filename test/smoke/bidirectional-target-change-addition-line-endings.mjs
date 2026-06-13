@@ -1,7 +1,10 @@
 import { assert } from './helpers.mjs';
 import {
   createBidirectionalTargetChangeRecord,
+  createSemanticEditScript,
   importNativeSource,
+  projectSemanticEditScriptToSource,
+  replaySemanticEditProjection,
   querySemanticPatchBundleRecords
 } from './compiler-api.mjs';
 
@@ -74,3 +77,39 @@ assert.equal(record.roundtripEvidence.admission.status, 'ready');
 assert.equal(record.roundtripEvidence.admission.action, 'skip-source-backprojection');
 assert.equal(record.metadata.reviewRequired, false);
 assert.equal(querySemanticPatchBundleRecords([record.sourcePatchBundle], { semanticEditAdmissionStatus: 'already-applied' }).length, 1);
+
+const movedBaseLfText = 'export function keep(value: number) {\n  return value;\n}\n\nexport function target(value: number) {\n  return value + 1;\n}\n';
+const movedWorkerLfText = movedBaseLfText.replace(
+  'export function target(value: number) {\n  return value + 1;\n}',
+  'export function target(value: number) {\n  const next = value + 2;\n  return next;\n}'
+);
+const movedMixedPrefixText = '// coordinator header\r\n\r\n';
+const movedCurrentMixedText = `${movedMixedPrefixText}${movedBaseLfText.replace(/\n/g, '\r\n')}`;
+const movedExpectedMixedText = movedCurrentMixedText.replace(
+  'export function target(value: number) {\r\n  return value + 1;\r\n}',
+  'export function target(value: number) {\r\n  const next = value + 2;\r\n  return next;\r\n}'
+);
+
+const movedLineEndingScript = createSemanticEditScript({
+  id: 'semantic_edit_replay_preserves_current_line_endings',
+  language: 'typescript',
+  sourcePath: 'src/moved-line-endings.ts',
+  baseSourceText: movedBaseLfText,
+  workerSourceText: movedWorkerLfText,
+  headSourceText: movedCurrentMixedText,
+  generatedAt: 301
+});
+assert.equal(movedLineEndingScript.admission.status, 'auto-merge-candidate');
+
+const movedLineEndingProjection = projectSemanticEditScriptToSource({
+  script: movedLineEndingScript,
+  workerSourceText: movedWorkerLfText,
+  headSourceText: movedCurrentMixedText
+});
+const movedLineEndingReplay = replaySemanticEditProjection({
+  projection: movedLineEndingProjection,
+  currentSourceText: movedCurrentMixedText
+});
+assert.equal(movedLineEndingReplay.status, 'accepted-clean');
+assert.equal(movedLineEndingReplay.edits.find((edit) => edit.editKind === 'insert').replacementText.endsWith(';\r\n'), true);
+assert.equal(movedLineEndingReplay.outputSourceText, movedExpectedMixedText);

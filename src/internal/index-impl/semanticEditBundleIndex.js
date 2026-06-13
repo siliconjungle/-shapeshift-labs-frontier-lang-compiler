@@ -1,4 +1,5 @@
 import { uniqueStrings } from '../../native-import-utils.js';
+import { summarizeSemanticSidecarQuality } from './semanticSidecarQuality.js';
 
 export function semanticEditRecordIndex(scripts, projections, replays, source = {}) {
   const operations = scripts.flatMap((script) => array(script.operations));
@@ -6,6 +7,8 @@ export function semanticEditRecordIndex(scripts, projections, replays, source = 
   const replayEdits = replays.flatMap((replay) => array(replay.edits));
   const index = source.index ?? {};
   const summary = source.metadata?.semanticEditSummary ?? {};
+  const sidecarQuality = summarizeSemanticSidecarQuality([source, ...scripts, ...projections, ...replays]);
+  const priorSidecarQuality = summary.semanticSidecarQuality ?? {};
   return {
     semanticEditScriptIds: uniqueStrings([...strings(source.semanticEditScriptIds), ...strings(source.semanticEditScriptId), ...strings(index.semanticEditScriptIds), ...strings(summary.scriptIds), ...scripts.map((script) => script.id), ...replays.map((replay) => replay.scriptId)]),
     semanticEditProjectionIds: uniqueStrings([...strings(source.semanticEditProjectionIds), ...strings(source.semanticEditProjectionId), ...strings(index.semanticEditProjectionIds), ...strings(summary.projectionIds), ...projections.map((projection) => projection.id), ...replays.map((replay) => replay.projectionId)]),
@@ -26,7 +29,15 @@ export function semanticEditRecordIndex(scripts, projections, replays, source = 
     editContentHashes: uniqueStrings([...strings(source.editContentHashes), ...strings(index.editContentHashes), ...strings(summary.editContentHashes), ...edits.map((edit) => edit.editContentHash), ...replayEdits.map((edit) => edit.editContentHash)]),
     anchorKeys: uniqueStrings([...strings(source.anchorKeys), ...strings(index.anchorKeys), ...strings(summary.anchorKeys), ...operations.map((operation) => operation.anchor?.key), ...edits.map((edit) => edit.anchorKey), ...replayEdits.map((edit) => edit.anchorKey)]),
     conflictKeys: uniqueStrings([...strings(source.conflictKeys), ...strings(index.conflictKeys), ...strings(summary.conflictKeys), ...operations.map((operation) => operation.anchor?.conflictKey), ...edits.map((edit) => edit.conflictKey), ...replayEdits.map((edit) => edit.conflictKey)]),
-    projectedSourcePaths: uniqueStrings([...strings(source.projectedSourcePaths), ...strings(index.projectedSourcePaths), ...strings(summary.projectedSourcePaths), ...projections.map((projection) => projection.sourcePath), ...edits.flatMap((edit) => [edit.sourcePath, edit.targetSourcePath]), ...replays.map((replay) => replay.sourcePath), ...replayEdits.map((edit) => edit.sourcePath)])
+    projectedSourcePaths: uniqueStrings([...strings(source.projectedSourcePaths), ...strings(index.projectedSourcePaths), ...strings(summary.projectedSourcePaths), ...projections.map((projection) => projection.sourcePath), ...edits.flatMap((edit) => [edit.sourcePath, edit.targetSourcePath]), ...replays.map((replay) => replay.sourcePath), ...replayEdits.map((edit) => edit.sourcePath)]),
+    semanticEditSidecarQualityRecords: maxCount(sidecarQuality.records, source.semanticEditSidecarQualityRecords, index.semanticEditSidecarQualityRecords, priorSidecarQuality.records),
+    semanticEditSidecarSymbolCount: maxCount(sidecarQuality.symbols, source.semanticEditSidecarSymbolCount, index.semanticEditSidecarSymbolCount, priorSidecarQuality.symbols),
+    semanticEditSidecarOwnershipRegionCount: maxCount(sidecarQuality.ownershipRegions, source.semanticEditSidecarOwnershipRegionCount, index.semanticEditSidecarOwnershipRegionCount, priorSidecarQuality.ownershipRegions),
+    semanticEditSidecarPatchHintCount: maxCount(sidecarQuality.patchHints, source.semanticEditSidecarPatchHintCount, index.semanticEditSidecarPatchHintCount, priorSidecarQuality.patchHints),
+    semanticEditSidecarWarningCount: maxCount(sidecarQuality.warnings, source.semanticEditSidecarWarningCount, index.semanticEditSidecarWarningCount, priorSidecarQuality.warnings),
+    semanticEditSidecarZeroRecordWarningCount: maxCount(sidecarQuality.zeroRecordWarnings, source.semanticEditSidecarZeroRecordWarningCount, index.semanticEditSidecarZeroRecordWarningCount, priorSidecarQuality.zeroRecordWarnings),
+    semanticEditSidecarWarningCodes: uniqueStrings([...strings(source.semanticEditSidecarWarningCodes), ...strings(index.semanticEditSidecarWarningCodes), ...strings(priorSidecarQuality.warningCodes), ...sidecarQuality.warningCodes]),
+    semanticEditSidecarZeroRecordWarningCodes: uniqueStrings([...strings(source.semanticEditSidecarZeroRecordWarningCodes), ...strings(index.semanticEditSidecarZeroRecordWarningCodes), ...strings(priorSidecarQuality.zeroRecordWarningCodes), ...sidecarQuality.zeroRecordWarningCodes])
   };
 }
 
@@ -50,6 +61,16 @@ export function semanticEditSummary(index) {
     anchorKeys: index.anchorKeys,
     conflictKeys: index.conflictKeys,
     projectedSourcePaths: index.projectedSourcePaths,
+    semanticSidecarQuality: {
+      records: index.semanticEditSidecarQualityRecords,
+      symbols: index.semanticEditSidecarSymbolCount,
+      ownershipRegions: index.semanticEditSidecarOwnershipRegionCount,
+      patchHints: index.semanticEditSidecarPatchHintCount,
+      warnings: index.semanticEditSidecarWarningCount,
+      zeroRecordWarnings: index.semanticEditSidecarZeroRecordWarningCount,
+      warningCodes: index.semanticEditSidecarWarningCodes,
+      zeroRecordWarningCodes: index.semanticEditSidecarZeroRecordWarningCodes
+    },
     replayEditCount: index.semanticEditReplayEditCount
   });
 }
@@ -75,6 +96,12 @@ function scriptBackprojectionModes(script) {
     script.metadata?.sourceProjectionHint?.sourceBackprojectionMode,
     ...array(script.operations).map((operation) => operation.metadata?.sourceBackprojection?.mode)
   ];
+}
+function maxCount(...values) {
+  return Math.max(0, ...values.map((value) => {
+    const count = Number(value ?? 0);
+    return Number.isFinite(count) ? count : 0;
+  }));
 }
 function array(value) { if (value === undefined || value === null) return []; return Array.isArray(value) ? value : [value]; }
 function strings(value) { return array(value).map((entry) => String(entry ?? '')).filter(Boolean); }

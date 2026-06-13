@@ -31,7 +31,9 @@ const excludedSegments = new Set(policy.excludedSegments ?? ['node_modules', 'di
 const localImportExtensions = new Set(policy.allowedLocalImportExtensions ?? ['.js', '.mjs', '.cjs', '.json', '.node', '.ts', '.tsx', '.jsx']);
 const violations = [];
 const notes = [];
-const files = gitFiles().filter((file) => !hasExcludedSegment(file));
+const gitDiscoveredFiles = gitFiles();
+const discoveryMode = gitDiscoveredFiles.length > 0 ? 'tracked/non-ignored' : 'workspace';
+const files = (gitDiscoveredFiles.length > 0 ? gitDiscoveredFiles : workspaceFiles(root)).filter((file) => !hasExcludedSegment(file));
 const pkg = readJson('package.json');
 
 requirePackageScripts(pkg);
@@ -44,7 +46,7 @@ if (violations.length > 0) {
   for (const violation of violations) console.error('- ' + violation);
   process.exit(1);
 }
-console.log('frontier strict source policy ok: ' + files.length + ' tracked/non-ignored files checked' + (notes.length ? ', ' + notes.length + ' baseline exceptions' : ''));
+console.log('frontier strict source policy ok: ' + files.length + ' ' + discoveryMode + ' files checked' + (notes.length ? ', ' + notes.length + ' baseline exceptions' : ''));
 
 function gitFiles() {
   return execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { cwd: root, encoding: 'utf8' })
@@ -52,6 +54,22 @@ function gitFiles() {
     .map((entry) => entry.trim())
     .filter(Boolean)
     .sort();
+}
+
+function workspaceFiles(directory, prefix = '') {
+  const files = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name === '.git') continue;
+    const relative = prefix ? path.posix.join(prefix, entry.name) : entry.name;
+    if (hasExcludedSegment(relative)) continue;
+    const absolute = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...workspaceFiles(absolute, relative));
+    } else if (entry.isFile()) {
+      files.push(relative);
+    }
+  }
+  return files.sort();
 }
 
 function hasExcludedSegment(file) {
