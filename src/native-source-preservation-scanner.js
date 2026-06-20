@@ -264,3 +264,7 @@ export {
   scanPreservedSourceDirectives,
   scanPreservedSourceTokens
 };
+export {
+  isJavaScriptTypeScriptSource,
+  scanJavaScriptTypeScriptSourceLedger
+} from './native-source-ledger.js';

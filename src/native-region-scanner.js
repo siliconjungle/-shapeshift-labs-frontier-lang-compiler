@@ -33,6 +33,10 @@ export {
   scanPreservedSourceDirectives,
   scanPreservedSourceTokens
 } from './native-source-preservation-scanner.js';
+export {
+  isJavaScriptTypeScriptSource,
+  scanJavaScriptTypeScriptSourceLedger
+} from './native-source-ledger.js';
 
 function scanNativeDeclarations(input) {
   const language = normalizeNativeLanguageId(input.language) || String(input.language).toLowerCase();

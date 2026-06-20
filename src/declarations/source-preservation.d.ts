@@ -54,11 +54,16 @@ export type NativeSourceTokenKind =
   | 'keyword'
   | 'number'
   | 'string'
+  | 'template'
+  | 'regex-like'
+  | 'jsx'
   | 'operator'
   | 'punctuation'
   | 'comment'
+  | 'source-map-comment'
   | 'whitespace'
   | 'newline'
+  | 'shebang'
   | 'directive'
   | 'unknown'
   | string;
@@ -81,6 +86,65 @@ export interface NativeSourcePreservedDirective {
   readonly metadata?: Record<string, unknown>;
 }
 
+export type NativeSourceLedgerSpanRole =
+  | 'token'
+  | 'trivia'
+  | 'comment'
+  | 'directive'
+  | 'module-keyword'
+  | 'brace'
+  | 'protected'
+  | string;
+
+export interface NativeSourceLedgerSpan {
+  readonly id: string;
+  readonly kind: string;
+  readonly role: NativeSourceLedgerSpanRole;
+  readonly text?: string;
+  readonly textHash: string;
+  readonly span: SourceSpan;
+  readonly metadata?: Record<string, unknown>;
+}
+
+export interface NativeSourceLedgerSummary {
+  readonly spans: number;
+  readonly tokens: number;
+  readonly trivia: number;
+  readonly comments: number;
+  readonly shebangs: number;
+  readonly directives: number;
+  readonly sourceMapComments: number;
+  readonly importExportSpans: number;
+  readonly braces: number;
+  readonly protectedRegions: number;
+  readonly stringRegions: number;
+  readonly templateRegions: number;
+  readonly regexLikeRegions: number;
+  readonly jsxRegions: number;
+  readonly triviaByKind?: Record<string, number>;
+  readonly tokenByKind?: Record<string, number>;
+  readonly directiveByKind?: Record<string, number>;
+  readonly truncated: boolean;
+}
+
+export interface NativeSourceLedger {
+  readonly kind: 'frontier.lang.jsTsSourceLedger';
+  readonly version: 1;
+  readonly language: FrontierSourceLanguage | string;
+  readonly sourcePath?: string;
+  readonly sourceHash: string;
+  readonly spans: readonly NativeSourceLedgerSpan[];
+  readonly tokens: readonly NativeSourceLedgerSpan[];
+  readonly trivia: readonly NativeSourceLedgerSpan[];
+  readonly comments: readonly NativeSourceLedgerSpan[];
+  readonly shebangs: readonly NativeSourceLedgerSpan[];
+  readonly directives: readonly NativeSourceLedgerSpan[];
+  readonly importExportSpans: readonly NativeSourceLedgerSpan[];
+  readonly braces: readonly NativeSourceLedgerSpan[];
+  readonly protectedRegions: readonly NativeSourceLedgerSpan[];
+  readonly summary: NativeSourceLedgerSummary;
+}
+
 export interface NativeSourcePreservation {
   readonly kind: 'frontier.lang.nativeSourcePreservation';
   readonly version: 1;
@@ -96,12 +160,18 @@ export interface NativeSourcePreservation {
   readonly tokens: readonly NativeSourcePreservedToken[];
   readonly trivia: readonly NativeSourcePreservedToken[];
   readonly directives: readonly NativeSourcePreservedDirective[];
+  readonly ledger?: NativeSourceLedger;
   readonly summary: {
     readonly tokens: number;
     readonly trivia: number;
     readonly directives: number;
     readonly comments: number;
     readonly whitespace: number;
+    readonly ledger?: NativeSourceLedgerSummary;
+    readonly sourceMapComments?: number;
+    readonly protectedRegions?: number;
+    readonly importExportSpans?: number;
+    readonly braces?: number;
     readonly exactSourceAvailable: boolean;
     readonly truncated: boolean;
   };
@@ -119,8 +189,10 @@ export interface CreateNativeSourcePreservationOptions {
   readonly includeTokens?: boolean;
   readonly includeTrivia?: boolean;
   readonly includeDirectives?: boolean;
+  readonly includeSourceLedger?: boolean;
   readonly maxTokens?: number;
   readonly maxTrivia?: number;
   readonly maxDirectives?: number;
+  readonly maxLedgerSpans?: number;
   readonly metadata?: Record<string, unknown>;
 }

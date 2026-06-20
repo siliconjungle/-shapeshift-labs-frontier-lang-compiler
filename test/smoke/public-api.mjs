@@ -16,6 +16,12 @@ for (const requiredExport of [
   'ProjectionReadinessStatuses',
   'LanguageAdapterPackageContracts',
   'LanguageAdapterPackageReleaseReadinessStatuses',
+  'JsTsSafeMergeConflictCodes',
+  'JsTsSafeMergeGateIds',
+  'JsTsSafeMergeStatuses',
+  'JsTsSemanticConflictSidecarClasses',
+  'JsTsSemanticMergeConflictClasses',
+  'JsTsSemanticMergeGateStatuses',
 	  'SemanticMergeConflictClasses',
 	  'SemanticMergeCandidateProjectionRisks',
 	  'SemanticPatchBundleAdmissionStatuses',
@@ -42,6 +48,9 @@ for (const requiredExport of [
   'createGoAstNativeImporterAdapter',
   'createJavaAstNativeImporterAdapter',
   'createKotlinPsiNativeImporterAdapter',
+  'createJsTsSemanticConflictSidecars',
+  'createJsTsSemanticMergeConflictExplanation',
+  'createJsTsSemanticMergeGateResult',
   'createSwiftSyntaxNativeImporterAdapter',
   'createPythonAstNativeImporterAdapter',
 	  'createRustSynNativeImporterAdapter',
@@ -81,6 +90,7 @@ for (const requiredExport of [
 	  'querySemanticLineageEvents',
 	  'resolveSemanticHistoryRecordLineage',
 	  'resolveSemanticHistoryRecordsLineage',
+  'mergeJsTsSafeMemberAdditions',
 	  'querySemanticMergeCandidateAdmissionOverlaps',
 	  'querySemanticPatchBundleRecords',
 	  'querySemanticPatchBundleOverlaps',
@@ -107,7 +117,10 @@ for (const requiredExport of [
   'importNativeProject',
   'renderTargetAstWithSourceMap',
   'replaySemanticEditProjection',
-  'runNativeTargetProjectionAdapter'
+  'safeMergeJsTsImportsAndDeclarations',
+  'safeMergeJsTsMembers',
+  'runNativeTargetProjectionAdapter',
+  'summarizeJsTsSemanticConflictSidecars'
 ]) {
   assert.equal(publicRuntimeExports.includes(requiredExport), true, `missing public export ${requiredExport}`);
 }

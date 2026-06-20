@@ -24,6 +24,7 @@ export { createPythonAstNativeImporterAdapter } from './internal/index-impl/crea
 export { createRustSynNativeImporterAdapter } from './internal/index-impl/createRustSynNativeImporterAdapter.js';
 export { createSemanticImportSidecar } from './internal/index-impl/createSemanticImportSidecar.js';
 export { compactSemanticSidecarExample } from './semantic-sidecar-example.js';
+export * from './js-ts-semantic-merge.js';
 export { createSemanticSlice } from './internal/index-impl/createSemanticSlice.js';
 export { createSemanticSliceAdmissionRecord } from './internal/index-impl/createSemanticSliceAdmissionRecord.js';
 export { createSwiftSyntaxNativeImporterAdapter } from './internal/index-impl/createSwiftSyntaxNativeImporterAdapter.js';

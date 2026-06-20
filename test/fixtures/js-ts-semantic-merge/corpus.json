@@ -1,0 +1,386 @@
+{
+  "schema": "frontier.lang.jsTsSemanticMergeFixtureCorpus.v1",
+  "metadata": {
+    "id": "js-ts-semantic-merge-fixture-corpus",
+    "description": "Small internal corpus for narrow JS/TS semantic merge and source-ledger admission.",
+    "createdFor": "fixture-corpus",
+    "dependencies": [],
+    "expectedOutcomes": ["accepted", "rejected"]
+  },
+  "coverageRequirements": [
+    "imports",
+    "exports",
+    "type-interface-members",
+    "object-members",
+    "comments-trivia",
+    "generated-source-map-boundary",
+    "tsx-jsx-text",
+    "negative-unsafe-case"
+  ],
+  "fixtures": [
+    {
+      "id": "imports-independent-additions",
+      "title": "independent import additions keep both imports",
+      "kind": "merge",
+      "language": "javascript",
+      "sourcePath": "src/ledger/imports.js",
+      "coverage": ["imports"],
+      "expected": {
+        "outcome": "accepted",
+        "admissionStatus": "auto-merge-candidate",
+        "projectionStatus": "projected",
+        "replayStatus": "accepted-clean",
+        "operationKinds": ["addImport"],
+        "operationAnchors": ["node:path"],
+        "reasonCodes": ["added-anchor-absent-from-head"]
+      },
+      "baseLines": [
+        "import { readFile } from 'node:fs';",
+        "export const ready = true;",
+        ""
+      ],
+      "workerLines": [
+        "import { readFile } from 'node:fs';",
+        "import { join } from 'node:path';",
+        "export const ready = true;",
+        ""
+      ],
+      "headLines": [
+        "import { readFile } from 'node:fs';",
+        "import { strict as assert } from 'node:assert';",
+        "export const ready = true;",
+        ""
+      ],
+      "expectedLines": [
+        "import { readFile } from 'node:fs';",
+        "import { join } from 'node:path';",
+        "import { strict as assert } from 'node:assert';",
+        "export const ready = true;",
+        ""
+      ]
+    },
+    {
+      "id": "exports-independent-additions",
+      "title": "independent exported value declarations keep both exports",
+      "kind": "merge",
+      "language": "typescript",
+      "sourcePath": "src/ledger/exports.ts",
+      "coverage": ["exports"],
+      "expected": {
+        "outcome": "accepted",
+        "admissionStatus": "auto-merge-candidate",
+        "projectionStatus": "projected",
+        "replayStatus": "accepted-clean",
+        "operationKinds": ["addRegion"],
+        "operationAnchors": ["beta"],
+        "reasonCodes": ["added-anchor-absent-from-head"]
+      },
+      "baseLines": [
+        "export const alpha = 1;",
+        ""
+      ],
+      "workerLines": [
+        "export const alpha = 1;",
+        "export const beta = 2;",
+        ""
+      ],
+      "headLines": [
+        "export const gamma = 3;",
+        "export const alpha = 1;",
+        ""
+      ],
+      "expectedLines": [
+        "export const gamma = 3;",
+        "export const alpha = 1;",
+        "export const beta = 2;",
+        ""
+      ]
+    },
+    {
+      "id": "interface-member-independent-additions",
+      "title": "independent interface property additions keep both members",
+      "kind": "merge",
+      "language": "typescript",
+      "sourcePath": "src/ledger/model.ts",
+      "coverage": ["type-interface-members"],
+      "expected": {
+        "outcome": "accepted",
+        "admissionStatus": "auto-merge-candidate",
+        "projectionStatus": "projected",
+        "replayStatus": "accepted-clean",
+        "operationKinds": ["addProperty"],
+        "operationAnchors": ["Model.title"],
+        "reasonCodes": ["added-anchor-absent-from-head"]
+      },
+      "baseLines": [
+        "export interface Model {",
+        "  id: string;",
+        "}",
+        ""
+      ],
+      "workerLines": [
+        "export interface Model {",
+        "  id: string;",
+        "  title?: string;",
+        "}",
+        ""
+      ],
+      "headLines": [
+        "export interface Model {",
+        "  id: string;",
+        "  updatedAt?: Date;",
+        "}",
+        ""
+      ],
+      "expectedLines": [
+        "export interface Model {",
+        "  id: string;",
+        "  title?: string;",
+        "  updatedAt?: Date;",
+        "}",
+        ""
+      ]
+    },
+    {
+      "id": "object-member-independent-additions",
+      "title": "independent object literal member additions keep both members",
+      "kind": "merge",
+      "language": "typescript",
+      "sourcePath": "src/ledger/config.ts",
+      "coverage": ["object-members"],
+      "expected": {
+        "outcome": "accepted",
+        "admissionStatus": "auto-merge-candidate",
+        "projectionStatus": "projected",
+        "replayStatus": "accepted-clean",
+        "operationKinds": ["addRegion"],
+        "operationAnchors": ["config.flag"],
+        "reasonCodes": ["added-anchor-absent-from-head"]
+      },
+      "baseLines": [
+        "export const config = {",
+        "  mode: 'a',",
+        "};",
+        ""
+      ],
+      "workerLines": [
+        "export const config = {",
+        "  mode: 'a',",
+        "  flag: true,",
+        "};",
+        ""
+      ],
+      "headLines": [
+        "export const config = {",
+        "  mode: 'a',",
+        "  count: 1,",
+        "};",
+        ""
+      ],
+      "expectedLines": [
+        "export const config = {",
+        "  mode: 'a',",
+        "  flag: true,",
+        "  count: 1,",
+        "};",
+        ""
+      ]
+    },
+    {
+      "id": "tsx-jsx-text-control-flow",
+      "title": "TSX-ish JSX text edit survives coordinator-only prefix trivia",
+      "kind": "merge",
+      "language": "tsx",
+      "sourcePath": "src/ledger/view.tsx",
+      "coverage": ["tsx-jsx-text"],
+      "expected": {
+        "outcome": "accepted",
+        "admissionStatus": "auto-merge-candidate",
+        "projectionStatus": "projected",
+        "replayStatus": "accepted-clean",
+        "operationKinds": ["replaceControlFlow"],
+        "operationAnchors": ["Label:controlFlow:exit#1"],
+        "reasonCodes": ["head-anchor-matches-base"]
+      },
+      "baseLines": [
+        "export function Label(props: { title: string }) {",
+        "  return <span>Hello {props.title}</span>;",
+        "}",
+        ""
+      ],
+      "workerLines": [
+        "export function Label(props: { title: string }) {",
+        "  return <span>Ready: {props.title}</span>;",
+        "}",
+        ""
+      ],
+      "headLines": [
+        "// coordinator moved this file",
+        "export function Label(props: { title: string }) {",
+        "  return <span>Hello {props.title}</span>;",
+        "}",
+        ""
+      ],
+      "expectedLines": [
+        "// coordinator moved this file",
+        "export function Label(props: { title: string }) {",
+        "  return <span>Ready: {props.title}</span>;",
+        "}",
+        ""
+      ]
+    },
+    {
+      "id": "comments-trivia-source-ledger",
+      "title": "comments and directive trivia remain byte-preserved by source ledger",
+      "kind": "source-ledger",
+      "language": "javascript",
+      "sourcePath": "bin/ledger-commentary.mjs",
+      "coverage": ["comments-trivia"],
+      "expected": {
+        "outcome": "accepted",
+        "oracle": "source-preservation",
+        "minComments": 3,
+        "minSemanticSymbols": 1,
+        "directiveKinds": ["shebang", "runtime-directive", "module-directive"]
+      },
+      "sourceLines": [
+        "#!/usr/bin/env node",
+        "'use strict';",
+        "// leading license comment",
+        "/* block trivia preserved */",
+        "export function run(value) {",
+        "  // inner comment remains trivia",
+        "  return value ?? 'fallback';",
+        "}",
+        ""
+      ]
+    },
+    {
+      "id": "generated-source-map-boundary",
+      "title": "generated/source-map boundary remains review-required metadata",
+      "kind": "source-ledger",
+      "language": "javascript",
+      "sourcePath": "dist/generated-boundary.js",
+      "coverage": ["generated-source-map-boundary", "negative-unsafe-case"],
+      "expected": {
+        "outcome": "rejected",
+        "oracle": "source-preservation",
+        "minComments": 3,
+        "minSemanticSymbols": 1,
+        "directiveKinds": ["module-directive"],
+        "reasonCodes": ["generated-source-boundary", "source-map-boundary"]
+      },
+      "sourceLines": [
+        "/* @generated by fixture-corpus */",
+        "/* istanbul ignore file */",
+        "export const generated = true;",
+        "//# sourceMappingURL=generated-boundary.js.map",
+        "//# sourceURL=webpack://frontier/generated-boundary.js",
+        ""
+      ]
+    },
+    {
+      "id": "unsafe-object-same-member-conflict",
+      "title": "same object member edited by worker and head is unsafe",
+      "kind": "merge",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/config.ts",
+      "coverage": ["object-members", "negative-unsafe-case"],
+      "expected": {
+        "outcome": "rejected",
+        "admissionStatus": "conflict",
+        "projectionStatus": "blocked",
+        "replayStatus": "blocked",
+        "operationStatuses": ["conflict"],
+        "operationAnchors": ["config.mode"],
+        "reasonCodes": ["head-anchor-changed-since-base"]
+      },
+      "baseLines": [
+        "export const config = {",
+        "  mode: 'a',",
+        "};",
+        ""
+      ],
+      "workerLines": [
+        "export const config = {",
+        "  mode: 'worker',",
+        "};",
+        ""
+      ],
+      "headLines": [
+        "export const config = {",
+        "  mode: 'head',",
+        "};",
+        ""
+      ]
+    },
+    {
+      "id": "unsafe-control-flow-conflict",
+      "title": "same function control-flow edited by worker and head is unsafe",
+      "kind": "merge",
+      "language": "javascript",
+      "sourcePath": "src/unsafe/calc.js",
+      "coverage": ["negative-unsafe-case"],
+      "expected": {
+        "outcome": "rejected",
+        "admissionStatus": "conflict",
+        "projectionStatus": "blocked",
+        "replayStatus": "blocked",
+        "operationKinds": ["replaceControlFlow"],
+        "operationStatuses": ["conflict"],
+        "operationAnchors": ["calc:controlFlow:exit#1"],
+        "reasonCodes": ["head-anchor-changed-since-base"]
+      },
+      "baseLines": [
+        "export function calc(value) {",
+        "  return value + 1;",
+        "}",
+        ""
+      ],
+      "workerLines": [
+        "export function calc(value) {",
+        "  return value + 2;",
+        "}",
+        ""
+      ],
+      "headLines": [
+        "export function calc(value) {",
+        "  return value * 2;",
+        "}",
+        ""
+      ]
+    },
+    {
+      "id": "unsafe-delete-modify-conflict",
+      "title": "worker delete plus head modify of same function is unsafe",
+      "kind": "merge",
+      "language": "javascript",
+      "sourcePath": "src/unsafe/delete-modify.js",
+      "coverage": ["negative-unsafe-case"],
+      "expected": {
+        "outcome": "rejected",
+        "admissionStatus": "conflict",
+        "projectionStatus": "blocked",
+        "replayStatus": "blocked",
+        "operationKinds": ["removeRegion", "removeControlFlow"],
+        "operationStatuses": ["conflict"],
+        "operationAnchors": ["removeMe", "removeMe:controlFlow:exit#1"],
+        "reasonCodes": ["head-anchor-changed-since-base"]
+      },
+      "baseLines": [
+        "export function keep() { return 1; }",
+        "export function removeMe(value) { return value; }",
+        ""
+      ],
+      "workerLines": [
+        "export function keep() { return 1; }",
+        ""
+      ],
+      "headLines": [
+        "export function keep() { return 1; }",
+        "export function removeMe(value) { return value + 1; }",
+        ""
+      ]
+    }
+  ]
+}
