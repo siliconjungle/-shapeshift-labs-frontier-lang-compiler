@@ -9,13 +9,23 @@
   },
   "coverageRequirements": [
     "imports",
+    "import-safe-merge",
     "exports",
+    "top-level-declarations",
+    "declaration-safe-merge",
     "type-interface-members",
+    "interfaces",
     "type-alias-members",
+    "type-aliases",
     "object-members",
+    "member-safe-merge",
     "comments-trivia",
     "generated-source-map-boundary",
     "tsx-jsx-text",
+    "jsx-ish-source",
+    "decorators",
+    "overloads",
+    "malformed-stale-edits",
     "negative-unsafe-case"
   ],
   "fixtures": [
@@ -25,7 +35,7 @@
       "kind": "merge",
       "language": "javascript",
       "sourcePath": "src/ledger/imports.js",
-      "coverage": ["imports"],
+      "coverage": ["imports", "import-safe-merge"],
       "expected": {
         "outcome": "accepted",
         "admissionStatus": "auto-merge-candidate",
@@ -66,7 +76,7 @@
       "kind": "merge",
       "language": "typescript",
       "sourcePath": "src/ledger/exports.ts",
-      "coverage": ["exports"],
+      "coverage": ["exports", "top-level-declarations", "declaration-safe-merge"],
       "expected": {
         "outcome": "accepted",
         "admissionStatus": "auto-merge-candidate",
@@ -103,7 +113,7 @@
       "kind": "merge",
       "language": "typescript",
       "sourcePath": "src/ledger/model.ts",
-      "coverage": ["type-interface-members"],
+      "coverage": ["type-interface-members", "interfaces", "member-safe-merge"],
       "expected": {
         "outcome": "accepted",
         "admissionStatus": "auto-merge-candidate",
@@ -148,7 +158,7 @@
       "kind": "merge",
       "language": "typescript",
       "sourcePath": "src/ledger/runner.ts",
-      "coverage": ["type-interface-members", "type-alias-members"],
+      "coverage": ["type-interface-members", "type-alias-members", "type-aliases", "member-safe-merge"],
       "expected": {
         "outcome": "accepted",
         "admissionStatus": "auto-merge-candidate",
@@ -193,7 +203,7 @@
       "kind": "merge",
       "language": "typescript",
       "sourcePath": "src/ledger/config.ts",
-      "coverage": ["object-members"],
+      "coverage": ["object-members", "member-safe-merge"],
       "expected": {
         "outcome": "accepted",
         "admissionStatus": "auto-merge-candidate",
@@ -238,7 +248,7 @@
       "kind": "merge",
       "language": "tsx",
       "sourcePath": "src/ledger/view.tsx",
-      "coverage": ["tsx-jsx-text"],
+      "coverage": ["tsx-jsx-text", "jsx-ish-source"],
       "expected": {
         "outcome": "accepted",
         "admissionStatus": "auto-merge-candidate",
@@ -271,6 +281,57 @@
         "// coordinator moved this file",
         "export function Label(props: { title: string }) {",
         "  return <span>Ready: {props.title}</span>;",
+        "}",
+        ""
+      ]
+    },
+    {
+      "id": "overload-body-prefix-merge",
+      "title": "overload implementation body edit survives coordinator-only prefix trivia",
+      "kind": "merge",
+      "language": "typescript",
+      "sourcePath": "src/ledger/overload.ts",
+      "coverage": ["overloads", "declaration-safe-merge"],
+      "expected": {
+        "outcome": "accepted",
+        "admissionStatus": "auto-merge-candidate",
+        "projectionStatus": "projected",
+        "replayStatus": "accepted-clean",
+        "operationKinds": ["replaceControlFlow"],
+        "operationAnchors": ["parse:controlFlow:exit#1"],
+        "reasonCodes": ["head-anchor-matches-base"]
+      },
+      "baseLines": [
+        "export function parse(value: string): string;",
+        "export function parse(value: number): string;",
+        "export function parse(value: string | number): string {",
+        "  return String(value);",
+        "}",
+        ""
+      ],
+      "workerLines": [
+        "export function parse(value: string): string;",
+        "export function parse(value: number): string;",
+        "export function parse(value: string | number): string {",
+        "  return String(value).trim();",
+        "}",
+        ""
+      ],
+      "headLines": [
+        "// coordinator moved this file",
+        "export function parse(value: string): string;",
+        "export function parse(value: number): string;",
+        "export function parse(value: string | number): string {",
+        "  return String(value);",
+        "}",
+        ""
+      ],
+      "expectedLines": [
+        "// coordinator moved this file",
+        "export function parse(value: string): string;",
+        "export function parse(value: number): string;",
+        "export function parse(value: string | number): string {",
+        "  return String(value).trim();",
         "}",
         ""
       ]
@@ -324,6 +385,50 @@
         "//# sourceURL=webpack://frontier/generated-boundary.js",
         ""
       ]
+    },
+    {
+      "id": "decorator-stale-malformed-conflicts",
+      "title": "decorator metadata plus stale malformed source blocks auto-merge",
+      "kind": "conflict-sidecar",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/decorated.ts",
+      "coverage": ["decorators", "malformed-stale-edits", "negative-unsafe-case"],
+      "expected": {
+        "outcome": "rejected",
+        "admissionStatus": "blocked",
+        "sidecarClasses": ["parser-ledger-loss", "stale-source-hash", "unsupported-syntax"],
+        "reasonCodes": [
+          "parser-or-ledger-loss",
+          "malformed-syntax-tree",
+          "stale-source-hash",
+          "expected-source-hash-mismatch",
+          "unsupported-js-ts-syntax",
+          "unsupported-decorator-merge-anchor"
+        ]
+      },
+      "sidecarInput": {
+        "expectedSourceHash": "hash_base_decorated",
+        "currentSourceHash": "hash_head_decorated",
+        "ledgerLosses": [
+          {
+            "id": "loss_malformed_decorator",
+            "kind": "parser-ledger-loss",
+            "severity": "error",
+            "key": "class:Widget",
+            "sourceSpan": { "startLine": 1, "startColumn": 1, "endLine": 4, "endColumn": 2 },
+            "reasonCode": "malformed-syntax-tree"
+          }
+        ],
+        "unsupportedSyntax": [
+          {
+            "id": "unsupported_decorator_metadata",
+            "kind": "decorator-metadata",
+            "key": "class:Widget#decorator:sealed",
+            "sourceSpan": { "startLine": 1, "startColumn": 1, "endLine": 1, "endColumn": 8 },
+            "reasonCode": "unsupported-decorator-merge-anchor"
+          }
+        ]
+      }
     },
     {
       "id": "unsafe-object-same-member-conflict",

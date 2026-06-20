@@ -6,6 +6,7 @@ import { assert } from './helpers.mjs';
 
 const {
   createNativeSourcePreservation,
+  createJsTsSemanticConflictSidecars,
   createSemanticEditScript,
   createSemanticImportSidecar,
   diffNativeSources,
@@ -38,6 +39,8 @@ for (const fixture of corpus.fixtures) {
     assertMergeFixture(fixture);
   } else if (fixture.kind === 'source-ledger') {
     assertSourceLedgerFixture(fixture);
+  } else if (fixture.kind === 'conflict-sidecar') {
+    assertConflictSidecarFixture(fixture);
   } else {
     assert.fail(`${fixture.id}: unknown fixture kind ${fixture.kind}`);
   }
@@ -61,7 +64,7 @@ async function loadCompilerApi() {
 function validateFixtureMetadata(fixture) {
   assert.match(fixture.id, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
   assert.equal(typeof fixture.title, 'string', `${fixture.id}: title`);
-  assert.equal(['merge', 'source-ledger'].includes(fixture.kind), true, `${fixture.id}: kind`);
+  assert.equal(['merge', 'source-ledger', 'conflict-sidecar'].includes(fixture.kind), true, `${fixture.id}: kind`);
   assert.equal(['javascript', 'typescript', 'tsx'].includes(fixture.language), true, `${fixture.id}: language`);
   assert.equal(typeof fixture.sourcePath, 'string', `${fixture.id}: sourcePath`);
   assert.equal(Array.isArray(fixture.coverage) && fixture.coverage.length > 0, true, `${fixture.id}: coverage`);
@@ -145,6 +148,30 @@ function assertSourceLedgerFixture(fixture) {
     assert.match(sourceText, /sourceMappingURL=/, `${fixture.id}: source map boundary`);
     assertExpectedValues(fixture.expected.reasonCodes, ['generated-source-boundary', 'source-map-boundary'], `${fixture.id}: generated rejection metadata`);
   }
+}
+
+function assertConflictSidecarFixture(fixture) {
+  assert.equal(typeof fixture.sidecarInput, 'object', `${fixture.id}: sidecarInput`);
+  const bundle = createJsTsSemanticConflictSidecars({
+    id: `conflict_sidecar_fixture_${fixture.id}`,
+    language: fixture.language,
+    sourcePath: fixture.sourcePath,
+    ...fixture.sidecarInput
+  });
+  assert.equal(bundle.kind, 'frontier.lang.jsTsSemanticMergeConflictSidecars', `${fixture.id}: sidecar kind`);
+  assert.equal(bundle.admission.status, fixture.expected.admissionStatus, `${fixture.id}: sidecar admission`);
+
+  if (fixture.expected.outcome === 'rejected') {
+    assert.equal(bundle.admission.autoMergeSafe, false, `${fixture.id}: auto merge blocked`);
+    assert.equal(bundle.admission.reviewRequired, true, `${fixture.id}: review required`);
+  }
+
+  assertExpectedValues(
+    bundle.conflicts.map((conflict) => conflict.class),
+    fixture.expected.sidecarClasses ?? [],
+    `${fixture.id}: sidecar classes`
+  );
+  assertExpectedValues(bundle.admission.reasonCodes, fixture.expected.reasonCodes ?? [], `${fixture.id}: sidecar reason codes`);
 }
 
 function assertSourcePreservation(fixture, sourceText, expected) {
