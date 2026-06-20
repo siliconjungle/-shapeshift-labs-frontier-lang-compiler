@@ -1,48 +1,15 @@
-export const JsTsSafeMergeStatuses = Object.freeze({
-  merged: 'merged',
-  blocked: 'blocked'
-});
-
-export const JsTsSafeMergeGateIds = Object.freeze({
-  parseLedger: 'parse-ledger',
-  preserveBaseOrder: 'preserve-base-order',
-  stableExistingDeclarations: 'stable-existing-declarations',
-  independentImportSpecifiers: 'independent-import-specifiers',
-  independentTopLevelDeclarations: 'independent-top-level-declarations',
-  uniqueNames: 'unique-names',
-  resolvedInsertionAnchors: 'resolved-insertion-anchors'
-});
-
-export const JsTsSafeMergeConflictCodes = Object.freeze({
-  invalidInput: 'invalid-input',
-  parserLedgerLoss: 'parser-ledger-loss',
-  sideEffectImportReorder: 'side-effect-import-reorder',
-  topLevelOrderChanged: 'top-level-order-changed',
-  changedExistingDeclaration: 'changed-existing-declaration',
-  importShapeChanged: 'import-shape-changed',
-  importSpecifierRemoved: 'import-specifier-removed',
-  importSpecifierReordered: 'import-specifier-reordered',
-  importFormattingChanged: 'import-formatting-changed',
-  newImportDeclaration: 'new-import-declaration',
-  duplicateName: 'duplicate-name',
-  ambiguousInsertionPoint: 'ambiguous-insertion-point',
-  insertionAnchorMissing: 'insertion-anchor-missing'
-});
-
 import { analyzeVariantLedger, validateIndependentAdditions } from './js-ts-safe-merge-analyze.js';
 import { addConflict, blockedResult, compactRecord, createMergeContext, gatesFor } from './js-ts-safe-merge-context.js';
+import {
+  JsTsSafeMergeConflictCodes,
+  JsTsSafeMergeGateIds,
+  JsTsSafeMergeStatuses,
+  jsTsSafeMergeGateOrder
+} from './js-ts-safe-merge-constants.js';
 import { indexBaseLedger, scanJsTsTopLevelLedger, validateLedgerUniqueness } from './js-ts-safe-merge-ledger.js';
 import { applySourceMergePlan, createSourceMergePlan } from './js-ts-safe-merge-plan.js';
 
-const gateOrder = Object.freeze([
-  JsTsSafeMergeGateIds.parseLedger,
-  JsTsSafeMergeGateIds.preserveBaseOrder,
-  JsTsSafeMergeGateIds.stableExistingDeclarations,
-  JsTsSafeMergeGateIds.independentImportSpecifiers,
-  JsTsSafeMergeGateIds.independentTopLevelDeclarations,
-  JsTsSafeMergeGateIds.uniqueNames,
-  JsTsSafeMergeGateIds.resolvedInsertionAnchors
-]);
+export { JsTsSafeMergeConflictCodes, JsTsSafeMergeGateIds, JsTsSafeMergeStatuses };
 
 export function safeMergeJsTsImportsAndDeclarations(input = {}) {
   const context = createMergeContext(input);
@@ -63,6 +30,10 @@ export function safeMergeJsTsImportsAndDeclarations(input = {}) {
     });
     return blockedResult(context);
   }
+
+  validateStaleSourceHashes(input, context);
+  validateSourceLedgerSpans(input, context);
+  if (context.conflicts.length) return blockedResult(context);
 
   const base = scanJsTsTopLevelLedger(baseSourceText, 'base', context);
   const worker = scanJsTsTopLevelLedger(workerSourceText, 'worker', context);
@@ -116,14 +87,89 @@ export function safeMergeJsTsImportsAndDeclarations(input = {}) {
       topLevelDeclarationAdditions: mergePlan.topLevelDeclarationAdditions,
       changedExistingDeclarations: 0,
       conflicts: 0,
-      gatesPassed: gateOrder.length
+      gatesPassed: jsTsSafeMergeGateOrder.length
     },
     metadata: compactRecord({
       workerChangeSetId: input.workerChangeSetId,
       headChangeSetId: input.headChangeSetId,
       baseHash: input.baseHash,
       workerHash: input.workerHash,
-      headHash: input.headHash
+      headHash: input.headHash,
+      expectedSourceHash: input.expectedSourceHash,
+      currentSourceHash: input.currentSourceHash
     })
   };
+}
+
+function validateStaleSourceHashes(input, context) {
+  for (const pair of [
+    ['expectedSourceHash', 'currentSourceHash', 'head'],
+    ['expectedHeadHash', 'headHash', 'head'],
+    ['expectedBaseHash', 'baseHash', 'base'],
+    ['expectedWorkerHash', 'workerHash', 'worker']
+  ]) {
+    const [expectedField, currentField, side] = pair;
+    const expected = input[expectedField];
+    const current = input[currentField];
+    if (typeof expected !== 'string' || typeof current !== 'string' || expected === current) continue;
+    addConflict(context, {
+      code: JsTsSafeMergeConflictCodes.staleSourceHash,
+      gateId: JsTsSafeMergeGateIds.parseLedger,
+      side,
+      message: `${side} source hash is stale for safe merge anchors.`,
+      details: { expectedField, currentField, expected, current }
+    });
+  }
+}
+
+function validateSourceLedgerSpans(input, context) {
+  if (!input.requireSourceLedgerSpans && !input.sourceLedgers && !input.sourceLedger) return;
+  for (const side of ['base', 'worker', 'head']) {
+    const ledger = sourceLedgerForSide(input, side);
+    if (!ledger) {
+      addConflict(context, {
+        code: JsTsSafeMergeConflictCodes.missingSourceLedgerSpan,
+        gateId: JsTsSafeMergeGateIds.parseLedger,
+        side,
+        message: `${side} source is missing source ledger span evidence.`,
+        details: { side, missing: 'source-ledger' }
+      });
+      continue;
+    }
+    const spans = Array.isArray(ledger.spans) ? ledger.spans : Array.isArray(ledger.entries) ? ledger.entries : [];
+    if (!spans.length) {
+      addConflict(context, {
+        code: JsTsSafeMergeConflictCodes.missingSourceLedgerSpan,
+        gateId: JsTsSafeMergeGateIds.parseLedger,
+        side,
+        message: `${side} source ledger does not include span entries.`,
+        details: { side, missing: 'spans' }
+      });
+      continue;
+    }
+    const missingIndex = spans.findIndex((entry) => !hasLedgerSpan(entry));
+    if (missingIndex >= 0) {
+      addConflict(context, {
+        code: JsTsSafeMergeConflictCodes.missingSourceLedgerSpan,
+        gateId: JsTsSafeMergeGateIds.parseLedger,
+        side,
+        message: `${side} source ledger contains an entry without a source span.`,
+        details: { side, index: missingIndex, id: spans[missingIndex]?.id, kind: spans[missingIndex]?.kind }
+      });
+    }
+  }
+}
+
+function sourceLedgerForSide(input, side) {
+  return input.sourceLedgers?.[side]
+    ?? input[`${side}SourceLedger`]
+    ?? (input.sourceLedgerSide === side ? input.sourceLedger : undefined);
+}
+
+function hasLedgerSpan(entry) {
+  const span = entry?.span ?? entry?.sourceSpan;
+  if (!span) return false;
+  const hasOffsets = Number.isFinite(span.start) && Number.isFinite(span.end);
+  const hasLines = Number.isFinite(span.startLine) && Number.isFinite(span.endLine);
+  return hasOffsets || hasLines;
 }

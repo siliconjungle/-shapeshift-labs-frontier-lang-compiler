@@ -21,15 +21,22 @@ export declare const JsTsSafeMergeGateIds: Readonly<{
 export declare const JsTsSafeMergeConflictCodes: Readonly<{
   readonly invalidInput: 'invalid-input';
   readonly parserLedgerLoss: 'parser-ledger-loss';
+  readonly malformedSyntax: 'malformed-syntax';
   readonly sideEffectImportReorder: 'side-effect-import-reorder';
   readonly topLevelOrderChanged: 'top-level-order-changed';
   readonly changedExistingDeclaration: 'changed-existing-declaration';
+  readonly typeAliasConflict: 'type-alias-conflict';
   readonly importShapeChanged: 'import-shape-changed';
   readonly importSpecifierRemoved: 'import-specifier-removed';
   readonly importSpecifierReordered: 'import-specifier-reordered';
   readonly importFormattingChanged: 'import-formatting-changed';
   readonly newImportDeclaration: 'new-import-declaration';
   readonly duplicateName: 'duplicate-name';
+  readonly computedKey: 'computed-key';
+  readonly unsupportedDecorator: 'unsupported-decorator-merge-anchor';
+  readonly unsupportedOverload: 'unsupported-overload-merge-anchor';
+  readonly staleSourceHash: 'stale-source-hash';
+  readonly missingSourceLedgerSpan: 'missing-source-ledger-span';
   readonly ambiguousInsertionPoint: 'ambiguous-insertion-point';
   readonly insertionAnchorMissing: 'insertion-anchor-missing';
 }>;
@@ -46,6 +53,18 @@ export interface JsTsSafeMergeInput {
   readonly baseHash?: string;
   readonly workerHash?: string;
   readonly headHash?: string;
+  readonly expectedSourceHash?: string;
+  readonly currentSourceHash?: string;
+  readonly expectedBaseHash?: string;
+  readonly expectedWorkerHash?: string;
+  readonly expectedHeadHash?: string;
+  readonly requireSourceLedgerSpans?: boolean;
+  readonly sourceLedgerSide?: 'base' | 'worker' | 'head' | string;
+  readonly sourceLedger?: unknown;
+  readonly sourceLedgers?: Record<string, unknown>;
+  readonly baseSourceLedger?: unknown;
+  readonly workerSourceLedger?: unknown;
+  readonly headSourceLedger?: unknown;
 }
 
 export interface JsTsSafeMergeConflict {

@@ -102,6 +102,10 @@ function parseMembers(body, kind) {
       reasonCodes.push('computed-key');
       continue;
     }
+    if (kind === 'type' && isTypeAliasConflictMember(trimmed)) {
+      reasonCodes.push('type-alias-conflict');
+      continue;
+    }
     const key = kind === 'object' ? objectMemberKey(trimmed) : typeMemberKey(trimmed);
     if (!key) {
       reasonCodes.push(`unsupported-${kind}-member`);
@@ -180,6 +184,10 @@ function typeMemberKey(text) {
   const colon = topLevelColon(source);
   if (colon < 0) return undefined;
   return propertyKey(source.slice(0, colon).trim().replace(/\?$/, '').trim());
+}
+
+function isTypeAliasConflictMember(text) {
+  return /^\|/.test(text) || /^&/.test(text);
 }
 
 function propertyKey(source) {

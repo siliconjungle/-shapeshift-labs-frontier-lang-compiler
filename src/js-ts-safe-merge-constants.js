@@ -16,15 +16,22 @@ export const JsTsSafeMergeGateIds = Object.freeze({
 export const JsTsSafeMergeConflictCodes = Object.freeze({
   invalidInput: 'invalid-input',
   parserLedgerLoss: 'parser-ledger-loss',
+  malformedSyntax: 'malformed-syntax',
   sideEffectImportReorder: 'side-effect-import-reorder',
   topLevelOrderChanged: 'top-level-order-changed',
   changedExistingDeclaration: 'changed-existing-declaration',
+  typeAliasConflict: 'type-alias-conflict',
   importShapeChanged: 'import-shape-changed',
   importSpecifierRemoved: 'import-specifier-removed',
   importSpecifierReordered: 'import-specifier-reordered',
   importFormattingChanged: 'import-formatting-changed',
   newImportDeclaration: 'new-import-declaration',
   duplicateName: 'duplicate-name',
+  computedKey: 'computed-key',
+  unsupportedDecorator: 'unsupported-decorator-merge-anchor',
+  unsupportedOverload: 'unsupported-overload-merge-anchor',
+  staleSourceHash: 'stale-source-hash',
+  missingSourceLedgerSpan: 'missing-source-ledger-span',
   ambiguousInsertionPoint: 'ambiguous-insertion-point',
   insertionAnchorMissing: 'insertion-anchor-missing'
 });

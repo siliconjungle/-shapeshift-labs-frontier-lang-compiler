@@ -1,4 +1,4 @@
-import { identifierRegExp } from './js-ts-safe-merge-constants.js';
+import { JsTsSafeMergeConflictCodes, identifierRegExp } from './js-ts-safe-merge-constants.js';
 
 export function classifyStatement(text, start, end) {
   const importInfo = parseImportInfo(text);
@@ -15,6 +15,8 @@ export function classifyStatement(text, start, end) {
   }
   const declarationInfo = parseDeclarationInfo(text);
   if (declarationInfo) {
+    const unsupported = unsupportedDeclarationPolicy(text, declarationInfo);
+    if (unsupported) return { unsupported, text, start, end };
     return {
       kind: declarationInfo.kind,
       key: `${declarationInfo.kind}:${declarationInfo.names.join('|')}`,
@@ -150,6 +152,33 @@ function parseDeclarationInfo(text) {
   const variableMatch = source.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\b/);
   if (variableMatch) return { kind: 'declaration', names: [variableMatch[1]], declarationKind: 'variable', exported: trimmed.startsWith('export ') };
   return undefined;
+}
+
+function unsupportedDeclarationPolicy(text, declarationInfo) {
+  const trimmed = text.trim();
+  if (/^\s*@/m.test(text)) {
+    return {
+      code: JsTsSafeMergeConflictCodes.unsupportedDecorator,
+      details: { reasonCode: 'unsupported-decorator-merge-anchor', declarationKind: declarationInfo.declarationKind }
+    };
+  }
+  if (declarationInfo.declarationKind === 'function' && !trimmed.includes('{') && /;\s*$/.test(trimmed)) {
+    return {
+      code: JsTsSafeMergeConflictCodes.unsupportedOverload,
+      details: { reasonCode: 'unsupported-overload-merge-anchor', names: declarationInfo.names }
+    };
+  }
+  if (hasComputedMemberKey(text)) {
+    return {
+      code: JsTsSafeMergeConflictCodes.computedKey,
+      details: { reasonCode: 'computed-key', declarationKind: declarationInfo.declarationKind, names: declarationInfo.names }
+    };
+  }
+  return undefined;
+}
+
+function hasComputedMemberKey(text) {
+  return /(?:^|[\n{,;])\s*(?:readonly\s+)?\[[^\]\n]+\]\??\s*(?::|\()/m.test(text);
 }
 
 function parseExportSpecifierName(raw) {

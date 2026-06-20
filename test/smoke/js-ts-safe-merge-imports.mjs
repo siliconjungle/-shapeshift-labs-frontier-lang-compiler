@@ -103,6 +103,83 @@ const parserLedgerLoss = safeMergeJsTsImportsAndDeclarations({
 });
 assertBlocked(parserLedgerLoss, JsTsSafeMergeConflictCodes.parserLedgerLoss, JsTsSafeMergeGateIds.parseLedger);
 
+const malformedSyntax = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_malformed_syntax',
+  baseSourceText: 'export const broken = (\n',
+  workerSourceText: 'export const broken = (\n',
+  headSourceText: 'export const broken = (\n'
+});
+assertBlocked(malformedSyntax, JsTsSafeMergeConflictCodes.malformedSyntax, JsTsSafeMergeGateIds.parseLedger);
+
+const decoratorSyntax = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_decorator_anchors',
+  baseSourceText: '@sealed\nexport class Widget {}\n',
+  workerSourceText: '@sealed\nexport class Widget {}\nexport const workerOnly = 1;\n',
+  headSourceText: '@sealed\nexport class Widget {}\n'
+});
+assertBlocked(decoratorSyntax, JsTsSafeMergeConflictCodes.unsupportedDecorator, JsTsSafeMergeGateIds.parseLedger);
+
+const overloadSyntax = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_overload_anchors',
+  baseSourceText: [
+    'export function parse(value: string): string;',
+    'export function parse(value: string | number): string { return String(value); }',
+    ''
+  ].join('\n'),
+  workerSourceText: [
+    'export function parse(value: string): string;',
+    'export function parse(value: string | number): string { return String(value); }',
+    'export const workerOnly = 1;',
+    ''
+  ].join('\n'),
+  headSourceText: [
+    'export function parse(value: string): string;',
+    'export function parse(value: string | number): string { return String(value); }',
+    ''
+  ].join('\n')
+});
+assertBlocked(overloadSyntax, JsTsSafeMergeConflictCodes.unsupportedOverload, JsTsSafeMergeGateIds.parseLedger);
+
+const computedKeyDeclaration = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_computed_key_declarations',
+  baseSourceText: 'export const stable = 1;\n',
+  workerSourceText: "export const stable = 1;\nexport const config = {\n  ['flag']: true,\n};\n",
+  headSourceText: 'export const stable = 1;\n'
+});
+assertBlocked(computedKeyDeclaration, JsTsSafeMergeConflictCodes.computedKey, JsTsSafeMergeGateIds.parseLedger);
+
+const typeAliasConflict = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_type_alias_conflicts',
+  baseSourceText: 'export type Model = { id: string; };\n',
+  workerSourceText: 'export type Model = { id: number; };\n',
+  headSourceText: 'export type Model = { id: string; };\n'
+});
+assertBlocked(typeAliasConflict, JsTsSafeMergeConflictCodes.typeAliasConflict, JsTsSafeMergeGateIds.stableExistingDeclarations);
+
+const staleAnchors = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_stale_source_anchors',
+  expectedSourceHash: 'hash_base_widget',
+  currentSourceHash: 'hash_head_widget',
+  baseSourceText: 'export const stable = 1;\n',
+  workerSourceText: 'export const stable = 1;\nexport const workerOnly = 1;\n',
+  headSourceText: 'export const stable = 1;\n'
+});
+assertBlocked(staleAnchors, JsTsSafeMergeConflictCodes.staleSourceHash, JsTsSafeMergeGateIds.parseLedger);
+
+const missingSourceLedgerSpans = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_missing_source_ledger_spans',
+  requireSourceLedgerSpans: true,
+  sourceLedgers: {
+    base: { spans: [{ id: 'base-token', kind: 'identifier' }] },
+    worker: { spans: [{ id: 'worker-token', kind: 'identifier', span: { start: 0, end: 6 } }] },
+    head: { spans: [{ id: 'head-token', kind: 'identifier', span: { start: 0, end: 6 } }] }
+  },
+  baseSourceText: 'export const stable = 1;\n',
+  workerSourceText: 'export const stable = 1;\nexport const workerOnly = 1;\n',
+  headSourceText: 'export const stable = 1;\n'
+});
+assertBlocked(missingSourceLedgerSpans, JsTsSafeMergeConflictCodes.missingSourceLedgerSpan, JsTsSafeMergeGateIds.parseLedger);
+
 const ambiguousInsertion = safeMergeJsTsImportsAndDeclarations({
   id: 'js_ts_safe_merge_rejects_ambiguous_insertion_point',
   baseSourceText: '',

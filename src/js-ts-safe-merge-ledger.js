@@ -21,10 +21,21 @@ export function scanJsTsTopLevelLedger(sourceText, label, context) {
     offset = skipped.offset;
     if (offset >= sourceText.length) break;
 
+    if (sourceText[offset] === '@') {
+      addConflict(context, {
+        code: JsTsSafeMergeConflictCodes.unsupportedDecorator,
+        gateId: JsTsSafeMergeGateIds.parseLedger,
+        side: label,
+        message: `${label} source contains decorator syntax that is not safe for ledger merge anchors.`,
+        details: { offset, reasonCode: 'unsupported-js-ts-syntax', preview: sourceText.slice(offset, Math.min(sourceText.length, offset + 80)) }
+      });
+      return createLedger(label, sourceText, entries);
+    }
+
     const end = findStatementEnd(sourceText, offset);
     if (end.error) {
       addConflict(context, {
-        code: JsTsSafeMergeConflictCodes.parserLedgerLoss,
+        code: JsTsSafeMergeConflictCodes.malformedSyntax,
         gateId: JsTsSafeMergeGateIds.parseLedger,
         side: label,
         message: `${label} source contains a top-level statement the narrow ledger cannot bound.`,
@@ -35,6 +46,16 @@ export function scanJsTsTopLevelLedger(sourceText, label, context) {
 
     const statementText = sourceText.slice(offset, end.offset);
     const entry = classifyStatement(statementText, offset, end.offset);
+    if (entry?.unsupported) {
+      addConflict(context, {
+        code: entry.unsupported.code,
+        gateId: JsTsSafeMergeGateIds.parseLedger,
+        side: label,
+        message: `${label} source contains syntax that is not safe for automatic JS/TS ledger merge.`,
+        details: { offset, ...entry.unsupported.details, statement: statementText.trim().slice(0, 120) }
+      });
+      return createLedger(label, sourceText, entries);
+    }
     if (!entry) {
       addConflict(context, {
         code: JsTsSafeMergeConflictCodes.parserLedgerLoss,

@@ -38,12 +38,16 @@ export function analyzeVariantLedger(base, variant, baseIndex, side, context) {
       const additions = analyzeImportStatementChange(baseEntry, entry, side, context);
       if (additions.length) importAdditions.set(entry.key, additions);
     } else if (!sameStatementText(baseEntry.text, entry.text)) {
+      const typeAliasConflict = baseEntry.declarationInfo?.declarationKind === 'type'
+        || entry.declarationInfo?.declarationKind === 'type';
       addConflict(context, {
-        code: JsTsSafeMergeConflictCodes.changedExistingDeclaration,
+        code: typeAliasConflict ? JsTsSafeMergeConflictCodes.typeAliasConflict : JsTsSafeMergeConflictCodes.changedExistingDeclaration,
         gateId: JsTsSafeMergeGateIds.stableExistingDeclarations,
         side,
-        message: `${side} source changes an existing top-level declaration or export body.`,
-        details: { key: entry.key, name: entry.names?.[0] }
+        message: typeAliasConflict
+          ? `${side} source changes an existing type alias body.`
+          : `${side} source changes an existing top-level declaration or export body.`,
+        details: { key: entry.key, name: entry.names?.[0], declarationKind: entry.declarationInfo?.declarationKind }
       });
     }
   }
@@ -187,17 +191,25 @@ function validateAddedEntryNames(plan, baseNames, context) {
 }
 
 function validateCrossSideAddedNames(workerPlan, headPlan, context) {
-  const headNames = new Set(headPlan.addedEntries.flatMap((entry) => (entry.names ?? []).map((name) => `${entry.kind}:${name}`)));
+  const headEntriesByName = new Map();
+  for (const entry of headPlan.addedEntries) {
+    for (const name of entry.names ?? []) headEntriesByName.set(`${entry.kind}:${name}`, entry);
+  }
   for (const entry of workerPlan.addedEntries) {
     for (const name of entry.names ?? []) {
       const nameKey = `${entry.kind}:${name}`;
-      if (headNames.has(nameKey)) {
+      const headEntry = headEntriesByName.get(nameKey);
+      if (headEntry) {
+        const typeAliasConflict = entry.declarationInfo?.declarationKind === 'type'
+          || headEntry.declarationInfo?.declarationKind === 'type';
         addConflict(context, {
-          code: JsTsSafeMergeConflictCodes.duplicateName,
+          code: typeAliasConflict ? JsTsSafeMergeConflictCodes.typeAliasConflict : JsTsSafeMergeConflictCodes.duplicateName,
           gateId: JsTsSafeMergeGateIds.uniqueNames,
           side: 'worker',
-          message: 'Worker and head add the same top-level name.',
-          details: { name, kind: entry.kind }
+          message: typeAliasConflict
+            ? 'Worker and head add conflicting type aliases.'
+            : 'Worker and head add the same top-level name.',
+          details: { name, kind: entry.kind, workerDeclarationKind: entry.declarationInfo?.declarationKind, headDeclarationKind: headEntry.declarationInfo?.declarationKind }
         });
       }
     }
