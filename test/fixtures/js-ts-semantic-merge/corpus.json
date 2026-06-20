@@ -11,6 +11,7 @@
     "imports",
     "exports",
     "type-interface-members",
+    "type-alias-members",
     "object-members",
     "comments-trivia",
     "generated-source-map-boundary",
@@ -138,6 +139,51 @@
         "  title?: string;",
         "  updatedAt?: Date;",
         "}",
+        ""
+      ]
+    },
+    {
+      "id": "type-alias-member-independent-additions",
+      "title": "independent type alias property additions keep both members",
+      "kind": "merge",
+      "language": "typescript",
+      "sourcePath": "src/ledger/runner.ts",
+      "coverage": ["type-interface-members", "type-alias-members"],
+      "expected": {
+        "outcome": "accepted",
+        "admissionStatus": "auto-merge-candidate",
+        "projectionStatus": "projected",
+        "replayStatus": "accepted-clean",
+        "operationKinds": ["addProperty"],
+        "operationAnchors": ["Runner.timeoutMs"],
+        "reasonCodes": ["added-anchor-absent-from-head"]
+      },
+      "baseLines": [
+        "export type Runner = {",
+        "  run(value: string): string;",
+        "};",
+        ""
+      ],
+      "workerLines": [
+        "export type Runner = {",
+        "  run(value: string): string;",
+        "  timeoutMs?: number;",
+        "};",
+        ""
+      ],
+      "headLines": [
+        "export type Runner = {",
+        "  run(value: string): string;",
+        "  signal?: AbortSignal;",
+        "};",
+        ""
+      ],
+      "expectedLines": [
+        "export type Runner = {",
+        "  run(value: string): string;",
+        "  timeoutMs?: number;",
+        "  signal?: AbortSignal;",
+        "};",
         ""
       ]
     },
