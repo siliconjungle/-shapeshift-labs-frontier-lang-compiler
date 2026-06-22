@@ -187,6 +187,27 @@ artifacts keep `autoMergeClaim: false` and `semanticEquivalenceClaim: false`,
 but give coordinators machine-readable proof that the projected source matches
 the merge output and that applying the same projection again is a no-op.
 
+Project-level JS/TS safe merges compose the same file-level gates across a
+base/worker/head file set. They preserve head-only files, admit worker-only
+file additions when file additions are enabled, block conflicting same-path
+additions, and attach per-file semantic artifacts for files merged through the
+JS/TS source merger:
+
+```js
+import { safeMergeJsTsProject } from '@shapeshift-labs/frontier-lang-compiler';
+
+const project = safeMergeJsTsProject({
+  language: 'typescript',
+  baseFiles: { 'src/index.ts': 'export const stable = 1;\n' },
+  workerFiles: { 'src/index.ts': 'export const stable = 1;\nexport const workerOnly = 1;\n' },
+  headFiles: { 'src/index.ts': 'export const stable = 1;\n' }
+});
+
+console.log(project.status); // "merged"
+console.log(project.outputFiles[0].sourcePath); // "src/index.ts"
+console.log(project.files[0].semanticArtifacts.status); // "verified"
+```
+
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 
 ```js

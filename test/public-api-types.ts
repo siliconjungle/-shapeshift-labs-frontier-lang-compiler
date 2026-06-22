@@ -147,6 +147,7 @@ type ExpectedPublicRuntimeExport =
   | 'runNativeImporterAdapter'
   | 'runNativeTargetProjectionAdapter'
   | 'safeMergeJsTsImportsAndDeclarations'
+  | 'safeMergeJsTsProject'
   | 'safeMergeJsTsSource'
   | 'safeMergeJsTsMembers'
   | 'semanticMergeCandidateReadinessSortKey'

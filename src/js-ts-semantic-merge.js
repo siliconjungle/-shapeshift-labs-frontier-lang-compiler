@@ -8,6 +8,9 @@ export {
   safeMergeJsTsSource
 } from './js-ts-safe-merge-composed.js';
 export {
+  safeMergeJsTsProject
+} from './js-ts-safe-project-merge.js';
+export {
   mergeJsTsSafeMemberAdditions,
   safeMergeJsTsMembers
 } from './js-ts-safe-member-merge.js';
