@@ -1,5 +1,6 @@
 import{idFragment,uniqueByEvidenceId,uniqueByLossId,uniqueStrings}from'../../native-import-utils.js';import{createDocument,createPatch,createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';
 import{createNativeImportResultContract}from'./createNativeImportResultContract.js';import{createProjectImportAdmissionRecord}from'./createProjectImportAdmissionRecord.js';import{mergeSemanticIndexes}from'./mergeSemanticIndexes.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';import{summarizeProjectSourcePreservation}from'./summarizeProjectSourcePreservation.js';
+import{resolveRelativeProjectModule}from'./projectSymbolGraphModuleResolution.js';
 export function createNativeProjectImportResult(input, imports) {
   const idPart = idFragment(input.id ?? input.projectRoot ?? 'native_project');
   const nodes = {};
@@ -140,8 +141,6 @@ export function createNativeProjectImportResult(input, imports) {
 }
 
 const PROJECT_SYMBOL_GRAPH_REMAINING_FIELDS = Object.freeze([
-  'moduleEdges[].resolvedModulePath',
-  'moduleEdges[].targetDocumentId',
   'moduleEdges[].resolvedTargetSymbolId',
   'moduleEdges[].resolutionKind',
   'moduleEdges[].packageName',
@@ -158,16 +157,17 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   const documents = semanticIndex?.documents ?? [];
   const symbolsById = new Map((semanticIndex?.symbols ?? []).map((symbol) => [symbol.id, symbol]));
   const documentsById = new Map(documents.map((document) => [document.id, document]));
+  const documentsByPath = new Map(documents.filter((document) => document.path).map((document) => [document.path, document]));
   const facts = semanticIndex?.facts ?? [];
   const moduleEdgeFacts = facts.filter((fact) => fact.predicate === 'moduleEdge');
   const moduleEdgeByRelation = new Map(moduleEdgeFacts.map((fact) => [fact.subjectId, fact]));
   const relations = semanticIndex?.relations ?? [];
   const importEdges = relations
     .filter((relation) => relation.predicate === 'imports')
-    .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById));
+    .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById, documentsByPath));
   const exportEdges = relations
     .filter((relation) => relation.predicate === 'exports')
-    .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById));
+    .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById, documentsByPath));
   const reExportIdentities = uniqueRecords([
     ...facts
       .filter((fact) => fact.predicate === 'reExportIdentity' && fact.value)
@@ -213,7 +213,7 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   };
 }
 
-function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById) {
+function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById, documentsByPath) {
   const fact = moduleEdgeByRelation.get(relation.id);
   const value = objectValue(fact?.value);
   const metadata = objectValue(relation.metadata);
@@ -228,6 +228,7 @@ function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documents
     symbolMetadata.moduleSpecifier,
     symbol?.kind === 'module' ? symbol.name : undefined
   );
+  const resolution = resolveRelativeProjectModule(document?.path, moduleSpecifier, documentsByPath);
   return compactRecord({
     id: relation.id,
     sourceDocumentId: relation.sourceId,
@@ -237,6 +238,9 @@ function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documents
     sourcePath: document?.path,
     sourceHash: document?.sourceHash,
     moduleSpecifier,
+    resolvedModulePath: resolution?.path,
+    targetDocumentId: resolution?.documentId,
+    resolutionKind: resolution?.kind,
     importKind: firstString(moduleEdge.importKind, value.importKind),
     exportKind: firstString(moduleEdge.exportKind, value.exportKind),
     importedName: firstString(moduleEdge.importedName, value.importedName),
