@@ -1,0 +1,213 @@
+import { readFileSync } from 'node:fs';
+
+import { assert } from './helpers.mjs';
+import { createJsTsSemanticConflictSidecars } from '../../src/js-ts-semantic-conflict-sidecars.js';
+import {
+  JsTsSafeMergeConflictCodes,
+  JsTsSafeMergeGateIds,
+  safeMergeJsTsImportsAndDeclarations
+} from '../../src/js-ts-safe-merge.js';
+import { mergeJsTsSafeMemberAdditions } from '../../src/js-ts-safe-member-merge.js';
+
+const corpus = JSON.parse(readFileSync(new URL('../fixtures/js-ts-semantic-merge/corpus.json', import.meta.url), 'utf8'));
+const fixturesById = new Map(corpus.fixtures.map((fixture) => [fixture.id, fixture]));
+
+for (const coverage of [
+  'imports',
+  'exports',
+  'conflicting-exports',
+  'interfaces',
+  'type-aliases',
+  'type-interface-members',
+  'object-members',
+  'decorators',
+  'overloads',
+  'tsx-jsx-text',
+  'jsx-ish-source',
+  'malformed-stale-edits',
+  'comments-trivia',
+  'generated-source-map-boundary'
+]) {
+  assert.equal(corpus.coverageRequirements.includes(coverage), true, `missing oracle coverage requirement ${coverage}`);
+  assert.equal(
+    corpus.fixtures.some((fixture) => fixture.coverage.includes(coverage)),
+    true,
+    `missing concrete oracle fixture for ${coverage}`
+  );
+}
+
+assertCorpusFixture('imports-independent-additions', 'accepted', ['added-anchor-absent-from-head']);
+assertCorpusFixture('exports-independent-additions', 'accepted', ['added-anchor-absent-from-head']);
+assertCorpusFixture('conflicting-export-additions', 'rejected', ['duplicate-export-name']);
+assertCorpusFixture('interface-member-independent-additions', 'accepted', ['added-anchor-absent-from-head']);
+assertCorpusFixture('type-alias-member-independent-additions', 'accepted', ['added-anchor-absent-from-head']);
+assertCorpusFixture('object-member-independent-additions', 'accepted', ['added-anchor-absent-from-head']);
+assertCorpusFixture('tsx-jsx-text-control-flow', 'accepted', ['head-anchor-matches-base']);
+assertCorpusFixture('overload-body-prefix-merge', 'accepted', ['head-anchor-matches-base']);
+assertCorpusFixture('decorator-stale-malformed-conflicts', 'rejected', [
+  'parser-or-ledger-loss',
+  'malformed-syntax-tree',
+  'stale-source-hash',
+  'unsupported-decorator-merge-anchor'
+]);
+assertCorpusFixture('comments-trivia-source-ledger', 'accepted');
+assertCorpusFixture('generated-source-map-boundary', 'rejected', ['generated-source-boundary', 'source-map-boundary']);
+
+const independentImportsExports = safeMergeJsTsImportsAndDeclarations({
+  id: 'oracle_safe_independent_imports_exports',
+  language: 'typescript',
+  sourcePath: 'src/oracles/independent.ts',
+  baseSourceText: [
+    "import { readFile } from 'node:fs';",
+    'export const stable = readFile;',
+    ''
+  ].join('\n'),
+  workerSourceText: [
+    "import { readFile, writeFile } from 'node:fs';",
+    'export const stable = readFile;',
+    'export const workerOnly = writeFile;',
+    ''
+  ].join('\n'),
+  headSourceText: [
+    "import { readFile, stat } from 'node:fs';",
+    'export const stable = readFile;',
+    'export function headOnly() { return stat; }',
+    ''
+  ].join('\n')
+});
+assert.equal(independentImportsExports.status, 'merged');
+assert.equal(independentImportsExports.admission.status, 'auto-merge-candidate');
+assert.equal(independentImportsExports.conflicts.length, 0);
+
+const conflictingExports = safeMergeJsTsImportsAndDeclarations({
+  id: 'oracle_unsafe_conflicting_exports',
+  language: 'typescript',
+  sourcePath: 'src/oracles/export-conflict.ts',
+  baseSourceText: 'export const stable = 1;\n',
+  workerSourceText: 'export const stable = 1;\nexport const feature = 1;\n',
+  headSourceText: 'export const stable = 1;\nexport function feature() { return 2; }\n'
+});
+assertSafeMergeBlocked(conflictingExports, JsTsSafeMergeConflictCodes.duplicateName, JsTsSafeMergeGateIds.uniqueNames);
+
+const malformedEdit = safeMergeJsTsImportsAndDeclarations({
+  id: 'oracle_unsafe_malformed_edit',
+  language: 'typescript',
+  sourcePath: 'src/oracles/malformed.ts',
+  baseSourceText: 'export const broken = (\n',
+  workerSourceText: 'export const broken = (\n',
+  headSourceText: 'export const broken = (\n'
+});
+assertSafeMergeBlocked(malformedEdit, JsTsSafeMergeConflictCodes.malformedSyntax, JsTsSafeMergeGateIds.parseLedger);
+
+const staleSourceHash = safeMergeJsTsImportsAndDeclarations({
+  id: 'oracle_unsafe_stale_source_hash',
+  language: 'typescript',
+  sourcePath: 'src/oracles/stale.ts',
+  expectedSourceHash: 'hash_base_oracle',
+  currentSourceHash: 'hash_head_oracle',
+  baseSourceText: 'export const stable = 1;\n',
+  workerSourceText: 'export const stable = 1;\nexport const workerOnly = 1;\n',
+  headSourceText: 'export const stable = 1;\n'
+});
+assertSafeMergeBlocked(staleSourceHash, JsTsSafeMergeConflictCodes.staleSourceHash, JsTsSafeMergeGateIds.parseLedger);
+
+const decoratorAnchor = safeMergeJsTsImportsAndDeclarations({
+  id: 'oracle_unsafe_decorator_anchor',
+  language: 'typescript',
+  sourcePath: 'src/oracles/decorator.ts',
+  baseSourceText: '@sealed\nexport class Widget {}\n',
+  workerSourceText: '@sealed\nexport class Widget {}\nexport const workerOnly = 1;\n',
+  headSourceText: '@sealed\nexport class Widget {}\n'
+});
+assertSafeMergeBlocked(decoratorAnchor, JsTsSafeMergeConflictCodes.unsupportedDecorator, JsTsSafeMergeGateIds.parseLedger);
+
+const overloadAnchor = safeMergeJsTsImportsAndDeclarations({
+  id: 'oracle_unsafe_overload_anchor',
+  language: 'typescript',
+  sourcePath: 'src/oracles/overload.ts',
+  baseSourceText: [
+    'export function parse(value: string): string;',
+    'export function parse(value: string | number): string { return String(value); }',
+    ''
+  ].join('\n'),
+  workerSourceText: [
+    'export function parse(value: string): string;',
+    'export function parse(value: string | number): string { return String(value); }',
+    'export const workerOnly = 1;',
+    ''
+  ].join('\n'),
+  headSourceText: [
+    'export function parse(value: string): string;',
+    'export function parse(value: string | number): string { return String(value); }',
+    ''
+  ].join('\n')
+});
+assertSafeMergeBlocked(overloadAnchor, JsTsSafeMergeConflictCodes.unsupportedOverload, JsTsSafeMergeGateIds.parseLedger);
+
+const interfaceMemberAdditions = mergeJsTsSafeMemberAdditions({
+  baseSourceText: 'export interface Options {\n  enabled: boolean;\n}\n',
+  workerSourceText: 'export interface Options {\n  enabled: boolean;\n  label?: string;\n}\n',
+  headSourceText: 'export interface Options {\n  enabled: boolean;\n  retries: number;\n}\n',
+  policy: { unorderedRegions: [{ kind: 'interface', name: 'Options', order: 'non-semantic' }] }
+});
+assert.equal(interfaceMemberAdditions.status, 'merged');
+assert.deepEqual(interfaceMemberAdditions.reasonCodes, []);
+assert.deepEqual(interfaceMemberAdditions.mergedRegions[0].workerAddedKeys, ['label']);
+assert.deepEqual(interfaceMemberAdditions.mergedRegions[0].headAddedKeys, ['retries']);
+
+const objectMemberConflict = mergeJsTsSafeMemberAdditions({
+  baseSourceText: "export const config = {\n  mode: 'a',\n};\n",
+  workerSourceText: "export const config = {\n  mode: 'a',\n  flag: true,\n};\n",
+  headSourceText: "export const config = {\n  mode: 'a',\n  flag: false,\n};\n",
+  policy: { unorderedRegions: [{ kind: 'object', name: 'config', regionKind: 'config', order: 'non-semantic' }] }
+});
+assert.equal(objectMemberConflict.status, 'rejected');
+assert.equal(
+  objectMemberConflict.reasonCodes.some((code) => code.includes('duplicate-added-key:flag')),
+  true,
+  objectMemberConflict.reasonCodes.join(', ')
+);
+
+const duplicateExportSidecar = createJsTsSemanticConflictSidecars({
+  id: 'oracle_duplicate_export_sidecar',
+  language: 'typescript',
+  sourcePath: 'src/oracles/export-conflict.ts',
+  exports: [
+    { id: 'worker_feature_export', kind: 'export', name: 'feature', exportName: 'feature', exported: true },
+    { id: 'head_feature_export', kind: 'export', name: 'feature', exportName: 'feature', exported: true }
+  ]
+});
+assert.equal(duplicateExportSidecar.admission.status, 'blocked');
+assert.equal(duplicateExportSidecar.summary.classes.includes('duplicate-export'), true);
+assert.equal(duplicateExportSidecar.admission.reasonCodes.includes('duplicate-export-name'), true);
+
+const conflictingExportFixture = fixturesById.get('conflicting-export-additions');
+const conflictingExportFixtureSidecar = createJsTsSemanticConflictSidecars({
+  id: `oracle_fixture_${conflictingExportFixture.id}`,
+  language: conflictingExportFixture.language,
+  sourcePath: conflictingExportFixture.sourcePath,
+  ...conflictingExportFixture.sidecarInput
+});
+assert.equal(conflictingExportFixtureSidecar.admission.status, conflictingExportFixture.expected.admissionStatus);
+assert.equal(conflictingExportFixtureSidecar.summary.classes.includes('duplicate-export'), true);
+assert.equal(conflictingExportFixtureSidecar.admission.reasonCodes.includes('duplicate-export-name'), true);
+
+function assertCorpusFixture(id, outcome, reasonCodes = []) {
+  const fixture = fixturesById.get(id);
+  assert.ok(fixture, `missing fixture ${id}`);
+  assert.equal(fixture.expected.outcome, outcome, `${id}: outcome`);
+  if (outcome === 'rejected') {
+    assert.equal(fixture.coverage.includes('negative-unsafe-case'), true, `${id}: unsafe coverage`);
+  }
+  for (const reasonCode of reasonCodes) {
+    assert.equal((fixture.expected.reasonCodes ?? []).includes(reasonCode), true, `${id}: missing ${reasonCode}`);
+  }
+}
+
+function assertSafeMergeBlocked(result, code, gateId) {
+  assert.equal(result.status, 'blocked', code);
+  assert.equal(result.admission.reviewRequired, true, code);
+  assert.equal(result.admission.reasonCodes.includes(code), true, code);
+  assert.equal(result.conflicts.some((conflict) => conflict.code === code), true, code);
+  assert.equal(result.gates.some((gate) => gate.id === gateId && gate.status === 'blocked'), true, gateId);
+}

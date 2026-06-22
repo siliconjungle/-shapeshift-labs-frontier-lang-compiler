@@ -11,6 +11,7 @@
     "imports",
     "import-safe-merge",
     "exports",
+    "conflicting-exports",
     "top-level-declarations",
     "declaration-safe-merge",
     "type-interface-members",
@@ -106,6 +107,40 @@
         "export const beta = 2;",
         ""
       ]
+    },
+    {
+      "id": "conflicting-export-additions",
+      "title": "same exported name added by worker and head is unsafe",
+      "kind": "conflict-sidecar",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/export-conflict.ts",
+      "coverage": ["exports", "conflicting-exports", "negative-unsafe-case"],
+      "expected": {
+        "outcome": "rejected",
+        "admissionStatus": "blocked",
+        "sidecarClasses": ["duplicate-export"],
+        "reasonCodes": ["duplicate-export-name"]
+      },
+      "sidecarInput": {
+        "exports": [
+          {
+            "id": "worker_feature_export",
+            "kind": "export",
+            "name": "feature",
+            "exportName": "feature",
+            "exported": true,
+            "sourceSpan": { "startLine": 2, "startColumn": 1, "endLine": 2, "endColumn": 26 }
+          },
+          {
+            "id": "head_feature_export",
+            "kind": "export",
+            "name": "feature",
+            "exportName": "feature",
+            "exported": true,
+            "sourceSpan": { "startLine": 2, "startColumn": 1, "endLine": 2, "endColumn": 43 }
+          }
+        ]
+      }
     },
     {
       "id": "interface-member-independent-additions",

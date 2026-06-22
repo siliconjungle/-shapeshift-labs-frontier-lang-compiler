@@ -28,6 +28,7 @@ const smokeModules = [
   './smoke/js-ts-safe-merge-members.mjs',
   './smoke/js-ts-conflict-sidecars.mjs',
   './smoke/js-ts-fixture-corpus.mjs',
+  './smoke/js-ts-semantic-merge-oracles.mjs',
   './smoke/semantic-react-wrapper-names.mjs',
   './smoke/semantic-sidecar-scanned-fixture.mjs',
   './smoke/semantic-sidecars.mjs',
