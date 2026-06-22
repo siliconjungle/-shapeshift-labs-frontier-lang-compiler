@@ -2,11 +2,8 @@ import { readFileSync } from 'node:fs';
 
 import { assert } from './helpers.mjs';
 import { createJsTsSemanticConflictSidecars } from '../../src/js-ts-semantic-conflict-sidecars.js';
-import {
-  JsTsSafeMergeConflictCodes,
-  JsTsSafeMergeGateIds,
-  safeMergeJsTsImportsAndDeclarations
-} from '../../src/js-ts-safe-merge.js';
+import { JsTsSafeMergeConflictCodes, JsTsSafeMergeGateIds, safeMergeJsTsImportsAndDeclarations } from '../../src/js-ts-safe-merge.js';
+import { safeMergeJsTsSource } from '../../src/js-ts-semantic-merge.js';
 import { mergeJsTsSafeMemberAdditions } from '../../src/js-ts-safe-member-merge.js';
 
 const corpus = JSON.parse(readFileSync(new URL('../fixtures/js-ts-semantic-merge/corpus.json', import.meta.url), 'utf8'));
@@ -17,6 +14,7 @@ for (const coverage of [
   'import-specifier-order',
   'exports',
   'conflicting-exports',
+  'composed-safe-merge',
   'interfaces',
   'type-aliases',
   'type-interface-members',
@@ -61,9 +59,11 @@ assertCorpusFixture('unsafe-object-same-member-conflict', 'rejected', ['head-anc
 assertCorpusFixture('unsafe-control-flow-conflict', 'rejected', ['head-anchor-changed-since-base']);
 assertCorpusFixture('unsafe-delete-modify-conflict', 'rejected', ['head-anchor-changed-since-base']);
 assertCorpusFixture('safe-import-declaration-additions', 'accepted');
+assertCorpusFixture('safe-composed-source-additions', 'accepted');
 assertCorpusFixture('unsafe-import-specifier-reorder', 'rejected', ['import-specifier-reordered']);
 assertCorpusFixture('unsafe-missing-source-ledger-span', 'rejected', ['missing-source-ledger-span']);
 assertCorpusFixture('unsafe-computed-key-declaration', 'rejected', ['computed-key']);
+assertCorpusFixture('unsafe-composed-member-conflict', 'rejected', ['duplicate-member-name']);
 assertCorpusFixture('unsafe-object-duplicate-member-key', 'rejected', ['duplicate-added-key:flag:object:config']);
 assertCorpusFixture('unsafe-order-sensitive-member-region', 'rejected', [
   'order-sensitive-region-kind:route',
@@ -71,9 +71,11 @@ assertCorpusFixture('unsafe-order-sensitive-member-region', 'rejected', [
 ]);
 
 assertSafeMergeCorpusFixture('safe-import-declaration-additions');
+assertSafeMergeCorpusFixture('safe-composed-source-additions');
 assertSafeMergeCorpusFixture('unsafe-import-specifier-reorder');
 assertSafeMergeCorpusFixture('unsafe-missing-source-ledger-span');
 assertSafeMergeCorpusFixture('unsafe-computed-key-declaration');
+assertSafeMergeCorpusFixture('unsafe-composed-member-conflict');
 assertSafeMergeCorpusFixture('unsafe-object-duplicate-member-key');
 assertSafeMergeCorpusFixture('unsafe-order-sensitive-member-region');
 
@@ -275,6 +277,28 @@ function assertSafeMergeCorpusFixture(id) {
     for (const reasonCode of fixture.expected.reasonCodes ?? []) {
       assert.equal(result.reasonCodes.includes(reasonCode), true, `${id}: missing member reason ${reasonCode}; actual ${JSON.stringify(result.reasonCodes)}`);
     }
+    return;
+  }
+
+  if (fixture.safeMerge.mode === 'source') {
+    const result = safeMergeJsTsSource({
+      id: `oracle_fixture_${id}`,
+      language: fixture.language,
+      sourcePath: fixture.sourcePath,
+      policy: fixture.safeMerge.policy,
+      baseSourceText,
+      workerSourceText,
+      headSourceText
+    });
+    assert.equal(result.status, fixture.expected.safeMergeStatus, `${id}: composed merge status`);
+    assert.equal(result.admission.status, fixture.expected.admissionStatus, `${id}: composed merge admission`);
+    for (const reasonCode of fixture.expected.reasonCodes ?? []) {
+      assert.equal(result.admission.reasonCodes.includes(reasonCode), true, `${id}: missing composed reason ${reasonCode}; actual ${JSON.stringify(result.admission.reasonCodes)}`);
+    }
+    for (const gateId of fixture.expected.blockedGateIds ?? []) {
+      assert.equal(result.gates.some((gate) => gate.id === gateId && gate.status === 'blocked'), true, `${id}: missing composed blocked gate ${gateId}; actual ${JSON.stringify(result.gates)}`);
+    }
+    if (fixture.expected.outcome === 'rejected') assert.equal(result.mergedSourceText, undefined, `${id}: blocked composed source`);
     return;
   }
 

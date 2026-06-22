@@ -1,4 +1,8 @@
 import type { FrontierSourceLanguage } from '@shapeshift-labs/frontier-lang-kernel';
+import type {
+  JsTsSafeMemberMergePolicy,
+  JsTsSafeMemberMergePolicyRegion
+} from './js-ts-safe-member-merge.js';
 
 export type JsTsSafeMergeStatus = 'merged' | 'blocked';
 export type JsTsSafeMergeGateStatus = 'passed' | 'blocked' | 'skipped';
@@ -65,6 +69,9 @@ export interface JsTsSafeMergeInput {
   readonly baseSourceLedger?: unknown;
   readonly workerSourceLedger?: unknown;
   readonly headSourceLedger?: unknown;
+  readonly policy?: JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[];
+  readonly mergePolicy?: JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[];
+  readonly unorderedRegions?: readonly JsTsSafeMemberMergePolicyRegion[];
 }
 
 export interface JsTsSafeMergeConflict {
@@ -98,6 +105,9 @@ export interface JsTsSafeMergeSummary {
   readonly changedExistingDeclarations: number;
   readonly conflicts: number;
   readonly gatesPassed: number;
+  readonly memberRegions?: number;
+  readonly memberAdditions?: number;
+  readonly composedPhases?: number;
 }
 
 export interface JsTsSafeMergeResult {
@@ -118,3 +128,4 @@ export interface JsTsSafeMergeResult {
 }
 
 export declare function safeMergeJsTsImportsAndDeclarations(input: JsTsSafeMergeInput): JsTsSafeMergeResult;
+export declare function safeMergeJsTsSource(input: JsTsSafeMergeInput): JsTsSafeMergeResult;

@@ -91,6 +91,7 @@ export {
   runNativeImporterAdapter,
   runNativeTargetProjectionAdapter,
   safeMergeJsTsImportsAndDeclarations,
+  safeMergeJsTsSource,
   safeMergeJsTsMembers,
   classifyNativeImportRoundtripReadiness,
   classifyNativeImportReadiness,

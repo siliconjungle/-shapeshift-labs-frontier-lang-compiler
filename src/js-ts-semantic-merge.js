@@ -5,6 +5,9 @@ export {
   safeMergeJsTsImportsAndDeclarations
 } from './js-ts-safe-merge.js';
 export {
+  safeMergeJsTsSource
+} from './js-ts-safe-merge-composed.js';
+export {
   mergeJsTsSafeMemberAdditions,
   safeMergeJsTsMembers
 } from './js-ts-safe-member-merge.js';

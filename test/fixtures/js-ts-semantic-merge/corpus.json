@@ -15,6 +15,7 @@
     "conflicting-exports",
     "top-level-declarations",
     "declaration-safe-merge",
+    "composed-safe-merge",
     "type-interface-members",
     "interfaces",
     "type-alias-members",
@@ -713,6 +714,133 @@
         "export const stable = readFile;",
         "export function headOnly() { return stat; }",
         "export const workerOnly = writeFile;",
+        ""
+      ]
+    },
+    {
+      "id": "safe-composed-source-additions",
+      "title": "safe top-level and unordered member additions merge atomically",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/ledger/composed-source.ts",
+      "coverage": ["imports", "import-safe-merge", "exports", "top-level-declarations", "declaration-safe-merge", "type-interface-members", "interfaces", "member-safe-merge", "composed-safe-merge"],
+      "safeMerge": {
+        "mode": "source",
+        "policy": {
+          "unorderedRegions": [
+            { "kind": "interface", "name": "Options", "order": "non-semantic" }
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "accepted",
+        "safeMergeStatus": "merged",
+        "admissionStatus": "auto-merge-candidate",
+        "reasonCodes": [],
+        "gateIds": [
+          "parse-ledger",
+          "preserve-base-order",
+          "stable-existing-declarations",
+          "independent-import-specifiers",
+          "independent-top-level-declarations",
+          "unique-names",
+          "resolved-insertion-anchors"
+        ],
+        "memberRegions": 1,
+        "memberAdditions": 2,
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "import { readFile } from 'node:fs';",
+        "export interface Options {",
+        "  enabled: boolean;",
+        "}",
+        "export function stable() { return readFile; }",
+        ""
+      ],
+      "workerLines": [
+        "import { readFile, writeFile } from 'node:fs';",
+        "export interface Options {",
+        "  enabled: boolean;",
+        "  label?: string;",
+        "}",
+        "export function stable() { return readFile; }",
+        "export function workerOnly() { return writeFile; }",
+        ""
+      ],
+      "headLines": [
+        "import { readFile, stat } from 'node:fs';",
+        "export interface Options {",
+        "  enabled: boolean;",
+        "  retries: number;",
+        "}",
+        "export function stable() { return readFile; }",
+        "export const headOnly = stat;",
+        ""
+      ],
+      "expectedLines": [
+        "import { readFile, stat, writeFile } from 'node:fs';",
+        "export interface Options {",
+        "  enabled: boolean;",
+        "  retries: number;",
+        "  label?: string;",
+        "}",
+        "export function stable() { return readFile; }",
+        "export const headOnly = stat;",
+        "export function workerOnly() { return writeFile; }",
+        ""
+      ]
+    },
+    {
+      "id": "unsafe-composed-member-conflict",
+      "title": "member conflict blocks composed top-level output",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/composed-member-conflict.ts",
+      "coverage": ["imports", "import-safe-merge", "exports", "top-level-declarations", "declaration-safe-merge", "type-interface-members", "interfaces", "member-safe-merge", "member-duplicate-keys", "composed-safe-merge", "negative-unsafe-case"],
+      "safeMerge": {
+        "mode": "source",
+        "policy": {
+          "unorderedRegions": [
+            { "kind": "interface", "name": "Options", "order": "non-semantic" }
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "rejected",
+        "safeMergeStatus": "blocked",
+        "admissionStatus": "blocked",
+        "reasonCodes": ["duplicate-member-name"],
+        "gateIds": ["unique-names"],
+        "blockedGateIds": ["unique-names"],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "import { readFile } from 'node:fs';",
+        "export interface Options {",
+        "  enabled: boolean;",
+        "}",
+        "export function stable() { return readFile; }",
+        ""
+      ],
+      "workerLines": [
+        "import { readFile, writeFile } from 'node:fs';",
+        "export interface Options {",
+        "  enabled: boolean;",
+        "  label?: string;",
+        "}",
+        "export function stable() { return readFile; }",
+        "export function workerOnly() { return writeFile; }",
+        ""
+      ],
+      "headLines": [
+        "import { readFile, stat } from 'node:fs';",
+        "export interface Options {",
+        "  enabled: boolean;",
+        "  label?: number;",
+        "}",
+        "export function stable() { return readFile; }",
+        "export const headOnly = stat;",
         ""
       ]
     },

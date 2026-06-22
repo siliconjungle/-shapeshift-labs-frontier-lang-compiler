@@ -1,4 +1,4 @@
-export type JsTsSafeMemberMergeRegionKind = 'interface' | 'type' | 'object';
+export type JsTsSafeMemberMergeRegionKind = 'interface' | 'type' | 'class' | 'object';
 export type JsTsSafeMemberMergeOrder = 'non-semantic' | string;
 export type JsTsSafeMemberMergeStatus = 'merged' | 'rejected';
 
@@ -26,6 +26,30 @@ export interface JsTsSafeMemberMergeInput {
   readonly policy?: JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[];
   readonly mergePolicy?: JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[];
   readonly unorderedRegions?: readonly JsTsSafeMemberMergePolicyRegion[];
+  readonly allowNonPolicySourceChanges?: boolean;
+}
+
+export interface JsTsSafeMemberMergeConflict {
+  readonly code: string;
+  readonly gateId: string;
+  readonly message: string;
+  readonly side?: 'base' | 'worker' | 'head' | string;
+  readonly sourcePath?: string;
+  readonly details?: Record<string, unknown>;
+}
+
+export interface JsTsSafeMemberMergeGate {
+  readonly id: string;
+  readonly status: 'passed' | 'blocked' | 'skipped' | string;
+  readonly reasonCodes: readonly string[];
+}
+
+export interface JsTsSafeMemberMergeAdmission {
+  readonly status: 'auto-merge-candidate' | 'blocked' | string;
+  readonly action: 'apply' | 'human-review' | string;
+  readonly reviewRequired: boolean;
+  readonly autoApplyCandidate: boolean;
+  readonly reasonCodes: readonly string[];
 }
 
 export interface JsTsSafeMemberMergedRegion {
@@ -42,12 +66,16 @@ export interface JsTsSafeMemberMergeResult {
   readonly status: JsTsSafeMemberMergeStatus;
   readonly sourceText?: string;
   readonly reasonCodes: readonly string[];
+  readonly conflicts: readonly JsTsSafeMemberMergeConflict[];
+  readonly gates: readonly JsTsSafeMemberMergeGate[];
+  readonly admission: JsTsSafeMemberMergeAdmission;
   readonly mergedRegions: readonly JsTsSafeMemberMergedRegion[];
   readonly summary: {
     readonly regions: number;
     readonly workerAdditions: number;
     readonly headAdditions: number;
     readonly appliedAdditions: number;
+    readonly conflicts: number;
   };
   readonly metadata: {
     readonly explicitPolicy: boolean;

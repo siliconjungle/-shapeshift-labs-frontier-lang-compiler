@@ -1,5 +1,6 @@
 import {
   applyMemberAdditions,
+  applyPreparedMemberAdditions,
   canonicalizeSourceBodies,
   findContainer,
   normalizeKind,
@@ -17,6 +18,54 @@ function safeMergeJsTsMembers(input = {}) {
 }
 
 function mergeJsTsSafeMemberAdditions(input = {}) {
+  const analysis = analyzeJsTsSafeMemberAdditions(input);
+  const uniqueReasons = uniqueStrings(analysis.reasonCodes);
+  if (uniqueReasons.length) {
+    return mergeResult('rejected', undefined, uniqueReasons, analysis.preparedRegions, input, analysis.explicitPolicy);
+  }
+  const sourceText = applyMemberAdditions(analysis.headSourceText, analysis.preparedRegions);
+  return mergeResult('merged', sourceText, [], analysis.preparedRegions, input, analysis.explicitPolicy);
+}
+
+function analyzeJsTsSafeMemberAdditions(input = {}) {
+  const analysis = prepareJsTsSafeMemberAdditions(input);
+  const reasonCodes = [...analysis.reasonCodes];
+  if (!input.allowNonPolicySourceChanges) {
+    reasonCodes.push(...nonPolicySourceChangeReasons(analysis));
+  }
+  return {
+    ...analysis,
+    reasonCodes: uniqueStrings(reasonCodes),
+    ok: reasonCodes.length === 0
+  };
+}
+
+function neutralizeJsTsSafeMemberMergeSources(input = {}) {
+  const analysis = analyzeJsTsSafeMemberAdditions({
+    ...input,
+    allowNonPolicySourceChanges: true
+  });
+  if (analysis.reasonCodes.length) {
+    return {
+      ok: false,
+      analysis,
+      result: mergeResult('rejected', undefined, analysis.reasonCodes, analysis.preparedRegions, input, analysis.explicitPolicy)
+    };
+  }
+  return {
+    ok: true,
+    analysis,
+    baseSourceText: analysis.baseSourceText,
+    workerSourceText: canonicalizeSourceBodies(analysis.workerSourceText, analysis.preparedRegions, 'worker'),
+    headSourceText: canonicalizeSourceBodies(analysis.headSourceText, analysis.preparedRegions, 'head')
+  };
+}
+
+function applyJsTsPreparedMemberAdditions(sourceText, preparedRegions, sides) {
+  return applyPreparedMemberAdditions(sourceText, preparedRegions, sides);
+}
+
+function prepareJsTsSafeMemberAdditions(input = {}) {
   const baseSourceText = input.baseSourceText;
   const workerSourceText = input.workerSourceText;
   const headSourceText = input.headSourceText;
@@ -36,6 +85,20 @@ function mergeJsTsSafeMemberAdditions(input = {}) {
     reasonCodes.push(...prepared.reasonCodes);
     if (prepared.ok) preparedRegions.push(prepared.value);
   }
+  const explicitPolicy = policyRegions.length > 0;
+  return {
+    baseSourceText,
+    workerSourceText,
+    headSourceText,
+    reasonCodes: uniqueStrings(reasonCodes),
+    preparedRegions,
+    explicitPolicy
+  };
+}
+
+function nonPolicySourceChangeReasons(analysis) {
+  const reasonCodes = [];
+  const { baseSourceText, workerSourceText, headSourceText, preparedRegions } = analysis;
   if (typeof baseSourceText === 'string' && typeof workerSourceText === 'string' && preparedRegions.length) {
     const canonicalWorker = canonicalizeSourceBodies(workerSourceText, preparedRegions, 'worker');
     if (canonicalWorker !== baseSourceText) reasonCodes.push('non-policy-source-change:worker');
@@ -44,11 +107,7 @@ function mergeJsTsSafeMemberAdditions(input = {}) {
     const canonicalHead = canonicalizeSourceBodies(headSourceText, preparedRegions, 'head');
     if (canonicalHead !== baseSourceText) reasonCodes.push('non-policy-source-change:head');
   }
-  const uniqueReasons = uniqueStrings(reasonCodes);
-  const explicitPolicy = policyRegions.length > 0;
-  if (uniqueReasons.length) return mergeResult('rejected', undefined, uniqueReasons, preparedRegions, input, explicitPolicy);
-  const sourceText = applyMemberAdditions(headSourceText, preparedRegions);
-  return mergeResult('merged', sourceText, [], preparedRegions, input, explicitPolicy);
+  return reasonCodes;
 }
 
 function normalizePolicyRegions(policy) {
@@ -125,7 +184,8 @@ function prepareRegion(input) {
       headMembers: headMembers.members,
       workerAddedKeys,
       headAddedKeys,
-      workerAddedMembers: workerMembers.members.filter((member) => workerAddedKeys.includes(member.key))
+      workerAddedMembers: workerMembers.members.filter((member) => workerAddedKeys.includes(member.key)),
+      headAddedMembers: headMembers.members.filter((member) => headAddedKeys.includes(member.key))
     }
   };
 }
@@ -197,6 +257,9 @@ function regionReason(region, reason) {
 }
 
 export {
+  analyzeJsTsSafeMemberAdditions,
+  applyJsTsPreparedMemberAdditions,
   mergeJsTsSafeMemberAdditions,
+  neutralizeJsTsSafeMemberMergeSources,
   safeMergeJsTsMembers
 };

@@ -1,3 +1,6 @@
+import { findContainer } from './js-ts-semantic-merge-member-containers.js';
+import { uniqueStrings } from './js-ts-semantic-merge-member-utils.js';
+
 function canonicalizeSourceBodies(sourceText, preparedRegions, side) {
   let output = sourceText;
   const replacements = preparedRegions
@@ -10,15 +13,29 @@ function canonicalizeSourceBodies(sourceText, preparedRegions, side) {
 }
 
 function applyMemberAdditions(headSourceText, preparedRegions) {
-  let output = headSourceText;
+  return applyPreparedMemberAdditions(headSourceText, preparedRegions, ['worker']).sourceText;
+}
+
+function applyPreparedMemberAdditions(sourceText, preparedRegions, sides = ['worker']) {
+  let output = sourceText;
+  const reasonCodes = [];
   const replacements = preparedRegions
-    .filter((region) => region.workerAddedMembers.length)
-    .map((region) => ({ range: region.head, replacement: appendMembersToBody(region.head.body, region.workerAddedMembers) }))
+    .map((region) => {
+      const match = findContainer(sourceText, region.policy);
+      if (match.reasonCodes.length) {
+        reasonCodes.push(...match.reasonCodes.map((reason) => `target-${reason}:${region.kind}:${region.name}`));
+        return undefined;
+      }
+      const members = sides.flatMap((side) => region[`${side}AddedMembers`] ?? []);
+      if (!members.length) return undefined;
+      return { range: match.value, replacement: appendMembersToBody(match.value.body, members) };
+    })
+    .filter(Boolean)
     .sort((left, right) => right.range.bodyStart - left.range.bodyStart);
   for (const { range, replacement } of replacements) {
     output = `${output.slice(0, range.bodyStart)}${replacement}${output.slice(range.bodyEnd)}`;
   }
-  return output;
+  return { sourceText: output, reasonCodes: uniqueStrings(reasonCodes) };
 }
 
 function appendMembersToBody(body, members) {
@@ -60,5 +77,6 @@ function leadingWhitespace(line) {
 
 export {
   applyMemberAdditions,
+  applyPreparedMemberAdditions,
   canonicalizeSourceBodies
 };

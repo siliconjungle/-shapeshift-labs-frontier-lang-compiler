@@ -25,6 +25,7 @@ const smokeModules = [
   './smoke/js-ts-source-ledger.mjs',
   './smoke/js-ts-semantic-merge-contracts.mjs',
   './smoke/js-ts-safe-merge-imports.mjs',
+  './smoke/js-ts-safe-merge-composed.mjs',
   './smoke/js-ts-safe-merge-members.mjs',
   './smoke/js-ts-conflict-sidecars.mjs',
   './smoke/js-ts-fixture-corpus.mjs',

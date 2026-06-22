@@ -168,7 +168,8 @@ The JS/TS semantic merge smoke corpus lives at
 `test/smoke/js-ts-semantic-merge-oracles.mjs`. The fixtures are deliberately
 small and dependency-free. They cover accepted projection/replay cases, exact
 source preservation, generated/source-map boundaries, safe import/declaration
-merges, safe unordered member merges, and rejected unsafe cases such as stale
+merges, safe unordered member merges, composed top-level/member safe merges,
+and rejected unsafe cases such as stale
 ledger spans, import specifier reordering, computed keys, duplicate exported
 names, duplicate object members, decorators, overload anchors, and same-anchor
 edit conflicts. Fixture failures include the fixture id and the actual

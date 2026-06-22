@@ -7,6 +7,7 @@ export {
 } from './js-ts-semantic-merge-member-segments.js';
 export {
   applyMemberAdditions,
+  applyPreparedMemberAdditions,
   canonicalizeSourceBodies
 } from './js-ts-semantic-merge-member-source.js';
 export {
