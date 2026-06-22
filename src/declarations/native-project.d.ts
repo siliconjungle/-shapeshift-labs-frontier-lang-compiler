@@ -78,7 +78,6 @@ export interface ImportNativeProjectOptions {
 }
 
 export type NativeProjectSymbolGraphRemainingField =
-  | 'moduleEdges[].resolvedTargetSymbolId'
   | 'moduleEdges[].resolutionKind'
   | 'moduleEdges[].packageName'
   | 'moduleEdges[].packageExportCondition'
@@ -112,6 +111,7 @@ export interface NativeProjectSymbolGraphModuleEdgeRecord {
   readonly moduleSpecifier?: string;
   readonly resolvedModulePath?: string;
   readonly targetDocumentId?: string;
+  readonly resolvedTargetSymbolId?: string;
   readonly resolutionKind?: 'relative-source' | 'relative-missing' | string;
   readonly importKind?: string;
   readonly exportKind?: string;

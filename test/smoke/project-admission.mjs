@@ -316,5 +316,5 @@ assert.equal(Boolean(projectReExportEdge.targetDocumentId), true);
 assert.deepEqual(projectSymbolGraph.reExportIdentities.map((identity) => identity.moduleSpecifier), ['./thing.js']);
 assert.deepEqual(projectSymbolGraph.publicContractRegions.map((region) => region.regionKind), ['export']);
 assert.equal(projectSymbolGraph.remainingFields.includes('moduleEdges[].targetDocumentId'), false);
-assert.equal(projectSymbolGraph.remainingFields.includes('moduleEdges[].resolvedTargetSymbolId'), true);
+assert.equal(projectSymbolGraph.remainingFields.includes('moduleEdges[].resolvedTargetSymbolId'), false);
 assert.equal(projectSymbolGraphImport.semanticIndex.metadata.projectSymbolGraph, projectSymbolGraph);

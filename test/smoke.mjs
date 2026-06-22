@@ -20,6 +20,7 @@ const smokeModules = [
   './smoke/csharp-adapter.mjs',
   './smoke/swift-kotlin-project.mjs',
   './smoke/project-admission.mjs',
+  './smoke/project-symbol-graph-resolution.mjs',
   './smoke/tree-sitter-cst-envelope.mjs',
   './smoke/scanned-js.mjs',
   './smoke/js-ts-source-ledger.mjs',

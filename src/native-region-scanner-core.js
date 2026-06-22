@@ -71,6 +71,8 @@ function nativeImportBindingDeclaration(input, lineNumber, importPath, binding, 
     },
     metadata: {
       scan: 'lightweight-import-binding',
+      importPath: String(importPath),
+      moduleSpecifier: String(importPath),
       localName,
       importedName,
       importKind,
