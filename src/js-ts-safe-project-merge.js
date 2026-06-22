@@ -1,6 +1,7 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsSource } from './js-ts-safe-merge-composed.js';
 import { compactRecord } from './js-ts-safe-merge-context.js';
+import { createJsTsProjectSafeMergeGraphArtifacts } from './js-ts-safe-project-merge-graph.js';
 
 function safeMergeJsTsProject(input = {}) {
   const id = String(input.id ?? 'js_ts_project_safe_merge');
@@ -18,6 +19,9 @@ function safeMergeJsTsProject(input = {}) {
       operation: file.operation
     }));
   const reasonCodes = uniqueStrings(blockedFiles.flatMap((file) => file.admission.reasonCodes));
+  const graphArtifacts = status === 'merged' && input.includeOutputProjectSymbolGraph
+    ? createJsTsProjectSafeMergeGraphArtifacts(input, outputFiles, id)
+    : undefined;
   const core = {
     kind: 'frontier.lang.jsTsProjectSafeMerge',
     version: 1,
@@ -26,6 +30,8 @@ function safeMergeJsTsProject(input = {}) {
     status,
     files: fileResults,
     outputFiles,
+    outputProjectImport: graphArtifacts?.projectImport,
+    outputProjectSymbolGraph: graphArtifacts?.projectSymbolGraph,
     conflicts: fileResults.flatMap((file) => file.conflicts),
     admission: {
       status: status === 'merged' ? 'auto-merge-candidate' : 'blocked',
@@ -43,6 +49,7 @@ function safeMergeJsTsProject(input = {}) {
       headChangeSetId: input.headChangeSetId,
       projectRoot: input.projectRoot,
       filesInput: Array.isArray(input.files) ? 'records' : 'maps',
+      outputProjectSymbolGraph: Boolean(graphArtifacts?.projectSymbolGraph),
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     })

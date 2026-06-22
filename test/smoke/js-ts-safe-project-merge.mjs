@@ -60,6 +60,7 @@ const headFiles = {
 const project = safeMergeJsTsProject({
   id: 'js_ts_project_safe_merge_smoke',
   language: 'typescript',
+  includeOutputProjectSymbolGraph: true,
   baseFiles,
   workerFiles,
   headFiles,
@@ -81,6 +82,9 @@ assert.equal(project.summary.operations['merged-source'], 1);
 assert.equal(project.summary.operations['merged-source-and-members'], 1);
 assert.equal(project.summary.operations['worker-added'], 1);
 assert.equal(project.summary.operations['head-only'], 1);
+assert.equal(project.outputProjectSymbolGraph.kind, 'frontier.lang.projectSymbolGraph');
+assert.equal(project.outputProjectSymbolGraph.fileHashes.length, 4);
+assert.equal(project.outputProjectImport.projectSymbolGraph, project.outputProjectSymbolGraph);
 
 const outputByPath = new Map(project.outputFiles.map((file) => [file.sourcePath, file]));
 assert.equal(outputByPath.get('src/index.ts').sourceText, [
