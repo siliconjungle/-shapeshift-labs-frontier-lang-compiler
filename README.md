@@ -162,6 +162,19 @@ const overlaps = querySemanticMergeCandidateAdmissionOverlaps(queue);
 
 These candidate records are compact merge-admission evidence. They preserve changed semantic regions, source/base/target hashes, conflict keys, evidence IDs, projection risk, readiness, and overlap pairs so swarm coordinators can sort likely-ready candidates first and detect conflicting regions before patch review.
 
+The JS/TS semantic merge smoke corpus lives at
+`test/fixtures/js-ts-semantic-merge/corpus.json` and is exercised by
+`test/smoke/js-ts-fixture-corpus.mjs` plus
+`test/smoke/js-ts-semantic-merge-oracles.mjs`. The fixtures are deliberately
+small and dependency-free. They cover accepted projection/replay cases, exact
+source preservation, generated/source-map boundaries, safe import/declaration
+merges, safe unordered member merges, and rejected unsafe cases such as stale
+ledger spans, import specifier reordering, computed keys, duplicate exported
+names, duplicate object members, decorators, overload anchors, and same-anchor
+edit conflicts. Fixture failures include the fixture id and the actual
+reason-code or gate values so distributed swarm evidence can point at a stable
+case instead of an agent transcript.
+
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 
 ```js

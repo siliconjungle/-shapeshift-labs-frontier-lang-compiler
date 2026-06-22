@@ -11,8 +11,10 @@ const {
   createSemanticImportSidecar,
   diffNativeSources,
   importNativeSource,
+  mergeJsTsSafeMemberAdditions,
   projectSemanticEditScriptToSource,
-  replaySemanticEditProjection
+  replaySemanticEditProjection,
+  safeMergeJsTsImportsAndDeclarations
 } = await loadCompilerApi();
 
 const corpusUrl = new URL('../fixtures/js-ts-semantic-merge/corpus.json', import.meta.url);
@@ -37,6 +39,8 @@ for (const fixture of corpus.fixtures) {
 
   if (fixture.kind === 'merge') {
     assertMergeFixture(fixture);
+  } else if (fixture.kind === 'safe-merge') {
+    assertSafeMergeFixture(fixture);
   } else if (fixture.kind === 'source-ledger') {
     assertSourceLedgerFixture(fixture);
   } else if (fixture.kind === 'conflict-sidecar') {
@@ -64,7 +68,7 @@ async function loadCompilerApi() {
 function validateFixtureMetadata(fixture) {
   assert.match(fixture.id, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
   assert.equal(typeof fixture.title, 'string', `${fixture.id}: title`);
-  assert.equal(['merge', 'source-ledger', 'conflict-sidecar'].includes(fixture.kind), true, `${fixture.id}: kind`);
+  assert.equal(['merge', 'safe-merge', 'source-ledger', 'conflict-sidecar'].includes(fixture.kind), true, `${fixture.id}: kind`);
   assert.equal(['javascript', 'typescript', 'tsx'].includes(fixture.language), true, `${fixture.id}: language`);
   assert.equal(typeof fixture.sourcePath, 'string', `${fixture.id}: sourcePath`);
   assert.equal(Array.isArray(fixture.coverage) && fixture.coverage.length > 0, true, `${fixture.id}: coverage`);
@@ -136,6 +140,68 @@ function assertMergeFixture(fixture) {
     assert.equal(script.admission.status === 'conflict' || script.admission.status === 'blocked', true, `${fixture.id}: rejected admission`);
     assert.equal(projection.sourceText, undefined, `${fixture.id}: blocked projection should not emit source`);
   }
+}
+
+function assertSafeMergeFixture(fixture) {
+  const baseSourceText = sourceFromLines(fixture, 'baseLines');
+  const workerSourceText = sourceFromLines(fixture, 'workerLines');
+  const headSourceText = sourceFromLines(fixture, 'headLines');
+
+  assertSmallSource(fixture, baseSourceText, 'baseLines');
+  assertSmallSource(fixture, workerSourceText, 'workerLines');
+  assertSmallSource(fixture, headSourceText, 'headLines');
+  assertSourcePreservation(fixture, baseSourceText, { minSemanticSymbols: fixture.expected.minSemanticSymbols ?? 1 });
+
+  if (fixture.safeMerge?.mode === 'imports-declarations') {
+    const result = safeMergeJsTsImportsAndDeclarations({
+      id: `safe_merge_fixture_${fixture.id}`,
+      language: fixture.language,
+      sourcePath: fixture.sourcePath,
+      expectedSourceHash: fixture.safeMerge.expectedSourceHash,
+      currentSourceHash: fixture.safeMerge.currentSourceHash,
+      requireSourceLedgerSpans: fixture.safeMerge.requireSourceLedgerSpans,
+      sourceLedgers: fixture.safeMerge.sourceLedgers,
+      baseSourceText,
+      workerSourceText,
+      headSourceText
+    });
+    assert.equal(result.status, fixture.expected.safeMergeStatus, `${fixture.id}: safe merge status`);
+    assert.equal(result.admission.status, fixture.expected.admissionStatus, `${fixture.id}: safe merge admission`);
+    assertExpectedValues(result.admission.reasonCodes, fixture.expected.reasonCodes ?? [], `${fixture.id}: safe merge reason codes`);
+    assertExpectedValues(result.gates.map((gate) => gate.id), fixture.expected.gateIds ?? [], `${fixture.id}: safe merge gate ids`);
+    for (const gateId of fixture.expected.blockedGateIds ?? []) {
+      assert.equal(
+        result.gates.some((gate) => gate.id === gateId && gate.status === 'blocked'),
+        true,
+        `${fixture.id}: expected blocked gate ${gateId}; actual gates ${JSON.stringify(result.gates)}`
+      );
+    }
+    if (fixture.expected.outcome === 'accepted') {
+      assert.equal(typeof fixture.expectedLines, 'object', `${fixture.id}: expected safe-merge source`);
+      assert.equal(result.mergedSourceText, sourceFromLines(fixture, 'expectedLines'), `${fixture.id}: safe merged source`);
+    }
+    return;
+  }
+
+  if (fixture.safeMerge?.mode === 'members') {
+    const result = mergeJsTsSafeMemberAdditions({
+      baseSourceText,
+      workerSourceText,
+      headSourceText,
+      policy: fixture.safeMerge.policy
+    });
+    assert.equal(result.status, fixture.expected.safeMergeStatus, `${fixture.id}: member merge status`);
+    assertExpectedValues(result.reasonCodes, fixture.expected.reasonCodes ?? [], `${fixture.id}: member merge reason codes`);
+    if (fixture.expected.outcome === 'accepted') {
+      assert.equal(typeof fixture.expectedLines, 'object', `${fixture.id}: expected member-merge source`);
+      assert.equal(result.sourceText, sourceFromLines(fixture, 'expectedLines'), `${fixture.id}: member merged source`);
+    } else {
+      assert.equal(result.sourceText, undefined, `${fixture.id}: rejected member merge source`);
+    }
+    return;
+  }
+
+  assert.fail(`${fixture.id}: unknown safeMerge mode ${fixture.safeMerge?.mode}`);
 }
 
 function assertSourceLedgerFixture(fixture) {
@@ -224,7 +290,11 @@ function assertExpectedReasonCodes(script, fixture) {
 
 function assertExpectedValues(actualValues, expectedValues, label) {
   for (const expectedValue of expectedValues) {
-    assert.equal(actualValues.includes(expectedValue), true, `${label}: missing ${expectedValue}`);
+    assert.equal(
+      actualValues.includes(expectedValue),
+      true,
+      `${label}: missing ${expectedValue}; actual ${JSON.stringify(actualValues)}`
+    );
   }
 }
 

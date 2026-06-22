@@ -10,6 +10,7 @@
   "coverageRequirements": [
     "imports",
     "import-safe-merge",
+    "import-specifier-order",
     "exports",
     "conflicting-exports",
     "top-level-declarations",
@@ -20,6 +21,10 @@
     "type-aliases",
     "object-members",
     "member-safe-merge",
+    "member-duplicate-keys",
+    "order-sensitive-member-regions",
+    "source-ledger-spans",
+    "computed-keys",
     "comments-trivia",
     "generated-source-map-boundary",
     "tsx-jsx-text",
@@ -466,6 +471,98 @@
       }
     },
     {
+      "id": "unsafe-member-edge-policy-sidecars",
+      "title": "member edge policy emits structured unsafe reasons",
+      "kind": "conflict-sidecar",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/member-edges.ts",
+      "coverage": ["type-interface-members", "interfaces", "object-members", "overloads", "negative-unsafe-case"],
+      "expected": {
+        "outcome": "rejected",
+        "admissionStatus": "blocked",
+        "sidecarClasses": ["duplicate-member", "ordered-list-conflict", "parser-ledger-loss", "unsupported-syntax"],
+        "reasonCodes": [
+          "duplicate-member-name",
+          "ordered-list-concurrent-position",
+          "parser-or-ledger-loss",
+          "overload-collision",
+          "unsupported-js-ts-syntax",
+          "computed-key",
+          "spread-like-member"
+        ]
+      },
+      "sidecarInput": {
+        "declarations": [
+          {
+            "id": "worker_hydrate_member",
+            "kind": "method",
+            "name": "hydrate",
+            "memberName": "hydrate",
+            "containerKey": "class:Widget",
+            "sourceSpan": { "startLine": 7, "startColumn": 3, "endLine": 9, "endColumn": 4 }
+          },
+          {
+            "id": "head_hydrate_member",
+            "kind": "method",
+            "name": "hydrate",
+            "memberName": "hydrate",
+            "containerKey": "class:Widget",
+            "sourceSpan": { "startLine": 11, "startColumn": 3, "endLine": 13, "endColumn": 4 }
+          }
+        ],
+        "orderedLists": [
+          {
+            "id": "widget_member_order",
+            "key": "class:Widget#members",
+            "changes": [
+              {
+                "id": "worker_insert_member",
+                "side": "worker",
+                "changeKind": "insert",
+                "memberName": "hydrate",
+                "index": 2,
+                "sourceSpan": { "startLine": 7, "startColumn": 3, "endLine": 9, "endColumn": 4 }
+              },
+              {
+                "id": "head_insert_member",
+                "side": "head",
+                "changeKind": "insert",
+                "memberName": "hydrate",
+                "index": 2,
+                "sourceSpan": { "startLine": 11, "startColumn": 3, "endLine": 13, "endColumn": 4 }
+              }
+            ]
+          }
+        ],
+        "ledgerLosses": [
+          {
+            "id": "loss_overload_collision",
+            "kind": "parser-ledger-loss",
+            "severity": "error",
+            "key": "interface:Runner#method:run",
+            "sourceSpan": { "startLine": 16, "startColumn": 3, "endLine": 17, "endColumn": 31 },
+            "reasonCode": "overload-collision"
+          }
+        ],
+        "unsupportedSyntax": [
+          {
+            "id": "unsupported_computed_member_key",
+            "kind": "computed-member-key",
+            "key": "interface:Registry#[key]",
+            "sourceSpan": { "startLine": 20, "startColumn": 3, "endLine": 20, "endColumn": 33 },
+            "reasonCode": "computed-key"
+          },
+          {
+            "id": "unsupported_spread_like_member",
+            "kind": "spread-like-member",
+            "key": "object:config#spread",
+            "sourceSpan": { "startLine": 24, "startColumn": 3, "endLine": 24, "endColumn": 15 },
+            "reasonCode": "spread-like-member"
+          }
+        ]
+      }
+    },
+    {
       "id": "unsafe-object-same-member-conflict",
       "title": "same object member edited by worker and head is unsafe",
       "kind": "merge",
@@ -565,6 +662,253 @@
       "headLines": [
         "export function keep() { return 1; }",
         "export function removeMe(value) { return value + 1; }",
+        ""
+      ]
+    },
+    {
+      "id": "safe-import-declaration-additions",
+      "title": "safe import specifier and declaration additions are merged",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/ledger/safe-imports.ts",
+      "coverage": ["imports", "import-safe-merge", "exports", "top-level-declarations", "declaration-safe-merge"],
+      "safeMerge": {
+        "mode": "imports-declarations"
+      },
+      "expected": {
+        "outcome": "accepted",
+        "safeMergeStatus": "merged",
+        "admissionStatus": "auto-merge-candidate",
+        "reasonCodes": [],
+        "gateIds": [
+          "parse-ledger",
+          "preserve-base-order",
+          "stable-existing-declarations",
+          "independent-import-specifiers",
+          "independent-top-level-declarations",
+          "unique-names",
+          "resolved-insertion-anchors"
+        ],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "import { readFile } from 'node:fs';",
+        "export const stable = readFile;",
+        ""
+      ],
+      "workerLines": [
+        "import { readFile, writeFile } from 'node:fs';",
+        "export const stable = readFile;",
+        "export const workerOnly = writeFile;",
+        ""
+      ],
+      "headLines": [
+        "import { readFile, stat } from 'node:fs';",
+        "export const stable = readFile;",
+        "export function headOnly() { return stat; }",
+        ""
+      ],
+      "expectedLines": [
+        "import { readFile, stat, writeFile } from 'node:fs';",
+        "export const stable = readFile;",
+        "export function headOnly() { return stat; }",
+        "export const workerOnly = writeFile;",
+        ""
+      ]
+    },
+    {
+      "id": "unsafe-import-specifier-reorder",
+      "title": "import specifier reordering is unsafe for source-preserving merge",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/import-reorder.ts",
+      "coverage": ["imports", "import-specifier-order", "negative-unsafe-case"],
+      "safeMerge": {
+        "mode": "imports-declarations"
+      },
+      "expected": {
+        "outcome": "rejected",
+        "safeMergeStatus": "blocked",
+        "admissionStatus": "blocked",
+        "reasonCodes": ["import-specifier-reordered"],
+        "gateIds": ["independent-import-specifiers"],
+        "blockedGateIds": ["independent-import-specifiers"],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "import { readFile, writeFile } from 'node:fs';",
+        "export const stable = readFile;",
+        ""
+      ],
+      "workerLines": [
+        "import { writeFile, readFile } from 'node:fs';",
+        "export const stable = readFile;",
+        ""
+      ],
+      "headLines": [
+        "import { readFile, writeFile, stat } from 'node:fs';",
+        "export const stable = readFile;",
+        ""
+      ]
+    },
+    {
+      "id": "unsafe-missing-source-ledger-span",
+      "title": "required source-ledger spans block replay admission when missing",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/missing-ledger-span.ts",
+      "coverage": ["source-ledger-spans", "negative-unsafe-case"],
+      "safeMerge": {
+        "mode": "imports-declarations",
+        "requireSourceLedgerSpans": true,
+        "sourceLedgers": {
+          "base": { "spans": [{ "id": "base-token", "kind": "identifier" }] },
+          "worker": { "spans": [{ "id": "worker-token", "kind": "identifier", "span": { "start": 0, "end": 6 } }] },
+          "head": { "spans": [{ "id": "head-token", "kind": "identifier", "span": { "start": 0, "end": 6 } }] }
+        }
+      },
+      "expected": {
+        "outcome": "rejected",
+        "safeMergeStatus": "blocked",
+        "admissionStatus": "blocked",
+        "reasonCodes": ["missing-source-ledger-span"],
+        "gateIds": ["parse-ledger"],
+        "blockedGateIds": ["parse-ledger"],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "export const stable = 1;",
+        ""
+      ],
+      "workerLines": [
+        "export const stable = 1;",
+        "export const workerOnly = 1;",
+        ""
+      ],
+      "headLines": [
+        "export const stable = 1;",
+        ""
+      ]
+    },
+    {
+      "id": "unsafe-computed-key-declaration",
+      "title": "computed top-level object keys are unsafe parser-ledger anchors",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/computed-key.ts",
+      "coverage": ["computed-keys", "object-members", "negative-unsafe-case"],
+      "safeMerge": {
+        "mode": "imports-declarations"
+      },
+      "expected": {
+        "outcome": "rejected",
+        "safeMergeStatus": "blocked",
+        "admissionStatus": "blocked",
+        "reasonCodes": ["computed-key"],
+        "gateIds": ["parse-ledger"],
+        "blockedGateIds": ["parse-ledger"],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "export const stable = 1;",
+        ""
+      ],
+      "workerLines": [
+        "export const stable = 1;",
+        "export const config = {",
+        "  ['flag']: true,",
+        "};",
+        ""
+      ],
+      "headLines": [
+        "export const stable = 1;",
+        ""
+      ]
+    },
+    {
+      "id": "unsafe-object-duplicate-member-key",
+      "title": "same object member added by worker and head is unsafe",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/object-duplicate-key.ts",
+      "coverage": ["object-members", "member-safe-merge", "member-duplicate-keys", "negative-unsafe-case"],
+      "safeMerge": {
+        "mode": "members",
+        "policy": {
+          "unorderedRegions": [
+            { "kind": "object", "name": "config", "regionKind": "config", "order": "non-semantic" }
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "rejected",
+        "safeMergeStatus": "rejected",
+        "reasonCodes": ["duplicate-added-key:flag:object:config"],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "export const config = {",
+        "  mode: 'a',",
+        "};",
+        ""
+      ],
+      "workerLines": [
+        "export const config = {",
+        "  mode: 'a',",
+        "  flag: true,",
+        "};",
+        ""
+      ],
+      "headLines": [
+        "export const config = {",
+        "  mode: 'a',",
+        "  flag: false,",
+        "};",
+        ""
+      ]
+    },
+    {
+      "id": "unsafe-order-sensitive-member-region",
+      "title": "order-sensitive object regions cannot use unordered member merge",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/routes.ts",
+      "coverage": ["object-members", "order-sensitive-member-regions", "negative-unsafe-case"],
+      "safeMerge": {
+        "mode": "members",
+        "policy": {
+          "unorderedRegions": [
+            { "kind": "object", "name": "routes", "regionKind": "route", "order": "non-semantic" }
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "rejected",
+        "safeMergeStatus": "rejected",
+        "reasonCodes": [
+          "order-sensitive-region-kind:route",
+          "object-region-kind-not-safe-listed"
+        ],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "export const routes = {",
+        "  home: '/',",
+        "};",
+        ""
+      ],
+      "workerLines": [
+        "export const routes = {",
+        "  home: '/',",
+        "  admin: '/admin',",
+        "};",
+        ""
+      ],
+      "headLines": [
+        "export const routes = {",
+        "  home: '/',",
+        "  docs: '/docs',",
+        "};",
         ""
       ]
     }

@@ -48,16 +48,53 @@ assert.equal(accepted.summary.importSpecifierAdditions, 2);
 assert.equal(accepted.summary.topLevelDeclarationAdditions, 1);
 assert.equal(accepted.gates.every((gate) => gate.status === 'passed'), true);
 assert.equal(accepted.mergedSourceText, [
-  "import { readFile, writeFile, stat } from 'node:fs';",
+  "import { readFile, stat, writeFile } from 'node:fs';",
   'export function stable() {',
   '  return readFile;',
   '}',
+  'export const headOnly = 1;',
   'export function workerOnly() {',
   '  return writeFile;',
   '}',
-  'export const headOnly = 1;',
   ''
 ].join('\n'));
+
+const repeatedAccepted = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_repeated_application_without_duplication',
+  language: 'typescript',
+  sourcePath: 'src/example.ts',
+  baseSourceText: acceptedBase,
+  workerSourceText: acceptedWorker,
+  headSourceText: accepted.mergedSourceText
+});
+
+assertBlocked(repeatedAccepted, JsTsSafeMergeConflictCodes.duplicateName, JsTsSafeMergeGateIds.uniqueNames);
+
+const deterministicSpecifierOrder = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_orders_simultaneous_import_specifier_additions',
+  baseSourceText: "import { gamma } from 'pkg';\nexport const stable = gamma;\n",
+  workerSourceText: "import { gamma, zeta } from 'pkg';\nexport const stable = gamma;\n",
+  headSourceText: "import { gamma, alpha } from 'pkg';\nexport const stable = gamma;\n"
+});
+
+assert.equal(deterministicSpecifierOrder.status, 'merged');
+assert.equal(
+  deterministicSpecifierOrder.mergedSourceText,
+  "import { gamma, alpha, zeta } from 'pkg';\nexport const stable = gamma;\n"
+);
+
+const deterministicDeclarationOrder = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_orders_same_anchor_declaration_additions',
+  baseSourceText: 'export const stable = 1;\n',
+  workerSourceText: 'export const stable = 1;\nexport const zeta = 1;\n',
+  headSourceText: 'export const stable = 1;\nexport const alpha = 1;\n'
+});
+
+assert.equal(deterministicDeclarationOrder.status, 'merged');
+assert.equal(
+  deterministicDeclarationOrder.mergedSourceText,
+  'export const stable = 1;\nexport const alpha = 1;\nexport const zeta = 1;\n'
+);
 
 const duplicateDeclaration = safeMergeJsTsImportsAndDeclarations({
   id: 'js_ts_safe_merge_rejects_duplicate_declarations',
@@ -201,8 +238,9 @@ assertBlocked(
 );
 
 function assertBlocked(result, code, gateId) {
-  assert.equal(result.status, 'blocked', code);
-  assert.equal(result.admission.reviewRequired, true, code);
-  assert.equal(result.conflicts.some((conflict) => conflict.code === code), true, code);
-  assert.equal(result.gates.some((gate) => gate.id === gateId && gate.status === 'blocked'), true, gateId);
+  assert.equal(result.status, 'blocked', `${code}: status`);
+  assert.equal(result.admission.reviewRequired, true, `${code}: review required`);
+  assert.equal(result.admission.reasonCodes.includes(code), true, `${code}: reasons ${JSON.stringify(result.admission.reasonCodes)}`);
+  assert.equal(result.conflicts.some((conflict) => conflict.code === code), true, `${code}: conflicts ${JSON.stringify(result.conflicts)}`);
+  assert.equal(result.gates.some((gate) => gate.id === gateId && gate.status === 'blocked'), true, `${gateId}: gates ${JSON.stringify(result.gates)}`);
 }

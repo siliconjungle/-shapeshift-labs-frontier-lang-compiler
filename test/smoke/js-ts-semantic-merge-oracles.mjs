@@ -14,12 +14,17 @@ const fixturesById = new Map(corpus.fixtures.map((fixture) => [fixture.id, fixtu
 
 for (const coverage of [
   'imports',
+  'import-specifier-order',
   'exports',
   'conflicting-exports',
   'interfaces',
   'type-aliases',
   'type-interface-members',
   'object-members',
+  'member-duplicate-keys',
+  'order-sensitive-member-regions',
+  'source-ledger-spans',
+  'computed-keys',
   'decorators',
   'overloads',
   'tsx-jsx-text',
@@ -52,6 +57,25 @@ assertCorpusFixture('decorator-stale-malformed-conflicts', 'rejected', [
 ]);
 assertCorpusFixture('comments-trivia-source-ledger', 'accepted');
 assertCorpusFixture('generated-source-map-boundary', 'rejected', ['generated-source-boundary', 'source-map-boundary']);
+assertCorpusFixture('unsafe-object-same-member-conflict', 'rejected', ['head-anchor-changed-since-base']);
+assertCorpusFixture('unsafe-control-flow-conflict', 'rejected', ['head-anchor-changed-since-base']);
+assertCorpusFixture('unsafe-delete-modify-conflict', 'rejected', ['head-anchor-changed-since-base']);
+assertCorpusFixture('safe-import-declaration-additions', 'accepted');
+assertCorpusFixture('unsafe-import-specifier-reorder', 'rejected', ['import-specifier-reordered']);
+assertCorpusFixture('unsafe-missing-source-ledger-span', 'rejected', ['missing-source-ledger-span']);
+assertCorpusFixture('unsafe-computed-key-declaration', 'rejected', ['computed-key']);
+assertCorpusFixture('unsafe-object-duplicate-member-key', 'rejected', ['duplicate-added-key:flag:object:config']);
+assertCorpusFixture('unsafe-order-sensitive-member-region', 'rejected', [
+  'order-sensitive-region-kind:route',
+  'object-region-kind-not-safe-listed'
+]);
+
+assertSafeMergeCorpusFixture('safe-import-declaration-additions');
+assertSafeMergeCorpusFixture('unsafe-import-specifier-reorder');
+assertSafeMergeCorpusFixture('unsafe-missing-source-ledger-span');
+assertSafeMergeCorpusFixture('unsafe-computed-key-declaration');
+assertSafeMergeCorpusFixture('unsafe-object-duplicate-member-key');
+assertSafeMergeCorpusFixture('unsafe-order-sensitive-member-region');
 
 const independentImportsExports = safeMergeJsTsImportsAndDeclarations({
   id: 'oracle_safe_independent_imports_exports',
@@ -200,14 +224,73 @@ function assertCorpusFixture(id, outcome, reasonCodes = []) {
     assert.equal(fixture.coverage.includes('negative-unsafe-case'), true, `${id}: unsafe coverage`);
   }
   for (const reasonCode of reasonCodes) {
-    assert.equal((fixture.expected.reasonCodes ?? []).includes(reasonCode), true, `${id}: missing ${reasonCode}`);
+    assert.equal(
+      (fixture.expected.reasonCodes ?? []).includes(reasonCode),
+      true,
+      `${id}: missing ${reasonCode}; expected ${JSON.stringify(fixture.expected.reasonCodes ?? [])}`
+    );
   }
 }
 
+function assertSafeMergeCorpusFixture(id) {
+  const fixture = fixturesById.get(id);
+  assert.ok(fixture, `missing fixture ${id}`);
+  assert.equal(fixture.kind, 'safe-merge', `${id}: safe-merge fixture kind`);
+  const baseSourceText = sourceFromLines(fixture, 'baseLines');
+  const workerSourceText = sourceFromLines(fixture, 'workerLines');
+  const headSourceText = sourceFromLines(fixture, 'headLines');
+
+  if (fixture.safeMerge.mode === 'imports-declarations') {
+    const result = safeMergeJsTsImportsAndDeclarations({
+      id: `oracle_fixture_${id}`,
+      language: fixture.language,
+      sourcePath: fixture.sourcePath,
+      expectedSourceHash: fixture.safeMerge.expectedSourceHash,
+      currentSourceHash: fixture.safeMerge.currentSourceHash,
+      requireSourceLedgerSpans: fixture.safeMerge.requireSourceLedgerSpans,
+      sourceLedgers: fixture.safeMerge.sourceLedgers,
+      baseSourceText,
+      workerSourceText,
+      headSourceText
+    });
+    assert.equal(result.status, fixture.expected.safeMergeStatus, `${id}: safe merge status`);
+    assert.equal(result.admission.status, fixture.expected.admissionStatus, `${id}: safe merge admission`);
+    for (const reasonCode of fixture.expected.reasonCodes ?? []) {
+      assert.equal(result.admission.reasonCodes.includes(reasonCode), true, `${id}: missing reason ${reasonCode}; actual ${JSON.stringify(result.admission.reasonCodes)}`);
+    }
+    for (const gateId of fixture.expected.blockedGateIds ?? []) {
+      assert.equal(result.gates.some((gate) => gate.id === gateId && gate.status === 'blocked'), true, `${id}: missing blocked gate ${gateId}; actual ${JSON.stringify(result.gates)}`);
+    }
+    return;
+  }
+
+  if (fixture.safeMerge.mode === 'members') {
+    const result = mergeJsTsSafeMemberAdditions({
+      baseSourceText,
+      workerSourceText,
+      headSourceText,
+      policy: fixture.safeMerge.policy
+    });
+    assert.equal(result.status, fixture.expected.safeMergeStatus, `${id}: member merge status`);
+    for (const reasonCode of fixture.expected.reasonCodes ?? []) {
+      assert.equal(result.reasonCodes.includes(reasonCode), true, `${id}: missing member reason ${reasonCode}; actual ${JSON.stringify(result.reasonCodes)}`);
+    }
+    return;
+  }
+
+  assert.fail(`${id}: unknown safe merge mode ${fixture.safeMerge.mode}`);
+}
+
 function assertSafeMergeBlocked(result, code, gateId) {
-  assert.equal(result.status, 'blocked', code);
-  assert.equal(result.admission.reviewRequired, true, code);
-  assert.equal(result.admission.reasonCodes.includes(code), true, code);
-  assert.equal(result.conflicts.some((conflict) => conflict.code === code), true, code);
-  assert.equal(result.gates.some((gate) => gate.id === gateId && gate.status === 'blocked'), true, gateId);
+  assert.equal(result.status, 'blocked', `${code}: status`);
+  assert.equal(result.admission.reviewRequired, true, `${code}: review required`);
+  assert.equal(result.admission.reasonCodes.includes(code), true, `${code}: reasons ${JSON.stringify(result.admission.reasonCodes)}`);
+  assert.equal(result.conflicts.some((conflict) => conflict.code === code), true, `${code}: conflicts ${JSON.stringify(result.conflicts)}`);
+  assert.equal(result.gates.some((gate) => gate.id === gateId && gate.status === 'blocked'), true, `${gateId}: gates ${JSON.stringify(result.gates)}`);
+}
+
+function sourceFromLines(fixture, field) {
+  const lines = fixture[field];
+  assert.equal(Array.isArray(lines), true, `${fixture.id}: ${field} must be an array`);
+  return lines.join('\n');
 }

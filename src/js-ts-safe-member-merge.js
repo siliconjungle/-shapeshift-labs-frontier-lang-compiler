@@ -7,6 +7,7 @@ import {
   parseMembers,
   uniqueStrings
 } from './js-ts-semantic-merge-parse.js';
+import { mergeResult } from './js-ts-safe-member-merge-result.js';
 
 const NonSemanticRegionKinds = new Set(['property', 'type', 'config', 'content']);
 const OrderSensitiveRegionKinds = new Set(['body', 'call', 'controlFlow', 'effect', 'import', 'mutation', 'route']);
@@ -44,9 +45,10 @@ function mergeJsTsSafeMemberAdditions(input = {}) {
     if (canonicalHead !== baseSourceText) reasonCodes.push('non-policy-source-change:head');
   }
   const uniqueReasons = uniqueStrings(reasonCodes);
-  if (uniqueReasons.length) return mergeResult('rejected', undefined, uniqueReasons, preparedRegions, input);
+  const explicitPolicy = policyRegions.length > 0;
+  if (uniqueReasons.length) return mergeResult('rejected', undefined, uniqueReasons, preparedRegions, input, explicitPolicy);
   const sourceText = applyMemberAdditions(headSourceText, preparedRegions);
-  return mergeResult('merged', sourceText, [], preparedRegions, input);
+  return mergeResult('merged', sourceText, [], preparedRegions, input, explicitPolicy);
 }
 
 function normalizePolicyRegions(policy) {
@@ -63,7 +65,7 @@ function normalizePolicyRegions(policy) {
 function validatePolicyRegion(region) {
   const reasonCodes = [];
   const kind = normalizeKind(region?.kind);
-  if (!kind || !['interface', 'type', 'object'].includes(kind)) reasonCodes.push('unsupported-region-kind');
+  if (!kind || !['interface', 'type', 'class', 'object'].includes(kind)) reasonCodes.push('unsupported-region-kind');
   if (!region?.name || typeof region.name !== 'string') reasonCodes.push('missing-region-name');
   if (!regionDeclaresNonSemanticOrder(region)) reasonCodes.push('region-not-declared-non-semantic');
   const regionKind = region?.regionKind;
@@ -106,8 +108,7 @@ function prepareRegion(input) {
   reasonCodes.push(...existingMemberReasons(input.region, 'head', baseMembers.members, headMembers.members, headByKey));
   const workerAddedKeys = workerMembers.members.map((member) => member.key).filter((key) => !baseByKey.has(key));
   const headAddedKeys = headMembers.members.map((member) => member.key).filter((key) => !baseByKey.has(key));
-  const duplicateAddedKeys = workerAddedKeys.filter((key) => headByKey.has(key));
-  for (const key of duplicateAddedKeys) reasonCodes.push(regionReason(input.region, `duplicate-added-key:${key}`));
+  reasonCodes.push(...duplicateAddedReasons(input.region, workerAddedKeys, workerByKey, headByKey));
   if (reasonCodes.length) return { ok: false, reasonCodes };
   return {
     ok: true,
@@ -134,13 +135,21 @@ function regionParseReasons(region, side, parsed) {
 }
 
 function duplicateReasons(region, side, members) {
-  const seen = new Set();
-  const duplicates = new Set();
+  const seen = new Map();
+  const duplicateGroups = new Map();
   for (const member of members) {
-    if (seen.has(member.key)) duplicates.add(member.key);
-    seen.add(member.key);
+    const group = seen.get(member.key);
+    if (group) {
+      group.push(member);
+      duplicateGroups.set(member.key, group);
+    } else {
+      seen.set(member.key, [member]);
+    }
   }
-  return [...duplicates].map((key) => regionReason(region, `duplicate-key:${side}:${key}`));
+  return [...duplicateGroups].map(([key, group]) => {
+    const reason = group.some(isOverloadLikeMember) ? `overload-collision:${side}:${key}` : `duplicate-key:${side}:${key}`;
+    return regionReason(region, reason);
+  });
 }
 
 function existingMemberReasons(region, side, baseMembers, sideMembers, sideByKey) {
@@ -163,39 +172,28 @@ function existingMemberReasons(region, side, baseMembers, sideMembers, sideByKey
   return reasonCodes;
 }
 
+function duplicateAddedReasons(region, workerAddedKeys, workerByKey, headByKey) {
+  const duplicateAddedKeys = workerAddedKeys.filter((key) => headByKey.has(key));
+  return duplicateAddedKeys.map((key) => {
+    const workerMember = workerByKey.get(key);
+    const headMember = headByKey.get(key);
+    const reason = isOverloadLikeMember(workerMember) || isOverloadLikeMember(headMember)
+      ? `overload-collision:worker-head:${key}`
+      : `duplicate-added-key:${key}`;
+    return regionReason(region, reason);
+  });
+}
+
+function isOverloadLikeMember(member) {
+  return member?.memberKind === 'method' || member?.memberKind === 'constructor';
+}
+
 function membersByKey(members) {
   return new Map(members.map((member) => [member.key, member]));
 }
 
 function regionReason(region, reason) {
   return `${reason}:${normalizeKind(region.kind)}:${region.name}`;
-}
-
-function mergeResult(status, sourceText, reasonCodes, regions, input) {
-  const mergedRegions = regions.map((region) => ({
-    kind: region.kind,
-    name: region.name,
-    regionKind: region.policy.regionKind,
-    workerAddedKeys: region.workerAddedKeys,
-    headAddedKeys: region.headAddedKeys
-  }));
-  return {
-    kind: 'frontier.lang.jsTsSafeMemberMerge',
-    version: 1,
-    status,
-    sourceText,
-    reasonCodes,
-    mergedRegions,
-    summary: {
-      regions: mergedRegions.length,
-      workerAdditions: mergedRegions.reduce((total, region) => total + region.workerAddedKeys.length, 0),
-      headAdditions: mergedRegions.reduce((total, region) => total + region.headAddedKeys.length, 0),
-      appliedAdditions: status === 'merged' ? mergedRegions.reduce((total, region) => total + region.workerAddedKeys.length, 0) : 0
-    },
-    metadata: {
-      explicitPolicy: normalizePolicyRegions(input.policy ?? input.mergePolicy ?? input).length > 0
-    }
-  };
 }
 
 export {
