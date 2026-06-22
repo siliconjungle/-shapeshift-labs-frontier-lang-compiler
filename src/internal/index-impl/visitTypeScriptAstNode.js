@@ -33,6 +33,7 @@ export function visitTypeScriptAstNode(node, sourceFile, context, propertyPath, 
     fields: primitiveTypeScriptFields(node, kind),
     children,
     metadata: {
+      ...declaration?.metadata,
       astFormat: context.options.astFormat,
       propertyPath,
       pos: numberOrUndefined(node.pos),

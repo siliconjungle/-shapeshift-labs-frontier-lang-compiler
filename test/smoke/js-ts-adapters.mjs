@@ -178,14 +178,34 @@ export const tsMock = {
     for (const child of node.children ?? []) visit(child);
   }
 };
+const tsSymbolCalls = [];
+const tsTypeCheckerMock = {
+  getSymbolAtLocation(node) {
+    const name = String(node?.escapedText ?? node?.text ?? node?.name ?? 'unknown');
+    tsSymbolCalls.push(name);
+    return { name, escapedName: name, flags: 7, declarations: [node] };
+  },
+  getFullyQualifiedName(symbol) {
+    return `"project".${symbol.name}`;
+  }
+};
 const tsFixtureSource = 'export function fromTs(): boolean { return true; }\n';
-export const tsAdapterImport = await runNativeImporterAdapter(createTypeScriptCompilerNativeImporterAdapter({ typescript: tsMock }), {
+export const tsAdapterImport = await runNativeImporterAdapter(createTypeScriptCompilerNativeImporterAdapter({
+  typescript: tsMock,
+  typeChecker: tsTypeCheckerMock
+}), {
   sourcePath: 'src/ts.ts',
   sourceText: tsFixtureSource
 });
 assert.equal(tsAdapterImport.adapter.parser, 'typescript-compiler-api');
 assert.equal(tsCreateSourceFileCalls.find((call) => call.fileName === 'src/ts.ts')?.scriptKind, tsMock.ScriptKind.TS);
-assert.equal(tsAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromTs'), true);
+const fromTsSymbol = tsAdapterImport.semanticIndex.symbols.find((symbol) => symbol.name === 'fromTs');
+assert.equal(Boolean(fromTsSymbol), true);
+assert.equal(fromTsSymbol.id.includes('compiler'), true);
+assert.equal(fromTsSymbol.metadata.compilerSymbol.fullyQualifiedName, '"project".fromTs');
+assert.equal(fromTsSymbol.metadata.compilerSymbol.flags, 7);
+assert.equal(tsSymbolCalls.includes('fromTs'), true);
+assert.equal(tsAdapterImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId === fromTsSymbol.id), true);
 const scannedTsFixtureImport = importNativeSource({
   language: 'typescript',
   sourcePath: 'src/ts.ts',

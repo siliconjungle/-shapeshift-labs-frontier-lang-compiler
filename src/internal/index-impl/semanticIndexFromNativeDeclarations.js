@@ -35,6 +35,7 @@ export function semanticIndexFromNativeDeclarations(declarations, input, options
     };
     declaration.nativeNode.metadata = {
       ...declaration.nativeNode.metadata,
+      ...declaration.metadata,
       ownershipRegionId: ownershipRegion.id,
       ownershipRegionKey: ownershipRegion.key,
       ownershipRegionKind: ownershipRegion.regionKind,
@@ -47,7 +48,7 @@ export function semanticIndexFromNativeDeclarations(declarations, input, options
       kind: declaration.symbolKind,
       language: input.language,
       nativeAstNodeId: declaration.nativeNode.id,
-      signatureHash: hashSemanticValue([input.language, declaration.nativeNode.kind, declaration.name, declaration.nativeNode.fields ?? {}]),
+      signatureHash: declaration.signatureHash ?? hashSemanticValue([input.language, declaration.nativeNode.kind, declaration.name, declaration.nativeNode.fields ?? {}]),
       definitionSpan: declaration.nativeNode.span,
       metadata: {
         ...declaration.nativeNode.metadata,

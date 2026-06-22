@@ -76,6 +76,9 @@ export interface TypeScriptCompilerNativeImporterAdapterOptions {
   readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
   readonly typescript?: unknown;
   readonly ts?: unknown;
+  readonly program?: { readonly getTypeChecker?: () => unknown } | unknown;
+  readonly typeChecker?: unknown;
+  readonly checker?: unknown;
   readonly sourceFile?: unknown;
   readonly createSourceFile?: (input: NativeImporterAdapterParseInput, typescript?: unknown) => unknown;
   readonly scriptTarget?: unknown;

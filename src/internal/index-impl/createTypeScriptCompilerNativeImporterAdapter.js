@@ -25,6 +25,8 @@ export function createTypeScriptCompilerNativeImporterAdapter(options = {}) {
     diagnostics: options.diagnostics,
     parse(input) {
       const ts = options.typescript ?? options.ts ?? input.options?.typescript ?? input.options?.ts;
+      const program = options.program ?? input.options?.program;
+      const typeChecker = options.typeChecker ?? options.checker ?? input.options?.typeChecker ?? input.options?.checker ?? program?.getTypeChecker?.();
       const sourceFile = input.options?.sourceFile ?? input.options?.ast ?? options.sourceFile ?? createTypeScriptSourceFile(ts, input, options);
       if (!sourceFile) {
         return missingInjectedParserResult(input, {
@@ -37,6 +39,8 @@ export function createTypeScriptCompilerNativeImporterAdapter(options = {}) {
         parser: options.parser ?? 'typescript-compiler-api',
         astFormat: 'typescript-compiler-api',
         ts,
+        program,
+        typeChecker,
         maxNodes: options.maxNodes,
         includeTokens: options.includeTokens
       });

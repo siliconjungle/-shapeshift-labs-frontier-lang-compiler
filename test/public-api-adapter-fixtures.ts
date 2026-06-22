@@ -2,6 +2,7 @@ import { FrontierCompileTargets, NativeImportLanguageProfiles, NativeImportLossK
 import { LanguageAdapterPackageContracts, createLanguageAdapterPackageContract, getLanguageAdapterPackageContract, queryLanguageAdapterPackageContracts, summarizeLanguageAdapterPackageContracts } from '../src/index.js';
 import type { CapabilityResolution, CompileNativeSourceOptions, CreateNativeSourcePreservationOptions, ExternalSemanticIndexFormat, ExternalSemanticIndexImportResult, FrontierCompileOptions, FrontierCompileResult, FrontierCompileTarget, FrontierTargetAst, FrontierTargetDocumentSourceMapResult, FrontierTargetSourceMapResult, NativeImportContractSource, NativeImportFeatureEvidenceIssue, NativeImportFeatureEvidencePolicy, NativeImportFeatureEvidenceRisk, NativeImportFeatureEvidenceSummary, NativeImportCoverageMatrix, NativeImportCoverageMatrixOptions, NativeImportKnownLossKind, NativeImportLanguageProfile, NativeImportLossSummary, NativeParserAstFormatMatrix, NativeParserAstFormatMatrixOptions, NativeParserAstFormatProfile, NativeParserFeatureCategory, NativeParserFeatureCoverageStatus, NativeParserFeatureMatrix, NativeParserFeatureMatrixOptions, NativeParserFeatureMatrixQueryResult, NativeImportReadinessClassification, NativeImportRegionTaxonomyKind, NativeImportResultContract, NativeImportRoundtripReadinessClassification, NativeImportRoundtripReadinessStatus, NativeImportTaxonomyKind, NativeImporterAdapter, NativeImporterAdapterCoverageAggregate, NativeImporterAdapterCoverageCapabilityEvidence, NativeImporterAdapterDiagnostic, NativeImporterAdapterImportResult, NativeImporterAdapterParseInput, NativeImporterAdapterParseResult, NativeTargetProjectionAdapter, NativeTargetProjectionAdapterInput, NativeTargetProjectionAdapterResult, NativeTargetProjectionResult, NativeProjectImportResult, NativeSourceChangeSet, NativeSourceChangeProjectionEndpoint, NativeSourceChangeProjectionMetadata, NativeSourceChangeProjectionSourceMapLink, NativeSourceChangeProjectionSummary, NativeSourceChangeSymbol, NativeSourceCompileOutputMode, NativeSourceCompileResult, NativeSourceImportResult, NativeSourcePreservation, NativeSourceProjectionResult, ProjectNativeImportToSourceOptions, ProjectionTargetLossClass, ProjectionTargetLossMatrix, ProjectionTargetLossMatrixOptions, CreateSemanticSliceOptions, SemanticSlice, SemanticSliceInput, SemanticSliceSourceFile, SemanticSliceSourceMapLink, SemanticSliceTestResult, TestSemanticSliceOptions, UniversalCapabilityMatrix, UniversalCapabilityMatrixOptions, ClangAstNativeImporterAdapterOptions, CSharpRoslynNativeImporterAdapterOptions, GoAstNativeImporterAdapterOptions, JavaAstNativeImporterAdapterOptions, KotlinPsiNativeImporterAdapterOptions, RustSynNativeImporterAdapterOptions, SwiftSyntaxNativeImporterAdapterOptions, SemanticImportSidecar, SemanticImportSidecarParadigmSemanticsSummary, SemanticImportSidecarProofSpecSummary, SemanticImportSidecarSourcePreservationRecord, SemanticImportRegionTaxonomySummary } from '../src/index.js';
 import type { LanguageAdapterPackageContract, LanguageAdapterPackageContractQuery, LanguageAdapterPackageContractSummary, LanguageAdapterPackageReleaseReadinessStatus } from '../src/index.js';
+import type { TypeScriptCompilerNativeImporterAdapterOptions } from '../src/index.js';
 
 const adapterFixtureSource = `
 module AdapterApiTypes @id("mod_adapter_api_types")
@@ -35,6 +36,11 @@ const targetProjectionAdapter: NativeTargetProjectionAdapter = {
 const estreeAdapter: NativeImporterAdapter = createEstreeNativeImporterAdapter();
 const babelAdapter: NativeImporterAdapter = createBabelNativeImporterAdapter();
 const tsAdapter: NativeImporterAdapter = createTypeScriptCompilerNativeImporterAdapter();
+const tsCheckerAdapterOptions: TypeScriptCompilerNativeImporterAdapterOptions = {
+  program: { getTypeChecker: () => ({}) },
+  typeChecker: {},
+  checker: {}
+};
 const pythonAstAdapter: NativeImporterAdapter = createPythonAstNativeImporterAdapter();
 const rustSynAdapter: NativeImporterAdapter = createRustSynNativeImporterAdapter();
 const clangAstAdapter: NativeImporterAdapter = createClangAstNativeImporterAdapter();
@@ -201,4 +207,5 @@ const universalJson: string = writeUniversalAstJson(universalAst);
 const parsedUniversalAst = readUniversalAstJson(universalJson);
 
 void targetProjectionAdapter;
+void tsCheckerAdapterOptions;
 void parsedUniversalAst;
