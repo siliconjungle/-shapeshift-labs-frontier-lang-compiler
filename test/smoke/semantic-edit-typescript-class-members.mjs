@@ -146,6 +146,39 @@ const splitReceiverReplay = replaySemanticEditProjection({
 assert.equal(splitReceiverReplay.status, 'accepted-clean');
 assert.equal(splitReceiverReplay.outputSourceText, splitReceiverExpectedSource);
 
+const memberContainerBaseSource = 'export class Queue {\n  push(value: string) {\n    return value;\n  }\n}\n';
+const memberContainerWorkerSource = 'export class Queue {\n  push(value: string) {\n    return value;\n  }\n  restore(value: string) {\n    return value.trim();\n  }\n}\n';
+const memberContainerScript = createSemanticEditScript({
+  id: 'semantic_edit_typescript_member_container_addition',
+  language: 'typescript',
+  sourcePath: 'src/queue.ts',
+  baseSourceText: memberContainerBaseSource,
+  workerSourceText: memberContainerWorkerSource,
+  headSourceText: memberContainerBaseSource,
+  generatedAt: 223
+});
+assert.equal(memberContainerScript.admission.status, 'auto-merge-candidate');
+assert.equal(memberContainerScript.operations.some((operation) => String(operation.kind).startsWith('add')), true);
+
+const memberContainerProjection = projectSemanticEditScriptToSource({
+  script: memberContainerScript,
+  workerSourceText: memberContainerWorkerSource,
+  headSourceText: memberContainerBaseSource
+});
+assert.equal(memberContainerProjection.status, 'projected');
+assert.equal(memberContainerProjection.sourceText, memberContainerWorkerSource);
+assert.equal(memberContainerProjection.edits.some((edit) => edit.editKind === 'insert' && edit.replacementText.includes('restore')), true);
+
+const memberContainerReplay = replaySemanticEditProjection({
+  projection: memberContainerProjection,
+  currentSourceText: memberContainerBaseSource
+});
+assert.equal(memberContainerReplay.status, 'accepted-clean');
+assert.equal(memberContainerReplay.outputSourceText, memberContainerWorkerSource);
+assert.equal(memberContainerReplay.admission.action, 'apply');
+assert.equal(memberContainerReplay.admission.autoApplyCandidate, true);
+assert.equal(memberContainerReplay.summary.applied, 1);
+
 const jsImport = importNativeSource({
   language: 'javascript',
   sourcePath: 'src/store.js',

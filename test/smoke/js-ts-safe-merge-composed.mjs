@@ -76,6 +76,16 @@ assert.equal(composed.mergedSourceText, [
   '}',
   ''
 ].join('\n'));
+assert.equal(composed.semanticArtifacts.status, 'verified');
+assert.equal(composed.semanticArtifacts.summary.operations, 3);
+assert.equal(composed.semanticArtifacts.projection.sourceText, composed.mergedSourceText);
+assert.equal(composed.semanticArtifacts.replay.status, 'accepted-clean');
+assert.equal(composed.semanticArtifacts.replay.outputSourceText, composed.mergedSourceText);
+assert.equal(composed.semanticArtifacts.alreadyAppliedReplay.status, 'already-applied');
+assert.equal(
+  composed.semanticArtifacts.projection.edits.some((edit) => edit.kind === 'jsTsReplaceDeclaration'),
+  true
+);
 
 const composedMemberConflict = safeMergeJsTsSource({
   id: 'js_ts_safe_merge_composed_member_conflict_blocks_partial_top_level_output',

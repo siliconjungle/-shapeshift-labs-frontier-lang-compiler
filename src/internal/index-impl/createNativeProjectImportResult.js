@@ -4,7 +4,15 @@ export function createNativeProjectImportResult(input, imports) {
   const idPart = idFragment(input.id ?? input.projectRoot ?? 'native_project');
   const nodes = {};
   const rootIds = [];
-  const semanticIndex = mergeSemanticIndexes(imports, input, idPart);
+  const mergedSemanticIndex = mergeSemanticIndexes(imports, input, idPart);
+  const projectSymbolGraph = createProjectSymbolGraphSummary(mergedSemanticIndex, imports, input);
+  const semanticIndex = mergedSemanticIndex ? {
+    ...mergedSemanticIndex,
+    metadata: {
+      ...mergedSemanticIndex.metadata,
+      projectSymbolGraph
+    }
+  } : mergedSemanticIndex;
   const nativeSources = [];
   const sourceMaps = [];
   const losses = [];
@@ -43,6 +51,7 @@ export function createNativeProjectImportResult(input, imports) {
       sourceCount: imports.length,
       nativeImportLossSummary,
       sourcePreservationSummary,
+      projectSymbolGraph,
       ...input.documentMetadata
     }
   });
@@ -60,6 +69,7 @@ export function createNativeProjectImportResult(input, imports) {
       sourceCount: imports.length,
       nativeImportLossSummary,
       sourcePreservationSummary,
+      projectSymbolGraph,
       ...input.universalAstMetadata
     }
   });
@@ -75,7 +85,8 @@ export function createNativeProjectImportResult(input, imports) {
       sourceMapIds: sourceMaps.map((sourceMap) => sourceMap.id),
       sourceCount: imports.length,
       nativeImportLossSummary,
-      sourcePreservationSummary
+      sourcePreservationSummary,
+      projectSymbolGraph
     }
   });
   const projectResult = {
@@ -94,11 +105,13 @@ export function createNativeProjectImportResult(input, imports) {
     losses: uniqueLosses,
     evidence: uniqueEvidence,
     mergeCandidates,
+    projectSymbolGraph,
     metadata: {
       sourceCount: imports.length,
       sourcePaths: imports.map((result) => result.sourcePath).filter(Boolean),
       nativeImportLossSummary,
       sourcePreservationSummary,
+      projectSymbolGraph,
       ...input.metadata
     }
   };
@@ -120,7 +133,168 @@ export function createNativeProjectImportResult(input, imports) {
       readinessReasons: importResultContract.readiness.reasons,
       regionSummary: importResultContract.regions,
       sourceMapSummary: importResultContract.sourceMaps,
-      adapterCoverageSummary: importResultContract.adapterCoverage
+      adapterCoverageSummary: importResultContract.adapterCoverage,
+      projectSymbolGraph
     }
   };
+}
+
+const PROJECT_SYMBOL_GRAPH_REMAINING_FIELDS = Object.freeze([
+  'moduleEdges[].resolvedModulePath',
+  'moduleEdges[].targetDocumentId',
+  'moduleEdges[].resolvedTargetSymbolId',
+  'moduleEdges[].resolutionKind',
+  'moduleEdges[].packageName',
+  'moduleEdges[].packageExportCondition',
+  'reExportIdentities[].originSymbolId',
+  'reExportIdentities[].exportedSymbolId',
+  'reExportIdentities[].localSymbolId',
+  'publicContractRegions[].apiSurfaceKind',
+  'publicContractRegions[].signatureHash',
+  'publicContractRegions[].contractHash'
+]);
+
+function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
+  const documents = semanticIndex?.documents ?? [];
+  const symbolsById = new Map((semanticIndex?.symbols ?? []).map((symbol) => [symbol.id, symbol]));
+  const documentsById = new Map(documents.map((document) => [document.id, document]));
+  const facts = semanticIndex?.facts ?? [];
+  const moduleEdgeFacts = facts.filter((fact) => fact.predicate === 'moduleEdge');
+  const moduleEdgeByRelation = new Map(moduleEdgeFacts.map((fact) => [fact.subjectId, fact]));
+  const relations = semanticIndex?.relations ?? [];
+  const importEdges = relations
+    .filter((relation) => relation.predicate === 'imports')
+    .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById));
+  const exportEdges = relations
+    .filter((relation) => relation.predicate === 'exports')
+    .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById));
+  const reExportIdentities = uniqueRecords([
+    ...facts
+      .filter((fact) => fact.predicate === 'reExportIdentity' && fact.value)
+      .map((fact) => ({ ...objectValue(fact.value), factId: fact.id })),
+    ...exportEdges
+      .filter((edge) => edge.isReExport)
+      .map((edge) => compactRecord({
+        id: `reexport_${idFragment(edge.id)}`,
+        sourceDocumentId: edge.sourceDocumentId,
+        sourcePath: edge.sourcePath,
+        sourceHash: edge.sourceHash,
+        moduleSpecifier: edge.moduleSpecifier,
+        symbolId: edge.targetSymbolId,
+        relationId: edge.id,
+        publicContract: edge.publicContract
+      }))
+  ]);
+  const publicContractRegions = uniqueRecords(facts
+    .filter((fact) => fact.predicate === 'publicContractRegion' && fact.value)
+    .map((fact) => ({ ...objectValue(fact.value), factId: fact.id, symbolId: fact.subjectId })));
+  const fileHashes = uniqueRecords([
+    ...documents.map((document) => fileHashRecord(document)),
+    ...facts
+      .filter((fact) => fact.predicate === 'fileHash' && fact.value)
+      .map((fact) => ({ ...objectValue(fact.value), id: `file_hash_${idFragment(fact.subjectId)}`, factId: fact.id, documentId: fact.subjectId }))
+  ].filter(Boolean));
+  return {
+    kind: 'frontier.lang.projectSymbolGraph',
+    version: 1,
+    projectRoot: input.projectRoot,
+    sourceCount: imports.length,
+    documentCount: documents.length,
+    symbolCount: semanticIndex?.symbols?.length ?? 0,
+    occurrenceCount: semanticIndex?.occurrences?.length ?? 0,
+    relationCount: relations.length,
+    factCount: facts.length,
+    fileHashes,
+    importEdges,
+    exportEdges,
+    reExportIdentities,
+    publicContractRegions,
+    remainingFields: PROJECT_SYMBOL_GRAPH_REMAINING_FIELDS
+  };
+}
+
+function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById) {
+  const fact = moduleEdgeByRelation.get(relation.id);
+  const value = objectValue(fact?.value);
+  const metadata = objectValue(relation.metadata);
+  const moduleEdge = objectValue(metadata.moduleEdge);
+  const symbol = symbolsById.get(relation.targetId);
+  const symbolMetadata = objectValue(symbol?.metadata);
+  const document = documentsById.get(relation.sourceId);
+  const moduleSpecifier = firstString(
+    moduleEdge.moduleSpecifier,
+    value.moduleSpecifier,
+    metadata.moduleSpecifier,
+    symbolMetadata.moduleSpecifier,
+    symbol?.kind === 'module' ? symbol.name : undefined
+  );
+  return compactRecord({
+    id: relation.id,
+    sourceDocumentId: relation.sourceId,
+    targetSymbolId: relation.targetId,
+    predicate: relation.predicate,
+    edgeKind: firstString(moduleEdge.edgeKind, value.edgeKind, relation.predicate === 'imports' ? 'import' : moduleSpecifier ? 're-export' : 'export'),
+    sourcePath: document?.path,
+    sourceHash: document?.sourceHash,
+    moduleSpecifier,
+    importKind: firstString(moduleEdge.importKind, value.importKind),
+    exportKind: firstString(moduleEdge.exportKind, value.exportKind),
+    importedName: firstString(moduleEdge.importedName, value.importedName),
+    exportedName: firstString(moduleEdge.exportedName, value.exportedName),
+    localName: firstString(moduleEdge.localName, value.localName),
+    namespace: firstString(moduleEdge.namespace, value.namespace),
+    isTypeOnly: firstBoolean(moduleEdge.isTypeOnly, value.isTypeOnly),
+    isReExport: firstBoolean(moduleEdge.isReExport, value.isReExport) ?? (relation.predicate === 'exports' && Boolean(moduleSpecifier)),
+    publicContract: firstBoolean(moduleEdge.publicContract, value.publicContract, metadata.publicContract),
+    evidenceIds: uniqueStrings([...(relation.evidenceIds ?? []), ...(fact?.evidenceIds ?? [])])
+  });
+}
+
+function fileHashRecord(document) {
+  if (!document?.sourceHash) return undefined;
+  const sourceHash = String(document.sourceHash);
+  const separator = sourceHash.indexOf(':');
+  return compactRecord({
+    id: `file_hash_${idFragment(document.id)}`,
+    documentId: document.id,
+    sourcePath: document.path,
+    language: document.language,
+    sourceHash,
+    algorithm: separator > 0 ? sourceHash.slice(0, separator) : undefined,
+    value: separator > 0 ? sourceHash.slice(separator + 1) : sourceHash
+  });
+}
+
+function objectValue(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function compactRecord(record) {
+  return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
+}
+
+function uniqueRecords(records) {
+  const seen = new Set();
+  const result = [];
+  for (const record of records) {
+    const key = record.id ?? record.factId ?? JSON.stringify(record);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(record);
+  }
+  return result;
+}
+
+function firstString(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && String(value)) return String(value);
+  }
+  return undefined;
+}
+
+function firstBoolean(...values) {
+  for (const value of values) {
+    if (typeof value === 'boolean') return value;
+  }
+  return undefined;
 }

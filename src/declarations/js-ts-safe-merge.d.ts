@@ -1,4 +1,5 @@
 import type { FrontierSourceLanguage } from '@shapeshift-labs/frontier-lang-kernel';
+import type { SemanticEditProjection, SemanticEditReplay, SemanticEditScript } from './semantic-edit-script.js';
 import type {
   JsTsSafeMemberMergePolicy,
   JsTsSafeMemberMergePolicyRegion
@@ -110,6 +111,40 @@ export interface JsTsSafeMergeSummary {
   readonly composedPhases?: number;
 }
 
+export interface JsTsSafeMergeSemanticArtifacts {
+  readonly kind: 'frontier.lang.jsTsSafeMergeSemanticArtifacts';
+  readonly version: 1;
+  readonly schema: 'frontier.lang.jsTsSafeMergeSemanticArtifacts.v1';
+  readonly id: string;
+  readonly hash: string;
+  readonly sourcePath?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly status: 'verified' | 'blocked' | string;
+  readonly script?: SemanticEditScript;
+  readonly projection?: SemanticEditProjection;
+  readonly replay?: SemanticEditReplay;
+  readonly alreadyAppliedReplay?: SemanticEditReplay;
+  readonly admission: {
+    readonly status: 'auto-merge-candidate' | 'blocked' | string;
+    readonly action: 'apply' | 'human-review' | string;
+    readonly reviewRequired: boolean;
+    readonly autoApplyCandidate: boolean;
+    readonly autoMergeClaim: false;
+    readonly semanticEquivalenceClaim: false;
+    readonly reasonCodes: readonly string[];
+  };
+  readonly summary: {
+    readonly operations: number;
+    readonly edits: number;
+    readonly replayStatus?: string;
+    readonly alreadyAppliedReplayStatus?: string;
+    readonly projectedSourceMatchesMerged: boolean;
+    readonly replayOutputMatchesMerged: boolean;
+  };
+  readonly evidence?: readonly unknown[];
+  readonly metadata?: Record<string, unknown>;
+}
+
 export interface JsTsSafeMergeResult {
   readonly kind: 'frontier.lang.jsTsSafeMerge';
   readonly version: 1;
@@ -124,6 +159,7 @@ export interface JsTsSafeMergeResult {
   readonly gates: readonly JsTsSafeMergeGate[];
   readonly admission: JsTsSafeMergeAdmission;
   readonly summary: JsTsSafeMergeSummary;
+  readonly semanticArtifacts?: JsTsSafeMergeSemanticArtifacts;
   readonly metadata?: Record<string, unknown>;
 }
 

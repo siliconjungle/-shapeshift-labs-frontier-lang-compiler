@@ -176,6 +176,17 @@ edit conflicts. Fixture failures include the fixture id and the actual
 reason-code or gate values so distributed swarm evidence can point at a stable
 case instead of an agent transcript.
 
+Successful `safeMergeJsTsImportsAndDeclarations` and `safeMergeJsTsSource`
+results also include `semanticArtifacts`. These artifacts convert the
+JS/TS ledger-approved head-to-merged source edits into a semantic edit script,
+projection, replay, and already-applied replay. This is intentionally different
+from asking the generic three-way edit classifier to bless every JS/TS case:
+simultaneous import specifier additions are safe only because the JS/TS ledger
+gates proved independent additions, stable anchors, and source replay. The
+artifacts keep `autoMergeClaim: false` and `semanticEquivalenceClaim: false`,
+but give coordinators machine-readable proof that the projected source matches
+the merge output and that applying the same projection again is a no-op.
+
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 
 ```js

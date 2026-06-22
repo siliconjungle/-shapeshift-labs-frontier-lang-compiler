@@ -206,6 +206,23 @@ void typedBidirectionalTargetChange;
 void typedBidirectionalTargetPortability;
 void typedBidirectionalMatchPortability;
 
+const jsTsSafeMergeWithSemanticArtifacts = compilerApi.safeMergeJsTsImportsAndDeclarations({
+  baseSourceText: 'export const stable = 1;\n',
+  workerSourceText: 'export const stable = 1;\nexport const workerOnly = 1;\n',
+  headSourceText: 'export const stable = 1;\n',
+  language: 'typescript',
+  sourcePath: 'src/example.ts'
+});
+const typedJsTsSafeMergeSemanticArtifacts: compilerApi.JsTsSafeMergeSemanticArtifacts | undefined = jsTsSafeMergeWithSemanticArtifacts.semanticArtifacts;
+typedJsTsSafeMergeSemanticArtifacts?.script satisfies compilerApi.SemanticEditScript | undefined;
+typedJsTsSafeMergeSemanticArtifacts?.projection satisfies compilerApi.SemanticEditProjection | undefined;
+typedJsTsSafeMergeSemanticArtifacts?.replay satisfies compilerApi.SemanticEditReplay | undefined;
+typedJsTsSafeMergeSemanticArtifacts?.alreadyAppliedReplay satisfies compilerApi.SemanticEditReplay | undefined;
+typedJsTsSafeMergeSemanticArtifacts?.admission.autoMergeClaim satisfies false | undefined;
+typedJsTsSafeMergeSemanticArtifacts?.admission.semanticEquivalenceClaim satisfies false | undefined;
+
+void typedJsTsSafeMergeSemanticArtifacts;
+
 const semanticLineage = compilerApi.createSemanticLineageEvent({
   eventKind: 'moved',
   from: { key: 'source#src/example.js#function#run', bodyHash: 'body_old' },

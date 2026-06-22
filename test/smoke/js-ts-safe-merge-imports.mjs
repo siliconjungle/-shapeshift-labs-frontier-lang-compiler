@@ -58,6 +58,15 @@ assert.equal(accepted.mergedSourceText, [
   '}',
   ''
 ].join('\n'));
+assert.equal(accepted.semanticArtifacts.status, 'verified');
+assert.equal(accepted.semanticArtifacts.projection.status, 'projected');
+assert.equal(accepted.semanticArtifacts.projection.sourceText, accepted.mergedSourceText);
+assert.equal(accepted.semanticArtifacts.replay.status, 'accepted-clean');
+assert.equal(accepted.semanticArtifacts.replay.outputSourceText, accepted.mergedSourceText);
+assert.equal(accepted.semanticArtifacts.alreadyAppliedReplay.status, 'already-applied');
+assert.equal(accepted.semanticArtifacts.admission.autoMergeClaim, false);
+assert.equal(accepted.semanticArtifacts.admission.semanticEquivalenceClaim, false);
+assert.equal(accepted.semanticArtifacts.summary.operations, 2);
 
 const repeatedAccepted = safeMergeJsTsImportsAndDeclarations({
   id: 'js_ts_safe_merge_rejects_repeated_application_without_duplication',
@@ -82,6 +91,8 @@ assert.equal(
   deterministicSpecifierOrder.mergedSourceText,
   "import { gamma, alpha, zeta } from 'pkg';\nexport const stable = gamma;\n"
 );
+assert.equal(deterministicSpecifierOrder.semanticArtifacts.replay.status, 'accepted-clean');
+assert.equal(deterministicSpecifierOrder.semanticArtifacts.alreadyAppliedReplay.status, 'already-applied');
 
 const deterministicDeclarationOrder = safeMergeJsTsImportsAndDeclarations({
   id: 'js_ts_safe_merge_orders_same_anchor_declaration_additions',
@@ -95,6 +106,8 @@ assert.equal(
   deterministicDeclarationOrder.mergedSourceText,
   'export const stable = 1;\nexport const alpha = 1;\nexport const zeta = 1;\n'
 );
+assert.equal(deterministicDeclarationOrder.semanticArtifacts.projection.sourceText, deterministicDeclarationOrder.mergedSourceText);
+assert.equal(deterministicDeclarationOrder.semanticArtifacts.replay.outputSourceText, deterministicDeclarationOrder.mergedSourceText);
 
 const duplicateDeclaration = safeMergeJsTsImportsAndDeclarations({
   id: 'js_ts_safe_merge_rejects_duplicate_declarations',

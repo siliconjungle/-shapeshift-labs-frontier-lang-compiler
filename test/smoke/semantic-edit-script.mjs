@@ -107,6 +107,7 @@ const shiftedReplay = replaySemanticEditProjection({
 });
 assert.equal(shiftedReplay.status, 'accepted-clean');
 assert.equal(shiftedReplay.outputSourceText, shiftedWorkerSource);
+assert.equal(shiftedReplay.admission.action, 'apply');
 assert.equal(shiftedReplay.edits[0].reasonCodes.includes('current-symbol-anchor-matches-deleted'), true);
 assert.equal(shiftedReplay.edits[0].reasonCodes.includes('offset-reanchored-by-symbol'), true);
 const shiftedSignatureSource = 'export function step(value: string | number) { return value + 1; }\n';
@@ -201,6 +202,17 @@ assert.equal(crlfInsertionProjection.status, 'projected');
 assert.equal(crlfInsertionProjection.sourceText, crlfInsertionWorker);
 assert.equal(crlfInsertionProjection.edits[0].headStart, crlfInsertionBase.length);
 assert.equal(crlfInsertionProjection.edits[0].replacementText.endsWith('\r\n'), true);
+const crlfInsertionAlreadyAppliedReplay = replaySemanticEditProjection({
+  id: 'semantic_edit_crlf_insertion_already_applied_replay',
+  projection: crlfInsertionProjection,
+  currentSourceText: crlfInsertionWorker
+});
+assert.equal(crlfInsertionAlreadyAppliedReplay.status, 'already-applied');
+assert.equal(crlfInsertionAlreadyAppliedReplay.outputSourceText, crlfInsertionWorker);
+assert.equal(crlfInsertionAlreadyAppliedReplay.admission.action, 'skip');
+assert.equal(crlfInsertionAlreadyAppliedReplay.admission.reviewRequired, false);
+assert.equal(crlfInsertionAlreadyAppliedReplay.summary.alreadyApplied, 1);
+assert.equal(crlfInsertionAlreadyAppliedReplay.edits[0].reasonCodes.includes('current-inserted-symbol-matches-replacement-span'), true);
 const crlfRemovalKeepLine = 'export function keep() { return 1; }';
 const crlfRemovalRemovedLine = 'export function removed() { return 2; }';
 const crlfRemovalBase = `${crlfRemovalKeepLine}\r\n${crlfRemovalRemovedLine}\r\n`;
@@ -245,6 +257,9 @@ const conflictReplay = replaySemanticEditProjection({
 assert.equal(conflictReplay.status, 'conflict');
 assert.equal(conflictReplay.outputSourceText, undefined);
 assert.equal(conflictReplay.summary.conflicts, 1);
+assert.equal(conflictReplay.admission.action, 'human-review');
+assert.equal(conflictReplay.admission.reviewRequired, true);
+assert.equal(conflictReplay.admission.autoApplyCandidate, false);
 const conflictingHead = createSemanticEditScript({
   id: 'semantic_edit_conflicting_head',
   language: 'typescript',

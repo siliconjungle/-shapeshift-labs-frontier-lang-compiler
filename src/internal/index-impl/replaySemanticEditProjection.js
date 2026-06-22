@@ -207,7 +207,7 @@ function currentSymbolRangeLabel(edit) {
 }
 
 function replayStatus(reasonCodes, edits, projection) {
-  if (reasonCodes.some((reason) => reason !== 'current-source-hash-mismatch')) return 'blocked';
+  if (reasonCodes.length) return 'blocked';
   if (!edits.length && !(projection.edits ?? []).length) return 'evidence-only';
   if (edits.some((edit) => edit.status === 'blocked')) return 'blocked';
   if (edits.some((edit) => edit.status === 'conflict')) return 'conflict';

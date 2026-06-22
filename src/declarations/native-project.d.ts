@@ -77,6 +77,114 @@ export interface ImportNativeProjectOptions {
   readonly sources: readonly NativeProjectSourceInput[];
 }
 
+export type NativeProjectSymbolGraphRemainingField =
+  | 'moduleEdges[].resolvedModulePath'
+  | 'moduleEdges[].targetDocumentId'
+  | 'moduleEdges[].resolvedTargetSymbolId'
+  | 'moduleEdges[].resolutionKind'
+  | 'moduleEdges[].packageName'
+  | 'moduleEdges[].packageExportCondition'
+  | 'reExportIdentities[].originSymbolId'
+  | 'reExportIdentities[].exportedSymbolId'
+  | 'reExportIdentities[].localSymbolId'
+  | 'publicContractRegions[].apiSurfaceKind'
+  | 'publicContractRegions[].signatureHash'
+  | 'publicContractRegions[].contractHash'
+  | string;
+
+export interface NativeProjectSymbolGraphFileHashRecord {
+  readonly id: string;
+  readonly documentId: string;
+  readonly sourcePath?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly sourceHash: string;
+  readonly algorithm?: string;
+  readonly value: string;
+  readonly factId?: string;
+}
+
+export interface NativeProjectSymbolGraphModuleEdgeRecord {
+  readonly id: string;
+  readonly sourceDocumentId: string;
+  readonly targetSymbolId: string;
+  readonly predicate: 'imports' | 'exports' | string;
+  readonly edgeKind?: 'import' | 'export' | 're-export' | string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly moduleSpecifier?: string;
+  readonly importKind?: string;
+  readonly exportKind?: string;
+  readonly importedName?: string;
+  readonly exportedName?: string;
+  readonly localName?: string;
+  readonly namespace?: string;
+  readonly isTypeOnly?: boolean;
+  readonly isReExport?: boolean;
+  readonly publicContract?: boolean;
+  readonly evidenceIds?: readonly string[];
+}
+
+export interface NativeProjectSymbolGraphReExportIdentityRecord {
+  readonly kind?: 'frontier.lang.reExportIdentity' | string;
+  readonly version?: 1;
+  readonly id: string;
+  readonly sourceDocumentId?: string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly moduleSpecifier?: string;
+  readonly exportedName?: string;
+  readonly importedName?: string;
+  readonly localName?: string;
+  readonly namespace?: string;
+  readonly isTypeOnly?: boolean;
+  readonly symbolId?: string;
+  readonly relationId?: string;
+  readonly ownershipRegionId?: string;
+  readonly ownershipRegionKey?: string;
+  readonly publicContract?: boolean;
+  readonly factId?: string;
+}
+
+export interface NativeProjectSymbolGraphPublicContractRegionRecord {
+  readonly id: string;
+  readonly key?: string;
+  readonly regionKind?: string;
+  readonly granularity?: string;
+  readonly language?: FrontierSourceLanguage | string;
+  readonly documentId?: string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly symbolId?: string;
+  readonly symbolName?: string;
+  readonly symbolKind?: string;
+  readonly nativeAstNodeId?: string;
+  readonly sourceSpan?: SourceSpan;
+  readonly precision?: string;
+  readonly publicContract?: boolean;
+  readonly exportedName?: string;
+  readonly moduleSpecifier?: string;
+  readonly edgeKind?: string;
+  readonly factId?: string;
+}
+
+export interface NativeProjectSymbolGraphSummary {
+  readonly kind: 'frontier.lang.projectSymbolGraph';
+  readonly version: 1;
+  readonly projectRoot?: string;
+  readonly sourceCount: number;
+  readonly documentCount: number;
+  readonly symbolCount: number;
+  readonly occurrenceCount: number;
+  readonly relationCount: number;
+  readonly factCount: number;
+  readonly fileHashes: readonly NativeProjectSymbolGraphFileHashRecord[];
+  readonly importEdges: readonly NativeProjectSymbolGraphModuleEdgeRecord[];
+  readonly exportEdges: readonly NativeProjectSymbolGraphModuleEdgeRecord[];
+  readonly reExportIdentities: readonly NativeProjectSymbolGraphReExportIdentityRecord[];
+  readonly publicContractRegions: readonly NativeProjectSymbolGraphPublicContractRegionRecord[];
+  readonly remainingFields: readonly NativeProjectSymbolGraphRemainingField[];
+}
+
 export interface NativeProjectImportResultMetadata extends Record<string, unknown> {
   readonly importResultContract?: NativeImportResultContract;
   readonly projectAdmission?: NativeProjectImportAdmission;
@@ -84,6 +192,7 @@ export interface NativeProjectImportResultMetadata extends Record<string, unknow
   readonly nativeImportLossSummary?: NativeImportLossSummary;
   readonly semanticMergeReadiness?: SemanticMergeReadiness;
   readonly readinessReasons?: readonly string[];
+  readonly projectSymbolGraph?: NativeProjectSymbolGraphSummary;
 }
 
 export interface NativeProjectImportResult {
@@ -102,6 +211,7 @@ export interface NativeProjectImportResult {
   readonly losses: readonly NativeAstLossRecord[];
   readonly evidence: readonly EvidenceRecord[];
   readonly mergeCandidates: readonly SemanticMergeCandidateRecord[];
+  readonly projectSymbolGraph?: NativeProjectSymbolGraphSummary;
   readonly metadata?: NativeProjectImportResultMetadata;
 }
 

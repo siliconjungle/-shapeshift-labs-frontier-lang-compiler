@@ -5,6 +5,7 @@ import {
   jsTsSafeMergeGateOrder
 } from './js-ts-safe-merge-constants.js';
 import { safeMergeJsTsImportsAndDeclarations } from './js-ts-safe-merge.js';
+import { createJsTsSafeMergeSemanticArtifacts } from './js-ts-safe-merge-semantic-artifacts.js';
 import {
   applyJsTsPreparedMemberAdditions,
   neutralizeJsTsSafeMemberMergeSources
@@ -40,7 +41,7 @@ function safeMergeJsTsSource(input = {}) {
   const memberAdditions = memberNeutralization.analysis.preparedRegions.reduce((total, region) => (
     total + region.workerAddedKeys.length + region.headAddedKeys.length
   ), 0);
-  return {
+  const result = {
     ...topLevelResult,
     id: String(input.id ?? topLevelResult.id),
     mergedSourceText: memberApplication.sourceText,
@@ -64,6 +65,10 @@ function safeMergeJsTsSource(input = {}) {
         }))
       }
     }
+  };
+  return {
+    ...result,
+    semanticArtifacts: createJsTsSafeMergeSemanticArtifacts(input, result)
   };
 }
 

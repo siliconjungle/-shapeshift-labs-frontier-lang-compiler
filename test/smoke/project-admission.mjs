@@ -1,5 +1,5 @@
 import { assert } from './helpers.mjs';
-import { createProjectImportAdmissionRecord, importNativeProject } from './compiler-api.mjs';
+import { createEstreeNativeImporterAdapter, createProjectImportAdmissionRecord, importNativeProject } from './compiler-api.mjs';
 import { projectImport } from './swift-kotlin-project.mjs';
 
 const projectAdmission = projectImport.metadata.projectAdmission;
@@ -270,3 +270,43 @@ assert.deepEqual(healthyRegionAdmission.semanticEvidence.warningReasonCodes, [])
 assert.equal(healthyRegionAdmission.semanticEvidence.warnings.length, 0);
 assert.equal(healthyRegionAdmission.reasons.some((reason) => reason.includes('missing-ownership-regions')), false);
 assert.equal(healthyRegionAdmission.reasons.some((reason) => reason.includes('missing-patch-hints')), false);
+
+const projectSymbolGraphImport = await importNativeProject({
+  id: 'project_symbol_graph_admission',
+  projectRoot: 'src',
+  sources: [{
+    language: 'javascript',
+    sourcePath: 'src/index.js',
+    sourceText: "export { thing } from './thing.js';\n",
+    adapter: createEstreeNativeImporterAdapter(),
+    adapterOptions: {
+      ast: {
+        type: 'Program',
+        sourceType: 'module',
+        loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 36 } },
+        body: [{
+          type: 'ExportNamedDeclaration',
+          declaration: null,
+          specifiers: [{
+            type: 'ExportSpecifier',
+            local: { type: 'Identifier', name: 'thing' },
+            exported: { type: 'Identifier', name: 'thing' }
+          }],
+          source: { type: 'Literal', value: './thing.js' },
+          loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 36 } }
+        }]
+      }
+    },
+    metadata: { semanticImportExpected: true }
+  }]
+});
+const projectSymbolGraph = projectSymbolGraphImport.projectSymbolGraph;
+assert.equal(projectSymbolGraph, projectSymbolGraphImport.metadata.projectSymbolGraph);
+assert.equal(projectSymbolGraph.kind, 'frontier.lang.projectSymbolGraph');
+assert.equal(projectSymbolGraph.fileHashes.length, 1);
+assert.equal(projectSymbolGraph.fileHashes[0].sourcePath, 'src/index.js');
+assert.deepEqual(projectSymbolGraph.exportEdges.map((edge) => [edge.moduleSpecifier, edge.isReExport]), [['./thing.js', true]]);
+assert.deepEqual(projectSymbolGraph.reExportIdentities.map((identity) => identity.moduleSpecifier), ['./thing.js']);
+assert.deepEqual(projectSymbolGraph.publicContractRegions.map((region) => region.regionKind), ['export']);
+assert.equal(projectSymbolGraph.remainingFields.includes('moduleEdges[].targetDocumentId'), true);
+assert.equal(projectSymbolGraphImport.semanticIndex.metadata.projectSymbolGraph, projectSymbolGraph);

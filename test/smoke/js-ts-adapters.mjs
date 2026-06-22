@@ -37,6 +37,46 @@ assert.equal(estreeAdapterImport.adapter.coverage.semanticCoverage.level, 'decla
 assert.equal(estreeAdapterImport.adapter.coverage.semanticCoverage.symbols, true);
 assert.equal(estreeAdapterImport.semanticIndex.symbols.some((symbol) => symbol.name === 'fromEstree'), true);
 assert.equal(estreeAdapterImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId.includes('fromestree')), true);
+const estreeReExportFixtureSource = "export { value as publicValue } from './value.js';\nexport * from './barrel.js';\n";
+export const estreeReExportAdapterImport = await runNativeImporterAdapter(createEstreeNativeImporterAdapter(), {
+  sourcePath: 'src/re-export.js',
+  sourceText: estreeReExportFixtureSource,
+  adapterOptions: {
+    ast: {
+      type: 'Program',
+      sourceType: 'module',
+      loc: { start: { line: 1, column: 0 }, end: { line: 2, column: 28 } },
+      body: [{
+        type: 'ExportNamedDeclaration',
+        declaration: null,
+        specifiers: [{
+          type: 'ExportSpecifier',
+          local: { type: 'Identifier', name: 'value' },
+          exported: { type: 'Identifier', name: 'publicValue' }
+        }],
+        source: { type: 'Literal', value: './value.js' },
+        loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 48 } }
+      }, {
+        type: 'ExportAllDeclaration',
+        source: { type: 'Literal', value: './barrel.js' },
+        loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 28 } }
+      }]
+    }
+  }
+});
+const reExportRelations = estreeReExportAdapterImport.semanticIndex.relations.filter((relation) => relation.predicate === 'exports');
+const reExportFacts = estreeReExportAdapterImport.semanticIndex.facts.filter((fact) => fact.predicate === 'reExportIdentity');
+const publicContractRegionFacts = estreeReExportAdapterImport.semanticIndex.facts.filter((fact) => fact.predicate === 'publicContractRegion');
+assert.equal(estreeReExportAdapterImport.semanticIndex.metadata.graphCoverage, 'module-edge-declarations');
+assert.equal(estreeReExportAdapterImport.semanticIndex.facts.some((fact) => fact.predicate === 'fileHash'), true);
+assert.equal(reExportRelations.length, 2);
+assert.equal(reExportRelations.every((relation) => relation.metadata?.moduleEdge?.isReExport === true), true);
+assert.deepEqual(reExportRelations.map((relation) => relation.metadata.moduleEdge.moduleSpecifier), ['./value.js', './barrel.js']);
+assert.equal(reExportFacts.length, 2);
+assert.equal(reExportFacts.every((fact) => fact.value.publicContract === true), true);
+assert.equal(publicContractRegionFacts.length, 2);
+assert.equal(publicContractRegionFacts.every((fact) => fact.value.regionKind === 'export'), true);
+assert.equal(estreeReExportAdapterImport.evidence.some((record) => record.metadata?.graphRecords?.reExportIdentities === 2), true);
 export const scannedEstreeFixtureImport = importNativeSource({
   language: 'javascript',
   sourcePath: 'src/estree.js',

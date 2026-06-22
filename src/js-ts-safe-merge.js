@@ -8,6 +8,7 @@ import {
 } from './js-ts-safe-merge-constants.js';
 import { indexBaseLedger, scanJsTsTopLevelLedger, validateLedgerUniqueness } from './js-ts-safe-merge-ledger.js';
 import { applySourceMergePlan, createSourceMergePlan } from './js-ts-safe-merge-plan.js';
+import { createJsTsSafeMergeSemanticArtifacts } from './js-ts-safe-merge-semantic-artifacts.js';
 
 export { JsTsSafeMergeConflictCodes, JsTsSafeMergeGateIds, JsTsSafeMergeStatuses };
 
@@ -61,7 +62,7 @@ export function safeMergeJsTsImportsAndDeclarations(input = {}) {
   if (!context.conflicts.length) validateLedgerUniqueness(merged, context);
   if (context.conflicts.length) return blockedResult(context, { base, worker, head, merged });
 
-  return {
+  const result = {
     kind: 'frontier.lang.jsTsSafeMerge',
     version: 1,
     schema: 'frontier.lang.jsTsSafeMerge.v1',
@@ -98,6 +99,10 @@ export function safeMergeJsTsImportsAndDeclarations(input = {}) {
       expectedSourceHash: input.expectedSourceHash,
       currentSourceHash: input.currentSourceHash
     })
+  };
+  return {
+    ...result,
+    semanticArtifacts: createJsTsSafeMergeSemanticArtifacts(input, result)
   };
 }
 
