@@ -45,7 +45,7 @@ const accepted = safeMergeJsTsImportsAndDeclarations({
 assert.equal(accepted.status, 'merged');
 assert.equal(accepted.admission.status, 'auto-merge-candidate');
 assert.equal(accepted.summary.importSpecifierAdditions, 2);
-assert.equal(accepted.summary.topLevelDeclarationAdditions, 1);
+assert.equal(accepted.summary.topLevelDeclarationAdditions, 2);
 assert.equal(accepted.gates.every((gate) => gate.status === 'passed'), true);
 assert.equal(accepted.mergedSourceText, [
   "import { readFile, stat, writeFile } from 'node:fs';",

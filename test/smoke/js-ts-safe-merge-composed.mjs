@@ -57,7 +57,7 @@ const composed = safeMergeJsTsSource({
 assert.equal(composed.status, 'merged');
 assert.equal(composed.admission.status, 'auto-merge-candidate');
 assert.equal(composed.summary.importSpecifierAdditions, 2);
-assert.equal(composed.summary.topLevelDeclarationAdditions, 1);
+assert.equal(composed.summary.topLevelDeclarationAdditions, 2);
 assert.equal(composed.summary.memberRegions, 1);
 assert.equal(composed.summary.memberAdditions, 2);
 assert.equal(composed.gates.every((gate) => gate.status === 'passed'), true);

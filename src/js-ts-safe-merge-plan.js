@@ -47,7 +47,9 @@ export function createSourceMergePlan(base, worker, head, workerPlan, headPlan, 
     label: 'import'
   });
   const headImportGroupsByAnchor = new Map(headImportInsertionGroups.map((group) => [insertionGroupKey(group), group]));
+  const countedImportInsertionGroups = new Set();
   for (const group of importInsertionGroups) {
+    countedImportInsertionGroups.add(insertionGroupKey(group));
     const anchor = headEntriesByBaseKey.get(group.anchorKey);
     if (!anchor) {
       addConflict(context, {
@@ -68,7 +70,10 @@ export function createSourceMergePlan(base, worker, head, workerPlan, headPlan, 
       end: insertionSpan.end,
       text: importInsertionText(entries, detectLineEnding(head.sourceText))
     });
-    importDeclarationAdditions += group.entries.length;
+    importDeclarationAdditions += entries.length;
+  }
+  for (const group of headImportInsertionGroups) {
+    if (!countedImportInsertionGroups.has(insertionGroupKey(group))) importDeclarationAdditions += group.entries.length;
   }
 
   const insertionGroups = variantInsertionGroups(worker, workerPlan.matchedVariantKeys, 'worker', context, {
@@ -83,7 +88,9 @@ export function createSourceMergePlan(base, worker, head, workerPlan, headPlan, 
   });
   const headDeclarationGroupsByAnchor = new Map(headInsertionGroups.map((group) => [insertionGroupKey(group), group]));
   let topLevelDeclarationAdditions = 0;
+  const countedDeclarationInsertionGroups = new Set();
   for (const group of insertionGroups) {
+    countedDeclarationInsertionGroups.add(insertionGroupKey(group));
     const anchor = headEntriesByBaseKey.get(group.anchorKey);
     if (!anchor) {
       addConflict(context, {
@@ -104,7 +111,10 @@ export function createSourceMergePlan(base, worker, head, workerPlan, headPlan, 
       end: insertionSpan.end,
       text: declarationInsertionText(entries, detectLineEnding(head.sourceText))
     });
-    topLevelDeclarationAdditions += group.entries.length;
+    topLevelDeclarationAdditions += entries.length;
+  }
+  for (const group of headInsertionGroups) {
+    if (!countedDeclarationInsertionGroups.has(insertionGroupKey(group))) topLevelDeclarationAdditions += group.entries.length;
   }
 
   return {

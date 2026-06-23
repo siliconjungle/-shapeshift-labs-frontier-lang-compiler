@@ -25,7 +25,7 @@ const independentNewImports = safeMergeJsTsImportsAndDeclarations({
 });
 
 assert.equal(independentNewImports.status, 'merged');
-assert.equal(independentNewImports.summary.importDeclarationAdditions, 1);
+assert.equal(independentNewImports.summary.importDeclarationAdditions, 2);
 assert.equal(independentNewImports.summary.importSpecifierAdditions, 0);
 assert.equal(independentNewImports.mergedSourceText, [
   "import { readFile } from 'node:fs';",

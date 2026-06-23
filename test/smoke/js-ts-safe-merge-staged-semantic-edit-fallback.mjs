@@ -185,7 +185,7 @@ assert.equal(headDeclaration.mergedSourceText, [
   '}',
   ''
 ].join('\n'));
-assert.equal(headDeclaration.summary.topLevelDeclarationAdditions, 0);
+assert.equal(headDeclaration.summary.topLevelDeclarationAdditions, 1);
 assert.equal((headDeclaration.mergedSourceText.match(/import \{ readFile, writeFile \}/g) ?? []).length, 1);
 
 const conflictingBody = safeMergeJsTsSource({
