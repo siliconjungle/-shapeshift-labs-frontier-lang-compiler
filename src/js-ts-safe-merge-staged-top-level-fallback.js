@@ -14,11 +14,13 @@ function createStagedTopLevelSemanticFallback(input, topLevelResult) {
   if (stagedTopLevelResult.status !== JsTsSafeMergeStatuses.merged) return undefined;
   const safeTopLevelChanges = safeTopLevelChangeCount(stagedTopLevelResult.summary);
   const declarationReplay = createJsTsChangedDeclarationReplay(input, neutralization, stagedTopLevelResult.mergedSourceText);
+  const directSemanticHeadReplay = createJsTsChangedDeclarationReplay(input, neutralization, stagedTopLevelResult.mergedSourceText, 'head');
   const workerDeclarationChanges = neutralization.summary.workerChangedExistingDeclarations ?? 0;
   if (safeTopLevelChanges === 0 && workerDeclarationChanges === 0) return undefined;
   return {
     neutralization,
     declarationReplay,
+    safeTopLevelChanges,
     stagedTopLevelResult,
     scriptInput: {
       ...input,
@@ -28,12 +30,18 @@ function createStagedTopLevelSemanticFallback(input, topLevelResult) {
       headSourceHash: undefined
     },
     projectionHeadSourceText: stagedTopLevelResult.mergedSourceText,
+    directProjectionHeadSourceText: directSemanticHeadReplay.outputSourceText,
     replayCurrentSourceText: stagedTopLevelResult.mergedSourceText,
+    directReplayCurrentSourceText: directSemanticHeadReplay.outputSourceText,
     metadata: {
       stagedTopLevelSummary: stagedTopLevelResult.summary,
       declarationReplay: {
         edits: declarationReplay.edits.length,
         reasonCodes: declarationReplay.reasonCodes
+      },
+      directSemanticHeadReplay: {
+        edits: directSemanticHeadReplay.edits.length,
+        reasonCodes: directSemanticHeadReplay.reasonCodes
       },
       neutralization: neutralization.summary,
       originalReasonCodes: topLevelResult.admission?.reasonCodes ?? []

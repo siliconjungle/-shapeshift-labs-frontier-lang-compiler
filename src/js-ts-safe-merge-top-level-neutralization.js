@@ -42,7 +42,7 @@ function neutralizeJsTsSafeTopLevelMergeSources(input = {}) {
   };
 }
 
-function createJsTsChangedDeclarationReplay(input = {}, neutralization, currentSourceText) {
+function createJsTsChangedDeclarationReplay(input = {}, neutralization, currentSourceText, side = 'worker') {
   if (!neutralization?.ok || typeof currentSourceText !== 'string') {
     return { ok: false, reasonCodes: ['missing-neutralized-current-source'], edits: [] };
   }
@@ -56,15 +56,17 @@ function createJsTsChangedDeclarationReplay(input = {}, neutralization, currentS
   const workerMatches = matchedEntriesByBaseKey(neutralization.worker, baseEntries);
   const headMatches = matchedEntriesByBaseKey(neutralization.head, baseEntries);
   const currentMatches = matchedEntriesByBaseKey(current, baseEntries);
+  const sourceMatches = side === 'head' ? headMatches : workerMatches;
+  const guardMatches = side === 'head' ? undefined : headMatches;
   const edits = [];
   const reasonCodes = [];
   for (const baseEntry of baseEntries) {
     if (baseEntry.kind === 'import') continue;
-    const workerEntry = workerMatches.get(baseEntry.key);
-    if (!workerEntry || sameStatementText(workerEntry.text, baseEntry.text)) continue;
-    const headEntry = headMatches.get(baseEntry.key);
+    const sourceEntry = sourceMatches.get(baseEntry.key);
+    if (!sourceEntry || sameStatementText(sourceEntry.text, baseEntry.text)) continue;
     const currentEntry = currentMatches.get(baseEntry.key);
-    if (!headEntry || !sameStatementText(headEntry.text, baseEntry.text)) {
+    const guardEntry = guardMatches?.get(baseEntry.key);
+    if (guardMatches && (!guardEntry || !sameStatementText(guardEntry.text, baseEntry.text))) {
       reasonCodes.push(`head-anchor-changed-since-base:${baseEntry.key}`);
       continue;
     }
@@ -74,12 +76,12 @@ function createJsTsChangedDeclarationReplay(input = {}, neutralization, currentS
     }
     edits.push({
       key: baseEntry.key,
-      names: workerEntry.names ?? baseEntry.names ?? [],
-      declarationKind: workerEntry.declarationInfo?.declarationKind ?? baseEntry.declarationInfo?.declarationKind,
+      names: sourceEntry.names ?? baseEntry.names ?? [],
+      declarationKind: sourceEntry.declarationInfo?.declarationKind ?? baseEntry.declarationInfo?.declarationKind,
       start: currentEntry.start,
       end: currentEntry.end,
       currentText: currentEntry.text,
-      replacementText: workerEntry.text
+      replacementText: sourceEntry.text
     });
   }
   return {

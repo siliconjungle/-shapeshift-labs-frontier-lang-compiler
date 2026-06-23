@@ -2,7 +2,13 @@ import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { createSemanticEditScript } from './internal/index-impl/semanticEditScripts.js';
 import { projectSemanticEditScriptToSource } from './internal/index-impl/projectSemanticEditScriptToSource.js';
 import { replaySemanticEditProjection } from './internal/index-impl/replaySemanticEditProjection.js';
-import { JsTsSafeMergeConflictCodes, JsTsSafeMergeStatuses } from './js-ts-safe-merge-constants.js';
+import { JsTsSafeMergeStatuses } from './js-ts-safe-merge-constants.js';
+import {
+  semanticFallbackChangedExistingDeclarations,
+  semanticFallbackConflictCode,
+  semanticFallbackPhase,
+  shouldTrySemanticEditFallback
+} from './js-ts-safe-merge-semantic-edit-fallback-utils.js';
 import {
   createStagedDeclarationAlreadyAppliedReplay,
   createStagedDeclarationProjection,
@@ -17,10 +23,19 @@ function semanticEditFallbackResult(input, topLevelResult) {
   let selectedFallback = stagedFallback;
   let artifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallback);
   if (stagedFallback && artifacts.status !== 'verified') {
-    const directArtifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, undefined);
+    const directFallback = stagedFallback.directProjectionHeadSourceText && stagedFallback.safeTopLevelChanges > 0
+      ? { ...stagedFallback, projectionMode: 'direct' }
+      : undefined;
+    const directArtifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, directFallback);
     if (directArtifacts.status === 'verified') {
       artifacts = directArtifacts;
-      selectedFallback = undefined;
+      selectedFallback = directFallback;
+    } else if (directFallback) {
+      const plainDirectArtifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, undefined);
+      if (plainDirectArtifacts.status === 'verified') {
+        artifacts = plainDirectArtifacts;
+        selectedFallback = undefined;
+      }
     }
   }
   if (artifacts.status !== 'verified') return semanticEditFallbackBlockedResult(input, topLevelResult, artifacts);
@@ -57,7 +72,7 @@ function semanticEditFallbackResult(input, topLevelResult) {
     metadata: {
       ...resultBase.metadata,
       composed: {
-        phase: selectedFallback ? 'staged-top-level-semantic-edit-fallback' : 'semantic-edit-fallback',
+        phase: semanticFallbackPhase(selectedFallback),
         phases: selectedFallback ? ['top-level-neutralization', 'top-level-ledger', 'semantic-edit'] : ['top-level-ledger', 'semantic-edit'],
         originalReasonCodes: topLevelResult.admission?.reasonCodes ?? [],
         stagedTopLevelSummary: selectedFallback?.stagedTopLevelResult?.summary,
@@ -68,47 +83,26 @@ function semanticEditFallbackResult(input, topLevelResult) {
   };
 }
 
-function shouldTrySemanticEditFallback(result) {
-  const conflicts = result.conflicts ?? [];
-  return conflicts.length > 0 && conflicts.every((conflict) => semanticFallbackConflictCodes.has(conflict.code));
-}
-
-const semanticFallbackConflictCodes = new Set([
-  JsTsSafeMergeConflictCodes.changedExistingDeclaration,
-  JsTsSafeMergeConflictCodes.typeAliasConflict
-]);
-
-function semanticFallbackConflictCode(result) {
-  return result.conflicts?.find((conflict) => semanticFallbackConflictCodes.has(conflict.code))?.code
-    ?? JsTsSafeMergeConflictCodes.changedExistingDeclaration;
-}
-
-function semanticFallbackChangedExistingDeclarations(topLevelResult, resultBase, stagedFallback) {
-  const conflictCount = (topLevelResult.conflicts ?? [])
-    .filter((conflict) => semanticFallbackConflictCodes.has(conflict.code)).length;
-  return Math.max(
-    topLevelResult.summary?.changedExistingDeclarations ?? 0,
-    resultBase?.summary?.changedExistingDeclarations ?? 0,
-    stagedFallback?.neutralization?.summary?.workerChangedExistingDeclarations ?? 0,
-    conflictCount
-  );
-}
-
 function createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallback) {
   try {
     const id = String(input.id ?? topLevelResult.id ?? 'js_ts_safe_merge');
     const language = input.language ?? topLevelResult.language ?? 'typescript';
     const sourcePath = input.sourcePath ?? topLevelResult.sourcePath ?? 'inline.ts';
+    const stagedDeclarationProjection = stagedFallback && stagedFallback.projectionMode !== 'direct';
     const scriptInput = stagedFallback?.scriptInput ?? input;
-    const projectionHeadSourceText = stagedFallback?.projectionHeadSourceText ?? input.headSourceText;
-    const replayCurrentSourceText = stagedFallback?.replayCurrentSourceText ?? input.headSourceText;
+    const projectionHeadSourceText = stagedFallback?.projectionMode === 'direct'
+      ? stagedFallback.directProjectionHeadSourceText
+      : stagedFallback?.projectionHeadSourceText ?? input.headSourceText;
+    const replayCurrentSourceText = stagedFallback?.projectionMode === 'direct'
+      ? stagedFallback.directReplayCurrentSourceText
+      : stagedFallback?.replayCurrentSourceText ?? input.headSourceText;
     const script = createSemanticEditScript({
       ...scriptInput,
       id: `${id}_semantic_edit`,
       language,
       sourcePath
     });
-    const projection = stagedFallback
+    const projection = stagedDeclarationProjection
       ? createStagedDeclarationProjection({ id, script, sourcePath, language, stagedFallback })
       : projectSemanticEditScriptToSource({
         id: `${id}_semantic_edit_projection`,
@@ -119,7 +113,7 @@ function createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallba
         parser: input.parser,
         metadata: stagedFallback?.metadata
       });
-    const replay = stagedFallback
+    const replay = stagedDeclarationProjection
       ? createStagedDeclarationReplayRecord({ id, projection, sourcePath, language, stagedFallback, replayCurrentSourceText })
       : replaySemanticEditProjection({
         id: `${id}_semantic_edit_replay`,
@@ -130,7 +124,7 @@ function createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallba
         parser: input.parser,
         metadata: stagedFallback?.metadata
       });
-    const alreadyAppliedReplay = stagedFallback
+    const alreadyAppliedReplay = stagedDeclarationProjection
       ? createStagedDeclarationAlreadyAppliedReplay({ id, projection, sourcePath, language })
       : replaySemanticEditProjection({
         id: `${id}_semantic_edit_already_applied`,
@@ -201,7 +195,7 @@ function semanticEditArtifacts(input) {
     metadata: {
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
-      source: input.stagedFallback ? 'js-ts-staged-top-level-semantic-edit-fallback' : 'js-ts-semantic-edit-fallback',
+      source: input.stagedFallback ? semanticFallbackPhase(input.stagedFallback) : 'js-ts-semantic-edit-fallback',
       originalReasonCodes: input.topLevelResult.admission?.reasonCodes ?? [],
       stagedTopLevelSummary: input.stagedFallback?.stagedTopLevelResult?.summary,
       neutralization: input.stagedFallback?.neutralization?.summary
