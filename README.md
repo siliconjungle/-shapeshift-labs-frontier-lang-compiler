@@ -308,9 +308,13 @@ On a local Node v26.1.0 smoke fixture with 10 small JS/TS files and 36 scanned
 stage files for the delta case, baseline project merge JSON was 115 KB at a
 21.6 ms median. `includeOutputProjectSymbolGraph` raised the returned JSON to
 17.8 MB at a 303.1 ms median, and `includeProjectGraphDelta` raised it to
-83.0 MB at a 1,466.8 ms median. Keep these paths behind admission-queue caps
-for file count, total source bytes, graph edge count, and serialized artifact
-bytes, or expose summary/lazy graph materialization before using them broadly.
+83.0 MB at a 1,466.8 ms median. Pass `projectGraphLimits` for admission queues:
+`maxFiles`, `maxSourceBytes`, `maxImportEdges`, `maxExportEdges`, and
+`maxSerializedBytes` produce `project-graph-limit-exceeded` conflicts with the
+stage, limit kind, actual value, and configured limit. Limit failures block
+admission and omit oversized project graph artifacts from the returned result.
+Invalid limits such as negative numbers, `NaN`, or infinity fail closed with
+`project-graph-limit-invalid`.
 
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 

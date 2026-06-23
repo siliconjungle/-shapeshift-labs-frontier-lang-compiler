@@ -53,6 +53,22 @@ export type JsTsProjectSafeMergeOutputProjectImports =
 
 export type JsTsProjectGraphStageName = 'base' | 'worker' | 'head' | 'output' | string;
 
+export type JsTsProjectGraphLimitKind =
+  | 'source-files'
+  | 'source-bytes'
+  | 'import-edges'
+  | 'export-edges'
+  | 'serialized-bytes'
+  | string;
+
+export interface JsTsProjectGraphLimits {
+  readonly maxFiles?: number;
+  readonly maxSourceBytes?: number;
+  readonly maxImportEdges?: number;
+  readonly maxExportEdges?: number;
+  readonly maxSerializedBytes?: number;
+}
+
 export type JsTsProjectSafeMergeProjectGraphImportsByStage = Readonly<{
   base?: JsTsProjectSafeMergeOutputProjectImports;
   worker?: JsTsProjectSafeMergeOutputProjectImports;
@@ -72,6 +88,7 @@ export interface JsTsProjectSafeMergeInput {
   readonly allowFileDeletes?: boolean;
   readonly includeOutputProjectSymbolGraph?: boolean;
   readonly includeProjectGraphDelta?: boolean;
+  readonly projectGraphLimits?: JsTsProjectGraphLimits;
   readonly outputProjectImports?: JsTsProjectSafeMergeOutputProjectImports;
   readonly baseProjectImports?: JsTsProjectSafeMergeOutputProjectImports;
   readonly workerProjectImports?: JsTsProjectSafeMergeOutputProjectImports;
@@ -132,6 +149,7 @@ export interface JsTsProjectSafeMergeAdmission {
 export interface JsTsProjectGraphDeltaStageSummary {
   readonly stage: JsTsProjectGraphStageName;
   readonly sourceFiles: number;
+  readonly sourceBytes: number;
   readonly documents: number;
   readonly symbols: number;
   readonly fileHashes: number;
@@ -143,6 +161,8 @@ export interface JsTsProjectGraphDeltaStageSummary {
   readonly suppliedImports: number;
   readonly matchedSuppliedImports: number;
   readonly scannerFallbackImports: number;
+  readonly serializedBytes?: number;
+  readonly limitConflicts: number;
 }
 
 export interface JsTsProjectGraphDeltaStage {
@@ -152,6 +172,7 @@ export interface JsTsProjectGraphDeltaStage {
   readonly projectImport?: NativeProjectImportResult;
   readonly projectSymbolGraph?: NativeProjectSymbolGraphSummary;
   readonly summary: JsTsProjectGraphDeltaStageSummary;
+  readonly limitConflicts?: readonly JsTsSafeMergeConflict[];
 }
 
 export interface JsTsProjectGraphDeltaSummary {
@@ -165,6 +186,9 @@ export interface JsTsProjectGraphDeltaSummary {
   readonly suppliedImports: number;
   readonly matchedSuppliedImports: number;
   readonly scannerFallbackImports: number;
+  readonly sourceBytes: number;
+  readonly serializedBytes: number;
+  readonly limitConflicts: number;
   readonly conflicts: number;
   readonly publicContractConflicts: number;
   readonly reExportIdentityConflicts: number;
@@ -201,6 +225,7 @@ export interface JsTsProjectSafeMergeResult {
     readonly projectGraphConflicts: number;
     readonly outputProjectGraphConflicts: number;
     readonly projectGraphDeltaConflicts: number;
+    readonly projectGraphLimitConflicts: number;
     readonly projectGraphPublicContractConflicts: number;
     readonly projectGraphReExportIdentityConflicts: number;
     readonly projectGraphImportTargetConflicts: number;

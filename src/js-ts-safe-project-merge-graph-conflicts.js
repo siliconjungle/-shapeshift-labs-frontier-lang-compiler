@@ -2,6 +2,8 @@ import { compactRecord } from './js-ts-safe-merge-context.js';
 import { projectGraphDeltaConflicts } from './js-ts-safe-project-merge-graph-delta-conflicts.js';
 
 function outputProjectGraphConflicts(projectSymbolGraph) {
+  const limitConflicts = Array.isArray(projectSymbolGraph?.limitConflicts) ? projectSymbolGraph.limitConflicts : [];
+  projectSymbolGraph = projectSymbolGraph?.projectSymbolGraph ?? projectSymbolGraph;
   const importEdges = Array.isArray(projectSymbolGraph?.importEdges) ? projectSymbolGraph.importEdges : [];
   const missingModuleGroups = new Map();
   const missingSymbolGroups = new Map();
@@ -21,6 +23,7 @@ function outputProjectGraphConflicts(projectSymbolGraph) {
     }
   }
   return [
+    ...limitConflicts,
     ...[...missingModuleGroups.values()].map(projectGraphMissingImportConflict),
     ...[...missingSymbolGroups.values()].map(projectGraphMissingTargetConflict)
   ];

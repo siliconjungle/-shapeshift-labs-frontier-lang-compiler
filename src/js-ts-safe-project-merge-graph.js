@@ -3,6 +3,13 @@ import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { createNativeProjectImportResult } from './internal/index-impl/createNativeProjectImportResult.js';
 import { importNativeSource } from './internal/index-impl/importNativeSource.js';
+import {
+  normalizeProjectGraphLimits,
+  projectGraphEdgeLimitConflicts,
+  projectGraphSerializedLimitConflict,
+  projectGraphSourceLimitConflicts,
+  projectGraphSourceStats
+} from './js-ts-safe-project-merge-graph-limits.js';
 
 function createJsTsProjectSafeMergeGraphArtifacts(input, outputFiles, mergeId) {
   return createProjectGraphStageArtifacts(input, outputFiles, mergeId, 'output', projectImportsForStage(input, 'output'));
@@ -32,12 +39,28 @@ function createJsTsProjectSafeMergeGraphDelta(input, files, outputFiles, mergeId
       suppliedImports: sumStageSummary(stageSummaries, 'suppliedImports'),
       matchedSuppliedImports: sumStageSummary(stageSummaries, 'matchedSuppliedImports'),
       scannerFallbackImports: sumStageSummary(stageSummaries, 'scannerFallbackImports'),
+      sourceBytes: sumStageSummary(stageSummaries, 'sourceBytes'),
+      serializedBytes: sumStageSummary(stageSummaries, 'serializedBytes'),
+      limitConflicts: sumStageSummary(stageSummaries, 'limitConflicts'),
       stageSummaries
     }
   };
 }
 
 function createProjectGraphStageArtifacts(input, files, mergeId, stageName, stageImports) {
+  const limits = normalizeProjectGraphLimits(input.projectGraphLimits);
+  const sourceStats = projectGraphSourceStats(files);
+  const sourceLimitConflicts = projectGraphSourceLimitConflicts(limits, stageName, sourceStats);
+  const suppliedImports = normalizeProjectImports(stageImports);
+  const projectGraphImportSource = {
+    stage: stageName,
+    suppliedImports: suppliedImports.length,
+    matchedSuppliedImports: 0,
+    scannerFallbackImports: 0
+  };
+  if (sourceLimitConflicts.length) {
+    return limitedProjectGraphStage(stageName, projectGraphImportSource, sourceStats, undefined, sourceLimitConflicts);
+  }
   const sources = files.map((file) => ({
     id: `${mergeId}_${stageName}_${idFragment(file.sourcePath)}`,
     language: file.language ?? input.language ?? languageForPath(file.sourcePath),
@@ -46,7 +69,6 @@ function createProjectGraphStageArtifacts(input, files, mergeId, stageName, stag
     sourceHash: file.sourceHash,
     metadata: { semanticImportExpected: true, projectSafeMergeStage: stageName, projectSafeMergeOutput: stageName === 'output' }
   }));
-  const suppliedImports = normalizeProjectImports(stageImports);
   const importSelections = sources.map((source) => {
     const suppliedImport = matchingProjectImport(source, suppliedImports);
     return {
@@ -55,12 +77,8 @@ function createProjectGraphStageArtifacts(input, files, mergeId, stageName, stag
     };
   });
   const imports = importSelections.map((selection) => selection.importResult);
-  const projectGraphImportSource = {
-    stage: stageName,
-    suppliedImports: suppliedImports.length,
-    matchedSuppliedImports: importSelections.filter((selection) => selection.sourceKind === `supplied-${stageName}-project-import`).length,
-    scannerFallbackImports: importSelections.filter((selection) => selection.sourceKind === `lightweight-${stageName}-project-scan`).length
-  };
+  projectGraphImportSource.matchedSuppliedImports = importSelections.filter((selection) => selection.sourceKind === `supplied-${stageName}-project-import`).length;
+  projectGraphImportSource.scannerFallbackImports = importSelections.filter((selection) => selection.sourceKind === `lightweight-${stageName}-project-scan`).length;
   const projectImport = createNativeProjectImportResult({
     id: `${mergeId}_${stageName}_project_import`,
     projectRoot: input.projectRoot,
@@ -74,13 +92,32 @@ function createProjectGraphStageArtifacts(input, files, mergeId, stageName, stag
       ...(stageName === 'output' ? { outputProjectImportSource: projectGraphImportSource } : {})
     }
   }, imports);
+  const edgeLimitConflicts = projectGraphEdgeLimitConflicts(limits, stageName, projectImport.projectSymbolGraph);
+  const serialized = projectGraphSerializedLimitConflict(limits, stageName, {
+    projectImport,
+    projectSymbolGraph: projectImport.projectSymbolGraph
+  });
+  const limitConflicts = [...edgeLimitConflicts, serialized.conflict].filter(Boolean);
+  if (limitConflicts.length) {
+    return limitedProjectGraphStage(stageName, projectGraphImportSource, sourceStats, projectImport.projectSymbolGraph, limitConflicts, serialized.serializedBytes);
+  }
   return {
     kind: 'frontier.lang.jsTsProjectGraphStage',
     version: 1,
     stage: stageName,
     projectImport,
     projectSymbolGraph: projectImport.projectSymbolGraph,
-    summary: projectGraphStageSummary(stageName, projectImport.projectSymbolGraph, projectGraphImportSource)
+    summary: projectGraphStageSummary(stageName, projectImport.projectSymbolGraph, projectGraphImportSource, sourceStats, serialized.serializedBytes, [])
+  };
+}
+
+function limitedProjectGraphStage(stageName, importSource, sourceStats, projectSymbolGraph, limitConflicts, serializedBytes) {
+  return {
+    kind: 'frontier.lang.jsTsProjectGraphStage',
+    version: 1,
+    stage: stageName,
+    summary: projectGraphStageSummary(stageName, projectSymbolGraph, importSource, sourceStats, serializedBytes, limitConflicts),
+    limitConflicts
   };
 }
 
@@ -113,11 +150,12 @@ function matchingProjectImport(source, imports) {
   });
 }
 
-function projectGraphStageSummary(stageName, projectSymbolGraph, importSource) {
+function projectGraphStageSummary(stageName, projectSymbolGraph, importSource, sourceStats, serializedBytes, limitConflicts) {
   const importEdges = Array.isArray(projectSymbolGraph?.importEdges) ? projectSymbolGraph.importEdges : [];
   return {
     stage: stageName,
-    sourceFiles: projectSymbolGraph?.sourceCount ?? 0,
+    sourceFiles: projectSymbolGraph?.sourceCount ?? sourceStats.sourceFiles,
+    sourceBytes: sourceStats.sourceBytes,
     documents: projectSymbolGraph?.documentCount ?? 0,
     symbols: projectSymbolGraph?.symbolCount ?? 0,
     fileHashes: projectSymbolGraph?.fileHashes?.length ?? 0,
@@ -128,7 +166,9 @@ function projectGraphStageSummary(stageName, projectSymbolGraph, importSource) {
     unresolvedImportEdges: importEdges.filter(isMissingProjectImportEdge).length,
     suppliedImports: importSource.suppliedImports,
     matchedSuppliedImports: importSource.matchedSuppliedImports,
-    scannerFallbackImports: importSource.scannerFallbackImports
+    scannerFallbackImports: importSource.scannerFallbackImports,
+    serializedBytes,
+    limitConflicts: limitConflicts.length
   };
 }
 

@@ -25,7 +25,7 @@ function safeMergeJsTsProject(input = {}) {
   const graphArtifacts = projectGraphDelta?.stages?.output ?? (blockedFiles.length === 0 && input.includeOutputProjectSymbolGraph
     ? createJsTsProjectSafeMergeGraphArtifacts(input, outputFiles, id)
     : undefined);
-  const outputGraphConflicts = outputProjectGraphConflicts(graphArtifacts?.projectSymbolGraph);
+  const outputGraphConflicts = outputProjectGraphConflicts(projectGraphDelta ? graphArtifacts?.projectSymbolGraph : graphArtifacts);
   const deltaGraphConflicts = projectGraphDeltaConflicts(projectGraphDelta);
   const projectGraphDeltaWithConflicts = addProjectGraphDeltaConflictSummary(projectGraphDelta, deltaGraphConflicts);
   const graphConflicts = [...outputGraphConflicts, ...deltaGraphConflicts];
@@ -60,7 +60,7 @@ function safeMergeJsTsProject(input = {}) {
       reasonCodes,
       conflictKeys
     },
-    summary: projectSummary(fileResults, graphConflicts),
+    summary: projectSummary(fileResults, graphConflicts, Boolean(projectGraphDelta)),
     metadata: compactRecord({
       workerChangeSetId: input.workerChangeSetId,
       headChangeSetId: input.headChangeSetId,
@@ -71,6 +71,7 @@ function safeMergeJsTsProject(input = {}) {
       projectGraphConflicts: graphConflicts.length || undefined,
       outputProjectGraphConflicts: outputGraphConflicts.length || undefined,
       projectGraphDeltaConflicts: deltaGraphConflicts.length || undefined,
+      projectGraphLimitConflicts: graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-limit').length || undefined,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     })
@@ -254,18 +255,21 @@ function sourceLedgersForFile(input, sourcePath) {
   return byPath ?? (input.sourceLedgers?.base || input.sourceLedgers?.worker || input.sourceLedgers?.head ? input.sourceLedgers : undefined);
 }
 
-function projectSummary(files, graphConflicts = []) {
+function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false) {
   const byOperation = {};
   for (const file of files) byOperation[file.operation] = (byOperation[file.operation] ?? 0) + 1;
-  const deltaConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-delta');
+  const limitConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-limit');
+  const deltaConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-delta' || (hasProjectGraphDelta && conflict.gateId === 'project-graph-limit'));
+  const outputConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-symbol-graph' || (!hasProjectGraphDelta && conflict.gateId === 'project-graph-limit'));
   return {
     files: files.length,
     mergedFiles: files.filter((file) => file.status === 'merged').length,
     blockedFiles: files.filter((file) => file.status === 'blocked').length,
     outputFiles: files.filter((file) => typeof file.outputSourceText === 'string').length,
     projectGraphConflicts: graphConflicts.length,
-    outputProjectGraphConflicts: graphConflicts.length - deltaConflicts.length,
+    outputProjectGraphConflicts: outputConflicts.length,
     projectGraphDeltaConflicts: deltaConflicts.length,
+    projectGraphLimitConflicts: limitConflicts.length,
     projectGraphPublicContractConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-public-contract-delta-conflict').length,
     projectGraphReExportIdentityConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-re-export-identity-delta-conflict').length,
     projectGraphImportTargetConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-import-target-delta-conflict').length,

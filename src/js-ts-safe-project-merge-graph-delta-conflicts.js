@@ -2,12 +2,14 @@ import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { compactRecord } from './js-ts-safe-merge-context.js';
 
 function projectGraphDeltaConflicts(projectGraphDelta) {
+  const limitConflicts = projectGraphDeltaLimitConflicts(projectGraphDelta);
   const baseGraph = projectGraphDelta?.stages?.base?.projectSymbolGraph;
   const workerGraph = projectGraphDelta?.stages?.worker?.projectSymbolGraph;
   const headGraph = projectGraphDelta?.stages?.head?.projectSymbolGraph;
   const outputGraph = projectGraphDelta?.stages?.output?.projectSymbolGraph;
-  if (!baseGraph || !workerGraph || !headGraph) return [];
+  if (!baseGraph || !workerGraph || !headGraph) return limitConflicts;
   return [
+    ...limitConflicts,
     ...changedIdentityConflicts({
       code: 'project-public-contract-delta-conflict',
       label: 'public contract',
@@ -43,9 +45,14 @@ function addProjectGraphDeltaConflictSummary(projectGraphDelta, conflicts) {
       conflicts: conflicts.length,
       publicContractConflicts: conflicts.filter((conflict) => conflict.code === 'project-public-contract-delta-conflict').length,
       reExportIdentityConflicts: conflicts.filter((conflict) => conflict.code === 'project-re-export-identity-delta-conflict').length,
-      importTargetConflicts: conflicts.filter((conflict) => conflict.code === 'project-import-target-delta-conflict').length
+      importTargetConflicts: conflicts.filter((conflict) => conflict.code === 'project-import-target-delta-conflict').length,
+      limitConflicts: conflicts.filter((conflict) => conflict.code === 'project-graph-limit-exceeded').length
     }
   };
+}
+
+function projectGraphDeltaLimitConflicts(projectGraphDelta) {
+  return Object.values(projectGraphDelta?.stages ?? {}).flatMap((stage) => stage?.limitConflicts ?? []);
 }
 
 function changedIdentityConflicts(input) {

@@ -11,6 +11,7 @@ const typedModuleResolution: compilerApi.NativeProjectModuleResolutionOptions = 
 const jsTsProjectSafeMerge = compilerApi.safeMergeJsTsProject({
   language: 'typescript',
   includeOutputProjectSymbolGraph: true,
+  projectGraphLimits: { maxFiles: 10, maxSourceBytes: 20_000, maxImportEdges: 100, maxExportEdges: 100, maxSerializedBytes: 2_000_000 },
   moduleResolution: typedModuleResolution,
   baseFiles: { 'src/example.ts': 'export const stable = 1;\n' },
   workerFiles: { 'src/example.ts': 'export const stable = 1;\nexport const workerOnly = 1;\n' },
@@ -18,13 +19,16 @@ const jsTsProjectSafeMerge = compilerApi.safeMergeJsTsProject({
 });
 
 const typedJsTsProjectSafeMerge: compilerApi.JsTsProjectSafeMergeResult = jsTsProjectSafeMerge;
+const typedProjectGraphLimits: compilerApi.JsTsProjectGraphLimits = { maxFiles: 10, maxSerializedBytes: 1_000_000 };
 typedJsTsProjectSafeMerge.files[0]?.semanticArtifacts satisfies compilerApi.JsTsSafeMergeSemanticArtifacts | undefined;
 typedJsTsProjectSafeMerge.outputFiles[0]?.operation satisfies compilerApi.JsTsProjectSafeMergeFileOperation | undefined;
 typedJsTsProjectSafeMerge.outputProjectImport satisfies compilerApi.NativeProjectImportResult | undefined;
 typedJsTsProjectSafeMerge.outputProjectSymbolGraph satisfies compilerApi.NativeProjectSymbolGraphSummary | undefined;
 typedJsTsProjectSafeMerge.admission.autoMergeClaim satisfies false;
 typedJsTsProjectSafeMerge.admission.semanticEquivalenceClaim satisfies false;
+typedJsTsProjectSafeMerge.summary.projectGraphLimitConflicts satisfies number;
 
+void typedProjectGraphLimits;
 void typedJsTsProjectSafeMerge;
 
 const typedOutputProjectImport: compilerApi.NativeSourceImportResult = compilerApi.importNativeSource({
@@ -85,10 +89,16 @@ typedProjectGraphDelta?.stages.output.summary.stage satisfies compilerApi.JsTsPr
 typedProjectGraphDelta?.stages.output.summary.suppliedImports satisfies number | undefined;
 typedProjectGraphDelta?.stages.output.summary.matchedSuppliedImports satisfies number | undefined;
 typedProjectGraphDelta?.stages.output.summary.scannerFallbackImports satisfies number | undefined;
+typedProjectGraphDelta?.stages.output.summary.sourceBytes satisfies number | undefined;
+typedProjectGraphDelta?.stages.output.summary.serializedBytes satisfies number | undefined;
+typedProjectGraphDelta?.stages.output.summary.limitConflicts satisfies number | undefined;
+const typedProjectGraphLimitKind = typedProjectGraphDelta?.stages.output.limitConflicts?.[0]?.details?.limitKind as compilerApi.JsTsProjectGraphLimitKind | undefined;
+typedProjectGraphLimitKind satisfies compilerApi.JsTsProjectGraphLimitKind | undefined;
 typedProjectGraphDelta?.summary.conflicts satisfies number | undefined;
 typedProjectGraphDelta?.summary.publicContractConflicts satisfies number | undefined;
 typedProjectGraphDelta?.summary.reExportIdentityConflicts satisfies number | undefined;
 typedProjectGraphDelta?.summary.importTargetConflicts satisfies number | undefined;
+typedProjectGraphDelta?.summary.limitConflicts satisfies number | undefined;
 typedProjectGraphDeltaStageSummary?.publicContractRegions satisfies number | undefined;
 
 void typedOutputProjectImport;
@@ -99,3 +109,4 @@ void typedProjectGraphImportsByStage;
 void typedJsTsProjectSafeMergeWithProjectGraphDelta;
 void typedProjectGraphDelta;
 void typedProjectGraphDeltaStageSummary;
+void typedProjectGraphLimitKind;

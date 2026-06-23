@@ -32,6 +32,7 @@ const smokeModules = [
   './smoke/js-ts-safe-merge-members.mjs',
   './smoke/js-ts-safe-project-merge.mjs',
   './smoke/js-ts-safe-project-merge-output-graph.mjs',
+  './smoke/js-ts-safe-project-merge-graph-limits.mjs',
   './smoke/js-ts-conflict-sidecars.mjs',
   './smoke/js-ts-fixture-corpus.mjs',
   './smoke/js-ts-semantic-merge-oracles.mjs',
