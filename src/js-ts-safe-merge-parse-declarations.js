@@ -61,6 +61,15 @@ function parseImportInfo(text) {
 }
 
 function parseImportClause(clause, options) {
+  const defaultAndNamespace = clause.match(/^([A-Za-z_$][\w$]*)\s*,\s*\*\s+as\s+([A-Za-z_$][\w$]*)$/);
+  if (defaultAndNamespace) {
+    return {
+      defaultLocalName: defaultAndNamespace[1],
+      namespaceLocalName: defaultAndNamespace[2],
+      specifiers: []
+    };
+  }
+
   const namespace = clause.match(/^\*\s+as\s+([A-Za-z_$][\w$]*)$/);
   if (namespace) {
     return {

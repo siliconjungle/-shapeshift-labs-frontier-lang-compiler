@@ -12,6 +12,7 @@
     "import-safe-merge",
     "new-import-declarations",
     "import-specifier-order",
+    "import-shape-additions",
     "exports",
     "conflicting-exports",
     "top-level-declarations",
@@ -930,6 +931,46 @@
       ],
       "expectedLines": [
         "import { readFile, writeFile, stat } from 'node:fs';",
+        "export const stable = readFile;",
+        ""
+      ]
+    },
+    {
+      "id": "safe-existing-import-default-addition",
+      "title": "default binding additions to existing imports merge with named additions",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/safe/import-default-addition.ts",
+      "coverage": ["imports", "import-shape-additions", "import-safe-merge"],
+      "safeMerge": {
+        "mode": "imports-declarations"
+      },
+      "expected": {
+        "outcome": "accepted",
+        "safeMergeStatus": "merged",
+        "admissionStatus": "auto-merge-candidate",
+        "reasonCodes": [],
+        "gateIds": ["independent-import-specifiers"],
+        "blockedGateIds": [],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "import { readFile } from 'node:fs';",
+        "export const stable = readFile;",
+        ""
+      ],
+      "workerLines": [
+        "import fs, { readFile } from 'node:fs';",
+        "export const stable = readFile;",
+        ""
+      ],
+      "headLines": [
+        "import { readFile, stat } from 'node:fs';",
+        "export const stable = readFile;",
+        ""
+      ],
+      "expectedLines": [
+        "import fs, { readFile, stat } from 'node:fs';",
         "export const stable = readFile;",
         ""
       ]

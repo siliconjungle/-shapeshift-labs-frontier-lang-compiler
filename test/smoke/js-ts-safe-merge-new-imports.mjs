@@ -143,6 +143,7 @@ const defaultNamespaceMixedAndTypeOnlyNewImports = safeMergeJsTsImportsAndDeclar
   baseSourceText: 'export const stable = 1;\n',
   workerSourceText: [
     "import DefaultThing from 'pkg-default';",
+    "import DefaultTools, * as toolsDefault from 'pkg-default-namespace';",
     "import MixedThing, { helper } from 'pkg-mixed';",
     "import * as tools from 'pkg-namespace';",
     'export const stable = 1;',
@@ -159,6 +160,7 @@ const defaultNamespaceMixedAndTypeOnlyNewImports = safeMergeJsTsImportsAndDeclar
 assert.equal(defaultNamespaceMixedAndTypeOnlyNewImports.status, 'merged');
 assert.equal(defaultNamespaceMixedAndTypeOnlyNewImports.mergedSourceText, [
   "import DefaultThing from 'pkg-default';",
+  "import DefaultTools, * as toolsDefault from 'pkg-default-namespace';",
   "import MixedThing, { helper } from 'pkg-mixed';",
   "import * as tools from 'pkg-namespace';",
   "import type TypeThing from 'pkg-type-default';",

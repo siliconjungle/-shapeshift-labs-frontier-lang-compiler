@@ -7,9 +7,7 @@ import { mergeJsTsSafeMemberAdditions } from '../../src/js-ts-safe-member-merge.
 const corpus = JSON.parse(readFileSync(new URL('../fixtures/js-ts-semantic-merge/corpus.json', import.meta.url), 'utf8'));
 const fixturesById = new Map(corpus.fixtures.map((fixture) => [fixture.id, fixture]));
 for (const coverage of [
-  'imports',
-  'import-specifier-order',
-  'new-import-declarations',
+  'imports', 'import-specifier-order', 'import-shape-additions', 'new-import-declarations',
   'exports',
   'conflicting-exports',
   'composed-safe-merge',
@@ -60,6 +58,7 @@ assertCorpusFixture('safe-import-declaration-additions', 'accepted');
 assertCorpusFixture('safe-composed-source-additions', 'accepted');
 assertCorpusFixture('safe-new-import-declaration-additions', 'accepted');
 assertCorpusFixture('safe-import-specifier-reorder', 'accepted');
+assertCorpusFixture('safe-existing-import-default-addition', 'accepted');
 assertCorpusFixture('unsafe-missing-source-ledger-span', 'rejected', ['missing-source-ledger-span']);
 assertCorpusFixture('unsafe-computed-key-declaration', 'rejected', ['computed-key']);
 assertCorpusFixture('unsafe-composed-member-conflict', 'rejected', ['duplicate-member-name']);
@@ -73,6 +72,7 @@ assertSafeMergeCorpusFixture('safe-import-declaration-additions');
 assertSafeMergeCorpusFixture('safe-composed-source-additions');
 assertSafeMergeCorpusFixture('safe-new-import-declaration-additions');
 assertSafeMergeCorpusFixture('safe-import-specifier-reorder');
+assertSafeMergeCorpusFixture('safe-existing-import-default-addition');
 assertSafeMergeCorpusFixture('unsafe-missing-source-ledger-span');
 assertSafeMergeCorpusFixture('unsafe-computed-key-declaration');
 assertSafeMergeCorpusFixture('unsafe-composed-member-conflict');

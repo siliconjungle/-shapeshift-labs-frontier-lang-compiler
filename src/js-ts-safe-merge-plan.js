@@ -1,17 +1,21 @@
 import { JsTsSafeMergeConflictCodes, JsTsSafeMergeGateIds } from './js-ts-safe-merge-constants.js';
 import { addConflict, detectLineEnding, normalizeLineEndings } from './js-ts-safe-merge-context.js';
+import { findCompatibleVariantImportEntry } from './js-ts-safe-merge-import-shape.js';
 import { importSpecifierCanonical } from './js-ts-safe-merge-ledger.js';
 
 export function createSourceMergePlan(base, worker, head, workerPlan, headPlan, context) {
   const edits = [];
   let importSpecifierAdditions = 0;
   let importDeclarationAdditions = 0;
+  const headEntriesByBaseKey = variantEntriesByBaseKey(head, headPlan);
+  const usedHeadImportKeys = new Set();
   for (const baseEntry of base.entries.filter((entry) => entry.kind === 'import')) {
     const workerAdditions = workerPlan.importAdditions.get(baseEntry.key) ?? [];
     const headAdditions = headPlan.importAdditions.get(baseEntry.key) ?? [];
     if (!workerAdditions.length && !headAdditions.length) continue;
     importSpecifierAdditions += workerAdditions.length + headAdditions.length;
-    const headEntry = head.entries.find((entry) => entry.key === baseEntry.key);
+    const headEntry = headEntriesByBaseKey.get(baseEntry.key)
+      ?? findCompatibleVariantImportEntry(baseEntry, head.entries, usedHeadImportKeys);
     if (!headEntry) {
       addConflict(context, {
         code: JsTsSafeMergeConflictCodes.insertionAnchorMissing,
@@ -22,26 +26,29 @@ export function createSourceMergePlan(base, worker, head, workerPlan, headPlan, 
       });
       continue;
     }
+    usedHeadImportKeys.add(headEntry.key);
+    const importInfo = mergedImportInfo(baseEntry.importInfo, workerAdditions, headAdditions);
     edits.push({
       kind: 'replace-import',
       start: headEntry.start,
       end: headEntry.end,
-      text: renderImportStatement(baseEntry.importInfo, mergedImportSpecifiers(baseEntry.importInfo.specifiers, workerAdditions, headAdditions))
+      text: renderImportStatement(importInfo, importInfo.specifiers)
     });
   }
 
-  const importInsertionGroups = variantInsertionGroups(worker, workerPlan.baseKeys, 'worker', context, {
+  const importInsertionGroups = variantInsertionGroups(worker, workerPlan.matchedVariantKeys, 'worker', context, {
+    baseKeyByVariantKey: workerPlan.baseKeyByVariantKey,
     includeEntry: (entry) => entry.kind === 'import',
     label: 'import'
   });
-  const headImportInsertionGroups = variantInsertionGroups(head, headPlan.baseKeys, 'head', context, {
+  const headImportInsertionGroups = variantInsertionGroups(head, headPlan.matchedVariantKeys, 'head', context, {
+    baseKeyByVariantKey: headPlan.baseKeyByVariantKey,
     includeEntry: (entry) => entry.kind === 'import',
     label: 'import'
   });
   const headImportGroupsByAnchor = new Map(headImportInsertionGroups.map((group) => [insertionGroupKey(group), group]));
-  const headEntriesByKey = new Map(head.entries.map((entry) => [entry.key, entry]));
   for (const group of importInsertionGroups) {
-    const anchor = headEntriesByKey.get(group.anchorKey);
+    const anchor = headEntriesByBaseKey.get(group.anchorKey);
     if (!anchor) {
       addConflict(context, {
         code: JsTsSafeMergeConflictCodes.insertionAnchorMissing,
@@ -64,18 +71,20 @@ export function createSourceMergePlan(base, worker, head, workerPlan, headPlan, 
     importDeclarationAdditions += group.entries.length;
   }
 
-  const insertionGroups = variantInsertionGroups(worker, workerPlan.baseKeys, 'worker', context, {
+  const insertionGroups = variantInsertionGroups(worker, workerPlan.matchedVariantKeys, 'worker', context, {
+    baseKeyByVariantKey: workerPlan.baseKeyByVariantKey,
     includeEntry: (entry) => entry.kind !== 'import',
     label: 'declaration'
   });
-  const headInsertionGroups = variantInsertionGroups(head, headPlan.baseKeys, 'head', context, {
+  const headInsertionGroups = variantInsertionGroups(head, headPlan.matchedVariantKeys, 'head', context, {
+    baseKeyByVariantKey: headPlan.baseKeyByVariantKey,
     includeEntry: (entry) => entry.kind !== 'import',
     label: 'declaration'
   });
   const headDeclarationGroupsByAnchor = new Map(headInsertionGroups.map((group) => [insertionGroupKey(group), group]));
   let topLevelDeclarationAdditions = 0;
   for (const group of insertionGroups) {
-    const anchor = headEntriesByKey.get(group.anchorKey);
+    const anchor = headEntriesByBaseKey.get(group.anchorKey);
     if (!anchor) {
       addConflict(context, {
         code: JsTsSafeMergeConflictCodes.insertionAnchorMissing,
@@ -108,6 +117,7 @@ export function createSourceMergePlan(base, worker, head, workerPlan, headPlan, 
 
 function variantInsertionGroups(variant, baseKeys, side, context, options = {}) {
   const includeEntry = options.includeEntry ?? (() => true);
+  const baseKeyByVariantKey = options.baseKeyByVariantKey ?? new Map();
   const groups = [];
   let index = 0;
   while (index < variant.entries.length) {
@@ -132,10 +142,24 @@ function variantInsertionGroups(variant, baseKeys, side, context, options = {}) 
       continue;
     }
     groups.push(previousBase
-      ? { mode: 'after', anchorKey: previousBase.key, entries }
-      : { mode: 'before', anchorKey: nextBase.key, entries });
+      ? { mode: 'after', anchorKey: baseKeyForVariantEntry(previousBase, baseKeyByVariantKey), entries }
+      : { mode: 'before', anchorKey: baseKeyForVariantEntry(nextBase, baseKeyByVariantKey), entries });
   }
   return groups;
+}
+
+function variantEntriesByBaseKey(variant, plan) {
+  const entriesByKey = new Map(variant.entries.map((entry) => [entry.key, entry]));
+  const entriesByBaseKey = new Map();
+  for (const [variantKey, baseKey] of plan.baseKeyByVariantKey ?? []) {
+    const entry = entriesByKey.get(variantKey);
+    if (entry) entriesByBaseKey.set(baseKey, entry);
+  }
+  return entriesByBaseKey;
+}
+
+function baseKeyForVariantEntry(entry, baseKeyByVariantKey) {
+  return baseKeyByVariantKey.get(entry.key) ?? entry.key;
 }
 
 function insertionGroupKey(group) {
@@ -165,13 +189,25 @@ export function applySourceMergePlan(sourceText, mergePlan) {
 function mergedImportSpecifiers(baseSpecifiers, workerAdditions, headAdditions) {
   const seen = new Set(baseSpecifiers.map((specifier) => specifier.canonical));
   const additions = [];
-  for (const specifier of [...workerAdditions, ...headAdditions]) {
+  for (const specifier of [...workerAdditions, ...headAdditions].filter((addition) => !addition.additionKind)) {
     if (seen.has(specifier.canonical)) continue;
     seen.add(specifier.canonical);
     additions.push(specifier);
   }
   additions.sort((left, right) => left.canonical.localeCompare(right.canonical));
   return [...baseSpecifiers, ...additions];
+}
+
+function mergedImportInfo(baseImportInfo, workerAdditions, headAdditions) {
+  const additions = [...workerAdditions, ...headAdditions];
+  const defaultAddition = additions.find((addition) => addition.additionKind === 'default');
+  const namespaceAddition = additions.find((addition) => addition.additionKind === 'namespace');
+  return {
+    ...baseImportInfo,
+    defaultLocalName: baseImportInfo.defaultLocalName ?? defaultAddition?.localName,
+    namespaceLocalName: baseImportInfo.namespaceLocalName ?? namespaceAddition?.localName,
+    specifiers: mergedImportSpecifiers(baseImportInfo.specifiers, workerAdditions, headAdditions)
+  };
 }
 
 function renderImportStatement(importInfo, specifiers) {

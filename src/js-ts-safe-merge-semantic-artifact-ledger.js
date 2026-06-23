@@ -2,12 +2,16 @@ import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { idFragment } from './native-import-utils.js';
 import { detectLineEnding, normalizeLineEndings } from './js-ts-safe-merge-context.js';
 import { importEntryBindings } from './js-ts-safe-merge-import-entry-utils.js';
+import { findCompatibleBaseImportEntry } from './js-ts-safe-merge-import-shape.js';
 
 function createOperationsFromLedgers(context) {
   const headByKey = new Map(context.head.entries.map((entry) => [entry.key, entry]));
+  const usedHeadKeys = new Set();
   return context.merged.entries.flatMap((entry, index) => {
-    const headEntry = headByKey.get(entry.key);
+    const headEntry = headByKey.get(entry.key)
+      ?? findCompatibleBaseImportEntry(entry, context.head.entries, usedHeadKeys);
     if (headEntry) {
+      usedHeadKeys.add(headEntry.key);
       if (sameEntryText(headEntry.text, entry.text)) return [];
       return [operationRecord({
         ...context,
@@ -129,7 +133,8 @@ function insertionAnchorForMergedEntry(entry, index, context) {
 function nearestHeadEntry(mergedEntries, headEntries, startIndex, step) {
   const headByKey = new Map(headEntries.map((entry) => [entry.key, entry]));
   for (let index = startIndex + step; index >= 0 && index < mergedEntries.length; index += step) {
-    const headEntry = headByKey.get(mergedEntries[index].key);
+    const headEntry = headByKey.get(mergedEntries[index].key)
+      ?? findCompatibleBaseImportEntry(mergedEntries[index], headEntries);
     if (headEntry) return headEntry;
   }
   return undefined;

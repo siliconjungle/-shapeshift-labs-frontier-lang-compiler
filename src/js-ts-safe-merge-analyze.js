@@ -2,17 +2,27 @@ import { JsTsSafeMergeConflictCodes, JsTsSafeMergeGateIds } from './js-ts-safe-m
 import { addConflict, arraysEqual, sameStatementText } from './js-ts-safe-merge-context.js';
 import { validateCrossSideExportStarAdditions } from './js-ts-safe-merge-export-star-validation.js';
 import { importEntryBindings, mergedNewImportBindings } from './js-ts-safe-merge-import-entry-utils.js';
+import {
+  classifyImportExpansion,
+  findCompatibleBaseImportEntry,
+  findSameImportTargetBaseEntry
+} from './js-ts-safe-merge-import-shape.js';
 import { validateNewImportDeclarations } from './js-ts-safe-merge-new-import-validation.js';
 
 export function analyzeVariantLedger(base, variant, baseIndex, side, context) {
   const projectedBaseKeys = [];
+  const projectedBaseKeySet = new Set();
+  const matchedVariantKeys = new Set();
+  const baseKeyByVariantKey = new Map();
   const addedEntries = [];
   const newImportEntries = [];
   const importAdditions = new Map();
-  const baseKeys = new Set(baseIndex.orderedKeys);
+  const baseEntries = baseIndex.orderedKeys.map((key) => baseIndex.entriesByKey.get(key)).filter(Boolean);
 
   for (const entry of variant.entries) {
-    const baseEntry = baseIndex.entriesByKey.get(entry.key);
+    const baseEntry = baseIndex.entriesByKey.get(entry.key)
+      ?? findCompatibleBaseImportEntry(entry, baseEntries, projectedBaseKeySet)
+      ?? findSameImportTargetBaseEntry(entry, baseEntries, projectedBaseKeySet);
     if (!baseEntry) {
       if (entry.kind === 'import') {
         newImportEntries.push(entry);
@@ -21,7 +31,10 @@ export function analyzeVariantLedger(base, variant, baseIndex, side, context) {
       }
       continue;
     }
-    projectedBaseKeys.push(entry.key);
+    projectedBaseKeys.push(baseEntry.key);
+    projectedBaseKeySet.add(baseEntry.key);
+    matchedVariantKeys.add(entry.key);
+    baseKeyByVariantKey.set(entry.key, baseEntry.key);
     if (entry.kind !== baseEntry.kind) {
       addConflict(context, {
         code: JsTsSafeMergeConflictCodes.parserLedgerLoss,
@@ -34,7 +47,7 @@ export function analyzeVariantLedger(base, variant, baseIndex, side, context) {
     }
     if (entry.kind === 'import') {
       const additions = analyzeImportStatementChange(baseEntry, entry, side, context);
-      if (additions.length) importAdditions.set(entry.key, additions);
+      if (additions.length) importAdditions.set(baseEntry.key, additions);
     } else if (!sameStatementText(baseEntry.text, entry.text)) {
       const typeAliasConflict = baseEntry.declarationInfo?.declarationKind === 'type'
         || entry.declarationInfo?.declarationKind === 'type';
@@ -71,20 +84,22 @@ export function analyzeVariantLedger(base, variant, baseIndex, side, context) {
     addedEntries,
     newImportEntries,
     importAdditions,
-    baseKeys
+    matchedVariantKeys,
+    baseKeyByVariantKey
   };
 }
 
 function analyzeImportStatementChange(baseEntry, variantEntry, side, context) {
   const baseImport = baseEntry.importInfo;
   const variantImport = variantEntry.importInfo;
-  if (!sameImportShape(baseImport, variantImport)) {
+  const expansion = classifyImportExpansion(baseImport, variantImport);
+  if (!expansion.compatible) {
     addConflict(context, {
-      code: baseImport.sideEffectOnly ? JsTsSafeMergeConflictCodes.sideEffectImportReorder : JsTsSafeMergeConflictCodes.importShapeChanged,
-      gateId: JsTsSafeMergeGateIds.independentImportSpecifiers,
+      code: expansion.code,
+      gateId: expansion.gateId,
       side,
-      message: `${side} source changes an existing import shape instead of adding named specifiers.`,
-      details: { key: baseEntry.key }
+      message: expansion.message,
+      details: { key: baseEntry.key, ...expansion.details }
     });
     return [];
   }
@@ -104,22 +119,9 @@ function analyzeImportStatementChange(baseEntry, variantEntry, side, context) {
   const baseSpecifiers = baseImport.specifiers;
   const variantSpecifiers = variantImport.specifiers;
   const baseSpecifiersByCanonical = new Set(baseSpecifiers.map((specifier) => specifier.canonical));
-  const variantSpecifiersByCanonical = new Set(variantSpecifiers.map((specifier) => specifier.canonical));
-  const missingBaseSpecifiers = baseSpecifiers.filter((specifier) => !variantSpecifiersByCanonical.has(specifier.canonical));
-  if (missingBaseSpecifiers.length) {
-    addConflict(context, {
-      code: JsTsSafeMergeConflictCodes.importSpecifierRemoved,
-      gateId: JsTsSafeMergeGateIds.independentImportSpecifiers,
-      side,
-      message: `${side} source removes import specifiers.`,
-      details: {
-        key: baseEntry.key,
-        missing: missingBaseSpecifiers.map((specifier) => specifier.canonical)
-      }
-    });
-    return [];
-  }
   const additions = variantSpecifiers.filter((specifier) => !baseSpecifiersByCanonical.has(specifier.canonical));
+  if (expansion.defaultAddition) additions.unshift(expansion.defaultAddition);
+  if (expansion.namespaceAddition) additions.unshift(expansion.namespaceAddition);
   if (additions.length === 0 && !sameStatementText(baseEntry.text, variantEntry.text)) {
     const baseCanonicalOrder = baseSpecifiers.map((specifier) => specifier.canonical);
     const variantCanonicalOrder = variantSpecifiers.map((specifier) => specifier.canonical);
@@ -133,14 +135,6 @@ function analyzeImportStatementChange(baseEntry, variantEntry, side, context) {
     });
   }
   return additions;
-}
-
-function sameImportShape(left, right) {
-  return left.moduleSpecifier === right.moduleSpecifier
-    && left.typeOnly === right.typeOnly
-    && left.sideEffectOnly === right.sideEffectOnly
-    && left.defaultLocalName === right.defaultLocalName
-    && left.namespaceLocalName === right.namespaceLocalName;
 }
 
 export function validateIndependentAdditions(base, workerPlan, headPlan, context) {

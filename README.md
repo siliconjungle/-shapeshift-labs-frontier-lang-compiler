@@ -169,7 +169,7 @@ The JS/TS semantic merge smoke corpus lives at
 small and dependency-free. They cover accepted projection/replay cases, exact
 source preservation, generated/source-map boundaries, safe import/declaration
 merges, safe unordered member merges, composed top-level/member safe merges,
-and rejected unsafe cases such as stale
+existing import binding-shape additions, and rejected unsafe cases such as stale
 ledger spans, import specifier removals, computed keys, duplicate exported
 names, duplicate object members, decorators, overload anchors, and same-anchor
 edit conflicts. Fixture failures include the fixture id and the actual
@@ -182,7 +182,8 @@ JS/TS ledger-approved head-to-merged source edits into a semantic edit script,
 projection, replay, and already-applied replay. This is intentionally different
 from asking the generic three-way edit classifier to bless every JS/TS case:
 simultaneous import specifier additions are safe only because the JS/TS ledger
-gates proved independent additions, stable anchors, and source replay. The
+gates proved independent additions, compatible import binding expansions,
+stable anchors, and source replay. The
 artifacts keep `autoMergeClaim: false` and `semanticEquivalenceClaim: false`,
 but give coordinators machine-readable proof that the projected source matches
 the merge output and that applying the same projection again is a no-op.
