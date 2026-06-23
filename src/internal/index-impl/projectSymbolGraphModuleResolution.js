@@ -13,6 +13,7 @@ export function resolveRelativeProjectModule(sourcePath, moduleSpecifier, docume
 export function resolveProjectModule(sourcePath, moduleSpecifier, documentsByPath, moduleResolution) {
   if (!sourcePath || !moduleSpecifier) return undefined;
   if (String(moduleSpecifier).startsWith('.')) return resolveRelativeProjectModule(sourcePath, moduleSpecifier, documentsByPath);
+  if (String(moduleSpecifier).startsWith('#')) return resolvePackageImportProjectModule(sourcePath, moduleSpecifier, documentsByPath, moduleResolution);
   return resolveConfiguredProjectModule(moduleSpecifier, documentsByPath, moduleResolution);
 }
 
@@ -72,6 +73,32 @@ function resolveConfiguredProjectModule(moduleSpecifier, documentsByPath, module
     firstMissing ??= { path: candidate.path, kind: `${candidate.kind}-missing`, ...packageFields };
   }
   return firstMissing ?? (packageInfo ? { kind: 'package-external', ...packageInfo } : undefined);
+}
+
+function resolvePackageImportProjectModule(sourcePath, moduleSpecifier, documentsByPath, moduleResolution = {}) {
+  const packageContext = packageImportContext(sourcePath, moduleResolution);
+  const importsValue = packageContext.imports;
+  if (!importsValue) return { kind: 'package-import-external', packageImportKey: moduleSpecifier };
+  const match = packageImportMapValue(importsValue, moduleSpecifier);
+  if (!match) return { kind: 'package-import-external', packageImportKey: moduleSpecifier };
+  let firstMissing;
+  for (const target of exportTargetsForValue(match.value, packageConditions(moduleResolution))) {
+    const packageImportTarget = target.path;
+    if (!packageImportTarget || !String(packageImportTarget).startsWith('.')) {
+      return { kind: 'package-import-external', packageImportKey: match.key, packageImportCondition: target.condition, packageImportTarget };
+    }
+    const candidatePath = normalizeProjectPath(joinProjectPath(packageContext.root, packageImportTarget));
+    const resolved = moduleTargetDocument(candidatePath, documentsByPath);
+    const record = {
+      packageImportKey: match.key,
+      packageImportCondition: target.condition,
+      packageImportTarget,
+      packageName: packageContext.packageName
+    };
+    if (resolved) return { path: resolved.path, documentId: resolved.id, kind: 'package-import-source', ...record };
+    firstMissing ??= { path: candidatePath, kind: 'package-import-missing', ...record };
+  }
+  return firstMissing ?? { kind: 'package-import-external', packageImportKey: match.key };
 }
 
 function configuredModuleCandidates(moduleSpecifier, moduleResolution = {}, packageInfo) {
@@ -134,6 +161,31 @@ function packageExportCandidates(packageInfo, options, moduleResolution) {
 function packageExportTargets(exportsValue, subpath, conditions) {
   if (!exportsValue) return [];
   return exportTargetsForValue(exportMapValue(exportsValue, subpath), conditions);
+}
+
+function packageImportMapValue(importsValue, moduleSpecifier) {
+  if (!isRecord(importsValue)) return undefined;
+  if (Object.prototype.hasOwnProperty.call(importsValue, moduleSpecifier)) return { key: moduleSpecifier, value: importsValue[moduleSpecifier] };
+  for (const [pattern, value] of Object.entries(importsValue)) {
+    const capture = patternCapture(moduleSpecifier, pattern);
+    if (capture !== undefined) return { key: pattern, value: replaceExportTargetCapture(value, capture) };
+  }
+  return undefined;
+}
+
+function packageImportContext(sourcePath, moduleResolution = {}) {
+  const packages = Object.entries(moduleResolution.packages ?? {})
+    .map(([packageName, options]) => ({
+      packageName,
+      root: normalizeProjectPath(options.root ?? ''),
+      imports: options.imports
+    }))
+    .filter((entry) => entry.imports && pathInsideRoot(sourcePath, entry.root))
+    .sort((left, right) => right.root.length - left.root.length);
+  return packages[0] ?? {
+    root: normalizeProjectPath(moduleResolution.packageRoot ?? moduleResolution.root ?? ''),
+    imports: moduleResolution.imports ?? moduleResolution.packageImports
+  };
 }
 
 function exportMapValue(exportsValue, subpath) {
@@ -229,7 +281,10 @@ function packageResolutionFields(candidate, packageInfo) {
   return {
     packageName: candidate.packageName ?? packageInfo?.packageName,
     packageSubpath: candidate.packageSubpath ?? packageInfo?.packageSubpath,
-    packageExportCondition: candidate.packageExportCondition
+    packageExportCondition: candidate.packageExportCondition,
+    packageImportKey: candidate.packageImportKey,
+    packageImportCondition: candidate.packageImportCondition,
+    packageImportTarget: candidate.packageImportTarget
   };
 }
 
@@ -249,4 +304,10 @@ function normalizeProjectPath(path) {
     else parts.push(part);
   }
   return parts.join('/');
+}
+
+function pathInsideRoot(sourcePath, root) {
+  if (!root) return true;
+  const normalized = normalizeProjectPath(sourcePath);
+  return normalized === root || normalized.startsWith(`${root}/`);
 }

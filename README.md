@@ -238,6 +238,29 @@ console.log(project.outputProjectSymbolGraph.importEdges[0].packageName); // "@p
 console.log(project.outputProjectSymbolGraph.importEdges[0].packageExportCondition); // "import"
 ```
 
+Package `imports` maps are also modeled for `#internal` specifiers. Top-level
+`moduleResolution.imports` applies from `packageRoot`/`root`, while
+`packages[name].imports` applies to the nearest configured package root. Graph
+edges record `packageImportKey`, `packageImportCondition`, and
+`packageImportTarget` so merge admission can distinguish private aliases from
+external or unresolved imports:
+
+```js
+const project = safeMergeJsTsProject({
+  includeOutputProjectSymbolGraph: true,
+  moduleResolution: {
+    imports: { '#internal/*': { import: './src/internal/*.ts', default: './src/internal/*.js' } },
+    packageExportConditions: ['import', 'default']
+  },
+  baseFiles,
+  workerFiles,
+  headFiles
+});
+
+console.log(project.outputProjectSymbolGraph.importEdges[0].resolutionKind); // "package-import-source"
+console.log(project.outputProjectSymbolGraph.importEdges[0].packageImportKey); // "#internal/*"
+```
+
 Named re-export identities also include symbol links when the project graph has
 enough evidence. For `export { thing as renamedThing } from './thing.js'`,
 `reExportIdentities[]` records the source module, imported/exported names,

@@ -95,6 +95,44 @@ assert.equal(externalEdge.resolvedModulePath, undefined);
 assert.equal(packageGraph.remainingFields.includes('moduleEdges[].packageName'), false);
 assert.equal(packageGraph.remainingFields.includes('moduleEdges[].packageExportCondition'), false);
 
+const packageImportsProject = await importNativeProject({
+  id: 'project_symbol_graph_package_imports_resolution',
+  projectRoot: '.',
+  moduleResolution: {
+    imports: {
+      '#internal/*': { types: './src/internal/*.d.ts', import: './src/internal/*.ts', default: './src/internal/*.js' },
+      '#external': { default: 'react/jsx-runtime' }
+    },
+    packageExportConditions: ['types', 'import', 'default']
+  },
+  sources: [{
+    language: 'typescript',
+    sourcePath: 'src/index.ts',
+    sourceText: "import { internal } from '#internal/thing';\nimport { jsx } from '#external';\nexport const used = internal;\nexport const view = jsx;\n",
+    metadata: { semanticImportExpected: true }
+  }, {
+    language: 'typescript',
+    sourcePath: 'src/internal/thing.ts',
+    sourceText: 'export const internal = 1;\n',
+    metadata: { semanticImportExpected: true }
+  }]
+});
+
+const packageImportsGraph = packageImportsProject.projectSymbolGraph;
+const packageImportEdge = packageImportsGraph.importEdges.find((edge) => edge.moduleSpecifier === '#internal/thing' && edge.importedName === 'internal');
+assert.equal(packageImportEdge.resolvedModulePath, 'src/internal/thing.ts');
+assert.equal(packageImportEdge.targetDocumentId, 'doc_src_internal_thing_ts');
+assert.equal(packageImportEdge.resolutionKind, 'package-import-source');
+assert.equal(packageImportEdge.packageImportKey, '#internal/*');
+assert.equal(packageImportEdge.packageImportCondition, 'import');
+assert.equal(packageImportEdge.packageImportTarget, './src/internal/thing.ts');
+assert.equal(packageImportEdge.resolvedTargetSymbolId, 'symbol:typescript:export:internal');
+const externalPackageImportEdge = packageImportsGraph.importEdges.find((edge) => edge.moduleSpecifier === '#external' && edge.importedName === 'jsx');
+assert.equal(externalPackageImportEdge.resolutionKind, 'package-import-external');
+assert.equal(externalPackageImportEdge.packageImportKey, '#external');
+assert.equal(externalPackageImportEdge.packageImportCondition, 'default');
+assert.equal(externalPackageImportEdge.packageImportTarget, 'react/jsx-runtime');
+
 const reExportProject = await importNativeProject({
   id: 'project_symbol_graph_reexport_identity_resolution',
   projectRoot: 'src',

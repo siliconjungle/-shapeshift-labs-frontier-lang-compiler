@@ -170,6 +170,36 @@ assert.equal(packageGraphEdge.packageExportCondition, 'import');
 assert.equal(packageGraphEdge.resolvedModulePath, 'packages/core/src/utils.ts');
 assert.equal(packageGraphEdge.resolvedTargetSymbolId, 'symbol:typescript:export:util');
 
+const packageImportsGraphProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_package_imports_graph',
+  language: 'typescript',
+  includeOutputProjectSymbolGraph: true,
+  moduleResolution: {
+    imports: { '#internal/*': { import: './src/internal/*.ts', default: './src/internal/*.js' } },
+    packageExportConditions: ['import', 'default']
+  },
+  baseFiles: {
+    'src/index.ts': "import { internal } from '#internal/thing';\nexport const used = internal;\n",
+    'src/internal/thing.ts': 'export const internal = 1;\n'
+  },
+  workerFiles: {
+    'src/index.ts': "import { internal } from '#internal/thing';\nexport const used = internal;\nexport const workerOnly = internal;\n",
+    'src/internal/thing.ts': 'export const internal = 1;\n'
+  },
+  headFiles: {
+    'src/index.ts': "import { internal } from '#internal/thing';\nexport const used = internal;\n",
+    'src/internal/thing.ts': 'export const internal = 1;\n'
+  }
+});
+const packageImportGraphEdge = packageImportsGraphProject.outputProjectSymbolGraph.importEdges.find((edge) => edge.moduleSpecifier === '#internal/thing' && edge.importedName === 'internal');
+assert.equal(packageImportsGraphProject.status, 'merged');
+assert.equal(packageImportGraphEdge.resolutionKind, 'package-import-source');
+assert.equal(packageImportGraphEdge.packageImportKey, '#internal/*');
+assert.equal(packageImportGraphEdge.packageImportCondition, 'import');
+assert.equal(packageImportGraphEdge.packageImportTarget, './src/internal/thing.ts');
+assert.equal(packageImportGraphEdge.resolvedModulePath, 'src/internal/thing.ts');
+assert.equal(packageImportGraphEdge.resolvedTargetSymbolId, 'symbol:typescript:export:internal');
+
 const spanLedger = { spans: [{ id: 'source-span', span: { start: 0, end: 1 } }] };
 const ledgerRequired = safeMergeJsTsProject({
   id: 'js_ts_project_safe_merge_with_source_ledgers',
