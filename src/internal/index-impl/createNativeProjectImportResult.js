@@ -1,6 +1,7 @@
 import{idFragment,uniqueByEvidenceId,uniqueByLossId,uniqueStrings}from'../../native-import-utils.js';import{createDocument,createPatch,createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';
 import{createNativeImportResultContract}from'./createNativeImportResultContract.js';import{createProjectImportAdmissionRecord}from'./createProjectImportAdmissionRecord.js';import{mergeSemanticIndexes}from'./mergeSemanticIndexes.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';import{summarizeProjectSourcePreservation}from'./summarizeProjectSourcePreservation.js';
-import{createProjectModuleSymbolResolver,resolveProjectModule}from'./projectSymbolGraphModuleResolution.js';
+import{createProjectDocumentExportSymbolResolver,createProjectModuleSymbolResolver,resolveProjectModule}from'./projectSymbolGraphModuleResolution.js';
+import{isReExportImportEdge,reExportIdentityInputFromEdge,reExportIdentityRecord}from'./projectSymbolGraphReExports.js';
 export function createNativeProjectImportResult(input, imports) {
   const idPart = idFragment(input.id ?? input.projectRoot ?? 'native_project');
   const nodes = {};
@@ -156,6 +157,7 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   const documentsByPath = new Map(documents.filter((document) => document.path).map((document) => [document.path, document]));
   const moduleResolution = input.moduleResolution ?? input.tsconfig;
   const resolveTargetSymbolId = createProjectModuleSymbolResolver(semanticIndex?.symbols ?? [], documents);
+  const resolveDocumentExportSymbolId = createProjectDocumentExportSymbolResolver(semanticIndex?.symbols ?? [], documents);
   const facts = semanticIndex?.facts ?? [];
   const moduleEdgeFacts = facts.filter((fact) => fact.predicate === 'moduleEdge');
   const moduleEdgeByRelation = new Map(moduleEdgeFacts.map((fact) => [fact.subjectId, fact]));
@@ -166,22 +168,17 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   const exportEdges = relations
     .filter((relation) => relation.predicate === 'exports')
     .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById, documentsByPath, moduleResolution, resolveTargetSymbolId));
+  const moduleEdgeById = new Map([...importEdges, ...exportEdges].map((edge) => [edge.id, edge]));
   const reExportIdentities = uniqueRecords([
     ...facts
       .filter((fact) => fact.predicate === 'reExportIdentity' && fact.value)
-      .map((fact) => ({ ...objectValue(fact.value), factId: fact.id })),
+      .map((fact) => reExportIdentityRecord(objectValue(fact.value), moduleEdgeById.get(objectValue(fact.value).relationId ?? fact.objectId), resolveDocumentExportSymbolId, { factId: fact.id })),
     ...exportEdges
       .filter((edge) => edge.isReExport)
-      .map((edge) => compactRecord({
-        id: `reexport_${idFragment(edge.id)}`,
-        sourceDocumentId: edge.sourceDocumentId,
-        sourcePath: edge.sourcePath,
-        sourceHash: edge.sourceHash,
-        moduleSpecifier: edge.moduleSpecifier,
-        symbolId: edge.targetSymbolId,
-        relationId: edge.id,
-        publicContract: edge.publicContract
-      }))
+      .map((edge) => reExportIdentityRecord(reExportIdentityInputFromEdge(edge, `reexport_${idFragment(edge.id)}`), edge, resolveDocumentExportSymbolId)),
+    ...importEdges
+      .filter((edge) => isReExportImportEdge(edge))
+      .map((edge) => reExportIdentityRecord(reExportIdentityInputFromEdge(edge, `reexport_${idFragment(edge.id)}`), edge, resolveDocumentExportSymbolId))
   ]);
   const publicContractRegions = uniqueRecords(facts
     .filter((fact) => fact.predicate === 'publicContractRegion' && fact.value)

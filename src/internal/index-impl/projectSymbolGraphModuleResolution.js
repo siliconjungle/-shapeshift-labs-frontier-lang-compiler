@@ -17,20 +17,32 @@ export function resolveProjectModule(sourcePath, moduleSpecifier, documentsByPat
 }
 
 export function createProjectModuleSymbolResolver(symbols, documents) {
-  const documentsByPath = new Map(documents.filter((document) => document.path).map((document) => [document.path, document]));
-  const exportedByDocumentAndName = new Map();
-  for (const symbol of symbols ?? []) {
-    if (symbol?.kind !== 'export' || !symbol.name) continue;
-    const document = documentsByPath.get(symbol.definitionSpan?.path);
-    if (!document) continue;
-    exportedByDocumentAndName.set(symbolKey(document.id, symbol.name), symbol);
-  }
+  const exportedByDocumentAndName = projectExportSymbolMap(symbols, documents);
   return function resolveProjectModuleSymbol(edge) {
     if (!edge?.targetDocumentId) return undefined;
     const targetName = targetExportName(edge);
     if (!targetName) return undefined;
     return exportedByDocumentAndName.get(symbolKey(edge.targetDocumentId, targetName))?.id;
   };
+}
+
+export function createProjectDocumentExportSymbolResolver(symbols, documents) {
+  const exportedByDocumentAndName = projectExportSymbolMap(symbols, documents);
+  return function resolveDocumentExportSymbol(documentId, name) {
+    if (!documentId || !name) return undefined;
+    return exportedByDocumentAndName.get(symbolKey(documentId, name))?.id;
+  };
+}
+
+function projectExportSymbolMap(symbols, documents) {
+  const documentsByPath = new Map(documents.filter((document) => document.path).map((document) => [document.path, document]));
+  const exportedByDocumentAndName = new Map();
+  for (const symbol of symbols ?? []) {
+    if (symbol?.kind !== 'export' || !symbol.name) continue;
+    const document = documentsByPath.get(symbol.definitionSpan?.path);
+    if (document) exportedByDocumentAndName.set(symbolKey(document.id, symbol.name), symbol);
+  }
+  return exportedByDocumentAndName;
 }
 
 function resolveConfiguredProjectModule(moduleSpecifier, documentsByPath, moduleResolution) {

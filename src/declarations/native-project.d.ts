@@ -138,10 +138,10 @@ export interface NativeProjectSymbolGraphReExportIdentityRecord {
   readonly localName?: string;
   readonly namespace?: string;
   readonly isTypeOnly?: boolean;
-  readonly symbolId?: string;
+  readonly symbolId?: string; readonly originSymbolId?: string;
+  readonly exportedSymbolId?: string; readonly localSymbolId?: string;
   readonly relationId?: string;
-  readonly ownershipRegionId?: string;
-  readonly ownershipRegionKey?: string;
+  readonly ownershipRegionId?: string; readonly ownershipRegionKey?: string;
   readonly publicContract?: boolean;
   readonly factId?: string;
 }

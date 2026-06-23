@@ -238,6 +238,11 @@ console.log(project.outputProjectSymbolGraph.importEdges[0].packageName); // "@p
 console.log(project.outputProjectSymbolGraph.importEdges[0].packageExportCondition); // "import"
 ```
 
+Named re-export identities also include symbol links when the project graph has
+enough evidence. For `export { thing as renamedThing } from './thing.js'`,
+`reExportIdentities[]` records the source module, imported/exported names,
+`originSymbolId`, `exportedSymbolId`, and `localSymbolId`.
+
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 
 ```js

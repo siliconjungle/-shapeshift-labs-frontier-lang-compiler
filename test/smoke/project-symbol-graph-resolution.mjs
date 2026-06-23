@@ -94,3 +94,27 @@ assert.equal(externalEdge.resolutionKind, 'package-external');
 assert.equal(externalEdge.resolvedModulePath, undefined);
 assert.equal(packageGraph.remainingFields.includes('moduleEdges[].packageName'), false);
 assert.equal(packageGraph.remainingFields.includes('moduleEdges[].packageExportCondition'), false);
+
+const reExportProject = await importNativeProject({
+  id: 'project_symbol_graph_reexport_identity_resolution',
+  projectRoot: 'src',
+  sources: [{
+    language: 'javascript',
+    sourcePath: 'src/index.js',
+    sourceText: "export { thing as renamedThing } from './thing.js';\n",
+    metadata: { semanticImportExpected: true }
+  }, {
+    language: 'javascript',
+    sourcePath: 'src/thing.js',
+    sourceText: 'export const thing = 1;\n',
+    metadata: { semanticImportExpected: true }
+  }]
+});
+
+const reExportIdentity = reExportProject.projectSymbolGraph.reExportIdentities[0];
+assert.equal(reExportIdentity.moduleSpecifier, './thing.js');
+assert.equal(reExportIdentity.importedName, 'thing');
+assert.equal(reExportIdentity.exportedName, 'renamedThing');
+assert.equal(reExportIdentity.originSymbolId, 'symbol:javascript:export:thing');
+assert.equal(reExportIdentity.exportedSymbolId, 'symbol:javascript:export:renamedthing');
+assert.equal(reExportIdentity.localSymbolId, 'symbol:javascript:import:thing_js_renamedthing');
