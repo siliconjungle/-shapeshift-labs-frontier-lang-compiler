@@ -1,6 +1,7 @@
 import{idFragment,uniqueByEvidenceId,uniqueByLossId,uniqueStrings}from'../../native-import-utils.js';import{createDocument,createPatch,createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';
 import{createNativeImportResultContract}from'./createNativeImportResultContract.js';import{createProjectImportAdmissionRecord}from'./createProjectImportAdmissionRecord.js';import{mergeSemanticIndexes}from'./mergeSemanticIndexes.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';import{summarizeProjectSourcePreservation}from'./summarizeProjectSourcePreservation.js';
 import{createProjectDocumentExportSymbolResolver,createProjectModuleSymbolResolver,resolveProjectModule}from'./projectSymbolGraphModuleResolution.js';
+import{publicContractRegionRecord}from'./projectSymbolGraphPublicContracts.js';
 import{isReExportImportEdge,reExportIdentityInputFromEdge,reExportIdentityRecord}from'./projectSymbolGraphReExports.js';
 export function createNativeProjectImportResult(input, imports) {
   const idPart = idFragment(input.id ?? input.projectRoot ?? 'native_project');
@@ -144,10 +145,7 @@ export function createNativeProjectImportResult(input, imports) {
 const PROJECT_SYMBOL_GRAPH_REMAINING_FIELDS = Object.freeze([
   'reExportIdentities[].originSymbolId',
   'reExportIdentities[].exportedSymbolId',
-  'reExportIdentities[].localSymbolId',
-  'publicContractRegions[].apiSurfaceKind',
-  'publicContractRegions[].signatureHash',
-  'publicContractRegions[].contractHash'
+  'reExportIdentities[].localSymbolId'
 ]);
 
 function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
@@ -182,7 +180,7 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   ]);
   const publicContractRegions = uniqueRecords(facts
     .filter((fact) => fact.predicate === 'publicContractRegion' && fact.value)
-    .map((fact) => ({ ...objectValue(fact.value), factId: fact.id, symbolId: fact.subjectId })));
+    .map((fact) => publicContractRegionRecord(objectValue(fact.value), fact, symbolsById.get(fact.subjectId))));
   const fileHashes = uniqueRecords([
     ...documents.map((document) => fileHashRecord(document)),
     ...facts

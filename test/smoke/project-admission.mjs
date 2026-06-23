@@ -306,15 +306,14 @@ const projectSymbolGraphImport = await importNativeProject({
   }]
 });
 const projectSymbolGraph = projectSymbolGraphImport.projectSymbolGraph;
-assert.equal(projectSymbolGraph, projectSymbolGraphImport.metadata.projectSymbolGraph);
-assert.equal(projectSymbolGraph.kind, 'frontier.lang.projectSymbolGraph');
-assert.equal(projectSymbolGraph.fileHashes.length, 2);
-assert.equal(projectSymbolGraph.fileHashes[0].sourcePath, 'src/index.js');
+assert.deepEqual([projectSymbolGraph === projectSymbolGraphImport.metadata.projectSymbolGraph, projectSymbolGraph.kind, projectSymbolGraph.fileHashes.length, projectSymbolGraph.fileHashes[0].sourcePath], [true, 'frontier.lang.projectSymbolGraph', 2, 'src/index.js']);
 const projectReExportEdge = projectSymbolGraph.exportEdges.find((edge) => edge.moduleSpecifier === './thing.js');
 assert.deepEqual([projectReExportEdge.isReExport, projectReExportEdge.resolvedModulePath, projectReExportEdge.resolutionKind], [true, 'src/thing.js', 'relative-source']);
 assert.equal(Boolean(projectReExportEdge.targetDocumentId), true);
 assert.deepEqual(projectSymbolGraph.reExportIdentities.map((identity) => identity.moduleSpecifier), ['./thing.js']);
-assert.deepEqual(projectSymbolGraph.publicContractRegions.map((region) => region.regionKind), ['export']);
+const publicContractRegion = projectSymbolGraph.publicContractRegions[0];
+assert.deepEqual([publicContractRegion.regionKind, publicContractRegion.apiSurfaceKind, Boolean(publicContractRegion.signatureHash), Boolean(publicContractRegion.contractHash)], ['export', 'module-re-export', true, true]);
 assert.equal(projectSymbolGraph.remainingFields.includes('moduleEdges[].targetDocumentId'), false);
 assert.equal(projectSymbolGraph.remainingFields.includes('moduleEdges[].resolvedTargetSymbolId'), false);
+for (const field of ['publicContractRegions[].apiSurfaceKind', 'publicContractRegions[].signatureHash', 'publicContractRegions[].contractHash']) assert.equal(projectSymbolGraph.remainingFields.includes(field), false);
 assert.equal(projectSymbolGraphImport.semanticIndex.metadata.projectSymbolGraph, projectSymbolGraph);

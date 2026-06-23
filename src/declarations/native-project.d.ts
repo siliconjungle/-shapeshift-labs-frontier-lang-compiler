@@ -82,9 +82,6 @@ export type NativeProjectSymbolGraphRemainingField =
   | 'reExportIdentities[].originSymbolId'
   | 'reExportIdentities[].exportedSymbolId'
   | 'reExportIdentities[].localSymbolId'
-  | 'publicContractRegions[].apiSurfaceKind'
-  | 'publicContractRegions[].signatureHash'
-  | 'publicContractRegions[].contractHash'
   | string;
 
 export interface NativeProjectSymbolGraphFileHashRecord {
@@ -158,6 +155,9 @@ export interface NativeProjectSymbolGraphPublicContractRegionRecord {
   readonly symbolId?: string;
   readonly symbolName?: string;
   readonly symbolKind?: string;
+  readonly apiSurfaceKind?: string;
+  readonly signatureHash?: string;
+  readonly contractHash?: string;
   readonly nativeAstNodeId?: string;
   readonly sourceSpan?: SourceSpan;
   readonly precision?: string;
