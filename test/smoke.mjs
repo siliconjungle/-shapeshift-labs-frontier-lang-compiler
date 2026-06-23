@@ -41,6 +41,7 @@ const smokeModules = [
   './smoke/js-ts-safe-merge-members.mjs',
   './smoke/js-ts-safe-project-merge.mjs',
   './smoke/js-ts-safe-project-merge-output-graph.mjs',
+  './smoke/js-ts-safe-project-merge-lightweight-public-contracts.mjs',
   './smoke/js-ts-safe-project-merge-output-re-export-graph.mjs',
   './smoke/js-ts-safe-project-merge-new-import-graph.mjs',
   './smoke/js-ts-safe-project-merge-graph-limits.mjs',

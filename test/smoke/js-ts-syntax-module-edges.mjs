@@ -71,6 +71,19 @@ assertEdge(babelEdges.filter((edge) => edge.role === 'export'), { moduleSpecifie
 assertEdge(babelEdges.filter((edge) => edge.role === 'export'), { exportedName: 'LocalModel', localName: 'LocalModel', exportKind: 'type-named', isTypeOnly: true, publicContract: true });
 assertUniqueGraphIds(babelTyped);
 
+const babelNamespaces = await runNativeImporterAdapter(babelAdapter, {
+  sourcePath: 'src/babel-namespaces.ts',
+  sourceText: "export namespace Tools { export const value = 1; }\ndeclare module './plugin' { export interface Plugin {} }\n",
+  adapterOptions: { ast: babelFile([
+    { type: 'ExportNamedDeclaration', declaration: tsModuleDeclaration(id('Tools')), specifiers: [], source: null },
+    tsModuleDeclaration(lit('./plugin'), { declare: true })
+  ]) }
+});
+assertSymbol(babelNamespaces.semanticIndex.symbols, { name: 'Tools', kind: 'module', ownershipRegionKind: 'body', namespace: 'Tools' });
+assertSymbol(babelNamespaces.semanticIndex.symbols, { name: './plugin', kind: 'module', ownershipRegionKind: 'body', namespace: './plugin' });
+assertEdge(moduleEdges(babelNamespaces).filter((edge) => edge.role === 'export'), { exportedName: 'Tools', localName: 'Tools', exportKind: 'named', publicContract: true });
+assertUniqueGraphIds(babelNamespaces);
+
 const project = await importNativeProject({
   id: 'syntax_project_module_edges',
   projectRoot: 'src',
@@ -127,6 +140,10 @@ function variableDeclaration(name) {
   return { type: 'VariableDeclaration', declarations: [{ type: 'VariableDeclarator', id: id(name) }] };
 }
 
+function tsModuleDeclaration(moduleId, options = {}) {
+  return { type: 'TSModuleDeclaration', id: moduleId, body: { type: 'TSModuleBlock', body: [] }, ...options };
+}
+
 function id(name) {
   return { type: 'Identifier', name };
 }
@@ -142,6 +159,11 @@ function moduleEdges(importResult) {
 function assertEdge(edges, expected) {
   const edge = edges.find((candidate) => Object.entries(expected).every(([key, value]) => candidate[key] === value));
   assert.equal(Boolean(edge), true, `missing edge ${JSON.stringify(expected)}`);
+}
+
+function assertSymbol(symbols, expected) {
+  const symbol = symbols.find((candidate) => Object.entries(expected).every(([key, value]) => (candidate[key] ?? candidate.metadata?.[key]) === value));
+  assert.equal(Boolean(symbol), true, `missing symbol ${JSON.stringify(expected)}`);
 }
 
 function assertUniqueGraphIds(importResult) {

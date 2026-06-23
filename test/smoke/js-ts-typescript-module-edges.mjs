@@ -59,6 +59,15 @@ export = legacyRuntime;
 assertEdge(moduleEdges(exportAssignment), { exportedName: 'module.exports', localName: 'legacyRuntime', exportKind: 'assignment', publicContract: true });
 assertUniqueGraphIds(exportAssignment);
 
+const namespaceDeclarations = await runTypeScriptAdapter('src/namespaces.ts', `
+export namespace Tools { export const value = 1; }
+declare module './plugin' { export interface Plugin {} }
+`);
+assertSymbol(namespaceDeclarations.semanticIndex.symbols, { name: 'Tools', kind: 'module', ownershipRegionKind: 'body', namespace: 'Tools' });
+assertSymbol(namespaceDeclarations.semanticIndex.symbols, { name: './plugin', kind: 'module', ownershipRegionKind: 'body', namespace: './plugin' });
+assertEdge(moduleEdges(namespaceDeclarations).filter((edge) => edge.role === 'export'), { exportedName: 'Tools', localName: 'Tools', exportKind: 'named', publicContract: true });
+assertUniqueGraphIds(namespaceDeclarations);
+
 const projectAdapter = createTypeScriptCompilerNativeImporterAdapter({ typescript });
 const project = await importNativeProject({
   id: 'typescript_compiler_project_module_edges',
@@ -108,6 +117,11 @@ function moduleEdges(importResult) {
 function assertEdge(edges, expected) {
   const edge = edges.find((candidate) => Object.entries(expected).every(([key, value]) => candidate[key] === value));
   assert.equal(Boolean(edge), true, `missing edge ${JSON.stringify(expected)}`);
+}
+
+function assertSymbol(symbols, expected) {
+  const symbol = symbols.find((candidate) => Object.entries(expected).every(([key, value]) => (candidate[key] ?? candidate.metadata?.[key]) === value));
+  assert.equal(Boolean(symbol), true, `missing symbol ${JSON.stringify(expected)}`);
 }
 
 function assertUniqueGraphIds(importResult) {

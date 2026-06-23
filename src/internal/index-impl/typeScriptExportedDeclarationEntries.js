@@ -92,6 +92,7 @@ function exportedSymbolKind(kind) {
   if (kind === 'ClassDeclaration') return 'class';
   if (kind === 'InterfaceDeclaration') return 'interface';
   if (kind === 'TypeAliasDeclaration' || kind === 'EnumDeclaration') return 'type';
+  if (kind === 'ModuleDeclaration') return 'module';
   return undefined;
 }
 

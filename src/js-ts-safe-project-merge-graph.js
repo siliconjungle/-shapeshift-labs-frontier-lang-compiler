@@ -1,6 +1,7 @@
 import { idFragment } from './native-import-utils.js';
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { compactRecord } from './js-ts-safe-merge-context.js';
+import { augmentProjectSymbolGraphPublicContracts } from './js-ts-safe-project-merge-public-contracts.js';
 import { createNativeProjectImportResult } from './internal/index-impl/createNativeProjectImportResult.js';
 import { importNativeSource } from './internal/index-impl/importNativeSource.js';
 import {
@@ -92,22 +93,26 @@ function createProjectGraphStageArtifacts(input, files, mergeId, stageName, stag
       ...(stageName === 'output' ? { outputProjectImportSource: projectGraphImportSource } : {})
     }
   }, imports);
-  const edgeLimitConflicts = projectGraphEdgeLimitConflicts(limits, stageName, projectImport.projectSymbolGraph);
+  const projectSymbolGraph = augmentProjectSymbolGraphPublicContracts(projectImport.projectSymbolGraph, files, input, stageName);
+  const stageProjectImport = projectSymbolGraph === projectImport.projectSymbolGraph
+    ? projectImport
+    : attachProjectSymbolGraph(projectImport, projectSymbolGraph);
+  const edgeLimitConflicts = projectGraphEdgeLimitConflicts(limits, stageName, projectSymbolGraph);
   const serialized = projectGraphSerializedLimitConflict(limits, stageName, {
-    projectImport,
-    projectSymbolGraph: projectImport.projectSymbolGraph
+    projectImport: stageProjectImport,
+    projectSymbolGraph
   });
   const limitConflicts = [...edgeLimitConflicts, serialized.conflict].filter(Boolean);
   if (limitConflicts.length) {
-    return limitedProjectGraphStage(stageName, projectGraphImportSource, sourceStats, projectImport.projectSymbolGraph, limitConflicts, serialized.serializedBytes);
+    return limitedProjectGraphStage(stageName, projectGraphImportSource, sourceStats, projectSymbolGraph, limitConflicts, serialized.serializedBytes);
   }
   return {
     kind: 'frontier.lang.jsTsProjectGraphStage',
     version: 1,
     stage: stageName,
-    projectImport,
-    projectSymbolGraph: projectImport.projectSymbolGraph,
-    summary: projectGraphStageSummary(stageName, projectImport.projectSymbolGraph, projectGraphImportSource, sourceStats, serialized.serializedBytes, [])
+    projectImport: stageProjectImport,
+    projectSymbolGraph,
+    summary: projectGraphStageSummary(stageName, projectSymbolGraph, projectGraphImportSource, sourceStats, serialized.serializedBytes, [])
   };
 }
 
@@ -213,6 +218,24 @@ function stageFile(file, sourceText, input) {
     sourceText,
     sourceHash: hashText(sourceText)
   });
+}
+
+function attachProjectSymbolGraph(projectImport, projectSymbolGraph) {
+  return {
+    ...projectImport,
+    projectSymbolGraph,
+    semanticIndex: projectImport.semanticIndex ? {
+      ...projectImport.semanticIndex,
+      metadata: {
+        ...projectImport.semanticIndex.metadata,
+        projectSymbolGraph
+      }
+    } : projectImport.semanticIndex,
+    metadata: {
+      ...projectImport.metadata,
+      projectSymbolGraph
+    }
+  };
 }
 
 function hashText(sourceText) {

@@ -14,6 +14,7 @@ export function typeScriptDeclaration(node, kind, nativeNodeId, input, options =
   if (kind === 'ClassDeclaration') return declarationWithExports(enrich(namedDeclaration(input, nativeNodeId, node.name, 'class')), exportedEntries, enrich, node);
   if (kind === 'InterfaceDeclaration') return declarationWithExports(enrich(namedDeclaration(input, nativeNodeId, node.name, 'interface')), exportedEntries, enrich, node);
   if (kind === 'TypeAliasDeclaration' || kind === 'EnumDeclaration') return declarationWithExports(enrich(namedDeclaration(input, nativeNodeId, node.name, 'type')), exportedEntries, enrich, node);
+  if (kind === 'ModuleDeclaration') return declarationWithExports(enrich(moduleDeclaration(input, nativeNodeId, node), node.name ?? node), exportedEntries, enrich, node);
   if (kind === 'VariableDeclaration') return enrich(namedDeclaration(input, nativeNodeId, node.name, 'variable'));
   if (kind === 'MethodDeclaration' || kind === 'MethodSignature') return enrich(namedDeclaration(input, nativeNodeId, node.name, 'method'));
   return undefined;
@@ -23,6 +24,19 @@ function declarationWithExports(declaration, exportedEntries, enrich, node) {
   const exports = exportedEntries.map((entry) => enrich(entry.declaration, entry.symbolNode ?? node));
   if (!declaration) return exports.length ? exports : undefined;
   return exports.length ? [declaration, ...exports] : declaration;
+}
+
+function moduleDeclaration(input, nativeNodeId, node) {
+  const name = stringFromTsExpression(node.name);
+  if (!name) return undefined;
+  return {
+    ...declarationRecord(input, nativeNodeId, name, 'module', 'definition'),
+    metadata: compactRecord({
+      scan: 'typescript-module-declaration',
+      moduleName: name,
+      namespace: name
+    })
+  };
 }
 
 function enrichTypeScriptDeclaration(node, symbolNode, declaration, input, options) {
