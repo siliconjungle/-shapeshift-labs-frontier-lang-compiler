@@ -1,6 +1,7 @@
 import { assert } from './helpers.mjs';
 import {
   JsTsSafeMergeConflictCodes,
+  safeMergeJsTsImportsAndDeclarations,
   safeMergeJsTsSource
 } from './compiler-api.mjs';
 
@@ -187,6 +188,85 @@ assert.equal(headDeclaration.mergedSourceText, [
 ].join('\n'));
 assert.equal(headDeclaration.summary.topLevelDeclarationAdditions, 1);
 assert.equal((headDeclaration.mergedSourceText.match(/import \{ readFile, writeFile \}/g) ?? []).length, 1);
+
+const rawTypeAliasEdit = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_staged_raw_type_alias_stays_blocked',
+  language: 'typescript',
+  sourcePath: 'src/type-alias.ts',
+  baseSourceText: 'export type Result = { ok: boolean };\n',
+  workerSourceText: 'export type Result = { ok: boolean; value: string };\n',
+  headSourceText: 'export type Result = { ok: boolean };\n'
+});
+
+assert.equal(rawTypeAliasEdit.status, 'blocked');
+assert.equal(rawTypeAliasEdit.conflicts[0].code, JsTsSafeMergeConflictCodes.typeAliasConflict);
+
+const typeAliasEdit = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_staged_type_alias_edit',
+  language: 'typescript',
+  sourcePath: 'src/type-alias.ts',
+  baseSourceText: 'export type Result = { ok: boolean };\n',
+  workerSourceText: 'export type Result = { ok: boolean; value: string };\n',
+  headSourceText: 'export type Result = { ok: boolean };\n'
+});
+
+assert.equal(typeAliasEdit.status, 'merged');
+assert.equal(typeAliasEdit.mergedSourceText, 'export type Result = { ok: boolean; value: string };\n');
+assert.equal(typeAliasEdit.summary.changedExistingDeclarations, 1);
+assert.equal(typeAliasEdit.metadata.composed.phase, 'staged-top-level-semantic-edit-fallback');
+assert.equal(typeAliasEdit.semanticArtifacts.projection.metadata.source, 'js-ts-staged-declaration-replay');
+assert.equal(typeAliasEdit.semanticArtifacts.projection.edits[0].kind, 'replaceDeclaration');
+assert.equal(typeAliasEdit.semanticArtifacts.replay.status, 'accepted-clean');
+
+const typeAliasImportsAndHeadDeclaration = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_staged_type_alias_imports_and_head_declaration',
+  language: 'typescript',
+  sourcePath: 'src/type-alias-imports.ts',
+  baseSourceText: [
+    'import { z } from \'zod\';',
+    'export type Result = { ok: boolean };',
+    ''
+  ].join('\n'),
+  workerSourceText: [
+    'import { z, object } from \'zod\';',
+    'export type Result = { ok: boolean; value: string };',
+    ''
+  ].join('\n'),
+  headSourceText: [
+    'import { z, string } from \'zod\';',
+    'export type Result = { ok: boolean };',
+    'export const headOnly = string;',
+    ''
+  ].join('\n')
+});
+
+assert.equal(typeAliasImportsAndHeadDeclaration.status, 'merged');
+assert.equal(typeAliasImportsAndHeadDeclaration.mergedSourceText, [
+  'import { z, object, string } from \'zod\';',
+  'export type Result = { ok: boolean; value: string };',
+  'export const headOnly = string;',
+  ''
+].join('\n'));
+assert.equal(typeAliasImportsAndHeadDeclaration.summary.importSpecifierAdditions, 2);
+assert.equal(typeAliasImportsAndHeadDeclaration.summary.topLevelDeclarationAdditions, 1);
+assert.equal(typeAliasImportsAndHeadDeclaration.summary.changedExistingDeclarations, 1);
+
+const conflictingTypeAlias = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_staged_conflicting_type_alias',
+  language: 'typescript',
+  sourcePath: 'src/type-alias-conflict.ts',
+  baseSourceText: 'export type Result = { ok: boolean };\n',
+  workerSourceText: 'export type Result = { ok: boolean; value: string };\n',
+  headSourceText: 'export type Result = { ok: boolean; error: Error };\n'
+});
+
+assert.equal(conflictingTypeAlias.status, 'blocked');
+assert.equal(conflictingTypeAlias.semanticArtifacts.status, 'blocked');
+assert.equal(conflictingTypeAlias.conflicts[0].code, JsTsSafeMergeConflictCodes.typeAliasConflict);
+assert.equal(
+  conflictingTypeAlias.admission.reasonCodes.some((reason) => reason.startsWith('head-anchor-changed-since-base:declaration:Result')),
+  true
+);
 
 const conflictingBody = safeMergeJsTsSource({
   id: 'js_ts_safe_merge_staged_conflicting_body',

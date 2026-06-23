@@ -38,7 +38,7 @@ function semanticEditFallbackResult(input, topLevelResult) {
     },
     summary: {
       ...resultBase.summary,
-      changedExistingDeclarations: topLevelResult.summary?.changedExistingDeclarations ?? resultBase.summary?.changedExistingDeclarations ?? 0,
+      changedExistingDeclarations: semanticFallbackChangedExistingDeclarations(topLevelResult, resultBase, stagedFallback),
       conflicts: 0,
       gatesPassed: gates.filter((gate) => gate.status === 'passed').length,
       semanticEditOperations: artifacts.script.summary.operations,
@@ -62,7 +62,28 @@ function semanticEditFallbackResult(input, topLevelResult) {
 
 function shouldTrySemanticEditFallback(result) {
   const conflicts = result.conflicts ?? [];
-  return conflicts.length > 0 && conflicts.every((conflict) => conflict.code === JsTsSafeMergeConflictCodes.changedExistingDeclaration);
+  return conflicts.length > 0 && conflicts.every((conflict) => semanticFallbackConflictCodes.has(conflict.code));
+}
+
+const semanticFallbackConflictCodes = new Set([
+  JsTsSafeMergeConflictCodes.changedExistingDeclaration,
+  JsTsSafeMergeConflictCodes.typeAliasConflict
+]);
+
+function semanticFallbackConflictCode(result) {
+  return result.conflicts?.find((conflict) => semanticFallbackConflictCodes.has(conflict.code))?.code
+    ?? JsTsSafeMergeConflictCodes.changedExistingDeclaration;
+}
+
+function semanticFallbackChangedExistingDeclarations(topLevelResult, resultBase, stagedFallback) {
+  const conflictCount = (topLevelResult.conflicts ?? [])
+    .filter((conflict) => semanticFallbackConflictCodes.has(conflict.code)).length;
+  return Math.max(
+    topLevelResult.summary?.changedExistingDeclarations ?? 0,
+    resultBase?.summary?.changedExistingDeclarations ?? 0,
+    stagedFallback?.neutralization?.summary?.workerChangedExistingDeclarations ?? 0,
+    conflictCount
+  );
 }
 
 function createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallback) {
@@ -240,7 +261,7 @@ function semanticEditFallbackBlockedResult(input, topLevelResult, artifacts) {
     : topLevelResult.admission?.reasonCodes ?? [];
   const gates = semanticEditGates(artifacts);
   const conflict = {
-    code: JsTsSafeMergeConflictCodes.changedExistingDeclaration,
+    code: semanticFallbackConflictCode(topLevelResult),
     gateId: 'semantic-edit-replay',
     message: 'JS/TS semantic edit fallback did not verify a clean replay.',
     side: 'worker',
@@ -262,6 +283,7 @@ function semanticEditFallbackBlockedResult(input, topLevelResult, artifacts) {
     },
     summary: {
       ...topLevelResult.summary,
+      changedExistingDeclarations: semanticFallbackChangedExistingDeclarations(topLevelResult, topLevelResult),
       conflicts: 1,
       gatesPassed: gates.filter((gate) => gate.status === 'passed').length,
       semanticEditOperations: artifacts.summary.operations,
