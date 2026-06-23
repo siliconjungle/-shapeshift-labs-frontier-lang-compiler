@@ -39,17 +39,20 @@ function exportDeclarationEntries(node, nativeNodeId, input) {
   const typeOnly = Boolean(node.isTypeOnly);
   const exportStar = moduleSpecifier && !node.exportClause;
   const bindings = exportClauseBindings(node.exportClause, { typeOnly, reExport: Boolean(moduleSpecifier) });
+  const namespaceReExport = Boolean(moduleSpecifier && bindings.some((binding) => binding.exportKind === 'namespace-reexport'));
   return [
     ...(moduleSpecifier ? importModuleEntries(input, nativeNodeId, moduleSpecifier, 'ExportFromDeclaration', reExportImportBindings(bindings, exportStar), {
       typeOnly,
       reexport: true,
       exportStar,
+      namespaceReExport,
       importKind: exportStar ? 'reexport' : 'reexport'
     }) : []),
     ...exportModuleEntries(input, nativeNodeId, moduleSpecifier, bindings, {
       typeOnly,
       exportStar,
       reExport: Boolean(moduleSpecifier),
+      namespaceReExport,
       exportKind: exportStar ? 'export-star' : 'named'
     })
   ];
@@ -269,6 +272,7 @@ function moduleMetadata(scan, bindings, metadata) {
     sideEffectOnly: metadata.sideEffectOnly,
     reexport: metadata.reexport,
     reExport: metadata.reExport,
+    namespaceReExport: metadata.namespaceReExport,
     exportStar: metadata.exportStar,
     publicContract: metadata.reExport || metadata.exportKind
   });

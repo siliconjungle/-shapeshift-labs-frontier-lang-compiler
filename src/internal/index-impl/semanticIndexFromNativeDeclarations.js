@@ -245,6 +245,7 @@ function publicContractRegionForDeclaration(declaration, ownershipRegion, module
 function reExportIdentityForDeclaration(declaration, input, documentId, relationId, ownershipRegion, moduleEdge) {
   if (!moduleEdge?.isReExport && !declaration.reExport) return undefined;
   const bindingCount = Number(declaration.nativeNode?.metadata?.bindingCount ?? declaration.metadata?.bindingCount ?? 0);
+  if (declaration.symbolKind === 'module' && declaration.metadata?.namespaceReExport) return undefined;
   if (declaration.symbolKind === 'module' && !declaration.exportStar && !declaration.metadata?.exportStar && bindingCount > 1) return undefined;
   const identityId = hashSemanticValue([relationId, declaration.symbolId, declaration.exportedName ?? declaration.metadata?.exportedName, declaration.importedName ?? declaration.metadata?.importedName, declaration.localName ?? declaration.metadata?.localName]);
   const stableId = bindingCount > 1 ? idFragment(identityId) : idFragment(relationId);

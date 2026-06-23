@@ -39,6 +39,7 @@ assertEdge(exportEdges, { moduleSpecifier: './all.js', exportedName: 'allExports
 assertEdge(exportEdges, { exportedName: 'PublicLocal', localName: 'LocalType', exportKind: 'type-named', isTypeOnly: true, publicContract: true });
 assert.equal(exportedBindings.semanticIndex.facts.filter((fact) => fact.predicate === 'reExportIdentity').length >= 4, true);
 assert.equal(exportedBindings.semanticIndex.facts.filter((fact) => fact.predicate === 'publicContractRegion').length >= 5, true);
+assertUniqueReExportIdentityIds(exportedBindings);
 assertUniqueGraphIds(exportedBindings);
 
 const declarationExports = await runTypeScriptAdapter('src/declaration-exports.ts', `
@@ -114,6 +115,16 @@ function assertUniqueGraphIds(importResult) {
   assertUnique(importResult.semanticIndex.relations.map((entry) => entry.id), 'relation');
   assertUnique(importResult.semanticIndex.facts.map((entry) => entry.id), 'fact');
   assertUnique(importResult.sourceMaps.flatMap((sourceMap) => sourceMap.mappings.map((entry) => entry.id)), 'mapping');
+}
+
+function assertUniqueReExportIdentityIds(importResult) {
+  assertUnique(
+    importResult.semanticIndex.facts
+      .filter((fact) => fact.predicate === 'reExportIdentity')
+      .map((fact) => fact.value?.id)
+      .filter(Boolean),
+    're-export identity'
+  );
 }
 
 function assertUnique(values, label) {
