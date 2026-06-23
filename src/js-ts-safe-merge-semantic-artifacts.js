@@ -59,6 +59,7 @@ function createJsTsSafeMergeSemanticArtifacts(input = {}, merge = {}) {
     id: `js_ts_safe_merge_replay_${idFragment(id)}`,
     projection,
     currentSourceText: headSourceText,
+    currentSourceHash: headReplaySourceHash(input),
     currentSourcePath: sourcePath,
     language
   });
@@ -66,6 +67,7 @@ function createJsTsSafeMergeSemanticArtifacts(input = {}, merge = {}) {
     id: `js_ts_safe_merge_replay_already_applied_${idFragment(id)}`,
     projection,
     currentSourceText: mergedSourceText,
+    currentSourceHash: projection.projectedHash,
     currentSourcePath: sourcePath,
     language
   });
@@ -74,6 +76,8 @@ function createJsTsSafeMergeSemanticArtifacts(input = {}, merge = {}) {
   const status = !blocked && replayReady && alreadyAppliedReady ? 'verified' : 'blocked';
   const finalReasonCodes = uniqueStrings([
     ...reasonCodes,
+    ...(replayReady ? [] : replay.admission?.reasonCodes ?? replay.summary?.reasonCodes ?? []),
+    ...(alreadyAppliedReady ? [] : alreadyAppliedReplay.admission?.reasonCodes ?? alreadyAppliedReplay.summary?.reasonCodes ?? []),
     replayReady ? undefined : `semantic-replay-${replay.status}`,
     alreadyAppliedReady ? undefined : `semantic-replay-already-applied-${alreadyAppliedReplay.status}`
   ]);
@@ -261,6 +265,14 @@ function countBy(values, keyFor) {
     result[key] = (result[key] ?? 0) + 1;
   }
   return result;
+}
+
+function headReplaySourceHash(input) {
+  return nativeSemanticHash(input.currentSourceHash) ?? nativeSemanticHash(input.headHash);
+}
+
+function nativeSemanticHash(value) {
+  return typeof value === 'string' && /^fnv1a32:[0-9a-f]+$/i.test(value) ? value : undefined;
 }
 
 export { createJsTsSafeMergeSemanticArtifacts };

@@ -1,5 +1,6 @@
 import { assert } from './helpers.mjs';
 import {
+  createBabelNativeImporterAdapter,
   createEstreeNativeImporterAdapter,
   importNativeProject,
   runNativeImporterAdapter
@@ -50,6 +51,26 @@ assertEdge(exportEdges, { exportedName: 'PublicLocal', localName: 'LocalType', e
 assertEdge(exportEdges, { exportedName: 'default', localName: 'defaultThing', exportKind: 'default', publicContract: true });
 assertUniqueGraphIds(exported);
 
+const babelAdapter = createBabelNativeImporterAdapter();
+const babelTyped = await runNativeImporterAdapter(babelAdapter, {
+  sourcePath: 'src/babel-types.ts',
+  sourceText: "import type { Model } from './types.js';\nimport type * as TypeNS from './types.js';\nexport type { Model as PublicModel } from './types.js';\nexport type * as TypeExports from './types.js';\nexport interface LocalModel {}\n",
+  adapterOptions: { ast: babelFile([
+    { type: 'ImportDeclaration', importKind: 'type', source: lit('./types.js'), specifiers: [{ type: 'ImportSpecifier', imported: id('Model'), local: id('Model') }] },
+    { type: 'ImportDeclaration', importKind: 'type', source: lit('./types.js'), specifiers: [{ type: 'ImportNamespaceSpecifier', local: id('TypeNS') }] },
+    { type: 'ExportNamedDeclaration', exportKind: 'type', declaration: null, source: lit('./types.js'), specifiers: [{ type: 'ExportSpecifier', local: id('Model'), exported: id('PublicModel') }] },
+    { type: 'ExportAllDeclaration', exportKind: 'type', source: lit('./types.js'), exported: id('TypeExports') },
+    { type: 'ExportNamedDeclaration', declaration: { type: 'TSInterfaceDeclaration', id: id('LocalModel') }, specifiers: [], source: null }
+  ]) }
+});
+const babelEdges = moduleEdges(babelTyped);
+assertEdge(babelEdges.filter((edge) => edge.role === 'import'), { moduleSpecifier: './types.js', localName: 'Model', importedName: 'Model', importKind: 'type-named', isTypeOnly: true });
+assertEdge(babelEdges.filter((edge) => edge.role === 'import'), { moduleSpecifier: './types.js', localName: 'TypeNS', importedName: '*', importKind: 'namespace', namespace: 'TypeNS', isTypeOnly: true });
+assertEdge(babelEdges.filter((edge) => edge.role === 'export'), { moduleSpecifier: './types.js', exportedName: 'PublicModel', importedName: 'Model', exportKind: 'type-named', isTypeOnly: true, isReExport: true });
+assertEdge(babelEdges.filter((edge) => edge.role === 'export'), { moduleSpecifier: './types.js', exportedName: 'TypeExports', importedName: '*', exportKind: 'namespace-reexport', namespace: 'TypeExports', isTypeOnly: true, isReExport: true });
+assertEdge(babelEdges.filter((edge) => edge.role === 'export'), { exportedName: 'LocalModel', localName: 'LocalModel', exportKind: 'type-named', isTypeOnly: true, publicContract: true });
+assertUniqueGraphIds(babelTyped);
+
 const project = await importNativeProject({
   id: 'syntax_project_module_edges',
   projectRoot: 'src',
@@ -84,6 +105,10 @@ assertEdge(project.projectSymbolGraph.reExportIdentities, { exportedName: 'barre
 
 function program(body) {
   return { type: 'Program', sourceType: 'module', body };
+}
+
+function babelFile(body) {
+  return { type: 'File', program: program(body), errors: [] };
 }
 
 function importDecl(source, specifiers) {

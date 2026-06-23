@@ -182,13 +182,16 @@ export interface NativeProjectSymbolGraphSummary {
   readonly remainingFields: readonly NativeProjectSymbolGraphRemainingField[];
 }
 
+export interface NativeProjectSourcePreservationSummary { readonly total: number; readonly exactSourceAvailable: number; readonly sourceBytes: number; readonly tokens: number; readonly trivia: number; readonly directives: number; readonly truncated: boolean; readonly ids: readonly string[]; }
+
 export interface NativeProjectImportResultMetadata extends Record<string, unknown> {
-  readonly importResultContract?: NativeImportResultContract;
-  readonly projectAdmission?: NativeProjectImportAdmission;
-  readonly semanticMergeAdmission?: NativeProjectImportAdmission;
-  readonly nativeImportLossSummary?: NativeImportLossSummary;
-  readonly semanticMergeReadiness?: SemanticMergeReadiness;
+  readonly sourceCount?: number; readonly sourcePaths?: readonly string[];
+  readonly importResultContract?: NativeImportResultContract; readonly projectAdmission?: NativeProjectImportAdmission;
+  readonly semanticMergeAdmission?: NativeProjectImportAdmission; readonly nativeImportLossSummary?: NativeImportLossSummary;
+  readonly sourcePreservationSummary?: NativeProjectSourcePreservationSummary; readonly semanticMergeReadiness?: SemanticMergeReadiness;
   readonly readinessReasons?: readonly string[];
+  readonly regionSummary?: NativeImportRegionSummary; readonly sourceMapSummary?: NativeImportSourceMapSummary;
+  readonly adapterCoverageSummary?: NativeImportAdapterCoverageContract;
   readonly projectSymbolGraph?: NativeProjectSymbolGraphSummary;
 }
 

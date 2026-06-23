@@ -286,6 +286,12 @@ re-export, export-star, local export, `export default`, and TypeScript
 `importedName`, `exportedName`, `isTypeOnly`, and public-contract metadata into
 the semantic index and project symbol graph.
 
+`safeMergeJsTsProject` stays synchronous. When a caller already has parser-backed
+native import results for merged output files, pass them as `outputProjectImports`
+with `includeOutputProjectSymbolGraph`. The graph builder matches supplied
+imports by `sourcePath` and `sourceHash`, uses them for output graph artifacts,
+and falls back to the lightweight scanner for missing or stale files.
+
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 
 ```js

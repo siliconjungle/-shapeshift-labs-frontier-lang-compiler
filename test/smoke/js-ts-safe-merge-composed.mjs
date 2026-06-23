@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import {
   JsTsSafeMergeGateIds,
   safeMergeJsTsSource
@@ -86,6 +87,30 @@ assert.equal(
   composed.semanticArtifacts.projection.edits.some((edit) => edit.kind === 'jsTsReplaceDeclaration'),
   true
 );
+
+const composedStaleHeadHash = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_composed_blocks_stale_semantic_artifact_head_hash',
+  language: 'typescript',
+  sourcePath: 'src/composed-stale-hash.ts',
+  baseSourceText: composedBase,
+  workerSourceText: composedWorker,
+  headSourceText: composedHead,
+  headHash: hashSemanticValue(composedBase),
+  policy: { unorderedRegions: [{ kind: 'interface', name: 'Options', order: 'non-semantic' }] }
+});
+
+assert.equal(composedStaleHeadHash.status, 'merged');
+assert.equal(composedStaleHeadHash.semanticArtifacts.status, 'blocked');
+assert.equal(composedStaleHeadHash.semanticArtifacts.replay.status, 'blocked');
+assert.equal(
+  composedStaleHeadHash.semanticArtifacts.replay.admission.reasonCodes.includes('current-source-hash-mismatch'),
+  true
+);
+assert.equal(
+  composedStaleHeadHash.semanticArtifacts.admission.reasonCodes.includes('current-source-hash-mismatch'),
+  true
+);
+assert.equal(composedStaleHeadHash.semanticArtifacts.alreadyAppliedReplay.status, 'already-applied');
 
 const composedMemberConflict = safeMergeJsTsSource({
   id: 'js_ts_safe_merge_composed_member_conflict_blocks_partial_top_level_output',

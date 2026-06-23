@@ -7,6 +7,7 @@ import type {
   JsTsSafeMergeSummary
 } from './js-ts-safe-merge.js';
 import type { JsTsSafeMemberMergePolicy, JsTsSafeMemberMergePolicyRegion } from './js-ts-safe-member-merge.js';
+import type { NativeSourceImportResult } from './import-adapter-core.js';
 import type { NativeProjectImportResult, NativeProjectSymbolGraphSummary } from './native-project.js';
 import type { NativeProjectModuleResolutionOptions } from './native-project-module-resolution.js';
 
@@ -45,6 +46,11 @@ export type JsTsProjectSafeMergeFileMap =
   | ReadonlyMap<string, string>
   | readonly { readonly sourcePath?: string; readonly path?: string; readonly sourceText?: string; readonly text?: string }[];
 
+export type JsTsProjectSafeMergeOutputProjectImports =
+  | readonly NativeSourceImportResult[]
+  | ReadonlyMap<string, NativeSourceImportResult>
+  | Readonly<Record<string, NativeSourceImportResult>>;
+
 export interface JsTsProjectSafeMergeInput {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage | string;
@@ -56,6 +62,7 @@ export interface JsTsProjectSafeMergeInput {
   readonly allowFileAdditions?: boolean;
   readonly allowFileDeletes?: boolean;
   readonly includeOutputProjectSymbolGraph?: boolean;
+  readonly outputProjectImports?: JsTsProjectSafeMergeOutputProjectImports;
   readonly moduleResolution?: NativeProjectModuleResolutionOptions;
   readonly tsconfig?: NativeProjectModuleResolutionOptions;
   readonly workerChangeSetId?: string;
@@ -126,6 +133,7 @@ export interface JsTsProjectSafeMergeResult {
     readonly mergedFiles: number;
     readonly blockedFiles: number;
     readonly outputFiles: number;
+    readonly projectGraphConflicts: number;
     readonly semanticArtifactFiles: number;
     readonly operations: Readonly<Record<string, number>>;
   };

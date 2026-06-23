@@ -244,24 +244,17 @@ function publicContractRegionForDeclaration(declaration, ownershipRegion, module
 
 function reExportIdentityForDeclaration(declaration, input, documentId, relationId, ownershipRegion, moduleEdge) {
   if (!moduleEdge?.isReExport && !declaration.reExport) return undefined;
+  const bindingCount = Number(declaration.nativeNode?.metadata?.bindingCount ?? declaration.metadata?.bindingCount ?? 0);
+  if (declaration.symbolKind === 'module' && !declaration.exportStar && !declaration.metadata?.exportStar && bindingCount > 1) return undefined;
+  const identityId = hashSemanticValue([relationId, declaration.symbolId, declaration.exportedName ?? declaration.metadata?.exportedName, declaration.importedName ?? declaration.metadata?.importedName, declaration.localName ?? declaration.metadata?.localName]);
+  const stableId = bindingCount > 1 ? idFragment(identityId) : idFragment(relationId);
   return compactRecord({
-    kind: 'frontier.lang.reExportIdentity',
-    version: 1,
-    id: `reexport_${idFragment(relationId)}`,
-    sourceDocumentId: documentId,
-    sourcePath: input.sourcePath,
-    sourceHash: input.sourceHash,
-    moduleSpecifier: moduleEdge?.moduleSpecifier,
-    exportedName: declaration.exportedName ?? declaration.metadata?.exportedName,
-    importedName: declaration.importedName ?? declaration.metadata?.importedName,
-    localName: declaration.localName ?? declaration.metadata?.localName,
-    namespace: declaration.namespace ?? declaration.metadata?.namespace,
-    isTypeOnly: declaration.isTypeOnly ?? declaration.metadata?.isTypeOnly ?? declaration.metadata?.typeOnly,
-    exportStar: declaration.exportStar ?? declaration.metadata?.exportStar,
-    symbolId: declaration.symbolId,
-    relationId,
-    ownershipRegionId: ownershipRegion.id,
-    ownershipRegionKey: ownershipRegion.key,
+    kind: 'frontier.lang.reExportIdentity', version: 1, id: `reexport_${stableId}`, sourceDocumentId: documentId,
+    sourcePath: input.sourcePath, sourceHash: input.sourceHash, moduleSpecifier: moduleEdge?.moduleSpecifier,
+    exportedName: declaration.exportedName ?? declaration.metadata?.exportedName, importedName: declaration.importedName ?? declaration.metadata?.importedName,
+    localName: declaration.localName ?? declaration.metadata?.localName, namespace: declaration.namespace ?? declaration.metadata?.namespace,
+    isTypeOnly: declaration.isTypeOnly ?? declaration.metadata?.isTypeOnly ?? declaration.metadata?.typeOnly, exportStar: declaration.exportStar ?? declaration.metadata?.exportStar,
+    symbolId: declaration.symbolId, relationId, ownershipRegionId: ownershipRegion.id, ownershipRegionKey: ownershipRegion.key,
     publicContract: true
   });
 }

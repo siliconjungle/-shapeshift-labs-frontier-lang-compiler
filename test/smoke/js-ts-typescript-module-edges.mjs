@@ -11,6 +11,8 @@ const typescript = tsModule.default ?? tsModule;
 const importedBindings = await runTypeScriptAdapter('src/imports.ts', `
 import defaultThing, { type Model, value as localValue } from './dep.js';
 import * as allDep from './all.js';
+import type * as typeBag from './types.js';
+import legacy = require('./legacy.cjs');
 import './side-effect.js';
 `);
 const importEdges = moduleEdges(importedBindings).filter((edge) => edge.role === 'import');
@@ -18,6 +20,8 @@ assertEdge(importEdges, { moduleSpecifier: './dep.js', localName: 'defaultThing'
 assertEdge(importEdges, { moduleSpecifier: './dep.js', localName: 'Model', importedName: 'Model', importKind: 'type-named', isTypeOnly: true });
 assertEdge(importEdges, { moduleSpecifier: './dep.js', localName: 'localValue', importedName: 'value', importKind: 'named' });
 assertEdge(importEdges, { moduleSpecifier: './all.js', localName: 'allDep', importedName: '*', importKind: 'namespace', namespace: 'allDep' });
+assertEdge(importEdges, { moduleSpecifier: './types.js', localName: 'typeBag', importedName: '*', importKind: 'namespace', namespace: 'typeBag', isTypeOnly: true });
+assertEdge(importEdges, { moduleSpecifier: './legacy.cjs', localName: 'legacy', importedName: 'default', importKind: 'commonjs-require' });
 assertEdge(importEdges, { moduleSpecifier: './side-effect.js', importKind: 'side-effect' });
 assertUniqueGraphIds(importedBindings);
 
@@ -36,6 +40,16 @@ assertEdge(exportEdges, { exportedName: 'PublicLocal', localName: 'LocalType', e
 assert.equal(exportedBindings.semanticIndex.facts.filter((fact) => fact.predicate === 'reExportIdentity').length >= 4, true);
 assert.equal(exportedBindings.semanticIndex.facts.filter((fact) => fact.predicate === 'publicContractRegion').length >= 5, true);
 assertUniqueGraphIds(exportedBindings);
+
+const declarationExports = await runTypeScriptAdapter('src/declaration-exports.ts', `
+export default function () { return true; }
+export const alpha = 1, beta = 2;
+`);
+const declarationExportEdges = moduleEdges(declarationExports).filter((edge) => edge.role === 'export');
+assertEdge(declarationExportEdges, { exportedName: 'default', exportKind: 'default', publicContract: true });
+assertEdge(declarationExportEdges, { exportedName: 'alpha', localName: 'alpha', exportKind: 'named', publicContract: true });
+assertEdge(declarationExportEdges, { exportedName: 'beta', localName: 'beta', exportKind: 'named', publicContract: true });
+assertUniqueGraphIds(declarationExports);
 
 const exportAssignment = await runTypeScriptAdapter('src/legacy.ts', `
 const legacyRuntime = {};
@@ -61,13 +75,21 @@ const project = await importNativeProject({
     language: 'typescript',
     sourcePath: 'src/barrel.ts',
     sourceText: 'export const barrelValue = 1;\n'
+  }, {
+    language: 'typescript',
+    sourcePath: 'src/reexports.ts',
+    sourceText: "export { value as renamedValue, type Model as RenamedModel } from './dep.js';\n"
   }]
 });
 assertEdge(project.projectSymbolGraph.importEdges, { moduleSpecifier: './dep.js', importedName: 'default', resolvedTargetSymbolId: 'symbol:typescript:export:default' });
 assertEdge(project.projectSymbolGraph.importEdges, { moduleSpecifier: './dep.js', importedName: 'Model', isTypeOnly: true, resolvedTargetSymbolId: 'symbol:typescript:export:model' });
 assertEdge(project.projectSymbolGraph.importEdges, { moduleSpecifier: './dep.js', importedName: 'value', resolvedTargetSymbolId: 'symbol:typescript:export:value' });
 assertEdge(project.projectSymbolGraph.importEdges, { moduleSpecifier: './barrel.js', exportStar: true, resolvedModulePath: 'src/barrel.ts' });
+assertEdge(project.projectSymbolGraph.exportEdges, { moduleSpecifier: './dep.js', exportedName: 'renamedValue', importedName: 'value', isReExport: true, resolvedTargetSymbolId: 'symbol:typescript:export:value' });
+assertEdge(project.projectSymbolGraph.exportEdges, { moduleSpecifier: './dep.js', exportedName: 'RenamedModel', importedName: 'Model', isTypeOnly: true, isReExport: true, resolvedTargetSymbolId: 'symbol:typescript:export:model' });
 assertEdge(project.projectSymbolGraph.reExportIdentities, { exportedName: 'barrelValue', originSymbolId: 'symbol:typescript:export:barrelvalue', isExportStar: true });
+assertEdge(project.projectSymbolGraph.reExportIdentities, { moduleSpecifier: './dep.js', exportedName: 'renamedValue', importedName: 'value', originSymbolId: 'symbol:typescript:export:value' });
+assertEdge(project.projectSymbolGraph.reExportIdentities, { moduleSpecifier: './dep.js', exportedName: 'RenamedModel', importedName: 'Model', originSymbolId: 'symbol:typescript:export:model', isTypeOnly: true });
 
 async function runTypeScriptAdapter(sourcePath, sourceText) {
   return runNativeImporterAdapter(createTypeScriptCompilerNativeImporterAdapter({ typescript }), {

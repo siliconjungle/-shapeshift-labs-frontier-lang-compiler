@@ -2,13 +2,13 @@ import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsSource } from './js-ts-safe-merge-composed.js';
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { createJsTsProjectSafeMergeGraphArtifacts } from './js-ts-safe-project-merge-graph.js';
+import { outputProjectGraphConflicts } from './js-ts-safe-project-merge-graph-conflicts.js';
 
 function safeMergeJsTsProject(input = {}) {
   const id = String(input.id ?? 'js_ts_project_safe_merge');
   const files = normalizeProjectFiles(input);
   const fileResults = files.map((file) => mergeProjectFile(file, input, id));
   const blockedFiles = fileResults.filter((file) => file.status === 'blocked');
-  const status = blockedFiles.length ? 'blocked' : 'merged';
   const outputFiles = fileResults
     .filter((file) => typeof file.outputSourceText === 'string')
     .map((file) => compactRecord({
@@ -18,10 +18,19 @@ function safeMergeJsTsProject(input = {}) {
       sourceHash: file.outputHash,
       operation: file.operation
     }));
-  const reasonCodes = uniqueStrings(blockedFiles.flatMap((file) => file.admission.reasonCodes));
-  const graphArtifacts = status === 'merged' && input.includeOutputProjectSymbolGraph
+  const graphArtifacts = blockedFiles.length === 0 && input.includeOutputProjectSymbolGraph
     ? createJsTsProjectSafeMergeGraphArtifacts(input, outputFiles, id)
     : undefined;
+  const graphConflicts = outputProjectGraphConflicts(graphArtifacts?.projectSymbolGraph);
+  const status = blockedFiles.length || graphConflicts.length ? 'blocked' : 'merged';
+  const reasonCodes = uniqueStrings([
+    ...blockedFiles.flatMap((file) => file.admission.reasonCodes),
+    ...graphConflicts.map((conflict) => conflict.code)
+  ]);
+  const conflictKeys = uniqueStrings([
+    ...fileResults.flatMap((file) => file.conflictKeys),
+    ...graphConflicts.map((conflict) => conflict.details?.conflictKey)
+  ]);
   const core = {
     kind: 'frontier.lang.jsTsProjectSafeMerge',
     version: 1,
@@ -32,7 +41,7 @@ function safeMergeJsTsProject(input = {}) {
     outputFiles,
     outputProjectImport: graphArtifacts?.projectImport,
     outputProjectSymbolGraph: graphArtifacts?.projectSymbolGraph,
-    conflicts: fileResults.flatMap((file) => file.conflicts),
+    conflicts: [...fileResults.flatMap((file) => file.conflicts), ...graphConflicts],
     admission: {
       status: status === 'merged' ? 'auto-merge-candidate' : 'blocked',
       action: status === 'merged' ? 'apply-project' : 'human-review',
@@ -41,15 +50,16 @@ function safeMergeJsTsProject(input = {}) {
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
       reasonCodes,
-      conflictKeys: uniqueStrings(fileResults.flatMap((file) => file.conflictKeys))
+      conflictKeys
     },
-    summary: projectSummary(fileResults),
+    summary: projectSummary(fileResults, graphConflicts),
     metadata: compactRecord({
       workerChangeSetId: input.workerChangeSetId,
       headChangeSetId: input.headChangeSetId,
       projectRoot: input.projectRoot,
       filesInput: Array.isArray(input.files) ? 'records' : 'maps',
       outputProjectSymbolGraph: Boolean(graphArtifacts?.projectSymbolGraph),
+      projectGraphConflicts: graphConflicts.length || undefined,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     })
@@ -235,7 +245,7 @@ function sourceLedgersForFile(input, sourcePath) {
   return undefined;
 }
 
-function projectSummary(files) {
+function projectSummary(files, graphConflicts = []) {
   const byOperation = {};
   for (const file of files) byOperation[file.operation] = (byOperation[file.operation] ?? 0) + 1;
   return {
@@ -243,6 +253,7 @@ function projectSummary(files) {
     mergedFiles: files.filter((file) => file.status === 'merged').length,
     blockedFiles: files.filter((file) => file.status === 'blocked').length,
     outputFiles: files.filter((file) => typeof file.outputSourceText === 'string').length,
+    projectGraphConflicts: graphConflicts.length,
     semanticArtifactFiles: files.filter((file) => file.semanticArtifacts).length,
     operations: byOperation
   };
