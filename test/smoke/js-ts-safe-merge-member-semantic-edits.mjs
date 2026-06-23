@@ -47,6 +47,47 @@ assert.equal(objectAdditions.mergedSourceText, [
 assert.equal(objectAdditions.summary.memberAdditions, 2);
 assert.equal(objectAdditions.semanticArtifacts.status, 'verified');
 
+const objectTrailingCommaPolicy = { unorderedRegions: [{ kind: 'object', name: 'config', order: 'non-semantic', regionKind: 'config' }] };
+const objectTrailingCommaAdditions = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_object_member_additions_preserve_base_trailing_comma',
+  language: 'typescript',
+  sourcePath: 'src/config.ts',
+  baseSourceText: [
+    'export const config = {',
+    '  mode: "a",',
+    '};',
+    ''
+  ].join('\n'),
+  workerSourceText: [
+    'export const config = {',
+    '  mode: "a",',
+    '  flag: true,',
+    '};',
+    ''
+  ].join('\n'),
+  headSourceText: [
+    'export const config = {',
+    '  mode: "a",',
+    '  count: 1,',
+    '};',
+    ''
+  ].join('\n'),
+  policy: objectTrailingCommaPolicy
+});
+
+assert.equal(objectTrailingCommaAdditions.status, 'merged');
+assert.deepEqual(objectTrailingCommaAdditions.metadata.composed.phases, ['top-level', 'member']);
+assert.equal(objectTrailingCommaAdditions.mergedSourceText, [
+  'export const config = {',
+  '  mode: "a",',
+  '  count: 1,',
+  '  flag: true,',
+  '};',
+  ''
+].join('\n'));
+assert.equal(objectTrailingCommaAdditions.summary.memberAdditions, 2);
+assert.equal(objectTrailingCommaAdditions.semanticArtifacts.status, 'verified');
+
 const classBase = [
   'export class Counter {',
   '  step(v: number) {',

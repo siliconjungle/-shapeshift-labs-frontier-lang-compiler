@@ -17,7 +17,7 @@ function removePreparedMemberAdditions(sourceText, preparedRegions, side) {
   const replacements = preparedRegions
     .map((region) => ({
       range: region[side],
-      replacement: removeMembersFromBody(region[side].body, region[`${side}AddedMembers`] ?? [], region.kind)
+      replacement: removeMembersFromBody(region[side].body, region[`${side}AddedMembers`] ?? [], region.kind, region.base.body)
     }))
     .sort((left, right) => right.range.bodyStart - left.range.bodyStart);
   for (const { range, replacement } of replacements) {
@@ -88,14 +88,23 @@ function appendReadyBody(before, kind) {
   return `${before.replace(/\s*$/, '')},`;
 }
 
-function removeMembersFromBody(body, members, kind) {
+function removeMembersFromBody(body, members, kind, baseBody) {
   let output = body;
   for (const member of [...members].sort((left, right) => right.start - left.start || right.end - left.end)) {
     output = `${output.slice(0, member.start)}${output.slice(member.end)}`;
   }
   if (kind !== 'object') return output;
+  if (typeof baseBody === 'string' && sameObjectBodyIgnoringTrailingDelimiter(output, baseBody)) return baseBody;
   const trailing = String(body ?? '').match(/\s*$/)?.[0] ?? '';
   return output.replace(/,\s*$/, trailing);
+}
+
+function sameObjectBodyIgnoringTrailingDelimiter(left, right) {
+  return normalizeObjectTrailingDelimiter(left) === normalizeObjectTrailingDelimiter(right);
+}
+
+function normalizeObjectTrailingDelimiter(body) {
+  return String(body ?? '').replace(/,\s*$/, (trailing) => trailing.replace(',', ''));
 }
 
 function minimumIndent(lines) {
