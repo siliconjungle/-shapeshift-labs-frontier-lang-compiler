@@ -20,23 +20,14 @@ import { idFragment, uniqueStrings } from './native-import-utils.js';
 function semanticEditFallbackResult(input, topLevelResult) {
   if (!shouldTrySemanticEditFallback(topLevelResult)) return topLevelResult;
   const stagedFallback = createStagedTopLevelSemanticFallback(input, topLevelResult);
-  let selectedFallback = stagedFallback;
-  let artifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallback);
-  if (stagedFallback && artifacts.status !== 'verified') {
-    const directFallback = stagedFallback.directProjectionHeadSourceText && stagedFallback.safeTopLevelChanges > 0
-      ? { ...stagedFallback, projectionMode: 'direct' }
-      : undefined;
-    const directArtifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, directFallback);
-    if (directArtifacts.status === 'verified') {
-      artifacts = directArtifacts;
-      selectedFallback = directFallback;
-    } else if (directFallback) {
-      const plainDirectArtifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, undefined);
-      if (plainDirectArtifacts.status === 'verified') {
-        artifacts = plainDirectArtifacts;
-        selectedFallback = undefined;
-      }
-    }
+  const candidates = semanticFallbackCandidates(stagedFallback);
+  let selectedFallback = candidates[0];
+  let artifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, selectedFallback);
+  for (const candidate of candidates.slice(1)) {
+    if (artifacts.status === 'verified') break;
+    const nextArtifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, candidate);
+    if (nextArtifacts.status === 'verified') selectedFallback = candidate;
+    artifacts = nextArtifacts.status === 'verified' ? nextArtifacts : artifacts;
   }
   if (artifacts.status !== 'verified') return semanticEditFallbackBlockedResult(input, topLevelResult, artifacts);
   const resultBase = selectedFallback?.stagedTopLevelResult ?? topLevelResult;
@@ -81,6 +72,16 @@ function semanticEditFallbackResult(input, topLevelResult) {
     },
     semanticArtifacts: artifacts
   };
+}
+
+function semanticFallbackCandidates(stagedFallback) {
+  if (!stagedFallback) return [undefined];
+  const headChanged = (stagedFallback.neutralization?.summary?.headChangedExistingDeclarations ?? 0) > 0;
+  const directFallback = stagedFallback.directProjectionHeadSourceText && (headChanged || stagedFallback.safeTopLevelChanges > 0)
+    ? { ...stagedFallback, projectionMode: 'direct' }
+    : undefined;
+  if (headChanged) return directFallback ? [directFallback, undefined] : [undefined];
+  return directFallback ? [stagedFallback, directFallback, undefined] : [stagedFallback];
 }
 
 function createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallback) {

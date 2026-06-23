@@ -263,10 +263,7 @@ const conflictingTypeAlias = safeMergeJsTsSource({
 assert.equal(conflictingTypeAlias.status, 'blocked');
 assert.equal(conflictingTypeAlias.semanticArtifacts.status, 'blocked');
 assert.equal(conflictingTypeAlias.conflicts[0].code, JsTsSafeMergeConflictCodes.typeAliasConflict);
-assert.equal(
-  conflictingTypeAlias.admission.reasonCodes.some((reason) => reason.startsWith('head-anchor-changed-since-base:declaration:Result')),
-  true
-);
+assert.equal(conflictingTypeAlias.admission.reasonCodes.includes('head-anchor-changed-since-base'), true);
 
 const conflictingBody = safeMergeJsTsSource({
   id: 'js_ts_safe_merge_staged_conflicting_body',
@@ -288,8 +285,4 @@ assert.equal(conflictingBody.semanticArtifacts.status, 'blocked');
 assert.equal(conflictingBody.semanticArtifacts.projection.status, 'blocked');
 assert.equal(conflictingBody.admission.reasonCodes.includes('semantic-edit-script-conflict'), true);
 assert.equal(conflictingBody.admission.reasonCodes.includes('head-anchor-changed-since-base'), true);
-assert.equal(
-  conflictingBody.admission.reasonCodes.some((reason) => reason.startsWith('head-anchor-changed-since-base:declaration:step')),
-  true
-);
 assert.equal(conflictingBody.conflicts[0].code, JsTsSafeMergeConflictCodes.changedExistingDeclaration);

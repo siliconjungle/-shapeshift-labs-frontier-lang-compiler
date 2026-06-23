@@ -200,11 +200,12 @@ interface, type, class, or object member additions. Existing class/object method
 or property body edits inside the declared member region are preserved for
 semantic replay while added members are neutralized; object member additions are
 re-emitted with safe commas when both sides add final properties.
-If staged whole-declaration replay cannot verify because head changed a sibling
-member inside the same declaration, `safeMergeJsTsSource` retries the direct
-semantic edit projection and admits the merge only when replay still verifies
-cleanly. That direct retry can project onto the staged top-level merge output,
-so safe import/declaration additions are preserved alongside the sibling edit.
+When head changed an existing sibling declaration or sibling member,
+`safeMergeJsTsSource` prefers the direct semantic edit projection over a
+neutralized staged projection, and admits the merge only when replay still
+verifies cleanly. That direct path projects onto a staged top-level output with
+head declaration changes replayed first, so safe import/declaration additions
+are preserved without dropping the head-side sibling edit.
 
 Project-level JS/TS safe merges compose the same file-level gates across a
 base/worker/head file set. They preserve head-only files, admit worker-only

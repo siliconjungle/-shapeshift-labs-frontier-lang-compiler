@@ -159,9 +159,9 @@ assert.equal(interfaceSiblingEdit.mergedSourceText, [
   '}',
   ''
 ].join('\n'));
-assert.equal(interfaceSiblingEdit.metadata.composed.phase, 'semantic-edit-fallback');
+assert.equal(interfaceSiblingEdit.metadata.composed.phase, 'staged-top-level-direct-semantic-edit-fallback');
 assert.equal(interfaceSiblingEdit.summary.semanticEditAppliedOperations, 1);
-assert.equal(interfaceSiblingEdit.semanticArtifacts.metadata.source, 'js-ts-semantic-edit-fallback');
+assert.equal(interfaceSiblingEdit.semanticArtifacts.metadata.source, 'staged-top-level-direct-semantic-edit-fallback');
 assert.equal(interfaceSiblingEdit.semanticArtifacts.projection.edits[0].symbolName, 'User.id');
 assert.equal(interfaceSiblingEdit.semanticArtifacts.replay.status, 'accepted-clean');
 
@@ -200,7 +200,7 @@ assert.equal(typeAliasSiblingEdit.mergedSourceText, [
   '};',
   ''
 ].join('\n'));
-assert.equal(typeAliasSiblingEdit.metadata.composed.phase, 'semantic-edit-fallback');
+assert.equal(typeAliasSiblingEdit.metadata.composed.phase, 'staged-top-level-direct-semantic-edit-fallback');
 assert.equal(typeAliasSiblingEdit.conflicts.length, 0);
 
 const memberBase = [
