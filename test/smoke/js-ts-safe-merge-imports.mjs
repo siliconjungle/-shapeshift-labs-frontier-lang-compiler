@@ -278,14 +278,34 @@ const ambiguousInsertion = safeMergeJsTsImportsAndDeclarations({
 assertBlocked(ambiguousInsertion, JsTsSafeMergeConflictCodes.ambiguousInsertionPoint, JsTsSafeMergeGateIds.resolvedInsertionAnchors);
 
 const importSpecifierReorder = safeMergeJsTsImportsAndDeclarations({
-  id: 'js_ts_safe_merge_rejects_import_specifier_reorder',
+  id: 'js_ts_safe_merge_treats_import_specifier_reorder_as_semantic_noop',
   baseSourceText: "import { readFile, writeFile } from 'node:fs';\nexport const stable = readFile;\n",
   workerSourceText: "import { writeFile, readFile } from 'node:fs';\nexport const stable = readFile;\n",
   headSourceText: "import { readFile, writeFile, stat } from 'node:fs';\nexport const stable = readFile;\n"
 });
+assert.equal(importSpecifierReorder.status, 'merged');
+assert.equal(importSpecifierReorder.summary.importSpecifierAdditions, 1);
+assert.equal(importSpecifierReorder.mergedSourceText, "import { readFile, writeFile, stat } from 'node:fs';\nexport const stable = readFile;\n");
+
+const importSpecifierReorderWithWorkerAddition = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_accepts_worker_addition_after_import_specifier_reorder',
+  baseSourceText: "import { readFile, writeFile } from 'node:fs';\nexport const stable = readFile;\n",
+  workerSourceText: "import { writeFile, stat, readFile } from 'node:fs';\nexport const stable = readFile;\n",
+  headSourceText: "import { readFile, writeFile, mkdir } from 'node:fs';\nexport const stable = readFile;\n"
+});
+assert.equal(importSpecifierReorderWithWorkerAddition.status, 'merged');
+assert.equal(importSpecifierReorderWithWorkerAddition.summary.importSpecifierAdditions, 2);
+assert.equal(importSpecifierReorderWithWorkerAddition.mergedSourceText, "import { readFile, writeFile, mkdir, stat } from 'node:fs';\nexport const stable = readFile;\n");
+
+const importSpecifierRemovalAfterReorder = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_import_specifier_removal_after_reorder',
+  baseSourceText: "import { readFile, writeFile } from 'node:fs';\nexport const stable = readFile;\n",
+  workerSourceText: "import { writeFile } from 'node:fs';\nexport const stable = writeFile;\n",
+  headSourceText: "import { readFile, writeFile, stat } from 'node:fs';\nexport const stable = readFile;\n"
+});
 assertBlocked(
-  importSpecifierReorder,
-  JsTsSafeMergeConflictCodes.importSpecifierReordered,
+  importSpecifierRemovalAfterReorder,
+  JsTsSafeMergeConflictCodes.importSpecifierRemoved,
   JsTsSafeMergeGateIds.independentImportSpecifiers
 );
 

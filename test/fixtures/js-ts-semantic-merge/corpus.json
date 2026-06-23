@@ -895,22 +895,22 @@
       ]
     },
     {
-      "id": "unsafe-import-specifier-reorder",
-      "title": "import specifier reordering is unsafe for source-preserving merge",
+      "id": "safe-import-specifier-reorder",
+      "title": "import specifier reordering is a semantic no-op when bindings are preserved",
       "kind": "safe-merge",
       "language": "typescript",
-      "sourcePath": "src/unsafe/import-reorder.ts",
-      "coverage": ["imports", "import-specifier-order", "negative-unsafe-case"],
+      "sourcePath": "src/safe/import-reorder.ts",
+      "coverage": ["imports", "import-specifier-order", "import-safe-merge"],
       "safeMerge": {
         "mode": "imports-declarations"
       },
       "expected": {
-        "outcome": "rejected",
-        "safeMergeStatus": "blocked",
-        "admissionStatus": "blocked",
-        "reasonCodes": ["import-specifier-reordered"],
+        "outcome": "accepted",
+        "safeMergeStatus": "merged",
+        "admissionStatus": "auto-merge-candidate",
+        "reasonCodes": [],
         "gateIds": ["independent-import-specifiers"],
-        "blockedGateIds": ["independent-import-specifiers"],
+        "blockedGateIds": [],
         "minSemanticSymbols": 1
       },
       "baseLines": [
@@ -924,6 +924,11 @@
         ""
       ],
       "headLines": [
+        "import { readFile, writeFile, stat } from 'node:fs';",
+        "export const stable = readFile;",
+        ""
+      ],
+      "expectedLines": [
         "import { readFile, writeFile, stat } from 'node:fs';",
         "export const stable = readFile;",
         ""

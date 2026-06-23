@@ -103,34 +103,27 @@ function analyzeImportStatementChange(baseEntry, variantEntry, side, context) {
 
   const baseSpecifiers = baseImport.specifiers;
   const variantSpecifiers = variantImport.specifiers;
-  if (variantSpecifiers.length < baseSpecifiers.length) {
+  const baseSpecifiersByCanonical = new Set(baseSpecifiers.map((specifier) => specifier.canonical));
+  const variantSpecifiersByCanonical = new Set(variantSpecifiers.map((specifier) => specifier.canonical));
+  const missingBaseSpecifiers = baseSpecifiers.filter((specifier) => !variantSpecifiersByCanonical.has(specifier.canonical));
+  if (missingBaseSpecifiers.length) {
     addConflict(context, {
       code: JsTsSafeMergeConflictCodes.importSpecifierRemoved,
       gateId: JsTsSafeMergeGateIds.independentImportSpecifiers,
       side,
       message: `${side} source removes import specifiers.`,
-      details: { key: baseEntry.key }
+      details: {
+        key: baseEntry.key,
+        missing: missingBaseSpecifiers.map((specifier) => specifier.canonical)
+      }
     });
     return [];
   }
-  for (let index = 0; index < baseSpecifiers.length; index += 1) {
-    if (variantSpecifiers[index]?.canonical !== baseSpecifiers[index].canonical) {
-      addConflict(context, {
-        code: JsTsSafeMergeConflictCodes.importSpecifierReordered,
-        gateId: JsTsSafeMergeGateIds.independentImportSpecifiers,
-        side,
-        message: `${side} source reorders or changes existing import specifiers.`,
-        details: {
-          key: baseEntry.key,
-          expected: baseSpecifiers.map((specifier) => specifier.canonical),
-          actual: variantSpecifiers.map((specifier) => specifier.canonical)
-        }
-      });
-      return [];
-    }
-  }
-  const additions = variantSpecifiers.slice(baseSpecifiers.length);
+  const additions = variantSpecifiers.filter((specifier) => !baseSpecifiersByCanonical.has(specifier.canonical));
   if (additions.length === 0 && !sameStatementText(baseEntry.text, variantEntry.text)) {
+    const baseCanonicalOrder = baseSpecifiers.map((specifier) => specifier.canonical);
+    const variantCanonicalOrder = variantSpecifiers.map((specifier) => specifier.canonical);
+    if (!arraysEqual(baseCanonicalOrder, variantCanonicalOrder)) return [];
     addConflict(context, {
       code: JsTsSafeMergeConflictCodes.importFormattingChanged,
       gateId: JsTsSafeMergeGateIds.independentImportSpecifiers,
