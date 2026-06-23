@@ -13,6 +13,7 @@ const smokeModules = [
   './smoke/universal-dialects.mjs',
   './smoke/adapter-contract.mjs',
   './smoke/js-ts-adapters.mjs',
+  './smoke/js-ts-syntax-module-edges.mjs',
   './smoke/js-ts-typescript-module-edges.mjs',
   './smoke/python-adapter.mjs',
   './smoke/rust-adapter.mjs',

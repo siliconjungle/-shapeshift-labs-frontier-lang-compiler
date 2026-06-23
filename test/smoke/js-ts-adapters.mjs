@@ -69,14 +69,16 @@ const reExportFacts = estreeReExportAdapterImport.semanticIndex.facts.filter((fa
 const publicContractRegionFacts = estreeReExportAdapterImport.semanticIndex.facts.filter((fact) => fact.predicate === 'publicContractRegion');
 assert.equal(estreeReExportAdapterImport.semanticIndex.metadata.graphCoverage, 'module-edge-declarations');
 assert.equal(estreeReExportAdapterImport.semanticIndex.facts.some((fact) => fact.predicate === 'fileHash'), true);
-assert.equal(reExportRelations.length, 2);
+assert.equal(reExportRelations.length, 3);
 assert.equal(reExportRelations.every((relation) => relation.metadata?.moduleEdge?.isReExport === true), true);
-assert.deepEqual(reExportRelations.map((relation) => relation.metadata.moduleEdge.moduleSpecifier), ['./value.js', './barrel.js']);
-assert.equal(reExportFacts.length, 2);
+assert.deepEqual(reExportRelations.map((relation) => relation.metadata.moduleEdge.moduleSpecifier), ['./value.js', './value.js', './barrel.js']);
+assert.equal(reExportRelations.some((relation) => relation.metadata.moduleEdge.exportedName === 'publicValue' && relation.metadata.moduleEdge.importedName === 'value'), true);
+assert.equal(reExportRelations.some((relation) => relation.metadata.moduleEdge.exportStar === true), true);
+assert.equal(reExportFacts.length, 3);
 assert.equal(reExportFacts.every((fact) => fact.value.publicContract === true), true);
-assert.equal(publicContractRegionFacts.length, 2);
+assert.equal(publicContractRegionFacts.length, 3);
 assert.equal(publicContractRegionFacts.every((fact) => fact.value.regionKind === 'export'), true);
-assert.equal(estreeReExportAdapterImport.evidence.some((record) => record.metadata?.graphRecords?.reExportIdentities === 2), true);
+assert.equal(estreeReExportAdapterImport.evidence.some((record) => record.metadata?.graphRecords?.reExportIdentities === 3), true);
 export const scannedEstreeFixtureImport = importNativeSource({
   language: 'javascript',
   sourcePath: 'src/estree.js',

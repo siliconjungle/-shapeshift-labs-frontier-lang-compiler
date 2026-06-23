@@ -23,16 +23,20 @@ export function visitSyntaxAstNode(node, context, propertyPath) {
       if (childId) children.push(childId);
     }
   }
-  const declaration = syntaxDeclaration(node, id, context.input, context.options);
+  const declarationResult = syntaxDeclaration(node, id, context.input, context.options);
+  const declarations = Array.isArray(declarationResult) ? declarationResult.filter(Boolean) : declarationResult ? [declarationResult] : [];
+  const primaryDeclaration = declarations[0];
   const nativeNode = {
     id,
     kind: String(node.type ?? node.kind ?? 'Node'),
     languageKind: `${context.input.language}.${node.type ?? node.kind ?? 'Node'}`,
     span: spanFromLoc(node.loc, context.input),
-    value: declaration?.name ?? literalSyntaxValue(node),
+    value: primaryDeclaration?.name ?? literalSyntaxValue(node),
     fields,
     children,
     metadata: {
+      ...primaryDeclaration?.metadata,
+      ...(declarations.length > 1 ? { declarationCount: declarations.length } : {}),
       astFormat: context.options.astFormat,
       propertyPath,
       start: numberOrUndefined(node.start),
@@ -41,6 +45,6 @@ export function visitSyntaxAstNode(node, context, propertyPath) {
     }
   };
   context.nodes[id] = nativeNode;
-  if (declaration) context.declarations.push({ ...declaration, nativeNode });
+  for (const declaration of declarations) context.declarations.push({ ...declaration, nativeNode });
   return id;
 }

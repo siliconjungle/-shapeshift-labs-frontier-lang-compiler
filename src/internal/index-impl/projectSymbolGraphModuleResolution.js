@@ -43,11 +43,11 @@ export function createProjectDocumentExportSymbolsResolver(symbols, documents) {
   const exportsByDocumentId = new Map();
   for (const symbol of symbols ?? []) {
     if (symbol?.kind !== 'export' || !symbol.name) continue;
-    const document = documentsByPath.get(symbol.definitionSpan?.path);
-    if (!document) continue;
-    const exports = exportsByDocumentId.get(document.id) ?? [];
+    const documentId = symbolDocumentId(symbol, documentsByPath);
+    if (!documentId) continue;
+    const exports = exportsByDocumentId.get(documentId) ?? [];
     exports.push(symbol);
-    exportsByDocumentId.set(document.id, exports);
+    exportsByDocumentId.set(documentId, exports);
   }
   return function resolveDocumentExports(documentId) {
     return exportsByDocumentId.get(documentId) ?? [];
@@ -59,10 +59,14 @@ function projectExportSymbolMap(symbols, documents) {
   const exportedByDocumentAndName = new Map();
   for (const symbol of symbols ?? []) {
     if (symbol?.kind !== 'export' || !symbol.name) continue;
-    const document = documentsByPath.get(symbol.definitionSpan?.path);
-    if (document) exportedByDocumentAndName.set(symbolKey(document.id, symbol.name), symbol);
+    const documentId = symbolDocumentId(symbol, documentsByPath);
+    if (documentId) exportedByDocumentAndName.set(symbolKey(documentId, symbol.name), symbol);
   }
   return exportedByDocumentAndName;
+}
+
+function symbolDocumentId(symbol, documentsByPath) {
+  return symbol?.metadata?.moduleEdge?.sourceDocumentId ?? documentsByPath.get(symbol.definitionSpan?.path)?.id;
 }
 
 function resolveConfiguredProjectModule(moduleSpecifier, documentsByPath, moduleResolution) {

@@ -1,6 +1,8 @@
-import{declarationRecord}from'./declarationRecord.js';import{namedDeclaration}from'./namedDeclaration.js';import{nativeNodeId}from'./nativeNodeId.js';
+import{declarationRecord}from'./declarationRecord.js';import{namedDeclaration}from'./namedDeclaration.js';import{nativeNodeId}from'./nativeNodeId.js';import{syntaxModuleDeclarationEntries}from'./syntaxModuleDeclarationEntries.js';
 export function syntaxDeclaration(node, nativeNodeId, input) {
   const kind = String(node.type ?? node.kind ?? '');
+  const moduleEntries = syntaxModuleDeclarationEntries(node, nativeNodeId, input);
+  if (moduleEntries.length) return moduleEntries.map((entry) => entry.declaration);
   if (kind === 'ImportDeclaration') {
     const name = node.source?.value;
     if (typeof name === 'string') return declarationRecord(input, nativeNodeId, name, 'module', 'import');
