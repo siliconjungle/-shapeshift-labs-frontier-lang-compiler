@@ -295,6 +295,9 @@ Public contract regions include `apiSurfaceKind`, `signatureHash`, and
 For `export * from './module.js'`, project graphs fan out re-export identities
 for each named export in the resolved target document and omit `default`, which
 matches JavaScript module semantics.
+Output graph admission can use those expanded identities to accept disjoint
+export-star additions while blocking incompatible duplicate exported names as
+`project-output-re-export-identity-conflict`.
 
 When using `createTypeScriptCompilerNativeImporterAdapter`,
 `createEstreeNativeImporterAdapter`, or `createBabelNativeImporterAdapter`,

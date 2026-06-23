@@ -1,3 +1,4 @@
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { projectGraphDeltaConflicts } from './js-ts-safe-project-merge-graph-delta-conflicts.js';
 
@@ -25,7 +26,8 @@ function outputProjectGraphConflicts(projectSymbolGraph) {
   return [
     ...limitConflicts,
     ...[...missingModuleGroups.values()].map(projectGraphMissingImportConflict),
-    ...[...missingSymbolGroups.values()].map(projectGraphMissingTargetConflict)
+    ...[...missingSymbolGroups.values()].map(projectGraphMissingTargetConflict),
+    ...duplicateReExportIdentityConflicts(projectSymbolGraph?.reExportIdentities)
   ];
 }
 
@@ -92,6 +94,83 @@ function projectImportTargetName(edge) {
   const name = edge?.importedName ?? edge?.localName ?? edge?.exportedName;
   if (!name || name === '*') return undefined;
   return String(name);
+}
+
+function duplicateReExportIdentityConflicts(records = []) {
+  const groups = new Map();
+  for (const record of records) {
+    const key = reExportIdentityKey(record);
+    if (!key) continue;
+    const group = groups.get(key) ?? [];
+    group.push(record);
+    groups.set(key, group);
+  }
+  return [...groups.entries()]
+    .filter(([, group]) => new Set(group.map(reExportIdentityFingerprint)).size > 1)
+    .map(([identityKey, group]) => projectGraphDuplicateReExportIdentityConflict(identityKey, group));
+}
+
+function projectGraphDuplicateReExportIdentityConflict(identityKey, group) {
+  const record = group[0] ?? {};
+  return {
+    code: 'project-output-re-export-identity-conflict',
+    gateId: 'project-symbol-graph',
+    message: `Output project graph exposes incompatible re-export identity ${JSON.stringify(identityKey)}.`,
+    sourcePath: record.sourcePath,
+    details: compactRecord({
+      reasonCode: 'project-output-re-export-identity-conflict',
+      conflictKey: `project-output-re-export-identity#${identityKey}`,
+      identityKey,
+      sourcePath: record.sourcePath,
+      exportedName: record.exportedName,
+      records: group.map(reExportIdentityDetails)
+    })
+  };
+}
+
+function reExportIdentityKey(record) {
+  return stableKey([
+    're-export-identity',
+    record?.sourcePath,
+    record?.exportedName ?? record?.localName ?? record?.namespace ?? (record?.exportStar || record?.isExportStar ? '*' : undefined)
+  ]);
+}
+
+function reExportIdentityFingerprint(record) {
+  return hashSemanticValue({
+    moduleSpecifier: record.moduleSpecifier,
+    exportedName: record.exportedName,
+    importedName: record.importedName,
+    localName: record.localName,
+    namespace: record.namespace,
+    isTypeOnly: record.isTypeOnly,
+    exportStar: record.exportStar,
+    isExportStar: record.isExportStar,
+    originSymbolId: record.originSymbolId,
+    exportedSymbolId: record.exportedSymbolId,
+    localSymbolId: record.localSymbolId
+  });
+}
+
+function reExportIdentityDetails(record) {
+  return compactRecord({
+    moduleSpecifier: record.moduleSpecifier,
+    exportedName: record.exportedName,
+    importedName: record.importedName,
+    localName: record.localName,
+    namespace: record.namespace,
+    isTypeOnly: record.isTypeOnly,
+    exportStar: record.exportStar,
+    isExportStar: record.isExportStar,
+    originSymbolId: record.originSymbolId,
+    exportedSymbolId: record.exportedSymbolId,
+    localSymbolId: record.localSymbolId
+  });
+}
+
+function stableKey(parts) {
+  const values = parts.map((part) => part === undefined || part === null ? '' : String(part));
+  return values.some(Boolean) ? values.join('#') : undefined;
 }
 
 function uniqueStrings(values) {

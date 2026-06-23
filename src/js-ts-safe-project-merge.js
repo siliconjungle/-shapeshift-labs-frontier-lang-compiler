@@ -111,7 +111,7 @@ function mergeProjectFile(file, input, projectId) {
   const result = safeMergeJsTsSource({
     ...input,
     ...context,
-    deferReExportIdentityConflictsToProjectGraph: input.includeProjectGraphDelta === true,
+    deferReExportIdentityConflictsToProjectGraph: input.includeProjectGraphDelta === true || input.includeOutputProjectSymbolGraph === true,
     id: `${projectId}_${safeId(file.sourcePath)}`,
     baseSourceText: base,
     workerSourceText: worker,
