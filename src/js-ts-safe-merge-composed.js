@@ -25,12 +25,16 @@ function safeMergeJsTsSource(input = {}) {
     return composedBlockedResult(input, 'member-analysis', memberNeutralization.result, memberNeutralization.analysis);
   }
 
-  const topLevelResult = safeMergeJsTsImportsAndDeclarations({
+  const topLevelInput = {
     ...input,
     baseSourceText: memberNeutralization.baseSourceText,
     workerSourceText: memberNeutralization.workerSourceText,
     headSourceText: memberNeutralization.headSourceText
-  });
+  };
+  const topLevelLedgerResult = safeMergeJsTsImportsAndDeclarations(topLevelInput);
+  const topLevelResult = topLevelLedgerResult.status === JsTsSafeMergeStatuses.merged
+    ? topLevelLedgerResult
+    : semanticEditFallbackResult(topLevelInput, topLevelLedgerResult);
   if (topLevelResult.status !== JsTsSafeMergeStatuses.merged) {
     return composedBlockedResult(input, 'top-level', topLevelResult, memberNeutralization.analysis);
   }
@@ -61,7 +65,7 @@ function safeMergeJsTsSource(input = {}) {
     metadata: {
       ...topLevelResult.metadata,
       composed: {
-        phases: ['top-level', 'member'],
+        phases: composedPhaseList(topLevelResult),
         memberRegions: memberNeutralization.analysis.preparedRegions.map((region) => ({
           kind: region.kind,
           name: region.name,
@@ -76,6 +80,13 @@ function safeMergeJsTsSource(input = {}) {
     ...result,
     semanticArtifacts: createJsTsSafeMergeSemanticArtifacts(input, result)
   };
+}
+
+function composedPhaseList(topLevelResult) {
+  const topLevelPhases = topLevelResult.metadata?.composed?.phases;
+  if (Array.isArray(topLevelPhases) && topLevelPhases.length) return [...topLevelPhases, 'member'];
+  const topLevelPhase = topLevelResult.metadata?.composed?.phase;
+  return topLevelPhase ? [topLevelPhase, 'member'] : ['top-level', 'member'];
 }
 
 function hasMemberMergePolicy(input) {
@@ -119,14 +130,20 @@ function composedBlockedResult(input, phase, result, memberAnalysis) {
       gatesPassed: result.gates?.filter((gate) => gate.status === 'passed').length ?? 0,
       memberRegions: memberAnalysis?.preparedRegions?.length ?? 0,
       memberAdditions: 0,
+      semanticEditOperations: result.summary?.semanticEditOperations,
+      semanticEditAppliedOperations: result.summary?.semanticEditAppliedOperations,
+      semanticEditReplayStatus: result.summary?.semanticEditReplayStatus,
       composedPhases: phase === 'top-level' ? 2 : 1
     },
     metadata: {
       composed: {
         phase,
-        sourceKind: result.kind
+        sourceKind: result.kind,
+        topLevelPhase: result.metadata?.composed?.phase,
+        topLevelPhases: result.metadata?.composed?.phases
       }
-    }
+    },
+    semanticArtifacts: result.semanticArtifacts
   };
 }
 

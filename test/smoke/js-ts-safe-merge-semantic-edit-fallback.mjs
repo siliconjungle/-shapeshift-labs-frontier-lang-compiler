@@ -122,3 +122,96 @@ assert.equal(projectBodyEdit.outputFiles[0].operation, 'merged-source');
 assert.equal(projectBodyEdit.outputFiles[0].sourceText, workerStep);
 assert.equal(projectBodyEdit.files[0].result.metadata.composed.phase, 'semantic-edit-fallback');
 assert.equal(projectBodyEdit.files[0].semanticArtifacts.status, 'verified');
+
+const memberBase = [
+  'export interface Options {',
+  '  enabled: boolean;',
+  '}',
+  'export function step(v: number) {',
+  '  return v + 1;',
+  '}',
+  ''
+].join('\n');
+
+const memberWorker = [
+  'export interface Options {',
+  '  enabled: boolean;',
+  '  label?: string;',
+  '}',
+  'export function step(v: number) {',
+  '  return v + 2;',
+  '}',
+  ''
+].join('\n');
+
+const memberHead = [
+  'export interface Options {',
+  '  enabled: boolean;',
+  '  retries: number;',
+  '}',
+  'export function step(v: number) {',
+  '  return v + 1;',
+  '}',
+  ''
+].join('\n');
+
+const memberAndBodyEdit = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_composes_members',
+  language: 'typescript',
+  sourcePath: 'src/options.ts',
+  baseSourceText: memberBase,
+  workerSourceText: memberWorker,
+  headSourceText: memberHead,
+  policy: { unorderedRegions: [{ kind: 'interface', name: 'Options', order: 'non-semantic' }] }
+});
+
+assert.equal(memberAndBodyEdit.status, 'merged');
+assert.equal(memberAndBodyEdit.mergedSourceText, [
+  'export interface Options {',
+  '  enabled: boolean;',
+  '  retries: number;',
+  '  label?: string;',
+  '}',
+  'export function step(v: number) {',
+  '  return v + 2;',
+  '}',
+  ''
+].join('\n'));
+assert.deepEqual(memberAndBodyEdit.metadata.composed.phases, ['top-level-ledger', 'semantic-edit', 'member']);
+assert.equal(memberAndBodyEdit.summary.memberRegions, 1);
+assert.equal(memberAndBodyEdit.summary.memberAdditions, 2);
+assert.equal(memberAndBodyEdit.summary.semanticEditOperations, 1);
+assert.equal(memberAndBodyEdit.semanticArtifacts.status, 'verified');
+assert.equal(memberAndBodyEdit.semanticArtifacts.summary.operations, 2);
+assert.equal(memberAndBodyEdit.semanticArtifacts.replay.status, 'accepted-clean');
+assert.equal(memberAndBodyEdit.semanticArtifacts.alreadyAppliedReplay.status, 'already-applied');
+
+const memberAndBodyConflict = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_composed_conflict',
+  language: 'typescript',
+  sourcePath: 'src/options.ts',
+  baseSourceText: memberBase,
+  workerSourceText: memberWorker,
+  headSourceText: [
+    'export interface Options {',
+    '  enabled: boolean;',
+    '  retries: number;',
+    '}',
+    'export function step(v: number) {',
+    '  return v + 3;',
+    '}',
+    ''
+  ].join('\n'),
+  policy: { unorderedRegions: [{ kind: 'interface', name: 'Options', order: 'non-semantic' }] }
+});
+
+assert.equal(memberAndBodyConflict.status, 'blocked');
+assert.equal(memberAndBodyConflict.summary.memberRegions, 1);
+assert.equal(memberAndBodyConflict.summary.memberAdditions, 0);
+assert.equal(memberAndBodyConflict.summary.semanticEditOperations, 1);
+assert.equal(memberAndBodyConflict.semanticArtifacts.status, 'blocked');
+assert.equal(memberAndBodyConflict.semanticArtifacts.script.admission.status, 'conflict');
+assert.equal(
+  memberAndBodyConflict.admission.reasonCodes.includes('head-anchor-changed-since-base'),
+  true
+);

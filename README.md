@@ -194,7 +194,9 @@ generic semantic edit script path. The fallback admits the merge only after the
 script is an auto-merge candidate, the source projection succeeds, replay on
 current head is `accepted-clean`, and replay on the projected source is
 `already-applied`. Same-anchor head edits, stale anchors, and non-body conflicts
-remain blocked for review.
+remain blocked for review. The same fallback composes with declared unordered
+member-addition regions, so a verified body edit can still merge alongside safe
+interface, type, class, or object member additions.
 
 Project-level JS/TS safe merges compose the same file-level gates across a
 base/worker/head file set. They preserve head-only files, admit worker-only
