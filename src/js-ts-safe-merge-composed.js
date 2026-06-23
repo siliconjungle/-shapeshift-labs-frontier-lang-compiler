@@ -5,6 +5,7 @@ import {
   jsTsSafeMergeGateOrder
 } from './js-ts-safe-merge-constants.js';
 import { safeMergeJsTsImportsAndDeclarations } from './js-ts-safe-merge.js';
+import { semanticEditFallbackResult } from './js-ts-safe-merge-semantic-edit-fallback.js';
 import { createJsTsSafeMergeSemanticArtifacts } from './js-ts-safe-merge-semantic-artifacts.js';
 import {
   applyJsTsPreparedMemberAdditions,
@@ -12,7 +13,12 @@ import {
 } from './js-ts-safe-member-merge.js';
 
 function safeMergeJsTsSource(input = {}) {
-  if (!hasMemberMergePolicy(input)) return safeMergeJsTsImportsAndDeclarations(input);
+  if (!hasMemberMergePolicy(input)) {
+    const topLevelResult = safeMergeJsTsImportsAndDeclarations(input);
+    return topLevelResult.status === JsTsSafeMergeStatuses.merged
+      ? topLevelResult
+      : semanticEditFallbackResult(input, topLevelResult);
+  }
 
   const memberNeutralization = neutralizeJsTsSafeMemberMergeSources(input);
   if (!memberNeutralization.ok) {

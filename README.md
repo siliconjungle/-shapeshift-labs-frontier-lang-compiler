@@ -188,6 +188,14 @@ artifacts keep `autoMergeClaim: false` and `semanticEquivalenceClaim: false`,
 but give coordinators machine-readable proof that the projected source matches
 the merge output and that applying the same projection again is a no-op.
 
+When the top-level JS/TS ledger blocks only because an existing declaration
+body or semantic fact changed, `safeMergeJsTsSource` can fall back to the
+generic semantic edit script path. The fallback admits the merge only after the
+script is an auto-merge candidate, the source projection succeeds, replay on
+current head is `accepted-clean`, and replay on the projected source is
+`already-applied`. Same-anchor head edits, stale anchors, and non-body conflicts
+remain blocked for review.
+
 Project-level JS/TS safe merges compose the same file-level gates across a
 base/worker/head file set. They preserve head-only files, admit worker-only
 file additions when file additions are enabled, block conflicting same-path

@@ -109,6 +109,9 @@ export interface JsTsSafeMergeSummary {
   readonly gatesPassed: number;
   readonly memberRegions?: number;
   readonly memberAdditions?: number;
+  readonly semanticEditOperations?: number;
+  readonly semanticEditAppliedOperations?: number;
+  readonly semanticEditReplayStatus?: string;
   readonly composedPhases?: number;
 }
 
