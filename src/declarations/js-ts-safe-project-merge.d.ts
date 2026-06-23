@@ -8,6 +8,7 @@ import type {
 } from './js-ts-safe-merge.js';
 import type { JsTsSafeMemberMergePolicy, JsTsSafeMemberMergePolicyRegion } from './js-ts-safe-member-merge.js';
 import type { NativeProjectImportResult, NativeProjectSymbolGraphSummary } from './native-project.js';
+import type { NativeProjectModuleResolutionOptions } from './native-project-module-resolution.js';
 
 export type JsTsProjectSafeMergeStatus = 'merged' | 'blocked';
 export type JsTsProjectSafeMergeFileStatus = 'merged' | 'blocked';
@@ -55,6 +56,8 @@ export interface JsTsProjectSafeMergeInput {
   readonly allowFileAdditions?: boolean;
   readonly allowFileDeletes?: boolean;
   readonly includeOutputProjectSymbolGraph?: boolean;
+  readonly moduleResolution?: NativeProjectModuleResolutionOptions;
+  readonly tsconfig?: NativeProjectModuleResolutionOptions;
   readonly workerChangeSetId?: string;
   readonly headChangeSetId?: string;
   readonly policy?: JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[];

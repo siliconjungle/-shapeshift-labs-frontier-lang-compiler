@@ -1,6 +1,6 @@
 import{idFragment,uniqueByEvidenceId,uniqueByLossId,uniqueStrings}from'../../native-import-utils.js';import{createDocument,createPatch,createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';
 import{createNativeImportResultContract}from'./createNativeImportResultContract.js';import{createProjectImportAdmissionRecord}from'./createProjectImportAdmissionRecord.js';import{mergeSemanticIndexes}from'./mergeSemanticIndexes.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';import{summarizeProjectSourcePreservation}from'./summarizeProjectSourcePreservation.js';
-import{createProjectModuleSymbolResolver,resolveRelativeProjectModule}from'./projectSymbolGraphModuleResolution.js';
+import{createProjectModuleSymbolResolver,resolveProjectModule}from'./projectSymbolGraphModuleResolution.js';
 export function createNativeProjectImportResult(input, imports) {
   const idPart = idFragment(input.id ?? input.projectRoot ?? 'native_project');
   const nodes = {};
@@ -141,7 +141,6 @@ export function createNativeProjectImportResult(input, imports) {
 }
 
 const PROJECT_SYMBOL_GRAPH_REMAINING_FIELDS = Object.freeze([
-  'moduleEdges[].resolutionKind',
   'moduleEdges[].packageName',
   'moduleEdges[].packageExportCondition',
   'reExportIdentities[].originSymbolId',
@@ -157,6 +156,7 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   const symbolsById = new Map((semanticIndex?.symbols ?? []).map((symbol) => [symbol.id, symbol]));
   const documentsById = new Map(documents.map((document) => [document.id, document]));
   const documentsByPath = new Map(documents.filter((document) => document.path).map((document) => [document.path, document]));
+  const moduleResolution = input.moduleResolution ?? input.tsconfig;
   const resolveTargetSymbolId = createProjectModuleSymbolResolver(semanticIndex?.symbols ?? [], documents);
   const facts = semanticIndex?.facts ?? [];
   const moduleEdgeFacts = facts.filter((fact) => fact.predicate === 'moduleEdge');
@@ -164,10 +164,10 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   const relations = semanticIndex?.relations ?? [];
   const importEdges = relations
     .filter((relation) => relation.predicate === 'imports')
-    .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById, documentsByPath, resolveTargetSymbolId));
+    .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById, documentsByPath, moduleResolution, resolveTargetSymbolId));
   const exportEdges = relations
     .filter((relation) => relation.predicate === 'exports')
-    .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById, documentsByPath, resolveTargetSymbolId));
+    .map((relation) => moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById, documentsByPath, moduleResolution, resolveTargetSymbolId));
   const reExportIdentities = uniqueRecords([
     ...facts
       .filter((fact) => fact.predicate === 'reExportIdentity' && fact.value)
@@ -213,7 +213,7 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   };
 }
 
-function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById, documentsByPath, resolveTargetSymbolId) {
+function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documentsById, documentsByPath, moduleResolution, resolveTargetSymbolId) {
   const fact = moduleEdgeByRelation.get(relation.id);
   const value = objectValue(fact?.value);
   const metadata = objectValue(relation.metadata);
@@ -231,7 +231,7 @@ function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documents
     symbolMetadata.source,
     symbol?.kind === 'module' ? symbol.name : undefined
   );
-  const resolution = resolveRelativeProjectModule(document?.path, moduleSpecifier, documentsByPath);
+  const resolution = resolveProjectModule(document?.path, moduleSpecifier, documentsByPath, moduleResolution);
   const record = {
     id: relation.id,
     sourceDocumentId: relation.sourceId,

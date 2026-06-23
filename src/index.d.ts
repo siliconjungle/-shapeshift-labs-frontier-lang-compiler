@@ -40,6 +40,7 @@ export * from './declarations/import-adapter-options-native.js';
 export * from './declarations/import-adapter-options-platform.js';
 export * from './declarations/target-adapters.js';
 export * from './declarations/native-project-admission.js';
+export * from './declarations/native-project-module-resolution.js';
 export * from './declarations/native-project.js';
 export * from './declarations/roundtrip.js';
 export * from './declarations/runtime.js';

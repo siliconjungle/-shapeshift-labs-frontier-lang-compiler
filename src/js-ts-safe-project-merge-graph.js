@@ -14,6 +14,7 @@ function createJsTsProjectSafeMergeGraphArtifacts(input, outputFiles, mergeId) {
   const projectImport = createNativeProjectImportResult({
     id: `${mergeId}_output_project_import`,
     projectRoot: input.projectRoot,
+    moduleResolution: input.moduleResolution ?? input.tsconfig,
     sources,
     metadata: {
       projectSafeMergeId: mergeId,

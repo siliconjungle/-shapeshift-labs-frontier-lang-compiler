@@ -49,11 +49,11 @@ import type { JavaScriptNativeImporterAdapterOptions, TypeScriptCompilerNativeIm
 import type { JavaAstNativeImporterAdapterOptions, KotlinPsiNativeImporterAdapterOptions, CSharpRoslynNativeImporterAdapterOptions, SwiftSyntaxNativeImporterAdapterOptions, TreeSitterNativeImporterAdapterOptions } from './import-adapter-options-platform.js';
 import type { NativeTargetProjectionAdapterCoverageInput, NativeTargetProjectionAdapterSummary, NativeTargetProjectionAdapterInput, NativeTargetProjectionAdapterResult, NativeTargetProjectionAdapter, NativeTargetProjectionAdapterResolverInput, NativeTargetProjectionResult } from './target-adapters.js';
 import type { NativeImportRoundtripReadinessStatus, NativeImportRoundtripReadinessOptions, NativeImportRoundtripReadinessClassification } from './roundtrip.js';
+import type { NativeProjectModuleResolutionOptions } from './native-project-module-resolution.js';
 
 export interface NativeProjectSourceInput extends ImportNativeSourceOptions {
   readonly adapter?: NativeImporterAdapter | string;
-  readonly adapterOptions?: Record<string, unknown>;
-  readonly adapterMetadata?: Record<string, unknown>;
+  readonly adapterOptions?: Record<string, unknown>; readonly adapterMetadata?: Record<string, unknown>;
 }
 
 export interface ImportNativeProjectOptions {
@@ -70,15 +70,15 @@ export interface ImportNativeProjectOptions {
   readonly patchId?: string;
   readonly author?: string;
   readonly metadata?: Record<string, unknown>;
-  readonly adapterOptions?: Record<string, unknown>;
-  readonly adapterMetadata?: Record<string, unknown>;
+  readonly moduleResolution?: NativeProjectModuleResolutionOptions;
+  readonly tsconfig?: NativeProjectModuleResolutionOptions;
+  readonly adapterOptions?: Record<string, unknown>; readonly adapterMetadata?: Record<string, unknown>;
   readonly adapters?: readonly NativeImporterAdapter[];
   readonly adapterResolver?: (source: NativeProjectSourceInput, adapters: readonly NativeImporterAdapter[]) => NativeImporterAdapter | undefined;
   readonly sources: readonly NativeProjectSourceInput[];
 }
 
 export type NativeProjectSymbolGraphRemainingField =
-  | 'moduleEdges[].resolutionKind'
   | 'moduleEdges[].packageName'
   | 'moduleEdges[].packageExportCondition'
   | 'reExportIdentities[].originSymbolId'
@@ -112,7 +112,7 @@ export interface NativeProjectSymbolGraphModuleEdgeRecord {
   readonly resolvedModulePath?: string;
   readonly targetDocumentId?: string;
   readonly resolvedTargetSymbolId?: string;
-  readonly resolutionKind?: 'relative-source' | 'relative-missing' | string;
+  readonly resolutionKind?: 'relative-source' | 'relative-missing' | 'alias-source' | 'alias-missing' | 'path-alias-source' | 'path-alias-missing' | 'base-url-source' | 'base-url-missing' | string;
   readonly importKind?: string;
   readonly exportKind?: string;
   readonly importedName?: string;

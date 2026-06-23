@@ -198,6 +198,7 @@ import { safeMergeJsTsProject } from '@shapeshift-labs/frontier-lang-compiler';
 
 const project = safeMergeJsTsProject({
   language: 'typescript',
+  moduleResolution: { baseUrl: '.', paths: { '@app/*': ['src/*'] } },
   baseFiles: { 'src/index.ts': 'export const stable = 1;\n' },
   workerFiles: { 'src/index.ts': 'export const stable = 1;\nexport const workerOnly = 1;\n' },
   headFiles: { 'src/index.ts': 'export const stable = 1;\n' }
@@ -207,6 +208,11 @@ console.log(project.status); // "merged"
 console.log(project.outputFiles[0].sourcePath); // "src/index.ts"
 console.log(project.files[0].semanticArtifacts.status); // "verified"
 ```
+
+When `includeOutputProjectSymbolGraph` is enabled, the same
+`moduleResolution` shape is used for output graph artifacts. Resolution is
+runtime-neutral: `baseUrl`, `paths`, `aliases`, and `compilerOptions.paths`
+are matched against the supplied project files, not the host filesystem.
 
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 
@@ -817,6 +823,7 @@ const imported = await runNativeImporterAdapter(babelAdapter, {
 
 const project = await importNativeProject({
   projectRoot: 'src',
+  moduleResolution: { baseUrl: '.', paths: { '@app/*': ['src/*'] } },
   adapters: [babelAdapter, pythonAstAdapter, rustSynAdapter, clangAstAdapter, goAstAdapter, javaAstAdapter, kotlinPsiAdapter, csharpRoslynAdapter, swiftSyntaxAdapter],
   sources: [
     { language: 'typescript', adapter: babelAdapter.id, sourcePath: 'src/todo.ts', sourceText },

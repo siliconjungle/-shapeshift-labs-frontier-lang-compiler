@@ -111,6 +111,30 @@ assert.equal(outputByPath.get('src/head-only.ts').operation, 'head-only');
 assert.equal(project.files.find((file) => file.sourcePath === 'src/index.ts').semanticArtifacts.status, 'verified');
 assert.equal(project.files.find((file) => file.sourcePath === 'src/options.ts').semanticArtifacts.status, 'verified');
 
+const aliasProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_alias_graph',
+  language: 'typescript',
+  includeOutputProjectSymbolGraph: true,
+  moduleResolution: { baseUrl: '.', paths: { '@app/*': ['src/*'] } },
+  baseFiles: {
+    'src/index.ts': "import { thing } from '@app/thing';\nexport const used = thing;\n",
+    'src/thing.ts': 'export const thing = 1;\n'
+  },
+  workerFiles: {
+    'src/index.ts': "import { thing } from '@app/thing';\nexport const used = thing;\nexport const workerOnly = 1;\n",
+    'src/thing.ts': 'export const thing = 1;\n'
+  },
+  headFiles: {
+    'src/index.ts': "import { thing } from '@app/thing';\nexport const used = thing;\n",
+    'src/thing.ts': 'export const thing = 1;\n'
+  }
+});
+const aliasEdge = aliasProject.outputProjectSymbolGraph.importEdges.find((edge) => edge.moduleSpecifier === '@app/thing' && edge.importedName === 'thing');
+assert.equal(aliasProject.status, 'merged');
+assert.equal(aliasEdge.resolvedModulePath, 'src/thing.ts');
+assert.equal(aliasEdge.resolutionKind, 'path-alias-source');
+assert.equal(aliasEdge.resolvedTargetSymbolId, 'symbol:typescript:export:thing');
+
 const spanLedger = { spans: [{ id: 'source-span', span: { start: 0, end: 1 } }] };
 const ledgerRequired = safeMergeJsTsProject({
   id: 'js_ts_project_safe_merge_with_source_ledgers',
