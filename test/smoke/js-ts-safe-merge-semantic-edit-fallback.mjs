@@ -124,6 +124,85 @@ assert.equal(projectBodyEdit.outputFiles[0].sourceText, workerStep);
 assert.equal(projectBodyEdit.files[0].result.metadata.composed.phase, 'staged-top-level-semantic-edit-fallback');
 assert.equal(projectBodyEdit.files[0].semanticArtifacts.status, 'verified');
 
+const interfaceSiblingEdit = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_interface_siblings',
+  language: 'typescript',
+  sourcePath: 'src/user.ts',
+  baseSourceText: [
+    'export interface User {',
+    '  id: string;',
+    '  name: string;',
+    '}',
+    ''
+  ].join('\n'),
+  workerSourceText: [
+    'export interface User {',
+    '  id: number;',
+    '  name: string;',
+    '}',
+    ''
+  ].join('\n'),
+  headSourceText: [
+    'export interface User {',
+    '  id: string;',
+    '  name: string | null;',
+    '}',
+    ''
+  ].join('\n')
+});
+
+assert.equal(interfaceSiblingEdit.status, 'merged');
+assert.equal(interfaceSiblingEdit.mergedSourceText, [
+  'export interface User {',
+  '  id: number;',
+  '  name: string | null;',
+  '}',
+  ''
+].join('\n'));
+assert.equal(interfaceSiblingEdit.metadata.composed.phase, 'semantic-edit-fallback');
+assert.equal(interfaceSiblingEdit.summary.semanticEditAppliedOperations, 1);
+assert.equal(interfaceSiblingEdit.semanticArtifacts.metadata.source, 'js-ts-semantic-edit-fallback');
+assert.equal(interfaceSiblingEdit.semanticArtifacts.projection.edits[0].symbolName, 'User.id');
+assert.equal(interfaceSiblingEdit.semanticArtifacts.replay.status, 'accepted-clean');
+
+const typeAliasSiblingEdit = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_type_alias_siblings',
+  language: 'typescript',
+  sourcePath: 'src/user-type.ts',
+  baseSourceText: [
+    'export type User = {',
+    '  id: string;',
+    '  name: string;',
+    '};',
+    ''
+  ].join('\n'),
+  workerSourceText: [
+    'export type User = {',
+    '  id: number;',
+    '  name: string;',
+    '};',
+    ''
+  ].join('\n'),
+  headSourceText: [
+    'export type User = {',
+    '  id: string;',
+    '  name: string | null;',
+    '};',
+    ''
+  ].join('\n')
+});
+
+assert.equal(typeAliasSiblingEdit.status, 'merged');
+assert.equal(typeAliasSiblingEdit.mergedSourceText, [
+  'export type User = {',
+  '  id: number;',
+  '  name: string | null;',
+  '};',
+  ''
+].join('\n'));
+assert.equal(typeAliasSiblingEdit.metadata.composed.phase, 'semantic-edit-fallback');
+assert.equal(typeAliasSiblingEdit.conflicts.length, 0);
+
 const memberBase = [
   'export interface Options {',
   '  enabled: boolean;',

@@ -14,9 +14,17 @@ import { idFragment, uniqueStrings } from './native-import-utils.js';
 function semanticEditFallbackResult(input, topLevelResult) {
   if (!shouldTrySemanticEditFallback(topLevelResult)) return topLevelResult;
   const stagedFallback = createStagedTopLevelSemanticFallback(input, topLevelResult);
-  const artifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallback);
+  let selectedFallback = stagedFallback;
+  let artifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallback);
+  if (stagedFallback && artifacts.status !== 'verified') {
+    const directArtifacts = createSemanticEditFallbackArtifacts(input, topLevelResult, undefined);
+    if (directArtifacts.status === 'verified') {
+      artifacts = directArtifacts;
+      selectedFallback = undefined;
+    }
+  }
   if (artifacts.status !== 'verified') return semanticEditFallbackBlockedResult(input, topLevelResult, artifacts);
-  const resultBase = stagedFallback?.stagedTopLevelResult ?? topLevelResult;
+  const resultBase = selectedFallback?.stagedTopLevelResult ?? topLevelResult;
   const mergedSourceText = artifacts.projection.sourceText;
   const gates = semanticEditGates(artifacts);
   return {
@@ -38,7 +46,7 @@ function semanticEditFallbackResult(input, topLevelResult) {
     },
     summary: {
       ...resultBase.summary,
-      changedExistingDeclarations: semanticFallbackChangedExistingDeclarations(topLevelResult, resultBase, stagedFallback),
+      changedExistingDeclarations: semanticFallbackChangedExistingDeclarations(topLevelResult, resultBase, selectedFallback),
       conflicts: 0,
       gatesPassed: gates.filter((gate) => gate.status === 'passed').length,
       semanticEditOperations: artifacts.script.summary.operations,
@@ -49,11 +57,11 @@ function semanticEditFallbackResult(input, topLevelResult) {
     metadata: {
       ...resultBase.metadata,
       composed: {
-        phase: stagedFallback ? 'staged-top-level-semantic-edit-fallback' : 'semantic-edit-fallback',
-        phases: stagedFallback ? ['top-level-neutralization', 'top-level-ledger', 'semantic-edit'] : ['top-level-ledger', 'semantic-edit'],
+        phase: selectedFallback ? 'staged-top-level-semantic-edit-fallback' : 'semantic-edit-fallback',
+        phases: selectedFallback ? ['top-level-neutralization', 'top-level-ledger', 'semantic-edit'] : ['top-level-ledger', 'semantic-edit'],
         originalReasonCodes: topLevelResult.admission?.reasonCodes ?? [],
-        stagedTopLevelSummary: stagedFallback?.stagedTopLevelResult?.summary,
-        neutralization: stagedFallback?.neutralization?.summary
+        stagedTopLevelSummary: selectedFallback?.stagedTopLevelResult?.summary,
+        neutralization: selectedFallback?.neutralization?.summary
       }
     },
     semanticArtifacts: artifacts
