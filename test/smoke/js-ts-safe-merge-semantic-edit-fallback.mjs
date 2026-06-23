@@ -36,7 +36,8 @@ assert.equal(cleanBodyEdit.admission.semanticEquivalenceClaim, false);
 assert.equal(cleanBodyEdit.summary.semanticEditOperations, 1);
 assert.equal(cleanBodyEdit.summary.semanticEditAppliedOperations, 1);
 assert.equal(cleanBodyEdit.summary.semanticEditReplayStatus, 'accepted-clean');
-assert.equal(cleanBodyEdit.metadata.composed.phase, 'semantic-edit-fallback');
+assert.equal(cleanBodyEdit.metadata.composed.phase, 'staged-top-level-semantic-edit-fallback');
+assert.deepEqual(cleanBodyEdit.metadata.composed.phases, ['top-level-neutralization', 'top-level-ledger', 'semantic-edit']);
 assert.deepEqual(cleanBodyEdit.metadata.composed.originalReasonCodes, [JsTsSafeMergeConflictCodes.changedExistingDeclaration]);
 assert.equal(cleanBodyEdit.semanticArtifacts.status, 'verified');
 assert.equal(cleanBodyEdit.semanticArtifacts.admission.status, 'auto-merge-candidate');
@@ -120,7 +121,7 @@ assert.equal(projectBodyEdit.summary.operations['merged-source'], 1);
 assert.equal(projectBodyEdit.summary.semanticArtifactFiles, 1);
 assert.equal(projectBodyEdit.outputFiles[0].operation, 'merged-source');
 assert.equal(projectBodyEdit.outputFiles[0].sourceText, workerStep);
-assert.equal(projectBodyEdit.files[0].result.metadata.composed.phase, 'semantic-edit-fallback');
+assert.equal(projectBodyEdit.files[0].result.metadata.composed.phase, 'staged-top-level-semantic-edit-fallback');
 assert.equal(projectBodyEdit.files[0].semanticArtifacts.status, 'verified');
 
 const memberBase = [
@@ -177,7 +178,7 @@ assert.equal(memberAndBodyEdit.mergedSourceText, [
   '}',
   ''
 ].join('\n'));
-assert.deepEqual(memberAndBodyEdit.metadata.composed.phases, ['top-level-ledger', 'semantic-edit', 'member']);
+assert.deepEqual(memberAndBodyEdit.metadata.composed.phases, ['top-level-neutralization', 'top-level-ledger', 'semantic-edit', 'member']);
 assert.equal(memberAndBodyEdit.summary.memberRegions, 1);
 assert.equal(memberAndBodyEdit.summary.memberAdditions, 2);
 assert.equal(memberAndBodyEdit.summary.semanticEditOperations, 1);

@@ -103,7 +103,7 @@ assert.equal(classMethodAndMembers.mergedSourceText, [
   '}',
   ''
 ].join('\n'));
-assert.deepEqual(classMethodAndMembers.metadata.composed.phases, ['top-level-ledger', 'semantic-edit', 'member']);
+assert.deepEqual(classMethodAndMembers.metadata.composed.phases, ['top-level-neutralization', 'top-level-ledger', 'semantic-edit', 'member']);
 assert.equal(classMethodAndMembers.summary.semanticEditOperations, 1);
 assert.equal(classMethodAndMembers.summary.memberAdditions, 2);
 assert.equal(classMethodAndMembers.semanticArtifacts.status, 'verified');
