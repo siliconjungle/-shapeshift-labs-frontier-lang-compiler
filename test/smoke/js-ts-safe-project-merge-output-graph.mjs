@@ -55,6 +55,32 @@ assert.equal(crossBranchDependencyDeltaProject.projectGraphDelta.summary.importT
 assert.equal(crossBranchDeltaConflict.details.outputTargetSymbolId, 'symbol:typescript:export:headvalue');
 assert.equal(crossBranchDeltaConflict.details.workerTargetSymbolId, undefined);
 
+const reExportHeadOnlyBaseFiles = {
+  'src/provider.ts': 'export const stable = 1;\n'
+};
+const reExportHeadOnlyWorkerFiles = {
+  'src/barrel.ts': "export { headValue } from './provider.js';\n",
+  'src/provider.ts': 'export const stable = 1;\n'
+};
+const reExportHeadOnlyHeadFiles = {
+  'src/provider.ts': 'export const stable = 1;\nexport const headValue = 2;\n'
+};
+const reExportHeadOnlyDeltaProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_worker_re_export_head_only_provider_delta_graph',
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  baseFiles: reExportHeadOnlyBaseFiles,
+  workerFiles: reExportHeadOnlyWorkerFiles,
+  headFiles: reExportHeadOnlyHeadFiles
+});
+const reExportHeadOnlyDeltaConflict = reExportHeadOnlyDeltaProject.conflicts.find((conflict) => conflict.code === 'project-import-target-delta-conflict');
+assert.equal(reExportHeadOnlyDeltaProject.status, 'blocked');
+assert.equal(reExportHeadOnlyDeltaProject.admission.reasonCodes.includes('project-import-target-delta-conflict'), true);
+assert.equal(reExportHeadOnlyDeltaProject.summary.projectGraphImportTargetConflicts, 1);
+assert.equal(reExportHeadOnlyDeltaConflict.details.identityKey, 'import-target#src/barrel.ts#./provider.js#headValue#reexport#');
+assert.equal(reExportHeadOnlyDeltaConflict.details.workerTargetSymbolId, undefined);
+assert.equal(reExportHeadOnlyDeltaConflict.details.outputTargetSymbolId, 'symbol:typescript:export:headvalue');
+
 const parserBackedOutputSources = [{
   language: 'typescript',
   sourcePath: 'src/index.ts',

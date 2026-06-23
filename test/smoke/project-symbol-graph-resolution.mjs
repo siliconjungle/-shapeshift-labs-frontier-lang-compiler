@@ -1,5 +1,6 @@
 import { assert } from './helpers.mjs';
 import { importNativeProject } from './compiler-api.mjs';
+import { createProjectDocumentExportSymbolResolver } from '../../src/internal/index-impl/projectSymbolGraphModuleResolution.js';
 
 const project = await importNativeProject({
   id: 'project_symbol_graph_named_import_resolution',
@@ -27,6 +28,15 @@ assert.equal(namedImportEdge.resolutionPathVariant, 'exact');
 assert.equal(graph.remainingFields.includes('moduleEdges[].resolutionKind'), false);
 assert.equal(graph.remainingFields.includes('moduleEdges[].resolvedTargetSymbolId'), false);
 assert.equal(project.semanticIndex.metadata.projectSymbolGraph, graph);
+
+const fallbackExportResolver = createProjectDocumentExportSymbolResolver([{
+  id: 'symbol:javascript:export:fallback',
+  kind: 'export',
+  name: 'fallback',
+  definitionSpan: { path: 'src/fallback.js' },
+  metadata: {}
+}], [{ id: 'doc_src_fallback_js', path: 'src/fallback.js' }]);
+assert.equal(fallbackExportResolver('doc_src_fallback_js', 'fallback'), 'symbol:javascript:export:fallback');
 
 const nodeNextProject = await importNativeProject({
   id: 'project_symbol_graph_nodenext_extension_resolution',

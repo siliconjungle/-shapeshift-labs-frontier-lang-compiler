@@ -54,4 +54,48 @@ const typedJsTsProjectSafeMergeWithOutputImportMap = compilerApi.safeMergeJsTsPr
 typedJsTsProjectSafeMergeWithOutputImports.outputProjectImport?.imports[0] satisfies compilerApi.NativeSourceImportResult | undefined;
 typedJsTsProjectSafeMergeWithOutputImportMap.outputProjectSymbolGraph satisfies compilerApi.NativeProjectSymbolGraphSummary | undefined;
 
-void typedOutputProjectImport; void typedOutputProjectImports; void typedJsTsProjectSafeMergeWithOutputImports; void typedJsTsProjectSafeMergeWithOutputImportMap;
+const typedProjectGraphImportsByStage: compilerApi.JsTsProjectSafeMergeProjectGraphImportsByStage = {
+  base: [typedOutputProjectImport],
+  worker: typedOutputProjectImports,
+  head: { 'src/output.ts': typedOutputProjectImport },
+  output: [typedOutputProjectImport]
+};
+const typedJsTsProjectSafeMergeWithProjectGraphDelta = compilerApi.safeMergeJsTsProject({
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  baseProjectImports: [typedOutputProjectImport],
+  workerProjectImports: typedOutputProjectImports,
+  headProjectImports: { 'src/output.ts': typedOutputProjectImport },
+  outputProjectImports: [typedOutputProjectImport],
+  projectGraphImports: typedProjectGraphImportsByStage,
+  baseFiles: { 'src/output.ts': 'export const stable = 1;\n' },
+  workerFiles: { 'src/output.ts': 'export const stable = 1;\nexport const workerOnly = 1;\n' },
+  headFiles: { 'src/output.ts': 'export const stable = 1;\n' }
+});
+const typedProjectGraphDelta: compilerApi.JsTsProjectGraphDelta | undefined = typedJsTsProjectSafeMergeWithProjectGraphDelta.projectGraphDelta;
+const typedProjectGraphDeltaStageSummary: compilerApi.JsTsProjectGraphDeltaStageSummary | undefined = typedProjectGraphDelta?.summary.stageSummaries.output;
+typedJsTsProjectSafeMergeWithProjectGraphDelta.outputProjectImport satisfies compilerApi.NativeProjectImportResult | undefined;
+typedJsTsProjectSafeMergeWithProjectGraphDelta.summary.projectGraphDeltaConflicts satisfies number;
+typedJsTsProjectSafeMergeWithProjectGraphDelta.summary.projectGraphPublicContractConflicts satisfies number;
+typedJsTsProjectSafeMergeWithProjectGraphDelta.summary.projectGraphReExportIdentityConflicts satisfies number;
+typedJsTsProjectSafeMergeWithProjectGraphDelta.summary.projectGraphImportTargetConflicts satisfies number;
+typedProjectGraphDelta?.stages.output.projectImport satisfies compilerApi.NativeProjectImportResult | undefined;
+typedProjectGraphDelta?.stages.output.projectSymbolGraph satisfies compilerApi.NativeProjectSymbolGraphSummary | undefined;
+typedProjectGraphDelta?.stages.output.summary.stage satisfies compilerApi.JsTsProjectGraphStageName | undefined;
+typedProjectGraphDelta?.stages.output.summary.suppliedImports satisfies number | undefined;
+typedProjectGraphDelta?.stages.output.summary.matchedSuppliedImports satisfies number | undefined;
+typedProjectGraphDelta?.stages.output.summary.scannerFallbackImports satisfies number | undefined;
+typedProjectGraphDelta?.summary.conflicts satisfies number | undefined;
+typedProjectGraphDelta?.summary.publicContractConflicts satisfies number | undefined;
+typedProjectGraphDelta?.summary.reExportIdentityConflicts satisfies number | undefined;
+typedProjectGraphDelta?.summary.importTargetConflicts satisfies number | undefined;
+typedProjectGraphDeltaStageSummary?.publicContractRegions satisfies number | undefined;
+
+void typedOutputProjectImport;
+void typedOutputProjectImports;
+void typedJsTsProjectSafeMergeWithOutputImports;
+void typedJsTsProjectSafeMergeWithOutputImportMap;
+void typedProjectGraphImportsByStage;
+void typedJsTsProjectSafeMergeWithProjectGraphDelta;
+void typedProjectGraphDelta;
+void typedProjectGraphDeltaStageSummary;

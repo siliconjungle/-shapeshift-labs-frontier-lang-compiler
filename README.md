@@ -303,6 +303,15 @@ incompatible ways. Parser-backed stage imports can be supplied with
 lightweight scanner. This is a conservative admission gate only: results still
 keep `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
+Artifact-size and runtime note: these graph options are deliberately opt-in.
+On a local Node v26.1.0 smoke fixture with 10 small JS/TS files and 36 scanned
+stage files for the delta case, baseline project merge JSON was 115 KB at a
+21.6 ms median. `includeOutputProjectSymbolGraph` raised the returned JSON to
+17.8 MB at a 303.1 ms median, and `includeProjectGraphDelta` raised it to
+83.0 MB at a 1,466.8 ms median. Keep these paths behind admission-queue caps
+for file count, total source bytes, graph edge count, and serialized artifact
+bytes, or expose summary/lazy graph materialization before using them broadly.
+
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 
 ```js
