@@ -88,6 +88,71 @@ assert.equal(classMethodRenameConflict.semanticArtifacts.status, 'blocked');
 assert.equal(classMethodRenameConflict.semanticArtifacts.script.admission.status, 'conflict');
 assert.equal(classMethodRenameConflict.admission.reasonCodes.includes('head-anchor-changed-since-base'), true);
 
+const duplicateTargetRenameBase = [
+  'export class Service {',
+  '  step(v: number) { return v + 1; }',
+  '  renamedStep(v: number) { return v + 2; }',
+  '  keep() { return 0; }',
+  '}',
+  ''
+].join('\n');
+
+const duplicateTargetRenameWorker = [
+  'export class Service {',
+  '  renamedStep(v: number) { return v + 1; }',
+  '  renamedStep(v: number) { return v + 2; }',
+  '  keep() { return 0; }',
+  '}',
+  ''
+].join('\n');
+
+const duplicateTargetRenameHead = duplicateTargetRenameBase.replace('return 0;', 'return 10;');
+const duplicateTargetRenameBlocked = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_class_method_rename_duplicate_target_blocked',
+  language: 'typescript',
+  sourcePath: 'src/service.ts',
+  baseSourceText: duplicateTargetRenameBase,
+  workerSourceText: duplicateTargetRenameWorker,
+  headSourceText: duplicateTargetRenameHead
+});
+
+assert.equal(duplicateTargetRenameBlocked.status, 'blocked');
+assert.equal(duplicateTargetRenameBlocked.semanticArtifacts.status, 'blocked');
+assert.equal(duplicateTargetRenameBlocked.admission.reasonCodes.includes('semantic-edit-already-applied-stale'), true);
+assert.equal(duplicateTargetRenameBlocked.admission.reasonCodes.includes('current-symbol-anchor-missing'), true);
+
+const duplicateTargetSameBodyRenameBase = [
+  'export class Service {',
+  '  step(v: number) { return v + 1; }',
+  '  renamedStep(v: number) { return v + 1; }',
+  '  keep() { return 0; }',
+  '}',
+  ''
+].join('\n');
+
+const duplicateTargetSameBodyRenameWorker = [
+  'export class Service {',
+  '  renamedStep(v: number) { return v + 1; }',
+  '  renamedStep(v: number) { return v + 1; }',
+  '  keep() { return 0; }',
+  '}',
+  ''
+].join('\n');
+
+const duplicateTargetSameBodyRenameBlocked = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_class_method_rename_duplicate_target_same_body_blocked',
+  language: 'typescript',
+  sourcePath: 'src/service.ts',
+  baseSourceText: duplicateTargetSameBodyRenameBase,
+  workerSourceText: duplicateTargetSameBodyRenameWorker,
+  headSourceText: duplicateTargetSameBodyRenameBase.replace('return 0;', 'return 10;')
+});
+
+assert.equal(duplicateTargetSameBodyRenameBlocked.status, 'blocked');
+assert.equal(duplicateTargetSameBodyRenameBlocked.semanticArtifacts.status, 'blocked');
+assert.equal(duplicateTargetSameBodyRenameBlocked.admission.reasonCodes.includes('semantic-edit-already-applied-stale'), true);
+assert.equal(duplicateTargetSameBodyRenameBlocked.admission.reasonCodes.includes('current-symbol-anchor-missing'), true);
+
 const movedDeclarationBase = [
   'export function first() {',
   '  return 1;',

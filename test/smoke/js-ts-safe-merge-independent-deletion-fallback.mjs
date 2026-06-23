@@ -110,3 +110,86 @@ const exportedDeletionBlocked = safeMergeJsTsSource({
 assert.equal(exportedDeletionBlocked.status, 'blocked');
 assert.equal(exportedDeletionBlocked.semanticArtifacts, undefined);
 assert.deepEqual(exportedDeletionBlocked.admission.reasonCodes, [JsTsSafeMergeConflictCodes.topLevelOrderChanged]);
+
+const declareDeletionBlocked = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_declare_deletion_blocked',
+  language: 'typescript',
+  sourcePath: 'src/ambient-delete.ts',
+  baseSourceText: [
+    'declare const removeAmbient: number;',
+    'function keepInternal() { return 2; }',
+    ''
+  ].join('\n'),
+  workerSourceText: [
+    'function keepInternal() { return 2; }',
+    ''
+  ].join('\n'),
+  headSourceText: [
+    'declare const removeAmbient: number;',
+    'function keepInternal() { return 2; }',
+    'function headOnly() { return 3; }',
+    ''
+  ].join('\n')
+});
+
+assert.equal(declareDeletionBlocked.status, 'blocked');
+assert.equal(declareDeletionBlocked.semanticArtifacts, undefined);
+assert.deepEqual(declareDeletionBlocked.admission.reasonCodes, [JsTsSafeMergeConflictCodes.topLevelOrderChanged]);
+
+const namespaceDeletionBlocked = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_namespace_deletion_blocked',
+  language: 'typescript',
+  sourcePath: 'src/namespace-delete.ts',
+  baseSourceText: [
+    'namespace Internal {',
+    '  export const value = 1;',
+    '}',
+    'function keepInternal() { return 2; }',
+    ''
+  ].join('\n'),
+  workerSourceText: [
+    'function keepInternal() { return 2; }',
+    ''
+  ].join('\n'),
+  headSourceText: [
+    'namespace Internal {',
+    '  export const value = 1;',
+    '}',
+    'function keepInternal() { return 2; }',
+    'function headOnly() { return 3; }',
+    ''
+  ].join('\n')
+});
+
+assert.equal(namespaceDeletionBlocked.status, 'blocked');
+assert.equal(namespaceDeletionBlocked.semanticArtifacts, undefined);
+assert.deepEqual(namespaceDeletionBlocked.admission.reasonCodes, [JsTsSafeMergeConflictCodes.topLevelOrderChanged]);
+
+const moduleDeletionBlocked = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_module_deletion_blocked',
+  language: 'typescript',
+  sourcePath: 'src/module-delete.ts',
+  baseSourceText: [
+    'module Internal {',
+    '  export const value = 1;',
+    '}',
+    'function keepInternal() { return 2; }',
+    ''
+  ].join('\n'),
+  workerSourceText: [
+    'function keepInternal() { return 2; }',
+    ''
+  ].join('\n'),
+  headSourceText: [
+    'module Internal {',
+    '  export const value = 1;',
+    '}',
+    'function keepInternal() { return 2; }',
+    'function headOnly() { return 3; }',
+    ''
+  ].join('\n')
+});
+
+assert.equal(moduleDeletionBlocked.status, 'blocked');
+assert.equal(moduleDeletionBlocked.semanticArtifacts, undefined);
+assert.deepEqual(moduleDeletionBlocked.admission.reasonCodes, [JsTsSafeMergeConflictCodes.topLevelOrderChanged]);

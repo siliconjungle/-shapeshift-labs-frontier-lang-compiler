@@ -50,6 +50,9 @@ function createIndependentTopLevelDeletionPlan(input, topLevelResult) {
   if (deletedEntry.kind !== 'declaration' || deletedEntry.declarationInfo?.exported === true) {
     return { ok: false, reasonCodes: ['exported-or-unsupported-top-level-deletion'] };
   }
+  if (isUnsupportedTopLevelDeletion(deletedEntry)) {
+    return { ok: false, reasonCodes: ['unsupported-top-level-deletion-declaration'] };
+  }
 
   const expectedWorkerKeys = base.entries
     .filter((entry) => entry.key !== deletedEntry.key)
@@ -125,6 +128,11 @@ function firstDuplicateLedgerReason(...ledgers) {
 
 function entriesByKey(entries) {
   return new Map(entries.map((entry) => [entry.key, entry]));
+}
+
+function isUnsupportedTopLevelDeletion(entry) {
+  if (entry.declarationInfo?.declarationKind === 'module') return true;
+  return /^\s*(?:export\s+)?declare\b/.test(entry.text ?? '');
 }
 
 function sameStringList(left, right) {

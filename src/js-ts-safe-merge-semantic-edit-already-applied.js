@@ -58,6 +58,7 @@ function isProjectedDeleteAlreadyAppliedReplay(input) {
     .filter((edit) => edit.editKind === 'delete')
     .map((edit) => edit.operationId));
   const staleDeletes = edits.filter(isProjectedDeleteMissingAnchor);
+  if (hasUnsafeProjectedDeleteCompanions(input, staleDeletes)) return false;
   return staleDeletes.length > 0
     && edits.every((edit) => edit.status === 'already-applied' || isProjectedDeleteMissingAnchor(edit))
     && staleDeletes.every((edit) => appliedDeleteIds.has(edit.operationId) && projectionDeleteIds.has(edit.operationId));
@@ -77,6 +78,50 @@ function alreadyAppliedDeleteEdit(edit) {
     reasonCodes: ['projected-delete-anchor-absent'],
     diagnostics: []
   };
+}
+
+function hasUnsafeProjectedDeleteCompanions(input, staleDeletes) {
+  const projectionEdits = input.projection?.edits ?? [];
+  if (!projectionEdits.length || !staleDeletes.length) return false;
+  const projectionDeleteById = new Map(projectionEdits
+    .filter((edit) => edit.editKind === 'delete')
+    .map((edit) => [edit.operationId, edit]));
+  for (const staleDelete of staleDeletes) {
+    const projectedDelete = projectionDeleteById.get(staleDelete.operationId);
+    const scope = memberBodyDeleteScope(projectedDelete ?? staleDelete);
+    if (!scope) continue;
+    const companions = projectionEdits.filter((edit) => (
+      edit.operationId !== staleDelete.operationId
+        && edit.editKind !== 'delete'
+        && symbolContainerName(edit.symbolName) === scope.container
+    ));
+    if (!companions.length) return true;
+    const bodyInserts = companions.filter((edit) => (
+      edit.editKind === 'insert'
+        && edit.regionKind === scope.regionKind
+        && edit.symbolKind === scope.symbolKind
+    ));
+    if (bodyInserts.length === 0) return true;
+    if (companions.some((edit) => !bodyInserts.includes(edit))) return true;
+  }
+  return false;
+}
+
+function memberBodyDeleteScope(edit) {
+  if (edit?.editKind !== 'delete' || edit?.regionKind !== 'body') return undefined;
+  const container = symbolContainerName(edit.symbolName);
+  if (!container) return undefined;
+  return {
+    container,
+    regionKind: edit.regionKind,
+    symbolKind: edit.symbolKind
+  };
+}
+
+function symbolContainerName(symbolName) {
+  const normalized = String(symbolName ?? '').split(':controlFlow:')[0];
+  const separator = normalized.lastIndexOf('.');
+  return separator === -1 ? undefined : normalized.slice(0, separator);
 }
 
 export { normalizeAlreadyAppliedDeleteReplay };
