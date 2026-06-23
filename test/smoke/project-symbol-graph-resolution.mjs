@@ -182,6 +182,7 @@ assert.equal(reExportIdentity.exportedName, 'renamedThing');
 assert.equal(reExportIdentity.originSymbolId, 'symbol:javascript:export:thing');
 assert.equal(reExportIdentity.exportedSymbolId, 'symbol:javascript:export:renamedthing');
 assert.equal(reExportIdentity.localSymbolId, 'symbol:javascript:import:thing_js_renamedthing');
+assert.deepEqual(reExportProject.projectSymbolGraph.remainingFields, []);
 
 const exportStarProject = await importNativeProject({
   id: 'project_symbol_graph_export_star_fanout',

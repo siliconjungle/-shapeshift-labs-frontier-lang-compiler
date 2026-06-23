@@ -142,11 +142,7 @@ export function createNativeProjectImportResult(input, imports) {
   };
 }
 
-const PROJECT_SYMBOL_GRAPH_REMAINING_FIELDS = Object.freeze([
-  'reExportIdentities[].originSymbolId',
-  'reExportIdentities[].exportedSymbolId',
-  'reExportIdentities[].localSymbolId'
-]);
+const PROJECT_SYMBOL_GRAPH_REMAINING_FIELDS = Object.freeze([]);
 
 function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   const documents = semanticIndex?.documents ?? [];

@@ -78,11 +78,7 @@ export interface ImportNativeProjectOptions {
   readonly sources: readonly NativeProjectSourceInput[];
 }
 
-export type NativeProjectSymbolGraphRemainingField =
-  | 'reExportIdentities[].originSymbolId'
-  | 'reExportIdentities[].exportedSymbolId'
-  | 'reExportIdentities[].localSymbolId'
-  | string;
+export type NativeProjectSymbolGraphRemainingField = string;
 
 export interface NativeProjectSymbolGraphFileHashRecord {
   readonly id: string;
