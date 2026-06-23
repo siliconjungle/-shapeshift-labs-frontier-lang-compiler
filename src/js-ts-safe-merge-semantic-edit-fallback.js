@@ -15,6 +15,7 @@ import {
   createStagedDeclarationReplayRecord
 } from './js-ts-safe-merge-staged-declaration-replay.js';
 import { createStagedTopLevelSemanticFallback } from './js-ts-safe-merge-staged-top-level-fallback.js';
+import { createVariableDeclaratorSemanticFallbackResult } from './js-ts-safe-merge-variable-declarator-fallback.js';
 import { idFragment, uniqueStrings } from './native-import-utils.js';
 
 function semanticEditFallbackResult(input, topLevelResult) {
@@ -29,7 +30,11 @@ function semanticEditFallbackResult(input, topLevelResult) {
     if (nextArtifacts.status === 'verified') selectedFallback = candidate;
     artifacts = nextArtifacts.status === 'verified' ? nextArtifacts : artifacts;
   }
-  if (artifacts.status !== 'verified') return semanticEditFallbackBlockedResult(input, topLevelResult, artifacts);
+  if (artifacts.status !== 'verified') {
+    const variableDeclaratorResult = createVariableDeclaratorSemanticFallbackResult(input, topLevelResult, stagedFallback);
+    if (variableDeclaratorResult) return variableDeclaratorResult;
+    return semanticEditFallbackBlockedResult(input, topLevelResult, artifacts);
+  }
   const resultBase = selectedFallback?.stagedTopLevelResult ?? topLevelResult;
   const mergedSourceText = artifacts.projection.sourceText;
   const gates = semanticEditGates(artifacts);
