@@ -6,6 +6,7 @@ import {
   normalizeKind,
   normalizeMemberText,
   parseMembers,
+  removePreparedMemberAdditions,
   uniqueStrings
 } from './js-ts-semantic-merge-parse.js';
 import { mergeResult } from './js-ts-safe-member-merge-result.js';
@@ -43,7 +44,8 @@ function analyzeJsTsSafeMemberAdditions(input = {}) {
 function neutralizeJsTsSafeMemberMergeSources(input = {}) {
   const analysis = analyzeJsTsSafeMemberAdditions({
     ...input,
-    allowNonPolicySourceChanges: true
+    allowNonPolicySourceChanges: true,
+    allowExistingMemberChanges: true
   });
   if (analysis.reasonCodes.length) {
     return {
@@ -56,8 +58,8 @@ function neutralizeJsTsSafeMemberMergeSources(input = {}) {
     ok: true,
     analysis,
     baseSourceText: analysis.baseSourceText,
-    workerSourceText: canonicalizeSourceBodies(analysis.workerSourceText, analysis.preparedRegions, 'worker'),
-    headSourceText: canonicalizeSourceBodies(analysis.headSourceText, analysis.preparedRegions, 'head')
+    workerSourceText: removePreparedMemberAdditions(analysis.workerSourceText, analysis.preparedRegions, 'worker'),
+    headSourceText: removePreparedMemberAdditions(analysis.headSourceText, analysis.preparedRegions, 'head')
   };
 }
 
@@ -81,7 +83,7 @@ function prepareJsTsSafeMemberAdditions(input = {}) {
     reasonCodes.push(...policyReasons);
     if (policyReasons.length) continue;
     if (typeof baseSourceText !== 'string' || typeof workerSourceText !== 'string' || typeof headSourceText !== 'string') continue;
-    const prepared = prepareRegion({ region, baseSourceText, workerSourceText, headSourceText });
+    const prepared = prepareRegion({ region, baseSourceText, workerSourceText, headSourceText, allowExistingMemberChanges: input.allowExistingMemberChanges });
     reasonCodes.push(...prepared.reasonCodes);
     if (prepared.ok) preparedRegions.push(prepared.value);
   }
@@ -163,8 +165,8 @@ function prepareRegion(input) {
   const baseByKey = membersByKey(baseMembers.members);
   const workerByKey = membersByKey(workerMembers.members);
   const headByKey = membersByKey(headMembers.members);
-  reasonCodes.push(...existingMemberReasons(input.region, 'worker', baseMembers.members, workerMembers.members, workerByKey));
-  reasonCodes.push(...existingMemberReasons(input.region, 'head', baseMembers.members, headMembers.members, headByKey));
+  reasonCodes.push(...existingMemberReasons(input.region, 'worker', baseMembers.members, workerMembers.members, workerByKey, input.allowExistingMemberChanges));
+  reasonCodes.push(...existingMemberReasons(input.region, 'head', baseMembers.members, headMembers.members, headByKey, input.allowExistingMemberChanges));
   const workerAddedKeys = workerMembers.members.map((member) => member.key).filter((key) => !baseByKey.has(key));
   const headAddedKeys = headMembers.members.map((member) => member.key).filter((key) => !baseByKey.has(key));
   reasonCodes.push(...duplicateAddedReasons(input.region, workerAddedKeys, workerByKey, headByKey));
@@ -212,7 +214,7 @@ function duplicateReasons(region, side, members) {
   });
 }
 
-function existingMemberReasons(region, side, baseMembers, sideMembers, sideByKey) {
+function existingMemberReasons(region, side, baseMembers, sideMembers, sideByKey, allowExistingMemberChanges) {
   const reasonCodes = [];
   const sideBaseOrder = sideMembers.map((member) => member.key).filter((key) => baseMembers.some((baseMember) => baseMember.key === key));
   const baseOrder = baseMembers.map((member) => member.key);
@@ -225,7 +227,7 @@ function existingMemberReasons(region, side, baseMembers, sideMembers, sideByKey
       reasonCodes.push(regionReason(region, `existing-member-removed:${side}:${baseMember.key}`));
       continue;
     }
-    if (normalizeMemberText(sideMember.text) !== normalizeMemberText(baseMember.text)) {
+    if (!allowExistingMemberChanges && normalizeMemberText(sideMember.text, normalizeKind(region.kind)) !== normalizeMemberText(baseMember.text, normalizeKind(region.kind))) {
       reasonCodes.push(regionReason(region, `existing-member-changed:${side}:${baseMember.key}`));
     }
   }

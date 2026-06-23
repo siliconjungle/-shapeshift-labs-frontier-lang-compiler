@@ -8,7 +8,8 @@ export {
 export {
   applyMemberAdditions,
   applyPreparedMemberAdditions,
-  canonicalizeSourceBodies
+  canonicalizeSourceBodies,
+  removePreparedMemberAdditions
 } from './js-ts-semantic-merge-member-source.js';
 export {
   normalizeMemberText,

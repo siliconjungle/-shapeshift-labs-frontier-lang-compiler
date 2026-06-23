@@ -196,7 +196,10 @@ current head is `accepted-clean`, and replay on the projected source is
 `already-applied`. Same-anchor head edits, stale anchors, and non-body conflicts
 remain blocked for review. The same fallback composes with declared unordered
 member-addition regions, so a verified body edit can still merge alongside safe
-interface, type, class, or object member additions.
+interface, type, class, or object member additions. Existing class/object method
+or property body edits inside the declared member region are preserved for
+semantic replay while added members are neutralized; object member additions are
+re-emitted with safe commas when both sides add final properties.
 
 Project-level JS/TS safe merges compose the same file-level gates across a
 base/worker/head file set. They preserve head-only files, admit worker-only
