@@ -109,6 +109,31 @@ assert.equal(
 assert.equal(deterministicDeclarationOrder.semanticArtifacts.projection.sourceText, deterministicDeclarationOrder.mergedSourceText);
 assert.equal(deterministicDeclarationOrder.semanticArtifacts.replay.outputSourceText, deterministicDeclarationOrder.mergedSourceText);
 
+const reExportAdditions = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_accepts_independent_re_export_additions',
+  language: 'typescript',
+  sourcePath: 'src/barrel.ts',
+  baseSourceText: 'export const stable = 1;\n',
+  workerSourceText: "export const stable = 1;\nexport { workerValue } from './worker.js';\n",
+  headSourceText: "export const stable = 1;\nexport * as headNs from './head.js';\n"
+});
+
+assert.equal(reExportAdditions.status, 'merged');
+assert.equal(
+  reExportAdditions.mergedSourceText,
+  "export const stable = 1;\nexport { workerValue } from './worker.js';\nexport * as headNs from './head.js';\n"
+);
+
+const duplicateReExportWithoutGraph = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_duplicate_re_exports_without_project_graph',
+  language: 'typescript',
+  sourcePath: 'src/barrel.ts',
+  baseSourceText: 'export const stable = 1;\n',
+  workerSourceText: "export const stable = 1;\nexport { value as shared } from './worker.js';\n",
+  headSourceText: "export const stable = 1;\nexport { value as shared } from './head.js';\n"
+});
+assertBlocked(duplicateReExportWithoutGraph, JsTsSafeMergeConflictCodes.duplicateName, JsTsSafeMergeGateIds.uniqueNames);
+
 const duplicateDeclaration = safeMergeJsTsImportsAndDeclarations({
   id: 'js_ts_safe_merge_rejects_duplicate_declarations',
   baseSourceText: 'export function stable() { return 1; }\n',

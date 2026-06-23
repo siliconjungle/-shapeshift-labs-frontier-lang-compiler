@@ -24,6 +24,7 @@ export function validateLedgerUniqueness(ledger, context) {
       const nameKey = `${entry.kind}:${name}`;
       const existing = nameOwners.get(nameKey);
       if (existing) {
+        if (shouldDeferMergedReExportNameConflict(ledger, existing, entry, context)) continue;
         addConflict(context, {
           code: JsTsSafeMergeConflictCodes.duplicateName,
           gateId: JsTsSafeMergeGateIds.uniqueNames,
@@ -63,6 +64,17 @@ function validateUniqueImportSpecifiers(entry, side, context) {
       localNames.set(specifier.localName, specifier);
     }
   }
+}
+
+function shouldDeferMergedReExportNameConflict(ledger, left, right, context) {
+  return ledger.label === 'merged'
+    && context.deferReExportIdentityConflictsToProjectGraph === true
+    && isReExportEntry(left)
+    && isReExportEntry(right);
+}
+
+function isReExportEntry(entry) {
+  return entry?.kind === 'export' && entry.declarationInfo?.reExport === true;
 }
 
 export function indexBaseLedger(base, context) {

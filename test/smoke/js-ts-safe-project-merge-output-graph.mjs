@@ -81,6 +81,37 @@ assert.equal(reExportHeadOnlyDeltaConflict.details.identityKey, 'import-target#s
 assert.equal(reExportHeadOnlyDeltaConflict.details.workerTargetSymbolId, undefined);
 assert.equal(reExportHeadOnlyDeltaConflict.details.outputTargetSymbolId, 'symbol:typescript:export:headvalue');
 
+const reExportIdentityBaseFiles = {
+  'src/barrel.ts': 'export const stable = 1;\n'
+};
+const reExportIdentityWorkerFiles = {
+  'src/barrel.ts': "export const stable = 1;\nexport { value as shared } from './worker.js';\n",
+  'src/worker.ts': 'export const value = 1;\n'
+};
+const reExportIdentityHeadFiles = {
+  'src/barrel.ts': "export const stable = 1;\nexport { value as shared } from './head.js';\n",
+  'src/head.ts': 'export const value = 2;\n'
+};
+const reExportIdentityDeltaProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_re_export_identity_delta_conflict',
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  baseFiles: reExportIdentityBaseFiles,
+  workerFiles: reExportIdentityWorkerFiles,
+  headFiles: reExportIdentityHeadFiles
+});
+const reExportIdentityDeltaConflict = reExportIdentityDeltaProject.conflicts.find((conflict) => conflict.code === 'project-re-export-identity-delta-conflict');
+const reExportIdentityOutputByPath = new Map(reExportIdentityDeltaProject.outputFiles.map((file) => [file.sourcePath, file.sourceText]));
+assert.equal(reExportIdentityDeltaProject.status, 'blocked');
+assert.equal(reExportIdentityDeltaProject.admission.reasonCodes.includes('project-re-export-identity-delta-conflict'), true);
+assert.equal(reExportIdentityDeltaProject.summary.projectGraphDeltaConflicts, 1);
+assert.equal(reExportIdentityDeltaProject.summary.projectGraphReExportIdentityConflicts, 1);
+assert.equal(reExportIdentityDeltaProject.projectGraphDelta.summary.reExportIdentityConflicts, 1);
+assert.equal(reExportIdentityDeltaConflict.details.identityKey, 're-export-identity#src/barrel.ts#shared');
+assert.equal(reExportIdentityDeltaConflict.details.worker.moduleSpecifier, './worker.js');
+assert.equal(reExportIdentityDeltaConflict.details.head.moduleSpecifier, './head.js');
+assert.equal(reExportIdentityOutputByPath.get('src/barrel.ts'), "export const stable = 1;\nexport { value as shared } from './head.js';\nexport { value as shared } from './worker.js';\n");
+
 const parserBackedOutputSources = [{
   language: 'typescript',
   sourcePath: 'src/index.ts',

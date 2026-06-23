@@ -19,7 +19,7 @@ export function classifyStatement(text, start, end) {
     if (unsupported) return { unsupported, text, start, end };
     return {
       kind: declarationInfo.kind,
-      key: `${declarationInfo.kind}:${declarationInfo.names.join('|')}`,
+      key: declarationLedgerKey(declarationInfo),
       text,
       start,
       end,
@@ -126,6 +126,50 @@ function parseDeclarationInfo(text) {
   const defaultClass = trimmed.match(/^export\s+default\s+(?:abstract\s+)?class(?:\s+([A-Za-z_$][\w$]*))?\b/);
   if (defaultClass) return { kind: 'declaration', names: ['default'], declarationKind: 'class', exported: true, defaultExport: true };
 
+  const namespaceReExport = trimmed.match(/^export\s+(type\s+)?\*\s+as\s+([A-Za-z_$][\w$]*)\s+from\s+(['"])([^'"]+)\3\s*;?$/);
+  if (namespaceReExport) {
+    return {
+      kind: 'export',
+      names: [namespaceReExport[2]],
+      declarationKind: 're-export-namespace',
+      exported: true,
+      typeOnly: Boolean(namespaceReExport[1]),
+      reExport: true,
+      moduleSpecifier: namespaceReExport[4],
+      namespace: namespaceReExport[2]
+    };
+  }
+
+  const starReExport = trimmed.match(/^export\s+(type\s+)?\*\s+from\s+(['"])([^'"]+)\2\s*;?$/);
+  if (starReExport) {
+    return {
+      kind: 'export',
+      names: [],
+      declarationKind: 're-export-star',
+      exported: true,
+      typeOnly: Boolean(starReExport[1]),
+      reExport: true,
+      moduleSpecifier: starReExport[3],
+      exportStar: true
+    };
+  }
+
+  const namedReExport = trimmed.match(/^export\s+(type\s+)?\{([\s\S]+)\}\s+from\s+(['"])([^'"]+)\3\s*;?$/);
+  if (namedReExport) {
+    const names = splitCommaList(namedReExport[2]).map((part) => parseExportSpecifierName(part)).filter(Boolean);
+    const expectedCount = splitCommaList(namedReExport[2]).filter((part) => part.trim()).length;
+    if (names.length !== expectedCount || names.length === 0) return undefined;
+    return {
+      kind: 'export',
+      names,
+      declarationKind: 're-export-list',
+      exported: true,
+      typeOnly: Boolean(namedReExport[1]),
+      reExport: true,
+      moduleSpecifier: namedReExport[4]
+    };
+  }
+
   const namedExport = trimmed.match(/^export\s+(type\s+)?\{([\s\S]+)\}\s*;?$/);
   if (namedExport) {
     const names = splitCommaList(namedExport[2]).map((part) => parseExportSpecifierName(part)).filter(Boolean);
@@ -152,6 +196,19 @@ function parseDeclarationInfo(text) {
   const variableMatch = source.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\b/);
   if (variableMatch) return { kind: 'declaration', names: [variableMatch[1]], declarationKind: 'variable', exported: trimmed.startsWith('export ') };
   return undefined;
+}
+
+function declarationLedgerKey(declarationInfo) {
+  if (declarationInfo.reExport) {
+    return [
+      declarationInfo.kind,
+      declarationInfo.declarationKind,
+      declarationInfo.moduleSpecifier ?? '',
+      declarationInfo.typeOnly ? 'type' : 'value',
+      declarationInfo.exportStar ? '*' : declarationInfo.names.join('|')
+    ].join(':');
+  }
+  return `${declarationInfo.kind}:${declarationInfo.names.join('|')}`;
 }
 
 function unsupportedDeclarationPolicy(text, declarationInfo) {

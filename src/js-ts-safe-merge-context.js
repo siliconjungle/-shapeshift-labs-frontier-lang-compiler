@@ -5,6 +5,7 @@ export function createMergeContext(input) {
     id: String(input.id ?? 'js_ts_safe_merge'),
     sourcePath: input.sourcePath,
     language: input.language ?? 'typescript',
+    deferReExportIdentityConflictsToProjectGraph: input.deferReExportIdentityConflictsToProjectGraph === true,
     conflicts: [],
     blockedGateIds: new Set(),
     gateReasonCodes: new Map()

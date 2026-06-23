@@ -200,6 +200,7 @@ function validateCrossSideAddedNames(workerPlan, headPlan, context) {
       const nameKey = `${entry.kind}:${name}`;
       const headEntry = headEntriesByName.get(nameKey);
       if (headEntry) {
+        if (shouldDeferReExportNameConflict(entry, headEntry, context)) continue;
         const typeAliasConflict = entry.declarationInfo?.declarationKind === 'type'
           || headEntry.declarationInfo?.declarationKind === 'type';
         addConflict(context, {
@@ -214,6 +215,16 @@ function validateCrossSideAddedNames(workerPlan, headPlan, context) {
       }
     }
   }
+}
+
+function shouldDeferReExportNameConflict(left, right, context) {
+  return context.deferReExportIdentityConflictsToProjectGraph === true
+    && isReExportEntry(left)
+    && isReExportEntry(right);
+}
+
+function isReExportEntry(entry) {
+  return entry?.kind === 'export' && entry.declarationInfo?.reExport === true;
 }
 
 function validateCrossSideImportAdditions(workerPlan, headPlan, context) {
