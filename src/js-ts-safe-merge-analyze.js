@@ -148,6 +148,7 @@ export function validateIndependentAdditions(base, workerPlan, headPlan, context
   validateCrossSideAddedNames(workerPlan, headPlan, context);
   validateCrossSideExportStarAdditions(workerPlan, headPlan, context);
   validateCrossSideImportAdditions(workerPlan, headPlan, context);
+  validateMergedImportShapes(base, workerPlan, headPlan, context);
   validateMergedImportAndDeclarationNames(base, workerPlan, headPlan, context);
 }
 
@@ -231,6 +232,32 @@ function validateCrossSideImportAdditions(workerPlan, headPlan, context) {
         });
       }
     }
+  }
+}
+
+function validateMergedImportShapes(base, workerPlan, headPlan, context) {
+  for (const entry of base.entries.filter((item) => item.kind === 'import')) {
+    const additions = [
+      ...(workerPlan.importAdditions.get(entry.key) ?? []),
+      ...(headPlan.importAdditions.get(entry.key) ?? [])
+    ];
+    const namespaceAddition = additions.find((specifier) => specifier.additionKind === 'namespace');
+    if (!namespaceAddition) continue;
+    const namedAdditions = additions.filter((specifier) => !specifier.additionKind);
+    if (!entry.importInfo.specifiers.length && !namedAdditions.length) continue;
+    addConflict(context, {
+      code: JsTsSafeMergeConflictCodes.importShapeChanged,
+      gateId: JsTsSafeMergeGateIds.independentImportSpecifiers,
+      message: 'Merged imports would combine namespace and named import specifiers.',
+      details: {
+        key: entry.key,
+        namespace: namespaceAddition.localName,
+        namedSpecifiers: [
+          ...entry.importInfo.specifiers.map((specifier) => specifier.canonical),
+          ...namedAdditions.map((specifier) => specifier.canonical)
+        ]
+      }
+    });
   }
 }
 

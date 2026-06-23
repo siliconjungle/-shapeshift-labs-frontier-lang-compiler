@@ -50,6 +50,21 @@ assert.equal(existingNamespaceImportDefaultAddition.mergedSourceText, "import fs
 assertSemanticArtifactsVerified(existingNamespaceImportDefaultAddition, 'existing namespace import default addition');
 assert.equal(existingNamespaceImportDefaultAddition.semanticArtifacts.script.summary.byKind.jsTsReplaceImport, 1);
 
+const existingDefaultImportNamespaceAddition = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_accepts_existing_default_import_namespace_addition',
+  language: 'typescript',
+  sourcePath: 'src/import-default-namespace-addition.ts',
+  baseSourceText: "import fsDefault from 'node:fs';\nexport const stable = fsDefault;\n",
+  workerSourceText: "import fsDefault, * as fs from 'node:fs';\nexport const stable = fsDefault;\n",
+  headSourceText: "import fsDefault from 'node:fs';\nexport const stable = fsDefault;\nexport const headOnly = 1;\n"
+});
+
+assert.equal(existingDefaultImportNamespaceAddition.status, 'merged');
+assert.equal(existingDefaultImportNamespaceAddition.summary.importSpecifierAdditions, 1);
+assert.equal(existingDefaultImportNamespaceAddition.mergedSourceText, "import fsDefault, * as fs from 'node:fs';\nexport const stable = fsDefault;\nexport const headOnly = 1;\n");
+assertSemanticArtifactsVerified(existingDefaultImportNamespaceAddition, 'existing default import namespace addition');
+assert.equal(existingDefaultImportNamespaceAddition.semanticArtifacts.script.summary.byKind.jsTsReplaceImport, 1);
+
 const duplicateDefaultImportAddition = safeMergeJsTsImportsAndDeclarations({
   id: 'js_ts_safe_merge_rejects_duplicate_default_import_additions',
   baseSourceText: "import { readFile } from 'node:fs';\nexport const stable = readFile;\n",
@@ -65,6 +80,14 @@ const changedDefaultImport = safeMergeJsTsImportsAndDeclarations({
   headSourceText: "import fs, { readFile, stat } from 'node:fs';\nexport const stable = readFile;\n"
 });
 assertBlocked(changedDefaultImport, JsTsSafeMergeConflictCodes.importShapeChanged, JsTsSafeMergeGateIds.independentImportSpecifiers);
+
+const namespaceAndNamedImportAddition = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_namespace_and_named_import_addition',
+  baseSourceText: "import fsDefault from 'node:fs';\nexport const stable = fsDefault;\n",
+  workerSourceText: "import fsDefault, * as fs from 'node:fs';\nexport const stable = fsDefault;\n",
+  headSourceText: "import fsDefault, { readFile } from 'node:fs';\nexport const stable = fsDefault;\n"
+});
+assertBlocked(namespaceAndNamedImportAddition, JsTsSafeMergeConflictCodes.importShapeChanged, JsTsSafeMergeGateIds.independentImportSpecifiers);
 
 function assertSemanticArtifactsVerified(result, label) {
   assert.equal(result.semanticArtifacts.status, 'verified', `${label}: semantic artifact status`);
