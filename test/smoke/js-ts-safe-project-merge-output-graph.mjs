@@ -8,22 +8,25 @@ import {
 const tsModule = await import('typescript');
 const typescript = tsModule.default ?? tsModule;
 
+const crossBranchBaseFiles = {
+  'src/consumer.ts': "import { stable } from './provider.js';\nexport const used = stable;\n",
+  'src/provider.ts': 'export const stable = 1;\n'
+};
+const crossBranchWorkerFiles = {
+  'src/consumer.ts': "import { stable, headValue } from './provider.js';\nexport const used = stable;\nexport const workerUsesHeadValue = headValue;\n",
+  'src/provider.ts': 'export const stable = 1;\n'
+};
+const crossBranchHeadFiles = {
+  'src/consumer.ts': "import { stable } from './provider.js';\nexport const used = stable;\n",
+  'src/provider.ts': 'export const stable = 1;\nexport const headValue = 2;\n'
+};
 const crossBranchDependencyProject = safeMergeJsTsProject({
   id: 'js_ts_project_safe_merge_cross_branch_dependency_graph',
   language: 'typescript',
   includeOutputProjectSymbolGraph: true,
-  baseFiles: {
-    'src/consumer.ts': "import { stable } from './provider.js';\nexport const used = stable;\n",
-    'src/provider.ts': 'export const stable = 1;\n'
-  },
-  workerFiles: {
-    'src/consumer.ts': "import { stable, headValue } from './provider.js';\nexport const used = stable;\nexport const workerUsesHeadValue = headValue;\n",
-    'src/provider.ts': 'export const stable = 1;\n'
-  },
-  headFiles: {
-    'src/consumer.ts': "import { stable } from './provider.js';\nexport const used = stable;\n",
-    'src/provider.ts': 'export const stable = 1;\nexport const headValue = 2;\n'
-  }
+  baseFiles: crossBranchBaseFiles,
+  workerFiles: crossBranchWorkerFiles,
+  headFiles: crossBranchHeadFiles
 });
 const crossBranchOutputByPath = new Map(crossBranchDependencyProject.outputFiles.map((file) => [file.sourcePath, file]));
 const crossBranchImportEdge = crossBranchDependencyProject.outputProjectSymbolGraph.importEdges.find((edge) => edge.moduleSpecifier === './provider.js' && edge.importedName === 'headValue');
@@ -34,6 +37,23 @@ assert.equal(crossBranchOutputByPath.get('src/provider.ts').sourceText, 'export 
 assert.equal(Boolean(crossBranchImportEdge), true);
 assert.equal(crossBranchImportEdge.resolvedTargetSymbolId, 'symbol:typescript:export:headvalue');
 assert.equal(crossBranchDependencyProject.outputProjectSymbolGraph.remainingFields.includes('moduleEdges[].resolvedTargetSymbolId'), false);
+
+const crossBranchDependencyDeltaProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_cross_branch_dependency_delta_graph',
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  baseFiles: crossBranchBaseFiles,
+  workerFiles: crossBranchWorkerFiles,
+  headFiles: crossBranchHeadFiles
+});
+const crossBranchDeltaConflict = crossBranchDependencyDeltaProject.conflicts.find((conflict) => conflict.code === 'project-import-target-delta-conflict');
+assert.equal(crossBranchDependencyDeltaProject.status, 'blocked');
+assert.equal(crossBranchDependencyDeltaProject.admission.reasonCodes.includes('project-import-target-delta-conflict'), true);
+assert.equal(crossBranchDependencyDeltaProject.summary.projectGraphDeltaConflicts, 1);
+assert.equal(crossBranchDependencyDeltaProject.summary.projectGraphImportTargetConflicts, 1);
+assert.equal(crossBranchDependencyDeltaProject.projectGraphDelta.summary.importTargetConflicts, 1);
+assert.equal(crossBranchDeltaConflict.details.outputTargetSymbolId, 'symbol:typescript:export:headvalue');
+assert.equal(crossBranchDeltaConflict.details.workerTargetSymbolId, undefined);
 
 const parserBackedOutputSources = [{
   language: 'typescript',
@@ -64,6 +84,85 @@ assert.equal(parserBackedValueEdge.resolvedTargetSymbolId, 'symbol:typescript:ex
 assert.equal(parserBackedTypeEdge.importKind, 'type-named');
 assert.equal(parserBackedTypeEdge.isTypeOnly, true);
 
+const staleHashlessGraphProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_hashless_output_import_fallback',
+  language: 'typescript',
+  includeOutputProjectSymbolGraph: true,
+  outputProjectImports: parserBackedOutputImports.map(stripSourceHashesFromImport),
+  files: parserBackedOutputSources.map((source) => ({ sourcePath: source.sourcePath, language: source.language, baseSourceText: source.sourceText, workerSourceText: source.sourceText, headSourceText: source.sourceText }))
+});
+assert.equal(staleHashlessGraphProject.status, 'merged');
+assert.equal(staleHashlessGraphProject.outputProjectImport.metadata.outputProjectImportSource.matchedSuppliedImports, 0);
+assert.equal(staleHashlessGraphProject.outputProjectImport.metadata.outputProjectImportSource.scannerFallbackImports, 2);
+
+const graphDeltaBaseFiles = {
+  'src/options.ts': [
+    'export interface Options {',
+    '  enabled: boolean;',
+    '}',
+    ''
+  ].join('\n')
+};
+const graphDeltaWorkerFiles = {
+  'src/options.ts': [
+    'export interface Options {',
+    '  enabled: boolean;',
+    '  label?: string;',
+    '}',
+    ''
+  ].join('\n')
+};
+const graphDeltaHeadFiles = {
+  'src/options.ts': [
+    'export interface Options {',
+    '  enabled: boolean;',
+    '  retries: number;',
+    '}',
+    ''
+  ].join('\n')
+};
+const graphDeltaOutputFiles = {
+  'src/options.ts': [
+    'export interface Options {',
+    '  enabled: boolean;',
+    '  retries: number;',
+    '  label?: string;',
+    '}',
+    ''
+  ].join('\n')
+};
+const graphDeltaPublicContractProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_public_contract_delta_conflict',
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  baseFiles: graphDeltaBaseFiles,
+  workerFiles: graphDeltaWorkerFiles,
+  headFiles: graphDeltaHeadFiles,
+  baseProjectImports: await parserBackedImportsForFiles(graphDeltaBaseFiles),
+  workerProjectImports: await parserBackedImportsForFiles(graphDeltaWorkerFiles),
+  headProjectImports: await parserBackedImportsForFiles(graphDeltaHeadFiles),
+  outputProjectImports: await parserBackedImportsForFiles(graphDeltaOutputFiles),
+  policyByPath: {
+    'src/options.ts': { unorderedRegions: [{ kind: 'interface', name: 'Options', order: 'non-semantic' }] }
+  }
+});
+const graphDeltaPublicContractConflict = graphDeltaPublicContractProject.conflicts.find((conflict) => conflict.code === 'project-public-contract-delta-conflict');
+assert.equal(graphDeltaPublicContractProject.status, 'blocked');
+assert.equal(graphDeltaPublicContractProject.outputProjectSymbolGraph.kind, 'frontier.lang.projectSymbolGraph');
+assert.equal(graphDeltaPublicContractProject.projectGraphDelta.kind, 'frontier.lang.jsTsProjectGraphDelta');
+assert.equal(graphDeltaPublicContractProject.projectGraphDelta.summary.conflicts, 1);
+assert.equal(graphDeltaPublicContractProject.projectGraphDelta.summary.publicContractConflicts, 1);
+assert.equal(graphDeltaPublicContractProject.projectGraphDelta.stages.base.summary.publicContractRegions, 1);
+assert.equal(graphDeltaPublicContractProject.projectGraphDelta.stages.worker.summary.publicContractRegions, 1);
+assert.equal(graphDeltaPublicContractProject.projectGraphDelta.stages.head.summary.publicContractRegions, 1);
+assert.equal(graphDeltaPublicContractProject.projectGraphDelta.stages.output.summary.publicContractRegions, 1);
+assert.equal(graphDeltaPublicContractProject.summary.projectGraphDeltaConflicts, 1);
+assert.equal(graphDeltaPublicContractProject.summary.projectGraphPublicContractConflicts, 1);
+assert.equal(graphDeltaPublicContractProject.admission.reasonCodes.includes('project-public-contract-delta-conflict'), true);
+assert.equal(graphDeltaPublicContractConflict.details.identityKey, 'source#src/options.ts#export#Options');
+assert.equal(graphDeltaPublicContractConflict.details.worker.contractHash === graphDeltaPublicContractConflict.details.head.contractHash, false);
+assert.equal(graphDeltaPublicContractProject.metadata.projectGraphDeltaConflicts, 1);
+
 const missingOutputImportProject = safeMergeJsTsProject({
   id: 'js_ts_project_safe_merge_missing_output_import',
   language: 'typescript',
@@ -79,3 +178,55 @@ assert.equal(missingOutputImportProject.summary.projectGraphConflicts, 1);
 assert.equal(missingOutputImportProject.conflicts[0].code, 'project-output-module-unresolved');
 assert.equal(missingOutputImportEdge.resolutionKind, 'relative-missing');
 assert.equal(missingOutputImportEdge.resolvedModulePath, 'src/missing.js');
+
+const missingOutputSymbolProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_missing_output_symbol',
+  language: 'typescript',
+  includeOutputProjectSymbolGraph: true,
+  baseFiles: {
+    'src/index.ts': "import { existing } from './provider.js';\nexport const stable = existing;\n",
+    'src/provider.ts': 'export const existing = 1;\n'
+  },
+  workerFiles: {
+    'src/index.ts': "import { existing, missing } from './provider.js';\nexport const stable = existing;\nexport const workerOnly = missing;\n",
+    'src/provider.ts': 'export const existing = 1;\n'
+  },
+  headFiles: {
+    'src/index.ts': "import { existing } from './provider.js';\nexport const stable = existing;\n",
+    'src/provider.ts': 'export const existing = 1;\n'
+  }
+});
+const missingOutputSymbolEdge = missingOutputSymbolProject.outputProjectSymbolGraph.importEdges.find((edge) => edge.moduleSpecifier === './provider.js' && edge.importedName === 'missing');
+assert.equal(missingOutputSymbolProject.status, 'blocked');
+assert.equal(missingOutputSymbolProject.admission.reasonCodes.includes('project-output-symbol-unresolved'), true);
+assert.equal(missingOutputSymbolProject.summary.projectGraphConflicts, 1);
+assert.equal(missingOutputSymbolProject.conflicts[0].code, 'project-output-symbol-unresolved');
+assert.equal(missingOutputSymbolEdge.resolutionKind, 'relative-source');
+assert.equal(missingOutputSymbolEdge.resolvedModulePath, 'src/provider.ts');
+assert.equal(missingOutputSymbolEdge.resolvedTargetSymbolId, undefined);
+
+function parserBackedImportsForFiles(files) {
+  return Promise.all(Object.entries(files).map(([sourcePath, sourceText]) => runNativeImporterAdapter(parserBackedOutputAdapter, {
+    language: 'typescript',
+    sourcePath,
+    sourceText
+  })));
+}
+
+function stripSourceHashesFromImport(importResult) {
+  return {
+    ...withoutSourceHash(importResult),
+    nativeSource: importResult.nativeSource ? withoutSourceHash(importResult.nativeSource) : importResult.nativeSource,
+    nativeAst: importResult.nativeAst ? withoutSourceHash(importResult.nativeAst) : importResult.nativeAst,
+    semanticIndex: importResult.semanticIndex ? {
+      ...importResult.semanticIndex,
+      documents: (importResult.semanticIndex.documents ?? []).map(withoutSourceHash)
+    } : importResult.semanticIndex
+  };
+}
+
+function withoutSourceHash(record) {
+  if (!record || typeof record !== 'object') return record;
+  const { sourceHash, ...rest } = record;
+  return rest;
+}

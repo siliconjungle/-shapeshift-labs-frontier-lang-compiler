@@ -1,8 +1,9 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsSource } from './js-ts-safe-merge-composed.js';
 import { compactRecord } from './js-ts-safe-merge-context.js';
-import { createJsTsProjectSafeMergeGraphArtifacts } from './js-ts-safe-project-merge-graph.js';
-import { outputProjectGraphConflicts } from './js-ts-safe-project-merge-graph-conflicts.js';
+import { createJsTsProjectSafeMergeGraphArtifacts, createJsTsProjectSafeMergeGraphDelta } from './js-ts-safe-project-merge-graph.js';
+import { addProjectGraphDeltaConflictSummary } from './js-ts-safe-project-merge-graph-delta-conflicts.js';
+import { outputProjectGraphConflicts, projectGraphDeltaConflicts } from './js-ts-safe-project-merge-graph-conflicts.js';
 
 function safeMergeJsTsProject(input = {}) {
   const id = String(input.id ?? 'js_ts_project_safe_merge');
@@ -18,10 +19,16 @@ function safeMergeJsTsProject(input = {}) {
       sourceHash: file.outputHash,
       operation: file.operation
     }));
-  const graphArtifacts = blockedFiles.length === 0 && input.includeOutputProjectSymbolGraph
-    ? createJsTsProjectSafeMergeGraphArtifacts(input, outputFiles, id)
+  const projectGraphDelta = blockedFiles.length === 0 && input.includeProjectGraphDelta
+    ? createJsTsProjectSafeMergeGraphDelta(input, files, outputFiles, id)
     : undefined;
-  const graphConflicts = outputProjectGraphConflicts(graphArtifacts?.projectSymbolGraph);
+  const graphArtifacts = projectGraphDelta?.stages?.output ?? (blockedFiles.length === 0 && input.includeOutputProjectSymbolGraph
+    ? createJsTsProjectSafeMergeGraphArtifacts(input, outputFiles, id)
+    : undefined);
+  const outputGraphConflicts = outputProjectGraphConflicts(graphArtifacts?.projectSymbolGraph);
+  const deltaGraphConflicts = projectGraphDeltaConflicts(projectGraphDelta);
+  const projectGraphDeltaWithConflicts = addProjectGraphDeltaConflictSummary(projectGraphDelta, deltaGraphConflicts);
+  const graphConflicts = [...outputGraphConflicts, ...deltaGraphConflicts];
   const status = blockedFiles.length || graphConflicts.length ? 'blocked' : 'merged';
   const reasonCodes = uniqueStrings([
     ...blockedFiles.flatMap((file) => file.admission.reasonCodes),
@@ -41,6 +48,7 @@ function safeMergeJsTsProject(input = {}) {
     outputFiles,
     outputProjectImport: graphArtifacts?.projectImport,
     outputProjectSymbolGraph: graphArtifacts?.projectSymbolGraph,
+    projectGraphDelta: projectGraphDeltaWithConflicts,
     conflicts: [...fileResults.flatMap((file) => file.conflicts), ...graphConflicts],
     admission: {
       status: status === 'merged' ? 'auto-merge-candidate' : 'blocked',
@@ -59,7 +67,10 @@ function safeMergeJsTsProject(input = {}) {
       projectRoot: input.projectRoot,
       filesInput: Array.isArray(input.files) ? 'records' : 'maps',
       outputProjectSymbolGraph: Boolean(graphArtifacts?.projectSymbolGraph),
+      projectGraphDelta: Boolean(projectGraphDeltaWithConflicts),
       projectGraphConflicts: graphConflicts.length || undefined,
+      outputProjectGraphConflicts: outputGraphConflicts.length || undefined,
+      projectGraphDeltaConflicts: deltaGraphConflicts.length || undefined,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     })
@@ -240,20 +251,24 @@ function policyForFile(input, sourcePath) {
 
 function sourceLedgersForFile(input, sourcePath) {
   const byPath = input.sourceLedgersByPath?.[sourcePath] ?? input.sourceLedgers?.[sourcePath];
-  if (byPath) return byPath;
-  if (input.sourceLedgers?.base || input.sourceLedgers?.worker || input.sourceLedgers?.head) return input.sourceLedgers;
-  return undefined;
+  return byPath ?? (input.sourceLedgers?.base || input.sourceLedgers?.worker || input.sourceLedgers?.head ? input.sourceLedgers : undefined);
 }
 
 function projectSummary(files, graphConflicts = []) {
   const byOperation = {};
   for (const file of files) byOperation[file.operation] = (byOperation[file.operation] ?? 0) + 1;
+  const deltaConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-delta');
   return {
     files: files.length,
     mergedFiles: files.filter((file) => file.status === 'merged').length,
     blockedFiles: files.filter((file) => file.status === 'blocked').length,
     outputFiles: files.filter((file) => typeof file.outputSourceText === 'string').length,
     projectGraphConflicts: graphConflicts.length,
+    outputProjectGraphConflicts: graphConflicts.length - deltaConflicts.length,
+    projectGraphDeltaConflicts: deltaConflicts.length,
+    projectGraphPublicContractConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-public-contract-delta-conflict').length,
+    projectGraphReExportIdentityConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-re-export-identity-delta-conflict').length,
+    projectGraphImportTargetConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-import-target-delta-conflict').length,
     semanticArtifactFiles: files.filter((file) => file.semanticArtifacts).length,
     operations: byOperation
   };
@@ -283,21 +298,15 @@ function blockedAdmission(reasonCode) {
   };
 }
 
-function hashText(text) {
-  return typeof text === 'string' ? hashSemanticValue(text) : undefined;
-}
+function hashText(text) { return typeof text === 'string' ? hashSemanticValue(text) : undefined; }
 
-function stringOrUndefined(value) {
-  return typeof value === 'string' ? value : undefined;
-}
+function stringOrUndefined(value) { return typeof value === 'string' ? value : undefined; }
 
 function safeId(value) {
   return String(value ?? 'unknown').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'file';
 }
 
-function bySourcePath(left, right) {
-  return String(left.sourcePath ?? '').localeCompare(String(right.sourcePath ?? ''));
-}
+function bySourcePath(left, right) { return String(left.sourcePath ?? '').localeCompare(String(right.sourcePath ?? '')); }
 
 function uniqueStrings(values) {
   return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))];

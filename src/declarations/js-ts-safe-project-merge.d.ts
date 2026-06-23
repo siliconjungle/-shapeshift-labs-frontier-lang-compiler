@@ -51,6 +51,15 @@ export type JsTsProjectSafeMergeOutputProjectImports =
   | ReadonlyMap<string, NativeSourceImportResult>
   | Readonly<Record<string, NativeSourceImportResult>>;
 
+export type JsTsProjectGraphStageName = 'base' | 'worker' | 'head' | 'output' | string;
+
+export type JsTsProjectSafeMergeProjectGraphImportsByStage = Readonly<{
+  base?: JsTsProjectSafeMergeOutputProjectImports;
+  worker?: JsTsProjectSafeMergeOutputProjectImports;
+  head?: JsTsProjectSafeMergeOutputProjectImports;
+  output?: JsTsProjectSafeMergeOutputProjectImports;
+} & Record<string, JsTsProjectSafeMergeOutputProjectImports | undefined>>;
+
 export interface JsTsProjectSafeMergeInput {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage | string;
@@ -62,7 +71,12 @@ export interface JsTsProjectSafeMergeInput {
   readonly allowFileAdditions?: boolean;
   readonly allowFileDeletes?: boolean;
   readonly includeOutputProjectSymbolGraph?: boolean;
+  readonly includeProjectGraphDelta?: boolean;
   readonly outputProjectImports?: JsTsProjectSafeMergeOutputProjectImports;
+  readonly baseProjectImports?: JsTsProjectSafeMergeOutputProjectImports;
+  readonly workerProjectImports?: JsTsProjectSafeMergeOutputProjectImports;
+  readonly headProjectImports?: JsTsProjectSafeMergeOutputProjectImports;
+  readonly projectGraphImports?: JsTsProjectSafeMergeProjectGraphImportsByStage;
   readonly moduleResolution?: NativeProjectModuleResolutionOptions;
   readonly tsconfig?: NativeProjectModuleResolutionOptions;
   readonly workerChangeSetId?: string;
@@ -115,6 +129,56 @@ export interface JsTsProjectSafeMergeAdmission {
   readonly conflictKeys: readonly string[];
 }
 
+export interface JsTsProjectGraphDeltaStageSummary {
+  readonly stage: JsTsProjectGraphStageName;
+  readonly sourceFiles: number;
+  readonly documents: number;
+  readonly symbols: number;
+  readonly fileHashes: number;
+  readonly importEdges: number;
+  readonly exportEdges: number;
+  readonly publicContractRegions: number;
+  readonly reExportIdentities: number;
+  readonly unresolvedImportEdges: number;
+  readonly suppliedImports: number;
+  readonly matchedSuppliedImports: number;
+  readonly scannerFallbackImports: number;
+}
+
+export interface JsTsProjectGraphDeltaStage {
+  readonly kind: 'frontier.lang.jsTsProjectGraphStage';
+  readonly version: 1;
+  readonly stage: JsTsProjectGraphStageName;
+  readonly projectImport?: NativeProjectImportResult;
+  readonly projectSymbolGraph?: NativeProjectSymbolGraphSummary;
+  readonly summary: JsTsProjectGraphDeltaStageSummary;
+}
+
+export interface JsTsProjectGraphDeltaSummary {
+  readonly stages: number;
+  readonly sourceFiles: number;
+  readonly publicContractRegions: number;
+  readonly reExportIdentities: number;
+  readonly importEdges: number;
+  readonly exportEdges: number;
+  readonly unresolvedImportEdges: number;
+  readonly suppliedImports: number;
+  readonly matchedSuppliedImports: number;
+  readonly scannerFallbackImports: number;
+  readonly conflicts: number;
+  readonly publicContractConflicts: number;
+  readonly reExportIdentityConflicts: number;
+  readonly importTargetConflicts: number;
+  readonly stageSummaries: Readonly<Record<string, JsTsProjectGraphDeltaStageSummary>>;
+}
+
+export interface JsTsProjectGraphDelta {
+  readonly kind: 'frontier.lang.jsTsProjectGraphDelta';
+  readonly version: 1;
+  readonly stages: Readonly<Record<string, JsTsProjectGraphDeltaStage>>;
+  readonly summary: JsTsProjectGraphDeltaSummary;
+}
+
 export interface JsTsProjectSafeMergeResult {
   readonly kind: 'frontier.lang.jsTsProjectSafeMerge';
   readonly version: 1;
@@ -126,6 +190,7 @@ export interface JsTsProjectSafeMergeResult {
   readonly outputFiles: readonly JsTsProjectSafeMergeOutputFile[];
   readonly outputProjectImport?: NativeProjectImportResult;
   readonly outputProjectSymbolGraph?: NativeProjectSymbolGraphSummary;
+  readonly projectGraphDelta?: JsTsProjectGraphDelta;
   readonly conflicts: readonly JsTsSafeMergeConflict[];
   readonly admission: JsTsProjectSafeMergeAdmission;
   readonly summary: {
@@ -134,6 +199,11 @@ export interface JsTsProjectSafeMergeResult {
     readonly blockedFiles: number;
     readonly outputFiles: number;
     readonly projectGraphConflicts: number;
+    readonly outputProjectGraphConflicts: number;
+    readonly projectGraphDeltaConflicts: number;
+    readonly projectGraphPublicContractConflicts: number;
+    readonly projectGraphReExportIdentityConflicts: number;
+    readonly projectGraphImportTargetConflicts: number;
     readonly semanticArtifactFiles: number;
     readonly operations: Readonly<Record<string, number>>;
   };

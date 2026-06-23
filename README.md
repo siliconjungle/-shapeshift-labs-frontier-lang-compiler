@@ -289,8 +289,19 @@ the semantic index and project symbol graph.
 `safeMergeJsTsProject` stays synchronous. When a caller already has parser-backed
 native import results for merged output files, pass them as `outputProjectImports`
 with `includeOutputProjectSymbolGraph`. The graph builder matches supplied
-imports by `sourcePath` and `sourceHash`, uses them for output graph artifacts,
-and falls back to the lightweight scanner for missing or stale files.
+imports by `sourcePath` and `sourceHash`, requires hash-verified matches when
+the merged source has a hash, uses them for output graph artifacts, and falls
+back to the lightweight scanner for missing or stale files.
+
+For admission queues that need bounded cross-branch API checks, enable
+`includeProjectGraphDelta`. This additionally builds base, worker, head, and
+output project graph stages and blocks the merge when worker and head both
+change the same public contract, re-export identity, or import target in
+incompatible ways. Parser-backed stage imports can be supplied with
+`baseProjectImports`, `workerProjectImports`, `headProjectImports`, and
+`outputProjectImports`; missing or hash-stale stages fall back to the synchronous
+lightweight scanner. This is a conservative admission gate only: results still
+keep `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 
