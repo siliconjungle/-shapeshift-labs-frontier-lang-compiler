@@ -3,12 +3,15 @@ import { createSemanticEditScript } from './internal/index-impl/semanticEditScri
 import { projectSemanticEditScriptToSource } from './internal/index-impl/projectSemanticEditScriptToSource.js';
 import { replaySemanticEditProjection } from './internal/index-impl/replaySemanticEditProjection.js';
 import { JsTsSafeMergeStatuses } from './js-ts-safe-merge-constants.js';
+import { independentTopLevelDeletionFallbackResult } from './js-ts-safe-merge-independent-deletion-fallback.js';
+import { normalizeAlreadyAppliedDeleteReplay } from './js-ts-safe-merge-semantic-edit-already-applied.js';
 import {
   semanticFallbackChangedExistingDeclarations,
   semanticFallbackConflictCode,
   semanticFallbackPhase,
   shouldTrySemanticEditFallback
 } from './js-ts-safe-merge-semantic-edit-fallback-utils.js';
+import { semanticEditGates } from './js-ts-safe-merge-semantic-edit-gates.js';
 import {
   createStagedDeclarationAlreadyAppliedReplay,
   createStagedDeclarationProjection,
@@ -19,6 +22,8 @@ import { createSourceShapeSemanticFallbackResult } from './js-ts-safe-merge-sour
 import { idFragment, uniqueStrings } from './native-import-utils.js';
 
 function semanticEditFallbackResult(input, topLevelResult) {
+  const independentDeletionResult = independentTopLevelDeletionFallbackResult(input, topLevelResult);
+  if (independentDeletionResult) return independentDeletionResult;
   if (!shouldTrySemanticEditFallback(topLevelResult)) return topLevelResult;
   const stagedFallback = createStagedTopLevelSemanticFallback(input, topLevelResult);
   const candidates = semanticFallbackCandidates(stagedFallback);
@@ -132,14 +137,18 @@ function createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallba
       });
     const alreadyAppliedReplay = stagedDeclarationProjection
       ? createStagedDeclarationAlreadyAppliedReplay({ id, projection, sourcePath, language })
-      : replaySemanticEditProjection({
-        id: `${id}_semantic_edit_already_applied`,
+      : normalizeAlreadyAppliedDeleteReplay({
         projection,
-        currentSourceText: projection.sourceText,
-        currentSourcePath: sourcePath,
-        currentSourceHash: projection.projectedHash,
-        language,
-        parser: input.parser
+        replay,
+        alreadyAppliedReplay: replaySemanticEditProjection({
+          id: `${id}_semantic_edit_already_applied`,
+          projection,
+          currentSourceText: projection.sourceText,
+          currentSourcePath: sourcePath,
+          currentSourceHash: projection.projectedHash,
+          language,
+          parser: input.parser
+        })
       });
     return semanticEditArtifacts({
       id,
@@ -301,19 +310,4 @@ function semanticEditFallbackBlockedResult(input, topLevelResult, artifacts) {
   };
 }
 
-function semanticEditGates(artifacts) {
-  return [
-    gate('semantic-edit-script', artifacts.script?.admission?.status === 'auto-merge-candidate', artifacts.script?.admission?.reasonCodes),
-    gate('semantic-edit-projection', artifacts.projection?.status === 'projected', artifacts.projection?.admission?.reasonCodes),
-    gate('semantic-edit-replay', artifacts.replay?.status === 'accepted-clean', artifacts.replay?.admission?.reasonCodes),
-    gate('semantic-edit-already-applied', artifacts.alreadyAppliedReplay?.status === 'already-applied', artifacts.alreadyAppliedReplay?.admission?.reasonCodes)
-  ];
-}
-
-function gate(id, passed, reasonCodes = []) {
-  return { id, status: passed ? 'passed' : 'blocked', reasonCodes: passed ? [] : uniqueStrings(reasonCodes) };
-}
-
-export {
-  semanticEditFallbackResult
-};
+export { semanticEditFallbackResult };
