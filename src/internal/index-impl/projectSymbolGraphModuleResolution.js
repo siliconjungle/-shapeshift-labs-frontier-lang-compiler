@@ -1,3 +1,5 @@
+import { modulePathCandidates } from './projectSymbolGraphModulePathCandidates.js';
+
 export function resolveRelativeProjectModule(sourcePath, moduleSpecifier, documentsByPath) {
   if (!sourcePath || !moduleSpecifier || !moduleSpecifier.startsWith('.')) return undefined;
   const base = sourcePath.includes('/') ? sourcePath.slice(0, sourcePath.lastIndexOf('/')) : '';
@@ -6,6 +8,7 @@ export function resolveRelativeProjectModule(sourcePath, moduleSpecifier, docume
   return {
     path: target?.path ?? unresolvedPath,
     documentId: target?.id,
+    resolutionPathVariant: target?.resolutionPathVariant,
     kind: target ? 'relative-source' : 'relative-missing'
   };
 }
@@ -69,7 +72,7 @@ function resolveConfiguredProjectModule(moduleSpecifier, documentsByPath, module
   for (const candidate of candidates) {
     const target = moduleTargetDocument(candidate.path, documentsByPath);
     const packageFields = packageResolutionFields(candidate, packageInfo);
-    if (target) return { path: target.path, documentId: target.id, kind: `${candidate.kind}-source`, ...packageFields };
+    if (target) return { path: target.path, documentId: target.id, resolutionPathVariant: target.resolutionPathVariant, kind: `${candidate.kind}-source`, ...packageFields };
     firstMissing ??= { path: candidate.path, kind: `${candidate.kind}-missing`, ...packageFields };
   }
   return firstMissing ?? (packageInfo ? { kind: 'package-external', ...packageInfo } : undefined);
@@ -95,7 +98,7 @@ function resolvePackageImportProjectModule(sourcePath, moduleSpecifier, document
       packageImportTarget,
       packageName: packageContext.packageName
     };
-    if (resolved) return { path: resolved.path, documentId: resolved.id, kind: 'package-import-source', ...record };
+    if (resolved) return { path: resolved.path, documentId: resolved.id, resolutionPathVariant: resolved.resolutionPathVariant, kind: 'package-import-source', ...record };
     firstMissing ??= { path: candidatePath, kind: 'package-import-missing', ...record };
   }
   return firstMissing ?? { kind: 'package-import-external', packageImportKey: match.key };
@@ -224,14 +227,10 @@ function packageFallbackTargets(options, subpath) {
 
 function moduleTargetDocument(path, documentsByPath) {
   for (const candidate of modulePathCandidates(path)) {
-    const document = documentsByPath.get(candidate);
-    if (document) return document;
+    const document = documentsByPath.get(candidate.path);
+    if (document) return { ...document, resolutionPathVariant: candidate.variant };
   }
   return undefined;
-}
-
-function modulePathCandidates(path) {
-  return [path, `${path}.js`, `${path}.ts`, `${path}.tsx`, `${path}.jsx`, `${path}.d.ts`, `${path}/index.js`, `${path}/index.ts`, `${path}/index.d.ts`];
 }
 
 function targetExportName(edge) {

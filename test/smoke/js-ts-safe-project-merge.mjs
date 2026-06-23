@@ -133,8 +133,33 @@ const aliasEdge = aliasProject.outputProjectSymbolGraph.importEdges.find((edge) 
 assert.equal(aliasProject.status, 'merged');
 assert.equal(aliasEdge.resolvedModulePath, 'src/thing.ts');
 assert.equal(aliasEdge.resolutionKind, 'path-alias-source');
+assert.equal(aliasEdge.resolutionPathVariant, 'extensionless');
 assert.equal(aliasEdge.packageName, undefined);
 assert.equal(aliasEdge.resolvedTargetSymbolId, 'symbol:typescript:export:thing');
+
+const nodeNextGraphProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_nodenext_graph',
+  language: 'typescript',
+  includeOutputProjectSymbolGraph: true,
+  baseFiles: {
+    'src/index.ts': "import { runtime } from './runtime.js';\nexport const used = runtime;\n",
+    'src/runtime.ts': 'export const runtime = 1;\n'
+  },
+  workerFiles: {
+    'src/index.ts': "import { runtime } from './runtime.js';\nexport const used = runtime;\nexport const workerOnly = runtime;\n",
+    'src/runtime.ts': 'export const runtime = 1;\n'
+  },
+  headFiles: {
+    'src/index.ts': "import { runtime } from './runtime.js';\nexport const used = runtime;\n",
+    'src/runtime.ts': 'export const runtime = 1;\n'
+  }
+});
+const nodeNextGraphEdge = nodeNextGraphProject.outputProjectSymbolGraph.importEdges.find((edge) => edge.moduleSpecifier === './runtime.js' && edge.importedName === 'runtime');
+assert.equal(nodeNextGraphProject.status, 'merged');
+assert.equal(nodeNextGraphEdge.resolvedModulePath, 'src/runtime.ts');
+assert.equal(nodeNextGraphEdge.resolutionKind, 'relative-source');
+assert.equal(nodeNextGraphEdge.resolutionPathVariant, 'extension-substitution');
+assert.equal(nodeNextGraphEdge.resolvedTargetSymbolId, 'symbol:typescript:export:runtime');
 
 const packageGraphProject = safeMergeJsTsProject({
   id: 'js_ts_project_safe_merge_package_graph',
@@ -144,7 +169,7 @@ const packageGraphProject = safeMergeJsTsProject({
     packages: {
       '@pkg/core': {
         root: 'packages/core',
-        exports: { './utils': { import: './src/utils.ts', default: './dist/utils.js' } }
+        exports: { './utils': { import: './src/utils.js', default: './dist/utils.js' } }
       }
     },
     packageExportConditions: ['import', 'default']
@@ -168,6 +193,7 @@ assert.equal(packageGraphEdge.packageName, '@pkg/core');
 assert.equal(packageGraphEdge.packageSubpath, './utils');
 assert.equal(packageGraphEdge.packageExportCondition, 'import');
 assert.equal(packageGraphEdge.resolvedModulePath, 'packages/core/src/utils.ts');
+assert.equal(packageGraphEdge.resolutionPathVariant, 'extension-substitution');
 assert.equal(packageGraphEdge.resolvedTargetSymbolId, 'symbol:typescript:export:util');
 
 const packageImportsGraphProject = safeMergeJsTsProject({

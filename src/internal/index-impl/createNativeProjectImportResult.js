@@ -240,6 +240,7 @@ function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documents
     resolvedModulePath: resolution?.path,
     targetDocumentId: resolution?.documentId,
     resolutionKind: resolution?.kind,
+    resolutionPathVariant: resolution?.resolutionPathVariant,
     packageName: resolution?.packageName,
     packageSubpath: resolution?.packageSubpath,
     packageExportCondition: resolution?.packageExportCondition,

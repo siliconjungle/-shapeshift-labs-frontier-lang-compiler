@@ -108,6 +108,7 @@ export interface NativeProjectSymbolGraphModuleEdgeRecord {
   readonly targetDocumentId?: string;
   readonly resolvedTargetSymbolId?: string;
   readonly resolutionKind?: 'relative-source' | 'relative-missing' | 'alias-source' | 'alias-missing' | 'path-alias-source' | 'path-alias-missing' | 'base-url-source' | 'base-url-missing' | 'package-source' | 'package-missing' | 'package-external' | 'package-import-source' | 'package-import-missing' | 'package-import-external' | string;
+  readonly resolutionPathVariant?: 'exact' | 'extension-substitution' | 'extensionless' | 'index' | string;
   readonly packageName?: string; readonly packageSubpath?: string; readonly packageExportCondition?: string;
   readonly packageImportKey?: string; readonly packageImportCondition?: string; readonly packageImportTarget?: string;
   readonly importKind?: string;

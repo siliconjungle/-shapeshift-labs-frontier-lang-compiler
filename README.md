@@ -238,6 +238,12 @@ console.log(project.outputProjectSymbolGraph.importEdges[0].packageName); // "@p
 console.log(project.outputProjectSymbolGraph.importEdges[0].packageExportCondition); // "import"
 ```
 
+NodeNext-style JS extension specifiers can resolve to supplied TS source files.
+For example, `import './runtime.js'` can resolve to `src/runtime.ts` when that is
+the available project document. Graph edges record `resolutionPathVariant` as
+`"extension-substitution"` so coordinators can distinguish exact source matches
+from source-extension substitutions during stale checks and merge admission.
+
 Package `imports` maps are also modeled for `#internal` specifiers. Top-level
 `moduleResolution.imports` applies from `packageRoot`/`root`, while
 `packages[name].imports` applies to the nearest configured package root. Graph

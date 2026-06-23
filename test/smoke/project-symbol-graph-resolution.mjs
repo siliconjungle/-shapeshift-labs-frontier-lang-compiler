@@ -23,9 +23,33 @@ assert.equal(namedImportEdge.moduleSpecifier, './thing.js');
 assert.equal(namedImportEdge.resolvedModulePath, 'src/thing.js');
 assert.equal(namedImportEdge.targetDocumentId, 'doc_src_thing_js');
 assert.equal(namedImportEdge.resolvedTargetSymbolId, 'symbol:javascript:export:thing');
+assert.equal(namedImportEdge.resolutionPathVariant, 'exact');
 assert.equal(graph.remainingFields.includes('moduleEdges[].resolutionKind'), false);
 assert.equal(graph.remainingFields.includes('moduleEdges[].resolvedTargetSymbolId'), false);
 assert.equal(project.semanticIndex.metadata.projectSymbolGraph, graph);
+
+const nodeNextProject = await importNativeProject({
+  id: 'project_symbol_graph_nodenext_extension_resolution',
+  projectRoot: 'src',
+  sources: [{
+    language: 'typescript',
+    sourcePath: 'src/index.ts',
+    sourceText: "import { runtime } from './runtime.js';\nexport const used = runtime;\n",
+    metadata: { semanticImportExpected: true }
+  }, {
+    language: 'typescript',
+    sourcePath: 'src/runtime.ts',
+    sourceText: 'export const runtime = 1;\n',
+    metadata: { semanticImportExpected: true }
+  }]
+});
+
+const nodeNextEdge = nodeNextProject.projectSymbolGraph.importEdges.find((edge) => edge.moduleSpecifier === './runtime.js' && edge.importedName === 'runtime');
+assert.equal(nodeNextEdge.resolvedModulePath, 'src/runtime.ts');
+assert.equal(nodeNextEdge.targetDocumentId, 'doc_src_runtime_ts');
+assert.equal(nodeNextEdge.resolutionKind, 'relative-source');
+assert.equal(nodeNextEdge.resolutionPathVariant, 'extension-substitution');
+assert.equal(nodeNextEdge.resolvedTargetSymbolId, 'symbol:typescript:export:runtime');
 
 const aliasProject = await importNativeProject({
   id: 'project_symbol_graph_path_alias_resolution',
@@ -60,7 +84,7 @@ const packageProject = await importNativeProject({
       '@pkg/core': {
         root: 'packages/core',
         exports: {
-          './utils': { types: './src/utils.d.ts', import: './src/utils.ts', default: './dist/utils.js' }
+          './utils': { types: './src/utils.d.ts', import: './src/utils.js', default: './dist/utils.js' }
         }
       }
     },
@@ -85,6 +109,7 @@ assert.equal(packageEdge.packageName, '@pkg/core');
 assert.equal(packageEdge.packageSubpath, './utils');
 assert.equal(packageEdge.packageExportCondition, 'import');
 assert.equal(packageEdge.resolvedModulePath, 'packages/core/src/utils.ts');
+assert.equal(packageEdge.resolutionPathVariant, 'extension-substitution');
 assert.equal(packageEdge.resolutionKind, 'package-source');
 assert.equal(packageEdge.resolvedTargetSymbolId, 'symbol:typescript:export:util');
 const externalEdge = packageGraph.importEdges.find((edge) => edge.moduleSpecifier === 'react/jsx-runtime' && edge.importedName === 'jsx');
@@ -126,6 +151,7 @@ assert.equal(packageImportEdge.resolutionKind, 'package-import-source');
 assert.equal(packageImportEdge.packageImportKey, '#internal/*');
 assert.equal(packageImportEdge.packageImportCondition, 'import');
 assert.equal(packageImportEdge.packageImportTarget, './src/internal/thing.ts');
+assert.equal(packageImportEdge.resolutionPathVariant, 'exact');
 assert.equal(packageImportEdge.resolvedTargetSymbolId, 'symbol:typescript:export:internal');
 const externalPackageImportEdge = packageImportsGraph.importEdges.find((edge) => edge.moduleSpecifier === '#external' && edge.importedName === 'jsx');
 assert.equal(externalPackageImportEdge.resolutionKind, 'package-import-external');
