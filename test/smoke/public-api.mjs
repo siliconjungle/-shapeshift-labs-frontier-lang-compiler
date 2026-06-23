@@ -62,6 +62,7 @@ for (const requiredExport of [
 	  'createSemanticLineageMap',
 	  'createSemanticMergeCandidateAdmissionRecord',
 	  'createSemanticPatchBundleRecord',
+	  'composeSemanticPatchBundleProjections',
 	  'compareSemanticPatchBundleRecords',
   'createUniversalCapabilityMatrix',
   'createUniversalConversionArtifacts',

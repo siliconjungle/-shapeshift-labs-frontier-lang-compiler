@@ -112,6 +112,7 @@ function mergeProjectFile(file, input, projectId) {
     ...input,
     ...context,
     deferReExportIdentityConflictsToProjectGraph: input.includeProjectGraphDelta === true || input.includeOutputProjectSymbolGraph === true,
+    deferTopLevelRenamePublicExportContractToProjectGraph: input.includeProjectGraphDelta === true || input.includeOutputProjectSymbolGraph === true,
     id: `${projectId}_${safeId(file.sourcePath)}`,
     baseSourceText: base,
     workerSourceText: worker,
@@ -304,7 +305,6 @@ function blockedAdmission(reasonCode) {
 }
 
 function hashText(text) { return typeof text === 'string' ? hashSemanticValue(text) : undefined; }
-
 function stringOrUndefined(value) { return typeof value === 'string' ? value : undefined; }
 
 function safeId(value) {

@@ -24,6 +24,7 @@ export * from './declarations/semantic-edit-bundle.js';
 export * from './declarations/semantic-patch-bundle-index.js';
 export * from './declarations/semantic-patch-bundle.js';
 export * from './declarations/semantic-patch-bundle-overlaps.js';
+export * from './declarations/semantic-patch-bundle-composition.js';
 export * from './declarations/semantic-transform-identity.js';
 export * from './declarations/bidirectional-target-change.js';
 export * from './declarations/bidirectional-target-change-source-edit.js';

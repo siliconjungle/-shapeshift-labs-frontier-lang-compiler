@@ -72,6 +72,7 @@ export { queryProjectionReadinessMatrix } from './internal/index-impl/queryProje
 export { createSemanticPatchBundleRecord, querySemanticPatchBundleRecords, SemanticPatchBundleAdmissionStatuses } from './internal/index-impl/semanticPatchBundleRecords.js';
 export { createSemanticEditBundleAdmission, SemanticEditBundleAdmissionStatuses } from './internal/index-impl/semanticEditBundleAdmission.js';
 export { compareSemanticPatchBundleRecords, querySemanticPatchBundleOverlaps, SemanticPatchBundleOverlapKinds, SemanticPatchBundleOverlapStatuses } from './internal/index-impl/semanticPatchBundleOverlaps.js';
+export { composeSemanticPatchBundleProjections } from './internal/index-impl/semanticPatchBundleComposition.js';
 export { createSemanticTransformIdentityRecord, deriveSemanticTransformIdentityRecords, semanticTransformIdentityFields } from './internal/index-impl/semanticTransformIdentityRecords.js';
 export { createSemanticMergeCandidateAdmissionRecord, decorateSemanticMergeCandidateForAdmission, querySemanticMergeCandidateAdmissionOverlaps, SemanticMergeCandidateProjectionRisks, semanticMergeCandidateReadinessSortKey, sortSemanticMergeCandidateAdmissionRecords } from './internal/index-impl/semanticMergeCandidateRecords.js';
 export { querySemanticMergeConflictClasses, SemanticMergeConflictClasses, semanticMergeConflictRiskScore, sortSemanticMergeCandidatesByConflictRisk, summarizeSemanticMergeConflicts } from './internal/index-impl/semanticMergeConflicts.js';

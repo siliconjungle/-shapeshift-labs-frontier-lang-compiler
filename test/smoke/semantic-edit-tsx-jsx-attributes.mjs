@@ -4,7 +4,8 @@ import {
   createSemanticImportSidecar,
   importNativeSource,
   projectSemanticEditScriptToSource,
-  replaySemanticEditProjection
+  replaySemanticEditProjection,
+  safeMergeJsTsSource
 } from './compiler-api.mjs';
 
 const baseSource = 'export const Button = React.forwardRef((props, ref) => {\n  return <button ref={ref}>{props.label}</button>;\n});\n';
@@ -79,3 +80,28 @@ const attributeReplay = replaySemanticEditProjection({
 });
 assert.equal(attributeReplay.status, 'accepted-clean');
 assert.equal(attributeReplay.outputSourceText, attributeExpectedSource);
+
+const sameRegionHeadSource = attributeBaseSource.replace('size="m"', 'size="l"');
+const sameRegionExpectedSource = 'export function View() {\n  return <Button tone="worker" size="l" />;\n}\n';
+const sameRegionMerge = safeMergeJsTsSource({
+  id: 'semantic_edit_tsx_jsx_attribute_same_region',
+  language: 'tsx',
+  sourcePath: 'src/view.tsx',
+  baseSourceText: attributeBaseSource,
+  workerSourceText: attributeWorkerSource,
+  headSourceText: sameRegionHeadSource
+});
+assert.equal(sameRegionMerge.status, 'merged');
+assert.equal(sameRegionMerge.mergedSourceText, sameRegionExpectedSource);
+assert.equal(sameRegionMerge.semanticArtifacts.status, 'verified');
+assert.equal(sameRegionMerge.summary.jsxAttributeEdits, 1);
+
+const sameAttributeConflict = safeMergeJsTsSource({
+  id: 'semantic_edit_tsx_jsx_attribute_conflict',
+  language: 'tsx',
+  sourcePath: 'src/view.tsx',
+  baseSourceText: attributeBaseSource,
+  workerSourceText: attributeWorkerSource,
+  headSourceText: attributeBaseSource.replace('tone="base"', 'tone="head"')
+});
+assert.equal(sameAttributeConflict.status, 'blocked');

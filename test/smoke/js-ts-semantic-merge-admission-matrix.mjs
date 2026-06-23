@@ -23,6 +23,12 @@ const semanticMergeMatrixCells = [
     note: 'composed safe merge still blocks exported top-level rename without project contract evidence'
   },
   {
+    id: 'top-level-rename/exported-project-contract-admitted',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-exported-rename-contract',
+    note: 'project graph delta admits alias-preserving exported rename when public contract evidence stays stable'
+  },
+  {
     id: 'top-level-rename/private-composed-safe-merge-admitted',
     status: 'done',
     evidence: 'js-ts-safe-merge-rename-move-fallback',
@@ -72,13 +78,12 @@ const semanticMergeMatrixCells = [
   },
   {
     id: 'tsx-jsx-attribute/same-region-field-merge',
-    status: 'missing',
+    status: 'done',
     evidence: 'semantic-edit-tsx-jsx-attributes',
-    note: 'future work: field-level JSX attribute merge when both sides edit the same JSX region'
+    note: 'field-level JSX attribute merge admits disjoint attribute changes in the same JSX region'
   }
 ];
-assert.equal(semanticMergeMatrixCells.filter((cell) => cell.status === 'done').length >= 3, true);
-assert.equal(semanticMergeMatrixCells.filter((cell) => cell.status === 'missing').length >= 1, true);
+assert.equal(semanticMergeMatrixCells.every((cell) => cell.status === 'done'), true);
 for (const cell of semanticMergeMatrixCells) {
   assert.match(cell.id, /^[a-z0-9-]+\/[a-z0-9-]+(?:-[a-z0-9]+)*$/);
   assert.equal(['done', 'missing'].includes(cell.status), true, `${cell.id}: matrix status`);
@@ -197,14 +202,14 @@ assert.equal(oracleTsxAttributeSafeMerge.status, 'merged');
 assert.equal(oracleTsxAttributeSafeMerge.mergedSourceText, `// shifted by head\n${oracleTsxAttributeWorker}`);
 assert.equal(oracleTsxAttributeSafeMerge.semanticArtifacts.status, 'verified');
 
-const oracleTsxAttributeSameRegionBlocked = safeMergeJsTsSource({
-  id: 'oracle_safe_merge_tsx_attribute_same_region_blocked',
+const oracleTsxAttributeSameRegionMerged = safeMergeJsTsSource({
+  id: 'oracle_safe_merge_tsx_attribute_same_region_merged',
   language: 'tsx',
   sourcePath: 'src/oracles/view.tsx',
   baseSourceText: oracleTsxAttributeBase,
   workerSourceText: oracleTsxAttributeWorker,
   headSourceText: oracleTsxAttributeBase.replace('size="m"', 'size="l"')
 });
-assert.equal(oracleTsxAttributeSameRegionBlocked.status, 'blocked');
-assert.equal(oracleTsxAttributeSameRegionBlocked.semanticArtifacts.status, 'blocked');
-assert.equal(oracleTsxAttributeSameRegionBlocked.admission.reasonCodes.includes('head-anchor-changed-since-base'), true);
+assert.equal(oracleTsxAttributeSameRegionMerged.status, 'merged');
+assert.equal(oracleTsxAttributeSameRegionMerged.mergedSourceText, 'export function View() {\n  return <Button tone="worker" size="l" />;\n}\n');
+assert.equal(oracleTsxAttributeSameRegionMerged.semanticArtifacts.status, 'verified');

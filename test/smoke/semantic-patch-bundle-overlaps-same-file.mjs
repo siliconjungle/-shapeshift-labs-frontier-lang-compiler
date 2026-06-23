@@ -1,5 +1,6 @@
 import { assert } from './helpers.mjs';
 import {
+  composeSemanticPatchBundleProjections,
   compareSemanticPatchBundleRecords,
   createSemanticEditScript,
   createSemanticPatchBundleRecord,
@@ -58,6 +59,34 @@ const queriedSameFileDisjoint = querySemanticPatchBundleOverlaps(
 );
 assert.equal(queriedSameFileDisjoint.length, 1);
 assert.equal(queriedSameFileDisjoint[0].admission.status, 'independent');
+
+const sameFileComposition = composeSemanticPatchBundleProjections({
+  id: 'same_file_disjoint_composition',
+  sourcePath: 'src/same-file-disjoint.js',
+  language: 'javascript',
+  currentSourceText: sameFileDisjointBaseSource,
+  bundles: [sameFileScore.bundle, sameFileTotal.bundle],
+  projections: [sameFileScore.projection, sameFileTotal.projection]
+});
+assert.equal(sameFileComposition.status, 'verified');
+assert.equal(sameFileComposition.outputSourceText, [
+  'export function score(value) { return value + 2; }',
+  'export function total(value) { return value * 3; }',
+  ''
+].join('\n'));
+assert.equal(sameFileComposition.summary.appliedEdits, 2);
+assert.equal(sameFileComposition.verificationReplays.every((replay) => replay.status === 'already-applied'), true);
+
+const duplicateComposition = composeSemanticPatchBundleProjections({
+  id: 'same_file_duplicate_composition',
+  sourcePath: 'src/same-file-disjoint.js',
+  language: 'javascript',
+  currentSourceText: sameFileDisjointBaseSource,
+  bundles: [sameFileScore.bundle, sameFileScore.bundle],
+  projections: [sameFileScore.projection, sameFileScore.projection]
+});
+assert.equal(duplicateComposition.status, 'blocked');
+assert.equal(duplicateComposition.admission.reasonCodes.includes('bundle-overlap:duplicate'), true);
 
 function createProjectedEditBundle({ id, sourcePath, baseSourceText, workerSourceText, generatedAt }) {
   const changeSet = diffNativeSources({

@@ -6,6 +6,7 @@ export function createMergeContext(input) {
     sourcePath: input.sourcePath,
     language: input.language ?? 'typescript',
     deferReExportIdentityConflictsToProjectGraph: input.deferReExportIdentityConflictsToProjectGraph === true,
+    deferTopLevelRenamePublicExportContractToProjectGraph: input.deferTopLevelRenamePublicExportContractToProjectGraph === true,
     conflicts: [],
     blockedGateIds: new Set(),
     gateReasonCodes: new Map()

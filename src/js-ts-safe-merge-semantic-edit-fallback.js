@@ -28,6 +28,14 @@ function semanticEditFallbackResult(input, topLevelResult) {
   if (independentDeletionResult) return independentDeletionResult;
   const topLevelRenameAdmission = analyzeTopLevelRenameAdmission(input, topLevelResult);
   if (topLevelRenameAdmission?.status === 'blocked') {
+    if (shouldDeferTopLevelRenamePublicContract(input, topLevelRenameAdmission)) {
+      const deferredAdmission = deferredTopLevelRenameAdmission(topLevelRenameAdmission);
+      const artifacts = createSemanticEditFallbackArtifacts(input, topLevelResult);
+      if (artifacts.status !== 'verified') {
+        return semanticEditFallbackBlockedResult(input, topLevelResult, artifacts, deferredAdmission);
+      }
+      return semanticEditFallbackMergedResult(input, topLevelResult, undefined, artifacts, deferredAdmission);
+    }
     return topLevelRenameBlockedResult(input, topLevelResult, topLevelRenameAdmission);
   }
   if (topLevelRenameAdmission?.status === 'candidate') {
@@ -213,6 +221,39 @@ function semanticEditFallbackBlockedResult(input, topLevelResult, artifacts) {
     },
     semanticArtifacts: artifacts
   };
+}
+
+function shouldDeferTopLevelRenamePublicContract(input, admission) {
+  return input.deferTopLevelRenamePublicExportContractToProjectGraph === true
+    && admission.reasonCodes?.length === 1
+    && admission.reasonCodes.includes('top-level-rename-public-export-contract')
+    && admission.summary?.exported !== true
+    && workerPreservesRenamedExportAlias(input.workerSourceText, admission.summary);
+}
+
+function deferredTopLevelRenameAdmission(admission) {
+  return {
+    ...admission,
+    status: 'candidate',
+    reasonCodes: ['top-level-rename-public-export-contract-deferred-to-project-graph'],
+    summary: {
+      ...admission.summary,
+      deferredToProjectGraph: true,
+      reasonCodes: ['top-level-rename-public-export-contract-deferred-to-project-graph']
+    }
+  };
+}
+
+function workerPreservesRenamedExportAlias(sourceText, summary) {
+  const fromName = summary?.fromName;
+  const toName = summary?.toName;
+  if (typeof sourceText !== 'string' || !fromName || !toName) return false;
+  const exportListPattern = new RegExp(`export\\s*\\{[^}]*\\b${escapeRegExp(toName)}\\s+as\\s+${escapeRegExp(fromName)}\\b[^}]*\\}`);
+  return exportListPattern.test(sourceText);
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export { semanticEditFallbackResult };

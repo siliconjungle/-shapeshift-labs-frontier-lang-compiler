@@ -25,6 +25,7 @@ export {
   createSemanticMergeCandidateAdmissionRecord,
   createSemanticHistoryRecord,
   createSemanticPatchBundleRecord,
+  composeSemanticPatchBundleProjections,
   compareSemanticPatchBundleRecords,
   createUniversalCapabilityMatrix,
   createUniversalConversionArtifacts,

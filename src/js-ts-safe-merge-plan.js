@@ -225,10 +225,12 @@ function renderImportStatement(importInfo, specifiers) {
   const clause = [];
   if (importInfo.defaultLocalName) clause.push(importInfo.defaultLocalName);
   if (importInfo.namespaceLocalName) clause.push(`* as ${importInfo.namespaceLocalName}`);
-  if (specifiers.length) clause.push(`{ ${specifiers.map(importSpecifierCanonical).join(', ')} }`);
+  if (specifiers.length) clause.push(`{ ${specifiers.map((specifier) => renderImportSpecifier(specifier, importInfo)).join(', ')} }`);
   const importType = importInfo.typeOnly ? 'type ' : '';
   return `import ${importType}${clause.join(', ')} from ${importInfo.quote}${importInfo.moduleSpecifier}${importInfo.quote};`;
 }
+
+const renderImportSpecifier = (specifier, importInfo) => importSpecifierCanonical(importInfo.typeOnly ? { ...specifier, typeOnly: false } : specifier);
 
 function importInsertionText(entries, lineEnding) {
   return entries
