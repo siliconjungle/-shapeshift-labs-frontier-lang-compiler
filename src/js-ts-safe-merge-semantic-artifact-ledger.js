@@ -174,6 +174,7 @@ function entryName(entry) {
 
 function entrySymbolKind(entry) {
   if (entry.kind === 'import') return 'import';
+  if (entry.declarationInfo?.declarationKind === 'enum') return 'type';
   return entry.declarationInfo?.declarationKind ?? entry.kind;
 }
 
