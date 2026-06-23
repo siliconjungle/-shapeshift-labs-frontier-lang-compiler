@@ -58,7 +58,7 @@ assertCorpusFixture('unsafe-control-flow-conflict', 'rejected', ['head-anchor-ch
 assertCorpusFixture('unsafe-delete-modify-conflict', 'rejected', ['head-anchor-changed-since-base']);
 assertCorpusFixture('safe-import-declaration-additions', 'accepted');
 assertCorpusFixture('safe-composed-source-additions', 'accepted');
-assertCorpusFixture('unsupported-new-import-declaration', 'rejected', ['new-import-declaration']);
+assertCorpusFixture('safe-new-import-declaration-additions', 'accepted');
 assertCorpusFixture('unsafe-import-specifier-reorder', 'rejected', ['import-specifier-reordered']);
 assertCorpusFixture('unsafe-missing-source-ledger-span', 'rejected', ['missing-source-ledger-span']);
 assertCorpusFixture('unsafe-computed-key-declaration', 'rejected', ['computed-key']);
@@ -71,7 +71,7 @@ assertCorpusFixture('unsafe-order-sensitive-member-region', 'rejected', [
 
 assertSafeMergeCorpusFixture('safe-import-declaration-additions');
 assertSafeMergeCorpusFixture('safe-composed-source-additions');
-assertSafeMergeCorpusFixture('unsupported-new-import-declaration');
+assertSafeMergeCorpusFixture('safe-new-import-declaration-additions');
 assertSafeMergeCorpusFixture('unsafe-import-specifier-reorder');
 assertSafeMergeCorpusFixture('unsafe-missing-source-ledger-span');
 assertSafeMergeCorpusFixture('unsafe-computed-key-declaration');

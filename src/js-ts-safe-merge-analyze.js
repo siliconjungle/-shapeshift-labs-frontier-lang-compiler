@@ -1,10 +1,13 @@
 import { JsTsSafeMergeConflictCodes, JsTsSafeMergeGateIds } from './js-ts-safe-merge-constants.js';
 import { addConflict, arraysEqual, sameStatementText } from './js-ts-safe-merge-context.js';
 import { validateCrossSideExportStarAdditions } from './js-ts-safe-merge-export-star-validation.js';
+import { importEntryBindings, mergedNewImportBindings } from './js-ts-safe-merge-import-entry-utils.js';
+import { validateNewImportDeclarations } from './js-ts-safe-merge-new-import-validation.js';
 
 export function analyzeVariantLedger(base, variant, baseIndex, side, context) {
   const projectedBaseKeys = [];
   const addedEntries = [];
+  const newImportEntries = [];
   const importAdditions = new Map();
   const baseKeys = new Set(baseIndex.orderedKeys);
 
@@ -12,13 +15,7 @@ export function analyzeVariantLedger(base, variant, baseIndex, side, context) {
     const baseEntry = baseIndex.entriesByKey.get(entry.key);
     if (!baseEntry) {
       if (entry.kind === 'import') {
-        addConflict(context, {
-          code: JsTsSafeMergeConflictCodes.newImportDeclaration,
-          gateId: JsTsSafeMergeGateIds.independentImportSpecifiers,
-          side,
-          message: `${side} source adds a new import declaration; only specifier additions to existing imports are accepted.`,
-          details: { key: entry.key, statement: entry.text.trim() }
-        });
+        newImportEntries.push(entry);
       } else {
         addedEntries.push(entry);
       }
@@ -72,6 +69,7 @@ export function analyzeVariantLedger(base, variant, baseIndex, side, context) {
   return {
     side,
     addedEntries,
+    newImportEntries,
     importAdditions,
     baseKeys
   };
@@ -159,6 +157,7 @@ export function validateIndependentAdditions(base, workerPlan, headPlan, context
   }
   validateAddedEntryNames(workerPlan, declarationNames, context);
   validateAddedEntryNames(headPlan, declarationNames, context);
+  validateNewImportDeclarations(workerPlan, headPlan, context);
   validateCrossSideAddedNames(workerPlan, headPlan, context);
   validateCrossSideExportStarAdditions(workerPlan, headPlan, context);
   validateCrossSideImportAdditions(workerPlan, headPlan, context);
@@ -264,12 +263,7 @@ function validateMergedImportAndDeclarationNames(base, workerPlan, headPlan, con
       ...(workerPlan.importAdditions.get(entry.key) ?? []),
       ...(headPlan.importAdditions.get(entry.key) ?? [])
     ];
-    for (const specifier of [
-      ...(entry.importInfo.defaultLocalName ? [{ localName: entry.importInfo.defaultLocalName, canonical: `default:${entry.importInfo.defaultLocalName}` }] : []),
-      ...(entry.importInfo.namespaceLocalName ? [{ localName: entry.importInfo.namespaceLocalName, canonical: `namespace:${entry.importInfo.namespaceLocalName}` }] : []),
-      ...entry.importInfo.specifiers,
-      ...additions
-    ]) {
+    for (const specifier of [...importEntryBindings(entry), ...additions]) {
       if (importLocalNames.has(specifier.localName)) {
         addConflict(context, {
           code: JsTsSafeMergeConflictCodes.duplicateName,
@@ -288,5 +282,16 @@ function validateMergedImportAndDeclarationNames(base, workerPlan, headPlan, con
       }
       importLocalNames.add(specifier.localName);
     }
+  }
+  for (const specifier of mergedNewImportBindings(workerPlan, headPlan)) {
+    if (importLocalNames.has(specifier.localName) || topLevelBindingNames.has(specifier.localName)) {
+      addConflict(context, {
+        code: JsTsSafeMergeConflictCodes.duplicateName,
+        gateId: JsTsSafeMergeGateIds.uniqueNames,
+        message: 'Merged new imports would duplicate an existing binding name.',
+        details: { localName: specifier.localName, specifier: specifier.canonical, importKey: specifier.importKey }
+      });
+    }
+    importLocalNames.add(specifier.localName);
   }
 }

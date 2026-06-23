@@ -35,6 +35,7 @@ export function blockedResult(context, ledgers = {}) {
     },
     summary: {
       importSpecifierAdditions: 0,
+      importDeclarationAdditions: 0,
       topLevelDeclarationAdditions: 0,
       changedExistingDeclarations: context.conflicts.filter((conflict) => conflict.code === JsTsSafeMergeConflictCodes.changedExistingDeclaration).length,
       conflicts: context.conflicts.length,

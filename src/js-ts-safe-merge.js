@@ -85,6 +85,7 @@ export function safeMergeJsTsImportsAndDeclarations(input = {}) {
     },
     summary: {
       importSpecifierAdditions: mergePlan.importSpecifierAdditions,
+      importDeclarationAdditions: mergePlan.importDeclarationAdditions,
       topLevelDeclarationAdditions: mergePlan.topLevelDeclarationAdditions,
       changedExistingDeclarations: 0,
       conflicts: 0,

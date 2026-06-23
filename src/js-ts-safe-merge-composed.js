@@ -106,6 +106,7 @@ function composedBlockedResult(input, phase, result, memberAnalysis) {
     },
     summary: {
       importSpecifierAdditions: 0,
+      importDeclarationAdditions: 0,
       topLevelDeclarationAdditions: 0,
       changedExistingDeclarations: result.summary?.changedExistingDeclarations ?? 0,
       conflicts: result.conflicts?.length ?? result.summary?.conflicts ?? 0,

@@ -221,6 +221,7 @@ typedJsTsSafeMergeSemanticArtifacts?.replay satisfies compilerApi.SemanticEditRe
 typedJsTsSafeMergeSemanticArtifacts?.alreadyAppliedReplay satisfies compilerApi.SemanticEditReplay | undefined;
 typedJsTsSafeMergeSemanticArtifacts?.admission.autoMergeClaim satisfies false | undefined;
 typedJsTsSafeMergeSemanticArtifacts?.admission.semanticEquivalenceClaim satisfies false | undefined;
+jsTsSafeMergeWithSemanticArtifacts.summary.importDeclarationAdditions satisfies number;
 
 void typedJsTsSafeMergeSemanticArtifacts;
 

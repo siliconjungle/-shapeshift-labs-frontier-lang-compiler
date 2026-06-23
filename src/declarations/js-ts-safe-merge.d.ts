@@ -102,6 +102,7 @@ export interface JsTsSafeMergeAdmission {
 
 export interface JsTsSafeMergeSummary {
   readonly importSpecifierAdditions: number;
+  readonly importDeclarationAdditions: number;
   readonly topLevelDeclarationAdditions: number;
   readonly changedExistingDeclarations: number;
   readonly conflicts: number;

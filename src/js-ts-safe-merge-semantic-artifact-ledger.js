@@ -1,6 +1,7 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { idFragment } from './native-import-utils.js';
 import { detectLineEnding, normalizeLineEndings } from './js-ts-safe-merge-context.js';
+import { importEntryBindings } from './js-ts-safe-merge-import-entry-utils.js';
 
 function createOperationsFromLedgers(context) {
   const headByKey = new Map(context.head.entries.map((entry) => [entry.key, entry]));
@@ -108,8 +109,8 @@ function insertionAnchorForMergedEntry(entry, index, context) {
   if (previous) return {
     mode: 'after',
     anchorKey: previous.key,
-    anchorSymbolName: entryName(previous),
-    anchorSymbolKind: entrySymbolKind(previous),
+    anchorSymbolName: insertionAnchorName(previous),
+    anchorSymbolKind: insertionAnchorKind(previous),
     headSpan: spanForEntry(previous),
     sourcePath: context.sourcePath
   };
@@ -117,8 +118,8 @@ function insertionAnchorForMergedEntry(entry, index, context) {
   if (next) return {
     mode: 'before',
     anchorKey: next.key,
-    anchorSymbolName: entryName(next),
-    anchorSymbolKind: entrySymbolKind(next),
+    anchorSymbolName: insertionAnchorName(next),
+    anchorSymbolKind: insertionAnchorKind(next),
     headSpan: spanForEntry(next),
     sourcePath: context.sourcePath
   };
@@ -162,13 +163,23 @@ function entryAnchor(entry, sourcePath, language) {
 }
 
 function entryName(entry) {
-  if (entry.kind === 'import') return entry.importInfo?.moduleSpecifier;
+  if (entry.kind === 'import') return importEntryBindings(entry)[0]?.localName ?? entry.importInfo?.moduleSpecifier;
   return entry.names?.join('|') ?? entry.key;
 }
 
 function entrySymbolKind(entry) {
   if (entry.kind === 'import') return 'import';
   return entry.declarationInfo?.declarationKind ?? entry.kind;
+}
+
+function insertionAnchorName(entry) {
+  if (entry.kind === 'import') return entry.importInfo?.moduleSpecifier;
+  return entryName(entry);
+}
+
+function insertionAnchorKind(entry) {
+  if (entry.kind === 'import') return 'module';
+  return entrySymbolKind(entry);
 }
 
 function spanForEntry(entry) {
