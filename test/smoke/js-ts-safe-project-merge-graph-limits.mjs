@@ -45,6 +45,17 @@ assert.equal(sourceByteLimitProject.projectGraphDelta.stages.base.summary.limitC
 assert.equal(sourceByteLimitProject.projectGraphDelta.stages.base.limitConflicts[0].details.limitKind, 'source-bytes');
 assert.equal(sourceByteLimitProject.projectGraphDelta.stages.base.projectImport, undefined);
 
+const invalidDeltaLimitProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_project_graph_delta_invalid_limit',
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  projectGraphLimits: { maxFiles: -1 },
+  baseFiles: { 'src/invalid.ts': 'export const invalid = 1;\n' },
+  workerFiles: { 'src/invalid.ts': 'export const invalid = 1;\n' },
+  headFiles: { 'src/invalid.ts': 'export const invalid = 1;\n' }
+});
+assert.equal(invalidDeltaLimitProject.projectGraphDelta.summary.limitConflicts, 4);
+
 const crossBranchBaseFiles = {
   'src/consumer.ts': "import { stable } from './provider.js';\nexport const used = stable;\n",
   'src/provider.ts': 'export const stable = 1;\n'

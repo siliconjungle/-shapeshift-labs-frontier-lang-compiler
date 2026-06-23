@@ -134,6 +134,20 @@ const duplicateReExportWithoutGraph = safeMergeJsTsImportsAndDeclarations({
 });
 assertBlocked(duplicateReExportWithoutGraph, JsTsSafeMergeConflictCodes.duplicateName, JsTsSafeMergeGateIds.uniqueNames);
 
+const exportStarWithoutGraph = safeMergeJsTsImportsAndDeclarations({
+  id: 'js_ts_safe_merge_rejects_export_star_without_project_graph',
+  language: 'typescript',
+  sourcePath: 'src/barrel.ts',
+  baseSourceText: 'export const stable = 1;\n',
+  workerSourceText: "export const stable = 1;\nexport * from './worker.js';\n",
+  headSourceText: "export const stable = 1;\nexport type * from './head.js';\n"
+});
+assertBlocked(exportStarWithoutGraph, JsTsSafeMergeConflictCodes.duplicateName, JsTsSafeMergeGateIds.uniqueNames);
+assert.equal(
+  exportStarWithoutGraph.conflicts.some((conflict) => conflict.details?.reasonCode === 'source-only-export-star-requires-project-graph'),
+  true
+);
+
 const duplicateDeclaration = safeMergeJsTsImportsAndDeclarations({
   id: 'js_ts_safe_merge_rejects_duplicate_declarations',
   baseSourceText: 'export function stable() { return 1; }\n',

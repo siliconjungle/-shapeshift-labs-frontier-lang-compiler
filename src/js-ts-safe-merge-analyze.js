@@ -1,5 +1,6 @@
 import { JsTsSafeMergeConflictCodes, JsTsSafeMergeGateIds } from './js-ts-safe-merge-constants.js';
 import { addConflict, arraysEqual, sameStatementText } from './js-ts-safe-merge-context.js';
+import { validateCrossSideExportStarAdditions } from './js-ts-safe-merge-export-star-validation.js';
 
 export function analyzeVariantLedger(base, variant, baseIndex, side, context) {
   const projectedBaseKeys = [];
@@ -159,6 +160,7 @@ export function validateIndependentAdditions(base, workerPlan, headPlan, context
   validateAddedEntryNames(workerPlan, declarationNames, context);
   validateAddedEntryNames(headPlan, declarationNames, context);
   validateCrossSideAddedNames(workerPlan, headPlan, context);
+  validateCrossSideExportStarAdditions(workerPlan, headPlan, context);
   validateCrossSideImportAdditions(workerPlan, headPlan, context);
   validateMergedImportAndDeclarationNames(base, workerPlan, headPlan, context);
 }

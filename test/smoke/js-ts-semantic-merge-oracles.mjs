@@ -1,17 +1,15 @@
 import { readFileSync } from 'node:fs';
-
 import { assert } from './helpers.mjs';
 import { createJsTsSemanticConflictSidecars } from '../../src/js-ts-semantic-conflict-sidecars.js';
 import { JsTsSafeMergeConflictCodes, JsTsSafeMergeGateIds, safeMergeJsTsImportsAndDeclarations } from '../../src/js-ts-safe-merge.js';
 import { safeMergeJsTsSource } from '../../src/js-ts-semantic-merge.js';
 import { mergeJsTsSafeMemberAdditions } from '../../src/js-ts-safe-member-merge.js';
-
 const corpus = JSON.parse(readFileSync(new URL('../fixtures/js-ts-semantic-merge/corpus.json', import.meta.url), 'utf8'));
 const fixturesById = new Map(corpus.fixtures.map((fixture) => [fixture.id, fixture]));
-
 for (const coverage of [
   'imports',
   'import-specifier-order',
+  'new-import-declarations',
   'exports',
   'conflicting-exports',
   'composed-safe-merge',
@@ -60,6 +58,7 @@ assertCorpusFixture('unsafe-control-flow-conflict', 'rejected', ['head-anchor-ch
 assertCorpusFixture('unsafe-delete-modify-conflict', 'rejected', ['head-anchor-changed-since-base']);
 assertCorpusFixture('safe-import-declaration-additions', 'accepted');
 assertCorpusFixture('safe-composed-source-additions', 'accepted');
+assertCorpusFixture('unsupported-new-import-declaration', 'rejected', ['new-import-declaration']);
 assertCorpusFixture('unsafe-import-specifier-reorder', 'rejected', ['import-specifier-reordered']);
 assertCorpusFixture('unsafe-missing-source-ledger-span', 'rejected', ['missing-source-ledger-span']);
 assertCorpusFixture('unsafe-computed-key-declaration', 'rejected', ['computed-key']);
@@ -72,6 +71,7 @@ assertCorpusFixture('unsafe-order-sensitive-member-region', 'rejected', [
 
 assertSafeMergeCorpusFixture('safe-import-declaration-additions');
 assertSafeMergeCorpusFixture('safe-composed-source-additions');
+assertSafeMergeCorpusFixture('unsupported-new-import-declaration');
 assertSafeMergeCorpusFixture('unsafe-import-specifier-reorder');
 assertSafeMergeCorpusFixture('unsafe-missing-source-ledger-span');
 assertSafeMergeCorpusFixture('unsafe-computed-key-declaration');

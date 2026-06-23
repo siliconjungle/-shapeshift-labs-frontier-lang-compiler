@@ -214,7 +214,7 @@ function moduleSpecifierForDeclaration(declaration) {
     declaration.metadata?.importPath,
     declaration.metadata?.exportPath,
     declaration.metadata?.source,
-    declaration.symbolKind === 'module' ? declaration.name : undefined
+    declaration.role === 'import' && declaration.symbolKind === 'module' ? declaration.name : undefined
   );
 }
 

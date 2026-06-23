@@ -46,7 +46,7 @@ function addProjectGraphDeltaConflictSummary(projectGraphDelta, conflicts) {
       publicContractConflicts: conflicts.filter((conflict) => conflict.code === 'project-public-contract-delta-conflict').length,
       reExportIdentityConflicts: conflicts.filter((conflict) => conflict.code === 'project-re-export-identity-delta-conflict').length,
       importTargetConflicts: conflicts.filter((conflict) => conflict.code === 'project-import-target-delta-conflict').length,
-      limitConflicts: conflicts.filter((conflict) => conflict.code === 'project-graph-limit-exceeded').length
+      limitConflicts: conflicts.filter((conflict) => conflict.gateId === 'project-graph-limit').length
     }
   };
 }

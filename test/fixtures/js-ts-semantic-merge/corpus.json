@@ -10,6 +10,7 @@
   "coverageRequirements": [
     "imports",
     "import-safe-merge",
+    "new-import-declarations",
     "import-specifier-order",
     "exports",
     "conflicting-exports",
@@ -788,6 +789,49 @@
         "export function stable() { return readFile; }",
         "export const headOnly = stat;",
         "export function workerOnly() { return writeFile; }",
+        ""
+      ]
+    },
+    {
+      "id": "unsupported-new-import-declaration",
+      "title": "independent new import declarations remain unsupported by safe merge",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/new-import-declaration.ts",
+      "coverage": ["imports", "new-import-declarations", "negative-unsafe-case"],
+      "safeMerge": {
+        "mode": "imports-declarations"
+      },
+      "expected": {
+        "outcome": "rejected",
+        "safeMergeStatus": "blocked",
+        "admissionStatus": "blocked",
+        "reasonCodes": ["new-import-declaration"],
+        "gateIds": [
+          "parse-ledger",
+          "preserve-base-order",
+          "stable-existing-declarations",
+          "independent-import-specifiers",
+          "independent-top-level-declarations",
+          "unique-names",
+          "resolved-insertion-anchors"
+        ],
+        "blockedGateIds": ["independent-import-specifiers"],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "export const stable = 1;",
+        ""
+      ],
+      "workerLines": [
+        "import { readFile } from 'node:fs';",
+        "export const stable = 1;",
+        "export const workerOnly = readFile;",
+        ""
+      ],
+      "headLines": [
+        "export const stable = 1;",
+        "export const headOnly = 2;",
         ""
       ]
     },
