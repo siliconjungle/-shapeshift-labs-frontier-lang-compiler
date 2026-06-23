@@ -141,8 +141,6 @@ export function createNativeProjectImportResult(input, imports) {
 }
 
 const PROJECT_SYMBOL_GRAPH_REMAINING_FIELDS = Object.freeze([
-  'moduleEdges[].packageName',
-  'moduleEdges[].packageExportCondition',
   'reExportIdentities[].originSymbolId',
   'reExportIdentities[].exportedSymbolId',
   'reExportIdentities[].localSymbolId',
@@ -244,6 +242,9 @@ function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documents
     resolvedModulePath: resolution?.path,
     targetDocumentId: resolution?.documentId,
     resolutionKind: resolution?.kind,
+    packageName: resolution?.packageName,
+    packageSubpath: resolution?.packageSubpath,
+    packageExportCondition: resolution?.packageExportCondition,
     importKind: firstString(moduleEdge.importKind, value.importKind, symbolMetadata.importKind),
     exportKind: firstString(moduleEdge.exportKind, value.exportKind, symbolMetadata.exportKind),
     importedName: firstString(moduleEdge.importedName, value.importedName, symbolMetadata.importedName),

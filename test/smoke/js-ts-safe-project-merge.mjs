@@ -133,7 +133,42 @@ const aliasEdge = aliasProject.outputProjectSymbolGraph.importEdges.find((edge) 
 assert.equal(aliasProject.status, 'merged');
 assert.equal(aliasEdge.resolvedModulePath, 'src/thing.ts');
 assert.equal(aliasEdge.resolutionKind, 'path-alias-source');
+assert.equal(aliasEdge.packageName, undefined);
 assert.equal(aliasEdge.resolvedTargetSymbolId, 'symbol:typescript:export:thing');
+
+const packageGraphProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_package_graph',
+  language: 'typescript',
+  includeOutputProjectSymbolGraph: true,
+  moduleResolution: {
+    packages: {
+      '@pkg/core': {
+        root: 'packages/core',
+        exports: { './utils': { import: './src/utils.ts', default: './dist/utils.js' } }
+      }
+    },
+    packageExportConditions: ['import', 'default']
+  },
+  baseFiles: {
+    'src/index.ts': "import { util } from '@pkg/core/utils';\nexport const used = util;\n",
+    'packages/core/src/utils.ts': 'export const util = 1;\n'
+  },
+  workerFiles: {
+    'src/index.ts': "import { util } from '@pkg/core/utils';\nexport const used = util;\nexport const workerOnly = 1;\n",
+    'packages/core/src/utils.ts': 'export const util = 1;\n'
+  },
+  headFiles: {
+    'src/index.ts': "import { util } from '@pkg/core/utils';\nexport const used = util;\n",
+    'packages/core/src/utils.ts': 'export const util = 1;\n'
+  }
+});
+const packageGraphEdge = packageGraphProject.outputProjectSymbolGraph.importEdges.find((edge) => edge.moduleSpecifier === '@pkg/core/utils' && edge.importedName === 'util');
+assert.equal(packageGraphProject.status, 'merged');
+assert.equal(packageGraphEdge.packageName, '@pkg/core');
+assert.equal(packageGraphEdge.packageSubpath, './utils');
+assert.equal(packageGraphEdge.packageExportCondition, 'import');
+assert.equal(packageGraphEdge.resolvedModulePath, 'packages/core/src/utils.ts');
+assert.equal(packageGraphEdge.resolvedTargetSymbolId, 'symbol:typescript:export:util');
 
 const spanLedger = { spans: [{ id: 'source-span', span: { start: 0, end: 1 } }] };
 const ledgerRequired = safeMergeJsTsProject({

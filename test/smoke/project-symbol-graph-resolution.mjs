@@ -49,4 +49,48 @@ const aliasEdge = aliasGraph.importEdges.find((edge) => edge.moduleSpecifier ===
 assert.equal(aliasEdge.resolvedModulePath, 'src/thing.ts');
 assert.equal(aliasEdge.targetDocumentId, 'doc_src_thing_ts');
 assert.equal(aliasEdge.resolutionKind, 'path-alias-source');
+assert.equal(aliasEdge.packageName, undefined);
 assert.equal(aliasEdge.resolvedTargetSymbolId, 'symbol:typescript:export:thing');
+
+const packageProject = await importNativeProject({
+  id: 'project_symbol_graph_package_resolution',
+  projectRoot: '.',
+  moduleResolution: {
+    packages: {
+      '@pkg/core': {
+        root: 'packages/core',
+        exports: {
+          './utils': { types: './src/utils.d.ts', import: './src/utils.ts', default: './dist/utils.js' }
+        }
+      }
+    },
+    packageExportConditions: ['types', 'import', 'default']
+  },
+  sources: [{
+    language: 'typescript',
+    sourcePath: 'src/index.ts',
+    sourceText: "import { util } from '@pkg/core/utils';\nimport { jsx } from 'react/jsx-runtime';\nexport const used = util;\nexport const view = jsx;\n",
+    metadata: { semanticImportExpected: true }
+  }, {
+    language: 'typescript',
+    sourcePath: 'packages/core/src/utils.ts',
+    sourceText: 'export const util = 1;\n',
+    metadata: { semanticImportExpected: true }
+  }]
+});
+
+const packageGraph = packageProject.projectSymbolGraph;
+const packageEdge = packageGraph.importEdges.find((edge) => edge.moduleSpecifier === '@pkg/core/utils' && edge.importedName === 'util');
+assert.equal(packageEdge.packageName, '@pkg/core');
+assert.equal(packageEdge.packageSubpath, './utils');
+assert.equal(packageEdge.packageExportCondition, 'import');
+assert.equal(packageEdge.resolvedModulePath, 'packages/core/src/utils.ts');
+assert.equal(packageEdge.resolutionKind, 'package-source');
+assert.equal(packageEdge.resolvedTargetSymbolId, 'symbol:typescript:export:util');
+const externalEdge = packageGraph.importEdges.find((edge) => edge.moduleSpecifier === 'react/jsx-runtime' && edge.importedName === 'jsx');
+assert.equal(externalEdge.packageName, 'react');
+assert.equal(externalEdge.packageSubpath, './jsx-runtime');
+assert.equal(externalEdge.resolutionKind, 'package-external');
+assert.equal(externalEdge.resolvedModulePath, undefined);
+assert.equal(packageGraph.remainingFields.includes('moduleEdges[].packageName'), false);
+assert.equal(packageGraph.remainingFields.includes('moduleEdges[].packageExportCondition'), false);

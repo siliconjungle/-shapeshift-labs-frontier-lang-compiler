@@ -213,6 +213,30 @@ When `includeOutputProjectSymbolGraph` is enabled, the same
 `moduleResolution` shape is used for output graph artifacts. Resolution is
 runtime-neutral: `baseUrl`, `paths`, `aliases`, and `compilerOptions.paths`
 are matched against the supplied project files, not the host filesystem.
+Bare package imports also get explicit package identity. If `packages` is
+provided, package export maps can resolve back to supplied workspace sources
+and record the selected export condition:
+
+```js
+const project = safeMergeJsTsProject({
+  includeOutputProjectSymbolGraph: true,
+  moduleResolution: {
+    packages: {
+      '@pkg/core': {
+        root: 'packages/core',
+        exports: { './utils': { import: './src/utils.ts', default: './dist/utils.js' } }
+      }
+    },
+    packageExportConditions: ['import', 'default']
+  },
+  baseFiles,
+  workerFiles,
+  headFiles
+});
+
+console.log(project.outputProjectSymbolGraph.importEdges[0].packageName); // "@pkg/core"
+console.log(project.outputProjectSymbolGraph.importEdges[0].packageExportCondition); // "import"
+```
 
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 

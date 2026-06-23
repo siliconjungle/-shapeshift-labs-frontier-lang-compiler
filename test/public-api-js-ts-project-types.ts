@@ -3,7 +3,9 @@ import * as compilerApi from '../src/index.js';
 const typedModuleResolution: compilerApi.NativeProjectModuleResolutionOptions = {
   baseUrl: '.',
   paths: { '@app/*': ['src/*'] },
-  aliases: { '#shared': 'src/shared.ts' }
+  aliases: { '#shared': 'src/shared.ts' },
+  packages: { '@pkg/core': { root: 'packages/core', exports: { './utils': { import: './src/utils.ts' } } } },
+  packageExportConditions: ['import', 'default']
 };
 
 const jsTsProjectSafeMerge = compilerApi.safeMergeJsTsProject({

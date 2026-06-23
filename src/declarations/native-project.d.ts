@@ -79,8 +79,6 @@ export interface ImportNativeProjectOptions {
 }
 
 export type NativeProjectSymbolGraphRemainingField =
-  | 'moduleEdges[].packageName'
-  | 'moduleEdges[].packageExportCondition'
   | 'reExportIdentities[].originSymbolId'
   | 'reExportIdentities[].exportedSymbolId'
   | 'reExportIdentities[].localSymbolId'
@@ -112,13 +110,15 @@ export interface NativeProjectSymbolGraphModuleEdgeRecord {
   readonly resolvedModulePath?: string;
   readonly targetDocumentId?: string;
   readonly resolvedTargetSymbolId?: string;
-  readonly resolutionKind?: 'relative-source' | 'relative-missing' | 'alias-source' | 'alias-missing' | 'path-alias-source' | 'path-alias-missing' | 'base-url-source' | 'base-url-missing' | string;
+  readonly resolutionKind?: 'relative-source' | 'relative-missing' | 'alias-source' | 'alias-missing' | 'path-alias-source' | 'path-alias-missing' | 'base-url-source' | 'base-url-missing' | 'package-source' | 'package-missing' | 'package-external' | string;
+  readonly packageName?: string;
+  readonly packageSubpath?: string;
+  readonly packageExportCondition?: string;
   readonly importKind?: string;
   readonly exportKind?: string;
   readonly importedName?: string;
   readonly exportedName?: string;
-  readonly localName?: string;
-  readonly namespace?: string;
+  readonly localName?: string; readonly namespace?: string;
   readonly isTypeOnly?: boolean;
   readonly isReExport?: boolean;
   readonly publicContract?: boolean;
