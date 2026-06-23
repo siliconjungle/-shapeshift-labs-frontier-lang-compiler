@@ -15,7 +15,7 @@ export function semanticIndexFromNativeDeclarations(declarations, input, options
       symbolId,
       regionKind: declarationRegionKind(declaration)
     };
-    const occurrenceId = `occ_${idFragment(declaration.nativeNode.id)}_${declaration.role ?? 'definition'}`;
+    const occurrenceId = `occ_${idFragment(declaration.nativeNode.id)}_${idFragment(symbolId)}_${declaration.role ?? 'definition'}`;
     const ownershipRegion = semanticOwnershipRegionForDeclaration(input, {
       ...normalizedDeclaration,
       nodeId: declaration.nativeNode.id,
@@ -24,7 +24,7 @@ export function semanticIndexFromNativeDeclarations(declarations, input, options
       span: declaration.nativeNode.span,
       symbolId
     }, documentId);
-    const relationId = `rel_${idFragment(documentId)}_${idFragment(declaration.nativeNode.id)}`;
+    const relationId = `rel_${idFragment(documentId)}_${idFragment(declaration.nativeNode.id)}_${idFragment(symbolId)}`;
     const moduleEdge = moduleEdgeForDeclaration(normalizedDeclaration, input, documentId, relationId, ownershipRegion);
     const publicContractRegion = publicContractRegionForDeclaration(normalizedDeclaration, ownershipRegion, moduleEdge);
     const reExportIdentity = reExportIdentityForDeclaration(normalizedDeclaration, input, documentId, relationId, ownershipRegion, moduleEdge);
@@ -76,17 +76,17 @@ export function semanticIndexFromNativeDeclarations(declarations, input, options
       ...(Object.keys(graphMetadata).length ? { metadata: graphMetadata } : {})
     });
     facts.push({
-      id: `fact_${idFragment(declaration.nativeNode.id)}_kind`,
+      id: `fact_${idFragment(declaration.nativeNode.id)}_${idFragment(symbolId)}_kind`,
       predicate: 'nativeKind',
       subjectId: symbolId,
       value: declaration.nativeNode.languageKind
     }, {
-      id: `fact_${idFragment(declaration.nativeNode.id)}_ownership_region`,
+      id: `fact_${idFragment(declaration.nativeNode.id)}_${idFragment(symbolId)}_ownership_region`,
       predicate: 'semanticOwnershipRegion',
       subjectId: symbolId,
       value: ownershipRegion
     }, {
-      id: `fact_${idFragment(declaration.nativeNode.id)}_ownership_region_taxonomy`,
+      id: `fact_${idFragment(declaration.nativeNode.id)}_${idFragment(symbolId)}_ownership_region_taxonomy`,
       predicate: 'semanticOwnershipRegionTaxonomy',
       subjectId: symbolId,
       value: {
@@ -96,7 +96,7 @@ export function semanticIndexFromNativeDeclarations(declarations, input, options
       }
     }, ...projectSymbolGraphFacts({ moduleEdge, publicContractRegion, reExportIdentity, relationId, symbolId, evidenceId }));
     mappings.push({
-      id: `map_${idFragment(declaration.nativeNode.id)}`,
+      id: `map_${idFragment(declaration.nativeNode.id)}_${idFragment(symbolId)}`,
       nativeAstNodeId: declaration.nativeNode.id,
       semanticSymbolId: symbolId,
       semanticOccurrenceId: occurrenceId,
@@ -197,7 +197,8 @@ function moduleEdgeForDeclaration(declaration, input, documentId, relationId, ow
     exportedName: declaration.exportedName ?? declaration.metadata?.exportedName,
     localName: declaration.localName ?? declaration.metadata?.localName,
     namespace: declaration.namespace ?? declaration.metadata?.namespace,
-    isTypeOnly: declaration.isTypeOnly ?? declaration.metadata?.isTypeOnly,
+    isTypeOnly: declaration.isTypeOnly ?? declaration.metadata?.isTypeOnly ?? declaration.metadata?.typeOnly,
+    exportStar: declaration.exportStar ?? declaration.metadata?.exportStar,
     isReExport: edgeKind === 're-export',
     publicContract: publicContractForDeclaration(declaration, edgeKind)
   });
@@ -255,7 +256,8 @@ function reExportIdentityForDeclaration(declaration, input, documentId, relation
     importedName: declaration.importedName ?? declaration.metadata?.importedName,
     localName: declaration.localName ?? declaration.metadata?.localName,
     namespace: declaration.namespace ?? declaration.metadata?.namespace,
-    isTypeOnly: declaration.isTypeOnly ?? declaration.metadata?.isTypeOnly,
+    isTypeOnly: declaration.isTypeOnly ?? declaration.metadata?.isTypeOnly ?? declaration.metadata?.typeOnly,
+    exportStar: declaration.exportStar ?? declaration.metadata?.exportStar,
     symbolId: declaration.symbolId,
     relationId,
     ownershipRegionId: ownershipRegion.id,
@@ -267,7 +269,7 @@ function reExportIdentityForDeclaration(declaration, input, documentId, relation
 function projectSymbolGraphFacts({ moduleEdge, publicContractRegion, reExportIdentity, relationId, symbolId, evidenceId }) {
   return [
     moduleEdge ? {
-      id: `fact_${idFragment(relationId)}_module_edge`,
+      id: graphFactId(relationId, symbolId, 'module_edge'),
       predicate: 'moduleEdge',
       subjectId: relationId,
       objectId: symbolId,
@@ -275,7 +277,7 @@ function projectSymbolGraphFacts({ moduleEdge, publicContractRegion, reExportIde
       evidenceIds: [evidenceId]
     } : undefined,
     reExportIdentity ? {
-      id: `fact_${idFragment(relationId)}_re_export_identity`,
+      id: graphFactId(relationId, symbolId, 're_export_identity'),
       predicate: 'reExportIdentity',
       subjectId: symbolId,
       objectId: relationId,
@@ -283,7 +285,7 @@ function projectSymbolGraphFacts({ moduleEdge, publicContractRegion, reExportIde
       evidenceIds: [evidenceId]
     } : undefined,
     publicContractRegion ? {
-      id: `fact_${idFragment(symbolId)}_public_contract_region`,
+      id: graphFactId(relationId, symbolId, 'public_contract_region'),
       predicate: 'publicContractRegion',
       subjectId: symbolId,
       objectId: publicContractRegion.id,
@@ -300,6 +302,10 @@ function hashParts(sourceHash) {
     sourceHash: text,
     ...(separator > 0 ? { algorithm: text.slice(0, separator), value: text.slice(separator + 1) } : { value: text })
   };
+}
+
+function graphFactId(relationId, symbolId, suffix) {
+  return `fact_${idFragment(hashSemanticValue([relationId, symbolId, suffix]))}_${suffix}`;
 }
 
 function compactRecord(record) {

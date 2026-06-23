@@ -254,7 +254,7 @@ function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documents
     localName: firstString(moduleEdge.localName, value.localName, symbolMetadata.localName),
     namespace: firstString(moduleEdge.namespace, value.namespace, symbolMetadata.namespace),
     exportStar: firstBoolean(moduleEdge.exportStar, value.exportStar, symbolMetadata.exportStar),
-    isTypeOnly: firstBoolean(moduleEdge.isTypeOnly, value.isTypeOnly),
+    isTypeOnly: firstBoolean(moduleEdge.isTypeOnly, value.isTypeOnly, symbolMetadata.isTypeOnly, symbolMetadata.typeOnly),
     isReExport: firstBoolean(moduleEdge.isReExport, value.isReExport, symbolMetadata.reexport) ?? (relation.predicate === 'exports' && Boolean(moduleSpecifier)),
     publicContract: firstBoolean(moduleEdge.publicContract, value.publicContract, metadata.publicContract),
     evidenceIds: uniqueStrings([...(relation.evidenceIds ?? []), ...(fact?.evidenceIds ?? [])])

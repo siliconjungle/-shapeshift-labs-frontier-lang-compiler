@@ -277,6 +277,13 @@ For `export * from './module.js'`, project graphs fan out re-export identities
 for each named export in the resolved target document and omit `default`, which
 matches JavaScript module semantics.
 
+When using `createTypeScriptCompilerNativeImporterAdapter`, compiler AST imports
+emit the same binding-level module facts instead of only statement-level module
+edges. Default, namespace, named, type-only, side-effect, re-export, export-star,
+local export, `export default`, and `export =` declarations carry `importKind`,
+`exportKind`, `localName`, `importedName`, `exportedName`, `isTypeOnly`, and
+public-contract metadata into the semantic index and project symbol graph.
+
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 
 ```js

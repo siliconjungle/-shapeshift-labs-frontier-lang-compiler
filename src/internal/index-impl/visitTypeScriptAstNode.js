@@ -23,17 +23,20 @@ export function visitTypeScriptAstNode(node, sourceFile, context, propertyPath, 
   } else if (Array.isArray(node.children)) {
     node.children.forEach(visitChild);
   }
-  const declaration = typeScriptDeclaration(node, kind, id, context.input, context.options);
+  const declarationResult = typeScriptDeclaration(node, kind, id, context.input, context.options);
+  const declarations = Array.isArray(declarationResult) ? declarationResult.filter(Boolean) : declarationResult ? [declarationResult] : [];
+  const primaryDeclaration = declarations[0];
   const nativeNode = {
     id,
     kind,
     languageKind: `${context.input.language}.${kind}`,
     span,
-    value: declaration?.name ?? typeScriptNodeValue(node),
+    value: primaryDeclaration?.name ?? typeScriptNodeValue(node),
     fields: primitiveTypeScriptFields(node, kind),
     children,
     metadata: {
-      ...declaration?.metadata,
+      ...primaryDeclaration?.metadata,
+      ...(declarations.length > 1 ? { declarationCount: declarations.length } : {}),
       astFormat: context.options.astFormat,
       propertyPath,
       pos: numberOrUndefined(node.pos),
@@ -41,6 +44,6 @@ export function visitTypeScriptAstNode(node, sourceFile, context, propertyPath, 
     }
   };
   context.nodes[id] = nativeNode;
-  if (declaration) context.declarations.push({ ...declaration, nativeNode });
+  for (const declaration of declarations) context.declarations.push({ ...declaration, nativeNode });
   return id;
 }
