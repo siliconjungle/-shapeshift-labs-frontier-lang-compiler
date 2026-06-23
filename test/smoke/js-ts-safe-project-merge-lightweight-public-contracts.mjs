@@ -112,3 +112,48 @@ for (const fixture of fixtures) {
   assert.equal(conflict.details.identityKey, `source#${fixture.sourcePath}#export#${fixture.symbolName}`);
   assert.equal(conflict.details.worker.contractHash === conflict.details.head.contractHash, false);
 }
+
+const exportedDeleteSourcePath = 'src/lightweight-public-delete.ts';
+const exportedDeleteBase = [
+  'export interface PublicApi {',
+  '  read(): string;',
+  '}',
+  ''
+].join('\n');
+const exportedDeleteHead = [
+  'export interface PublicApi {',
+  '  read(): string;',
+  '  write(value: string): void;',
+  '}',
+  ''
+].join('\n');
+const exportedDeleteProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_lightweight_exported_delete_public_contract_delta_conflict',
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  allowFileDeletes: true,
+  files: [{
+    sourcePath: exportedDeleteSourcePath,
+    baseSourceText: exportedDeleteBase,
+    workerDeleted: true,
+    headSourceText: exportedDeleteHead
+  }],
+  policyByPath: {
+    [exportedDeleteSourcePath]: { unorderedRegions: [{ kind: 'interface', name: 'PublicApi', order: 'non-semantic' }] }
+  }
+});
+const exportedDeleteConflict = exportedDeleteProject.conflicts.find((record) => record.code === 'project-public-contract-delta-conflict');
+assert.equal(exportedDeleteProject.status, 'blocked');
+assert.equal(exportedDeleteProject.summary.operations['worker-deleted'], 1);
+assert.equal(exportedDeleteProject.summary.projectGraphPublicContractConflicts, 1);
+assert.equal(exportedDeleteProject.admission.reasonCodes.includes('project-public-contract-delta-conflict'), true);
+assert.equal(exportedDeleteProject.projectGraphDelta.summary.publicContractConflicts, 1);
+assert.equal(exportedDeleteProject.projectGraphDelta.stages.base.summary.publicContractRegions, 1);
+assert.equal(exportedDeleteProject.projectGraphDelta.stages.worker.summary.publicContractRegions, 0);
+assert.equal(exportedDeleteProject.projectGraphDelta.stages.head.summary.publicContractRegions, 1);
+assert.equal(exportedDeleteProject.projectGraphDelta.stages.output.summary.publicContractRegions, 0);
+assert.equal(exportedDeleteConflict.details.identityKey, `source#${exportedDeleteSourcePath}#export#PublicApi`);
+assert.equal(exportedDeleteConflict.details.base.exportedName, 'PublicApi');
+assert.equal(exportedDeleteConflict.details.worker, undefined);
+assert.equal(exportedDeleteConflict.details.head.exportedName, 'PublicApi');
+assert.equal(exportedDeleteConflict.details.output, undefined);

@@ -179,6 +179,12 @@ const movedDeclarationProjection = projectSemanticEditScriptToSource({
 assert.equal(movedDeclarationProjection.status, 'projected');
 assert.equal(movedDeclarationProjection.sourceText, movedDeclarationExpected);
 assert.equal(movedDeclarationProjection.sourceText === movedDeclarationWorker.replace('return 1;', 'return 10;'), false);
+assert.equal(movedDeclarationWorker.indexOf('export function third()') < movedDeclarationWorker.indexOf('export function second()'), true);
+assert.equal(movedDeclarationProjection.sourceText.indexOf('export function second()') < movedDeclarationProjection.sourceText.indexOf('export function third()'), true);
+assert.equal(movedDeclarationProjection.edits.length, 1);
+assert.equal(movedDeclarationProjection.edits[0].symbolName, 'second');
+assert.equal(movedDeclarationProjection.edits[0].sourceRangeKind, 'body-content');
+assert.equal(movedDeclarationProjection.edits[0].replacementText, '\n  return 20;\n');
 
 const movedDeclarationReplay = replaySemanticEditProjection({
   id: 'semantic_edit_moved_declaration_sibling_replay',
@@ -189,3 +195,7 @@ const movedDeclarationReplay = replaySemanticEditProjection({
 });
 assert.equal(movedDeclarationReplay.status, 'accepted-clean');
 assert.equal(movedDeclarationReplay.outputSourceText, movedDeclarationExpected);
+assert.equal(movedDeclarationReplay.outputSourceText.indexOf('export function second()') < movedDeclarationReplay.outputSourceText.indexOf('export function third()'), true);
+assert.equal(movedDeclarationReplay.edits.length, 1);
+assert.equal(movedDeclarationReplay.edits[0].symbolName, 'second');
+assert.equal(movedDeclarationReplay.edits[0].sourceRangeKind, 'body-content');

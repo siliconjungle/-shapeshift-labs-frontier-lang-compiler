@@ -152,6 +152,21 @@ assert.equal(staleHashlessGraphProject.status, 'merged');
 assert.equal(staleHashlessGraphProject.outputProjectImport.metadata.outputProjectImportSource.matchedSuppliedImports, 0);
 assert.equal(staleHashlessGraphProject.outputProjectImport.metadata.outputProjectImportSource.scannerFallbackImports, 2);
 
+const exportedRenameBlockedBase = 'export function oldName() { return 1; }\n';
+const exportedRenameBlockedProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_exported_rename_blocked_oracle',
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  baseFiles: { 'src/rename.ts': exportedRenameBlockedBase },
+  workerFiles: { 'src/rename.ts': 'export function newName() { return 1; }\n' },
+  headFiles: { 'src/rename.ts': exportedRenameBlockedBase }
+});
+assert.equal(exportedRenameBlockedProject.status, 'blocked');
+assert.equal(exportedRenameBlockedProject.projectGraphDelta, undefined);
+assert.equal(exportedRenameBlockedProject.summary.blockedFiles, 1);
+assert.equal(exportedRenameBlockedProject.admission.reasonCodes.includes('top-level-order-changed'), true);
+assert.equal(exportedRenameBlockedProject.conflicts.some((conflict) => conflict.code === 'top-level-order-changed' && conflict.details?.expected?.includes('declaration:oldName')), true);
+
 const graphDeltaBaseFiles = {
   'src/options.ts': [
     'export interface Options {',

@@ -9,14 +9,18 @@
   },
   "coverageRequirements": [
     "imports",
+    "type-only-imports",
+    "value-import-dependencies",
     "import-safe-merge",
     "new-import-declarations",
     "import-specifier-order",
     "import-shape-additions",
     "exports",
+    "exported-types",
     "conflicting-exports",
     "top-level-declarations",
     "declaration-safe-merge",
+    "dependency-sensitive-edits",
     "composed-safe-merge",
     "type-interface-members",
     "interfaces",
@@ -716,6 +720,53 @@
         "export const stable = readFile;",
         "export function headOnly() { return stat; }",
         "export const workerOnly = writeFile;",
+        ""
+      ]
+    },
+    {
+      "id": "safe-type-value-import-dependencies",
+      "title": "type-only and value import dependency additions merge with exported type declarations",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/ledger/type-value-deps.ts",
+      "coverage": ["imports", "type-only-imports", "value-import-dependencies", "import-safe-merge", "exports", "exported-types", "interfaces", "type-aliases", "declaration-safe-merge", "dependency-sensitive-edits"],
+      "safeMerge": {
+        "mode": "imports-declarations"
+      },
+      "expected": {
+        "outcome": "accepted",
+        "safeMergeStatus": "merged",
+        "admissionStatus": "auto-merge-candidate",
+        "reasonCodes": [],
+        "gateIds": ["independent-import-specifiers", "independent-top-level-declarations", "unique-names"],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "import { type BaseModel, decode } from './schema.js';",
+        "export interface ApiModel { value: BaseModel; }",
+        "export const stable = decode;",
+        ""
+      ],
+      "workerLines": [
+        "import { type BaseModel, type WorkerShape, decode } from './schema.js';",
+        "export interface ApiModel { value: BaseModel; }",
+        "export type WorkerModel = ApiModel & WorkerShape;",
+        "export const stable = decode;",
+        ""
+      ],
+      "headLines": [
+        "import { type BaseModel, decode, encode } from './schema.js';",
+        "export interface ApiModel { value: BaseModel; }",
+        "export function serialize(value: ApiModel) { return encode(value); }",
+        "export const stable = decode;",
+        ""
+      ],
+      "expectedLines": [
+        "import { type BaseModel, decode, encode, type WorkerShape } from './schema.js';",
+        "export interface ApiModel { value: BaseModel; }",
+        "export function serialize(value: ApiModel) { return encode(value); }",
+        "export type WorkerModel = ApiModel & WorkerShape;",
+        "export const stable = decode;",
         ""
       ]
     },

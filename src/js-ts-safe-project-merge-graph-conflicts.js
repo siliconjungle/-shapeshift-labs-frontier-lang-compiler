@@ -6,6 +6,7 @@ function outputProjectGraphConflicts(projectSymbolGraph) {
   const limitConflicts = Array.isArray(projectSymbolGraph?.limitConflicts) ? projectSymbolGraph.limitConflicts : [];
   projectSymbolGraph = projectSymbolGraph?.projectSymbolGraph ?? projectSymbolGraph;
   const importEdges = Array.isArray(projectSymbolGraph?.importEdges) ? projectSymbolGraph.importEdges : [];
+  const exportEdges = Array.isArray(projectSymbolGraph?.exportEdges) ? projectSymbolGraph.exportEdges : [];
   const missingModuleGroups = new Map();
   const missingSymbolGroups = new Map();
   for (const edge of importEdges) {
@@ -16,7 +17,7 @@ function outputProjectGraphConflicts(projectSymbolGraph) {
       missingModuleGroups.set(key, group);
       continue;
     }
-    if (isMissingProjectImportTargetEdge(edge)) {
+    if (isMissingProjectImportTargetEdge(edge, exportEdges)) {
       const key = [edge.sourcePath, edge.moduleSpecifier, projectImportTargetName(edge), edge.resolvedModulePath].join('\u0000');
       const group = missingSymbolGroups.get(key) ?? [];
       group.push(edge);
@@ -81,8 +82,11 @@ function isMissingProjectImportEdge(edge) {
   return typeof edge?.resolutionKind === 'string' && edge.resolutionKind.endsWith('-missing');
 }
 
-function isMissingProjectImportTargetEdge(edge) {
-  return hasResolvedProjectModule(edge) && Boolean(projectImportTargetName(edge)) && !edge.resolvedTargetSymbolId;
+function isMissingProjectImportTargetEdge(edge, exportEdges = []) {
+  return hasResolvedProjectModule(edge)
+    && Boolean(projectImportTargetName(edge))
+    && !edge.resolvedTargetSymbolId
+    && !commonJsRequireResolvedByExportAssignment(edge, exportEdges);
 }
 
 function hasResolvedProjectModule(edge) {
@@ -94,6 +98,23 @@ function projectImportTargetName(edge) {
   const name = edge?.importedName ?? edge?.localName ?? edge?.exportedName;
   if (!name || name === '*') return undefined;
   return String(name);
+}
+
+function commonJsRequireResolvedByExportAssignment(edge, exportEdges) {
+  if (edge?.importKind !== 'commonjs-require' || projectImportTargetName(edge) !== 'default') return false;
+  return exportEdges.some((exportEdge) => exportEdge?.exportKind === 'assignment'
+    && exportEdge.exportedName === 'module.exports'
+    && sameProjectDocument(edge, exportEdge));
+}
+
+function sameProjectDocument(importEdge, exportEdge) {
+  if (importEdge?.targetDocumentId && exportEdge?.sourceDocumentId) {
+    return importEdge.targetDocumentId === exportEdge.sourceDocumentId;
+  }
+  if (importEdge?.resolvedModulePath && exportEdge?.sourcePath) {
+    return importEdge.resolvedModulePath === exportEdge.sourcePath;
+  }
+  return false;
 }
 
 function duplicateReExportIdentityConflicts(records = []) {

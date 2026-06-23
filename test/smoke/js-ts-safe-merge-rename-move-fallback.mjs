@@ -1,5 +1,5 @@
 import { assert } from './helpers.mjs';
-import { JsTsSafeMergeConflictCodes, safeMergeJsTsSource } from './compiler-api.mjs';
+import { JsTsSafeMergeConflictCodes, JsTsSafeMergeGateIds, safeMergeJsTsSource } from './compiler-api.mjs';
 
 const topLevelRenameBase = [
   'export function step(v: number) {',
@@ -25,7 +25,60 @@ const topLevelRenameWithSibling = safeMergeJsTsSource({
 assert.equal(topLevelRenameWithSibling.status, 'blocked');
 assert.equal(topLevelRenameWithSibling.admission.reasonCodes.includes(JsTsSafeMergeConflictCodes.topLevelOrderChanged), true);
 assert.equal(topLevelRenameWithSibling.admission.reasonCodes.includes(JsTsSafeMergeConflictCodes.changedExistingDeclaration), true);
+assert.equal(topLevelRenameWithSibling.admission.reasonCodes.includes(JsTsSafeMergeConflictCodes.topLevelRenamePublicExportContract), true);
+assert.equal(topLevelRenameWithSibling.summary.topLevelDeclarationRenames, 1);
 assert.equal(topLevelRenameWithSibling.semanticArtifacts, undefined);
+
+const privateTopLevelRenameBase = topLevelRenameBase.replaceAll('export function', 'function');
+const privateTopLevelRenameWorker = privateTopLevelRenameBase.replace('function step', 'function renamedStep');
+const privateTopLevelRenameHead = privateTopLevelRenameBase.replace('return 0;', 'return 10;');
+const privateTopLevelRenameExpected = [
+  'function renamedStep(v: number) {',
+  '  return v + 1;',
+  '}',
+  'function keep() {',
+  '  return 10;',
+  '}',
+  ''
+].join('\n');
+
+const privateTopLevelRenameWithSibling = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_private_top_level_rename_sibling',
+  language: 'typescript',
+  sourcePath: 'src/private-top-level-rename.ts',
+  baseSourceText: privateTopLevelRenameBase,
+  workerSourceText: privateTopLevelRenameWorker,
+  headSourceText: privateTopLevelRenameHead
+});
+
+assert.equal(privateTopLevelRenameWithSibling.status, 'merged');
+assert.equal(privateTopLevelRenameWithSibling.mergedSourceText, privateTopLevelRenameExpected);
+assert.equal(privateTopLevelRenameWithSibling.metadata.composed.phase, 'top-level-rename-semantic-edit-fallback');
+assert.equal(privateTopLevelRenameWithSibling.metadata.composed.originalReasonCodes.includes(JsTsSafeMergeConflictCodes.topLevelOrderChanged), true);
+assert.equal(privateTopLevelRenameWithSibling.metadata.composed.originalReasonCodes.includes(JsTsSafeMergeConflictCodes.changedExistingDeclaration), true);
+assert.equal(privateTopLevelRenameWithSibling.summary.topLevelDeclarationRenames, 1);
+assert.equal(privateTopLevelRenameWithSibling.summary.semanticEditOperations, 4);
+assert.equal(privateTopLevelRenameWithSibling.summary.semanticEditAppliedOperations, 2);
+assert.equal(privateTopLevelRenameWithSibling.semanticArtifacts.status, 'verified');
+assert.equal(privateTopLevelRenameWithSibling.semanticArtifacts.script.admission.status, 'auto-merge-candidate');
+assert.equal(privateTopLevelRenameWithSibling.semanticArtifacts.projection.status, 'projected');
+assert.equal(privateTopLevelRenameWithSibling.semanticArtifacts.replay.status, 'accepted-clean');
+assert.equal(privateTopLevelRenameWithSibling.semanticArtifacts.alreadyAppliedReplay.status, 'already-applied');
+assert.equal(privateTopLevelRenameWithSibling.gates.every((gate) => gate.status === 'passed'), true);
+
+const privateTopLevelRenameConflict = safeMergeJsTsSource({
+  id: 'js_ts_safe_merge_semantic_edit_fallback_private_top_level_rename_conflict',
+  language: 'typescript',
+  sourcePath: 'src/private-top-level-rename.ts',
+  baseSourceText: privateTopLevelRenameBase,
+  workerSourceText: privateTopLevelRenameWorker,
+  headSourceText: privateTopLevelRenameBase.replace('return v + 1;', 'return v + 3;')
+});
+
+assert.equal(privateTopLevelRenameConflict.status, 'blocked');
+assert.equal(privateTopLevelRenameConflict.semanticArtifacts.status, 'blocked');
+assert.equal(privateTopLevelRenameConflict.semanticArtifacts.script.admission.status, 'conflict');
+assert.equal(privateTopLevelRenameConflict.admission.reasonCodes.includes('head-anchor-changed-since-base'), true);
 
 const classMethodRenameBase = [
   'export class Service {',
@@ -192,3 +245,18 @@ assert.equal(movedDeclarationWithSibling.status, 'blocked');
 assert.equal(movedDeclarationWithSibling.admission.reasonCodes.includes(JsTsSafeMergeConflictCodes.topLevelOrderChanged), true);
 assert.equal(movedDeclarationWithSibling.admission.reasonCodes.includes(JsTsSafeMergeConflictCodes.changedExistingDeclaration), true);
 assert.equal(movedDeclarationWithSibling.semanticArtifacts, undefined);
+const movedDeclarationOrderConflict = movedDeclarationWithSibling.conflicts.find((conflict) => conflict.code === JsTsSafeMergeConflictCodes.topLevelOrderChanged);
+assert.equal(movedDeclarationOrderConflict?.gateId, JsTsSafeMergeGateIds.preserveBaseOrder);
+assert.deepEqual(movedDeclarationOrderConflict?.details.expected, [
+  'declaration:first',
+  'declaration:second',
+  'declaration:third'
+]);
+assert.deepEqual(movedDeclarationOrderConflict?.details.actual, [
+  'declaration:first',
+  'declaration:third',
+  'declaration:second'
+]);
+const movedDeclarationOrderGate = movedDeclarationWithSibling.gates.find((gate) => gate.id === JsTsSafeMergeGateIds.preserveBaseOrder);
+assert.equal(movedDeclarationOrderGate?.status, 'blocked');
+assert.deepEqual(movedDeclarationOrderGate?.reasonCodes, [JsTsSafeMergeConflictCodes.topLevelOrderChanged]);

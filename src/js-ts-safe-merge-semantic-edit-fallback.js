@@ -1,11 +1,12 @@
-import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { createSemanticEditScript } from './internal/index-impl/semanticEditScripts.js';
 import { projectSemanticEditScriptToSource } from './internal/index-impl/projectSemanticEditScriptToSource.js';
 import { replaySemanticEditProjection } from './internal/index-impl/replaySemanticEditProjection.js';
 import { JsTsSafeMergeStatuses } from './js-ts-safe-merge-constants.js';
 import { independentTopLevelDeletionFallbackResult } from './js-ts-safe-merge-independent-deletion-fallback.js';
 import { normalizeAlreadyAppliedDeleteReplay } from './js-ts-safe-merge-semantic-edit-already-applied.js';
+import { blockedSemanticEditArtifacts, semanticEditArtifacts } from './js-ts-safe-merge-semantic-edit-artifacts.js';
 import {
+  semanticFallbackCandidates,
   semanticFallbackChangedExistingDeclarations,
   semanticFallbackConflictCode,
   semanticFallbackPhase,
@@ -19,11 +20,23 @@ import {
 } from './js-ts-safe-merge-staged-declaration-replay.js';
 import { createStagedTopLevelSemanticFallback } from './js-ts-safe-merge-staged-top-level-fallback.js';
 import { createSourceShapeSemanticFallbackResult } from './js-ts-safe-merge-source-shape-fallbacks.js';
-import { idFragment, uniqueStrings } from './native-import-utils.js';
+import { analyzeTopLevelRenameAdmission } from './js-ts-safe-merge-top-level-rename-fallback.js';
+import { topLevelRenameBlockedResult } from './js-ts-safe-merge-top-level-rename-result.js';
 
 function semanticEditFallbackResult(input, topLevelResult) {
   const independentDeletionResult = independentTopLevelDeletionFallbackResult(input, topLevelResult);
   if (independentDeletionResult) return independentDeletionResult;
+  const topLevelRenameAdmission = analyzeTopLevelRenameAdmission(input, topLevelResult);
+  if (topLevelRenameAdmission?.status === 'blocked') {
+    return topLevelRenameBlockedResult(input, topLevelResult, topLevelRenameAdmission);
+  }
+  if (topLevelRenameAdmission?.status === 'candidate') {
+    const artifacts = createSemanticEditFallbackArtifacts(input, topLevelResult);
+    if (artifacts.status !== 'verified') {
+      return semanticEditFallbackBlockedResult(input, topLevelResult, artifacts, topLevelRenameAdmission);
+    }
+    return semanticEditFallbackMergedResult(input, topLevelResult, undefined, artifacts, topLevelRenameAdmission);
+  }
   if (!shouldTrySemanticEditFallback(topLevelResult)) return topLevelResult;
   const stagedFallback = createStagedTopLevelSemanticFallback(input, topLevelResult);
   const candidates = semanticFallbackCandidates(stagedFallback);
@@ -40,6 +53,10 @@ function semanticEditFallbackResult(input, topLevelResult) {
     if (sourceShapeResult) return sourceShapeResult;
     return semanticEditFallbackBlockedResult(input, topLevelResult, artifacts);
   }
+  return semanticEditFallbackMergedResult(input, topLevelResult, selectedFallback, artifacts);
+}
+
+function semanticEditFallbackMergedResult(input, topLevelResult, selectedFallback, artifacts, topLevelRenameAdmission) {
   const resultBase = selectedFallback?.stagedTopLevelResult ?? topLevelResult;
   const mergedSourceText = artifacts.projection.sourceText;
   const gates = semanticEditGates(artifacts);
@@ -68,30 +85,24 @@ function semanticEditFallbackResult(input, topLevelResult) {
       semanticEditOperations: artifacts.script.summary.operations,
       semanticEditAppliedOperations: artifacts.replay.summary.applied,
       semanticEditReplayStatus: artifacts.replay.status,
+      topLevelDeclarationRenames: topLevelRenameAdmission ? 1 : resultBase.summary?.topLevelDeclarationRenames,
       composedPhases: 2
     },
     metadata: {
       ...resultBase.metadata,
       composed: {
-        phase: semanticFallbackPhase(selectedFallback),
-        phases: selectedFallback ? ['top-level-neutralization', 'top-level-ledger', 'semantic-edit'] : ['top-level-ledger', 'semantic-edit'],
+        phase: topLevelRenameAdmission ? 'top-level-rename-semantic-edit-fallback' : semanticFallbackPhase(selectedFallback),
+        phases: topLevelRenameAdmission
+          ? ['top-level-rename-admission', 'semantic-edit']
+          : selectedFallback ? ['top-level-neutralization', 'top-level-ledger', 'semantic-edit'] : ['top-level-ledger', 'semantic-edit'],
         originalReasonCodes: topLevelResult.admission?.reasonCodes ?? [],
         stagedTopLevelSummary: selectedFallback?.stagedTopLevelResult?.summary,
-        neutralization: selectedFallback?.neutralization?.summary
+        neutralization: selectedFallback?.neutralization?.summary,
+        topLevelRenameAdmission: topLevelRenameAdmission?.summary
       }
     },
     semanticArtifacts: artifacts
   };
-}
-
-function semanticFallbackCandidates(stagedFallback) {
-  if (!stagedFallback) return [undefined];
-  const headChanged = (stagedFallback.neutralization?.summary?.headChangedExistingDeclarations ?? 0) > 0;
-  const directFallback = stagedFallback.directProjectionHeadSourceText && (headChanged || stagedFallback.safeTopLevelChanges > 0)
-    ? { ...stagedFallback, projectionMode: 'direct' }
-    : undefined;
-  if (headChanged) return directFallback ? [directFallback, undefined] : [undefined];
-  return directFallback ? [stagedFallback, directFallback, undefined] : [stagedFallback];
 }
 
 function createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallback) {
@@ -164,112 +175,6 @@ function createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallba
   } catch (error) {
     return blockedSemanticEditArtifacts(input, topLevelResult, ['semantic-edit-fallback-error'], error);
   }
-}
-
-function semanticEditArtifacts(input) {
-  const reasonCodes = semanticEditArtifactReasonCodes(input);
-  const status = reasonCodes.length ? 'blocked' : 'verified';
-  const core = {
-    kind: 'frontier.lang.jsTsSafeMergeSemanticArtifacts',
-    version: 1,
-    schema: 'frontier.lang.jsTsSafeMergeSemanticArtifacts.v1',
-    id: `js_ts_safe_merge_semantic_edit_artifacts_${idFragment(input.id)}`,
-    sourcePath: input.sourcePath,
-    language: input.language,
-    status,
-    script: input.script,
-    projection: input.projection,
-    replay: input.replay,
-    alreadyAppliedReplay: input.alreadyAppliedReplay,
-    admission: {
-      status: status === 'verified' ? 'auto-merge-candidate' : 'blocked',
-      action: status === 'verified' ? 'apply' : 'human-review',
-      reviewRequired: status !== 'verified',
-      autoApplyCandidate: status === 'verified',
-      autoMergeClaim: false,
-      semanticEquivalenceClaim: false,
-      reasonCodes
-    },
-    summary: {
-      operations: input.script.summary.operations,
-      edits: input.projection.edits.length,
-      replayStatus: input.replay.status,
-      alreadyAppliedReplayStatus: input.alreadyAppliedReplay.status,
-      projectedSourceMatchesMerged: input.projection.sourceText === input.replay.outputSourceText,
-      replayOutputMatchesMerged: input.replay.outputSourceText === input.projection.sourceText
-    },
-    evidence: [{
-      id: `evidence_${idFragment(input.id)}_js_ts_semantic_edit_replay`,
-      kind: 'js-ts-semantic-edit-replay',
-      status: status === 'verified' ? 'passed' : 'needs-review',
-      path: input.sourcePath,
-      summary: status === 'verified'
-        ? `JS/TS semantic edit replay verified ${input.script.summary.operations} operation(s).`
-        : `JS/TS semantic edit replay requires review: ${reasonCodes.join(', ')}.`
-    }],
-    metadata: {
-      autoMergeClaim: false,
-      semanticEquivalenceClaim: false,
-      source: input.stagedFallback ? semanticFallbackPhase(input.stagedFallback) : 'js-ts-semantic-edit-fallback',
-      originalReasonCodes: input.topLevelResult.admission?.reasonCodes ?? [],
-      stagedTopLevelSummary: input.stagedFallback?.stagedTopLevelResult?.summary,
-      neutralization: input.stagedFallback?.neutralization?.summary
-    }
-  };
-  return { ...core, hash: hashSemanticValue(core) };
-}
-
-function semanticEditArtifactReasonCodes(input) {
-  const scriptReady = input.script.admission.status === 'auto-merge-candidate';
-  const projectionReady = input.projection.status === 'projected';
-  const replayReady = input.replay.status === 'accepted-clean';
-  const alreadyAppliedReady = input.alreadyAppliedReplay.status === 'already-applied';
-  return uniqueStrings([
-    scriptReady ? undefined : `semantic-edit-script-${input.script.admission.status}`,
-    projectionReady ? undefined : `semantic-edit-projection-${input.projection.status}`,
-    replayReady ? undefined : `semantic-edit-replay-${input.replay.status}`,
-    input.replay.outputSourceText !== input.projection.sourceText ? 'semantic-edit-replay-output-mismatch' : undefined,
-    alreadyAppliedReady ? undefined : `semantic-edit-already-applied-${input.alreadyAppliedReplay.status}`,
-    ...(scriptReady ? [] : input.script.admission.reasonCodes),
-    ...(projectionReady ? [] : input.projection.admission.reasonCodes),
-    ...(replayReady ? [] : input.replay.admission.reasonCodes),
-    ...(alreadyAppliedReady ? [] : input.alreadyAppliedReplay.admission.reasonCodes)
-  ]);
-}
-
-function blockedSemanticEditArtifacts(input, topLevelResult, reasonCodes, error) {
-  const id = String(input.id ?? topLevelResult.id ?? 'js_ts_safe_merge');
-  const core = {
-    kind: 'frontier.lang.jsTsSafeMergeSemanticArtifacts',
-    version: 1,
-    schema: 'frontier.lang.jsTsSafeMergeSemanticArtifacts.v1',
-    id: `js_ts_safe_merge_semantic_edit_artifacts_${idFragment(id)}`,
-    sourcePath: input.sourcePath ?? topLevelResult.sourcePath,
-    language: input.language ?? topLevelResult.language ?? 'typescript',
-    status: 'blocked',
-    admission: {
-      status: 'blocked',
-      action: 'human-review',
-      reviewRequired: true,
-      autoApplyCandidate: false,
-      autoMergeClaim: false,
-      semanticEquivalenceClaim: false,
-      reasonCodes
-    },
-    summary: {
-      operations: 0,
-      edits: 0,
-      replayStatus: 'blocked',
-      alreadyAppliedReplayStatus: 'blocked',
-      projectedSourceMatchesMerged: false,
-      replayOutputMatchesMerged: false
-    },
-    metadata: {
-      source: 'js-ts-semantic-edit-fallback',
-      error: error?.message
-    }
-  };
-  return { ...core, hash: hashSemanticValue(core) };
 }
 
 function semanticEditFallbackBlockedResult(input, topLevelResult, artifacts) {

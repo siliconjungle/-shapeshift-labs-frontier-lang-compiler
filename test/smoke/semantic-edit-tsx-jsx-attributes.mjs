@@ -44,3 +44,38 @@ assert.equal(projection.sourceText, expectedSource);
 const replay = replaySemanticEditProjection({ projection, currentSourceText: headSource });
 assert.equal(replay.status, 'accepted-clean');
 assert.equal(replay.outputSourceText, expectedSource);
+
+const attributeBaseSource = 'export function View() {\n  return <Button tone="base" size="m" />;\n}\n';
+const attributeWorkerSource = attributeBaseSource.replace('tone="base"', 'tone="worker"');
+const attributeHeadSource = `// layout wrapper moved\n${attributeBaseSource}`;
+const attributeExpectedSource = `// layout wrapper moved\n${attributeWorkerSource}`;
+
+const attributeScript = createSemanticEditScript({
+  id: 'semantic_edit_tsx_jsx_actual_attribute',
+  language: 'tsx',
+  sourcePath: 'src/view.tsx',
+  baseSourceText: attributeBaseSource,
+  workerSourceText: attributeWorkerSource,
+  headSourceText: attributeHeadSource,
+  generatedAt: 181
+});
+assert.equal(attributeScript.admission.status, 'auto-merge-candidate');
+assert.equal(attributeScript.operations.length, 1);
+assert.equal(attributeScript.operations[0].kind, 'replaceControlFlow');
+assert.equal(attributeScript.operations[0].anchor.symbolName, 'View:controlFlow:exit#1');
+assert.equal(attributeScript.operations[0].reasonCodes.includes('head-anchor-matches-base'), true);
+
+const attributeProjection = projectSemanticEditScriptToSource({
+  script: attributeScript,
+  workerSourceText: attributeWorkerSource,
+  headSourceText: attributeHeadSource
+});
+assert.equal(attributeProjection.status, 'projected');
+assert.equal(attributeProjection.sourceText, attributeExpectedSource);
+
+const attributeReplay = replaySemanticEditProjection({
+  projection: attributeProjection,
+  currentSourceText: attributeHeadSource
+});
+assert.equal(attributeReplay.status, 'accepted-clean');
+assert.equal(attributeReplay.outputSourceText, attributeExpectedSource);

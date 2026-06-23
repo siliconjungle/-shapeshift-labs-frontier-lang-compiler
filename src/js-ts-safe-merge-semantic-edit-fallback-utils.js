@@ -33,7 +33,18 @@ function semanticFallbackPhase(fallback) {
     : 'staged-top-level-semantic-edit-fallback';
 }
 
+function semanticFallbackCandidates(stagedFallback) {
+  if (!stagedFallback) return [undefined];
+  const headChanged = (stagedFallback.neutralization?.summary?.headChangedExistingDeclarations ?? 0) > 0;
+  const directFallback = stagedFallback.directProjectionHeadSourceText && (headChanged || stagedFallback.safeTopLevelChanges > 0)
+    ? { ...stagedFallback, projectionMode: 'direct' }
+    : undefined;
+  if (headChanged) return directFallback ? [directFallback, undefined] : [undefined];
+  return directFallback ? [stagedFallback, directFallback, undefined] : [stagedFallback];
+}
+
 export {
+  semanticFallbackCandidates,
   semanticFallbackChangedExistingDeclarations,
   semanticFallbackConflictCode,
   semanticFallbackPhase,

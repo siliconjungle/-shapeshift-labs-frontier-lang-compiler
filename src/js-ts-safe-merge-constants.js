@@ -19,6 +19,7 @@ export const JsTsSafeMergeConflictCodes = Object.freeze({
   malformedSyntax: 'malformed-syntax',
   sideEffectImportReorder: 'side-effect-import-reorder',
   topLevelOrderChanged: 'top-level-order-changed',
+  topLevelRenamePublicExportContract: 'top-level-rename-public-export-contract',
   changedExistingDeclaration: 'changed-existing-declaration',
   typeAliasConflict: 'type-alias-conflict',
   importShapeChanged: 'import-shape-changed',
