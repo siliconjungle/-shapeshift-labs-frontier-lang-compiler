@@ -34,6 +34,22 @@ export function createProjectDocumentExportSymbolResolver(symbols, documents) {
   };
 }
 
+export function createProjectDocumentExportSymbolsResolver(symbols, documents) {
+  const documentsByPath = new Map(documents.filter((document) => document.path).map((document) => [document.path, document]));
+  const exportsByDocumentId = new Map();
+  for (const symbol of symbols ?? []) {
+    if (symbol?.kind !== 'export' || !symbol.name) continue;
+    const document = documentsByPath.get(symbol.definitionSpan?.path);
+    if (!document) continue;
+    const exports = exportsByDocumentId.get(document.id) ?? [];
+    exports.push(symbol);
+    exportsByDocumentId.set(document.id, exports);
+  }
+  return function resolveDocumentExports(documentId) {
+    return exportsByDocumentId.get(documentId) ?? [];
+  };
+}
+
 function projectExportSymbolMap(symbols, documents) {
   const documentsByPath = new Map(documents.filter((document) => document.path).map((document) => [document.path, document]));
   const exportedByDocumentAndName = new Map();

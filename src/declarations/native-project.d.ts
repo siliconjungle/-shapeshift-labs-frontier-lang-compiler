@@ -116,7 +116,7 @@ export interface NativeProjectSymbolGraphModuleEdgeRecord {
   readonly importedName?: string;
   readonly exportedName?: string;
   readonly localName?: string; readonly namespace?: string;
-  readonly isTypeOnly?: boolean;
+  readonly exportStar?: boolean; readonly isTypeOnly?: boolean;
   readonly isReExport?: boolean;
   readonly publicContract?: boolean;
   readonly evidenceIds?: readonly string[];
@@ -133,8 +133,8 @@ export interface NativeProjectSymbolGraphReExportIdentityRecord {
   readonly exportedName?: string;
   readonly importedName?: string;
   readonly localName?: string;
-  readonly namespace?: string;
-  readonly isTypeOnly?: boolean;
+  readonly namespace?: string; readonly isTypeOnly?: boolean;
+  readonly isExportStar?: boolean;
   readonly symbolId?: string; readonly originSymbolId?: string;
   readonly exportedSymbolId?: string; readonly localSymbolId?: string;
   readonly relationId?: string;

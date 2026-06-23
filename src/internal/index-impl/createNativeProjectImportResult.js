@@ -1,8 +1,8 @@
 import{idFragment,uniqueByEvidenceId,uniqueByLossId,uniqueStrings}from'../../native-import-utils.js';import{createDocument,createPatch,createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';
 import{createNativeImportResultContract}from'./createNativeImportResultContract.js';import{createProjectImportAdmissionRecord}from'./createProjectImportAdmissionRecord.js';import{mergeSemanticIndexes}from'./mergeSemanticIndexes.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';import{summarizeProjectSourcePreservation}from'./summarizeProjectSourcePreservation.js';
-import{createProjectDocumentExportSymbolResolver,createProjectModuleSymbolResolver,resolveProjectModule}from'./projectSymbolGraphModuleResolution.js';
+import{createProjectDocumentExportSymbolResolver,createProjectDocumentExportSymbolsResolver,createProjectModuleSymbolResolver,resolveProjectModule}from'./projectSymbolGraphModuleResolution.js';
 import{publicContractRegionRecord}from'./projectSymbolGraphPublicContracts.js';
-import{isReExportImportEdge,reExportIdentityInputFromEdge,reExportIdentityRecord}from'./projectSymbolGraphReExports.js';
+import{exportStarReExportIdentityRecords,isReExportImportEdge,reExportIdentityInputFromEdge,reExportIdentityRecord}from'./projectSymbolGraphReExports.js';
 export function createNativeProjectImportResult(input, imports) {
   const idPart = idFragment(input.id ?? input.projectRoot ?? 'native_project');
   const nodes = {};
@@ -156,6 +156,7 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   const moduleResolution = input.moduleResolution ?? input.tsconfig;
   const resolveTargetSymbolId = createProjectModuleSymbolResolver(semanticIndex?.symbols ?? [], documents);
   const resolveDocumentExportSymbolId = createProjectDocumentExportSymbolResolver(semanticIndex?.symbols ?? [], documents);
+  const resolveDocumentExportSymbols = createProjectDocumentExportSymbolsResolver(semanticIndex?.symbols ?? [], documents);
   const facts = semanticIndex?.facts ?? [];
   const moduleEdgeFacts = facts.filter((fact) => fact.predicate === 'moduleEdge');
   const moduleEdgeByRelation = new Map(moduleEdgeFacts.map((fact) => [fact.subjectId, fact]));
@@ -176,7 +177,9 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
       .map((edge) => reExportIdentityRecord(reExportIdentityInputFromEdge(edge, `reexport_${idFragment(edge.id)}`), edge, resolveDocumentExportSymbolId)),
     ...importEdges
       .filter((edge) => isReExportImportEdge(edge))
-      .map((edge) => reExportIdentityRecord(reExportIdentityInputFromEdge(edge, `reexport_${idFragment(edge.id)}`), edge, resolveDocumentExportSymbolId))
+      .flatMap((edge) => edge.exportStar
+        ? exportStarReExportIdentityRecords(edge, resolveDocumentExportSymbols(edge.targetDocumentId))
+        : [reExportIdentityRecord(reExportIdentityInputFromEdge(edge, `reexport_${idFragment(edge.id)}`), edge, resolveDocumentExportSymbolId)])
   ]);
   const publicContractRegions = uniqueRecords(facts
     .filter((fact) => fact.predicate === 'publicContractRegion' && fact.value)
@@ -246,8 +249,9 @@ function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documents
     exportedName: firstString(moduleEdge.exportedName, value.exportedName, symbolMetadata.exportedName),
     localName: firstString(moduleEdge.localName, value.localName, symbolMetadata.localName),
     namespace: firstString(moduleEdge.namespace, value.namespace, symbolMetadata.namespace),
+    exportStar: firstBoolean(moduleEdge.exportStar, value.exportStar, symbolMetadata.exportStar),
     isTypeOnly: firstBoolean(moduleEdge.isTypeOnly, value.isTypeOnly),
-    isReExport: firstBoolean(moduleEdge.isReExport, value.isReExport) ?? (relation.predicate === 'exports' && Boolean(moduleSpecifier)),
+    isReExport: firstBoolean(moduleEdge.isReExport, value.isReExport, symbolMetadata.reexport) ?? (relation.predicate === 'exports' && Boolean(moduleSpecifier)),
     publicContract: firstBoolean(moduleEdge.publicContract, value.publicContract, metadata.publicContract),
     evidenceIds: uniqueStrings([...(relation.evidenceIds ?? []), ...(fact?.evidenceIds ?? [])])
   };

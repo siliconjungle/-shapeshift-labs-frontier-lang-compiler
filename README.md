@@ -244,6 +244,9 @@ enough evidence. For `export { thing as renamedThing } from './thing.js'`,
 `originSymbolId`, `exportedSymbolId`, and `localSymbolId`.
 Public contract regions include `apiSurfaceKind`, `signatureHash`, and
 `contractHash`, giving merge admission a stable API surface fingerprint.
+For `export * from './module.js'`, project graphs fan out re-export identities
+for each named export in the resolved target document and omit `default`, which
+matches JavaScript module semantics.
 
 High-risk native features also have explicit evidence policies. These policies are advisory in this package: they tell a swarm or admission queue what evidence is missing without silently changing the existing readiness classification.
 

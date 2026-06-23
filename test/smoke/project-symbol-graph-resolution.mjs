@@ -118,3 +118,26 @@ assert.equal(reExportIdentity.exportedName, 'renamedThing');
 assert.equal(reExportIdentity.originSymbolId, 'symbol:javascript:export:thing');
 assert.equal(reExportIdentity.exportedSymbolId, 'symbol:javascript:export:renamedthing');
 assert.equal(reExportIdentity.localSymbolId, 'symbol:javascript:import:thing_js_renamedthing');
+
+const exportStarProject = await importNativeProject({
+  id: 'project_symbol_graph_export_star_fanout',
+  projectRoot: 'src',
+  sources: [{
+    language: 'javascript',
+    sourcePath: 'src/index.js',
+    sourceText: "export * from './thing.js';\n",
+    metadata: { semanticImportExpected: true }
+  }, {
+    language: 'javascript',
+    sourcePath: 'src/thing.js',
+    sourceText: 'export const thing = 1;\nexport default function run() { return thing; }\nexport const other = 2;\n',
+    metadata: { semanticImportExpected: true }
+  }]
+});
+
+const exportStarGraph = exportStarProject.projectSymbolGraph;
+const exportStarNames = exportStarGraph.reExportIdentities.map((identity) => identity.exportedName).sort();
+assert.deepEqual(exportStarNames, ['other', 'thing']);
+assert.equal(exportStarGraph.importEdges.find((edge) => edge.moduleSpecifier === './thing.js').exportStar, true);
+assert.equal(exportStarGraph.reExportIdentities.every((identity) => identity.isExportStar === true), true);
+assert.deepEqual(exportStarGraph.reExportIdentities.map((identity) => identity.originSymbolId).sort(), ['symbol:javascript:export:other', 'symbol:javascript:export:thing']);
