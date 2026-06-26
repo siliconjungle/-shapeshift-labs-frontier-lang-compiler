@@ -12,6 +12,7 @@ import type { JsTsProjectMergeQualityGate as QualityGate, JsTsProjectMergeQualit
 import type { JsTsProjectMergeProofEvidence, JsTsProjectMergeProofEvidenceStatus, JsTsProjectMergeProofLevel } from './js-ts-project-merge-proof-levels.js';
 import type { JsTsProjectSafeMergeAdmissionRoute, JsTsProjectSafeMergeAdmissionRouteSummary } from './js-ts-project-merge-admission-routes.js';
 import type { JsTsProjectSafeMergeConfidenceSummary, JsTsProjectSafeMergeMissingEvidenceTelemetry } from './js-ts-project-merge-confidence.js';
+import type { JsTsProjectSafeMergeSummary } from './js-ts-project-merge-summary.js';
 import type { JsTsProjectCommonJsRuntimeInteropProof } from './js-ts-project-merge-commonjs-interop.js';
 import type { JsTsProjectGlobalAugmentationCompatibilityProof } from './js-ts-project-merge-global-augmentation.js'; import type { JsTsProjectJsxRenderReturnBranchProof } from './js-ts-project-merge-jsx-render-branch.js'; import type { JsTsProjectSemanticEquivalenceProof } from './js-ts-project-merge-semantic-equivalence-proof.js';
 import type { ParserTriviaEvidenceInput } from './source-preservation.js';
@@ -20,12 +21,14 @@ export type { JsTsProjectMergeQualityGate, JsTsProjectMergeQualityGateDecision, 
 export type { JsTsProjectMergeProofEvidence, JsTsProjectMergeProofEvidenceRecord, JsTsProjectMergeProofEvidenceRecordStatus, JsTsProjectMergeProofEvidenceStatus, JsTsProjectMergeProofEvidenceSummary, JsTsProjectMergeProofLevel, JsTsProjectMergeProofMissingEvidence } from './js-ts-project-merge-proof-levels.js';
 export type { JsTsProjectSafeMergeAdmissionRoute, JsTsProjectSafeMergeAdmissionRouteSummary } from './js-ts-project-merge-admission-routes.js';
 export type { JsTsProjectSafeMergeConfidenceSummary, JsTsProjectSafeMergeMissingEvidence, JsTsProjectSafeMergeMissingEvidenceRoute, JsTsProjectSafeMergeMissingEvidenceTelemetry, JsTsProjectSafeMergeRecommendedAction } from './js-ts-project-merge-confidence.js';
+export type { JsTsProjectSafeMergeSummary } from './js-ts-project-merge-summary.js';
 export type { JsTsProjectCommonJsRuntimeInteropProof } from './js-ts-project-merge-commonjs-interop.js';
 export type { JsTsProjectGlobalAugmentationCompatibilityProof } from './js-ts-project-merge-global-augmentation.js'; export type { JsTsProjectJsxRenderReturnBranchArmOrigin, JsTsProjectJsxRenderReturnBranchControlKind, JsTsProjectJsxRenderReturnBranchProof } from './js-ts-project-merge-jsx-render-branch.js';
 
 export type JsTsProjectSafeMergeStatus = 'merged' | 'blocked';
 export type JsTsProjectSafeMergeFileStatus = 'merged' | 'blocked';
 export type JsTsProjectSafeMergeFileOperation = 'merged-source' | 'merged-source-and-members' | 'worker-added' | 'head-only' | 'both-added-identical' | 'worker-deleted' | 'head-deleted-worker-unchanged' | 'blocked-merge' | 'blocked-file-presence' | string;
+export type JsTsProjectHtmlCssMergeOptions = Readonly<Record<string, unknown>>;
 
 export interface JsTsProjectSafeMergeEvidenceRecord { readonly id: string; readonly kind: string; readonly status: 'passed' | 'failed' | 'skipped' | 'unknown' | string; readonly level?: string; readonly scope?: string; readonly summary?: string; readonly metadata?: Record<string, unknown>; }
 
@@ -105,6 +108,8 @@ export interface JsTsProjectSafeMergeInput {
   readonly commonJsRuntimeInteropProofs?: readonly JsTsProjectCommonJsRuntimeInteropProof[];
   readonly globalAugmentationCompatibilityProof?: JsTsProjectGlobalAugmentationCompatibilityProof;
   readonly globalAugmentationCompatibilityProofs?: readonly JsTsProjectGlobalAugmentationCompatibilityProof[]; readonly jsxRenderReturnBranchProof?: JsTsProjectJsxRenderReturnBranchProof; readonly jsxRenderReturnBranchProofs?: readonly JsTsProjectJsxRenderReturnBranchProof[]; readonly externalSemanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof; readonly semanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof;
+  readonly htmlMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly markupMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly htmlMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>; readonly markupMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>;
+  readonly cssMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly styleMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly cssMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>; readonly styleMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>;
   readonly moduleResolution?: NativeProjectModuleResolutionOptions;
   readonly tsconfig?: JsTsProjectTsconfigInput | NativeProjectModuleResolutionOptions;
   readonly projectReferences?: JsTsProjectReferencesInput;
@@ -169,7 +174,7 @@ export interface JsTsProjectSafeMergeFileResult {
   readonly baseHash?: string;
   readonly workerHash?: string;
   readonly headHash?: string;
-  readonly result?: JsTsSafeMergeResult;
+  readonly result?: JsTsSafeMergeResult | Record<string, unknown>;
   readonly semanticArtifacts?: JsTsSafeMergeSemanticArtifacts;
   readonly conflicts: readonly JsTsSafeMergeConflict[];
   readonly admission: JsTsSafeMergeAdmission;
@@ -272,37 +277,7 @@ export interface JsTsProjectSafeMergeResult {
   readonly outputQualityGate?: QualityGate;
   readonly conflicts: readonly JsTsSafeMergeConflict[];
   readonly admission: JsTsProjectSafeMergeAdmission; readonly proofEvidence: JsTsProjectMergeProofEvidence; readonly confidence: JsTsProjectSafeMergeConfidenceSummary; readonly evidence: readonly JsTsProjectSafeMergeEvidenceRecord[];
-  readonly summary: {
-    readonly files: number;
-    readonly mergedFiles: number;
-    readonly blockedFiles: number;
-    readonly outputFiles: number;
-    readonly projectGraphConflicts: number;
-    readonly projectGraphDeltaEvidenceIncluded: number;
-    outputProjectGraphConflicts:number; projectGraphCssModuleUseSiteConflicts:number;
-    readonly projectGraphDeltaConflicts: number;
-    readonly projectGraphLimitConflicts: number;
-    readonly projectGraphPublicContractConflicts: number;
-    readonly projectGraphSourceSpanConflicts: number;
-    readonly projectGraphCompilerTypeConflicts: number; readonly projectGraphRuntimeRegionConflicts: number; readonly projectGraphScopeUseDefConflicts: number; readonly projectGraphJsxPropConflicts: number; readonly projectGraphJsxRenderRiskConflicts: number;
-    readonly projectGraphReExportIdentityConflicts: number; readonly projectGraphModuleDeclarationShapeConflicts: number; readonly projectGraphExportAssignmentShapeConflicts: number;
-    readonly projectGraphImportAttributeConflicts: number;
-    readonly projectGraphImportTargetConflicts: number;
-    readonly outputDiagnostics: number;
-    readonly outputDiagnosticConflicts: number;
-    readonly outputDiagnosticErrors: number;
-    readonly outputDiagnosticWarnings: number;
-    readonly outputDeclarations: number;
-    readonly outputDeclarationBytes: number;
-    readonly outputDeclarationConflicts: number;
-    readonly outputDeclarationDiagnosticErrors: number;
-    readonly outputQualityGates: number; readonly outputQualityGateConflicts: number;
-    readonly proofEvidenceRecords: number; readonly proofEvidencePassed: number; readonly proofEvidenceFailed: number; readonly proofEvidenceSkipped: number; readonly proofEvidenceUnknown: number; readonly proofEvidenceMissing: number; readonly proofEvidenceMissingLevels: readonly JsTsProjectMergeProofLevel[]; readonly semanticEquivalenceLevel: 'semantic-equivalence-unknown' | string; readonly evidenceRecords: number; readonly passedEvidenceRecords: number; readonly failedEvidenceRecords: number; readonly unknownEvidenceRecords: number; readonly confidenceScore: number; readonly confidenceLevel: string; readonly confidenceDimensions: Readonly<Record<string,string>>; readonly missingEvidenceMatrix: JsTsProjectSafeMergeMissingEvidenceTelemetry; readonly missingSignals: number; readonly nextMissingEvidenceCode?: string; readonly nextMissingEvidenceKind?: string; readonly nextMissingEvidenceScope?: string; readonly nextMissingProofLevel?: string; readonly nextMissingEvidenceAction?: string; readonly nextMissingEvidenceRouteId?: string; readonly nextMissingEvidenceRouteLane?: string; readonly nextMissingEvidenceRouteNext?: string;
-    readonly projectMoveRenameClassifications: number; readonly projectFileMoveRenameClassifications: number; readonly projectSymbolMoveClassifications: number; readonly projectExportedSymbolMoveClassifications: number; readonly projectImportedSymbolMoveClassifications: number; readonly projectSymbolMoveAdmissions: number; readonly projectExportedSymbolMoveAdmissions: number; readonly projectImportedSymbolMoveAdmissions: number; readonly projectCrossFileSymbolRenameClassifications: number; readonly projectCrossFileSymbolRenameAdmissions: number;
-    readonly projectSplitMergeClassifications: number; readonly projectModuleSplitClassifications: number; readonly projectModuleMergeClassifications: number; readonly projectClassSplitClassifications: number; readonly projectClassMergeClassifications: number; readonly projectSplitMergeAdmissions: number; readonly projectModuleSplitAdmissions: number; readonly projectModuleMergeAdmissions: number; readonly projectClassSplitAdmissions: number; readonly projectClassMergeAdmissions: number;
-    readonly semanticArtifactFiles: number;
-    readonly operations: Readonly<Record<string,number>>;
-  };
+  readonly summary: JsTsProjectSafeMergeSummary;
   readonly metadata?: Record<string, unknown> & {
     readonly projectMoveRenameClassifications?: {
       readonly classifications: number;

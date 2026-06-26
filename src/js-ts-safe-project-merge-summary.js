@@ -1,5 +1,6 @@
 import { compactMissingEvidenceTelemetry, confidenceRecommendedAction, createProjectMergeAdmissionMatrixAudit, missingEvidenceItems, missingEvidenceSignals, prioritizedMissingEvidence } from './js-ts-safe-project-merge-missing-evidence.js';
 import { failedEvidenceMissingItems, fileAdmissionEvidenceRecords } from './js-ts-safe-project-merge-evidence-routing.js'; import { compactProjectMergeRoutingCalibration } from './js-ts-safe-project-merge-routing-calibration.js';
+import { htmlCssProjectSummary } from './js-ts-safe-project-merge-html-css-summary.js';
 
 function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false, outputDiagnosticsGate = undefined, outputDeclarationGate = undefined, outputQualityGate = undefined, moveRenameSummary = undefined, proofEvidence = undefined, symbolRenameSummary = undefined, splitMergeSummary = undefined, projectSymbolGraph = undefined) {
   const byOperation = {};
@@ -13,6 +14,7 @@ function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false
     mergedFiles: files.filter((file) => file.status === 'merged').length,
     blockedFiles: files.filter((file) => file.status === 'blocked').length,
     outputFiles: files.filter((file) => typeof file.outputSourceText === 'string').length,
+    ...htmlCssProjectSummary(files),
     projectGraphConflicts: graphConflicts.length,
     projectGraphDeltaEvidenceIncluded: hasProjectGraphDelta ? 1 : 0, projectGraphEvidenceIncluded: projectSymbolGraph || hasProjectGraphDelta ? 1 : 0,
     outputProjectGraphConflicts: outputConflicts.length, projectGraphCssModuleUseSiteConflicts: cssModuleConflicts.length,
@@ -285,9 +287,7 @@ function confidenceScore(status, summary, evidence, context) {
 
 function confidenceLevel(score, status) {
   if (status !== 'merged' || score < 35) return 'blocked';
-  if (score >= 90) return 'high';
-  if (score >= 70) return 'medium';
-  return 'low';
+  return score >= 90 ? 'high' : score >= 70 ? 'medium' : 'low';
 }
 
 function compactConfidenceDimensions(status, summary, context, routingCalibration = {}) {

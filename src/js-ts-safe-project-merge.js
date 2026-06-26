@@ -19,6 +19,7 @@ import { applyProjectMoveRenameClassifications, classifyProjectMoveRenames } fro
 import { applyProjectSymbolRenameClassifications, classifyProjectSymbolRenames } from './js-ts-safe-project-merge-symbol-rename.js';
 import { applyProjectSplitMergeClassifications, classifyProjectSplitMerges } from './js-ts-safe-project-merge-split-merge.js';
 import { projectConfidence, projectEvidence, projectSummary, projectSummaryWithConfidenceEvidence } from './js-ts-safe-project-merge-summary.js';
+import { maybeMergeHtmlCssProjectFile, projectFileLanguage } from './js-ts-safe-project-merge-html-css.js';
 
 function safeMergeJsTsProject(input = {}) {
   const id = String(input.id ?? 'js_ts_project_safe_merge');
@@ -215,7 +216,7 @@ function mergeProjectFile(file, input, projectId, projectSymbolRenames) {
   const base = file.baseSourceText;
   const worker = file.workerDeleted ? undefined : file.workerSourceText ?? base;
   const head = file.headDeleted ? undefined : file.headSourceText ?? base;
-  const context = { sourcePath: file.sourcePath, language: file.language ?? input.language ?? 'typescript' };
+  const context = { sourcePath: file.sourcePath, language: projectFileLanguage(file, input) };
   if (!file.sourcePath) return blockedFile(file, context, 'missing-source-path');
   const ambientBlock = maybeBlockAmbientProjectFile(file, context, input);
   if (ambientBlock) return ambientBlock;
@@ -242,6 +243,8 @@ function mergeProjectFile(file, input, projectId, projectSymbolRenames) {
       ? syntheticFile(file, context, undefined, 'head-deleted-worker-unchanged')
       : blockedFile(file, context, 'head-file-delete-conflict');
   }
+  const nonJsTsMerge = maybeMergeHtmlCssProjectFile({ file, input, projectId, context, base, worker, head, sourceInput: sourceMergeInputForProjectFile(input) });
+  if (nonJsTsMerge) return nonJsTsMerge;
   const result = safeMergeJsTsSource({
     ...sourceMergeInputForProjectFile(input),
     ...context,
@@ -286,17 +289,7 @@ function allowsProjectSymbolRenameForFile(input, projectSymbolRenames, sourcePat
 }
 
 function sourceMergeInputForProjectFile(input) {
-  const {
-    outputDiagnostics,
-    outputSyntaxDiagnostics,
-    mergedOutputSyntaxDiagnostics,
-    syntaxDiagnostics,
-    requireOutputSyntaxDiagnostics,
-    requireOutputSyntaxGate,
-    requireMergedOutputSyntaxDiagnostics,
-    requireSyntaxGate,
-    ...sourceInput
-  } = input;
+  const { outputDiagnostics, outputSyntaxDiagnostics, mergedOutputSyntaxDiagnostics, syntaxDiagnostics, requireOutputSyntaxDiagnostics, requireOutputSyntaxGate, requireMergedOutputSyntaxDiagnostics, requireSyntaxGate, ...sourceInput } = input;
   return sourceInput;
 }
 

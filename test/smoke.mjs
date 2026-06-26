@@ -116,6 +116,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-jsx-hook-dependencies.mjs',
   './smoke/js-ts-safe-project-merge-jsx-hook-effects.mjs',
   './smoke/js-ts-safe-project-merge-jsx-event-handlers.mjs',
+  './smoke/js-ts-safe-project-merge-html-css.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-use-sites.mjs',
   './smoke/js-ts-safe-project-merge-public-contract-output-graph.mjs',
   './smoke/js-ts-safe-project-merge-lightweight-public-contracts.mjs',

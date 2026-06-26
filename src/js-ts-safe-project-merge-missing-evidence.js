@@ -1,3 +1,4 @@
+import { HtmlCssProjectMergeMissingSignals, htmlCssProjectMergeAdmissionMatrixRows, htmlCssProjectMergeMatrixProofStatus, htmlCssProjectMergeMissingEvidenceItems, htmlCssProjectMergeMissingEvidenceRoutes } from './js-ts-safe-project-merge-html-css-matrix.js';
 const ProjectMergeMissingSignals = Object.freeze({
   outputDiagnosticsGate: 'output-diagnostics-gate-not-run',
   declarationGate: 'declaration-gate-not-run',
@@ -10,6 +11,7 @@ const ProjectMergeMissingSignals = Object.freeze({
   semanticEditReplayProof: 'semantic-edit-replay-proof-not-produced',
   semanticEditReplayOutputMismatch: 'semantic-edit-replay-proof-output-mismatch',
   unsupportedJsTsSurface: 'unsupported-js-ts-surface-proof-not-available',
+  ...HtmlCssProjectMergeMissingSignals,
   cssModuleUseSiteGraph: 'css-module-use-site-graph-proof-blocked',
   semanticEquivalenceProof: 'semantic-equivalence-proof-not-available'
 });
@@ -26,6 +28,7 @@ const ProjectMergeMissingEvidenceRoutes = Object.freeze({
   [ProjectMergeMissingSignals.semanticEditReplayProof]: route('produce-semantic-edit-replay-proof', 'source-files', 'run-semantic-edit-replay-diagnostics'),
   [ProjectMergeMissingSignals.semanticEditReplayOutputMismatch]: route('reject-semantic-edit-replay-output-mismatch', 'source-files', 'inspect-semantic-edit-replay-output-binding'),
   [ProjectMergeMissingSignals.unsupportedJsTsSurface]: route('prove-unsupported-js-ts-surface', 'semantic-proof', 'supply-unsupported-surface-evidence'),
+  ...htmlCssProjectMergeMissingEvidenceRoutes(route, ProjectMergeMissingSignals),
   [ProjectMergeMissingSignals.cssModuleUseSiteGraph]: route('prove-css-module-use-site-graph', 'layout-style-graph', 'supply-css-module-transform-and-use-site-proof'),
   [ProjectMergeMissingSignals.semanticEquivalenceProof]: route('external-semantic-equivalence-proof', 'semantic-proof', 'attach-external-equivalence-proof')
 });
@@ -39,6 +42,7 @@ const ProjectMergeAdmissionMatrixRows = Object.freeze([
   matrixRow('control-flow-effect-graph', 'partial', ['source-span-roundtrip', 'focused-test-passed'], [ProjectMergeMissingSignals.sourceSpanRoundtrip, ProjectMergeMissingSignals.semanticArtifacts, ProjectMergeMissingSignals.qualityGates, ProjectMergeMissingSignals.focusedTestGate]),
   matrixRow('generic-semantic-edit-admission', 'partial', ['source-span-roundtrip', 'semantic-edit-replay-clean'], [ProjectMergeMissingSignals.sourceSpanRoundtrip, ProjectMergeMissingSignals.semanticArtifacts, ProjectMergeMissingSignals.semanticEditReplayProof, ProjectMergeMissingSignals.semanticEditReplayOutputMismatch]),
   matrixRow('unsupported-js-ts-surface-coverage', 'partial', ['unsupported-js-ts-surface-review'], [ProjectMergeMissingSignals.unsupportedJsTsSurface]),
+  ...htmlCssProjectMergeAdmissionMatrixRows(matrixRow, ProjectMergeMissingSignals),
   matrixRow('css-modules-use-site-graph', 'partial', ['css-module-use-site-graph', 'css-module-transform-proof', 'project-graph-evidence'], [ProjectMergeMissingSignals.cssModuleUseSiteGraph]),
   matrixRow('semantic-equivalence-proof', 'bounded-evidence', ['semantic-equivalence-external', 'semantic-equivalence-unknown'], [ProjectMergeMissingSignals.semanticEquivalenceProof]),
   matrixRow('cross-file-symbol-rename', 'partial', ['diagnostics-clean', 'declaration-output-stable', 'project-graph-delta'], [ProjectMergeMissingSignals.outputDiagnosticsGate, ProjectMergeMissingSignals.declarationGate, ProjectMergeMissingSignals.projectGraphEvidence, ProjectMergeMissingSignals.projectGraphDeltaEvidence]),
@@ -135,6 +139,7 @@ function missingEvidenceItems(summary, context = {}) {
     summary: `CSS Module use-site graph has ${summary.projectGraphCssModuleUseSiteConflicts} blocker(s); supply generated class maps, bundler transform identity, source-map proof, and narrow use-site evidence before admission.`,
     suggestedInput: { includeOutputProjectSymbolGraph: true, cssModuleEvidence: true }
   }));
+  items.push(...htmlCssProjectMergeMissingEvidenceItems(summary, ProjectMergeMissingSignals, missingEvidenceItem));
   return items;
 }
 
@@ -247,6 +252,8 @@ function matrixProofStatuses(proofLevels, summary, proofEvidence) {
 function matrixProofStatus(level, summary, proofEvidence) {
   const levelStatuses = proofEvidence?.summary?.levelStatuses ?? summary.proofEvidenceLevelStatuses ?? {};
   if (levelStatuses[level]) return levelStatuses[level];
+  const htmlCssStatus = htmlCssProjectMergeMatrixProofStatus(level, summary);
+  if (htmlCssStatus) return htmlCssStatus;
   if (level === 'project-graph-delta') return summary.projectGraphDeltaEvidenceIncluded ? (summary.projectGraphDeltaConflicts ? 'failed' : 'passed') : 'missing';
   if (level === 'project-graph-evidence') return summary.projectGraphConflicts ? 'failed' : summary.projectGraphEvidenceIncluded || summary.projectGraphDeltaEvidenceIncluded ? 'passed' : 'missing';
   if (level === 'css-module-use-site-graph') return summary.projectGraphCssModuleUseSiteConflicts ? 'failed' : summary.projectGraphCssModuleUseSiteGraphs ? 'passed' : summary.projectGraphEvidenceIncluded ? 'absent' : 'missing';
@@ -309,12 +316,4 @@ function compactRecord(record) {
   return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
 }
 
-export {
-  compactMissingEvidenceTelemetry,
-  confidenceRecommendedAction,
-  createProjectMergeAdmissionMatrixAudit,
-  missingEvidenceItems,
-  missingEvidenceRouteForSignal,
-  missingEvidenceSignals,
-  prioritizedMissingEvidence
-};
+export { compactMissingEvidenceTelemetry, confidenceRecommendedAction, createProjectMergeAdmissionMatrixAudit, missingEvidenceItems, missingEvidenceRouteForSignal, missingEvidenceSignals, prioritizedMissingEvidence };

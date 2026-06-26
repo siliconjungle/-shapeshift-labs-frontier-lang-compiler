@@ -25,6 +25,7 @@ const jsTsProjectSafeMerge = compilerApi.safeMergeJsTsProject({
 
 const typedJsTsProjectSafeMerge: compilerApi.JsTsProjectSafeMergeResult = jsTsProjectSafeMerge;
 const typedProjectGraphLimits: compilerApi.JsTsProjectGraphLimits = { maxFiles: 10, maxSourceSpans: 500, maxScopeBindings: 50, maxScopeReferences: 100, maxJsxElements: 25, maxJsxProps: 75, maxSerializedBytes: 1_000_000 };
+const hco = {} satisfies compilerApi.JsTsProjectHtmlCssMergeOptions;
 const typedParserTriviaEvidence: compilerApi.ParserTriviaEvidenceInput = { status: 'exact', exactParserTrivia: true, sourceHash: 'typed-source', adapterId: 'typed-parser' };
 const typedParserTriviaProjectFile: compilerApi.JsTsProjectSafeMergeFileInput = { sourcePath: 'src/trivia.ts', baseSourceText: 'export const value = 1;\n', workerSourceText: 'export const value = 1;\n', headSourceText: 'export const value = 1;\n', outputParserTriviaEvidence: typedParserTriviaEvidence };
 const typedParserTriviaProjectMap: compilerApi.JsTsProjectSafeMergeFileMap = { 'src/trivia.ts': { sourceText: 'export const value = 1;\n', parserTriviaEvidence: typedParserTriviaEvidence } };
@@ -38,6 +39,7 @@ typedJsTsProjectSafeMerge.admission.autoMergeClaim satisfies false;
 typedJsTsProjectSafeMerge.admission.semanticEquivalenceClaim satisfies boolean;
 typedJsTsProjectSafeMerge.summary.projectGraphLimitConflicts satisfies number;
 typedJsTsProjectSafeMerge.summary.projectGraphCssModuleUseSiteConflicts satisfies number;
+typedJsTsProjectSafeMerge.summary.htmlFiles satisfies number;
 typedJsTsProjectSafeMerge.summary.outputDeclarations satisfies number;
 typedJsTsProjectSafeMerge.summary.outputDeclarationConflicts satisfies number;
 typedJsTsProjectSafeMerge.summary.projectSymbolMoveAdmissions satisfies number;
@@ -45,6 +47,7 @@ typedJsTsProjectSafeMerge.summary.projectCrossFileSymbolRenameAdmissions satisfi
 typedJsTsProjectSafeMerge.summary.projectSplitMergeAdmissions satisfies number;
 
 void typedProjectGraphLimits;
+void hco;
 void typedJsTsProjectSafeMerge;
 
 const typedOutputProjectImport: compilerApi.NativeSourceImportResult = compilerApi.importNativeSource({
@@ -168,6 +171,7 @@ const typedCommonJsRuntimeInteropProof: compilerApi.JsTsProjectCommonJsRuntimeIn
   runtimeInteropEquivalenceClaim: false
 };
 compilerApi.safeMergeJsTsProject({ commonJsRuntimeInteropProof: typedCommonJsRuntimeInteropProof });
+compilerApi.safeMergeJsTsProject({ htmlMergeOptions: hco, cssMergeOptions: hco });
 ds?.conflicts satisfies number | undefined;
 ds?.publicContractConflicts satisfies number | undefined;
 ds?.sourceSpanConflicts satisfies number | undefined;
