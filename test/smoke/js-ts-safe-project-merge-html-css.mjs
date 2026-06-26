@@ -126,6 +126,22 @@ const cssSelectorMoveSurface = matrixSurface(cssSelectorMoveProject, 'css-select
 assert.equal(cssSelectorMoveSurface.proofStatuses['css-selector-target-evidence'], 'failed');
 assert.equal(cssSelectorMoveSurface.missingRouteIds.includes('prove-css-selector-target-evidence'), true);
 
+const cssSelectorMoveRebasedProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_selector_move_rebased',
+  cssMergeOptionsByPath: { 'src/button.css': { selectorTargetEquivalences: [{ fromSelectors: ['.button'], toSelectors: ['.primary'] }] } },
+  files: [{
+    sourcePath: 'src/button.css',
+    baseSourceText: '.button { color: red; }\n',
+    workerSourceText: '.primary { color: red; }\n',
+    headSourceText: '.button { color: red; background-color: white; }\n'
+  }]
+});
+assert.equal(cssSelectorMoveRebasedProject.status, 'merged');
+assert.equal(cssSelectorMoveRebasedProject.summary.cssSelectorTargetRebasedFiles, 1);
+assert.match(cssSelectorMoveRebasedProject.outputFiles[0].sourceText, /\.primary \{/);
+assert.match(cssSelectorMoveRebasedProject.outputFiles[0].sourceText, /background-color: white/);
+assert.equal(matrixSurface(cssSelectorMoveRebasedProject, 'css-selector-target-evidence').proofStatuses['css-selector-target-evidence'], 'passed');
+
 const scopedCssBase = '@media (min-width: 700px) {\n  .button {\n    color: red;\n    padding-left: 1rem;\n  }\n}\n';
 const scopedCssWorker = scopedCssBase.replace('color: red', 'color: blue');
 const scopedCssHead = scopedCssBase.replace('padding-left: 1rem;', 'padding-left: 1rem;\n    background-color: white;');
