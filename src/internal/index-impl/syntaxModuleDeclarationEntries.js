@@ -5,6 +5,7 @@ import {
 } from './syntaxCommonJsModuleDeclarationEntries.js';
 import { dynamicImportExpressionMetadata } from './dynamicImportExpressionMetadata.js';
 import { hostModuleDependencyMetadata } from './importMetaUrlDependencyMetadata.js';
+import { moduleHostResourceImportMetadata } from './moduleHostResourceImportMetadata.js';
 import { moduleImportAttributeMetadata } from './moduleImportAttributeMetadata.js';
 import {
   declarationName,
@@ -38,10 +39,15 @@ function importDeclarationEntries(node, nativeNodeId, input) {
   if (!moduleSpecifier) return [];
   const typeOnly = node.importKind === 'type';
   const bindings = (node.specifiers ?? []).map((specifier) => importSpecifierBinding(specifier, typeOnly)).filter(Boolean);
+  const importKind = bindings.length === 0 ? 'side-effect' : 'module';
   return importModuleEntries(input, nativeNodeId, moduleSpecifier, bindings, {
     typeOnly,
     sideEffectOnly: bindings.length === 0,
-    importKind: bindings.length === 0 ? 'side-effect' : 'module',
+    importKind,
+    ...moduleHostResourceImportMetadata(moduleSpecifier, {
+      hostDependencyBase: 'module-import',
+      expressionText: `import ${JSON.stringify(moduleSpecifier)}`
+    }),
     ...moduleImportAttributeMetadata(node)
   });
 }
@@ -54,6 +60,10 @@ function dynamicImportExpressionEntries(node, nativeNodeId, input) {
     importKind: 'dynamic-import',
     dynamicImport: true,
     ...dynamicImportExpressionMetadata(importArgument, moduleSpecifier),
+    ...moduleHostResourceImportMetadata(moduleSpecifier, {
+      hostDependencyBase: 'dynamic-import',
+      expressionText: `import(${JSON.stringify(moduleSpecifier)})`
+    }),
     ...moduleImportAttributeMetadata(node)
   });
 }
@@ -75,12 +85,20 @@ function exportNamedDeclarationEntries(node, nativeNodeId, input) {
       typeOnly,
       reexport: true,
       importKind: 'reexport',
+      ...moduleHostResourceImportMetadata(moduleSpecifier, {
+        hostDependencyBase: 'module-reexport',
+        expressionText: `export from ${JSON.stringify(moduleSpecifier)}`
+      }),
       ...moduleImportAttributeMetadata(node)
     }) : []),
     ...exportModuleEntries(input, nativeNodeId, moduleSpecifier, bindings, {
       typeOnly,
       reExport: Boolean(moduleSpecifier),
       exportKind: typeOnly ? 'type-named' : 'named',
+      ...moduleHostResourceImportMetadata(moduleSpecifier, {
+        hostDependencyBase: 'module-reexport',
+        expressionText: `export from ${JSON.stringify(moduleSpecifier)}`
+      }),
       ...moduleImportAttributeMetadata(node)
     })
   ];
@@ -107,6 +125,10 @@ function exportAllDeclarationEntries(node, nativeNodeId, input) {
       reexport: true,
       exportStar: !exportedName,
       importKind: exportedName ? 'namespace-reexport' : 'reexport',
+      ...moduleHostResourceImportMetadata(moduleSpecifier, {
+        hostDependencyBase: 'module-reexport',
+        expressionText: `export from ${JSON.stringify(moduleSpecifier)}`
+      }),
       ...moduleImportAttributeMetadata(node)
     }),
     ...exportModuleEntries(input, nativeNodeId, moduleSpecifier, bindings, {
@@ -114,6 +136,10 @@ function exportAllDeclarationEntries(node, nativeNodeId, input) {
       reExport: true,
       exportStar: !exportedName,
       exportKind: exportedName ? 'namespace-reexport' : 'export-star',
+      ...moduleHostResourceImportMetadata(moduleSpecifier, {
+        hostDependencyBase: 'module-reexport',
+        expressionText: `export from ${JSON.stringify(moduleSpecifier)}`
+      }),
       ...moduleImportAttributeMetadata(node)
     })
   ];

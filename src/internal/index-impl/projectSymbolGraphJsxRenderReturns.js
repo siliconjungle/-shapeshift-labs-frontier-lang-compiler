@@ -1,12 +1,16 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
-import { jsxRenderReturnCollectionRecord } from './projectSymbolGraphJsxRenderCollections.js';
+import { jsxRenderReturnCollectionRecord } from './projectSymbolGraphJsxRenderReturnCollections.js';
 
 function jsxRenderReturnRecords(sourceText) {
   const statements = returnStatements(sourceText);
   const implicitArrows = statements.length ? [] : implicitArrowReturnStatements(sourceText);
   return [...statements, ...implicitArrows]
-    .filter((statement) => isRenderableReturnExpression(statement.expressionText))
-    .map((statement, index) => renderReturnRecord(statement, index));
+    .map((statement) => ({
+      statement,
+      collectionRecord: jsxRenderReturnCollectionRecord(statement.expressionText, sourceText)
+    }))
+    .filter(({ statement, collectionRecord }) => collectionRecord || isRenderableReturnExpression(statement.expressionText))
+    .map(({ statement, collectionRecord }, index) => renderReturnRecord(statement, index, collectionRecord));
 }
 
 function jsxRenderReturnRiskEvidence(owner) {
@@ -18,6 +22,8 @@ function jsxRenderReturnRiskEvidence(owner) {
   const hasLogicalBranchEvidence = records.some((record) => record.logicalBranchRecord);
   const hasArrayCollectionEvidence = records.some((record) => record.collectionRecord?.collectionKind === 'array-literal');
   const hasFragmentCollectionEvidence = records.some((record) => String(record.collectionRecord?.collectionKind ?? '').startsWith('fragment-'));
+  const hasMapCollectionEvidence = records.some((record) => record.collectionRecord?.collectionKind === 'static-const-array-map');
+  const hasKeyedListEvidence = records.some((record) => record.collectionRecord?.keyedListRecord);
   const renderRiskKinds = ['render-return-boundary', branched ? 'render-return-branch-control-flow' : undefined].filter(Boolean);
   const hasImplicitArrow = records.some((record) => record.returnKind === 'implicit-arrow-expression');
   const renderRiskReasonCodes = [
@@ -27,6 +33,8 @@ function jsxRenderReturnRiskEvidence(owner) {
     hasLogicalBranchEvidence ? 'jsx-render-return-logical-branch-static-evidence' : undefined,
     hasArrayCollectionEvidence ? 'jsx-render-return-array-static-evidence' : undefined,
     hasFragmentCollectionEvidence ? 'jsx-render-return-fragment-static-evidence' : undefined,
+    hasMapCollectionEvidence ? 'jsx-render-return-static-const-array-map-evidence' : undefined,
+    hasKeyedListEvidence ? 'jsx-render-return-keyed-list-static-evidence' : undefined,
     branched ? 'jsx-render-return-branch-unsupported' : undefined
   ].filter(Boolean);
   const record = compactRecord({
@@ -80,12 +88,11 @@ function implicitArrowReturnStatements(sourceText) {
   return statements;
 }
 
-function renderReturnRecord(statement, index) {
+function renderReturnRecord(statement, index, collectionRecord) {
   const expressionText = normalizedText(statement.expressionText);
   const ifConditionText = normalizedText(statement.ifConditionText);
   const conditionalBranch = conditionalBranchRecord(expressionText);
   const logicalBranch = logicalBranchRecord(expressionText);
-  const collectionRecord = jsxRenderReturnCollectionRecord(expressionText);
   return compactRecord({
     ordinal: index + 1,
     proofStatus: 'static-render-return-evidence',

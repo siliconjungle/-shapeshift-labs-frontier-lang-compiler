@@ -4,6 +4,8 @@ import {
   packageConditions,
   packageRuntimeConditionEvidence
 } from '../../src/internal/index-impl/projectSymbolGraphPackageConditions.js';
+import { moduleHostResourceImportMetadata } from '../../src/internal/index-impl/moduleHostResourceImportMetadata.js';
+import { resolveProjectModule } from '../../src/internal/index-impl/projectSymbolGraphModuleResolution.js';
 
 const semanticMergeModuleHostMatrixCells = [
   {
@@ -115,6 +117,12 @@ const semanticMergeModuleHostMatrixCells = [
     note: 'static imports, re-exports, dynamic imports, graph deltas, and unresolved-edge evidence preserve normalized import attribute key/value records alongside hashes'
   },
   {
+    id: 'module-export-import-graph/css-html-host-resource-import-evidence',
+    status: 'done',
+    evidence: 'project-symbol-graph-host-resource-import-evidence',
+    note: 'CSS, CSS Module, and HTML import specifiers are marked as static host-resource module edges with false runtime-resolution claims, and package resource imports fail closed when host runtime evidence is absent'
+  },
+  {
     id: 'module-export-import-graph/commonjs-arrow-block-getter-reexport-evidence',
     status: 'done',
     evidence: 'project-symbol-graph-commonjs-export-star',
@@ -145,6 +153,53 @@ for (const cell of semanticMergeModuleHostMatrixCells) {
   assert.equal(typeof cell.id, 'string');
   assert.equal(typeof cell.evidence, 'string');
 }
+
+const cssModuleResourceMetadata = moduleHostResourceImportMetadata('./Button.module.css');
+assert.equal(cssModuleResourceMetadata.hostDependency, true);
+assert.equal(cssModuleResourceMetadata.hostDependencyKind, 'css-module-import');
+assert.equal(cssModuleResourceMetadata.hostDependencyBase, 'module-import');
+assert.equal(cssModuleResourceMetadata.hostDependencyStaticSpecifierEvidence, true);
+assert.equal(cssModuleResourceMetadata.hostDependencyRuntimeResolutionClaim, false);
+assert.equal(cssModuleResourceMetadata.hostDependencyResolutionProofRequired, true);
+assert.equal(typeof cssModuleResourceMetadata.hostDependencyExpressionHash, 'string');
+
+const cssResourceMetadata = moduleHostResourceImportMetadata('./global.css?inline');
+assert.equal(cssResourceMetadata.hostDependencyKind, 'css-import');
+
+const htmlResourceMetadata = moduleHostResourceImportMetadata('./template.html');
+assert.equal(htmlResourceMetadata.hostDependencyKind, 'html-import');
+assert.deepEqual(moduleHostResourceImportMetadata('./dep.js'), {});
+
+const cssResourceRuntimeEvidence = packageRuntimeConditionEvidence({}, 'src/Button.tsx', undefined, {
+  importKind: 'module',
+  ...cssModuleResourceMetadata
+});
+assert.equal(cssResourceRuntimeEvidence.packageRuntimeCondition, undefined);
+assert.equal(cssResourceRuntimeEvidence.packageRuntimeConditionEvidenceSource, 'host-resource-import-ambiguous');
+assert.equal(cssResourceRuntimeEvidence.packageRuntimeConditionEdgeKind, 'host-css-module-import');
+assert.equal(cssResourceRuntimeEvidence.packageRuntimeConditionReasonCode, 'package-runtime-condition-host-resource-import-ambiguous-missing');
+assert.equal(cssResourceRuntimeEvidence.packageRuntimeConditionHostResourceKind, 'css-module');
+
+const packageCssResourceResolution = resolveProjectModule('src/Button.tsx', '@pkg/theme/button.module.css', new Map(), {
+  packages: {
+    '@pkg/theme': {
+      root: 'packages/theme',
+      exports: {
+        './button.module.css': './button.module.css'
+      }
+    }
+  },
+  packageExportConditions: ['import', 'require', 'default']
+}, {
+  importKind: 'module',
+  ...cssModuleResourceMetadata
+});
+assert.equal(packageCssResourceResolution.kind, 'package-runtime-condition-host-resource-import-ambiguous-missing');
+assert.equal(packageCssResourceResolution.packageName, '@pkg/theme');
+assert.equal(packageCssResourceResolution.packageSubpath, './button.module.css');
+assert.equal(packageCssResourceResolution.packageRuntimeConditionReasonCode, 'package-runtime-condition-host-resource-import-ambiguous-missing');
+assert.equal(packageCssResourceResolution.packageRuntimeConditionHostResourceKind, 'css-module');
+assert.equal(packageCssResourceResolution.path, 'packages/theme/button.module.css');
 
 const conditionalRuntimeExportValue = {
   import: './esm.js',

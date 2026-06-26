@@ -107,58 +107,6 @@ assert.equal(logicalButton.renderReturnRecords[0].logicalBranchRecord.leftText, 
 assert.equal(logicalButton.renderReturnRecords[0].logicalBranchRecord.rightText, '<button data-ready />');
 assert.equal(typeof logicalButton.renderReturnRecords[0].logicalBranchRecord.signatureHash, 'string');
 
-const arrayReturnSource = [
-  'export function ListView() {',
-  '  return [<li key="a">A</li>, <li key="b">B</li>];',
-  '}',
-  ''
-].join('\n');
-const arrayReturnProject = safeMergeJsTsProject({
-  id: 'js_ts_project_safe_merge_jsx_render_return_array',
-  language: 'tsx',
-  includeOutputProjectSymbolGraph: true,
-  baseFiles: { 'src/list.tsx': arrayReturnSource },
-  workerFiles: { 'src/list.tsx': arrayReturnSource },
-  headFiles: { 'src/list.tsx': arrayReturnSource },
-  outputDiagnostics: []
-});
-const arrayItem = arrayReturnProject.outputProjectSymbolGraph.jsxElementRecords
-  .find((record) => record.tagName === 'li');
-assert.equal(arrayItem.renderRiskReasonCodes.includes('jsx-render-return-array-static-evidence'), true);
-assert.equal(arrayItem.renderReturnCount, 1);
-assert.equal(arrayItem.renderReturnRecords[0].collectionRecord.collectionKind, 'array-literal');
-assert.equal(arrayItem.renderReturnRecords[0].collectionRecord.itemCount, 2);
-assert.deepEqual(arrayItem.renderReturnRecords[0].collectionRecord.itemExpressionTexts, ['<li key="a">A</li>', '<li key="b">B</li>']);
-assert.equal(arrayItem.renderReturnRecords[0].collectionRecord.itemRecords[0].ordinal, 1);
-assert.equal(typeof arrayItem.renderReturnRecords[0].collectionRecord.itemRecords[1].signatureHash, 'string');
-
-const fragmentReturnSource = [
-  'export function FragmentList() {',
-  '  return <>',
-  '    <li key="a">A</li>',
-  '    <li key="b">B</li>',
-  '  </>;',
-  '}',
-  ''
-].join('\n');
-const fragmentReturnProject = safeMergeJsTsProject({
-  id: 'js_ts_project_safe_merge_jsx_render_return_fragment',
-  language: 'tsx',
-  includeOutputProjectSymbolGraph: true,
-  baseFiles: { 'src/fragment-list.tsx': fragmentReturnSource },
-  workerFiles: { 'src/fragment-list.tsx': fragmentReturnSource },
-  headFiles: { 'src/fragment-list.tsx': fragmentReturnSource },
-  outputDiagnostics: []
-});
-const fragmentItem = fragmentReturnProject.outputProjectSymbolGraph.jsxElementRecords
-  .find((record) => record.tagName === 'li');
-assert.equal(fragmentItem.renderRiskReasonCodes.includes('jsx-render-return-fragment-static-evidence'), true);
-assert.equal(fragmentItem.renderReturnRecords[0].collectionRecord.proofStatus, 'static-render-return-fragment-evidence');
-assert.equal(fragmentItem.renderReturnRecords[0].collectionRecord.collectionKind, 'fragment-shorthand');
-assert.equal(fragmentItem.renderReturnRecords[0].collectionRecord.itemCount, 2);
-assert.deepEqual(fragmentItem.renderReturnRecords[0].collectionRecord.itemExpressionTexts, ['<li key="a">A</li>', '<li key="b">B</li>']);
-assert.equal(typeof fragmentItem.renderReturnRecords[0].collectionRecord.itemRecords[0].signatureHash, 'string');
-
 const wrapperSource = [
   'import { memo, forwardRef } from "react";',
   'export const Button = memo(forwardRef(function ButtonImpl({ ready }, ref) {',

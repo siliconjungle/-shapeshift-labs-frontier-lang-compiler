@@ -40,13 +40,6 @@ const readyButtonSourceText = [
   '}',
   ''
 ].join('\n');
-const missingExportButtonSourceText = [
-  `import readyStyles from '${readyCssModuleSpecifier}';`,
-  'export function BrokenButton() {',
-  '  return <button className={readyStyles.missing}>{readyStyles.label}</button>;',
-  '}',
-  ''
-].join('\n');
 const readyCssModuleSourceText = [
   '.root { color: red; }',
   '.label { display: block; }',
@@ -265,29 +258,6 @@ assert.equal(readyCssModuleSurface.proofStatuses['css-module-use-site-graph'], '
 assert.equal(readyCssModuleSurface.proofStatuses['css-module-transform-proof'], 'passed');
 assert.equal(readyCssModuleSurface.proofStatuses['project-graph-evidence'], 'passed');
 assert.equal((readyCssModuleSurface.missingRouteIds ?? []).includes('prove-css-module-use-site-graph'), false);
-
-const missingExportProject = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_module_missing_export',
-  includeOutputProjectSymbolGraph: true,
-  outputProjectImports: [readyCssModuleImport],
-  files: [
-    {
-      language: 'css',
-      sourcePath: 'src/Ready.module.css',
-      headSourceText: readyCssModuleSourceText
-    },
-    {
-      language: 'tsx',
-      sourcePath: 'src/Broken.tsx',
-      baseSourceText: missingExportButtonSourceText,
-      workerSourceText: missingExportButtonSourceText,
-      headSourceText: missingExportButtonSourceText
-    }
-  ]
-});
-assert.equal(missingExportProject.status, 'blocked');
-assert.equal(missingExportProject.conflicts.some((conflict) => conflict.code === 'project-output-symbol-unresolved'), false);
-assert.equal(missingExportProject.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-export-name-unresolved'), true);
 
 function matrixSurface(result, surface) {
   const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);

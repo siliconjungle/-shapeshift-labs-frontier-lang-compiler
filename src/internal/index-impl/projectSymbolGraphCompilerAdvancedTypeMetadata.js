@@ -1,4 +1,4 @@
-function compilerAdvancedTypeMetadata(value) {
+function compilerAdvancedTypeMetadata(value, source = {}) {
   const advancedTypeShapes = arrayValue(value.advancedTypeShapes);
   const typeReferenceTargets = arrayValue(value.typeReferenceTargets);
   const counts = {
@@ -14,7 +14,7 @@ function compilerAdvancedTypeMetadata(value) {
     intersectionTypeCount: numberValue(value.intersectionTypeCount) ?? countKind(advancedTypeShapes, 'intersection-type'),
     tupleTypeCount: numberValue(value.tupleTypeCount) ?? countKind(advancedTypeShapes, 'tuple-type')
   };
-  const proofRequirement = advancedTypeProofRequirement(advancedTypeShapes, counts);
+  const proofRequirement = advancedTypeProofRequirement(advancedTypeShapes, counts, source);
   return {
     counts,
     record: compactRecord({
@@ -40,6 +40,11 @@ function compilerAdvancedTypeMetadata(value) {
 
 const AdvancedTypeProofRequirementKind = 'typescript-checker-public-api-advanced-type-shape-equivalence';
 const AdvancedTypeProofRequiredEvidence = 'typescript-checker-public-api-type-equivalence';
+const AdvancedTypeSourcePathSignal = 'compiler-public-api-advanced-type-source-path';
+const AdvancedTypeSourceHashSignal = 'compiler-public-api-advanced-type-source-hash';
+const AdvancedTypeSourcePathStaleSignal = 'compiler-public-api-advanced-type-source-path-stale';
+const AdvancedTypeSourceHashStaleSignal = 'compiler-public-api-advanced-type-source-hash-stale';
+const AdvancedTypeClaimBearingSignal = 'compiler-advanced-type-shape-claim-bearing';
 const AdvancedTypeProofShapeSpecs = [
   proofShapeSpec('conditional-type', 'conditionalTypeCount', [
     proofField('nodeText', 'compiler-conditional-type-node-texts'),
@@ -98,11 +103,15 @@ const AdvancedTypeProofShapeSpecs = [
   ])
 ];
 
-function advancedTypeProofRequirement(advancedTypeShapes, counts) {
+function advancedTypeProofRequirement(advancedTypeShapes, counts, source = {}) {
   if (!counts.advancedTypeShapeCount) return {};
-  const requiredSignals = advancedTypeRequiredProofSignals(counts);
-  const missingSignals = missingAdvancedTypeProofSignals(advancedTypeShapes, counts);
-  const unsupportedSignals = unsupportedAdvancedTypeProofSignals(counts);
+  const sourceBinding = advancedTypeSourceBinding(source);
+  const requiredSignals = advancedTypeRequiredProofSignals(counts, sourceBinding);
+  const missingSignals = uniqueStrings([
+    ...missingAdvancedTypeProofSignals(advancedTypeShapes, counts),
+    ...missingAdvancedTypeSourceBindingSignals(sourceBinding)
+  ]);
+  const unsupportedSignals = unsupportedAdvancedTypeProofSignals(advancedTypeShapes, counts, sourceBinding);
   const status = unsupportedSignals.length
     ? 'requires-review'
     : missingSignals.length ? 'missing-compiler-evidence' : 'requires-type-equivalence-proof';
@@ -124,6 +133,9 @@ function advancedTypeProofRequirement(advancedTypeShapes, counts) {
     unionTypeCount: counts.unionTypeCount || undefined,
     intersectionTypeCount: counts.intersectionTypeCount || undefined,
     tupleTypeCount: counts.tupleTypeCount || undefined,
+    sourcePath: sourceBinding.sourcePath,
+    sourceHash: sourceBinding.sourceHash,
+    sourceBound: sourceBinding.required ? sourceBinding.bound : undefined,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   });
@@ -144,10 +156,14 @@ function advancedTypeProofRequirement(advancedTypeShapes, counts) {
   };
 }
 
-function advancedTypeRequiredProofSignals(counts) {
-  return uniqueStrings(AdvancedTypeProofShapeSpecs.flatMap((spec) => (
+function advancedTypeRequiredProofSignals(counts, sourceBinding) {
+  const shapeSignals = AdvancedTypeProofShapeSpecs.flatMap((spec) => (
     counts[spec.countKey] > 0 ? [countSignal(spec.kind), ...spec.fields.map((field) => field.signal)] : []
-  )));
+  ));
+  return uniqueStrings([
+    ...shapeSignals,
+    ...(sourceBinding.required ? [AdvancedTypeSourcePathSignal, AdvancedTypeSourceHashSignal] : [])
+  ]);
 }
 
 function missingAdvancedTypeProofSignals(advancedTypeShapes, counts) {
@@ -164,13 +180,68 @@ function missingAdvancedTypeProofSignals(advancedTypeShapes, counts) {
   }));
 }
 
-function unsupportedAdvancedTypeProofSignals(counts) {
+function missingAdvancedTypeSourceBindingSignals(sourceBinding) {
+  if (!sourceBinding.required) return [];
+  return [
+    sourceBinding.sourcePath ? undefined : AdvancedTypeSourcePathSignal,
+    sourceBinding.sourceHash ? undefined : AdvancedTypeSourceHashSignal
+  ].filter(Boolean);
+}
+
+function unsupportedAdvancedTypeProofSignals(advancedTypeShapes, counts, sourceBinding) {
   const knownShapeCount = AdvancedTypeProofShapeSpecs.reduce((sum, spec) => sum + (counts[spec.countKey] || 0), 0);
-  return counts.advancedTypeShapeCount > knownShapeCount ? ['compiler-unknown-advanced-type-shape'] : [];
+  return [
+    counts.advancedTypeShapeCount > knownShapeCount ? 'compiler-unknown-advanced-type-shape' : undefined,
+    ...staleAdvancedTypeSourceBindingSignals(advancedTypeShapes, sourceBinding),
+    hasClaimBearingAdvancedTypeShape(advancedTypeShapes) ? AdvancedTypeClaimBearingSignal : undefined
+  ].filter(Boolean);
+}
+
+function staleAdvancedTypeSourceBindingSignals(advancedTypeShapes, sourceBinding) {
+  if (!sourceBinding.required) return [];
+  const stalePath = sourceBinding.sourcePath
+    && advancedTypeShapes.some((shape) => nonBlankString(shape?.sourcePath) && shape.sourcePath !== sourceBinding.sourcePath);
+  const staleHash = sourceBinding.sourceHash
+    && advancedTypeShapes.some((shape) => nonBlankString(shape?.sourceHash) && shape.sourceHash !== sourceBinding.sourceHash);
+  return [
+    stalePath ? AdvancedTypeSourcePathStaleSignal : undefined,
+    staleHash ? AdvancedTypeSourceHashStaleSignal : undefined
+  ].filter(Boolean);
+}
+
+function hasClaimBearingAdvancedTypeShape(advancedTypeShapes) {
+  return advancedTypeShapes.some((shape) => [
+    shape?.proofClaim,
+    shape?.autoMergeClaim,
+    shape?.semanticEquivalenceClaim,
+    shape?.runtimeEquivalenceClaim,
+    shape?.proof?.proofClaim,
+    shape?.proof?.autoMergeClaim,
+    shape?.proof?.semanticEquivalenceClaim,
+    shape?.proof?.runtimeEquivalenceClaim
+  ].some((value) => value === true));
+}
+
+function advancedTypeSourceBinding(source) {
+  const required = source?.publicContract === true;
+  const sourcePath = nonBlankString(source?.sourcePath) ? source.sourcePath : undefined;
+  const sourceHash = nonBlankString(source?.sourceHash) ? source.sourceHash : undefined;
+  return {
+    required,
+    sourcePath,
+    sourceHash,
+    bound: !required || Boolean(sourcePath && sourceHash)
+  };
 }
 
 function fieldMissing(value) {
-  if (Array.isArray(value)) return !value.length || value.some((item) => item === undefined || item === null);
+  if (Array.isArray(value)) return !value.length || value.some(arrayFieldEntryMissing);
+  if (typeof value === 'string') return value.trim().length === 0;
+  return value === undefined || value === null;
+}
+
+function arrayFieldEntryMissing(value) {
+  if (Array.isArray(value)) return !value.length || value.some(arrayFieldEntryMissing);
   return value === undefined || value === null;
 }
 
@@ -182,6 +253,7 @@ function arrayValue(value) { return Array.isArray(value) ? value : []; }
 function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
 function numberValue(value) { return Number.isFinite(value) ? value : undefined; }
 function nonEmptyArray(value) { return Array.isArray(value) && value.length ? value : undefined; }
+function nonBlankString(value) { return typeof value === 'string' && value.trim().length > 0; }
 function uniqueStrings(values) { return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))]; }
 
 export { compilerAdvancedTypeMetadata };

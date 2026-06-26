@@ -3,6 +3,7 @@ import { exportMapMatch, exportTargetsForValue, packageEnvironmentConditionAmbig
 
 const UNKNOWN_DYNAMIC_IMPORT_MODULE_SPECIFIER = '<dynamic-import>';
 const UNKNOWN_HOST_DEPENDENCY_MODULE_SPECIFIER = '<host-dependency>';
+const PACKAGE_RUNTIME_CONDITION_HOST_RESOURCE_IMPORT_AMBIGUOUS_MISSING = 'package-runtime-condition-host-resource-import-ambiguous-missing';
 
 export function resolveRelativeProjectModule(sourcePath, moduleSpecifier, documentsByPath) {
   if (!sourcePath || !moduleSpecifier || !moduleSpecifier.startsWith('.')) return undefined;
@@ -115,6 +116,12 @@ function resolvePackageImportProjectModule(sourcePath, moduleSpecifier, document
     ...runtimeEvidence
   };
   if (match.value === null) return { kind: 'package-import-null-target-missing', packageImportKey: match.key, packageName: packageContext.packageName, ...runtimeEvidence };
+  if (runtimeEvidence.packageRuntimeConditionReasonCode === PACKAGE_RUNTIME_CONDITION_HOST_RESOURCE_IMPORT_AMBIGUOUS_MISSING) return {
+    kind: PACKAGE_RUNTIME_CONDITION_HOST_RESOURCE_IMPORT_AMBIGUOUS_MISSING,
+    packageImportKey: match.key,
+    packageName: packageContext.packageName,
+    ...runtimeEvidence
+  };
   const runtimeAmbiguity = packageRuntimeConditionAmbiguity(match.value, moduleResolution, sourcePath, packageContext, edgeMetadata);
   if (runtimeAmbiguity) return { kind: 'package-import-runtime-ambiguous-missing', packageImportKey: match.key, packageImportCondition: runtimeAmbiguity, packageName: packageContext.packageName, ...runtimeEvidence };
   const environmentEvidence = packageEnvironmentConditionEvidence(moduleResolution, edgeMetadata);
@@ -188,6 +195,7 @@ function packageCandidates(sourcePath, packageInfo, moduleResolution = {}, edgeM
     const fallbackPath = normalizeProjectPath(joinProjectPath(root, subpath || '.'));
     if (runtimeEvidence.packageRuntimeConditionConflict) return [{ kind: 'package', failClosedKind: 'package-runtime-condition-conflict-missing', path: fallbackPath, packageExportKey: exportMatch?.key, ...runtimeEvidence, ...packageInfo }];
     if (exportValue === undefined || exportValue === null) return [{ kind: 'package', failClosedKind: exportValue === null ? 'package-export-null-target-missing' : 'package-subpath-not-exported-missing', path: fallbackPath, packageExportKey: exportMatch?.key, ...runtimeEvidence, ...packageInfo }];
+    if (runtimeEvidence.packageRuntimeConditionReasonCode === PACKAGE_RUNTIME_CONDITION_HOST_RESOURCE_IMPORT_AMBIGUOUS_MISSING) return [{ kind: 'package', failClosedKind: PACKAGE_RUNTIME_CONDITION_HOST_RESOURCE_IMPORT_AMBIGUOUS_MISSING, path: fallbackPath, packageExportKey: exportMatch?.key, ...runtimeEvidence, ...packageInfo }];
     const runtimeAmbiguity = packageRuntimeConditionAmbiguity(exportValue, moduleResolution, sourcePath, undefined, edgeMetadata);
     if (runtimeAmbiguity) return [{ kind: 'package', failClosedKind: 'package-export-runtime-ambiguous-missing', path: fallbackPath, packageExportKey: exportMatch?.key, packageExportCondition: runtimeAmbiguity, ...runtimeEvidence, ...packageInfo }];
     const environmentAmbiguity = packageEnvironmentConditionAmbiguity(exportValue, moduleResolution, sourcePath, undefined, edgeMetadata);
@@ -251,15 +259,8 @@ function moduleTargetDocument(path, documentsByPath) {
   return undefined;
 }
 
-function targetExportName(edge) {
-  const name = edge.importedName ?? edge.localName ?? edge.exportedName;
-  if (!name || name === '*') return undefined;
-  return String(name);
-}
-
-function symbolKey(documentId, name) {
-  return `${documentId}\u0000${name}`;
-}
+function targetExportName(edge) { const name = edge.importedName ?? edge.localName ?? edge.exportedName; return name && name !== '*' ? String(name) : undefined; }
+function symbolKey(documentId, name) { return `${documentId}\u0000${name}`; }
 
 function patternCapture(value, pattern) {
   if (pattern === value) return '';
@@ -278,9 +279,7 @@ function uniquePaths(candidates) {
   });
 }
 
-function joinProjectPath(left, right) {
-  return left ? `${left}/${right}` : String(right);
-}
+function joinProjectPath(left, right) { return left ? `${left}/${right}` : String(right); }
 
 function packageSpecifierInfo(moduleSpecifier) {
   if (!moduleSpecifier || String(moduleSpecifier).startsWith('#')) return undefined;
@@ -295,11 +294,10 @@ function packageSpecifierInfo(moduleSpecifier) {
 
 function packageResolutionFields(candidate, packageInfo) {
   if (!candidate.packageName && candidate.kind !== 'package') return {};
-  return { packageName: candidate.packageName ?? packageInfo?.packageName, packageSubpath: candidate.packageSubpath ?? packageInfo?.packageSubpath, packageExportKey: candidate.packageExportKey, packageExportCondition: candidate.packageExportCondition, packageExportTarget: candidate.packageExportTarget, packageImportKey: candidate.packageImportKey, packageImportCondition: candidate.packageImportCondition, packageImportTarget: candidate.packageImportTarget, packageRuntimeCondition: candidate.packageRuntimeCondition, packageRuntimeConditionEvidenceSource: candidate.packageRuntimeConditionEvidenceSource, packageRuntimeConditionEdgeKind: candidate.packageRuntimeConditionEdgeKind, packageRuntimeConditionCandidates: candidate.packageRuntimeConditionCandidates, packageRuntimeConditionExcludedConditions: candidate.packageRuntimeConditionExcludedConditions, packageRuntimeConditionReasonCode: candidate.packageRuntimeConditionReasonCode, packageEnvironmentCondition: candidate.packageEnvironmentCondition, packageEnvironmentConditionEvidenceSource: candidate.packageEnvironmentConditionEvidenceSource, packageEnvironmentConditionCandidates: candidate.packageEnvironmentConditionCandidates, packageEnvironmentConditionReasonCode: candidate.packageEnvironmentConditionReasonCode, packageType: candidate.packageType, packageWorkspaceRootAmbiguous: candidate.packageWorkspaceRootAmbiguous, packageWorkspaceRoots: candidate.packageWorkspaceRoots, packageResolutionReasonCode: candidate.packageResolutionReasonCode };
+  return { packageName: candidate.packageName ?? packageInfo?.packageName, packageSubpath: candidate.packageSubpath ?? packageInfo?.packageSubpath, packageExportKey: candidate.packageExportKey, packageExportCondition: candidate.packageExportCondition, packageExportTarget: candidate.packageExportTarget, packageImportKey: candidate.packageImportKey, packageImportCondition: candidate.packageImportCondition, packageImportTarget: candidate.packageImportTarget, packageRuntimeCondition: candidate.packageRuntimeCondition, packageRuntimeConditionEvidenceSource: candidate.packageRuntimeConditionEvidenceSource, packageRuntimeConditionEdgeKind: candidate.packageRuntimeConditionEdgeKind, packageRuntimeConditionCandidates: candidate.packageRuntimeConditionCandidates, packageRuntimeConditionExcludedConditions: candidate.packageRuntimeConditionExcludedConditions, packageRuntimeConditionReasonCode: candidate.packageRuntimeConditionReasonCode, packageRuntimeConditionHostResourceKind: candidate.packageRuntimeConditionHostResourceKind, packageEnvironmentCondition: candidate.packageEnvironmentCondition, packageEnvironmentConditionEvidenceSource: candidate.packageEnvironmentConditionEvidenceSource, packageEnvironmentConditionCandidates: candidate.packageEnvironmentConditionCandidates, packageEnvironmentConditionReasonCode: candidate.packageEnvironmentConditionReasonCode, packageType: candidate.packageType, packageWorkspaceRootAmbiguous: candidate.packageWorkspaceRootAmbiguous, packageWorkspaceRoots: candidate.packageWorkspaceRoots, packageResolutionReasonCode: candidate.packageResolutionReasonCode };
 }
 
 function environmentAmbiguityFields(ambiguity) { return { packageEnvironmentConditionCandidates: ambiguity.split('|'), packageEnvironmentConditionReasonCode: 'package-environment-condition-ambiguous-missing' }; }
-
 function isRecord(value) { return value && typeof value === 'object' && !Array.isArray(value); }
 
 function normalizeProjectPath(path) {

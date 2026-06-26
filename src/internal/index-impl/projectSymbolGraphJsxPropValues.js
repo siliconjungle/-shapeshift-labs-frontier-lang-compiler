@@ -1,13 +1,13 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { isJsxSpreadAttribute } from '../../js-ts-safe-merge-jsx-attribute-parser.js';
+import { jsxSpreadPropValueEvidence } from './projectSymbolGraphJsxSpreadPropValues.js';
+import { parseStaticLiteralExpression } from './projectSymbolGraphJsxStaticLiterals.js';
 import { staticOptionalMemberReference } from './staticOptionalMemberReference.js';
 
-function jsxPropValueEvidence(tag, attribute) {
-  if (isJsxSpreadAttribute(attribute)) return undefined;
-  const assignedValueText = jsxAssignedPropValueText(attribute);
-  const evidence = assignedValueText === undefined
-    ? staticPropValueEvidence('boolean-shorthand', 'true', 'true')
-    : jsxAssignedPropValueEvidence(assignedValueText);
+function jsxPropValueEvidence(tag, attribute, context = {}) {
+  const evidence = isJsxSpreadAttribute(attribute)
+    ? jsxSpreadPropValueEvidence(tag, attribute, context)
+    : jsxNonSpreadPropValueEvidence(attribute);
   return compactRecord({
     ...evidence,
     expressionHash: hashSemanticValue({
@@ -34,10 +34,30 @@ function jsxPropValueEvidence(tag, attribute) {
       optionalReferenceSegments: evidence.optionalReferenceSegments,
       optionalReferenceSegmentIndexes: evidence.optionalReferenceSegmentIndexes,
       optionalNullishBoundaryCount: evidence.optionalNullishBoundaryCount,
+      claimScope: evidence.claimScope,
+      renderEquivalenceClaim: evidence.renderEquivalenceClaim,
+      staticSpreadSourceKind: evidence.staticSpreadSourceKind,
+      staticSpreadSourceName: evidence.staticSpreadSourceName,
+      staticSpreadPropEntries: evidence.staticSpreadPropEntries,
+      staticSpreadPropNames: evidence.staticSpreadPropNames,
+      staticSpreadPropCount: evidence.staticSpreadPropCount,
+      staticSpreadEffectivePropEntries: evidence.staticSpreadEffectivePropEntries,
+      staticSpreadEffectivePropNames: evidence.staticSpreadEffectivePropNames,
+      staticSpreadExplicitOverridePropNames: evidence.staticSpreadExplicitOverridePropNames,
+      staticSpreadOverridesExplicitPropNames: evidence.staticSpreadOverridesExplicitPropNames,
+      staticSpreadDuplicatePropNames: evidence.staticSpreadDuplicatePropNames,
+      staticSpreadPrecedenceStatus: evidence.staticSpreadPrecedenceStatus,
       dynamicText: evidence.dynamicText,
       dynamicBlockerReasonCode: evidence.dynamicBlockerReasonCode
     })
   });
+}
+
+function jsxNonSpreadPropValueEvidence(attribute) {
+  const assignedValueText = jsxAssignedPropValueText(attribute);
+  return assignedValueText === undefined
+    ? staticPropValueEvidence('boolean-shorthand', 'true', 'true')
+    : jsxAssignedPropValueEvidence(assignedValueText);
 }
 
 function jsxAssignedPropValueText(attribute) {
@@ -127,135 +147,6 @@ function staticStructuredLiteralKind(text) {
   return parsed && ['object-literal', 'array-literal', 'template-string'].includes(parsed.kind)
     ? parsed.kind
     : undefined;
-}
-
-function parseStaticLiteralExpression(text) {
-  const state = { text: String(text ?? ''), index: 0 };
-  const parsed = parseStaticLiteralValue(state);
-  skipWhitespace(state);
-  return parsed && state.index === state.text.length ? parsed : undefined;
-}
-
-function parseStaticLiteralValue(state) {
-  skipWhitespace(state);
-  const char = state.text[state.index];
-  if (char === '"' || char === "'") return parseQuotedStaticString(state) ? { kind: 'string' } : undefined;
-  if (char === '`') return parseStaticTemplateString(state) ? { kind: 'template-string' } : undefined;
-  if (char === '{') return parseStaticObjectLiteral(state) ? { kind: 'object-literal' } : undefined;
-  if (char === '[') return parseStaticArrayLiteral(state) ? { kind: 'array-literal' } : undefined;
-  const primitive = parseStaticPrimitiveToken(state);
-  return primitive ? { kind: primitive } : undefined;
-}
-
-function parseStaticObjectLiteral(state) {
-  state.index += 1;
-  skipWhitespace(state);
-  if (consumeChar(state, '}')) return true;
-  while (state.index < state.text.length) {
-    if (state.text.startsWith('...', state.index) || state.text[state.index] === '[') return false;
-    if (!parseStaticObjectKey(state)) return false;
-    skipWhitespace(state);
-    if (!consumeChar(state, ':')) return false;
-    if (!parseStaticLiteralValue(state)) return false;
-    skipWhitespace(state);
-    if (consumeChar(state, '}')) return true;
-    if (!consumeChar(state, ',')) return false;
-    skipWhitespace(state);
-    if (consumeChar(state, '}')) return true;
-  }
-  return false;
-}
-
-function parseStaticArrayLiteral(state) {
-  state.index += 1;
-  skipWhitespace(state);
-  if (consumeChar(state, ']')) return true;
-  while (state.index < state.text.length) {
-    if (state.text.startsWith('...', state.index) || state.text[state.index] === ',') return false;
-    if (!parseStaticLiteralValue(state)) return false;
-    skipWhitespace(state);
-    if (consumeChar(state, ']')) return true;
-    if (!consumeChar(state, ',')) return false;
-    skipWhitespace(state);
-    if (consumeChar(state, ']')) return true;
-  }
-  return false;
-}
-
-function parseStaticObjectKey(state) {
-  skipWhitespace(state);
-  const char = state.text[state.index];
-  if (char === '"' || char === "'") return parseQuotedStaticString(state);
-  const numberStart = state.index;
-  if (parseStaticNumberToken(state)) return true;
-  state.index = numberStart;
-  return Boolean(parseIdentifierToken(state));
-}
-
-function parseQuotedStaticString(state) {
-  const quote = state.text[state.index];
-  if (quote !== '"' && quote !== "'") return false;
-  state.index += 1;
-  while (state.index < state.text.length) {
-    const char = state.text[state.index];
-    if (char === '\\') {
-      state.index += 2;
-      continue;
-    }
-    state.index += 1;
-    if (char === quote) return true;
-  }
-  return false;
-}
-
-function parseStaticTemplateString(state) {
-  if (state.text[state.index] !== '`') return false;
-  state.index += 1;
-  while (state.index < state.text.length) {
-    const char = state.text[state.index];
-    if (char === '\\') {
-      state.index += 2;
-      continue;
-    }
-    if (char === '$' && state.text[state.index + 1] === '{') return false;
-    state.index += 1;
-    if (char === '`') return true;
-  }
-  return false;
-}
-
-function parseStaticPrimitiveToken(state) {
-  const number = parseStaticNumberToken(state);
-  if (number) return 'number';
-  const identifier = parseIdentifierToken(state);
-  if (['true', 'false'].includes(identifier)) return 'boolean';
-  if (identifier === 'null') return 'null';
-  if (identifier === 'undefined') return 'undefined';
-  return undefined;
-}
-
-function parseStaticNumberToken(state) {
-  const match = /^[-]?(?:0|[1-9]\d*)(?:\.\d+)?/.exec(state.text.slice(state.index));
-  if (!match) return undefined;
-  state.index += match[0].length;
-  return match[0];
-}
-
-function parseIdentifierToken(state) {
-  const match = /^[A-Za-z_$][\w$]*/.exec(state.text.slice(state.index));
-  if (!match) return undefined;
-  state.index += match[0].length;
-  return match[0];
-}
-
-function consumeChar(state, char) {
-  if (state.text[state.index] !== char) return false;
-  state.index += 1;
-  return true;
-}
-
-function skipWhitespace(state) {
-  while (/\s/.test(state.text[state.index] ?? '')) state.index += 1;
 }
 
 function staticPropReference(text) {

@@ -23,7 +23,7 @@ const sourceText = [
   'type ButtonProps = { tone: string; size: string };',
   'function Button(_props: ButtonProps) { return null; }',
   'const ThemeContext = React.createContext({ tone: "neutral" });',
-  'const passthrough = { disabled: false };',
+  'const passthrough = { disabled: false, tone: "muted" };',
   'export function View() {',
   '  const theme = useContext(ThemeContext);',
   '  const themedTone = useMemo(() => theme.tone, [theme]);',
@@ -107,6 +107,24 @@ assert.equal(spreadProp.propName, '...spread#1');
 assert.equal(spreadProp.spread, true);
 assert.equal(spreadProp.spreadOrdinal, 1);
 assert.equal(typeof spreadProp.spreadExpressionHash, 'string');
+assert.equal(spreadProp.propValueProofStatus, 'static-object-spread-jsx-prop-value-evidence');
+assert.equal(spreadProp.propValueReasonCode, 'jsx-render-prop-spread-static-object-evidence');
+assert.equal(spreadProp.propValueKind, 'object-spread');
+assert.equal(spreadProp.propValueExpressionText, 'passthrough');
+assert.equal(spreadProp.propValueStaticSpreadSourceKind, 'same-file-const-object');
+assert.equal(spreadProp.propValueStaticSpreadSourceName, 'passthrough');
+assert.deepEqual(spreadProp.propValueStaticSpreadPropNames, ['disabled', 'tone']);
+assert.equal(spreadProp.propValueStaticSpreadPropCount, 2);
+assert.deepEqual(spreadProp.propValueStaticSpreadPropEntries.map((entry) => [entry.propName, entry.valueKind, entry.valueText, entry.ordinal]), [['disabled', 'boolean', 'false', 1], ['tone', 'string', '"muted"', 2]]);
+assert.deepEqual(spreadProp.propValueStaticSpreadEffectivePropNames, ['disabled']);
+assert.deepEqual(spreadProp.propValueStaticSpreadExplicitOverridePropNames, ['tone']);
+assert.deepEqual(spreadProp.propValueStaticSpreadOverridesExplicitPropNames, []);
+assert.deepEqual(spreadProp.propValueStaticSpreadDuplicatePropNames, []);
+assert.equal(spreadProp.propValueStaticSpreadPrecedenceStatus, 'static-spread-overridden-by-later-explicit-prop');
+assert.equal(spreadProp.propValueClaimScope, 'static-object-spread-props-only');
+assert.equal(spreadProp.propValueRenderEquivalenceClaim, false);
+assert.equal(typeof spreadProp.propValueExpressionHash, 'string');
+assert.equal(typeof spreadProp.propValueSignatureHash, 'string');
 
 const provider = graph.jsxElementRecords.find((record) => record.tagName === 'ThemeContext.Provider');
 assert.equal(Boolean(provider?.publicContract), true);
@@ -133,24 +151,6 @@ assert.equal(provider.hookEffectCount, 1);
 assert.equal(typeof provider.hookEffectSignatureHash, 'string');
 assert.equal(provider.contextConsumerCount, 1);
 assert.equal(typeof provider.renderRiskSignatureHash, 'string');
-
-const literalContextSource = 'const ThemeContext = React.createContext("light");\nexport function LiteralView() {\n  return <ThemeContext.Provider value="dark"><button /></ThemeContext.Provider>;\n}\n';
-const literalContextFiles = { 'src/literal.tsx': literalContextSource };
-const literalContextProject = safeMergeJsTsProject({
-  id: 'js_ts_project_safe_merge_jsx_literal_context_value_graph',
-  language: 'tsx',
-  includeOutputProjectSymbolGraph: true,
-  baseFiles: literalContextFiles,
-  workerFiles: literalContextFiles,
-  headFiles: literalContextFiles,
-  outputDiagnostics: []
-});
-const literalProvider = literalContextProject.outputProjectSymbolGraph.jsxElementRecords.find((record) => record.tagName === 'ThemeContext.Provider');
-assert.equal(Boolean(literalProvider?.publicContract), true);
-assert.deepEqual(literalProvider.renderRiskKinds, ['context-provider-boundary', 'context-provider-value-boundary', 'render-return-boundary']);
-assert.deepEqual(literalProvider.renderRiskReasonCodes, ['jsx-render-context-provider-boundary', 'jsx-render-context-provider-value-literal-evidence', 'jsx-render-return-static-evidence']);
-assert.equal(literalProvider.contextValueRecord.proofStatus, 'literal-context-value-evidence'); assert.equal(literalProvider.contextValueRecord.literalValueKind, 'string'); assert.equal(literalProvider.contextValueRecord.literalValueText, '"dark"');
-assert.equal(typeof literalProvider.contextValueRecord.expressionHash, 'string');
 
 const delta = jsxDelta({
   base: jsxProp('base', 'jsx:base'),

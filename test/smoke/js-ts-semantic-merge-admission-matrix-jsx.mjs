@@ -32,6 +32,12 @@ const semanticMergeJsxMatrixCells = [
     note: 'simple static optional-chain prop values emit optional segment/index evidence while optional computed members and optional calls fail closed with dynamic blocker metadata'
   },
   {
+    id: 'jsx-tsx-element-prop-graph/static-object-spread-prop-precedence-evidence',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-jsx-graph',
+    note: 'same-file const object and inline object JSX spreads emit bounded prop-entry evidence with explicit prop precedence while call, getter, and computed spreads fail closed'
+  },
+  {
     id: 'jsx-tsx-element-prop-graph/static-class-style-prop-value-evidence',
     status: 'done',
     evidence: 'js-ts-semantic-merge-admission-matrix-jsx',
@@ -158,6 +164,12 @@ const semanticMergeJsxMatrixCells = [
     note: 'static JSX array returns emit collection kind, item count, item text, and item hash records while broader render equivalence remains unsupported'
   },
   {
+    id: 'jsx-tsx-element-prop-graph/static-const-array-map-render-return-evidence',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-jsx-render-returns',
+    note: 'expression-bodied JSX maps over local const array literals emit source-item and static key identity evidence while dynamic maps and render equivalence remain unsupported'
+  },
+  {
     id: 'jsx-tsx-element-prop-graph/fragment-render-return-collection-evidence',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-jsx-render-returns',
@@ -179,3 +191,10 @@ assert.equal(staticClassStylePropValueCell.evidence, 'js-ts-semantic-merge-admis
 assert.match(staticClassStylePropValueCell.note, /static className template strings/);
 assert.match(staticClassStylePropValueCell.note, /static style object\/array literals/);
 assert.match(staticClassStylePropValueCell.note, /template interpolation remain unsupported/);
+
+const staticObjectSpreadPropPrecedenceCell = semanticMergeJsxMatrixCells.find((cell) => cell.id === 'jsx-tsx-element-prop-graph/static-object-spread-prop-precedence-evidence');
+assert.equal(staticObjectSpreadPropPrecedenceCell.status, 'done');
+assert.equal(staticObjectSpreadPropPrecedenceCell.evidence, 'js-ts-safe-project-merge-jsx-graph');
+assert.match(staticObjectSpreadPropPrecedenceCell.note, /same-file const object/);
+assert.match(staticObjectSpreadPropPrecedenceCell.note, /explicit prop precedence/);
+assert.match(staticObjectSpreadPropPrecedenceCell.note, /fail closed/);

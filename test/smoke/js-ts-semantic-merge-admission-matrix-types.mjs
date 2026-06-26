@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { compilerAdvancedTypeMetadata } from '../../src/internal/index-impl/projectSymbolGraphCompilerAdvancedTypeMetadata.js';
 
 const semanticMergeTypeMatrixCells = [
   {
@@ -36,6 +37,12 @@ const semanticMergeTypeMatrixCells = [
     status: 'done',
     evidence: 'js-ts-safe-project-merge-compiler-type-equivalence-proof',
     note: 'public conditional/mapped/template compiler type records expose advancedTypeMissingProof in conflict evidence and fail closed when required shape text evidence is missing'
+  },
+  {
+    id: 'type-public-api-graph/advanced-type-source-bound-proof',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-compiler-type-equivalence-proof',
+    note: 'public infer/advanced type proof requirements bind shape evidence to source path/hash and route blank, stale, or claim-bearing evidence to missing/review'
   },
   {
     id: 'compiler-type-graph/computed-enum-runtime-value-proof',
@@ -82,3 +89,49 @@ assert.equal(advancedTypeMissingProofCell?.status, 'done');
 assert.equal(advancedTypeMissingProofCell?.evidence, 'js-ts-safe-project-merge-compiler-type-equivalence-proof');
 assert.match(advancedTypeMissingProofCell?.note ?? '', /advancedTypeMissingProof/);
 assert.match(advancedTypeMissingProofCell?.note ?? '', /conditional\/mapped\/template/);
+
+const publicAdvancedTypeSource = {
+  sourcePath: 'src/public-types.ts',
+  sourceHash: 'source:public-types:v2',
+  publicContract: true
+};
+const completeInferShape = {
+  kind: 'infer-type',
+  nodeText: 'infer Item',
+  typeText: 'Item',
+  typeParameterText: 'Item',
+  typeParameterName: 'Item'
+};
+
+const sourceBoundAdvancedType = compilerAdvancedTypeMetadata({
+  advancedTypeShapes: [completeInferShape]
+}, publicAdvancedTypeSource);
+assert.equal(sourceBoundAdvancedType.record.advancedTypeProofRequirement.status, 'requires-type-equivalence-proof');
+assert.equal(sourceBoundAdvancedType.record.advancedTypeProofRequirement.sourceBound, true);
+assert.equal(sourceBoundAdvancedType.record.advancedTypeMissingProof, undefined);
+
+const blankInferEvidence = compilerAdvancedTypeMetadata({
+  advancedTypeShapes: [{ ...completeInferShape, typeText: '   ' }]
+}, publicAdvancedTypeSource);
+assert.equal(blankInferEvidence.record.advancedTypeProofRequirement.status, 'missing-compiler-evidence');
+assert.equal(blankInferEvidence.record.advancedTypeMissingProof.reasonCode, 'typescript-public-api-advanced-type-shape-proof-missing');
+assert.equal(blankInferEvidence.record.advancedTypeMissingProof.missingSignals.includes('compiler-infer-type-type-texts'), true);
+
+const sourceUnboundInferEvidence = compilerAdvancedTypeMetadata({
+  advancedTypeShapes: [completeInferShape]
+}, { sourcePath: publicAdvancedTypeSource.sourcePath, publicContract: true });
+assert.equal(sourceUnboundInferEvidence.record.advancedTypeProofRequirement.status, 'missing-compiler-evidence');
+assert.equal(sourceUnboundInferEvidence.record.advancedTypeMissingProof.missingSignals.includes('compiler-public-api-advanced-type-source-hash'), true);
+
+const staleInferEvidence = compilerAdvancedTypeMetadata({
+  advancedTypeShapes: [{ ...completeInferShape, sourceHash: 'source:stale' }]
+}, publicAdvancedTypeSource);
+assert.equal(staleInferEvidence.record.advancedTypeProofRequirement.status, 'requires-review');
+assert.equal(staleInferEvidence.record.advancedTypeMissingProof.reasonCode, 'typescript-public-api-advanced-type-shape-proof-requires-review');
+assert.equal(staleInferEvidence.record.advancedTypeMissingProof.unsupportedSignals.includes('compiler-public-api-advanced-type-source-hash-stale'), true);
+
+const claimBearingInferEvidence = compilerAdvancedTypeMetadata({
+  advancedTypeShapes: [{ ...completeInferShape, semanticEquivalenceClaim: true }]
+}, publicAdvancedTypeSource);
+assert.equal(claimBearingInferEvidence.record.advancedTypeProofRequirement.status, 'requires-review');
+assert.equal(claimBearingInferEvidence.record.advancedTypeMissingProof.unsupportedSignals.includes('compiler-advanced-type-shape-claim-bearing'), true);

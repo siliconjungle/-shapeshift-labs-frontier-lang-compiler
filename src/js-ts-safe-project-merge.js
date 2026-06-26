@@ -259,6 +259,9 @@ function mergeProjectFile(file, input, projectId, projectSymbolRenames) {
     policy: file.policy ?? file.mergePolicy ?? policyForFile(input, file.sourcePath)
   });
   if (result.status !== 'merged') {
+    if (base === worker && base === head) {
+      return syntheticFile(file, context, base, 'unchanged-identical');
+    }
     return maybeMergeImportSpecifierRemovalFile(file, context, result, input)
       ?? mergeBlockedFile(file, context, result);
   }

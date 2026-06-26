@@ -69,7 +69,7 @@ function compilerTypeRecord(fact, symbol, document, publicSymbolIds, compilerSym
   const indexSignatureReadonlyCount = numberValue(value.indexSignatureReadonlyCount) ?? compilerIndexSignatureReadonlyCount(value.indexSignatures);
   const constructorSignatureCount = numberValue(value.constructorSignatureCount) ?? arrayLength(value.constructorSignatures);
   const classHeritageCount = numberValue(value.classHeritageCount) ?? arrayLength(value.classHeritage);
-  const advancedType = compilerAdvancedTypeMetadata(value);
+  const advancedType = compilerAdvancedTypeMetadata(value, sourceBinding);
   const enumShape = compilerEnumShapeMetadata(value);
   const typeInferenceSyntax = compilerTypeInferenceSyntaxMetadata(value, sourceBinding);
   const classMemberShape = compilerClassMemberShapeMetadata(value, sourceBinding);

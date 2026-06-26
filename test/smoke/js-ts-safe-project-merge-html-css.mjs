@@ -1,6 +1,6 @@
 import { assert } from './helpers.mjs';
-import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
-import { fileAdmissionEvidenceRecords } from '../../src/js-ts-safe-project-merge-evidence-routing.js';
+import { safeMergeJsTsProject } from './compiler-api.mjs';
+import { htmlCssProjectSummary } from '../../src/js-ts-safe-project-merge-html-css-summary.js';
 
 const htmlBase = [
   '<main id="app">',
@@ -56,14 +56,23 @@ assert.equal(mixedProject.summary.htmlCssParserEvidenceFiles, 2);
 assert.equal(mixedProject.summary.htmlIdentityEvidenceFiles, 1);
 assert.equal(mixedProject.summary.htmlExplicitIdentityEvidenceFiles, 1);
 assert.equal(mixedProject.summary.htmlPathOnlyIdentityResidualFiles, 1);
+assert.equal(mixedProject.summary.htmlDuplicateIdentityEvidenceFiles, 0);
+assert.equal(mixedProject.summary.htmlDuplicateIdentityKeys, 0);
 assert.equal(mixedProject.summary.htmlRuntimeBoundaryEvidenceFiles, 0);
 assert.equal(mixedProject.summary.htmlFrameworkBoundaryEvidenceFiles, 0);
 assert.equal(mixedProject.summary.htmlProofGapBlockedFiles, 0);
 assert.equal(mixedProject.summary.cssSelectorTargetEvidenceFiles, 1);
+assert.equal(mixedProject.summary.cssSelectorTargetGraphEvidenceFiles, 0);
+assert.equal(mixedProject.summary.cssSelectorSpecificityEvidenceFiles, 1);
+assert.equal(mixedProject.summary.cssSelectorTargetMoveFiles, 0);
 assert.equal(mixedProject.summary.htmlCssStructuralTargetEvidenceFiles, 2);
 assert.equal(mixedProject.summary.cssScopedCascadeFiles, 0);
 assert.equal(mixedProject.summary.cssScopedCascadeEvidenceFiles, 0);
 assert.equal(mixedProject.summary.cssScopedCascadeBlockedFiles, 0);
+assert.equal(mixedProject.summary.cssDependencySurfaceFiles, 0);
+assert.equal(mixedProject.summary.cssDependencyGraphEvidenceFiles, 0);
+assert.equal(mixedProject.summary.cssDependencyGraphMissingProofFiles, 0);
+assert.equal(mixedProject.summary.cssDependencyGraphBlockedFiles, 0);
 assert.equal(mixedProject.summary.htmlCssBrowserRuntimeProofs, 0);
 const outputByPath = new Map(mixedProject.outputFiles.map((file) => [file.sourcePath, file]));
 assert.equal(outputByPath.get('src/view.html').language, 'html');
@@ -83,6 +92,34 @@ assert.equal(matrixSurface(mixedProject, 'css-selector-target-evidence').proofSt
 const browserSurface = matrixSurface(mixedProject, 'html-css-browser-runtime-proof');
 assert.equal(browserSurface.proofStatuses['browser-runtime-proof'], 'missing');
 assert.equal(browserSurface.missingRouteIds.includes('prove-html-css-browser-runtime'), true);
+
+const htmlDuplicateIdentityBase = [
+  '<main id="app">',
+  '  <button data-frontier-key="dup">A</button>',
+  '  <button data-frontier-key="dup">B</button>',
+  '</main>',
+  ''
+].join('\n');
+const htmlDuplicateIdentityProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_duplicate_identity',
+  files: [{
+    sourcePath: 'src/view.html',
+    baseSourceText: htmlDuplicateIdentityBase,
+    workerSourceText: htmlDuplicateIdentityBase.replace('A</button>', 'Save</button>'),
+    headSourceText: htmlDuplicateIdentityBase.replace('id="app"', 'id="app" class="shell"')
+  }]
+});
+assert.equal(htmlDuplicateIdentityProject.status, 'blocked');
+assert.equal(htmlDuplicateIdentityProject.summary.htmlBlockedFiles, 1);
+assert.equal(htmlDuplicateIdentityProject.summary.htmlIdentityEvidenceFiles, 0);
+assert.equal(htmlDuplicateIdentityProject.summary.htmlIdentityEvidenceFailedFiles, 1);
+assert.equal(htmlDuplicateIdentityProject.summary.htmlDuplicateIdentityEvidenceFiles, 1);
+assert.equal(htmlDuplicateIdentityProject.summary.htmlDuplicateIdentityKeys, 3);
+assert.equal(htmlDuplicateIdentityProject.conflicts.some((conflict) => conflict.code === 'html-duplicate-identity-blocked'), true);
+assert.equal(htmlDuplicateIdentityProject.conflicts.some((conflict) => conflict.details.reasonCode === 'html-duplicate-explicit-identity'), true);
+const htmlDuplicateIdentitySurface = matrixSurface(htmlDuplicateIdentityProject, 'html-identity-evidence');
+assert.equal(htmlDuplicateIdentitySurface.proofStatuses['html-identity-evidence'], 'failed');
+assert.equal(htmlDuplicateIdentitySurface.missingRouteIds.includes('prove-html-identity-evidence'), true);
 
 const htmlBlockedProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_html_runtime_block',
@@ -104,6 +141,29 @@ assert.equal(htmlBlockedProject.conflicts.some((conflict) => conflict.details.re
 const htmlBlockedSurface = matrixSurface(htmlBlockedProject, 'html-structural-merge-admission');
 assert.equal(htmlBlockedSurface.proofStatuses['html-structural-merge'], 'failed');
 assert.equal(htmlBlockedSurface.missingRouteIds.includes('admit-html-structural-merge'), true);
+
+const htmlEventHandlerBlockedProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_event_handler_runtime_block',
+  files: [{
+    sourcePath: 'src/view.html',
+    baseSourceText: '<button data-frontier-key="save" onclick="save()">Save</button>\n',
+    workerSourceText: '<button data-frontier-key="save" onclick="saveNow()">Save</button>\n',
+    headSourceText: '<button data-frontier-key="save" onclick="save()">Save</button>\n'
+  }]
+});
+assert.equal(htmlEventHandlerBlockedProject.status, 'blocked');
+assert.equal(htmlEventHandlerBlockedProject.summary.htmlBlockedFiles, 1);
+assert.equal(htmlEventHandlerBlockedProject.summary.htmlParserEvidenceFiles, 1);
+assert.equal(htmlEventHandlerBlockedProject.summary.htmlExplicitIdentityEvidenceFiles, 1);
+assert.equal(htmlEventHandlerBlockedProject.summary.htmlRuntimeBoundaryEvidenceFiles, 1);
+assert.equal(htmlEventHandlerBlockedProject.summary.htmlProofGapBlockedFiles, 1);
+assert.equal(htmlEventHandlerBlockedProject.conflicts.some((conflict) => conflict.code === 'html-proof-gap-blocked'), true);
+assert.equal(htmlEventHandlerBlockedProject.conflicts.some((conflict) => conflict.details.reasonCode === 'event-handler-runtime-boundary'), true);
+assert.equal(htmlEventHandlerBlockedProject.files[0].result.browserRuntimeEquivalenceClaim, false);
+assert.equal(htmlEventHandlerBlockedProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
+const htmlEventHandlerBlockedSurface = matrixSurface(htmlEventHandlerBlockedProject, 'html-structural-merge-admission');
+assert.equal(htmlEventHandlerBlockedSurface.proofStatuses['html-structural-merge'], 'failed');
+assert.equal(htmlEventHandlerBlockedSurface.missingRouteIds.includes('admit-html-structural-merge'), true);
 
 const cssBlockedProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_conflict',
@@ -155,6 +215,71 @@ assert.match(cssSelectorMoveRebasedProject.outputFiles[0].sourceText, /\.primary
 assert.match(cssSelectorMoveRebasedProject.outputFiles[0].sourceText, /background-color: white/);
 assert.equal(matrixSurface(cssSelectorMoveRebasedProject, 'css-selector-target-evidence').proofStatuses['css-selector-target-evidence'], 'passed');
 
+const cssSpecificSelectorListBase = '.card > .button:hover, .toolbar .button::before { color: red; }\n';
+const cssSpecificSelectorListWorker = '.card > .primary:hover, .toolbar .button::before { color: red; }\n';
+const cssSpecificSelectorListHead = '.card > .button:hover, .toolbar .button::before { color: red; background-color: white; }\n';
+const cssSpecificSelectorListConflict = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_specific_selector_list_conflict',
+  files: [{
+    sourcePath: 'src/button.css',
+    baseSourceText: cssSpecificSelectorListBase,
+    workerSourceText: cssSpecificSelectorListWorker,
+    headSourceText: cssSpecificSelectorListHead
+  }]
+});
+assert.equal(cssSpecificSelectorListConflict.status, 'blocked');
+assert.equal(cssSpecificSelectorListConflict.summary.cssSelectorTargetEvidenceFiles, 1);
+assert.equal(cssSpecificSelectorListConflict.summary.cssSelectorTargetGraphEvidenceFiles, 0);
+assert.equal(cssSpecificSelectorListConflict.summary.cssSelectorSpecificityEvidenceFiles, 1);
+assert.equal(cssSpecificSelectorListConflict.summary.cssSelectorTargetMoveFiles, 1);
+assert.equal(cssSpecificSelectorListConflict.summary.cssSelectorTargetConflictFiles, 1);
+const cssSpecificSelectorListMove = cssSpecificSelectorListConflict.conflicts.find((conflict) => conflict.code === 'css-selector-target-conflict')?.details.selectorMove;
+assert.deepEqual(cssSpecificSelectorListMove?.beforeSelectors, ['.card > .button:hover', '.toolbar .button::before']);
+assert.deepEqual(cssSpecificSelectorListMove?.afterSelectors, ['.card > .primary:hover', '.toolbar .button::before']);
+assert.equal(cssSpecificSelectorListMove?.selectorTargetGraphHashPresent, false);
+const cssSpecificSelectorListSurface = matrixSurface(cssSpecificSelectorListConflict, 'css-selector-target-evidence');
+assert.equal(cssSpecificSelectorListSurface.proofStatuses['css-selector-target-evidence'], 'failed');
+assert.equal(cssSpecificSelectorListSurface.missingRouteIds.includes('prove-css-selector-target-evidence'), true);
+
+const cssSpecificSelectorListPartialEquivalence = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_specific_selector_list_partial_equivalence',
+  cssMergeOptionsByPath: { 'src/button.css': { selectorTargetEquivalences: [{ fromSelectors: ['.card > .button:hover'], toSelectors: ['.card > .primary:hover'] }] } },
+  files: [{
+    sourcePath: 'src/button.css',
+    baseSourceText: cssSpecificSelectorListBase,
+    workerSourceText: cssSpecificSelectorListWorker,
+    headSourceText: cssSpecificSelectorListHead
+  }]
+});
+assert.equal(cssSpecificSelectorListPartialEquivalence.status, 'blocked');
+assert.equal(cssSpecificSelectorListPartialEquivalence.summary.cssSelectorTargetConflictFiles, 1);
+
+const cssSpecificSelectorListRebased = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_specific_selector_list_rebased',
+  cssMergeOptionsByPath: {
+    'src/button.css': {
+      selectorTargetEquivalences: [{
+        fromSelectors: ['.card > .button:hover', '.toolbar .button::before'],
+        toSelectors: ['.card > .primary:hover', '.toolbar .button::before']
+      }]
+    }
+  },
+  files: [{
+    sourcePath: 'src/button.css',
+    baseSourceText: cssSpecificSelectorListBase,
+    workerSourceText: cssSpecificSelectorListWorker,
+    headSourceText: cssSpecificSelectorListHead
+  }]
+});
+assert.equal(cssSpecificSelectorListRebased.status, 'merged');
+assert.equal(cssSpecificSelectorListRebased.summary.cssSelectorTargetRebasedFiles, 1);
+assert.equal(cssSpecificSelectorListRebased.summary.cssSelectorSpecificityEvidenceFiles, 1);
+assert.equal(cssSpecificSelectorListRebased.summary.cssSelectorTargetGraphEvidenceFiles, 0);
+assert.match(cssSpecificSelectorListRebased.outputFiles[0].sourceText, /\.card > \.primary:hover, \.toolbar \.button::before \{/);
+assert.match(cssSpecificSelectorListRebased.outputFiles[0].sourceText, /background-color: white/);
+assert.equal(cssSpecificSelectorListRebased.files[0].result.selectorTargetEvidence.rebaseProofs[0].cascadeKey, '.card > .primary:hover,.toolbar .button::before::background-color');
+assert.equal(matrixSurface(cssSpecificSelectorListRebased, 'css-selector-target-evidence').proofStatuses['css-selector-target-evidence'], 'passed');
+
 const scopedCssBase = '@media (min-width: 700px) {\n  .button {\n    color: red;\n    padding-left: 1rem;\n  }\n}\n';
 const scopedCssWorker = scopedCssBase.replace('color: red', 'color: blue');
 const scopedCssHead = scopedCssBase.replace('padding-left: 1rem;', 'padding-left: 1rem;\n    background-color: white;');
@@ -180,118 +305,14 @@ assert.equal(scopedCssWithProof.summary.cssScopedCascadeEvidenceFiles, 1);
 assert.equal(scopedCssWithProof.summary.cssScopedCascadeBlockedFiles, 0);
 assert.equal(matrixSurface(scopedCssWithProof, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'passed');
 
-const icssModuleSource = [
-  ':export {',
-  '  accentColor: var(--accent);',
-  '}',
-  '.root {',
-  '  color: var(--accent);',
-  '}',
-  ''
-].join('\n');
-const icssModuleComponentSource = [
-  'import styles from ' + JSON.stringify('./Theme.module.css') + ';',
-  'export function ThemeButton() {',
-  '  const accent = styles.accentColor;',
-  '  return <button className={styles.root} data-accent={accent} />;',
-  '}',
-  ''
-].join('\n');
-const provenIcssModuleImport = importNativeSource({
+const layerScopedReasonSummary = htmlCssProjectSummary([{
   language: 'css',
-  sourcePath: 'src/Theme.module.css',
-  sourceText: icssModuleSource,
-  metadata: {
-    cssModuleEvidence: {
-      moduleHash: 'css-module:theme',
-      exports: [{ name: 'root' }],
-      icssExports: [{ name: 'accentColor', value: 'var(--accent)' }],
-      generatedClassNameMapHash: 'css-module-generated-map:theme',
-      jsTsUseSiteGraphHash: 'css-module-use-sites:theme',
-      icssGraphHash: 'icss-graph:theme'
-    },
-    bundlerTransformHash: 'bundler-transform:theme',
-    sourceMapProofHash: 'source-map-proof:theme'
-  }
-});
-const provenIcssModuleProject = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_module_icss_use_site',
-  includeOutputProjectSymbolGraph: true,
-  outputProjectImports: [provenIcssModuleImport],
-  files: [
-    { language: 'css', sourcePath: 'src/Theme.module.css', headSourceText: icssModuleSource },
-    { language: 'tsx', sourcePath: 'src/ThemeButton.tsx', baseSourceText: icssModuleComponentSource, workerSourceText: icssModuleComponentSource, headSourceText: icssModuleComponentSource }
-  ]
-});
-assert.equal(provenIcssModuleProject.status, 'merged');
-const provenIcssBinding = provenIcssModuleProject.outputProjectSymbolGraph.cssModuleImportBindings[0];
-assert.equal(provenIcssBinding.cssModuleExportNames.includes('accentColor'), true);
-assert.equal(provenIcssBinding.cssModuleExportNames.includes('root'), true);
-const provenIcssTokenUseSite = provenIcssModuleProject.outputProjectSymbolGraph.cssModuleUseSites.find((site) => site.exportName === 'accentColor');
-assert.equal(provenIcssTokenUseSite?.useSiteKind, 'scope-member-read');
-assert.equal(provenIcssTokenUseSite.cssModuleSourcePath, 'src/Theme.module.css');
-assert.equal(typeof provenIcssTokenUseSite.cssModuleExportHash, 'string');
-assert.equal(provenIcssModuleProject.summary.projectGraphCssModuleUseSiteConflicts, 0);
-assert.equal(provenIcssModuleProject.summary.projectGraphCssModuleUseSiteBlockers, 0);
-assert.equal(provenIcssModuleProject.summary.projectGraphCssModuleUseSiteGraphs, 1);
-assert.equal(matrixSurface(provenIcssModuleProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'passed');
-
-const unprovedIcssModuleImport = importNativeSource({
-  language: 'css',
-  sourcePath: 'src/Theme.module.css',
-  sourceText: icssModuleSource,
-  metadata: {
-    cssModuleEvidence: {
-      moduleHash: 'css-module:theme',
-      exports: [{ name: 'root' }],
-      icssExports: [{ name: 'accentColor', value: 'var(--accent)' }],
-      generatedClassNameMapHash: 'css-module-generated-map:theme',
-      jsTsUseSiteGraphHash: 'css-module-use-sites:theme'
-    },
-    bundlerTransformHash: 'bundler-transform:theme',
-    sourceMapProofHash: 'source-map-proof:theme'
-  }
-});
-const unprovedIcssModuleProject = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_module_icss_use_site_missing_graph',
-  includeOutputProjectSymbolGraph: true,
-  outputProjectImports: [unprovedIcssModuleImport],
-  files: [
-    { language: 'css', sourcePath: 'src/Theme.module.css', headSourceText: icssModuleSource },
-    { language: 'tsx', sourcePath: 'src/ThemeButton.tsx', baseSourceText: icssModuleComponentSource, workerSourceText: icssModuleComponentSource, headSourceText: icssModuleComponentSource }
-  ]
-});
-assert.equal(unprovedIcssModuleProject.status, 'blocked');
-assert.equal(unprovedIcssModuleProject.outputProjectSymbolGraph.cssModuleImportBindings[0].cssModuleExportNames.includes('accentColor'), false);
-assert.equal(unprovedIcssModuleProject.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-export-name-unresolved'), true);
-assert.equal(matrixSurface(unprovedIcssModuleProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'failed');
-
-const genericAdmissionEvidence = fileAdmissionEvidenceRecords([{
-  summary: {
-    genericAdmissionEvidence: [
-      { id: 'safe_exact', kind: 'js-ts-project-generic-admission', status: 'passed', details: { exactBranchOutput: true } },
-      { id: 'blocked_conflict', kind: 'js-ts-project-generic-admission', status: 'failed', details: { reasonCode: 'generic-conflict' } }
-    ]
-  },
-  metadata: {
-    genericAdmissions: [{
-      id: 'review_missing',
-      kind: 'js-ts-project-generic-admission',
-      status: 'missing',
-      admissionRoute: { status: 'missing', reasonCodes: ['missing-proof'] }
-    }]
-  }
+  sourcePath: 'src/layer.css',
+  status: 'blocked',
+  result: { conflicts: [{ details: { reasonCode: 'css-layer-cascade-scope-unproved' } }] }
 }]);
-const genericAdmissionById = new Map(genericAdmissionEvidence.map((record) => [record.id, record]));
-assert.equal(genericAdmissionById.get('safe_exact').admissionOutcome, 'safe');
-assert.equal(genericAdmissionById.get('safe_exact').admissionOutcomeReasonCode, 'passed-exact-branch-output');
-assert.equal(genericAdmissionById.get('blocked_conflict').admissionOutcome, 'blocked');
-assert.equal(genericAdmissionById.get('blocked_conflict').admissionOutcomeReasonCode, 'generic-conflict');
-assert.equal(genericAdmissionById.get('review_missing').admissionOutcome, 'review');
-assert.equal(genericAdmissionById.get('review_missing').admissionOutcomeReasonCode, 'missing-proof');
+assert.equal(layerScopedReasonSummary.cssScopedCascadeFiles, 1);
+assert.equal(layerScopedReasonSummary.cssScopedCascadeEvidenceFiles, 0);
+assert.equal(layerScopedReasonSummary.cssScopedCascadeBlockedFiles, 1);
 
-function matrixSurface(result, surface) {
-  const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);
-  assert.ok(record, `missing ${surface} matrix surface`);
-  return record;
-}
+function matrixSurface(result, surface) { const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface); assert.ok(record, `missing ${surface} matrix surface`); return record; }

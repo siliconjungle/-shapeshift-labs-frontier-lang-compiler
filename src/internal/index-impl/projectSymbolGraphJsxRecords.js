@@ -11,6 +11,7 @@ import { jsxImportedComponentOwnerIndexes, jsxImportedMemberComponentOwnerIndexe
 import { jsxSameFileMemberComponentObjectIndex, jsxSameFileMemberComponentOwnerIndex } from './projectSymbolGraphJsxMemberComponents.js';
 import { jsxProviderFlowAncestorMap, jsxProviderFlowRecords } from './projectSymbolGraphJsxProviderFlows.js';
 import { jsxComponentPropRenderFlowBoundary, jsxComponentPropRenderFlowRecords } from './projectSymbolGraphJsxPropFlows.js';
+import { jsxPropComponentFlowRecordFields, jsxPropValueRecordFields } from './projectSymbolGraphJsxPropRecordFields.js';
 import { jsxPropValueEvidence } from './projectSymbolGraphJsxPropValues.js';
 import { lineColumnForOffset } from './lineColumnForOffset.js';
 
@@ -112,7 +113,7 @@ function jsxElementRecord(tag, index, context) {
 function jsxPropRecordsForTag(tag, index, element, context) {
   return tag.attributes.map((attribute, attrIndex) => {
     const sourceSpan = sourceSpanForRange(context, attribute.start, attribute.end);
-    const valueEvidence = jsxPropValueEvidence(tag, attribute);
+    const valueEvidence = jsxPropValueEvidence(tag, attribute, context);
     const componentPropRenderFlow = jsxComponentPropRenderFlowBoundary(tag, attribute, valueEvidence, { componentOwners: context.componentOwners, componentMemberOwners: context.componentMemberOwners, sourcePath: context.sourcePath, sourceText: context.sourceText });
     return compactRecord({
       id: `jsx_prop_${idFragment(context.sourcePath)}_${index + 1}_${attrIndex + 1}`,
@@ -122,36 +123,8 @@ function jsxPropRecordsForTag(tag, index, element, context) {
       propKind: propKind(attribute), keyProp: attribute.name === 'key' || undefined,
       spread: isJsxSpreadAttribute(attribute) || undefined, spreadOrdinal: attribute.spreadOrdinal,
       spreadExpressionHash: spreadExpressionHash(attribute),
-      propValueProofStatus: valueEvidence?.proofStatus, propValueReasonCode: valueEvidence?.reasonCode,
-      propValueKind: valueEvidence?.valueKind, propValueText: valueEvidence?.valueText,
-      propValueExpressionText: valueEvidence?.expressionText, propValueReferenceRoot: valueEvidence?.referenceRoot,
-      propValueReferencePath: valueEvidence?.referencePath, propValueDynamicText: valueEvidence?.dynamicText,
-      propValueOptionalReference: valueEvidence?.optionalReference, propValueOptionalReferenceSegments: valueEvidence?.optionalReferenceSegments,
-      propValueOptionalReferenceSegmentIndexes: valueEvidence?.optionalReferenceSegmentIndexes, propValueOptionalNullishBoundaryCount: valueEvidence?.optionalNullishBoundaryCount,
-      propValueDynamicBlockerReasonCode: valueEvidence?.dynamicBlockerReasonCode,
-      propValueExpressionHash: valueEvidence?.expressionHash, propValueSignatureHash: valueEvidence?.signatureHash,
-      componentPropRenderFlowStatus: componentPropRenderFlow?.status, componentPropRenderFlowReasonCode: componentPropRenderFlow?.reasonCode,
-      componentPropRenderFlowClaim: componentPropRenderFlow?.claim, componentPropRenderFlowClaimScope: componentPropRenderFlow?.claimScope,
-      componentPropRenderFlowRenderEquivalenceClaim: componentPropRenderFlow?.renderEquivalenceClaim,
-      componentPropRenderFlowScope: componentPropRenderFlow?.scope,
-      componentPropRenderFlowTargetName: componentPropRenderFlow?.targetName,
-      componentPropRenderFlowTargetKind: componentPropRenderFlow?.targetKind,
-      componentPropRenderFlowTargetOwnerName: componentPropRenderFlow?.targetOwnerName,
-      componentPropRenderFlowTargetOwnerCount: componentPropRenderFlow?.targetOwnerCount,
-      componentPropRenderFlowTargetSourcePath: componentPropRenderFlow?.targetSourcePath,
-      componentPropRenderFlowTargetLookupStatus: componentPropRenderFlow?.targetLookupStatus, componentPropRenderFlowTargetLookupScope: componentPropRenderFlow?.targetLookupScope,
-      componentPropRenderFlowImportEdgeId: componentPropRenderFlow?.importEdgeId, componentPropRenderFlowImportKind: componentPropRenderFlow?.importKind, componentPropRenderFlowImportedName: componentPropRenderFlow?.importedName, componentPropRenderFlowLocalName: componentPropRenderFlow?.localName, componentPropRenderFlowTargetExportName: componentPropRenderFlow?.targetExportName,
-      componentPropRenderFlowReExportEdgeId: componentPropRenderFlow?.reExportEdgeId, componentPropRenderFlowReExportSourcePath: componentPropRenderFlow?.reExportSourcePath, componentPropRenderFlowReExportExportedName: componentPropRenderFlow?.reExportExportedName, componentPropRenderFlowReExportLocalName: componentPropRenderFlow?.reExportLocalName, componentPropRenderFlowReExportTargetSourcePath: componentPropRenderFlow?.reExportTargetSourcePath, componentPropRenderFlowReExportKind: componentPropRenderFlow?.reExportKind, componentPropRenderFlowReExportIdentityId: componentPropRenderFlow?.reExportIdentityId, componentPropRenderFlowTargetLookupHash: componentPropRenderFlow?.targetLookupHash,
-      componentPropRenderFlowMemberObjectName: componentPropRenderFlow?.memberObjectName, componentPropRenderFlowMemberPropertyName: componentPropRenderFlow?.memberPropertyName, componentPropRenderFlowMemberLocalName: componentPropRenderFlow?.memberLocalName, componentPropRenderFlowMemberBindingKind: componentPropRenderFlow?.memberBindingKind, componentPropRenderFlowMemberBindingHash: componentPropRenderFlow?.memberBindingHash,
-      componentPropRenderFlowComponentPropName: componentPropRenderFlow?.componentPropName,
-      componentPropRenderFlowRenderedTagName: componentPropRenderFlow?.renderedTagName,
-      componentPropRenderFlowRenderedPropName: componentPropRenderFlow?.renderedPropName,
-      componentPropRenderFlowPassthroughExpressionText: componentPropRenderFlow?.passthroughExpressionText,
-      componentPropRenderFlowBindingKind: componentPropRenderFlow?.bindingKind,
-      componentPropRenderFlowReturnOrdinal: componentPropRenderFlow?.returnOrdinal,
-      componentPropRenderFlowDynamicBlockerReasonCode: componentPropRenderFlow?.dynamicBlockerReasonCode,
-      componentPropRenderFlowTargetSignatureHash: componentPropRenderFlow?.targetSignatureHash,
-      componentPropRenderFlowSignatureHash: componentPropRenderFlow?.signatureHash,
+      ...jsxPropValueRecordFields(valueEvidence),
+      ...jsxPropComponentFlowRecordFields(componentPropRenderFlow),
       publicContract: element.publicContract, publicOwnerName: element.publicOwnerName,
       signatureHash: hashSemanticValue({
         kind: 'frontier.lang.projectJsxPropSignature', tagName: tag.tagName, tagKey: tag.key,

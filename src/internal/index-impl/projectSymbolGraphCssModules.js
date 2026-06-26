@@ -37,10 +37,13 @@ function createProjectCssModuleGraphRecords(semanticIndex, imports, importEdges,
   const namedImportBlockers = importBindings
     .filter((binding) => binding.importKind === 'named')
     .map((binding) => cssModuleNamedExportBlocker(binding));
-  const missingTransformBlockers = importBindings
-    .filter((binding) => hasUseSite(binding, lexicalUseSites) || hasUseSite(binding, jsxUseSites))
-    .flatMap((binding) => cssModuleTransformBlockers(binding));
   const cssModuleUseSites = uniqueRecords([...jsxUseSites, ...lexicalUseSites], cssModuleUseSiteKey);
+  const usedImportBindings = importBindings
+    .filter((binding) => hasUseSite(binding, cssModuleUseSites));
+  const missingTransformBlockers = usedImportBindings
+    .flatMap((binding) => cssModuleTransformBlockers(binding));
+  const missingDependencyGraphBlockers = usedImportBindings
+    .flatMap((binding) => cssModuleDependencyGraphBlockers(binding, cssSourcesByPath));
   const bindingsById = new Map(importBindings.map((binding) => [binding.id, binding]));
   const missingExportBlockers = cssModuleMissingExportBlockers(bindingsById, cssModuleUseSites);
   const cssModuleUseSiteBlockers = uniqueRecords([
@@ -48,7 +51,8 @@ function createProjectCssModuleGraphRecords(semanticIndex, imports, importEdges,
     ...jsxBlockers,
     ...namedImportBlockers,
     ...missingExportBlockers,
-    ...missingTransformBlockers
+    ...missingTransformBlockers,
+    ...missingDependencyGraphBlockers
   ], cssModuleBlockerKey);
   return {
     cssModuleImportBindings: importBindings,
@@ -73,6 +77,46 @@ function cssModuleNamedExportBlocker(binding) {
     reasonCode: 'css-module-named-export-transform-unproved',
     expressionText: binding.localName
   });
+}
+
+function cssModuleDependencyGraphBlockers(binding, cssSourcesByPath) {
+  const cssModuleEvidence = cssSourcesByPath.get(binding.cssModuleSourcePath)?.cssModuleEvidence;
+  const blockers = [];
+  if (requiresCssModuleCompositionGraph(cssModuleEvidence) && !binding.cssModuleCompositionGraphHash) {
+    blockers.push(cssModuleBindingBlocker(binding, {
+      reasonCode: 'css-module-composition-resolution-unproved',
+      expressionText: binding.localName
+    }));
+  }
+  if (requiresIcssGraph(cssModuleEvidence) && !binding.icssGraphHash) {
+    blockers.push(cssModuleBindingBlocker(binding, {
+      reasonCode: 'css-module-icss-graph-unproved',
+      expressionText: binding.localName
+    }));
+  }
+  return blockers;
+}
+
+function requiresCssModuleCompositionGraph(cssModuleEvidence) {
+  return hasCssModuleProofGap(cssModuleEvidence, 'css-module-composition-resolution-unproved')
+    || hasRecords(cssModuleEvidence?.compositions);
+}
+
+function requiresIcssGraph(cssModuleEvidence) {
+  return hasCssModuleProofGap(cssModuleEvidence, 'css-module-icss-graph-unproved')
+    || hasRecords(cssModuleEvidence?.icssImports)
+    || hasRecords(cssModuleEvidence?.icssExports)
+    || hasRecords(cssModuleEvidence?.icss?.imports)
+    || hasRecords(cssModuleEvidence?.icss?.exports);
+}
+
+function hasCssModuleProofGap(cssModuleEvidence, code) {
+  return (cssModuleEvidence?.proofGaps ?? []).some((gap) => gap?.code === code);
+}
+
+function hasRecords(value) {
+  if (Array.isArray(value)) return value.length > 0;
+  return value && typeof value === 'object' ? Object.keys(value).length > 0 : false;
 }
 
 function hasUseSite(binding, useSites) {

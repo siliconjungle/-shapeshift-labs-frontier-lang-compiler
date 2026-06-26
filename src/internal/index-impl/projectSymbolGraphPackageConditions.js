@@ -1,4 +1,5 @@
 import { runtimeAdmittedConditions, runtimeConditionRecord } from './projectSymbolGraphPackageRuntimeConditions.js';
+import { hostResourceImportDependencyKind } from './moduleHostResourceImportMetadata.js';
 
 const EnvironmentPackageConditions = Object.freeze([
   'browser',
@@ -11,6 +12,7 @@ const EnvironmentPackageConditions = Object.freeze([
   'bun',
   'react-native'
 ]);
+const PACKAGE_RUNTIME_CONDITION_HOST_RESOURCE_IMPORT_AMBIGUOUS_MISSING = 'package-runtime-condition-host-resource-import-ambiguous-missing';
 
 function exportTargetsForValue(value, conditions, condition) {
   if (!value) return [];
@@ -62,9 +64,11 @@ function packageEnvironmentConditionAmbiguity(value, moduleResolution, sourcePat
 }
 
 function packageRuntimeConditionEvidence(moduleResolution = {}, sourcePath, packageContext, edgeMetadata) {
+  const packageType = packageTypeForSource(moduleResolution, sourcePath, packageContext);
+  const hostResourceAmbiguity = packageRuntimeHostResourceConditionAmbiguity(edgeMetadata, packageType);
+  if (hostResourceAmbiguity) return hostResourceAmbiguity;
   const edgeCondition = packageRuntimeConditionFromEdge(edgeMetadata);
   const extensionCondition = packageRuntimeConditionFromExtension(sourcePath);
-  const packageType = packageTypeForSource(moduleResolution, sourcePath, packageContext);
   const packageTypeCondition = packageType === 'module' ? 'import' : packageType === 'commonjs' ? 'require' : undefined;
   if (edgeCondition) {
     const conflict = edgeCondition.conflictsWithSource && (
@@ -182,6 +186,19 @@ function packageRuntimeHostConditionAmbiguity(edgeMetadata = {}, packageType) {
   });
 }
 
+function packageRuntimeHostResourceConditionAmbiguity(edgeMetadata = {}, packageType) {
+  const hostKind = edgeMetadata.hostDependencyKind;
+  const hostResourceKind = hostResourceImportDependencyKind(hostKind);
+  if (!hostResourceKind) return undefined;
+  return compactRecord({
+    packageRuntimeConditionEvidenceSource: 'host-resource-import-ambiguous',
+    packageRuntimeConditionEdgeKind: `host-${hostKind}`,
+    packageRuntimeConditionReasonCode: PACKAGE_RUNTIME_CONDITION_HOST_RESOURCE_IMPORT_AMBIGUOUS_MISSING,
+    packageRuntimeConditionHostResourceKind: hostResourceKind,
+    packageType
+  });
+}
+
 function edgeCondition(packageRuntimeCondition, packageRuntimeConditionEdgeKind, packageRuntimeConditionReasonCode, preferred, conflictsWithSource) {
   return runtimeConditionRecord({
     packageRuntimeCondition,
@@ -245,10 +262,7 @@ function packageTypeByRoot(typeMap, sourcePath) {
     .sort((left, right) => right.root.length - left.root.length)[0]?.value;
 }
 
-function normalizePackageType(value) {
-  const type = typeof value === 'string' ? value : value?.type ?? value?.packageType;
-  return type === 'module' || type === 'commonjs' ? type : undefined;
-}
+function normalizePackageType(value) { const type = typeof value === 'string' ? value : value?.type ?? value?.packageType; return type === 'module' || type === 'commonjs' ? type : undefined; }
 
 function sameSet(left, right) {
   if (left.size !== right.size) return false;
@@ -256,13 +270,8 @@ function sameSet(left, right) {
   return true;
 }
 
-function uniqueStrings(values) {
-  return [...new Set(values.filter((value) => typeof value === 'string' && value))];
-}
-
-function stringValue(value) {
-  return typeof value === 'string' && value.length ? value : undefined;
-}
+function uniqueStrings(values) { return [...new Set(values.filter((value) => typeof value === 'string' && value))]; }
+function stringValue(value) { return typeof value === 'string' && value.length ? value : undefined; }
 
 function prioritizeConditions(conditions, preferred) {
   const entries = Array.isArray(conditions) ? conditions : [conditions];
@@ -276,7 +285,6 @@ function prioritizeConditions(conditions, preferred) {
 }
 
 function isRecord(value) { return value && typeof value === 'object' && !Array.isArray(value); }
-
 function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
 
 function replaceTargetCapture(target, capture) {
@@ -303,9 +311,6 @@ function patternCapture(value, pattern) {
   return String(value).slice(prefix.length, String(value).length - suffix.length);
 }
 
-function pathInsideRoot(sourcePath, root) {
-  if (!root) return true;
-  return sourcePath === root || sourcePath.startsWith(`${root}/`);
-}
+function pathInsideRoot(sourcePath, root) { return !root || sourcePath === root || sourcePath.startsWith(`${root}/`); }
 
 export { exportMapMatch, exportTargetsForValue, packageConditions, packageEnvironmentConditionAmbiguity, packageEnvironmentConditionEvidence, packageRuntimeConditionAmbiguity, packageRuntimeConditionEvidence };
