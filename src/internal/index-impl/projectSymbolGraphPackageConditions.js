@@ -1,3 +1,5 @@
+import { runtimeAdmittedConditions, runtimeConditionRecord } from './projectSymbolGraphPackageRuntimeConditions.js';
+
 const EnvironmentPackageConditions = Object.freeze([
   'browser',
   'node',
@@ -30,7 +32,10 @@ function exportMapMatch(exportsValue, subpath) {
 
 function packageConditions(moduleResolution = {}, sourcePath, packageContext, edgeMetadata) {
   return prioritizeConditions(
-    moduleResolution.packageExportConditions ?? moduleResolution.conditions ?? ['types', 'import', 'module', 'require', 'default'],
+    runtimeAdmittedConditions(
+      moduleResolution.packageExportConditions ?? moduleResolution.conditions ?? ['types', 'import', 'module', 'require', 'default'],
+      packageRuntimeConditionEvidence(moduleResolution, sourcePath, packageContext, edgeMetadata).packageRuntimeCondition
+    ),
     packageConditionPreferences(sourcePath, moduleResolution, packageContext, edgeMetadata)
   );
 }
@@ -78,8 +83,8 @@ function packageRuntimeConditionEvidence(moduleResolution = {}, sourcePath, pack
   }
   const hostAmbiguity = edgeCondition ? undefined : packageRuntimeHostConditionAmbiguity(edgeMetadata, packageType);
   if (hostAmbiguity) return hostAmbiguity;
-  if (extensionCondition) return { packageRuntimeCondition: extensionCondition, packageRuntimeConditionEvidenceSource: 'source-extension', packageType };
-  if (packageTypeCondition) return { packageRuntimeCondition: packageTypeCondition, packageRuntimeConditionEvidenceSource: 'package-type', packageType };
+  if (extensionCondition) return runtimeConditionRecord({ packageRuntimeCondition: extensionCondition, packageRuntimeConditionEvidenceSource: 'source-extension', packageType });
+  if (packageTypeCondition) return runtimeConditionRecord({ packageRuntimeCondition: packageTypeCondition, packageRuntimeConditionEvidenceSource: 'package-type', packageType });
   return {};
 }
 
@@ -178,14 +183,14 @@ function packageRuntimeHostConditionAmbiguity(edgeMetadata = {}, packageType) {
 }
 
 function edgeCondition(packageRuntimeCondition, packageRuntimeConditionEdgeKind, packageRuntimeConditionReasonCode, preferred, conflictsWithSource) {
-  return {
+  return runtimeConditionRecord({
     packageRuntimeCondition,
     packageRuntimeConditionEvidenceSource: 'edge-kind',
     packageRuntimeConditionEdgeKind,
     packageRuntimeConditionReasonCode,
     preferred,
     conflictsWithSource
-  };
+  });
 }
 
 function staticImportKind(importKind) {
@@ -303,12 +308,4 @@ function pathInsideRoot(sourcePath, root) {
   return sourcePath === root || sourcePath.startsWith(`${root}/`);
 }
 
-export {
-  exportMapMatch,
-  exportTargetsForValue,
-  packageConditions,
-  packageEnvironmentConditionAmbiguity,
-  packageEnvironmentConditionEvidence,
-  packageRuntimeConditionAmbiguity,
-  packageRuntimeConditionEvidence
-};
+export { exportMapMatch, exportTargetsForValue, packageConditions, packageEnvironmentConditionAmbiguity, packageEnvironmentConditionEvidence, packageRuntimeConditionAmbiguity, packageRuntimeConditionEvidence };

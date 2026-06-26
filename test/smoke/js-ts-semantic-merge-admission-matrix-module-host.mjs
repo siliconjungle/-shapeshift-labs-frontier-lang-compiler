@@ -1,4 +1,9 @@
-import { assert } from './helpers.mjs';
+import assert from 'node:assert/strict';
+import {
+  exportTargetsForValue,
+  packageConditions,
+  packageRuntimeConditionEvidence
+} from '../../src/internal/index-impl/projectSymbolGraphPackageConditions.js';
 
 const semanticMergeModuleHostMatrixCells = [
   {
@@ -42,6 +47,12 @@ const semanticMergeModuleHostMatrixCells = [
     status: 'done',
     evidence: 'project-symbol-graph-package-runtime-condition-from-edge-kind',
     note: 'static import/re-export, CommonJS require, literal dynamic import, and static resolver host edges carry package import/require condition evidence with fail-closed conflict candidates'
+  },
+  {
+    id: 'module-export-import-graph/package-runtime-condition-exclusive-admission-evidence',
+    status: 'done',
+    evidence: 'project-symbol-graph-package-runtime-condition-exclusive-admission',
+    note: 'known import/require runtime evidence excludes the opposite package export condition before conditional target admission'
   },
   {
     id: 'module-export-import-graph/commonjs-helper-package-runtime-condition-evidence',
@@ -134,3 +145,39 @@ for (const cell of semanticMergeModuleHostMatrixCells) {
   assert.equal(typeof cell.id, 'string');
   assert.equal(typeof cell.evidence, 'string');
 }
+
+const conditionalRuntimeExportValue = {
+  import: './esm.js',
+  module: './module.js',
+  require: './cjs.cjs',
+  default: './fallback.js'
+};
+
+const importRuntimeEvidence = packageRuntimeConditionEvidence({}, 'src/consumer.js', undefined, {
+  importKind: 'module'
+});
+assert.equal(importRuntimeEvidence.packageRuntimeCondition, 'import');
+assert.deepEqual(importRuntimeEvidence.packageRuntimeConditionExcludedConditions, ['require']);
+
+const importRuntimeConditions = packageConditions({}, 'src/consumer.js', undefined, {
+  importKind: 'module'
+});
+assert.equal(importRuntimeConditions.includes('require'), false);
+assert.equal(exportTargetsForValue(conditionalRuntimeExportValue, importRuntimeConditions)
+  .some((target) => target.path === './cjs.cjs'), false);
+
+const requireRuntimeEvidence = packageRuntimeConditionEvidence({}, 'src/consumer.js', undefined, {
+  importKind: 'commonjs-require',
+  commonJs: true
+});
+assert.equal(requireRuntimeEvidence.packageRuntimeCondition, 'require');
+assert.deepEqual(requireRuntimeEvidence.packageRuntimeConditionExcludedConditions, ['import', 'module']);
+
+const requireRuntimeConditions = packageConditions({}, 'src/consumer.js', undefined, {
+  importKind: 'commonjs-require',
+  commonJs: true
+});
+assert.equal(requireRuntimeConditions.includes('import'), false);
+assert.equal(requireRuntimeConditions.includes('module'), false);
+assert.equal(exportTargetsForValue(conditionalRuntimeExportValue, requireRuntimeConditions)
+  .some((target) => target.path === './esm.js' || target.path === './module.js'), false);

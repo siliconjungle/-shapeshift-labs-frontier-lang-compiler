@@ -26,6 +26,12 @@ const semanticMergeRuntimeMatrixCells = [
     note: 'module-scope top-level await emits runtime-scope order evidence and routes await suspension-order conflicts without treating the module as a function'
   },
   {
+    id: 'control-flow-effect-graph/dynamic-import-specifier-order-evidence',
+    status: 'done',
+    evidence: 'semantic-effect-runtime-order-evidence',
+    note: 'dynamic import async effects carry same-line specifier kind/text evidence with false runtime-resolution and equivalence claims so specifier-sensitive changes require explicit proof'
+  },
+  {
     id: 'control-flow-effect-graph/class-static-block-order-evidence',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-class-static-block-runtime',

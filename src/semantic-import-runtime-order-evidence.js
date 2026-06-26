@@ -9,6 +9,7 @@ import { reachabilityOrderEvidence } from './semantic-import-runtime-reachabilit
 import { throwOrderEvidenceRecords } from './semantic-import-runtime-throw-evidence.js';
 import { promiseCombinatorEvidenceRecords } from './semantic-import-runtime-promise-combinator-evidence.js';
 import { promiseChainEvidenceRecords } from './semantic-import-runtime-promise-chain-evidence.js';
+import { dynamicImportEvidenceRecords, dynamicImportSignatureEvidence } from './semantic-import-runtime-dynamic-import-evidence.js';
 function semanticFactOrderInfo(groups) {
   const bySubject = new Map();
   const info = new Map();
@@ -61,6 +62,7 @@ function semanticFactRuntimeOrderEvidence(sourceText, group, fact, spanInfo, ord
     sameLineAwaitOrder: sameLineEvidence.awaitOrder,
     sameLineOptionalChain: sameLineEvidence.optionalChain,
     sameLineConditionalExpression: sameLineEvidence.conditionalExpression,
+    sameLineDynamicImport: sameLineEvidence.dynamicImport,
     sameLinePromiseCombinator: sameLineEvidence.promiseCombinator,
     sameLinePromiseChain: sameLineEvidence.promiseChain,
     sameLineThrow: sameLineEvidence.throw,
@@ -85,6 +87,7 @@ function semanticFactRuntimeOrderSignatureEvidence(evidence) {
     sameLineAwaitOrder: evidence?.sameLineAwaitOrder,
     sameLineOptionalChain: evidence?.sameLineOptionalChain,
     sameLineConditionalExpression: evidence?.sameLineConditionalExpression,
+    sameLineDynamicImport: evidence?.sameLineDynamicImport?.map(dynamicImportSignatureEvidence),
     sameLinePromiseCombinator: evidence?.sameLinePromiseCombinator,
     sameLinePromiseChain: evidence?.sameLinePromiseChain,
     sameLineThrow: evidence?.sameLineThrow,
@@ -100,7 +103,7 @@ function sameLineRuntimeOrderEvidence(line, start, end) {
   const prefix = String(line ?? '').slice(0, start);
   const controlFlow = controlHeadEvidenceRecords(prefix), shortCircuit = shortCircuitEvidenceRecords(prefix), awaitOrder = awaitOrderEvidenceRecords(prefix);
   const optionalChain = optionalChainEvidenceRecords(line, start, end), conditionalExpression = conditionalExpressionEvidenceRecords(line, start, end);
-  const promiseCombinator = promiseCombinatorEvidenceRecords(line, start, end), promiseChain = promiseChainEvidenceRecords(line, start, end), throwOrder = throwOrderEvidenceRecords(line, start, end);
+  const dynamicImport = dynamicImportEvidenceRecords(line, start, end), promiseCombinator = promiseCombinatorEvidenceRecords(line, start, end), promiseChain = promiseChainEvidenceRecords(line, start, end), throwOrder = throwOrderEvidenceRecords(line, start, end);
   return {
     controlFlow: controlFlow.length ? controlFlow : undefined,
     shortCircuit: shortCircuit.length ? shortCircuit : undefined,
@@ -108,6 +111,7 @@ function sameLineRuntimeOrderEvidence(line, start, end) {
     awaitOrder: awaitOrder.length ? awaitOrder : undefined,
     optionalChain: optionalChain.length ? optionalChain : undefined,
     conditionalExpression: conditionalExpression.length ? conditionalExpression : undefined,
+    dynamicImport: dynamicImport.length ? dynamicImport : undefined,
     promiseCombinator: promiseCombinator.length ? promiseCombinator : undefined,
     promiseChain: promiseChain.length ? promiseChain : undefined,
     throw: throwOrder.length ? true : /\bthrow\b/.test(prefix) || undefined,
@@ -126,7 +130,6 @@ function controlFlowOrderEvidence(line, lineNumber, group) {
     loop: records.filter((record) => record.kind === 'loop')
   };
 }
-
 function optionalChainEvidenceRecords(line, start, end) {
   const expression = String(line ?? '').slice(Math.max(0, start), Math.max(start, end));
   const matches = [...expression.matchAll(/\?\.(?:\s*\(|\s*[A-Za-z_$][\w$]*|\s*\[)/g)];
@@ -136,7 +139,6 @@ function optionalChainEvidenceRecords(line, start, end) {
     text: normalizeOrderEvidenceText(expression.slice(Math.max(0, match.index - 24), match.index + match[0].length + 24))
   }));
 }
-
 function awaitOrderEvidenceRecords(prefix) {
   const text = String(prefix ?? '');
   const tokens = awaitTokenIndexes(text);
@@ -164,7 +166,6 @@ function awaitTokenIndexes(text) {
   }
   return indexes;
 }
-
 function shortCircuitEvidenceRecords(prefix) {
   const text = String(prefix ?? '');
   const operators = shortCircuitOperators(text);

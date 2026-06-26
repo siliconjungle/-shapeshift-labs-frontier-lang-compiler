@@ -57,6 +57,16 @@ function scanPreservedSourceTokens(sourceText, input) {
       push(trivia, 'whitespace', text, start);
       continue;
     }
+    if (offset === 0 && char === '#' && next === '!') {
+      let text = '';
+      while (offset < sourceText.length && sourceText[offset] !== '\n' && sourceText[offset] !== '\r') {
+        text += sourceText[offset];
+        offset += 1;
+        column += 1;
+      }
+      push(trivia, 'shebang', text, start);
+      continue;
+    }
     if (char === '/' && next === '/') {
       let text = '';
       while (offset < sourceText.length && sourceText[offset] !== '\n' && sourceText[offset] !== '\r') {

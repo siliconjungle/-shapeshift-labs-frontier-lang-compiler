@@ -1,4 +1,4 @@
-import { assert } from './helpers.mjs';
+import { strict as assert } from 'node:assert';
 
 const semanticMergeJsxMatrixCells = [
   {
@@ -30,6 +30,12 @@ const semanticMergeJsxMatrixCells = [
     status: 'done',
     evidence: 'js-ts-safe-project-merge-jsx-prop-values',
     note: 'simple static optional-chain prop values emit optional segment/index evidence while optional computed members and optional calls fail closed with dynamic blocker metadata'
+  },
+  {
+    id: 'jsx-tsx-element-prop-graph/static-class-style-prop-value-evidence',
+    status: 'done',
+    evidence: 'js-ts-semantic-merge-admission-matrix-jsx',
+    note: 'static className template strings and static style object/array literals emit static literal prop-value evidence while computed keys, calls, spreads, references, and template interpolation remain unsupported'
   },
   {
     id: 'jsx-tsx-element-prop-graph/static-inline-event-handler-evidence',
@@ -166,3 +172,10 @@ for (const cell of semanticMergeJsxMatrixCells) {
   assert.equal(typeof cell.evidence, 'string', `${cell.id}: evidence`);
   assert.equal(typeof cell.note, 'string', `${cell.id}: note`);
 }
+
+const staticClassStylePropValueCell = semanticMergeJsxMatrixCells.find((cell) => cell.id === 'jsx-tsx-element-prop-graph/static-class-style-prop-value-evidence');
+assert.equal(staticClassStylePropValueCell.status, 'done');
+assert.equal(staticClassStylePropValueCell.evidence, 'js-ts-semantic-merge-admission-matrix-jsx');
+assert.match(staticClassStylePropValueCell.note, /static className template strings/);
+assert.match(staticClassStylePropValueCell.note, /static style object\/array literals/);
+assert.match(staticClassStylePropValueCell.note, /template interpolation remain unsupported/);

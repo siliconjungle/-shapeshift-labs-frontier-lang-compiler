@@ -158,6 +158,8 @@ const smokeModules = [
   './smoke/semantic-effect-runtime-reachability-order.mjs',
   './smoke/semantic-effect-runtime-executable-evidence.mjs',
   './smoke/semantic-effect-runtime-conditional-order.mjs',
+  './smoke/semantic-effect-runtime-order-evidence.mjs',
+  './smoke/semantic-effect-runtime-dynamic-import-order.mjs',
   './smoke/semantic-effect-runtime-promise-chain.mjs',
   './smoke/semantic-effect-runtime-promise-proof-bridge.mjs',
   './smoke/semantic-effect-runtime-promise-chain-proof-bridge.mjs',

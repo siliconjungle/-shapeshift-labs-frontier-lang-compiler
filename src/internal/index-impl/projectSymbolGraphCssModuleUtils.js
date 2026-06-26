@@ -19,10 +19,11 @@ function cssModuleSourceRecord(imported) {
   );
   const sourceText = nativeImportSourceText(imported);
   const inferredEvidence = suppliedEvidence ? undefined : inferCssModuleEvidence(sourceText, sourcePath, metadata, nativeMetadata, astMetadata);
+  const cssModuleEvidence = normalizeCssModuleEvidence(suppliedEvidence ?? inferredEvidence);
   return compactRecord({
     sourcePath,
     sourceHash: imported?.nativeSource?.sourceHash ?? imported?.metadata?.sourceHash,
-    cssModuleEvidence: suppliedEvidence ?? inferredEvidence,
+    cssModuleEvidence,
     cssModuleEvidenceSource: suppliedEvidence ? 'supplied' : inferredEvidence ? 'inferred-source' : undefined,
     bundlerTransformHash: firstString(metadata.bundlerTransformHash, nativeMetadata.bundlerTransformHash, astMetadata.bundlerTransformHash),
     sourceMapProofHash: firstString(metadata.sourceMapProofHash, nativeMetadata.sourceMapProofHash, astMetadata.sourceMapProofHash)
@@ -134,6 +135,48 @@ function semanticSpanForHash(span) {
   return span ? { path: span.path, start: span.start, end: span.end, startLine: span.startLine, startColumn: span.startColumn, endLine: span.endLine, endColumn: span.endColumn } : undefined;
 }
 
+function normalizeCssModuleEvidence(evidence) {
+  if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) return undefined;
+  const icssExportNames = cssModuleIcssExportNames(evidence);
+  const exportNames = uniqueSortedStrings([
+    ...cssModuleEvidenceExportNames(evidence),
+    ...(evidence.icssGraphHash ? icssExportNames : [])
+  ]);
+  return compactRecord({
+    ...evidence,
+    icssExportNames: icssExportNames.length ? icssExportNames : undefined,
+    exportNames: exportNames.length ? exportNames : evidence.exportNames
+  });
+}
+
+function cssModuleEvidenceExportNames(evidence) {
+  return uniqueSortedStrings([
+    ...arrayValue(evidence?.exportNames),
+    ...arrayValue(evidence?.localClassNames),
+    ...arrayValue(evidence?.classNames),
+    ...cssModuleExportRecordNames(evidence?.exports),
+    ...objectKeys(evidence?.exports),
+    ...objectKeys(evidence?.generatedClassNameMap),
+    ...objectKeys(evidence?.classMap)
+  ]);
+}
+
+function cssModuleIcssExportNames(evidence) {
+  return uniqueSortedStrings([
+    ...arrayValue(evidence?.icssExportNames),
+    ...cssModuleExportRecordNames(evidence?.icssExports),
+    ...objectKeys(evidence?.icssExports),
+    ...cssModuleExportRecordNames(evidence?.icss?.exports),
+    ...objectKeys(evidence?.icss?.exports)
+  ]);
+}
+
+function cssModuleExportRecordNames(value) {
+  return Array.isArray(value)
+    ? value.map((entry) => entry?.name ?? entry?.localName ?? entry?.exportedName).filter(Boolean)
+    : [];
+}
+
 function compactRecord(record) {
   return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
 }
@@ -148,6 +191,18 @@ function isIdentifierChar(char) {
 
 function objectValue(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function arrayValue(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function objectKeys(value) {
+  return Object.keys(objectValue(value));
+}
+
+function uniqueSortedStrings(values) {
+  return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))].sort();
 }
 
 function firstObject(...values) {

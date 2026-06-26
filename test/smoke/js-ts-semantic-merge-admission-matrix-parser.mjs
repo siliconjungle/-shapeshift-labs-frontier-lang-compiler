@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import { scanPreservedSourceTokens } from '../../src/native-source-preservation-scanner.js';
 import { classifySourceMapGeneratedBoundary } from '../../src/internal/index-impl/sourceMapGeneratedBoundaryGate.js';
 
 const semanticMergeParserMatrixCells = [
@@ -53,6 +54,25 @@ for (const cell of semanticMergeParserMatrixCells) {
   assert.equal(typeof cell.evidence, 'string', `${cell.id}: evidence`);
   assert.equal(typeof cell.note, 'string', `${cell.id}: note`);
 }
+
+const shebangScan = scanPreservedSourceTokens('#!/usr/bin/env node\nconsole.log(1);\n', {
+  language: 'javascript',
+  sourcePath: 'bin/cli.js',
+  sourceHash: 'source:hash'
+});
+assert.equal(shebangScan.trivia[0].kind, 'shebang');
+assert.equal(shebangScan.trivia[0].text, '#!/usr/bin/env node');
+assert.equal(shebangScan.trivia[0].span.start, 0);
+assert.equal(shebangScan.trivia[0].span.end, 19);
+assert.equal(shebangScan.trivia[0].span.startLine, 1);
+assert.equal(shebangScan.trivia[0].span.startColumn, 1);
+assert.equal(shebangScan.trivia[0].span.endLine, 1);
+assert.equal(shebangScan.trivia[0].span.endColumn, 20);
+assert.equal(shebangScan.trivia[0].ownershipAnchor.role, 'trivia');
+assert.equal(shebangScan.trivia[0].ownershipAnchor.anchorKind, 'file-entrypoint-directive');
+assert.equal(shebangScan.trivia[1].kind, 'newline');
+assert.equal(shebangScan.tokens[0].text, 'console');
+assert.equal(shebangScan.tokens[0].span.start, 20);
 
 const exactGeneratedBoundaryGate = classifySourceMapGeneratedBoundary([{
   id: 'source_map_exact_generated_boundary',

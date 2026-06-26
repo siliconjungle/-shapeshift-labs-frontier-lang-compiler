@@ -74,6 +74,7 @@ const namespaceDynamicComputedConflict = namespaceDynamicComputedProject.conflic
 assert.equal(namespaceDynamicComputedProject.status, 'blocked');
 assert.equal(namespaceDynamicComputedProject.admission.reasonCodes.includes('project-public-scope-use-def-ambiguous-evidence'), true);
 assert.equal(namespaceDynamicComputedConflict?.details.reasonCodes.includes('lexical-scope-namespace-computed-member-unsupported'), true);
+assert.equal(namespaceDynamicComputedConflict?.details.reasonCodes.includes('lexical-scope-namespace-computed-member-dynamic-unsupported'), true);
 
 function projectGraph(files, id) {
   return safeMergeJsTsProject({

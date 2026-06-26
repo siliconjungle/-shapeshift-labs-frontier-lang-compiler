@@ -80,10 +80,18 @@ function exactBranchProjectSemanticEditAdmission(options) {
     if (requireOtherBranchUnchanged && !otherProjectBranchUnchanged(file, classification.branch, { requireBase: requireBaseForOtherBranchUnchanged })) return undefined;
   }
   const outputHash = hashProjectSourceText(branchText);
+  const admissionOutcome = 'safe';
+  const admissionOutcomeReasonCode = exactMergedOutput && allowExistingExactOutput
+    ? 'existing-exact-branch-output'
+    : typeof branchText === 'string'
+      ? 'exact-branch-output-other-branch-unchanged'
+      : 'exact-branch-deletion-other-branch-unchanged';
   const admission = {
     id: safeProjectEvidenceId(`${classification.details?.conflictKey ?? classification.code}_${file.sourcePath}`),
     kind: admissionKind,
     status: 'passed',
+    admissionOutcome,
+    admissionOutcomeReasonCode,
     branch: classification.branch,
     ...(admissionFields(classification) ?? {}),
     sourcePath: file.sourcePath,
@@ -94,6 +102,8 @@ function exactBranchProjectSemanticEditAdmission(options) {
       ...(details(classification) ?? {}),
       sourcePath: file.sourcePath,
       outputHash,
+      admissionOutcome,
+      admissionOutcomeReasonCode,
       exactBranchOutput: true,
       deletedOutput: typeof branchText !== 'string' || undefined,
       autoMergeClaim: false,

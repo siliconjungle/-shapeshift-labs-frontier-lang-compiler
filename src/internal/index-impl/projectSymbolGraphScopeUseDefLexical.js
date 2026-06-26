@@ -8,6 +8,7 @@ import { nearestPublicOwnerForOffset } from './projectSymbolGraphScopeUseDefOwne
 import { readStaticMemberLiteral } from './staticMemberLiteral.js';
 
 const jsTsKeywords = new Set('abstract as async await break case catch class const continue debugger declare default delete do else enum export extends false finally for from function if implements import in infer instanceof interface keyof let module namespace new null of package private protected public readonly return satisfies static super switch this throw true try type typeof undefined unique unknown var void while with yield'.split(' '));
+const namespaceComputedMemberDynamicUnsupportedReason = 'lexical-scope-namespace-computed-member-dynamic-unsupported', namespaceComputedMemberUnresolvedReason = 'lexical-scope-namespace-computed-member-unresolved';
 
 function lexicalScopeRecordsForImport(sourceText, context) {
   const masked = maskNonCode(sourceText);
@@ -230,15 +231,17 @@ function namespacePropertyAccess(code, token, binding, context) {
 
 function namespaceComputedPropertyAccess(sourceText, code, tokenStart, open) {
   const close = findMatchingBracket(code, open);
-  if (close === -1) return blockedNamespaceComputedPropertyAccess();
+  if (close === -1) return blockedNamespaceComputedPropertyAccess(undefined, [namespaceComputedMemberUnresolvedReason]);
   const writeOperation = namespaceMemberWriteOperation(code, tokenStart, close + 1);
   let index = open + 1;
   while (index < close && /\s/.test(sourceText[index])) index += 1;
+  if (index >= close) return blockedNamespaceComputedPropertyAccess(writeOperation, [namespaceComputedMemberUnresolvedReason]);
   const literal = readStaticMemberLiteral(sourceText, index, close);
-  if (!literal) return blockedNamespaceComputedPropertyAccess(writeOperation);
+  if (!literal) return blockedNamespaceComputedPropertyAccess(writeOperation, [namespaceComputedMemberDynamicUnsupportedReason]);
   let afterLiteral = literal.end + 1;
   while (afterLiteral < close && /\s/.test(sourceText[afterLiteral])) afterLiteral += 1;
-  if (afterLiteral !== close || !identifierRegExp.test(literal.value)) return blockedNamespaceComputedPropertyAccess(writeOperation);
+  if (afterLiteral !== close) return blockedNamespaceComputedPropertyAccess(writeOperation, [namespaceComputedMemberDynamicUnsupportedReason]);
+  if (!identifierRegExp.test(literal.value)) return blockedNamespaceComputedPropertyAccess(writeOperation);
   if (writeOperation) {
     return blockedNamespaceMemberWrite('namespace-computed-property-write', {
       memberName: literal.value,
@@ -252,31 +255,18 @@ function namespaceComputedPropertyAccess(sourceText, code, tokenStart, open) {
   return { referenceKind: 'namespace-computed-property-read', memberName: literal.value, memberStart: literal.start, memberEnd: literal.end, memberComputed: true, memberLiteralKind: literal.literalKind };
 }
 
-function blockedNamespaceComputedPropertyAccess(writeOperation) {
+function blockedNamespaceComputedPropertyAccess(writeOperation, reasonCodes = []) {
   return {
     referenceKind: writeOperation ? 'namespace-computed-property-write' : 'namespace-computed-property-read',
     memberComputed: true,
     writeOperation,
     status: 'blocked',
-    reasonCodes: [
-      LexicalUseDefReasonCodes.namespaceComputedMemberUnsupported,
-      ...(writeOperation ? [LexicalUseDefReasonCodes.namespaceMemberWriteUnsupported] : [])
-    ]
+    reasonCodes: uniqueReasonCodes([LexicalUseDefReasonCodes.namespaceComputedMemberUnsupported, ...reasonCodes, ...(writeOperation ? [LexicalUseDefReasonCodes.namespaceMemberWriteUnsupported] : [])])
   };
 }
 
 function blockedNamespaceMemberWrite(referenceKind, fields = {}) {
-  return {
-    referenceKind,
-    memberName: fields.memberName,
-    memberStart: fields.memberStart,
-    memberEnd: fields.memberEnd,
-    memberComputed: fields.memberComputed,
-    memberLiteralKind: fields.memberLiteralKind,
-    status: 'blocked',
-    reasonCodes: [LexicalUseDefReasonCodes.namespaceMemberWriteUnsupported],
-    writeOperation: fields.writeOperation
-  };
+  return { referenceKind, memberName: fields.memberName, memberStart: fields.memberStart, memberEnd: fields.memberEnd, memberComputed: fields.memberComputed, memberLiteralKind: fields.memberLiteralKind, status: 'blocked', reasonCodes: [LexicalUseDefReasonCodes.namespaceMemberWriteUnsupported], writeOperation: fields.writeOperation };
 }
 
 function namespaceMemberWriteOperation(code, tokenStart, accessEnd) {
@@ -316,5 +306,7 @@ function findMatchingBracket(code, open) {
   }
   return -1;
 }
+
+function uniqueReasonCodes(reasonCodes) { return [...new Set(reasonCodes.filter(Boolean))]; }
 
 export { lexicalScopeRecordsForImport };

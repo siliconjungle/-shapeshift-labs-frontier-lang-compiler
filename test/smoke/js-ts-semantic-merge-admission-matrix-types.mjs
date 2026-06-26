@@ -1,4 +1,4 @@
-import { assert } from './helpers.mjs';
+import assert from 'node:assert/strict';
 
 const semanticMergeTypeMatrixCells = [
   {
@@ -30,6 +30,12 @@ const semanticMergeTypeMatrixCells = [
     status: 'done',
     evidence: 'js-ts-safe-project-merge-compiler-type-reference-target-proof',
     note: 'public compiler type records bind type references to TypeScript checker target symbols, declaration spans, source text hashes, and fail closed when target proof hashes are missing'
+  },
+  {
+    id: 'type-public-api-graph/advanced-type-missing-proof-field',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-compiler-type-equivalence-proof',
+    note: 'public conditional/mapped/template compiler type records expose advancedTypeMissingProof in conflict evidence and fail closed when required shape text evidence is missing'
   },
   {
     id: 'compiler-type-graph/computed-enum-runtime-value-proof',
@@ -70,3 +76,9 @@ for (const cell of semanticMergeTypeMatrixCells) {
   assert.equal(typeof cell.evidence, 'string', `${cell.id}: evidence`);
   assert.equal(typeof cell.note, 'string', `${cell.id}: note`);
 }
+
+const advancedTypeMissingProofCell = semanticMergeTypeMatrixCells.find((cell) => cell.id === 'type-public-api-graph/advanced-type-missing-proof-field');
+assert.equal(advancedTypeMissingProofCell?.status, 'done');
+assert.equal(advancedTypeMissingProofCell?.evidence, 'js-ts-safe-project-merge-compiler-type-equivalence-proof');
+assert.match(advancedTypeMissingProofCell?.note ?? '', /advancedTypeMissingProof/);
+assert.match(advancedTypeMissingProofCell?.note ?? '', /conditional\/mapped\/template/);

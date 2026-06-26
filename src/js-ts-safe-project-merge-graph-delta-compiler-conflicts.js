@@ -117,6 +117,8 @@ function missingSharedCompilerTypeEquivalenceEvidence(workerRecord, headRecord) 
       enumMemberCount: record.enumMemberCount,
       enumComputedMemberCount: record.enumComputedMemberCount,
       typeEquivalenceEnumRuntimeShapeHash: record.typeEquivalenceEnumRuntimeShapeHash,
+      advancedTypeProofRequirement: record.advancedTypeProofRequirement,
+      advancedTypeMissingProof: record.advancedTypeMissingProof,
       typeEquivalenceSignatureSetHash: record.typeEquivalenceSignatureSetHash,
       typeEquivalenceCallSignatureSetHash: record.typeEquivalenceCallSignatureSetHash, typeEquivalenceConstructSignatureSetHash: record.typeEquivalenceConstructSignatureSetHash,
       typeEquivalenceTypeParameterSetHash: record.typeEquivalenceTypeParameterSetHash,
@@ -169,8 +171,13 @@ function hasPassedCompilerTypeEquivalenceProof(record) {
   ];
   return Boolean(record?.typeEquivalenceStatus === 'compiler-backed-equivalent'
     && record?.typeEquivalenceProof?.status === 'passed'
+    && !hasMissingAdvancedTypeProof(record)
     && requiredHashes.every(([required, hash]) => !required || hash)
     && record?.apiSignatureHash);
+}
+function hasMissingAdvancedTypeProof(record) {
+  const status = record?.advancedTypeMissingProof?.status ?? record?.advancedTypeProofRequirement?.status;
+  return status === 'missing-compiler-evidence' || status === 'requires-review';
 }
 function recordsByIdentityKey(records, identityKey) { const result = new Map(); for (const record of records ?? []) { const key = identityKey(record); if (!key || result.has(key)) continue; result.set(key, record); } return result; }
 function optionalFingerprint(record, fingerprint) { return record ? fingerprint(record) : undefined; }
