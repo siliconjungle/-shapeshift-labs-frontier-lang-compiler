@@ -48,6 +48,7 @@ function cssModuleImportBindingRecord(edge, index, documentsById, cssSourcesByPa
     cssModuleSourceHash: document?.sourceHash ?? cssSource?.sourceHash,
     cssModuleHash,
     cssModuleEvidenceStatus: cssModuleEvidence ? 'supplied' : 'unproved',
+    cssModuleEvidenceSource: cssSource?.cssModuleEvidenceSource,
     cssModuleExportNames: cssModuleExportNames.length ? cssModuleExportNames : undefined,
     cssModuleExportNamesHash: cssModuleExportNames.length ? hashSemanticValue(cssModuleExportNames) : undefined,
     generatedClassNameMapHash: cssModuleEvidence?.generatedClassNameMapHash ?? cssModuleGeneratedClassNameMapHash(cssModuleEvidence),
@@ -224,10 +225,17 @@ function cssModuleEvidenceExportNames(evidence) {
     ...arrayValue(evidence?.exportNames),
     ...arrayValue(evidence?.localClassNames),
     ...arrayValue(evidence?.classNames),
+    ...cssModuleExportRecordNames(evidence?.exports),
     ...objectKeys(evidence?.exports),
     ...objectKeys(evidence?.generatedClassNameMap),
     ...objectKeys(evidence?.classMap)
   ]);
+}
+
+function cssModuleExportRecordNames(value) {
+  return Array.isArray(value)
+    ? value.map((entry) => entry?.name ?? entry?.localName).filter(Boolean)
+    : [];
 }
 
 function cssModuleGeneratedClassNameMapHash(evidence) {

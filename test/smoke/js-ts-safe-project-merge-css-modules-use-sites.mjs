@@ -76,8 +76,11 @@ assert.equal(binding.localName, 'styles');
 assert.equal(binding.moduleSpecifier, './Button.module.css');
 assert.equal(binding.resolvedModulePath, 'src/Button.module.css');
 assert.equal(binding.cssModuleSourcePath, 'src/Button.module.css');
-assert.equal(binding.cssModuleEvidenceStatus, 'unproved');
+assert.equal(binding.cssModuleEvidenceStatus, 'supplied');
+assert.equal(binding.cssModuleEvidenceSource, 'inferred-source');
+assert.deepEqual(binding.cssModuleExportNames, ['active', 'label', 'root']);
 assert.equal(typeof binding.cssModuleHash, 'string');
+assert.equal(typeof binding.cssModuleExportNamesHash, 'string');
 assert.equal(typeof binding.signatureHash, 'string');
 
 const jsxRoot = graph.cssModuleUseSites.find((record) => record.useSiteKind === 'jsx-className' && record.exportName === 'root');

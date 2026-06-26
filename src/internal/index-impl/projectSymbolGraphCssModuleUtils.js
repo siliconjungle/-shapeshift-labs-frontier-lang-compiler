@@ -1,4 +1,5 @@
 import { lineColumnForOffset } from './lineColumnForOffset.js';
+import { parseCssSemanticSheet } from '@shapeshift-labs/frontier-lang-css';
 
 const CssModulePathPattern = /\.module\.css(?:[?#].*)?$/i;
 
@@ -8,20 +9,46 @@ function cssModuleSourceRecord(imported) {
   const metadata = objectValue(imported?.metadata);
   const nativeMetadata = objectValue(imported?.nativeSource?.metadata);
   const astMetadata = objectValue(imported?.nativeAst?.metadata);
+  const suppliedEvidence = firstObject(
+    metadata.cssModuleEvidence,
+    metadata.cssModules,
+    nativeMetadata.cssModuleEvidence,
+    nativeMetadata.cssModules,
+    astMetadata.cssModuleEvidence,
+    astMetadata.cssModules
+  );
+  const sourceText = nativeImportSourceText(imported);
+  const inferredEvidence = suppliedEvidence ? undefined : inferCssModuleEvidence(sourceText, sourcePath, metadata, nativeMetadata, astMetadata);
   return compactRecord({
     sourcePath,
     sourceHash: imported?.nativeSource?.sourceHash ?? imported?.metadata?.sourceHash,
-    cssModuleEvidence: firstObject(
-      metadata.cssModuleEvidence,
-      metadata.cssModules,
-      nativeMetadata.cssModuleEvidence,
-      nativeMetadata.cssModules,
-      astMetadata.cssModuleEvidence,
-      astMetadata.cssModules
-    ),
+    cssModuleEvidence: suppliedEvidence ?? inferredEvidence,
+    cssModuleEvidenceSource: suppliedEvidence ? 'supplied' : inferredEvidence ? 'inferred-source' : undefined,
     bundlerTransformHash: firstString(metadata.bundlerTransformHash, nativeMetadata.bundlerTransformHash, astMetadata.bundlerTransformHash),
     sourceMapProofHash: firstString(metadata.sourceMapProofHash, nativeMetadata.sourceMapProofHash, astMetadata.sourceMapProofHash)
   });
+}
+
+function inferCssModuleEvidence(sourceText, sourcePath, ...metadataValues) {
+  if (typeof sourceText !== 'string') return undefined;
+  const options = cssModuleEvidenceOptions(sourcePath, metadataValues);
+  try {
+    return parseCssSemanticSheet(sourceText, options).cssModules;
+  } catch {
+    return undefined;
+  }
+}
+
+function cssModuleEvidenceOptions(sourcePath, metadataValues) {
+  return {
+    sourcePath,
+    cssModules: true,
+    generatedClassNameMap: firstObject(...metadataValues.map((metadata) => metadata.generatedClassNameMap)),
+    generatedClassNameMapHash: firstString(...metadataValues.map((metadata) => metadata.generatedClassNameMapHash)),
+    jsTsUseSiteGraphHash: firstString(...metadataValues.map((metadata) => metadata.jsTsUseSiteGraphHash)),
+    cssModuleCompositionGraphHash: firstString(...metadataValues.map((metadata) => metadata.cssModuleCompositionGraphHash)),
+    icssGraphHash: firstString(...metadataValues.map((metadata) => metadata.icssGraphHash))
+  };
 }
 
 function nativeImportSourceText(imported) {

@@ -17,6 +17,9 @@ export interface NativeProjectSymbolGraphCssModuleImportBindingRecord {
   readonly cssModuleSourceHash?: string;
   readonly cssModuleHash?: string;
   readonly cssModuleEvidenceStatus?: 'supplied' | 'unproved' | string;
+  readonly cssModuleEvidenceSource?: 'supplied' | 'inferred-source' | string;
+  readonly cssModuleExportNames?: readonly string[];
+  readonly cssModuleExportNamesHash?: string;
   readonly generatedClassNameMapHash?: string;
   readonly jsTsUseSiteGraphHash?: string;
   readonly cssModuleCompositionGraphHash?: string;
@@ -81,6 +84,7 @@ export interface NativeProjectSymbolGraphCssModuleUseSiteGraphRecord {
   readonly useSiteCount: number;
   readonly blockerCount: number;
   readonly generatedClassNameMapHash?: string;
+  readonly cssModuleExportNamesHash?: string;
   readonly bundlerTransformHash?: string;
   readonly sourceMapProofHash?: string;
   readonly status: 'ready' | 'blocked' | string;
