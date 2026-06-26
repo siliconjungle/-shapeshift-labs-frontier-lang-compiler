@@ -11,7 +11,9 @@ const buttonSourceText = [
   "  styles.mutated = 'nope';",
   '  return <>',
   '    <button className={styles.root}>{styles.label}</button>',
-  '    <span className={cx(styles.root, state.ready && styles.active)} />',
+  "    <span className={cx(styles.root, state.ready && styles.active, styles['label'])} />",
+  '    <em className={styles?.label} />',
+  "    <strong className={styles['active']} />",
   '    <i className="root" />',
   '    {rootClass}{activeClass}{dynamicClass}',
   '  </>;',
@@ -99,6 +101,39 @@ assert.equal(staticBracket?.expressionText, "styles['active']");
 const labelRead = graph.cssModuleUseSites.find((record) => record.exportName === 'label' && record.useSiteKind === 'scope-member-read');
 assert.equal(labelRead?.expressionText, 'styles.label');
 
+const helperRoot = graph.cssModuleUseSites.find((record) => record.useSiteKind === 'jsx-className-helper' && record.exportName === 'root');
+assert.equal(helperRoot?.accessKind, 'dot');
+assert.equal(helperRoot.receiverLocalName, 'styles');
+assert.equal(helperRoot.expressionText, 'styles.root');
+assert.equal(helperRoot.conditionalRuntimePresence, undefined);
+assert.equal(typeof helperRoot.jsxPropRecordId, 'string');
+
+const helperActive = graph.cssModuleUseSites.find((record) => record.useSiteKind === 'jsx-className-helper' && record.exportName === 'active');
+assert.equal(helperActive?.accessKind, 'dot');
+assert.equal(helperActive.receiverLocalName, 'styles');
+assert.equal(helperActive.expressionText, 'styles.active');
+assert.equal(helperActive.conditionalRuntimePresence, true);
+assert.equal(typeof helperActive.jsxPropRecordId, 'string');
+
+const helperLabel = graph.cssModuleUseSites.find((record) => record.useSiteKind === 'jsx-className-helper' && record.exportName === 'label');
+assert.equal(helperLabel?.accessKind, 'static-bracket');
+assert.equal(helperLabel.receiverLocalName, 'styles');
+assert.equal(helperLabel.expressionText, "styles['label']");
+assert.equal(helperLabel.conditionalRuntimePresence, undefined);
+assert.equal(typeof helperLabel.jsxPropRecordId, 'string');
+
+const optionalLabel = graph.cssModuleUseSites.find((record) => record.useSiteKind === 'jsx-className' && record.exportName === 'label' && record.conditionalRuntimePresence === true);
+assert.equal(optionalLabel?.accessKind, 'dot');
+assert.equal(optionalLabel.receiverLocalName, 'styles');
+assert.equal(optionalLabel.expressionText, 'styles?.label');
+assert.equal(typeof optionalLabel.jsxPropRecordId, 'string');
+
+const staticBracketClassName = graph.cssModuleUseSites.find((record) => record.useSiteKind === 'jsx-className' && record.exportName === 'active' && record.accessKind === 'static-bracket');
+assert.equal(staticBracketClassName?.receiverLocalName, 'styles');
+assert.equal(staticBracketClassName.expressionText, "styles['active']");
+assert.equal(staticBracketClassName.conditionalRuntimePresence, undefined);
+assert.equal(typeof staticBracketClassName.jsxPropRecordId, 'string');
+
 const blockerReasonCodes = graph.cssModuleUseSiteBlockers.map((record) => record.reasonCode);
 assert.equal(blockerReasonCodes.includes('css-module-dynamic-member-access-unproved'), true);
 assert.equal(blockerReasonCodes.includes('css-module-member-write-unsupported'), true);
@@ -117,7 +152,7 @@ const useSiteGraph = graph.cssModuleUseSiteGraphs[0];
 assert.equal(useSiteGraph.kind, 'frontier.lang.cssModuleUseSiteGraph');
 assert.equal(useSiteGraph.cssModuleSourcePath, 'src/Button.module.css');
 assert.equal(useSiteGraph.importBindingCount, 1);
-assert.equal(useSiteGraph.useSiteCount >= 4, true);
+assert.equal(useSiteGraph.useSiteCount >= 8, true);
 assert.equal(useSiteGraph.blockerCount >= 7, true);
 assert.equal(useSiteGraph.status, 'blocked');
 assert.equal(useSiteGraph.autoMergeClaim, false);
