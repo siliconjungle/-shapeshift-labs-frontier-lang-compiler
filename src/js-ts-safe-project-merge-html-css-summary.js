@@ -4,6 +4,8 @@ function htmlCssProjectSummary(files) {
     htmlFiles: htmlFiles.length, cssFiles: cssFiles.length, htmlCssFiles: htmlCssFiles.length,
     htmlMergedFiles: htmlFiles.filter(isMerged).length, cssMergedFiles: cssFiles.filter(isMerged).length, htmlCssMergedFiles: htmlCssFiles.filter(isMerged).length,
     htmlBlockedFiles: htmlFiles.filter(isBlocked).length, cssBlockedFiles: cssFiles.filter(isBlocked).length, htmlCssBlockedFiles: htmlCssFiles.filter(isBlocked).length,
+    htmlParserEvidenceFiles: htmlFiles.filter(hasHtmlParserEvidence).length, cssParserEvidenceFiles: cssFiles.filter(hasCssParserEvidence).length, htmlCssParserEvidenceFiles: htmlCssFiles.filter((file) => hasHtmlParserEvidence(file) || hasCssParserEvidence(file)).length,
+    htmlParserEvidenceFailedFiles: htmlFiles.filter(hasParserEvidenceFailure).length, cssParserEvidenceFailedFiles: cssFiles.filter(hasParserEvidenceFailure).length, htmlCssParserEvidenceFailedFiles: htmlCssFiles.filter(hasParserEvidenceFailure).length,
     htmlCssBrowserRuntimeProofs: htmlCssFiles.filter(hasBrowserRuntimeProof).length
   };
 }
@@ -13,6 +15,15 @@ function isCssProjectFile(file) { return String(file?.language ?? '').toLowerCas
 function isMerged(file) { return file.status === 'merged'; }
 function isBlocked(file) { return file.status === 'blocked'; }
 function stripQuery(sourcePath) { return String(sourcePath ?? '').replace(/[?#].*$/, ''); }
+function hasHtmlParserEvidence(file) {
+  const evidence = file?.result?.parserEvidence;
+  return evidence?.parseErrors === 0 && evidence.sourceCodeLocationInfo === true && evidence.parserBackedSourceSpans === true && evidence.parserNames?.includes('parse5');
+}
+function hasCssParserEvidence(file) {
+  const evidence = file?.result?.parserEvidence;
+  return evidence?.parseErrors === 0 && evidence.sourceCodeLocationInfo === true && evidence.parserBackedSourceSpans === true && evidence.parserBackedDeclarationSpans === true && evidence.parserBackedTriviaHashes === true;
+}
+function hasParserEvidenceFailure(file) { return (file?.result?.parserEvidence?.parseErrors ?? 0) > 0; }
 function hasBrowserRuntimeProof(file) {
   const admission = file?.result?.admission ?? file?.admission ?? {};
   return admission.browserRuntimeEquivalenceClaim === true || admission.browserCascadeEquivalenceClaim === true || admission.browserRenderEquivalenceClaim === true;
