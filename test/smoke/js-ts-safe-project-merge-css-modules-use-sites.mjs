@@ -189,6 +189,14 @@ assert.equal(cssModuleConflictReasonCodes.includes('css-module-string-literal-cl
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-generated-class-map-unproved'), true);
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-bundler-transform-identity-unproved'), true);
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-source-map-proof-unproved'), true);
+assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteConflicts >= 7, true);
+assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteBlockers >= 7, true);
+assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteGraphs, 1);
+const blockedCssModuleSurface = matrixSurface(mergeProject, 'css-modules-use-site-graph');
+assert.equal(blockedCssModuleSurface.proofStatuses['css-module-use-site-graph'], 'failed');
+assert.equal(blockedCssModuleSurface.proofStatuses['css-module-transform-proof'], 'failed');
+assert.equal(blockedCssModuleSurface.missingRouteIds.includes('prove-css-module-use-site-graph'), true);
+assert.equal(blockedCssModuleSurface.nextMissingRouteId, 'prove-css-module-use-site-graph');
 
 const missingCssModuleProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_missing_css_module',
@@ -247,6 +255,16 @@ assert.equal(readyCssModuleGraph.status, 'ready');
 assert.equal(readyCssModuleGraph.blockerCount, 0);
 assert.equal(typeof readyCssModuleGraph.cssModuleExportNamesHash, 'string');
 assert.equal(readyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSites.every((site) => typeof site.cssModuleExportHash === 'string'), true);
+assert.equal(readyCssModuleProject.summary.projectGraphCssModuleUseSiteConflicts, 0);
+assert.equal(readyCssModuleProject.summary.projectGraphCssModuleUseSiteBlockers, 0);
+assert.equal(readyCssModuleProject.summary.projectGraphCssModuleUseSiteGraphs, 1);
+assert.equal(readyCssModuleProject.summary.projectGraphCssModuleUseSites >= 2, true);
+assert.equal(readyCssModuleProject.summary.projectGraphCssModuleImportBindings, 1);
+const readyCssModuleSurface = matrixSurface(readyCssModuleProject, 'css-modules-use-site-graph');
+assert.equal(readyCssModuleSurface.proofStatuses['css-module-use-site-graph'], 'passed');
+assert.equal(readyCssModuleSurface.proofStatuses['css-module-transform-proof'], 'passed');
+assert.equal(readyCssModuleSurface.proofStatuses['project-graph-evidence'], 'passed');
+assert.equal((readyCssModuleSurface.missingRouteIds ?? []).includes('prove-css-module-use-site-graph'), false);
 
 const missingExportProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_module_missing_export',
@@ -270,3 +288,9 @@ const missingExportProject = safeMergeJsTsProject({
 assert.equal(missingExportProject.status, 'blocked');
 assert.equal(missingExportProject.conflicts.some((conflict) => conflict.code === 'project-output-symbol-unresolved'), false);
 assert.equal(missingExportProject.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-export-name-unresolved'), true);
+
+function matrixSurface(result, surface) {
+  const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);
+  assert.ok(record, `missing ${surface} matrix surface`);
+  return record;
+}

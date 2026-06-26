@@ -34,6 +34,10 @@ export interface JsTsProjectSafeMergeMissingEvidence {
   readonly semanticEquivalenceClaim: false;
 }
 
+export type JsTsProjectSafeMergeAdmissionMatrixSurface = Record<string, unknown> & { readonly surface: string; readonly proofStatuses: Readonly<Record<string, string>>; readonly missingRouteIds?: readonly string[]; readonly nextMissingRouteId?: string };
+
+export type JsTsProjectSafeMergeAdmissionMatrixAudit = Record<string, unknown> & { readonly kind: 'frontier.lang.jsTsProjectMergeAdmissionMatrixAudit'; readonly surfaces: readonly JsTsProjectSafeMergeAdmissionMatrixSurface[] };
+
 export interface JsTsProjectSafeMergeConfidenceSummary {
   readonly kind: 'frontier.lang.jsTsProjectMergeConfidence';
   readonly version: 1;
@@ -59,6 +63,7 @@ export interface JsTsProjectSafeMergeConfidenceSummary {
   readonly missingEvidence: readonly JsTsProjectSafeMergeMissingEvidence[];
   readonly missingEvidenceMatrix: JsTsProjectSafeMergeMissingEvidenceTelemetry;
   readonly routingCalibration: Record<string, unknown>;
+  readonly admissionMatrixAudit: JsTsProjectSafeMergeAdmissionMatrixAudit;
   readonly dimensions: Readonly<Record<string, string>>;
   readonly signals: Readonly<Record<string, number>>;
 }

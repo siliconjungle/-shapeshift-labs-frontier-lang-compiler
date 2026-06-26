@@ -37,6 +37,7 @@ typedJsTsProjectSafeMerge.outputDeclarationGate satisfies compilerApi.JsTsProjec
 typedJsTsProjectSafeMerge.admission.autoMergeClaim satisfies false;
 typedJsTsProjectSafeMerge.admission.semanticEquivalenceClaim satisfies boolean;
 typedJsTsProjectSafeMerge.summary.projectGraphLimitConflicts satisfies number;
+typedJsTsProjectSafeMerge.summary.projectGraphCssModuleUseSiteConflicts satisfies number;
 typedJsTsProjectSafeMerge.summary.outputDeclarations satisfies number;
 typedJsTsProjectSafeMerge.summary.outputDeclarationConflicts satisfies number;
 typedJsTsProjectSafeMerge.summary.projectSymbolMoveAdmissions satisfies number;
@@ -113,6 +114,7 @@ typedJsTsProjectSafeMergeWithProjectGraphDelta.summary.nextMissingEvidenceCode s
 typedJsTsProjectSafeMergeWithProjectGraphDelta.confidence.recommendedAction satisfies compilerApi.JsTsProjectSafeMergeRecommendedAction;
 typedJsTsProjectSafeMergeWithProjectGraphDelta.confidence.nextMissingEvidence?.code satisfies string | undefined;
 typedJsTsProjectSafeMergeWithProjectGraphDelta.confidence.missingEvidence?.[0]?.semanticEquivalenceClaim satisfies false | undefined;
+typedJsTsProjectSafeMergeWithProjectGraphDelta.confidence.admissionMatrixAudit.surfaces[0]?.proofStatuses['project-graph-evidence'] satisfies string | undefined;
 typedJsTsProjectSafeMergeWithProjectGraphDelta.proofEvidence.summary.nextMissingEvidence?.semanticEquivalenceClaim satisfies false | undefined;
 typedJsTsProjectSafeMergeWithProjectGraphDelta.proofEvidence.summary.unsupportedSurfaceEvidenceCount satisfies number | undefined;
 typedJsTsProjectSafeMergeWithProjectGraphDelta.proofEvidence.summary.unsupportedSurfaceKinds?.[0] satisfies string | undefined;

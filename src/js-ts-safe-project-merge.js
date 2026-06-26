@@ -104,7 +104,7 @@ function safeMergeJsTsProject(input = {}) {
     ...fileResults.flatMap((file) => file.conflictKeys),
     ...outputConflicts.map((conflict) => conflict.details?.conflictKey)
   ]);
-  const baseSummary = projectSummary(fileResults, graphConflicts, Boolean(projectGraphDelta), outputDiagnosticsGate, outputDeclarationGate, outputQualityGate, moveRenameSummary, proofEvidence, symbolRenameSummary, splitMergeSummary);
+  const baseSummary = projectSummary(fileResults, graphConflicts, Boolean(projectGraphDelta), outputDiagnosticsGate, outputDeclarationGate, outputQualityGate, moveRenameSummary, proofEvidence, symbolRenameSummary, splitMergeSummary, graphArtifacts?.projectSymbolGraph);
   const evidenceContext = {
     fileResults,
     outputDiagnosticsGate,
@@ -162,7 +162,7 @@ function safeMergeJsTsProject(input = {}) {
       outputProjectSymbolGraph: Boolean(graphArtifacts?.projectSymbolGraph),
       projectGraphDelta: Boolean(projectGraphDeltaWithConflicts),
       projectGraphConflicts: graphConflicts.length || undefined,
-      outputProjectGraphConflicts: outputGraphConflicts.length || undefined,
+      outputProjectGraphConflicts: outputGraphConflicts.length || undefined, projectGraphCssModuleUseSiteConflicts: graphConflicts.filter((conflict) => conflict.gateId === 'project-css-module-use-site-graph').length || undefined,
       projectGraphDeltaConflicts: deltaGraphConflicts.length || undefined,
       projectGraphSourceSpanConflicts: deltaGraphConflicts.filter((conflict) => conflict.code === 'project-source-span-delta-conflict').length || undefined,
       projectGraphCompilerTypeConflicts: deltaGraphConflicts.filter((conflict) => conflict.code === 'project-public-compiler-type-delta-conflict').length || undefined,

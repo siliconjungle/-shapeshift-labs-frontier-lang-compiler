@@ -51,14 +51,14 @@ export interface JsTsProjectSafeMergeFileInput {
 }
 
 export type JsTsProjectSafeMergeFileMap =
-  | Readonly<Record<string, string | { readonly sourceText?: string; readonly text?: string; readonly parserTriviaEvidence?: ParserTriviaEvidenceInput }>>
+  | Readonly<Record<string,string | { readonly sourceText?: string; readonly text?: string; readonly parserTriviaEvidence?: ParserTriviaEvidenceInput }>>
   | ReadonlyMap<string, string | { readonly sourceText?: string; readonly text?: string; readonly parserTriviaEvidence?: ParserTriviaEvidenceInput }>
   | readonly { readonly sourcePath?: string; readonly path?: string; readonly sourceText?: string; readonly text?: string; readonly parserTriviaEvidence?: ParserTriviaEvidenceInput }[];
 
 export type JsTsProjectSafeMergeOutputProjectImports =
   | readonly NativeSourceImportResult[]
   | ReadonlyMap<string, NativeSourceImportResult>
-  | Readonly<Record<string, NativeSourceImportResult>>;
+  | Readonly<Record<string,NativeSourceImportResult>>;
 
 export type JsTsProjectGraphStageName = 'base' | 'worker' | 'head' | 'output' | string;
 
@@ -133,8 +133,8 @@ export interface JsTsProjectSafeMergeInput {
   readonly headChangeSetId?: string;
   readonly policy?: JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[];
   readonly mergePolicy?: JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[];
-  readonly policyByPath?: Readonly<Record<string, JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[]>>;
-  readonly mergePolicyByPath?: Readonly<Record<string, JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[]>>;
+  readonly policyByPath?: Readonly<Record<string,JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[]>>;
+  readonly mergePolicyByPath?: Readonly<Record<string,JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[]>>;
   readonly requireSourceLedgerSpans?: boolean;
   readonly sourceLedgers?: Record<string, unknown>;
   readonly sourceLedgersByPath?: Record<string, Record<string, unknown>>;
@@ -244,13 +244,13 @@ export interface JsTsProjectGraphDeltaSummary {
   readonly reExportIdentityConflicts: number; readonly moduleDeclarationShapeConflicts: number; readonly exportAssignmentShapeConflicts: number;
   readonly importAttributeConflicts: number;
   readonly importTargetConflicts: number;
-  readonly stageSummaries: Readonly<Record<string, JsTsProjectGraphDeltaStageSummary>>;
+  readonly stageSummaries: Readonly<Record<string,JsTsProjectGraphDeltaStageSummary>>;
 }
 
 export interface JsTsProjectGraphDelta {
   readonly kind: 'frontier.lang.jsTsProjectGraphDelta';
   readonly version: 1;
-  readonly stages: Readonly<Record<string, JsTsProjectGraphDeltaStage>>;
+  readonly stages: Readonly<Record<string,JsTsProjectGraphDeltaStage>>;
   readonly summary: JsTsProjectGraphDeltaSummary;
 }
 
@@ -279,7 +279,7 @@ export interface JsTsProjectSafeMergeResult {
     readonly outputFiles: number;
     readonly projectGraphConflicts: number;
     readonly projectGraphDeltaEvidenceIncluded: number;
-    readonly outputProjectGraphConflicts: number;
+    outputProjectGraphConflicts:number; projectGraphCssModuleUseSiteConflicts:number;
     readonly projectGraphDeltaConflicts: number;
     readonly projectGraphLimitConflicts: number;
     readonly projectGraphPublicContractConflicts: number;
@@ -297,11 +297,11 @@ export interface JsTsProjectSafeMergeResult {
     readonly outputDeclarationConflicts: number;
     readonly outputDeclarationDiagnosticErrors: number;
     readonly outputQualityGates: number; readonly outputQualityGateConflicts: number;
-    readonly proofEvidenceRecords: number; readonly proofEvidencePassed: number; readonly proofEvidenceFailed: number; readonly proofEvidenceSkipped: number; readonly proofEvidenceUnknown: number; readonly proofEvidenceMissing: number; readonly proofEvidenceMissingLevels: readonly JsTsProjectMergeProofLevel[]; readonly semanticEquivalenceLevel: 'semantic-equivalence-unknown' | string; readonly evidenceRecords: number; readonly passedEvidenceRecords: number; readonly failedEvidenceRecords: number; readonly unknownEvidenceRecords: number; readonly confidenceScore: number; readonly confidenceLevel: string; readonly confidenceDimensions: Readonly<Record<string, string>>; readonly missingEvidenceMatrix: JsTsProjectSafeMergeMissingEvidenceTelemetry; readonly missingSignals: number; readonly nextMissingEvidenceCode?: string; readonly nextMissingEvidenceKind?: string; readonly nextMissingEvidenceScope?: string; readonly nextMissingProofLevel?: string; readonly nextMissingEvidenceAction?: string; readonly nextMissingEvidenceRouteId?: string; readonly nextMissingEvidenceRouteLane?: string; readonly nextMissingEvidenceRouteNext?: string;
+    readonly proofEvidenceRecords: number; readonly proofEvidencePassed: number; readonly proofEvidenceFailed: number; readonly proofEvidenceSkipped: number; readonly proofEvidenceUnknown: number; readonly proofEvidenceMissing: number; readonly proofEvidenceMissingLevels: readonly JsTsProjectMergeProofLevel[]; readonly semanticEquivalenceLevel: 'semantic-equivalence-unknown' | string; readonly evidenceRecords: number; readonly passedEvidenceRecords: number; readonly failedEvidenceRecords: number; readonly unknownEvidenceRecords: number; readonly confidenceScore: number; readonly confidenceLevel: string; readonly confidenceDimensions: Readonly<Record<string,string>>; readonly missingEvidenceMatrix: JsTsProjectSafeMergeMissingEvidenceTelemetry; readonly missingSignals: number; readonly nextMissingEvidenceCode?: string; readonly nextMissingEvidenceKind?: string; readonly nextMissingEvidenceScope?: string; readonly nextMissingProofLevel?: string; readonly nextMissingEvidenceAction?: string; readonly nextMissingEvidenceRouteId?: string; readonly nextMissingEvidenceRouteLane?: string; readonly nextMissingEvidenceRouteNext?: string;
     readonly projectMoveRenameClassifications: number; readonly projectFileMoveRenameClassifications: number; readonly projectSymbolMoveClassifications: number; readonly projectExportedSymbolMoveClassifications: number; readonly projectImportedSymbolMoveClassifications: number; readonly projectSymbolMoveAdmissions: number; readonly projectExportedSymbolMoveAdmissions: number; readonly projectImportedSymbolMoveAdmissions: number; readonly projectCrossFileSymbolRenameClassifications: number; readonly projectCrossFileSymbolRenameAdmissions: number;
     readonly projectSplitMergeClassifications: number; readonly projectModuleSplitClassifications: number; readonly projectModuleMergeClassifications: number; readonly projectClassSplitClassifications: number; readonly projectClassMergeClassifications: number; readonly projectSplitMergeAdmissions: number; readonly projectModuleSplitAdmissions: number; readonly projectModuleMergeAdmissions: number; readonly projectClassSplitAdmissions: number; readonly projectClassMergeAdmissions: number;
     readonly semanticArtifactFiles: number;
-    readonly operations: Readonly<Record<string, number>>;
+    readonly operations: Readonly<Record<string,number>>;
   };
   readonly metadata?: Record<string, unknown> & {
     readonly projectMoveRenameClassifications?: {

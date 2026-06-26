@@ -1,12 +1,12 @@
 import { compactMissingEvidenceTelemetry, confidenceRecommendedAction, createProjectMergeAdmissionMatrixAudit, missingEvidenceItems, missingEvidenceSignals, prioritizedMissingEvidence } from './js-ts-safe-project-merge-missing-evidence.js';
 import { failedEvidenceMissingItems, fileAdmissionEvidenceRecords } from './js-ts-safe-project-merge-evidence-routing.js'; import { compactProjectMergeRoutingCalibration } from './js-ts-safe-project-merge-routing-calibration.js';
 
-function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false, outputDiagnosticsGate = undefined, outputDeclarationGate = undefined, outputQualityGate = undefined, moveRenameSummary = undefined, proofEvidence = undefined, symbolRenameSummary = undefined, splitMergeSummary = undefined) {
+function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false, outputDiagnosticsGate = undefined, outputDeclarationGate = undefined, outputQualityGate = undefined, moveRenameSummary = undefined, proofEvidence = undefined, symbolRenameSummary = undefined, splitMergeSummary = undefined, projectSymbolGraph = undefined) {
   const byOperation = {};
   for (const file of files) byOperation[file.operation] = (byOperation[file.operation] ?? 0) + 1;
   const limitConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-limit');
   const deltaConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-delta' || (hasProjectGraphDelta && conflict.gateId === 'project-graph-limit'));
-  const outputConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-symbol-graph' || (!hasProjectGraphDelta && conflict.gateId === 'project-graph-limit'));
+  const outputConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-symbol-graph' || (!hasProjectGraphDelta && conflict.gateId === 'project-graph-limit')), cssModuleConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-css-module-use-site-graph');
   const proofLevelStatuses = proofEvidence?.summary?.levelStatuses ?? {};
   return {
     files: files.length,
@@ -14,10 +14,10 @@ function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false
     blockedFiles: files.filter((file) => file.status === 'blocked').length,
     outputFiles: files.filter((file) => typeof file.outputSourceText === 'string').length,
     projectGraphConflicts: graphConflicts.length,
-    projectGraphDeltaEvidenceIncluded: hasProjectGraphDelta ? 1 : 0,
-    outputProjectGraphConflicts: outputConflicts.length,
-    projectGraphDeltaConflicts: deltaConflicts.length,
-    projectGraphLimitConflicts: limitConflicts.length,
+    projectGraphDeltaEvidenceIncluded: hasProjectGraphDelta ? 1 : 0, projectGraphEvidenceIncluded: projectSymbolGraph || hasProjectGraphDelta ? 1 : 0,
+    outputProjectGraphConflicts: outputConflicts.length, projectGraphCssModuleUseSiteConflicts: cssModuleConflicts.length,
+    projectGraphDeltaConflicts: deltaConflicts.length, projectGraphCssModuleUseSiteBlockers: projectSymbolGraph?.cssModuleUseSiteBlockers?.length ?? cssModuleConflicts.length,
+    projectGraphLimitConflicts: limitConflicts.length, projectGraphCssModuleUseSiteGraphs: projectSymbolGraph?.cssModuleUseSiteGraphs?.length ?? 0, projectGraphCssModuleUseSites: projectSymbolGraph?.cssModuleUseSites?.length ?? 0, projectGraphCssModuleImportBindings: projectSymbolGraph?.cssModuleImportBindings?.length ?? 0,
     projectGraphPublicContractConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-public-contract-delta-conflict').length,
     projectGraphSourceSpanConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-source-span-delta-conflict').length,
     projectGraphCompilerTypeConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-public-compiler-type-delta-conflict').length,
