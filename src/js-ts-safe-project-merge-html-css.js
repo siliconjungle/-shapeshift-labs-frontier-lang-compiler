@@ -13,9 +13,10 @@ function maybeMergeHtmlCssProjectFile(options) {
   const merge = language === 'html' ? safeMergeHtmlSource : language === 'css' ? safeMergeCssSource : undefined;
   if (!merge) return undefined;
   const resultId = `${projectId}_${safeId(file.sourcePath)}`;
-  const result = merge({ ...sourceInput, ...htmlCssMergeOptionsForProjectFile(input, file.sourcePath, language), ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head });
+  const mergeOptions = htmlCssMergeOptionsForProjectFile(input, file.sourcePath, language);
+  const result = merge({ ...sourceInput, ...mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head });
   const admittedResult = language === 'html' && result.status === 'merged'
-    ? blockHtmlProofGapChanges({ result, id: resultId, sourcePath: file.sourcePath, base, worker, head }) ?? result
+    ? blockHtmlProofGapChanges({ result, id: resultId, sourcePath: file.sourcePath, base, worker, head, runtimeBoundaryProofs: htmlRuntimeBoundaryProofCandidates(input, file.sourcePath, mergeOptions) }) ?? result
     : result;
   return admittedResult.status === 'merged' ? mergedHtmlCssFile(file, context, admittedResult, language) : blockedHtmlCssFile(file, context, admittedResult);
 }
@@ -36,12 +37,20 @@ function htmlCssMergeOptionsForProjectFile(input, sourcePath, language) {
   return compactRecord({ ...(language === 'css' ? input.cssMergeOptions ?? input.styleMergeOptions : input.htmlMergeOptions ?? input.markupMergeOptions), ...(byPath?.[sourcePath] ?? {}) });
 }
 
-function blockHtmlProofGapChanges({ result, id, sourcePath, base, worker, head }) {
+function blockHtmlProofGapChanges({ result, id, sourcePath, base, worker, head, runtimeBoundaryProofs = [] }) {
+  const binding = { sourcePath, base, worker, head, output: result.mergedSourceText };
+  const runtimeBoundaryProofRecords = [];
+  const runtimeBoundaryConflicts = [];
+  for (const change of htmlRuntimeBoundaryChanges(base, worker, head)) {
+    const proof = htmlRuntimeBoundaryProofForChange(runtimeBoundaryProofs, change, binding);
+    if (proof) runtimeBoundaryProofRecords.push(htmlRuntimeBoundaryProofRecord(proof, change, binding));
+    else runtimeBoundaryConflicts.push(htmlProofGapConflict(id, sourcePath, change.reasonCode, change));
+  }
   const conflicts = [
-    htmlDuplicateIdentityConflict(result),
-    ...htmlRuntimeBoundaryChanges(base, worker, head).map((change) => htmlProofGapConflict(id, sourcePath, change.reasonCode, change))
+    htmlDuplicateIdentityConflict(result, sourcePath),
+    ...runtimeBoundaryConflicts
   ].filter(Boolean);
-  if (!conflicts.length) return undefined;
+  if (!conflicts.length) return runtimeBoundaryProofRecords.length ? htmlRuntimeBoundaryProvenResult(result, runtimeBoundaryProofRecords) : undefined;
   const allConflicts = [...(result.conflicts ?? []), ...conflicts];
   const { mergedSourceText, mergedSourceHash, ...rest } = result;
   return compactRecord({
@@ -56,13 +65,30 @@ function blockHtmlProofGapChanges({ result, id, sourcePath, base, worker, head }
   });
 }
 
-function htmlDuplicateIdentityConflict(result) {
+function htmlDuplicateIdentityConflict(result, sourcePath) {
   const duplicates = duplicateHtmlExplicitIdentityKeys(result?.identityEvidence);
   if (!duplicates.length) return undefined;
-  return htmlProofGapConflict(result.id, result.sourcePath, 'html-duplicate-explicit-identity', {
+  return htmlProofGapConflict(result.id, result.sourcePath ?? sourcePath, 'html-duplicate-explicit-identity', {
     boundary: 'html-explicit-identity',
     duplicateIdentityKeys: duplicates
   }, 'html-duplicate-identity-blocked');
+}
+
+function htmlRuntimeBoundaryProofCandidates(input, sourcePath, mergeOptions) {
+  return [
+    input.htmlRuntimeBoundaryProof,
+    input.htmlRuntimeBoundaryProofs,
+    input.htmlRuntimeBoundaryProofsByPath?.[sourcePath],
+    input.htmlSourceBoundRuntimeBoundaryProof,
+    input.htmlSourceBoundRuntimeBoundaryProofs,
+    input.htmlSourceBoundRuntimeBoundaryProofsByPath?.[sourcePath],
+    mergeOptions.htmlRuntimeBoundaryProof,
+    mergeOptions.htmlRuntimeBoundaryProofs,
+    mergeOptions.sourceBoundRuntimeBoundaryProof,
+    mergeOptions.sourceBoundRuntimeBoundaryProofs,
+    mergeOptions.runtimeBoundaryProof,
+    mergeOptions.runtimeBoundaryProofs
+  ].flatMap(asArray).filter(Boolean);
 }
 
 function duplicateHtmlExplicitIdentityKeys(identityEvidence) {
@@ -93,6 +119,73 @@ function htmlRuntimeBoundaryChange(side, base, sourceText, baseEventHandlers) {
     boundary: 'html-event-handler-attribute',
     boundaryAttributes: htmlEventHandlerBoundaryAttributeNames(sourceText)
   };
+}
+
+function htmlRuntimeBoundaryProofForChange(proofs, change, binding) {
+  return proofs.find((proof) => isHtmlRuntimeBoundaryProofForChange(proof, change, binding));
+}
+
+function isHtmlRuntimeBoundaryProofForChange(proof, change, binding) {
+  return Boolean(proof && typeof proof === 'object') &&
+    HtmlRuntimeBoundaryProofKinds.has(proof.kind) &&
+    proof.status === 'passed' &&
+    proof.sourcePath === binding.sourcePath &&
+    htmlProofCoversValue(proof.reasonCode, proof.reasonCodes, change.reasonCode) &&
+    htmlProofCoversValue(proof.side, proof.sides, change.side) &&
+    proof.boundary === change.boundary &&
+    sameStringSet(proof.boundaryAttributes ?? proof.changedBoundaryAttributes, change.boundaryAttributes) &&
+    htmlRuntimeBoundaryProofSourceBound(proof, binding);
+}
+
+function htmlRuntimeBoundaryProofSourceBound(proof, binding) {
+  return htmlRuntimeBoundaryProofSourceMatches(proof, 'base', binding.base) &&
+    htmlRuntimeBoundaryProofSourceMatches(proof, 'worker', binding.worker) &&
+    htmlRuntimeBoundaryProofSourceMatches(proof, 'head', binding.head) &&
+    htmlRuntimeBoundaryProofSourceMatches(proof, 'output', binding.output);
+}
+
+function htmlRuntimeBoundaryProofSourceMatches(proof, role, sourceText) {
+  if (typeof sourceText !== 'string') return false;
+  const hash = hashText(sourceText);
+  const textFields = role === 'output' ? ['outputSourceText', 'mergedSourceText'] : [`${role}SourceText`];
+  const hashFields = role === 'output' ? ['outputSourceHash', 'mergedSourceHash'] : [`${role}SourceHash`];
+  const aliases = role === 'output' ? ['output', 'merged'] : [role];
+  return textFields.some((field) => proof[field] === sourceText) ||
+    aliases.some((alias) => proof.sourceTexts?.[alias] === sourceText || proof.sources?.[alias] === sourceText) ||
+    hashFields.some((field) => proof[field] === hash) ||
+    aliases.some((alias) => proof.sourceHashes?.[alias] === hash || proof.hashes?.[alias] === hash);
+}
+
+function htmlRuntimeBoundaryProofRecord(proof, change, binding) {
+  return compactRecord({
+    id: proof.id,
+    kind: proof.kind,
+    status: 'passed',
+    proofLevel: proof.proofLevel ?? 'html-runtime-boundary-source-bound',
+    reasonCode: change.reasonCode,
+    side: change.side,
+    boundary: change.boundary,
+    boundaryAttributes: change.boundaryAttributes,
+    sourcePath: binding.sourcePath,
+    baseSourceHash: hashText(binding.base),
+    workerSourceHash: hashText(binding.worker),
+    headSourceHash: hashText(binding.head),
+    outputSourceHash: hashText(binding.output)
+  });
+}
+
+function htmlRuntimeBoundaryProvenResult(result, runtimeBoundaryProofs) {
+  return compactRecord({
+    ...result,
+    runtimeBoundaryProofs,
+    browserRuntimeEquivalenceClaim: true,
+    admission: compactRecord({
+      ...(result.admission ?? {}),
+      browserRuntimeEquivalenceClaim: true,
+      htmlRuntimeBoundaryProofs: runtimeBoundaryProofs,
+      reasonCodes: uniqueStrings([...(result.admission?.reasonCodes ?? []), 'html-runtime-boundary-source-bound'])
+    })
+  });
 }
 
 function htmlEventHandlerBoundaryFingerprint(sourceText) {
@@ -126,6 +219,22 @@ function parseHtmlAttributes(text) {
   return attributes;
 }
 
+function htmlProofCoversValue(value, values, expected) {
+  return value === expected || (Array.isArray(values) && values.includes(expected));
+}
+
+function sameStringSet(actual, expected) {
+  const actualSet = uniqueStrings(asArray(actual).map((value) => String(value)));
+  const expectedSet = uniqueStrings(asArray(expected).map((value) => String(value)));
+  return actualSet.length === expectedSet.length && expectedSet.every((value) => actualSet.includes(value));
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : value === undefined ? [] : [value];
+}
+
+const HtmlRuntimeBoundaryProofKinds = new Set(['html-runtime-boundary-proof', 'html-source-bound-runtime-boundary-proof']);
+
 function htmlProofGapConflict(id, sourcePath, reasonCode, details = {}, code = 'html-proof-gap-blocked') {
   return {
     code,
@@ -138,6 +247,7 @@ function htmlProofGapConflict(id, sourcePath, reasonCode, details = {}, code = '
         code: reasonCode,
         status: 'not-claimed',
         summary: htmlProofGapSummary(reasonCode),
+        nextProof: htmlProofGapNextProof(reasonCode),
         failClosed: true,
         semanticEquivalenceClaim: false
       },
@@ -150,6 +260,12 @@ function htmlProofGapSummary(reasonCode) {
   if (reasonCode === 'html-duplicate-explicit-identity') return 'Duplicate explicit HTML identity keys make structural target admission ambiguous.';
   if (reasonCode === 'event-handler-runtime-boundary') return 'HTML event handler attributes execute in the browser runtime and require source-bound host evidence.';
   return 'HTML proof gap requires source-bound evidence before structural merge admission.';
+}
+
+function htmlProofGapNextProof(reasonCode) {
+  if (reasonCode === 'html-duplicate-explicit-identity') return 'Rename duplicate explicit HTML identity keys or supply parser-backed identity evidence with unique explicitIdentityKeys on every side.';
+  if (reasonCode === 'event-handler-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary, boundaryAttributes, and exact base/worker/head/output source text or hashes.';
+  return 'Attach source-bound HTML parser, identity, and runtime-boundary evidence for the changed file before structural admission.';
 }
 
 function blockedHtmlProofGapAdmission(admission = {}, conflicts = []) {

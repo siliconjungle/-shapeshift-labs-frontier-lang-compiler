@@ -62,12 +62,14 @@ export interface JsTsProjectMergeProofEvidenceSummary {
   readonly failed: number;
   readonly skipped: number;
   readonly unknown: number;
+  readonly levelStatuses: Readonly<Record<string, JsTsProjectMergeProofEvidenceRecordStatus>>;
   readonly evidenceLevels: readonly JsTsProjectMergeProofLevel[];
   readonly passedLevels: readonly JsTsProjectMergeProofLevel[];
   readonly failedLevels: readonly JsTsProjectMergeProofLevel[];
   readonly skippedLevels: readonly JsTsProjectMergeProofLevel[];
   readonly unknownLevels: readonly JsTsProjectMergeProofLevel[];
   readonly missingLevels: readonly JsTsProjectMergeProofLevel[];
+  readonly missingSignals: readonly string[];
   readonly unsupportedSurfaceEvidenceCount?: number;
   readonly unsupportedSurfaceKinds?: readonly string[];
   readonly unsupportedSurfaceReasonCodes?: readonly string[];
@@ -82,6 +84,7 @@ export interface JsTsProjectMergeProofEvidenceSummary {
   readonly nextMissingEvidence?: JsTsProjectMergeProofMissingEvidence;
   readonly semanticEquivalenceLevel: 'semantic-equivalence-unknown' | string;
   readonly semanticEquivalenceClaim: boolean;
+  readonly semanticEquivalenceUnknown: boolean;
   readonly evidenceOnly: true;
   readonly proofClaims: number;
 }
@@ -102,6 +105,7 @@ export interface JsTsProjectMergeProofEvidence {
     readonly evidenceOnly?: true;
     readonly proofClaims?: number;
     readonly missingLevels?: readonly JsTsProjectMergeProofLevel[];
+    readonly missingSignals?: readonly string[];
     readonly nextMissingEvidence?: JsTsProjectMergeProofMissingEvidence;
     readonly autoMergeClaim?: false;
     readonly semanticEquivalenceClaim?: boolean;

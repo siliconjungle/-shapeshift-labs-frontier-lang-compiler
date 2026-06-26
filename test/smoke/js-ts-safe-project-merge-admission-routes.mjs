@@ -139,6 +139,26 @@ assert.equal(rerunRoute.routeKind, 'rerun');
 assert.equal(rerunRoute.action, 'rerun');
 assert.equal(rerunRoute.autoMergeClaim, false);
 
+const missingSemanticProofRoute = projectAdmissionRouteFromMissingEvidence({
+  code: 'semantic-equivalence-proof-not-available',
+  kind: 'semantic-equivalence',
+  status: 'unknown',
+  action: 'review',
+  proofLevel: 'semantic-equivalence-unknown',
+  routeId: 'external-semantic-equivalence-proof',
+  routeLane: 'semantic-proof',
+  routeNext: 'attach-external-equivalence-proof'
+});
+assert.equal(missingSemanticProofRoute.routeKind, 'review');
+assert.equal(missingSemanticProofRoute.routeLane, 'semantic-proof');
+assert.deepEqual(missingSemanticProofRoute.missingEvidence, ['semantic-equivalence-proof-not-available']);
+assert.deepEqual(missingSemanticProofRoute.requiredEvidence, ['semantic-equivalence-external']);
+assert.deepEqual(missingSemanticProofRoute.presentEvidence, ['semantic-equivalence-unknown']);
+assert.equal(missingSemanticProofRoute.recommendedAction, 'review');
+assert.equal(missingSemanticProofRoute.confidenceDimension, 'semanticEquivalence');
+assert.equal(missingSemanticProofRoute.blocksSemanticEquivalence, true);
+assert.equal(missingSemanticProofRoute.semanticEquivalenceClaim, false);
+
 function routeById(result, routeId) {
   const route = result.admission.routes.find((entry) => entry.routeId === routeId);
   assert.notEqual(route, undefined, `${result.id} missing route ${routeId}`);

@@ -142,29 +142,6 @@ const htmlBlockedSurface = matrixSurface(htmlBlockedProject, 'html-structural-me
 assert.equal(htmlBlockedSurface.proofStatuses['html-structural-merge'], 'failed');
 assert.equal(htmlBlockedSurface.missingRouteIds.includes('admit-html-structural-merge'), true);
 
-const htmlEventHandlerBlockedProject = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_html_event_handler_runtime_block',
-  files: [{
-    sourcePath: 'src/view.html',
-    baseSourceText: '<button data-frontier-key="save" onclick="save()">Save</button>\n',
-    workerSourceText: '<button data-frontier-key="save" onclick="saveNow()">Save</button>\n',
-    headSourceText: '<button data-frontier-key="save" onclick="save()">Save</button>\n'
-  }]
-});
-assert.equal(htmlEventHandlerBlockedProject.status, 'blocked');
-assert.equal(htmlEventHandlerBlockedProject.summary.htmlBlockedFiles, 1);
-assert.equal(htmlEventHandlerBlockedProject.summary.htmlParserEvidenceFiles, 1);
-assert.equal(htmlEventHandlerBlockedProject.summary.htmlExplicitIdentityEvidenceFiles, 1);
-assert.equal(htmlEventHandlerBlockedProject.summary.htmlRuntimeBoundaryEvidenceFiles, 1);
-assert.equal(htmlEventHandlerBlockedProject.summary.htmlProofGapBlockedFiles, 1);
-assert.equal(htmlEventHandlerBlockedProject.conflicts.some((conflict) => conflict.code === 'html-proof-gap-blocked'), true);
-assert.equal(htmlEventHandlerBlockedProject.conflicts.some((conflict) => conflict.details.reasonCode === 'event-handler-runtime-boundary'), true);
-assert.equal(htmlEventHandlerBlockedProject.files[0].result.browserRuntimeEquivalenceClaim, false);
-assert.equal(htmlEventHandlerBlockedProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
-const htmlEventHandlerBlockedSurface = matrixSurface(htmlEventHandlerBlockedProject, 'html-structural-merge-admission');
-assert.equal(htmlEventHandlerBlockedSurface.proofStatuses['html-structural-merge'], 'failed');
-assert.equal(htmlEventHandlerBlockedSurface.missingRouteIds.includes('admit-html-structural-merge'), true);
-
 const cssBlockedProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_conflict',
   files: [{

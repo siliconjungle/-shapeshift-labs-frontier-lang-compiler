@@ -106,6 +106,7 @@ function projectAdmissionRouteFromMissingEvidence(item) {
   const routeId = item?.routeId ?? route.id;
   if (!routeId) return undefined;
   const action = normalizedRouteAction(item?.action);
+  const missingEvidence = missingEvidenceCodes(item);
   return routeRecord({
     routeId,
     routeKind: action,
@@ -118,6 +119,14 @@ function projectAdmissionRouteFromMissingEvidence(item) {
     proofLevel: item?.proofLevel,
     evidenceId: item?.evidenceId,
     reasonCodes: uniqueStrings([item?.code, ...(item?.relatedSignals ?? [])]),
+    requiredEvidence: item?.requiredEvidence ?? inferredRequiredEvidence(item),
+    presentEvidence: item?.presentEvidence ?? inferredPresentEvidence(item),
+    missingEvidence,
+    recommendedAction: item?.recommendedAction ?? recommendedActionFromMissingEvidence(item),
+    confidenceDimension: item?.confidenceDimension ?? confidenceDimensionFromMissingEvidence(item),
+    blocksSemanticEquivalence: item?.blocksSemanticEquivalence ?? semanticEquivalenceEvidenceGap(item),
+    summary: item?.summary,
+    nextAction: item?.nextAction,
     details: item
   });
 }
@@ -175,6 +184,11 @@ function routeRecord(input) {
     requiredEvidence: input.requiredEvidence,
     presentEvidence: input.presentEvidence,
     missingEvidence: input.missingEvidence,
+    recommendedAction: input.recommendedAction,
+    confidenceDimension: input.confidenceDimension,
+    blocksSemanticEquivalence: input.blocksSemanticEquivalence,
+    summary: input.summary,
+    nextAction: input.nextAction,
     details: input.details,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
@@ -198,6 +212,45 @@ function normalizedRouteAction(action) {
   if (action === 'apply') return 'apply';
   if (action === 'rebase') return 'rebase';
   return 'review';
+}
+
+function missingEvidenceCodes(item) {
+  return uniqueStrings([item?.code, ...(item?.missingEvidence ?? []), ...(item?.missingSignals ?? [])]);
+}
+
+function inferredRequiredEvidence(item) {
+  if (semanticEquivalenceEvidenceGap(item)) return ['semantic-equivalence-external'];
+  return item?.proofLevel ? [item.proofLevel] : undefined;
+}
+
+function inferredPresentEvidence(item) {
+  if (item?.proofLevel === 'semantic-equivalence-unknown') return ['semantic-equivalence-unknown'];
+  if (item?.proofLevel === 'semantic-equivalence-external' && item?.status === 'failed') return ['semantic-equivalence-external'];
+  return undefined;
+}
+
+function recommendedActionFromMissingEvidence(item) {
+  const action = normalizedRouteAction(item?.action);
+  if (action === 'reject' || action === 'block') return 'block';
+  if (action === 'rerun') return 'rerun';
+  return 'review';
+}
+
+function confidenceDimensionFromMissingEvidence(item) {
+  if (semanticEquivalenceEvidenceGap(item)) return 'semanticEquivalence';
+  if (item?.scope === 'project-output' && item?.kind === 'diagnostics') return 'diagnostics';
+  if (item?.scope === 'project-output' && item?.kind === 'declaration-output') return 'declarations';
+  if (item?.scope === 'quality-gates') return 'quality';
+  if (item?.scope === 'project-graph') return 'graph';
+  if (item?.scope === 'source-files') return 'proof';
+  return undefined;
+}
+
+function semanticEquivalenceEvidenceGap(item) {
+  return item?.code === 'semantic-equivalence-proof-not-available'
+    || item?.code === 'semantic-equivalence-proof-failed'
+    || item?.proofLevel === 'semantic-equivalence-unknown'
+    || item?.proofLevel === 'semantic-equivalence-external';
 }
 
 function routeSpec(routeId, routeLane, routeNext) { return Object.freeze({ routeId, routeLane, routeNext }); }

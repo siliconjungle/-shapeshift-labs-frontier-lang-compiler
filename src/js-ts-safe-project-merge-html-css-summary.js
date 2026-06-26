@@ -42,7 +42,7 @@ function hasHtmlExplicitIdentityEvidence(file) {
 }
 function hasHtmlPathOnlyIdentityResidual(file) { return (file?.result?.identityEvidence?.pathOnlyIdentityElements ?? 0) > 0; }
 function hasHtmlRuntimeBoundaryEvidence(file) {
-  return (file?.result?.identityEvidence?.runtimeBoundaryElements ?? 0) > 0 || hasRuntimeBoundaryConflict(file);
+  return (file?.result?.identityEvidence?.runtimeBoundaryElements ?? 0) > 0 || hasRuntimeBoundaryConflict(file) || hasHtmlRuntimeBoundaryProof(file);
 }
 function hasHtmlFrameworkBoundaryEvidence(file) {
   return (file?.result?.identityEvidence?.frameworkBoundaryElements ?? 0) > 0 || hasFrameworkBoundaryConflict(file);
@@ -73,6 +73,9 @@ function hasHtmlProofGapBlockedConflict(file) {
 }
 function hasRuntimeBoundaryConflict(file) {
   return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => HtmlRuntimeBoundaryReasonCodes.has(conflict?.details?.reasonCode));
+}
+function hasHtmlRuntimeBoundaryProof(file) {
+  return [...(file?.result?.runtimeBoundaryProofs ?? []), ...(file?.result?.admission?.htmlRuntimeBoundaryProofs ?? file?.admission?.htmlRuntimeBoundaryProofs ?? [])].some((proof) => proof?.status === 'passed' && HtmlRuntimeBoundaryReasonCodes.has(proof.reasonCode));
 }
 function hasFrameworkBoundaryConflict(file) {
   return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => HtmlFrameworkBoundaryReasonCodes.has(conflict?.details?.reasonCode));

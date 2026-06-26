@@ -5,6 +5,12 @@ const ExternalSemanticEquivalenceLevel = 'semantic-equivalence-external';
 const ExternalSemanticEquivalenceSchema = 'frontier.lang.jsTsProjectSemanticEquivalenceProof.v1';
 const ExternalSemanticEquivalenceKind = 'frontier.lang.jsTsProjectSemanticEquivalenceProof';
 const ExternalSemanticEquivalenceClaimBoundary = 'exact-js-ts-project-source-output-and-gates';
+const FailedSemanticEquivalenceProofSignal = 'semantic-equivalence-proof-failed';
+const FailedSemanticEquivalenceProofRoute = Object.freeze({
+  id: 'reject-semantic-equivalence-proof',
+  lane: 'semantic-proof',
+  next: 'inspect-external-equivalence-proof-binding'
+});
 
 function semanticEquivalenceExternalEvidence(id, input = {}) {
   const proof = input.externalSemanticEquivalenceProof ?? input.semanticEquivalenceProof;
@@ -34,12 +40,38 @@ function semanticEquivalenceExternalEvidence(id, input = {}) {
       artifactHash: proof?.artifactHash,
       expected,
       reasonCodes,
+      nextMissingEvidence: status === 'failed' ? failedSemanticEquivalenceProofMissingEvidence(reasonCodes) : undefined,
       proofHash: proof?.proofHash,
       expectedProofHash: proof && typeof proof === 'object' ? jsTsProjectSemanticEquivalenceProofHash(proof) : undefined,
       proofClaim: status === 'passed',
       autoMergeClaim: false,
       semanticEquivalenceClaim: status === 'passed'
     })
+  };
+}
+
+function failedSemanticEquivalenceProofMissingEvidence(reasonCodes = []) {
+  return {
+    code: FailedSemanticEquivalenceProofSignal,
+    kind: 'semantic-equivalence',
+    scope: 'project',
+    status: 'failed',
+    action: 'reject-proof',
+    proofLevel: ExternalSemanticEquivalenceLevel,
+    route: FailedSemanticEquivalenceProofRoute,
+    routeId: FailedSemanticEquivalenceProofRoute.id,
+    routeLane: FailedSemanticEquivalenceProofRoute.lane,
+    routeNext: FailedSemanticEquivalenceProofRoute.next,
+    relatedSignals: reasonCodes,
+    requiredEvidence: [ExternalSemanticEquivalenceLevel],
+    presentEvidence: [ExternalSemanticEquivalenceLevel],
+    recommendedAction: 'block',
+    confidenceDimension: 'semanticEquivalence',
+    blocksSemanticEquivalence: true,
+    summary: 'External semantic equivalence proof failed validation; reject the proof and keep semanticEquivalenceClaim false.',
+    nextAction: 'Inspect the external proof binding, then attach a valid source/output/gate-bound proof before claiming semantic equivalence.',
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false
   };
 }
 

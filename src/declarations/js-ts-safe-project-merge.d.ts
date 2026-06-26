@@ -21,7 +21,7 @@ export type { JsTsProjectMergeQualityGate, JsTsProjectMergeQualityGateDecision, 
 export type { JsTsProjectMergeProofEvidence, JsTsProjectMergeProofEvidenceRecord, JsTsProjectMergeProofEvidenceRecordStatus, JsTsProjectMergeProofEvidenceStatus, JsTsProjectMergeProofEvidenceSummary, JsTsProjectMergeProofLevel, JsTsProjectMergeProofMissingEvidence } from './js-ts-project-merge-proof-levels.js';
 export type { JsTsProjectSafeMergeAdmissionRoute, JsTsProjectSafeMergeAdmissionRouteSummary } from './js-ts-project-merge-admission-routes.js';
 export type { JsTsProjectSafeMergeConfidenceSummary, JsTsProjectSafeMergeMissingEvidence, JsTsProjectSafeMergeMissingEvidenceRoute, JsTsProjectSafeMergeMissingEvidenceTelemetry, JsTsProjectSafeMergeRecommendedAction } from './js-ts-project-merge-confidence.js';
-export type { JsTsProjectSafeMergeSummary } from './js-ts-project-merge-summary.js';
+export type { JsTsProjectMergeSummaryProofStatus, JsTsProjectSafeMergeSummary, JsTsProjectSourceTextMergeCandidateStatus } from './js-ts-project-merge-summary.js';
 export type { JsTsProjectCommonJsRuntimeInteropProof } from './js-ts-project-merge-commonjs-interop.js';
 export type { JsTsProjectGlobalAugmentationCompatibilityProof } from './js-ts-project-merge-global-augmentation.js'; export type { JsTsProjectJsxRenderReturnBranchArmOrigin, JsTsProjectJsxRenderReturnBranchControlKind, JsTsProjectJsxRenderReturnBranchProof } from './js-ts-project-merge-jsx-render-branch.js';
 

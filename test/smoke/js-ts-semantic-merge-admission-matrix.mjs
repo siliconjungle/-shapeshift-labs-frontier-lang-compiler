@@ -3,7 +3,6 @@ import { JsTsSafeMergeConflictCodes } from '../../src/js-ts-safe-merge.js';
 import { safeMergeJsTsSource } from '../../src/js-ts-semantic-merge.js';
 import { createSemanticEditScript, projectSemanticEditScriptToSource, replaySemanticEditProjection, safeMergeJsTsProject } from '../../src/index.js';
 const semanticMergeMatrixCells = [
-  { id: 'source-text-merge/baseline-candidate-recorded', status: 'done', evidence: 'js-ts-project-source-text-merge-candidate', note: 'project admission records the conservative concrete source merge candidate as the baseline reviewed by semantic proof surfaces' },
   { id: 'class-method-rename/admitted', status: 'done', evidence: 'js-ts-safe-merge-rename-move-fallback', note: 'composed safe merge admits class method rename when head changes a sibling method' },
   { id: 'top-level-rename/semantic-edit-admitted', status: 'done', evidence: 'semantic-edit-rename-move-source-replay', note: 'semantic edit projection can replay a top-level rename over an independent sibling edit' },
   {
@@ -123,13 +122,14 @@ const semanticMergeMatrixCells = [
   { id: 'semantic-replay/output-binding-spoof-blocked', status: 'done', evidence: 'js-ts-safe-project-merge-semantic-replay-proof', note: 'replay output source/hash binding blocks spoofed expected outputs before admission' }
 ];
 assert.equal(semanticMergeMatrixCells.every((cell) => cell.status === 'done'), true);
+const supportStatuses = ['baseline', 'bounded-evidence', 'partial', 'blocked', 'absent'];
 for (const cell of semanticMergeMatrixCells) {
   assert.match(cell.id, /^[a-z0-9-]+\/[a-z0-9-]+(?:-[a-z0-9]+)*$/);
   assert.equal(['done', 'missing'].includes(cell.status), true, `${cell.id}: matrix status`);
+  if ('support' in cell) assert.equal(supportStatuses.includes(cell.support), true, `${cell.id}: support status`);
   assert.equal(typeof cell.evidence, 'string', `${cell.id}: evidence`);
   assert.equal(typeof cell.note, 'string', `${cell.id}: note`);
 }
-
 const oracleTopLevelRenameBase = [
   'export function step(v: number) {',
   '  return v + 1;',
@@ -161,7 +161,6 @@ const oracleTopLevelRenameScript = createSemanticEditScript({
 assert.equal(oracleTopLevelRenameScript.admission.status, 'auto-merge-candidate');
 assert.equal(oracleTopLevelRenameScript.summary.byKind.removeBody, 1);
 assert.equal(oracleTopLevelRenameScript.summary.byKind.addBody, 1);
-
 const oracleTopLevelRenameProjection = projectSemanticEditScriptToSource({
   script: oracleTopLevelRenameScript,
   workerSourceText: oracleTopLevelRenameWorker,
@@ -169,7 +168,6 @@ const oracleTopLevelRenameProjection = projectSemanticEditScriptToSource({
 });
 assert.equal(oracleTopLevelRenameProjection.status, 'projected');
 assert.equal(oracleTopLevelRenameProjection.sourceText, oracleTopLevelRenameExpected);
-
 const oracleTopLevelRenameReplay = replaySemanticEditProjection({
   projection: oracleTopLevelRenameProjection,
   currentSourceText: oracleTopLevelRenameHead
@@ -188,7 +186,6 @@ assert.equal(oracleTopLevelRenameSafeMerge.status, 'blocked');
 assert.equal(oracleTopLevelRenameSafeMerge.semanticArtifacts, undefined);
 assert.equal(oracleTopLevelRenameSafeMerge.admission.reasonCodes.includes(JsTsSafeMergeConflictCodes.topLevelOrderChanged), true);
 assert.equal(oracleTopLevelRenameSafeMerge.admission.reasonCodes.includes(JsTsSafeMergeConflictCodes.changedExistingDeclaration), true);
-
 const oracleClassMethodRenameBase = [
   'export class Service {',
   '  step(v: number) {',
@@ -224,7 +221,6 @@ const oracleClassMethodRenameSafeMerge = safeMergeJsTsSource({
 assert.equal(oracleClassMethodRenameSafeMerge.status, 'merged');
 assert.equal(oracleClassMethodRenameSafeMerge.mergedSourceText, oracleClassMethodRenameExpected);
 assert.equal(oracleClassMethodRenameSafeMerge.semanticArtifacts.status, 'verified');
-
 const oracleTsxAttributeBase = 'export function View() {\n  return <Button tone="base" size="m" />;\n}\n';
 const oracleTsxAttributeWorker = oracleTsxAttributeBase.replace('tone="base"', 'tone="worker"');
 const oracleTsxAttributeHead = `// shifted by head\n${oracleTsxAttributeBase}`;
@@ -239,7 +235,6 @@ const oracleTsxAttributeSafeMerge = safeMergeJsTsSource({
 assert.equal(oracleTsxAttributeSafeMerge.status, 'merged');
 assert.equal(oracleTsxAttributeSafeMerge.mergedSourceText, `// shifted by head\n${oracleTsxAttributeWorker}`);
 assert.equal(oracleTsxAttributeSafeMerge.semanticArtifacts.status, 'verified');
-
 const oracleTsxAttributeSameRegionMerged = safeMergeJsTsSource({
   id: 'oracle_safe_merge_tsx_attribute_same_region_merged',
   language: 'tsx',
@@ -317,3 +312,9 @@ assert.equal(oracleImportRemovalProject.summary.nextMissingEvidenceRouteId, 'emi
 assert.equal(oracleImportRemovalProject.summary.confidenceDimensions.proof, 'partial');
 assert.equal(oracleImportRemovalProject.summary.confidenceDimensions.semanticEquivalence, 'unknown');
 assert.equal(oracleImportRemovalProject.summary.missingEvidenceMatrix.byRoute['produce-source-span-roundtrip-evidence'], undefined);
+
+function projectMatrixSurface(project, surface) {
+  const record = project.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);
+  assert.ok(record, `missing ${surface} matrix surface`);
+  return record;
+}

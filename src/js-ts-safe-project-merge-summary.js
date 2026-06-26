@@ -301,11 +301,12 @@ function compactConfidenceDimensions(status, summary, context, routingCalibratio
     diagnostics: gateConfidenceDimension(context.outputDiagnosticsGate),
     declarations: gateConfidenceDimension(context.outputDeclarationGate),
     quality: gateConfidenceDimension(context.outputQualityGate),
-    proof: summary.proofEvidenceFailed ? 'failed' : summary.proofEvidenceMissing ? 'partial' : 'complete', semanticEquivalence: summary.semanticEquivalenceLevel === 'semantic-equivalence-unknown' ? 'unknown' : 'claimed', routeLane: routingCalibration.nextRouteLane, routeId: routingCalibration.nextRouteId, focusedProofGapRoute: routingCalibration.nextFocusedProofGapRouteId
+    proof: summary.proofEvidenceFailed ? 'failed' : summary.proofEvidenceMissing ? 'partial' : 'complete', semanticEquivalence: summary.semanticEquivalenceLevel === 'semantic-equivalence-unknown' ? 'unknown' : 'claimed', semanticEquivalenceProof: semanticEquivalenceProofDimension(summary), routeLane: routingCalibration.nextRouteLane, routeId: routingCalibration.nextRouteId, focusedProofGapRoute: routingCalibration.nextFocusedProofGapRouteId
   });
 }
 
 function gateConfidenceDimension(gate) { return !gate ? 'missing' : gate.status === 'passed' ? 'passed' : gate.status === 'skipped' ? 'missing' : 'failed'; }
+function semanticEquivalenceProofDimension(summary) { return summary.proofSemanticEquivalenceStatus === 'failed' ? 'failed' : summary.semanticEquivalenceLevel === 'semantic-equivalence-unknown' ? 'missing' : 'passed'; }
 
 function uniqueRecords(records) { const seen = new Set(); return records.filter((record) => !record?.id || seen.has(record.id) ? false : (seen.add(record.id), true)); }
 

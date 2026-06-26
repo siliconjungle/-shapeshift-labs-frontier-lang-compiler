@@ -15,7 +15,8 @@ const ProjectMergeMissingSignals = Object.freeze({
   unsupportedJsTsSurface: 'unsupported-js-ts-surface-proof-not-available',
   ...HtmlCssProjectMergeMissingSignals,
   cssModuleUseSiteGraph: 'css-module-use-site-graph-proof-blocked',
-  semanticEquivalenceProof: 'semantic-equivalence-proof-not-available'
+  semanticEquivalenceProof: 'semantic-equivalence-proof-not-available',
+  semanticEquivalenceProofFailed: 'semantic-equivalence-proof-failed'
 });
 
 const ProjectMergeMissingEvidenceRoutes = Object.freeze({
@@ -33,7 +34,8 @@ const ProjectMergeMissingEvidenceRoutes = Object.freeze({
   [ProjectMergeMissingSignals.unsupportedJsTsSurface]: route('prove-unsupported-js-ts-surface', 'semantic-proof', 'supply-unsupported-surface-evidence'),
   ...htmlCssProjectMergeMissingEvidenceRoutes(route, ProjectMergeMissingSignals),
   [ProjectMergeMissingSignals.cssModuleUseSiteGraph]: route('prove-css-module-use-site-graph', 'layout-style-graph', 'supply-css-module-transform-and-use-site-proof'),
-  [ProjectMergeMissingSignals.semanticEquivalenceProof]: route('external-semantic-equivalence-proof', 'semantic-proof', 'attach-external-equivalence-proof')
+  [ProjectMergeMissingSignals.semanticEquivalenceProof]: route('external-semantic-equivalence-proof', 'semantic-proof', 'attach-external-equivalence-proof'),
+  [ProjectMergeMissingSignals.semanticEquivalenceProofFailed]: route('reject-semantic-equivalence-proof', 'semantic-proof', 'inspect-external-equivalence-proof-binding')
 });
 
 const ProjectMergeAdmissionMatrixRows = Object.freeze([
@@ -48,7 +50,7 @@ const ProjectMergeAdmissionMatrixRows = Object.freeze([
   matrixRow('unsupported-js-ts-surface-coverage', 'partial', ['unsupported-js-ts-surface-review'], [ProjectMergeMissingSignals.unsupportedJsTsSurface]),
   ...htmlCssProjectMergeAdmissionMatrixRows(matrixRow, ProjectMergeMissingSignals),
   matrixRow('css-modules-use-site-graph', 'partial', ['css-module-use-site-graph', 'css-module-transform-proof', 'project-graph-evidence'], [ProjectMergeMissingSignals.cssModuleUseSiteGraph]),
-  matrixRow('semantic-equivalence-proof', 'bounded-evidence', ['semantic-equivalence-external', 'semantic-equivalence-unknown'], [ProjectMergeMissingSignals.semanticEquivalenceProof]),
+  matrixRow('semantic-equivalence-proof', 'bounded-evidence', ['semantic-equivalence-external', 'semantic-equivalence-unknown'], [ProjectMergeMissingSignals.semanticEquivalenceProof, ProjectMergeMissingSignals.semanticEquivalenceProofFailed]),
   matrixRow('cross-file-symbol-rename', 'partial', ['diagnostics-clean', 'declaration-output-stable', 'project-graph-delta'], [ProjectMergeMissingSignals.outputDiagnosticsGate, ProjectMergeMissingSignals.declarationGate, ProjectMergeMissingSignals.projectGraphEvidence, ProjectMergeMissingSignals.projectGraphDeltaEvidence]),
   matrixRow('symbol-move-between-files', 'partial', ['diagnostics-clean', 'declaration-output-stable', 'project-graph-delta'], [ProjectMergeMissingSignals.outputDiagnosticsGate, ProjectMergeMissingSignals.declarationGate, ProjectMergeMissingSignals.projectGraphEvidence, ProjectMergeMissingSignals.projectGraphDeltaEvidence]),
   matrixRow('split-merge-modules-classes', 'partial', ['diagnostics-clean', 'declaration-output-stable', 'project-graph-delta'], [ProjectMergeMissingSignals.outputDiagnosticsGate, ProjectMergeMissingSignals.declarationGate, ProjectMergeMissingSignals.projectGraphEvidence, ProjectMergeMissingSignals.projectGraphDeltaEvidence]),
@@ -133,12 +135,10 @@ function missingEvidenceItems(summary, context = {}) {
     summary: 'Semantic edit artifacts were produced, but clean replay proof was not available for every semantic edit candidate.'
   }));
   if (summary.semanticEquivalenceLevel === 'semantic-equivalence-unknown') items.push(missingEvidenceItem({
-    code: ProjectMergeMissingSignals.semanticEquivalenceProof,
-    scope: 'project',
-    kind: 'semantic-equivalence',
-    proofLevel: 'semantic-equivalence-unknown',
-    action: 'review',
-    summary: 'Executable semantic equivalence is still unknown; keep semanticEquivalenceClaim false and require human or external proof for equivalence claims.'
+    code: ProjectMergeMissingSignals.semanticEquivalenceProof, scope: 'project', kind: 'semantic-equivalence', proofLevel: 'semantic-equivalence-unknown', action: 'review',
+    requiredEvidence: ['semantic-equivalence-external'], presentEvidence: ['semantic-equivalence-unknown'], recommendedAction: 'review', confidenceDimension: 'semanticEquivalence', blocksSemanticEquivalence: true,
+    summary: 'Executable semantic equivalence is still unknown; keep semanticEquivalenceClaim false and require human or external proof for equivalence claims.',
+    nextAction: 'Attach a source/output/gate-bound external semantic equivalence proof or keep the route in human review.'
   }));
   if (summary.projectGraphCssModuleUseSiteConflicts) items.push(missingEvidenceItem({
     code: ProjectMergeMissingSignals.cssModuleUseSiteGraph, scope: 'layout-style-graph', kind: 'css-module-use-site-proof', proofLevel: 'css-module-use-site-graph', action: 'review',
@@ -220,8 +220,9 @@ function missingEvidenceItem(input) {
     routeLane: route?.lane,
     routeNext: route?.next,
     relatedSignals: input.relatedSignals,
-    summary: input.summary,
-    suggestedInput: input.suggestedInput,
+    requiredEvidence: input.requiredEvidence, presentEvidence: input.presentEvidence, recommendedAction: input.recommendedAction,
+    confidenceDimension: input.confidenceDimension, blocksSemanticEquivalence: input.blocksSemanticEquivalence,
+    summary: input.summary, nextAction: input.nextAction, suggestedInput: input.suggestedInput,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   });

@@ -2,6 +2,7 @@ function sourceTextMergeSummary(files = []) {
   const mergedFiles = files.filter((file) => file.status === 'merged');
   const blockedFiles = files.filter((file) => file.status === 'blocked');
   const outputFiles = files.filter((file) => typeof file.outputSourceText === 'string');
+  const sourceTextMergeDisposition = sourceTextMergeDispositionFor(files.length, mergedFiles.length, blockedFiles.length);
   return {
     mergedFiles: mergedFiles.length,
     blockedFiles: blockedFiles.length,
@@ -9,7 +10,10 @@ function sourceTextMergeSummary(files = []) {
     sourceTextMergeCandidateFiles: mergedFiles.length,
     sourceTextMergeBlockedFiles: blockedFiles.length,
     sourceTextMergeOutputFiles: outputFiles.length,
-    sourceTextMergeCandidateStatus: files.length ? (blockedFiles.length ? 'failed' : 'passed') : 'absent'
+    sourceTextMergeCandidateStatus: files.length ? (blockedFiles.length ? 'failed' : 'passed') : 'absent',
+    sourceTextMergeDisposition,
+    sourceTextMergeAdmissionBoundary: sourceTextMergeAdmissionBoundary(sourceTextMergeDisposition),
+    sourceTextMergeFileStatusCounts: countFileStatuses(files)
   };
 }
 
@@ -28,6 +32,9 @@ function sourceTextMergeCandidateEvidenceRecord(id, summary) {
       sourceTextMergeCandidateFiles: summary.sourceTextMergeCandidateFiles,
       sourceTextMergeBlockedFiles: summary.sourceTextMergeBlockedFiles,
       sourceTextMergeOutputFiles: summary.sourceTextMergeOutputFiles,
+      sourceTextMergeDisposition: summary.sourceTextMergeDisposition,
+      sourceTextMergeAdmissionBoundary: summary.sourceTextMergeAdmissionBoundary,
+      sourceTextMergeFileStatusCounts: summary.sourceTextMergeFileStatusCounts,
       outputFiles: summary.outputFiles,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
@@ -56,9 +63,28 @@ function sourceTextMergeMatrixProofStatus(level, summary) {
 }
 
 function sourceTextMergeCandidateEvidenceSummary(summary, passed, failed) {
-  if (passed) return `Produced concrete source merge candidates for ${summary.sourceTextMergeCandidateFiles} file(s).`;
-  if (failed) return `Source merge candidate blocked for ${summary.sourceTextMergeBlockedFiles} file(s) before semantic admission.`;
-  return 'No source files were available for source text merge candidate production.';
+  if (passed) return `Produced concrete mechanical source merge candidates for ${summary.sourceTextMergeCandidateFiles} file(s); semantic review remains required for equivalence claims.`;
+  if (failed) return `Source merge candidate blocked for ${summary.sourceTextMergeBlockedFiles} overlapping file(s) before semantic admission.`;
+  return 'No source files were available; no mechanical source merge candidate was produced.';
+}
+
+function sourceTextMergeDispositionFor(files, candidateFiles, blockedFiles) {
+  if (!files) return 'absent-source-files';
+  if (blockedFiles) return 'blocked-overlap';
+  return candidateFiles === files ? 'passed-candidate' : 'incomplete-candidate';
+}
+
+function sourceTextMergeAdmissionBoundary(disposition) {
+  if (disposition === 'passed-candidate') return 'mechanical-candidate-needs-semantic-review';
+  if (disposition === 'blocked-overlap') return 'blocked-overlap-before-semantic-review';
+  if (disposition === 'absent-source-files') return 'absent-source-files-no-candidate';
+  return 'mechanical-candidate-incomplete';
+}
+
+function countFileStatuses(files) {
+  const counts = {};
+  for (const file of files) if (file?.status) counts[file.status] = (counts[file.status] ?? 0) + 1;
+  return counts;
 }
 
 function compactRecord(record) {
