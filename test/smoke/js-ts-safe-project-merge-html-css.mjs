@@ -52,6 +52,9 @@ assert.equal(mixedProject.summary.htmlCssMergedFiles, 2);
 assert.equal(mixedProject.summary.htmlParserEvidenceFiles, 1);
 assert.equal(mixedProject.summary.cssParserEvidenceFiles, 1);
 assert.equal(mixedProject.summary.htmlCssParserEvidenceFiles, 2);
+assert.equal(mixedProject.summary.htmlIdentityEvidenceFiles, 1);
+assert.equal(mixedProject.summary.cssSelectorTargetEvidenceFiles, 1);
+assert.equal(mixedProject.summary.htmlCssStructuralTargetEvidenceFiles, 2);
 assert.equal(mixedProject.summary.htmlCssBrowserRuntimeProofs, 0);
 const outputByPath = new Map(mixedProject.outputFiles.map((file) => [file.sourcePath, file]));
 assert.equal(outputByPath.get('src/view.html').language, 'html');
@@ -66,6 +69,8 @@ assert.equal(matrixSurface(mixedProject, 'html-structural-merge-admission').proo
 assert.equal(matrixSurface(mixedProject, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'passed');
 assert.equal(matrixSurface(mixedProject, 'html-parser-source-evidence').proofStatuses['html-parser-source-evidence'], 'passed');
 assert.equal(matrixSurface(mixedProject, 'css-parser-source-evidence').proofStatuses['css-parser-source-evidence'], 'passed');
+assert.equal(matrixSurface(mixedProject, 'html-identity-evidence').proofStatuses['html-identity-evidence'], 'passed');
+assert.equal(matrixSurface(mixedProject, 'css-selector-target-evidence').proofStatuses['css-selector-target-evidence'], 'passed');
 const browserSurface = matrixSurface(mixedProject, 'html-css-browser-runtime-proof');
 assert.equal(browserSurface.proofStatuses['browser-runtime-proof'], 'missing');
 assert.equal(browserSurface.missingRouteIds.includes('prove-html-css-browser-runtime'), true);
@@ -103,6 +108,23 @@ assert.equal(cssBlockedProject.conflicts.some((conflict) => conflict.code === 'c
 const cssBlockedSurface = matrixSurface(cssBlockedProject, 'css-cascade-merge-admission');
 assert.equal(cssBlockedSurface.proofStatuses['css-cascade-merge'], 'failed');
 assert.equal(cssBlockedSurface.missingRouteIds.includes('admit-css-cascade-merge'), true);
+
+const cssSelectorMoveProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_selector_move_conflict',
+  files: [{
+    sourcePath: 'src/button.css',
+    baseSourceText: '.button { color: red; }\n',
+    workerSourceText: '.primary { color: red; }\n',
+    headSourceText: '.button { color: red; background-color: white; }\n'
+  }]
+});
+assert.equal(cssSelectorMoveProject.status, 'blocked');
+assert.equal(cssSelectorMoveProject.summary.cssSelectorTargetEvidenceFiles, 1);
+assert.equal(cssSelectorMoveProject.summary.cssSelectorTargetConflictFiles, 1);
+assert.equal(cssSelectorMoveProject.conflicts.some((conflict) => conflict.code === 'css-selector-target-conflict'), true);
+const cssSelectorMoveSurface = matrixSurface(cssSelectorMoveProject, 'css-selector-target-evidence');
+assert.equal(cssSelectorMoveSurface.proofStatuses['css-selector-target-evidence'], 'failed');
+assert.equal(cssSelectorMoveSurface.missingRouteIds.includes('prove-css-selector-target-evidence'), true);
 
 const scopedCssBase = '@media (min-width: 700px) {\n  .button {\n    color: red;\n    padding-left: 1rem;\n  }\n}\n';
 const scopedCssWorker = scopedCssBase.replace('color: red', 'color: blue');
