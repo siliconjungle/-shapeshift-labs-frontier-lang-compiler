@@ -169,12 +169,52 @@ The JS/TS semantic merge smoke corpus lives at
 small and dependency-free. They cover accepted projection/replay cases, exact
 source preservation, generated/source-map boundaries, safe import/declaration
 merges, safe unordered member merges, composed top-level/member safe merges,
-existing import binding-shape additions, and rejected unsafe cases such as stale
-ledger spans, import specifier removals, computed keys, duplicate exported
-names, duplicate object members, decorators, overload anchors, and same-anchor
-edit conflicts. Fixture failures include the fixture id and the actual
-reason-code or gate values so distributed swarm evidence can point at a stable
-case instead of an agent transcript.
+existing import binding-shape additions, React-style TSX child insertions, and
+rejected unsafe cases such as stale ledger spans, import specifier removals,
+computed keys, duplicate exported names, duplicate object members, decorators with static metadata evidence,
+overload anchors, and same-anchor edit conflicts.
+
+### Real-Repo Corpus Proof Phases
+
+Manifest-only real-repo entries link those fixtures to TypeScript, Vite,
+Prettier, Next, and React patterns without committing third-party source. The
+manifest phase records repository identity, shallow fetch commands, source
+shape, path globs, byte budgets, oracle fixture links, and
+`committedSourceBytes: 0`; it is metadata, not vendored code.
+
+`bench/real-repo-corpus-suite.mjs` emits a network-free local checkout proof. By
+default it reports skipped entries under `tmp/js-ts-semantic-merge-real-repos`;
+callers can point `FRONTIER_REAL_REPO_CORPUS_ROOT` at already-existing local
+checkouts. The checkout phase stats only the declared path globs and reads
+`.git` metadata for identity booleans such as checkout identity status, manifest
+remote match, manifest ref match, metadata kind, gitdir pointer presence, git
+config presence, and origin URL presence. It does not clone, install
+dependencies, or read third-party source text. Each row also records
+`checkoutRootPresent`, `checkoutDirPresent`, `checkoutPresenceStatus`, and
+`checkoutProofReason`, so a skipped row distinguishes a missing root from a
+missing checkout directory and an executed row distinguishes matched declared
+globs from a present checkout with no proof match.
+
+The dependency install phase is default-off. Evidence rows report lockfile
+presence, package managers present, and the npm/pnpm/yarn command matrix as
+`metadata-only`; `dependencyInstallExecution` remains
+`not-run-default-network-free` until a caller supplies an explicit opt-in
+runner.
+
+The repository command phase is also default-off. Build/test command proof is
+kept separate from checkout and dependency metadata through
+`repositoryCommandProofStatus`, `repositoryCommandExecution`,
+`repositoryCommandDefaultOffReason`, and `repositoryCommandOptInRequired`.
+Repository commands remain `not-run-default-network-free` unless a caller passes
+`realRepoCommandExecution.enabled`. The opt-in runner reuses the checkout proof,
+verifies checkout realpath containment, declared proof-glob matches, git
+identity, a single lockfile-backed package manager, and an allowlisted
+npm/pnpm/yarn argv with `shell: false` and an allowlisted environment. It records
+per-phase exit code, signal, duration, timeout, stdout/stderr byte counts,
+SHA-256 hashes, capped previews, and truncation flags. Dependency installation
+still requires a separate `allowDependencyInstall` opt-in. Fixture failures
+include the fixture id and the actual reason-code or gate values so distributed
+swarm evidence can point at a stable case instead of an agent transcript.
 
 Successful `safeMergeJsTsImportsAndDeclarations` and `safeMergeJsTsSource`
 results also include `semanticArtifacts`. These artifacts convert the
@@ -265,7 +305,8 @@ the available project document. Graph edges record `resolutionPathVariant` as
 from source-extension substitutions during stale checks and merge admission.
 
 Package `imports` maps are also modeled for `#internal` specifiers. Top-level
-`moduleResolution.imports` applies from `packageRoot`/`root`, while
+`moduleResolution.imports` applies from `packageRoot`/`root`, while importers
+outside that root fail closed as `package-import-scope-missing`.
 `packages[name].imports` applies to the nearest configured package root. Graph
 edges record `packageImportKey`, `packageImportCondition`, and
 `packageImportTarget` so merge admission can distinguish private aliases from
@@ -286,6 +327,76 @@ const project = safeMergeJsTsProject({
 console.log(project.outputProjectSymbolGraph.importEdges[0].resolutionKind); // "package-import-source"
 console.log(project.outputProjectSymbolGraph.importEdges[0].packageImportKey); // "#internal/*"
 ```
+
+Matched package `imports` entries also fail closed when none of the configured
+conditions selects a target. Those graph edges record `resolutionKind` as
+`"package-import-condition-missing"` with `packageImportKey` and no resolved
+module path, even when a matching source file exists in the supplied project.
+When `import` and `require` branches resolve to different targets but the
+importer path is runtime-ambiguous, graph edges fail closed as
+`"package-import-runtime-ambiguous-missing"` or
+`"package-export-runtime-ambiguous-missing"` with condition evidence
+`"import|require"` instead of choosing whichever condition appears first.
+Static edge evidence can also disambiguate runtime condition selection without
+crawling the host filesystem: ESM import/re-export edges select `import`,
+CommonJS `require` / TypeScript `import = require` edges select `require`,
+literal dynamic `import()` selects `import`, and static `import.meta.resolve`
+or `require.resolve` host edges select the matching package branch while still
+recording no host-runtime resolution claim. Edges record
+`packageRuntimeConditionEvidenceSource`, `packageRuntimeConditionEdgeKind`, and
+`packageRuntimeConditionReasonCode`; contradictory hard evidence fails closed as
+`"package-runtime-condition-conflict-missing"` with
+`packageRuntimeConditionCandidates`. Caller-supplied package type metadata also
+disambiguates runtime condition selection for `.js`/`.ts` importers. Use
+`moduleResolution.packageType`, `moduleResolution.packageTypeByRoot`,
+`moduleResolution.packageTypes`, or `packages[name].type` / `packageType` for
+package-local `imports`; resolved graph edges record `packageRuntimeCondition`
+as `"import"` or `"require"` and include the matched `packageType`.
+Non-resolver host dependency edges such as `Worker`, `SharedWorker`,
+`serviceWorker.register`, worklet `addModule`, `importScripts`, and
+`new URL(specifier, import.meta.url)` do not inherit package type metadata to
+choose divergent package `import` / `require` targets. When those host package
+specifier targets differ, graph edges fail closed with
+`packageRuntimeConditionEvidenceSource: "host-runtime-ambiguous"` and reason code
+`"package-runtime-condition-host-ambiguous-missing"` while keeping
+`hostDependencyRuntimeResolutionClaim: false`.
+When a coordinator already has package manifest data, use
+`createNativeProjectModuleResolutionFromPackageManifests` to convert in-memory
+`package.json` objects or text into the same runtime-neutral module-resolution
+shape:
+
+```js
+const manifestResolution = createNativeProjectModuleResolutionFromPackageManifests({
+  packageExportConditions: ['import', 'require', 'default'],
+  manifests: [{
+    sourcePath: 'packages/app/package.json',
+    packageJson: {
+      name: '@pkg/app',
+      type: 'module',
+      exports: { './feature': { import: './esm/feature.mjs', require: './cjs/feature.cjs' } },
+      imports: { '#feature': { import: './esm/feature.mjs', require: './cjs/feature.cjs' } }
+    }
+  }]
+});
+
+const project = safeMergeJsTsProject({
+  includeOutputProjectSymbolGraph: true,
+  moduleResolution: manifestResolution.moduleResolution,
+  baseFiles,
+  workerFiles,
+  headFiles
+});
+```
+
+Configured package `exports` maps fail closed for blocked subpaths. If a package
+declares `exports` but the requested package subpath is not present, graph edges
+record `resolutionKind` as `"package-subpath-not-exported-missing"` with
+`packageName` and `packageSubpath` instead of falling through to source-root
+probing. This keeps package visibility distinct from local file presence,
+including type-only imports. Matched package export edges also retain
+`packageExportKey` and `packageExportTarget`, including wildcard keys such as
+`"./features/*"` resolved to concrete targets such as
+`"./esm/features/button.mjs"`.
 
 Named re-export identities also include symbol links when the project graph has
 enough evidence. For `export { thing as renamedThing } from './thing.js'`,
@@ -308,6 +419,56 @@ re-export, export-star, local export, `export default`, and TypeScript
 `export =` declarations carry `importKind`, `exportKind`, `localName`,
 `importedName`, `exportedName`, `isTypeOnly`, and public-contract metadata into
 the semantic index and project symbol graph.
+Binding-level import and re-export identities preserve import-attribute /
+import-assertion key/value records, counts, and hashes so attribute-only deltas
+remain visible to merge admission without relying on hashes alone.
+Dynamic `import()` calls with non-literal targets are recorded with the stable
+`<dynamic-import>` pseudo-specifier and project graph `resolutionKind`
+`"dynamic-import-non-literal-missing"` so merge gates fail closed without host
+filesystem or package crawling.
+CommonJS `require()` bindings are runtime-neutral graph edges: destructured
+requires resolve to matching named `exports.foo` records, a default `require()`
+binding resolves to the target document's `module.exports` record when that
+export assignment is present, and `exports.__esModule = true` is ignored as
+interop metadata instead of treated as a public export.
+Static TypeScript-style CommonJS import helpers, including bare
+`__importDefault(require("./dep"))` / `__importStar(require("./dep"))` calls and
+`tslib_1.__importDefault(require("./dep"))` /
+`tslib_1.__importStar(require("./dep"))` member-form calls, are recorded as
+default and namespace import edges in lightweight and parser-backed project
+graphs, while non-literal helper targets remain fail-closed. For conditional
+package `exports` / `imports`, those helper edges keep their binding-level
+default/namespace shape but select the `require` branch from the inner static
+`require()` evidence; contradictory source-extension or package-type evidence
+still fails closed instead of claiming runtime interop equivalence.
+Static TypeScript-style CommonJS re-export helpers, including bare
+`__exportStar(require("./dep"), exports)` /
+`__createBinding(exports, require("./dep"), "name", "alias")` calls and
+`tslib_1.__exportStar(require("./dep"), exports)` /
+`tslib_1.__createBinding(exports, require("./dep"), "name", "alias")`
+member-form calls, are also recorded as export-star or named re-export module
+edges and fan out through the same project re-export identity graph as ESM
+`export * from "./dep"` and `export { name as alias } from "./dep"`.
+TypeScript-style CommonJS named getter re-exports that pair a static
+`const dep = require("./dep")` alias with
+`Object.defineProperty(exports, "name", { get: function () { return dep.name; } })`,
+named function descriptors such as `Object.defineProperty(exports, "name", { get: function getName() { return dep.name; } })`,
+shorthand `Object.defineProperty(exports, "name", { get() { return dep.name; } })`,
+or block-bodied arrow getter `Object.defineProperty(exports, "name", { get: () => { return dep.name; } })`
+are stitched into re-export identities when the alias and getter member are
+static in the same source document.
+Parser-backed ESTree/Babel imports also normalize no-expression
+`TemplateLiteral` nodes as static CommonJS `require`, computed export keys, and
+`Object.defineProperty` / `Object.defineProperties` export specifiers, while
+template literals with expressions stay unresolved instead of being guessed.
+The same static-literal rule applies to parser-backed dynamic `import()` and
+TypeScript-style CommonJS helper re-export specifiers such as
+``__exportStar(require(`./dep`), exports)``.
+Host dependency APIs such as `new URL(specifier, import.meta.url)`, `Worker`,
+`import.meta.resolve`, `require.resolve`, and `importScripts` also accept
+no-substitution/static template specifiers as evidence while expression templates
+emit `<host-dependency>` edges with expression hashes and proof-required
+unresolved evidence.
 
 `safeMergeJsTsProject` stays synchronous. When a caller already has parser-backed
 native import results for merged output files, pass them as `outputProjectImports`
@@ -326,13 +487,158 @@ incompatible ways. Parser-backed stage imports can be supplied with
 lightweight scanner. This is a conservative admission gate only: results still
 keep `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
+When a coordinator has a caller-owned TypeScript compiler API available, project
+merge can also require output diagnostics before admitting the candidate:
+
+```js
+import ts from 'typescript';
+import { safeMergeJsTsProject } from '@shapeshift-labs/frontier-lang-compiler';
+
+const project = safeMergeJsTsProject({
+  requireOutputDiagnostics: true,
+  typescript: ts,
+  baseFiles,
+  workerFiles,
+  headFiles
+});
+
+console.log(project.outputDiagnosticsGate.status); // "passed" or "blocked"
+console.log(project.summary.outputDiagnosticErrors);
+```
+
+The diagnostics gate checks merged output files with TypeScript syntactic and
+semantic diagnostics, blocks on error diagnostics, and stores the normalized
+diagnostics/conflicts under `outputDiagnosticsGate`. The package does not import
+TypeScript from its runtime root; callers inject the compiler module or supply
+precomputed `outputDiagnostics`.
+
+The same caller-owned TypeScript module can emit declaration-output evidence for
+the merged project boundary:
+
+```js
+const project = safeMergeJsTsProject({
+  includeDeclarationOutput: true,
+  typescript: ts,
+  baseFiles,
+  workerFiles,
+  headFiles
+});
+
+console.log(project.outputDeclarationGate.status); // "passed" or "blocked"
+console.log(project.outputDeclarationGate.declarationFiles[0].sourceHash);
+```
+
+Use `requireDeclarationOutput: true` to fail closed when no compiler or supplied
+`outputDeclarations` are available. The gate records normalized declaration
+files, hashes, diagnostics, and conflicts under `outputDeclarationGate`; it is
+public-boundary evidence, not a semantic-equivalence claim.
+
+When project graph delta evidence is included, declaration output can also act
+as a public API admission proof. `safeMergeJsTsProject` records
+`declarationEmitParityProof` with worker/head/output declaration boundary
+hashes. If a public compiler type changes to the same fingerprint on worker and
+head, the graph delta admission can use that proof to verify the merged output
+emits the same declaration boundary; a missing or mismatched supplied proof
+fails closed with `typescript-public-api-declaration-emit-*` reason codes. The
+proof is still only public-boundary evidence and does not claim runtime or full
+semantic equivalence.
+
+Current JS/TS semantic-merge status matrix:
+
+| Surface | Status | Current evidence |
+| --- | --- | --- |
+| Parser/source-span/trivia evidence | Partial | Source preservation, source hashes, runtime directive-prologue entries, directives, comments/trivia summaries, project `sourceFileRecords` / `sourceSpanRecords`, protected-span hashes, shebang file-entrypoint directive ownership anchors, `sourceMappingURL` and `sourceURL` generated-boundary source-map spans, deterministic source-map generated-boundary ownership keys from supplied exact source/generated spans and hashes, generated-boundary position conflict evidence, deterministic ownership anchors, source-span/trivia ownership blockers, exact parser-trivia ownership records for directive prologues plus leading/trailing comments and JSDoc/block-comment spans when parser evidence matches the source hash, TypeScript `SourceFile` compiler-scanner exact token/trivia source-preservation evidence for JS/TS/JSX/TSX imports, ESTree/Babel parser token/comment range evidence when the supplied AST covers every non-whitespace byte of the current source, fail-closed scanner/ledger spoof blockers, source-span delta conflicts, parser roundtrip proof records, failed source-span roundtrip proof admission blockers, project-merge stage parser-trivia evidence from supplied parser-backed imports for base/worker/head/output, metadata-only exactness blockers for scanner fallbacks, and fixture corpus checks. Parser-backed exactness also requires contiguous current-source token/comment/trivia coverage with no gaps, overlaps, truncation, or text mismatches; truncated coverage blocks exact token/comment ownership. Adapters without token/comment ranges remain approximate/caller evidence, not exact parser trivia. |
+| Scope/use-def graph | Partial | Lightweight lexical scope/use-def scans, destructuring alias binding records, object/array/nested/rest/default-initializer parameter binding evidence for function and arrow parameters, default import alias reads through re-export chains when a stable default-export local binding is observed, fail-closed `lexical-scope-import-alias-target-unresolved` records when an alias target cannot be tied to a lexical binding, namespace import dot and literal/static-template computed member-read evidence, blocked evidence for ambiguous computed namespace reads and namespace member writes, `this`/`super` receiver member read/write evidence including computed string and static-template members, optional chaining markers, and TypeScript checker-backed receiver-member reference proof for full `this`/`super` access spans including private identifiers, template-literal interpolation live-reference records with expression hashes plus tagged-template site/tag root/member metadata, caller-supplied ESTree/scope-manager structural evidence normalization, closure-capture depth/owner/reference hashes, binding-level closure capture hashes, project `scopeBindingRecords` / `scopeReferenceRecords`, public owner use hashes, public scope-use and reference-site delta conflicts with alias target route/use-hash evidence, TypeScript compiler reference relations when a checker is supplied, exact compiler reference-site proof hashes on scope reference records, fail-closed `typescript-compiler-reference-site-ambiguous`, `typescript-compiler-reference-lexical-binding-mismatch`, and `typescript-compiler-reference-import-alias-target-mismatch` records when compiler alias evidence cannot be reconciled with the lexical route or re-export/import target, and dependency-sensitive fixture coverage. Full whole-program binding/control-flow resolution is still caller/compiler-evidence bounded. |
+| Module/export/import graph | Partial | Project graph stages, module resolution, runtime-neutral package manifest conversion from in-memory `package.json` objects/text, duplicate workspace-root package-name ambiguity diagnostics and fail-closed `package-workspace-root-ambiguous-missing` edges with `packageWorkspaceRoots` evidence, package exports/imports including wildcard package export key/target evidence, fail-closed package `imports` condition misses, runtime-ambiguous `import`/`require` condition blockers, caller-supplied package type runtime-condition evidence for `.js`/`.ts` package exports/imports, caller-supplied package environment-condition evidence such as `browser`, fail-closed `package-export-environment-ambiguous-missing` / `package-import-environment-ambiguous-missing` blockers with condition candidates when environment targets such as `browser` and `node` diverge without explicit evidence, and fail-closed host-runtime ambiguity blockers for non-resolver host package specifiers with divergent `import`/`require` targets, re-export identities including static TypeScript-style CommonJS bare and `tslib_1.__...` member-form `__exportStar(require("./dep"), exports)` fanout and `__createBinding(exports, require("./dep"), "name", "alias")` named re-export fanout, same-document CommonJS require-alias getter re-export identities for descriptor `get: function () { return dep.name; }`, named descriptor `get: function getName() { return dep.name; }`, shorthand `get() { return dep.name; }`, and block-bodied arrow `get: () => { return dep.name; }`, TypeScript-style CommonJS bare and `tslib_1.__...` member-form `__importDefault(require("./dep"))` and `__importStar(require("./dep"))` helper import edges, CommonJS `module.exports` default-import interop when no direct `default` export exists, literal computed CommonJS export properties such as `exports["default"]`, static `module.exports = { named }`, `Object.assign(exports, { named })`, `Object.defineProperty(exports, "named", { value/get })`, and `Object.defineProperties(exports, { named: { value/get } })` export maps in lightweight and AST-backed imports, ESTree/Babel no-expression `TemplateLiteral` normalization for CommonJS `require`, computed export keys, descriptor export specifiers, dynamic `import()`, CommonJS helper re-export specifiers, and host dependency specifiers while expression-bearing templates stay unresolved, TypeScript compiler no-substitution dynamic import and host dependency template evidence, `exports.__esModule` marker filtering, import-target deltas for head-introduced CommonJS export assignments, namespace/ambient module/global augmentation/export-assignment static shape records with proof hashes and no runtime-equivalence claim, fail-closed namespace/export-assignment shape delta conflicts, non-literal dynamic `import()` pseudo-specifiers with expression kind/text/hash evidence and fail-closed resolution evidence, static `new URL(specifier, import.meta.url)`, `Worker`, `SharedWorker`, `serviceWorker.register`, worklet `addModule`, `importScripts`, `import.meta.resolve`, and `require.resolve` host dependency edges with expression hashes and no runtime-resolution claim, dynamic host dependency targets emitted as `<host-dependency>` with expression hashes, `hostDependencyStaticSpecifierEvidence: false`, and proof-required unresolved evidence, import-attribute/import-assertion normalized key/value/count/hash evidence on static imports, dynamic imports, and re-exports, import-attribute delta conflicts, output graph unresolved-module conflicts that preserve edge-level fail-closed package, host, dynamic import, and import-attribute value evidence, and output graph resolved-module missing-export conflicts that preserve edge-level package and import-attribute evidence. Host filesystem/package graph crawling, namespace runtime evaluation, ambient/global compatibility, and CommonJS runtime interop equivalence remain out of the root API. |
+| Type/public API graph | Partial | Public-contract regions, signature/contract hashes, TypeScript compiler symbol/type records, source-bound checker proof source path/hash requirements, compiler-backed type-reference target proof that binds public API type references to resolved target symbols, declaration spans, and declaration source text hashes, inferred exported factory call-signature evidence, compiler-backed public call/construct signature shape evidence and proof hashes, exported overload declaration/signature counts, compiler-backed overload signature-set proof, compiler-backed generic type-parameter/default proof, compiler-backed public member property/method property-set proof, compiler-backed public index-signature key/value/readonly evidence and proof hashes, stable public-surface hashes that ignore transient TypeScript symbol flags, compiler-backed class heritage and constructor-signature evidence/proof hashes, compiler-backed private class member and accessor-field static shape records/proof hashes plus source- and required-signal-bound private/accessor runtime proof binding with command/trace/evidence hashes, private brand, private method, private accessor, static private, subclass brand-boundary, and accessor descriptor trace slots, and false claim flags, compiler-backed class/member/parameter decorator target and expression static metadata records/proof hashes plus source-bound decorator runtime execution proof binding with trace hashes and false claim flags, compiler-backed enum runtime-shape/member-value evidence and proof hashes, TypeScript compiler importer support for source-bound computed enum evaluated-value traces with emitted-shape hashes, trace/evidence hashes, and false claim flags, compiler-backed conditional, indexed-access, mapped, `keyof`, template-literal, `infer`, union, intersection, tuple, and mixed known advanced/composite type-shape proof hashes, static compiler-backed inference syntax evidence/proof hashes for `satisfies`, `as const`, and const type parameters, bounded TypeChecker `isTypeAssignableTo` oracle proof for simple public type aliases with source path/hash binding and fail-closed `typescript-public-api-type-equivalence-proof-missing` for missing or ambiguous oracle evidence, class private/accessor/decorator/class/enum/advanced-shape/composite-shape/inference-syntax/index-signature/callable-signature/type-reference-target hashes in public compiler-type delta fingerprints, fail-closed missing-proof blockers for missing public API source hashes, type-reference target proof hashes, call/construct signature return/parameter evidence, constructor/class-heritage/private-class-member/accessor-field/index-signature value-type/enum runtime-shape/conditional-branch/indexed-access object-index-result/mapped constraint-value/`keyof` target/template-literal span/`infer` type-parameter/union member/intersection member/tuple element evidence, fail-closed computed enum runtime-value blockers when source-bound evaluated-value proof is missing, stale, trace-incomplete, value-incomplete, or claim-bearing, fail-closed private/accessor and decorator runtime execution blockers when source-bound trace proof is missing, stale, trace-incomplete, schema/kind-mismatched, required-signal-incomplete, commandless, or claim-bearing, fail-closed unknown advanced type-shape evidence, unsupported type-equivalence reason codes, public compiler-type delta conflicts, declaration-output gate, TypeScript declaration emit parity proof for worker/head/output public boundaries, and project graph delta conflicts. Full type-equivalence, broad decorator execution equivalence beyond source-bound trace proofs, broad enum runtime evaluation beyond source-bound computed-value traces, broad runtime equivalence for private/accessor execution beyond source-bound trace proofs, or broad inference-semantics proof beyond these focused compiler-backed cases is not claimed. |
+| JSX/TSX element and prop graph | Partial | JSX attribute/child-expression safe-merge fallbacks, conditional child-expression blockers, keyed-child insertion evidence, keyed named Fragment insertion evidence, planned-output duplicate-key checks, top-level `key` attribute scanning that does not treat `data-key` as stable identity, deterministic shorthand-fragment/spread/reorder/same-gap blockers, spread-attribute records/expression hashes, spread/explicit prop precedence blockers, component prop diagnostic gates, project `jsxElementRecords` / `jsxPropRecords`, public owner prop and keyed child-order hashes, typed public key/fragment evidence, literal/shorthand/reference/static optional-chain JSX prop-value callsite records/hashes with `jsx-render-prop-value-literal-evidence`, `jsx-render-prop-value-static-reference-evidence`, and `jsx-render-prop-value-static-optional-reference-evidence`, dynamic prop-value blockers such as `jsx-render-prop-value-computed-reference-unsupported`, `jsx-render-prop-value-call-expression-unsupported`, and `jsx-render-prop-value-optional-reference-unsupported`, same-file plain/member and project-local named/default/barrel-import plain/member static component prop passthrough evidence with `jsx-render-component-prop-flow-static-passthrough-evidence`, dynamic component prop passthrough blockers with `jsx-render-component-prop-flow-dynamic-value-unsupported`, component prop render-flow blockers with `jsx-render-component-prop-flow-unsupported`, provider ancestor path/count/hash evidence for context-provider nesting, context provider value prop records/hashes with literal provider value evidence, static identifier/member reference-binding evidence, static optional-chain reference-binding evidence, static call-free object/array value evidence, or `jsx-render-context-provider-value-unsupported` plus provider-value dynamic blocker metadata (`dynamicBlockerReasonCode` values such as `jsx-render-context-provider-value-call-expression-unsupported` and `jsx-render-context-provider-value-computed-reference-unsupported`) for call/computed/optional/spread values, context consumer target records/hashes with static identifier/member target evidence, static optional target evidence, or `jsx-render-context-consumer-target-unsupported` plus dynamic-target blockers for computed/call targets, static lexical provider-ancestor lookup records/hashes for matching context consumers with `jsx-render-context-consumer-provider-lookup-static-evidence`, same-file direct component provider lookup evidence for plain identifier callsites and same-file member component provider lookup evidence for static object-literal callsites such as `UI.Child` with `jsx-render-context-consumer-provider-component-lookup-static-evidence`, same-file `{children}` / `props.children` / `this.props.children` provider-flow evidence for components that render children directly inside a static provider with `jsx-render-context-consumer-provider-component-flow-static-evidence`, project-local named/aliased named/default component-import and member-object provider lookup evidence plus explicit named/default, member-object, and unique star barrel re-export component evidence with `jsx-render-context-consumer-provider-project-component-lookup-static-evidence`, project-import children-flow evidence with `jsx-render-context-consumer-provider-project-component-flow-static-evidence`, while dynamic/ambiguous member, unresolved, external-runtime, and ambiguous-star component targets emit `jsx-render-context-consumer-provider-component-target-unsupported`, hook call-order/count/hash render-risk evidence, hook dependency-array records/counts/hashes with per-item literal/reference/static optional-reference evidence, dynamic computed/call blocker reason codes, static dependency-set evidence, or `jsx-render-hook-dependency-array-unsupported` for dynamic dependency expressions, effect-hook callback/cleanup records/counts/hashes with static callback/cleanup source evidence, callback reference-path metadata, static optional callback/cleanup evidence, dynamic callback/cleanup blocker reason codes, runtime-equivalence-unproved evidence, or `jsx-render-hook-effect-unsupported` for dynamic effect factories and cleanup returns, public component render-return records/counts/hashes with static return-expression evidence, static array/fragment return collection child records/hashes, plus `jsx-render-return-branch-unsupported` for branchy/conditional returns, static `memo` / `forwardRef` / `observer` / `React.lazy` component-wrapper render-risk records including lazy import-factory evidence and lazy-load/runtime proof gaps, event-handler prop records/counts/hashes with static handler-reference evidence, static optional handler-reference evidence, static inline handler expression evidence, same-owner local handler declaration hashes via `jsx-render-event-handler-local-declaration-evidence`, or `jsx-render-event-handler-prop-unsupported` with computed/call blocker metadata for handler factory/call expressions, and public JSX prop/spread/child-order/render-risk delta conflicts produce review/blocking evidence with reason codes such as `jsx-render-context-provider-nesting-unsupported`, `jsx-render-prop-value-literal-evidence`, `jsx-render-prop-value-static-reference-evidence`, `jsx-render-prop-value-static-optional-reference-evidence`, `jsx-render-prop-value-unsupported`, `jsx-render-component-prop-flow-static-passthrough-evidence`, `jsx-render-component-prop-flow-dynamic-value-unsupported`, `jsx-render-component-prop-flow-unsupported`, `jsx-render-context-provider-value-literal-evidence`, `jsx-render-context-provider-value-static-reference-evidence`, `jsx-render-context-provider-value-static-optional-reference-evidence`, `jsx-render-context-provider-value-static-data-evidence`, `jsx-render-context-provider-value-unsupported`, `jsx-render-context-consumer-target-static-evidence`, `jsx-render-context-consumer-target-static-optional-reference-evidence`, `jsx-render-context-consumer-provider-lookup-static-evidence`, `jsx-render-context-consumer-provider-component-lookup-static-evidence`, `jsx-render-context-consumer-provider-component-flow-static-evidence`, `jsx-render-context-consumer-provider-project-component-lookup-static-evidence`, `jsx-render-context-consumer-provider-project-component-flow-static-evidence`, `jsx-render-context-consumer-provider-component-target-unsupported`, `jsx-render-context-consumer-target-unsupported`, `jsx-render-hook-call-order-unsupported`, `jsx-render-hook-dependency-array-static-evidence`, `jsx-render-hook-dependency-array-unsupported`, `jsx-render-hook-effect-static-callback-evidence`, `jsx-render-hook-effect-static-optional-callback-evidence`, `jsx-render-hook-effect-static-cleanup-evidence`, `jsx-render-hook-effect-static-optional-cleanup-evidence`, `jsx-render-hook-effect-runtime-equivalence-unproved`, `jsx-render-hook-effect-unsupported`, `jsx-render-return-static-evidence`, `jsx-render-return-array-static-evidence`, `jsx-render-return-fragment-static-evidence`, `jsx-render-return-branch-unsupported`, `jsx-render-component-wrapper-lazy-boundary-evidence`, `jsx-render-component-wrapper-lazy-runtime-equivalence-unproved`, `jsx-render-event-handler-prop-static-evidence`, `jsx-render-event-handler-prop-static-optional-reference-evidence`, `jsx-render-event-handler-prop-static-inline-evidence`, `jsx-render-event-handler-local-declaration-evidence`, and `jsx-render-event-handler-prop-unsupported`. Full component render equivalence, lazy-load/runtime equivalence, dynamic context value semantics beyond value-expression identity, provider lookup across external/runtime/ambiguous imported component boundaries, arbitrary prop/render flow beyond bounded static passthrough evidence, optional-chain render equivalence beyond callsite identity evidence, executable hook effect equivalence, and framework template semantics are not proved. |
+| Control-flow/effect graph | Partial | Lightweight dependency/effect regions, same-line short-circuit guard evidence including logical assignment operators, static mutation target/operator/mutator evidence for assignment/update/delete/mutating-call regions including literal-computed mutation key evidence such as `state["visible"]` while dynamic computed targets remain marked dynamic, bounded same-line repeated assignment/update/delete/mutating-call mutation occurrence regions with per-occurrence target evidence, direct/receiver/literal-computed/same-scope const-bound computed/dynamic-computed/optional-receiver/optional-call/constructor/dotted-tagged-template/computed-tagged-template effect target evidence for recognized network/scheduler/storage/host/browser/tagged-template effect regions with false runtime-equivalence claims, global bracket-call ranges for `window`/`globalThis`/`self` calls such as `window["fetch"]`, `globalThis["setTimeout"]`, and `self["queueMicrotask"]`, optional global effect-call ranges for nullish-boundary calls such as `window?.fetch?.(api)`, `globalThis?.["setTimeout"]?.(api)`, and `self?.queueMicrotask?.(api)`, full scheduler API target ranges for timer/cancel/idle/immediate calls such as `clearTimeout`, `cancelAnimationFrame`, `requestIdleCallback`, `setImmediate`, and `clearImmediate`, exact constructor expression ranges for browser/network constructors such as `new Worker`, `new SharedWorker`, and `new WebSocket`, bounded same-line repeated named network/scheduler call occurrence regions, bounded same-line repeated constructor occurrence regions, bounded same-line repeated tagged-template occurrence regions, bounded same-line repeated await occurrence regions with per-await target and prefix-order evidence, bounded same-line repeated yield occurrence regions with per-yield target evidence, bounded storage/host/browser/import.meta token effect occurrence regions, same-line await-prefix order evidence, Promise combinator concurrency/settlement evidence for `Promise.all`/`allSettled`/`race`/`any` with direct array element position and false runtime-equivalence claims, module-scope top-level await runtime-scope evidence, source-bound top-level await proof binding for project runtime-region conflicts that validates source hashes, region identity, suspension-order hash, module/suspension trace evidence, signature hash, and false claim flags before suppressing the conflict, class static block initialization-order evidence, source-bound class static block proof binding for project runtime-region conflicts that validates source hashes, region identity, static-initialization order hash, execution trace evidence, signature hash, and false claim flags before suppressing the conflict, explicit resource-management `using`/`await using` acquisition and reverse lexical disposal-order evidence with no disposal-effect equivalence claim, source-bound resource-management disposal proof binding for project runtime-region conflicts that validates source hashes, region identity, disposal-order hash, async-disposal trace evidence, signature hash, and false claim flags before suppressing the conflict, static `import.meta` host-context member evidence, host-context member-path evidence in semantic sidecars, source-bound import.meta host-context proof binding for project runtime-region conflicts that validates source hashes, region identity, host-context member hash, host-resolution trace evidence, signature hash, and false claim flags before suppressing the conflict, host-dependent `import.meta` divergence fixture coverage, optional-chain/nullish-boundary order evidence for optional mutating calls, same-line conditional-expression guard/branch evidence for runtime-sensitive regions, structured same-line throw expression/order evidence for exception regions, structured loop-iteration evidence for `for`/`for-of`/`for-await-of`/`for-in`/`while`/`do` effects and mutations, `break`/`continue` transfer evidence for loop/switch exit and next-iteration order including lexical labeled-transfer target records, return/yield completion-value evidence for exit regions, `yield*` iterator-delegation evidence with delegated iterable text plus false iterator-protocol and completion-propagation equivalence claims, source-bound generator protocol proof binding for project runtime-region conflicts that validates source hashes, yield-star region identity, generator protocol order hash, iterator/completion trace evidence, signature hash, and false claim flags before suppressing the conflict, source-bound async-generator protocol proof binding that additionally requires async iterator, cancellation, and backpressure traces plus false async-protocol claim flags, bounded same-block unreachable-after-return/throw/break/continue evidence, simple exhaustive `if`/`else` plus `if`/`else if`/`else` completion evidence, bounded tail-position nested block/control completion evidence, and `try`/`catch`/`finally` finalizer return-or-throw completion evidence for later runtime-sensitive regions without a full path-reachability claim, switch/case/default dispatch evidence plus switch fallthrough/prior-case completion evidence for effects and mutations inside case arms, try/catch throw-path evidence, try/finally completion-order evidence for runtime-order-sensitive effects and mutations, bounded nested path reachability records with `reachabilityOrder`, typed public runtime-order evidence records, source-bound runtime-order proof evidence that rejects boolean/status-only and stale source proofs, project runtime-region records, public runtime-region delta conflicts with runtime-order admission reason codes, unsafe control-flow fixtures, rest-callee pure call-argument append admission with explicit same-language replacement evidence, and adversarial blockers for nested calls, method/optional callees, comments, duplicate object literals, spread arguments, stale spans, and spoofed callee-signature evidence. Executable effect equivalence, iterator-protocol equivalence, disposal side-effect equivalence, dynamic computed effect target equivalence, dynamic nested-path reachability, and full path reachability are not proved. |
+| Generic semantic edit admission | Partial | Semantic edit scripts, projection/replay, offset and line/column source-span roundtrip proof, output source/hash-bound replay-clean project proof records, replay IDs/statuses/diagnostic categories, replay overlap diagnostics, patch bundles, lineage records, JS/TS safe-merge fallbacks, and shared exact-branch project admission helpers carry admission evidence with `autoMergeClaim: false`. Clean current-head replay proof can route through bounded `admit-independent-semantic-edit-current-head-commutation` when current-source and output hashes are exact-bound. Missing or partial clean replay proof routes to `produce-semantic-edit-replay-proof`, stale current-head proof routes to `rerun-semantic-edit-replay-current-head`, and output-mismatched replay proof routes to `reject-semantic-edit-replay-output-mismatch` instead of becoming a broad equivalence claim. Project admission also emits normalized structural route records for missing-evidence review, semantic replay reject/rerun, symbol rename/move/split-merge apply paths, and stale split/merge rebase paths. |
+| Unsupported JS/TS surface coverage | Partial | `proofEvidence` records `unsupported-js-ts-surface-review`, masked-code observed-surface metadata with source spans, line/column, excerpts, `observedSurfaceKind`, focused `boundedEvidence`, and explicit `remainingProofGap` / `proofGapCode` fields so known bounded surfaces no longer collapse into stale generic partial reason codes. Current focused evidence metadata covers explicit resource-management acquisition/disposal order with disposal effects still unproved, decorator static target/expression metadata with source-bound runtime proof binding when supplied while missing/stale/trace-incomplete decorator runtime proof stays fail-closed, accessor/private class static shape with source- and required-signal-bound runtime proof binding when supplied while missing, stale, trace-incomplete, schema/kind-mismatched, required-signal-incomplete, commandless, or claim-bearing proof stays fail-closed, class static block initialization-order evidence with source-bound static-initialization proof binding when supplied while missing/stale/trace-incomplete proof stays fail-closed, enum runtime-shape/member-value evidence plus source-bound computed-value traces while broad enum runtime evaluation remains unproved, namespace/ambient/global/`export =` static module-shape evidence with runtime or compatibility equivalence still unproved, `import.meta` host-context member evidence with source-bound host-resolution proof binding when supplied while missing, stale, trace-incomplete, or claim-bearing proof stays fail-closed, inference-syntax evidence for `satisfies`, `as const`, and const type parameters with broad inference semantics still unproved, generator and async-generator yield/await ordering evidence with source-bound generator/async-generator protocol proof binding when supplied while missing, stale, trace-incomplete, or claim-bearing proof stays fail-closed, and top-level `await` runtime-scope evidence with source-bound suspension/module-evaluation proof binding when supplied while missing/stale/trace-incomplete proof stays fail-closed. The review routes remaining proof gaps to `prove-unsupported-js-ts-surface`, focused resource-management disposal proof, focused private/accessor runtime proof, focused generator protocol routes, and focused decorator runtime proof routes, keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`, and does not claim executable semantic equivalence. |
+| Semantic equivalence proof | Bounded evidence | `proofEvidence` records syntax identity, parser roundtrip, diagnostics, declaration output, focused tests, explicit `semantic-equivalence-unknown` by default, and opt-in source/output/gate-bound external `semantic-equivalence-external` proof records. A valid external proof can set aggregate `semanticEquivalenceClaim: true` for the exact project binding while `autoMergeClaim` remains false; stale, schema/kind-mismatched, output-hash-mismatched, gate-mismatched, or auto-merge-claiming proofs fail closed and retain unknown equivalence. |
+| Cross-file symbol rename | Partial | Default admission now covers the narrow exact worker/head branch case when a single exported symbol rename has every project import rewritten, no stale or duplicate import/export evidence, project graph delta evidence is requested, and diagnostics/declaration gates pass. Opt-in `allowProjectSymbolRenames` remains available for broader caller-reviewed exact branch admissions. |
+| Symbol move between files | Partial | Default admission now covers the narrow exact worker/head branch case when a single exported symbol move has every project import rewritten, no ambiguous/multiple/stale move evidence, project graph delta evidence is requested, and diagnostics/declaration gates pass. Opt-in `allowProjectSymbolMoves` remains available for broader caller-reviewed exact branch admissions. |
+| Split/merge modules/classes | Partial | Default path still blocks, but opt-in `allowProjectSplitMerges` admits exact branch output/deletions for module/class split and merge classifications only when moved declarations or class members form a one-to-one source/target partition, the other branch is unchanged, output project graph evidence is requested, diagnostics/declaration evidence passes, and generated-output boundaries are absent. Duplicate, missing, or extra structural keys route to `exact-structural-partition-proof` instead of becoming an admission. |
+| Real-repo benchmark suite | Partial | Manifest-only TypeScript/Vite/Prettier/Next/React corpus is validated and emitted by `bench/smoke.mjs`; compact synthetic Vite import-shape, Vite `import.meta` host-context divergence, and React TSX child-addition fixtures are asserted, comments/source-map boundary fixtures cover the parser/source-span row, and no third-party source is vendored. The real-repo bench emits 14 oracle cases across five matrix rows, per-entry local checkout proof rows plus explicit evidence rows that separate manifest metadata, checkout root/dir presence, checkout proof status/reason, proof execution, dependency-install proof/execution, repository-command proof/execution, `.git` metadata kind, gitdir pointer/config/origin presence, and lockfile/package-manager metadata under `tmp/js-ts-semantic-merge-real-repos` or `FRONTIER_REAL_REPO_CORPUS_ROOT`, offline npm/pnpm/yarn command-matrix metadata, per-entry `commandDryRunPhases` for dependency-install/build/test with skipped, ready-local-checkout, and opt-in-required assertions, and guarded opt-in `commandRunPhases` that verify realpath containment, proof-glob match, git identity, single package manager, allowlisted argv/env, timeout, exit, hash, capped-output, skipped-checkout, failed-command, and truncation evidence. Dependency installation and checked-out repository build/test execution remain default-off unless explicitly enabled, but the local runner and proof artifacts now exist. |
+| Telemetry/confidence routing | Partial | Project merge results now include compact `evidence`, `confidence`, confidence score/level, confidence dimensions, missing signals, next missing evidence route IDs, summary/matrix counters, missing-evidence `byLane` counters, `confidence.routingCalibration` route/lane/action/proof-level counters with next-route metadata, deterministic `routeWorklist` / `nextRouteWork` coordinator work items that merge missing evidence with focused proof gaps, and proof-summary unsupported-surface counts/kinds/reason codes for coordinator routing; failed quality gates remain blocked but promote `rerun` confidence with `rerun-project-quality-gate` evidence. |
+
+Recent residual closures represented in the matrix shards:
+
+- Parser/source-span/trivia now exposes source-map generated-boundary gate fields on project source file/span records and blocks position-only or missing exact generated-boundary ownership evidence as `project-generated-source-boundary-ownership-blocked`.
+- Parser/source-span/trivia now promotes failed `source-span-roundtrip` proof records into `project-source-span-roundtrip-proof-failed` project admission blockers so trivia-loss output cannot remain `merged`.
+- Module/export/import graph now treats top-level `moduleResolution.imports` as scoped to `packageRoot`/`root`; importers outside that root fail closed with `package-import-scope-missing`.
+- Module/export/import graph now keeps non-resolver host package specifiers fail-closed when package `import` / `require` targets diverge, using `host-runtime-ambiguous` evidence instead of inheriting caller package type.
+- Scope/use-def graph now records exact compiler reference-site proof hashes and blocks ambiguous or compiler/lexical-mismatched reference evidence.
+- Scope/use-def graph now attaches TypeScript checker proof hashes to full `this`/`super` receiver-member access spans, including private identifiers.
+- Scope/use-def graph now collects object, nested object, array, alias, default-initializer, and rest bindings from function and arrow parameter lists without treating property keys as parameter bindings.
+- Type/public API proof records now bind source path/hash for public compiler evidence and fail closed when source-bound proof is missing.
+- Type/public API proof records now bind public type references to TypeScript checker target symbols, declaration spans, and declaration source text hashes, and fail closed when target proof hashes are missing.
+- Type/public API and unsupported-surface evidence now separate static decorator metadata proof from decorator runtime execution equivalence with the `prove-decorator-runtime-execution-equivalence` route and a source-bound decorator runtime proof bridge for trace-backed evidence.
+- Type/public API and unsupported-surface evidence now harden private/accessor runtime proof binding with derived required signals, exact schema/kind checks, command/trace/evidence hashes, and trace slots for private brand checks, private method calls, private accessors, static private access, subclass brand boundaries, and accessor descriptors.
+- JSX/TSX graph evidence now includes imported provider-wrapper children-flow lookup hashes and keeps wrappers that do not render children unsupported.
+- JSX/TSX graph evidence now records literal, boolean shorthand, static-reference, and static optional-chain prop-value callsites plus static optional-chain context provider value bindings while blocking optional computed/call expressions and component prop render flow.
+- JSX/TSX graph evidence now records per-item hook dependency records for literals, references, static optional references, and dynamic computed/call blockers.
+- JSX/TSX graph evidence now records `useContext` target reference paths, static optional target paths, and dynamic computed/call blocker reason codes.
+- JSX/TSX graph evidence now records hook-effect callback reference paths, static optional callback/cleanup references, and dynamic callback/cleanup blocker reason codes.
+- JSX/TSX graph evidence now records static optional event-handler references while keeping computed handlers and handler factory calls on dynamic blocker routes.
+- Control-flow/effect evidence includes bounded exhaustive `switch`/`case`/`default` return-or-throw reachability, bounded tail-position nested completion reachability, and `try`/`catch`/`finally` finalizer return-or-throw reachability for later runtime-sensitive regions, without a full path-reachability claim.
+- Generic semantic edit admission binds replay proof to the current project head hash, routes stale replay artifacts to `rerun-semantic-edit-replay-current-head`, and routes output-mismatched replay proof to `reject-semantic-edit-replay-output-mismatch`.
+- Generic semantic edit admission now counts semantic operation line/column spans as source-span roundtrip evidence, so clean current-head replay fixtures no longer route to `produce-source-span-roundtrip-evidence` solely because they lack raw offset spans.
+- Split/merge module and class admissions now require exact structural partition evidence; duplicate moved declarations or members stay blocked with `exact-structural-partition-proof`, while stale other-branch output records an `other-branch-unchanged-proof` blocker.
+- Project admission now exposes `admission.routes` / `routeSummary` records for structural apply/review/reject/rerun/rebase decisions across cross-file symbol rename, symbol move, split/merge, replay-proof, and missing-evidence paths, while keeping `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
+- Semantic equivalence proof now accepts source/output/gate-bound external proof records for exact JS/TS project bindings, removes the external-proof missing route only when the proof validates, and keeps stale, malformed, or overclaiming proofs fail-closed with `semantic-equivalence-unknown`.
+- Parser/source-span/trivia now requires contiguous parser-backed current-source token/comment/trivia coverage with no gaps, overlaps, truncation, or text mismatches before claiming exact token/comment ownership, including distinct JSDoc and block-comment ownership relations.
+- Scope/use-def graph now blocks compiler/lexical import-alias re-export target disagreement with `typescript-compiler-reference-import-alias-target-mismatch`.
+- Scope/use-def graph now treats no-expression template literals in namespace-import and `this`/`super` computed member reads as static member evidence while expression templates remain blocked.
+- Module/export/import graph now treats duplicate package names across different workspace roots as `ambiguous-package-workspace-root` and emits fail-closed `package-workspace-root-ambiguous-missing` edges.
+- Module/export/import graph now preserves edge-specific fail-closed module evidence through `project-output-module-unresolved` conflicts instead of collapsing package, host, dynamic import, and import-attribute blockers into a generic module miss.
+- Module/export/import graph now preserves edge-specific package/import-attribute evidence through `project-output-symbol-unresolved` conflicts when a module resolves but the requested export is missing.
+- Module/export/import graph now preserves normalized import-attribute key/value records through static imports, dynamic imports, re-export identities, graph delta conflicts, and unresolved-edge evidence instead of relying on hashes alone.
+- Module/export/import graph now stitches CommonJS `Object.defineProperty` getter re-exports through block-bodied arrow getter descriptors when they statically return a require-alias member.
+- Module/export/import graph now stitches CommonJS `Object.defineProperty` getter re-exports through named function getter descriptors when they statically return a require-alias member.
+- Module/export/import graph now normalizes ESTree/Babel no-expression `TemplateLiteral` nodes as static CommonJS `require` and export specifiers while leaving dynamic template expressions unresolved.
+- Module/export/import graph now records no-substitution template dynamic imports and parser-backed CommonJS helper `require` templates as static module edges while keeping expression templates proof-required.
+- Module/export/import graph now records no-substitution/static template host dependencies for `new URL`, workers, resolver calls, and `importScripts` while leaving expression templates unsupported.
+- Module/export/import graph now emits dynamic host dependency targets as `<host-dependency>` edges with expression hashes and proof-required unresolved evidence instead of omitting them.
+- Type/public API graph now includes bounded TypeChecker assignability oracle proof for simple public type aliases while keeping semantic/runtime equivalence claims false.
+- JSX/TSX graph now records same-file and project-local named/default/barrel-import static component prop passthrough as `jsx-render-component-prop-flow-static-passthrough-evidence` and blocks dynamic callsite values with `jsx-render-component-prop-flow-dynamic-value-unsupported`.
+- JSX/TSX graph now records static `memo` / `forwardRef` / `observer` / `React.lazy` component wrapper chains as component-wrapper render-risk evidence while keeping render, lazy-load, and runtime equivalence explicitly unproved.
+- JSX/TSX graph now records public const-arrow components with implicit JSX expression returns as static render-return evidence without treating them as branch control flow.
+- JSX/TSX graph now records top-level conditional JSX return condition/consequent/alternate branch arms as static evidence while still routing branchy render equivalence to review.
+- JSX/TSX graph now records top-level logical JSX return operators and left/right guard arms as static evidence while still routing branchy render equivalence to review.
+- JSX/TSX graph now accepts source-bound branch-arm preservation proof for single top-level conditional/logical render returns, suppressing only the matching render-risk conflict while stale hashes, arm mismatches, non-render risks, and broad render/runtime equivalence claims remain blocked.
+- JSX/TSX graph now records static JSX array-return and fragment-return collection evidence, including child/item counts, texts, hashes, and collection hashes while keeping render equivalence review-only.
+- Control-flow/effect evidence now records same-line `then` / `catch` / `finally` promise-chain handler order, nested handler-step attribution, rejection/finalizer markers, and false handler/runtime equivalence claims for order-sensitive effect admission.
+- Control-flow/effect evidence now adds a source-bound promise runtime proof bridge for `Promise.all`/`allSettled`/`race`/`any` combinator order and `then`/`catch`/`finally` chain order, requiring concurrency, settlement, element-order, handler, rejection-flow, and finalizer traces plus false promise equivalence claims before suppressing project runtime-region conflicts.
+- Control-flow/effect evidence now records effect target order for direct, receiver, literal-computed, same-scope const-bound computed, dynamic-computed, constructor, dotted tagged-template, and computed tagged-template effect targets while keeping runtime equivalence false.
+- Control-flow/effect evidence now includes bounded nested path reachability records with `reachabilityOrder`; unsupported or dynamic nested paths omit reachability proof instead of broadening the claim.
+- Control-flow/effect evidence now records static literal-computed mutation keys separately from dynamic computed mutation targets while keeping runtime equivalence false.
+- Control-flow/effect evidence now records literal-computed mutator method calls such as `queue["push"](value)`, optional-call boundaries, computed method names, and false runtime-equivalence claims.
+- Unsupported-surface review records generator and async-generator functions as focused yield/await-order evidence and keeps broad iterator/async-iterator protocol equivalence unclaimed unless a source-bound protocol proof is supplied.
+- Control-flow/effect evidence now records `yield*` as iterator delegation with delegated iterable text and explicit iterator-protocol/completion-propagation proof gaps, plus source-bound generator and async-generator protocol proof bridges for project runtime-region conflict admission.
+- Control-flow/effect evidence now adds a source-bound class static block proof bridge for static-initialization order and execution-trace evidence before suppressing project runtime-region conflicts.
+- Control-flow/effect evidence now adds a source-bound top-level await proof bridge for suspension order and module-evaluation trace evidence before suppressing project runtime-region conflicts.
+- Generic semantic edit admission now has a bounded `admit-independent-semantic-edit-current-head-commutation` route for clean current-head replay proofs while stale and output-mismatched proof routes remain rerun/reject.
+- Symbol move admission now has a narrow default path for exact exported moves with complete import rewrites, graph evidence, and diagnostics/declaration gates; ambiguous and multiple moves stay blocked.
+- Real-repo corpus evidence now exposes per-entry `commandDryRunPhases` plus guarded opt-in `commandRunPhases` for dependency-install/build/test with default-off, skipped-checkout, executed, failed, and truncated-output proof coverage.
+- Telemetry/confidence routing now includes lane-level missing-evidence counters, compact `confidence.routingCalibration` route/lane/action/proof-level counters, and a deterministic route worklist for the next coordinator action.
+
+`confidence.admissionMatrixAudit` turns the partial JS/TS matrix rows into a
+compact serializable audit. Each row is keyed by a stable surface id, lists the
+current proof levels and statuses for that surface, and records both applicable
+route IDs and currently missing route IDs such as `include-project-graph-delta`,
+`emit-output-declarations`, `produce-semantic-edit-replay-proof`, and
+`external-semantic-equivalence-proof`. The audit
+keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`; unknown
+semantic equivalence remains explicit until an external proof exists.
+
 Artifact-size and runtime note: these graph options are deliberately opt-in.
 On a local Node v26.1.0 smoke fixture with 10 small JS/TS files and 36 scanned
 stage files for the delta case, baseline project merge JSON was 115 KB at a
 21.6 ms median. `includeOutputProjectSymbolGraph` raised the returned JSON to
 17.8 MB at a 303.1 ms median, and `includeProjectGraphDelta` raised it to
 83.0 MB at a 1,466.8 ms median. Pass `projectGraphLimits` for admission queues:
-`maxFiles`, `maxSourceBytes`, `maxImportEdges`, `maxExportEdges`, and
+`maxFiles`, `maxSourceBytes`, `maxSourceSpans`, `maxImportEdges`, `maxExportEdges`, and
 `maxSerializedBytes` produce `project-graph-limit-exceeded` conflicts with the
 stage, limit kind, actual value, and configured limit. Limit failures block
 admission and omit oversized project graph artifacts from the returned result.
@@ -459,7 +765,7 @@ console.log(preservation.summary.comments); // comments and whitespace are track
 console.log(imported.metadata.sourcePreservation.sourceHash);
 ```
 
-When `sourceText` is present, hashes are computed from the actual text. Caller-provided hashes are recorded as declared metadata and cannot make stale text project as exact source. Use `includeTokens`, `includeTrivia`, `includeDirectives`, and `max*` options to keep preservation records compact for large files.
+When `sourceText` is present, hashes are computed from the actual text. Caller-provided hashes are recorded as declared metadata and cannot make stale text project as exact source. Scanner/ledger trivia is recorded as `parserTriviaExactnessStatus: "approximate"` with stable review reason codes; exact parser-trivia evidence must include a matching source hash and parser-backed token/comment/trivia evidence on the preservation record. An adapter id or non-lightweight `parserEvidence` string alone cannot upgrade scanner/ledger tokens to exact parser proof. Lightweight scanner/ledger evidence is blocked with `exact-parser-trivia-scanner-evidence-not-parser` instead of satisfying exact parser proof, and metadata-only exactness is blocked with `exact-parser-trivia-token-comment-evidence-missing`. Verified exact parser-trivia evidence is threaded into native import metadata, project source file/span records, and source ownership anchors; metadata-only exactness cannot override the computed scanner/ledger exactness record. Use `includeTokens`, `includeTrivia`, `includeDirectives`, and `max*` options to keep preservation records compact for large files.
 
 Create a compact semantic sidecar for swarm merge admission. This is the artifact a coordinator can index instead of reading a worker directory by hand:
 

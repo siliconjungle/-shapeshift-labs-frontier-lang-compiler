@@ -6,10 +6,15 @@ function topLevelRenameBlockedResult(input, topLevelResult, topLevelRenameAdmiss
     ...(topLevelResult.admission?.reasonCodes ?? []),
     ...(topLevelRenameAdmission.reasonCodes ?? [])
   ]);
+  const primaryReasonCode = topLevelRenameAdmission.reasonCodes?.[0] ?? JsTsSafeMergeConflictCodes.topLevelRenamePublicExportContract;
+  const publicContractBlock = topLevelRenameAdmission.reasonCodes
+    ?.includes(JsTsSafeMergeConflictCodes.topLevelRenamePublicExportContract);
   const conflict = {
-    code: JsTsSafeMergeConflictCodes.topLevelRenamePublicExportContract,
+    code: publicContractBlock ? JsTsSafeMergeConflictCodes.topLevelRenamePublicExportContract : primaryReasonCode,
     gateId: JsTsSafeMergeGateIds.stableExistingDeclarations,
-    message: 'Top-level rename changes a public export contract without project-level evidence.',
+    message: publicContractBlock
+      ? 'Top-level rename changes a public export contract without project-level evidence.'
+      : 'Top-level rename requires lexical use-def evidence before automatic merge.',
     side: 'worker',
     sourcePath: input.sourcePath ?? topLevelResult.sourcePath,
     details: {

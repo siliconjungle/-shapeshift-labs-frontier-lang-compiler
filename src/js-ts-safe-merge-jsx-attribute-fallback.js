@@ -1,6 +1,8 @@
-import { JsTsSafeMergeStatuses } from './js-ts-safe-merge-constants.js';
+import { JsTsSafeMergeStatuses, jsTsSafeMergeGateOrder } from './js-ts-safe-merge-constants.js';
 import { createJsTsSafeMergeSemanticArtifacts } from './js-ts-safe-merge-semantic-artifacts.js';
 import { uniqueStrings } from './js-ts-safe-merge-context.js';
+import { attributeMap, isJsxComponentTag, isJsxSpreadAttribute, parseJsxTags, sameAttributeNames, sameAttrText, sameTagText } from './js-ts-safe-merge-jsx-attribute-parser.js';
+import { hasConditionalChildExpressionOperator, parseDirectChildren, parseJsxSource } from './js-ts-safe-merge-jsx-child-expression-parser.js';
 import { semanticFallbackChangedExistingDeclarations } from './js-ts-safe-merge-semantic-edit-fallback-utils.js';
 
 function createJsxAttributeSemanticFallbackResult(input, topLevelResult, stagedFallback) {
@@ -13,7 +15,8 @@ function createJsxAttributeSemanticFallbackResult(input, topLevelResult, stagedF
     headSourceText: input.headSourceText,
     currentSourceText
   });
-  if (!merge.ok || merge.sourceText === currentSourceText) return undefined;
+  if (!merge.ok) return merge.policyBlocker ? jsxAttributeBlockedResult(input, topLevelResult, merge, stagedFallback) : undefined;
+  if (merge.sourceText === currentSourceText) return undefined;
   const resultBase = stagedFallback?.stagedTopLevelResult ?? topLevelResult;
   const language = input.language ?? topLevelResult.language ?? 'tsx';
   const sourcePath = input.sourcePath ?? topLevelResult.sourcePath ?? 'inline.tsx';
@@ -63,6 +66,8 @@ function createJsxAttributeSemanticFallbackResult(input, topLevelResult, stagedF
       semanticEditReplayStatus: artifacts.replay.status,
       jsxAttributeTags: merge.summary.tags,
       jsxAttributeEdits: merge.summary.edits,
+      jsxComponentPropContractCandidates: merge.summary.componentPropContracts.length,
+      jsxComponentPropContractAttributes: merge.summary.componentPropContractAttributes,
       composedPhases: 2
     },
     metadata: {
@@ -84,6 +89,62 @@ function createJsxAttributeSemanticFallbackResult(input, topLevelResult, stagedF
   };
 }
 
+function jsxAttributeBlockedResult(input, topLevelResult, merge, stagedFallback) {
+  const reasonCodes = uniqueStrings(merge.reasonCodes);
+  const gates = jsTsSafeMergeGateOrder.map((id, index) => ({
+    id,
+    status: index === 0 ? 'blocked' : 'skipped',
+    reasonCodes: index === 0 ? reasonCodes : []
+  }));
+  return {
+    ...topLevelResult,
+    id: String(input.id ?? topLevelResult.id),
+    status: JsTsSafeMergeStatuses.blocked,
+    mergedSourceText: undefined,
+    outputSourceText: undefined,
+    conflicts: [{
+      code: 'jsx-attribute-policy-blocked',
+      gateId: 'parse-ledger',
+      message: 'JSX attribute merge policy could not prove stable prop identity and render ordering.',
+      side: 'worker',
+      sourcePath: input.sourcePath ?? topLevelResult.sourcePath,
+      details: { reasonCodes }
+    }],
+    gates,
+    admission: {
+      status: 'blocked',
+      action: 'human-review',
+      reviewRequired: true,
+      autoApplyCandidate: false,
+      autoMergeClaim: false,
+      semanticEquivalenceClaim: false,
+      reasonCodes
+    },
+    summary: {
+      ...topLevelResult.summary,
+      changedExistingDeclarations: semanticFallbackChangedExistingDeclarations(topLevelResult, topLevelResult, stagedFallback),
+      conflicts: 1,
+      gatesPassed: 0,
+      jsxAttributePolicyBlocked: true,
+      composedPhases: 2
+    },
+    metadata: {
+      ...topLevelResult.metadata,
+      composed: {
+        phase: stagedFallback ? 'staged-top-level-jsx-attribute-policy-blocked' : 'jsx-attribute-policy-blocked',
+        phases: stagedFallback
+          ? ['top-level-neutralization', 'top-level-ledger', 'jsx-attribute-policy']
+          : ['top-level-ledger', 'jsx-attribute-policy'],
+        originalReasonCodes: topLevelResult.admission?.reasonCodes ?? [],
+        stagedTopLevelSummary: stagedFallback?.stagedTopLevelResult?.summary,
+        neutralization: stagedFallback?.neutralization?.summary,
+        jsxAttributePolicy: { reasonCodes }
+      }
+    },
+    semanticArtifacts: topLevelResult.semanticArtifacts
+  };
+}
+
 function mergeJsxAttributeSources(input) {
   if (![input.baseSourceText, input.workerSourceText, input.headSourceText, input.currentSourceText].every(isString)) {
     return blocked('missing-source-text');
@@ -91,7 +152,15 @@ function mergeJsxAttributeSources(input) {
   const parsed = ['base', 'worker', 'head', 'current'].map((side) => parseJsxTags(input[`${side}SourceText`]));
   if (parsed.some((source) => source.reasonCodes.length)) return blocked('jsx-attribute-parse-blocked');
   const [base, worker, head, current] = parsed;
+  if (![worker, head, current].every((source) => sameJsxTagIdentitySequence(base.tags, source.tags))) {
+    return blocked('jsx-attribute-element-identity-changed');
+  }
+  const conditionalChildExpressionRanges = Object.fromEntries(['base', 'worker', 'head', 'current'].map((side) => [
+    side,
+    jsxConditionalChildExpressionRanges(input[`${side}SourceText`])
+  ]));
   const edits = [];
+  const componentPropContracts = [];
   let changedTags = 0;
   for (const baseTag of base.tags) {
     const workerTag = worker.byKey.get(baseTag.key);
@@ -99,15 +168,28 @@ function mergeJsxAttributeSources(input) {
     const currentTag = current.byKey.get(baseTag.key);
     if (!workerTag || !headTag || !currentTag) continue;
     if (sameTagText(baseTag, workerTag)) continue;
+    if (tagInConditionalChildExpression({ base: baseTag, worker: workerTag, head: headTag, current: currentTag }, conditionalChildExpressionRanges)) {
+      return blocked('jsx-child-conditional-expression-unsupported');
+    }
     const merged = mergeTagAttributes(baseTag, workerTag, headTag, currentTag);
     if (merged.status === 'blocked') return blocked(...merged.reasonCodes);
     for (const edit of merged.edits) edits.push(edit);
+    for (const contract of merged.componentPropContracts ?? []) componentPropContracts.push(contract);
     if (merged.edits.length) changedTags += 1;
   }
   if (!edits.length) return blocked('no-jsx-attribute-merge-candidate');
   const sourceText = edits.sort((left, right) => right.start - left.start)
     .reduce((text, edit) => text.slice(0, edit.start) + edit.replacement + text.slice(edit.end), input.currentSourceText);
-  return { ok: true, sourceText, summary: { tags: changedTags, edits: edits.length } };
+  return {
+    ok: true,
+    sourceText,
+    summary: {
+      tags: changedTags,
+      edits: edits.length,
+      componentPropContracts,
+      componentPropContractAttributes: componentPropContracts.reduce((total, contract) => total + contract.attributeCount, 0)
+    }
+  };
 }
 
 function mergeTagAttributes(base, worker, head, current) {
@@ -119,12 +201,23 @@ function mergeTagAttributes(base, worker, head, current) {
   }
   const [, workerAttrs, headAttrs, currentAttrs] = maps.map((map) => map.byName);
   const edits = [];
+  const changedAttributes = [];
+  let workerSpread = false, headSpread = false, workerNamed = false, headNamed = false;
   for (const baseAttr of base.attributes) {
     const workerAttr = workerAttrs.get(baseAttr.name);
     const headAttr = headAttrs.get(baseAttr.name);
     const currentAttr = currentAttrs.get(baseAttr.name);
     const workerChanged = !sameAttrText(baseAttr, workerAttr);
     const headChanged = !sameAttrText(baseAttr, headAttr);
+    if (baseAttr.name === 'key' && (workerChanged || headChanged)) {
+      return blockedTag('jsx-attribute-key-identity-changed');
+    }
+    if (workerChanged || headChanged) {
+      changedAttributes.push(baseAttr.name);
+      const spread = isJsxSpreadAttribute(baseAttr);
+      workerSpread ||= spread && workerChanged; headSpread ||= spread && headChanged;
+      workerNamed ||= !spread && workerChanged; headNamed ||= !spread && headChanged;
+    }
     if (workerChanged && headChanged && !sameAttrText(workerAttr, headAttr)) {
       return blockedTag('jsx-attribute-conflict');
     }
@@ -135,163 +228,34 @@ function mergeTagAttributes(base, worker, head, current) {
       edits.push({ start: currentAttr.start, end: currentAttr.end, replacement: workerAttr.text });
     }
   }
-  return { status: 'merged', edits };
+  if ((workerSpread && headNamed) || (headSpread && workerNamed)) return blockedTag('jsx-attribute-spread-explicit-precedence-unsupported');
+  const contractAttributes = uniqueStrings(changedAttributes);
+  const componentPropContracts = isJsxComponentTag(base.tagName) && contractAttributes.length
+    ? [{
+        tagName: base.tagName,
+        tagKey: base.key,
+        attributes: contractAttributes,
+        attributeCount: contractAttributes.length
+      }]
+    : [];
+  return { status: 'merged', edits, componentPropContracts };
 }
 
-function parseJsxTags(sourceText) {
-  const tags = [];
-  const reasonCodes = [];
-  const ordinals = new Map();
-  let index = 0;
-  while (index < sourceText.length) {
-    const start = sourceText.indexOf('<', index);
-    if (start === -1) break;
-    const parsed = parseOpeningTag(sourceText, start);
-    if (!parsed) {
-      index = start + 1;
-      continue;
-    }
-    if (parsed.reasonCodes.length) reasonCodes.push(...parsed.reasonCodes);
-    const ordinal = (ordinals.get(parsed.tagName) ?? 0) + 1;
-    ordinals.set(parsed.tagName, ordinal);
-    tags.push({ ...parsed, key: `${parsed.tagName}#${ordinal}` });
-    index = parsed.end;
-  }
-  return { tags, byKey: new Map(tags.map((tag) => [tag.key, tag])), reasonCodes: uniqueStrings(reasonCodes) };
+function jsxConditionalChildExpressionRanges(sourceText) {
+  const parsed = parseJsxSource(sourceText);
+  if (parsed.reasonCodes.length) return [];
+  return parsed.elements.flatMap((element) => {
+    if (element.selfClosing) return [];
+    const children = parseDirectChildren(sourceText, parsed, element);
+    if (children.reasonCodes.length) return [];
+    return children.tokens
+      .filter((token) => token.kind === 'expression' && hasConditionalChildExpressionOperator(token.text))
+      .map((token) => ({ start: token.start, end: token.end }));
+  });
 }
 
-function parseOpeningTag(sourceText, start) {
-  const afterOpen = start + 1;
-  if (/[/!?>]/.test(sourceText[afterOpen] ?? '')) return undefined;
-  const nameMatch = /^[A-Za-z_$][\w$]*(?:[.:][A-Za-z_$][\w$]*|-[\w$]+)*/.exec(sourceText.slice(afterOpen));
-  if (!nameMatch) return undefined;
-  const tagName = nameMatch[0];
-  const nameEnd = afterOpen + tagName.length;
-  const end = openingTagEnd(sourceText, nameEnd);
-  if (end === undefined) return undefined;
-  const attributes = parseAttributes(sourceText, nameEnd, end - 1);
-  return {
-    tagName,
-    start,
-    end,
-    text: sourceText.slice(start, end),
-    attributes: attributes.values,
-    reasonCodes: attributes.reasonCodes
-  };
-}
-
-function parseAttributes(sourceText, start, end) {
-  const values = [];
-  const reasonCodes = [];
-  let cursor = start;
-  while (cursor < end) {
-    while (cursor < end && /\s/.test(sourceText[cursor])) cursor += 1;
-    if (sourceText[cursor] === '/') {
-      cursor += 1;
-      continue;
-    }
-    const attrStart = cursor;
-    const nameMatch = /^[A-Za-z_$][\w$:-]*/.exec(sourceText.slice(cursor, end));
-    if (!nameMatch) {
-      reasonCodes.push('jsx-attribute-token-unsupported');
-      break;
-    }
-    const name = nameMatch[0];
-    cursor += name.length;
-    while (cursor < end && /\s/.test(sourceText[cursor])) cursor += 1;
-    if (sourceText[cursor] === '=') {
-      cursor += 1;
-      while (cursor < end && /\s/.test(sourceText[cursor])) cursor += 1;
-      cursor = attributeValueEnd(sourceText, cursor, end);
-      if (cursor === undefined) return { values, reasonCodes: ['jsx-attribute-value-unterminated'] };
-    }
-    values.push({ name, start: attrStart, end: cursor, text: sourceText.slice(attrStart, cursor) });
-  }
-  return { values, reasonCodes: uniqueStrings(reasonCodes) };
-}
-
-function openingTagEnd(sourceText, start) {
-  let quote;
-  let escaped = false;
-  let braceDepth = 0;
-  for (let index = start; index < sourceText.length; index += 1) {
-    const char = sourceText[index];
-    if (quote) {
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === quote) quote = undefined;
-      continue;
-    }
-    if (char === '"' || char === '\'' || char === '`') quote = char;
-    else if (char === '{') braceDepth += 1;
-    else if (char === '}') braceDepth = Math.max(0, braceDepth - 1);
-    else if (char === '>' && braceDepth === 0) return index + 1;
-  }
-  return undefined;
-}
-
-function attributeValueEnd(sourceText, start, end) {
-  const first = sourceText[start];
-  if (first === '"' || first === '\'') return quotedValueEnd(sourceText, start, end, first);
-  if (first === '{') return bracedValueEnd(sourceText, start, end);
-  let cursor = start;
-  while (cursor < end && !/[\s/]/.test(sourceText[cursor])) cursor += 1;
-  return cursor;
-}
-
-function quotedValueEnd(sourceText, start, end, quote) {
-  let escaped = false;
-  for (let cursor = start + 1; cursor < end; cursor += 1) {
-    const char = sourceText[cursor];
-    if (escaped) escaped = false;
-    else if (char === '\\') escaped = true;
-    else if (char === quote) return cursor + 1;
-  }
-  return undefined;
-}
-
-function bracedValueEnd(sourceText, start, end) {
-  let depth = 0;
-  let quote;
-  let escaped = false;
-  for (let cursor = start; cursor < end; cursor += 1) {
-    const char = sourceText[cursor];
-    if (quote) {
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === quote) quote = undefined;
-      continue;
-    }
-    if (char === '"' || char === '\'' || char === '`') quote = char;
-    else if (char === '{') depth += 1;
-    else if (char === '}') {
-      depth -= 1;
-      if (depth === 0) return cursor + 1;
-    }
-  }
-  return undefined;
-}
-
-function attributeMap(tag) {
-  const byName = new Map();
-  const duplicateNames = [];
-  for (const attribute of tag.attributes) {
-    if (byName.has(attribute.name)) duplicateNames.push(attribute.name);
-    byName.set(attribute.name, attribute);
-  }
-  return { byName, reasonCodes: duplicateNames.length ? ['jsx-attribute-duplicate-name'] : [] };
-}
-
-function sameAttributeNames(left, right) {
-  return left.attributes.map((attr) => attr.name).join('\0') === right.attributes.map((attr) => attr.name).join('\0');
-}
-
-function sameTagText(left, right) {
-  return String(left?.text ?? '').trim() === String(right?.text ?? '').trim();
-}
-
-function sameAttrText(left, right) {
-  return String(left?.text ?? '').trim() === String(right?.text ?? '').trim();
+function tagInConditionalChildExpression(tagsBySide, rangesBySide) {
+  return Object.entries(tagsBySide).some(([side, tag]) => (rangesBySide[side] ?? []).some((range) => range.start < tag.start && tag.end < range.end));
 }
 
 function semanticArtifactGates(artifacts) {
@@ -308,7 +272,12 @@ function gate(id, passed, reasonCodes = []) {
 }
 
 function blocked(...reasonCodes) {
-  return { ok: false, reasonCodes: uniqueStrings(reasonCodes) };
+  const normalized = uniqueStrings(reasonCodes);
+  return {
+    ok: false,
+    reasonCodes: normalized,
+    policyBlocker: normalized.some((reason) => jsxAttributePolicyBlockers.has(reason))
+  };
 }
 
 function blockedTag(...reasonCodes) {
@@ -316,5 +285,30 @@ function blockedTag(...reasonCodes) {
 }
 
 function isString(value) { return typeof value === 'string'; }
+function sameJsxTagIdentitySequence(leftTags, rightTags) {
+  return jsxTagIdentitySequence(leftTags) === jsxTagIdentitySequence(rightTags);
+}
+function jsxTagIdentitySequence(tags = []) {
+  return tags.map((tag, index) => {
+    const keyAttr = tag.attributes.find((attribute) => attribute.name === 'key');
+    return [tag.tagName, stableJsxKeyAttrText(keyAttr) ?? `ordinal:${index + 1}`].join('#');
+  }).join('\0');
+}
+function stableJsxKeyAttrText(attribute) {
+  if (!attribute) return undefined;
+  const match = /^key\s*=\s*(?:"([^"]*)"|'([^']*)')\s*$/.exec(String(attribute.text ?? '').trim());
+  if (!match) return undefined;
+  return `key:${match[1] ?? match[2] ?? ''}`;
+}
+
+const jsxAttributePolicyBlockers = new Set([
+  'jsx-attribute-conflict',
+  'jsx-attribute-current-diverged',
+  'jsx-attribute-duplicate-name',
+  'jsx-attribute-key-identity-changed',
+  'jsx-attribute-shape-changed',
+  'jsx-attribute-spread-explicit-precedence-unsupported',
+  'jsx-child-conditional-expression-unsupported'
+]);
 
 export { createJsxAttributeSemanticFallbackResult };

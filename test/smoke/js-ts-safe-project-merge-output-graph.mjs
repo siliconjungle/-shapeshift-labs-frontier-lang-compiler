@@ -4,6 +4,7 @@ import {
   runNativeImporterAdapter,
   safeMergeJsTsProject
 } from './compiler-api.mjs';
+import { typeScriptProgramForFiles } from './js-ts-compiler-program-helpers.mjs';
 
 const tsModule = await import('typescript');
 const typescript = tsModule.default ?? tsModule;
@@ -105,7 +106,10 @@ const reExportIdentityOutputByPath = new Map(reExportIdentityDeltaProject.output
 assert.equal(reExportIdentityDeltaProject.status, 'blocked');
 assert.equal(reExportIdentityDeltaProject.admission.reasonCodes.includes('project-re-export-identity-delta-conflict'), true);
 assert.equal(reExportIdentityDeltaProject.summary.projectGraphDeltaConflicts, 1);
+assert.equal(reExportIdentityDeltaProject.summary.outputProjectGraphConflicts, 1);
+assert.equal(reExportIdentityDeltaProject.summary.projectGraphSourceSpanConflicts, 0);
 assert.equal(reExportIdentityDeltaProject.summary.projectGraphReExportIdentityConflicts, 1);
+assert.equal(reExportIdentityDeltaProject.projectGraphDelta.summary.sourceSpanConflicts, 0);
 assert.equal(reExportIdentityDeltaProject.projectGraphDelta.summary.reExportIdentityConflicts, 1);
 assert.equal(reExportIdentityDeltaConflict.details.identityKey, 're-export-identity#src/barrel.ts#shared');
 assert.equal(reExportIdentityDeltaConflict.details.worker.moduleSpecifier, './worker.js');
@@ -218,22 +222,23 @@ const graphDeltaPublicContractProject = safeMergeJsTsProject({
     'src/options.ts': { unorderedRegions: [{ kind: 'interface', name: 'Options', order: 'non-semantic' }] }
   }
 });
-const graphDeltaPublicContractConflict = graphDeltaPublicContractProject.conflicts.find((conflict) => conflict.code === 'project-public-contract-delta-conflict');
+const graphDeltaCompilerTypeConflict = graphDeltaPublicContractProject.conflicts.find((conflict) => conflict.code === 'project-public-compiler-type-delta-conflict');
 assert.equal(graphDeltaPublicContractProject.status, 'blocked');
 assert.equal(graphDeltaPublicContractProject.outputProjectSymbolGraph.kind, 'frontier.lang.projectSymbolGraph');
 assert.equal(graphDeltaPublicContractProject.projectGraphDelta.kind, 'frontier.lang.jsTsProjectGraphDelta');
-assert.equal(graphDeltaPublicContractProject.projectGraphDelta.summary.conflicts, 1);
+assert.equal(graphDeltaPublicContractProject.projectGraphDelta.summary.conflicts, 2);
 assert.equal(graphDeltaPublicContractProject.projectGraphDelta.summary.publicContractConflicts, 1);
+assert.equal(graphDeltaPublicContractProject.projectGraphDelta.summary.compilerTypeConflicts, 1);
 assert.equal(graphDeltaPublicContractProject.projectGraphDelta.stages.base.summary.publicContractRegions, 1);
-assert.equal(graphDeltaPublicContractProject.projectGraphDelta.stages.worker.summary.publicContractRegions, 1);
-assert.equal(graphDeltaPublicContractProject.projectGraphDelta.stages.head.summary.publicContractRegions, 1);
-assert.equal(graphDeltaPublicContractProject.projectGraphDelta.stages.output.summary.publicContractRegions, 1);
-assert.equal(graphDeltaPublicContractProject.summary.projectGraphDeltaConflicts, 1);
+assert.equal(graphDeltaPublicContractProject.projectGraphDelta.stages.worker.summary.compilerTypeRecords > 0, true);
+assert.equal(graphDeltaPublicContractProject.summary.projectGraphDeltaConflicts, 2);
 assert.equal(graphDeltaPublicContractProject.summary.projectGraphPublicContractConflicts, 1);
+assert.equal(graphDeltaPublicContractProject.summary.projectGraphCompilerTypeConflicts, 1);
 assert.equal(graphDeltaPublicContractProject.admission.reasonCodes.includes('project-public-contract-delta-conflict'), true);
-assert.equal(graphDeltaPublicContractConflict.details.identityKey, 'source#src/options.ts#export#Options');
-assert.equal(graphDeltaPublicContractConflict.details.worker.contractHash === graphDeltaPublicContractConflict.details.head.contractHash, false);
-assert.equal(graphDeltaPublicContractProject.metadata.projectGraphDeltaConflicts, 1);
+assert.equal(graphDeltaPublicContractProject.admission.reasonCodes.includes('project-public-compiler-type-delta-conflict'), true);
+assert.equal(graphDeltaCompilerTypeConflict.details.identityKey, 'compiler-public-type#"src/options".Options');
+assert.notEqual(graphDeltaCompilerTypeConflict.details.worker.apiSignatureHash, graphDeltaCompilerTypeConflict.details.head.apiSignatureHash);
+assert.equal(graphDeltaPublicContractProject.metadata.projectGraphDeltaConflicts, 2);
 
 const missingOutputImportProject = safeMergeJsTsProject({
   id: 'js_ts_project_safe_merge_missing_output_import',
@@ -278,10 +283,13 @@ assert.equal(missingOutputSymbolEdge.resolvedModulePath, 'src/provider.ts');
 assert.equal(missingOutputSymbolEdge.resolvedTargetSymbolId, undefined);
 
 function parserBackedImportsForFiles(files) {
-  return Promise.all(Object.entries(files).map(([sourcePath, sourceText]) => runNativeImporterAdapter(parserBackedOutputAdapter, {
+  const program = typeScriptProgramForFiles(typescript, files);
+  const adapter = createTypeScriptCompilerNativeImporterAdapter({ typescript, program });
+  return Promise.all(Object.entries(files).map(([sourcePath, sourceText]) => runNativeImporterAdapter(adapter, {
     language: 'typescript',
     sourcePath,
-    sourceText
+    sourceText,
+    adapterOptions: { sourceFile: program.getSourceFile(sourcePath) }
   })));
 }
 

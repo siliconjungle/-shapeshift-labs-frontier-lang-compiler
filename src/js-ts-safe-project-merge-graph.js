@@ -32,10 +32,21 @@ function createJsTsProjectSafeMergeGraphDelta(input, files, outputFiles, mergeId
     summary: {
       stages: Object.keys(stages).length,
       sourceFiles: sumStageSummary(stageSummaries, 'sourceFiles'),
+      sourceFileRecords: sumStageSummary(stageSummaries, 'sourceFileRecords'),
+      sourceSpanRecords: sumStageSummary(stageSummaries, 'sourceSpanRecords'),
       publicContractRegions: sumStageSummary(stageSummaries, 'publicContractRegions'),
       reExportIdentities: sumStageSummary(stageSummaries, 'reExportIdentities'),
+      moduleDeclarationRecords: sumStageSummary(stageSummaries, 'moduleDeclarationRecords'),
+      exportAssignmentRecords: sumStageSummary(stageSummaries, 'exportAssignmentRecords'),
       importEdges: sumStageSummary(stageSummaries, 'importEdges'),
       exportEdges: sumStageSummary(stageSummaries, 'exportEdges'),
+      compilerSymbolRecords: sumStageSummary(stageSummaries, 'compilerSymbolRecords'),
+      compilerTypeRecords: sumStageSummary(stageSummaries, 'compilerTypeRecords'),
+      runtimeRegionRecords: sumStageSummary(stageSummaries, 'runtimeRegionRecords'),
+      scopeBindingRecords: sumStageSummary(stageSummaries, 'scopeBindingRecords'),
+      scopeReferenceRecords: sumStageSummary(stageSummaries, 'scopeReferenceRecords'),
+      jsxElementRecords: sumStageSummary(stageSummaries, 'jsxElementRecords'),
+      jsxPropRecords: sumStageSummary(stageSummaries, 'jsxPropRecords'),
       unresolvedImportEdges: sumStageSummary(stageSummaries, 'unresolvedImportEdges'),
       suppliedImports: sumStageSummary(stageSummaries, 'suppliedImports'),
       matchedSuppliedImports: sumStageSummary(stageSummaries, 'matchedSuppliedImports'),
@@ -68,6 +79,7 @@ function createProjectGraphStageArtifacts(input, files, mergeId, stageName, stag
     sourcePath: file.sourcePath,
     sourceText: file.sourceText,
     sourceHash: file.sourceHash,
+    parserTriviaEvidence: file.parserTriviaEvidence,
     metadata: { semanticImportExpected: true, projectSafeMergeStage: stageName, projectSafeMergeOutput: stageName === 'output' }
   }));
   const importSelections = sources.map((source) => {
@@ -164,10 +176,21 @@ function projectGraphStageSummary(stageName, projectSymbolGraph, importSource, s
     documents: projectSymbolGraph?.documentCount ?? 0,
     symbols: projectSymbolGraph?.symbolCount ?? 0,
     fileHashes: projectSymbolGraph?.fileHashes?.length ?? 0,
+    sourceFileRecords: projectSymbolGraph?.sourceFileRecords?.length ?? 0,
+    sourceSpanRecords: projectSymbolGraph?.sourceSpanRecords?.length ?? 0,
     importEdges: importEdges.length,
     exportEdges: projectSymbolGraph?.exportEdges?.length ?? 0,
     publicContractRegions: projectSymbolGraph?.publicContractRegions?.length ?? 0,
+    compilerSymbolRecords: projectSymbolGraph?.compilerSymbolRecords?.length ?? 0,
+    compilerTypeRecords: projectSymbolGraph?.compilerTypeRecords?.length ?? 0,
+    runtimeRegionRecords: projectSymbolGraph?.runtimeRegionRecords?.length ?? 0,
+    scopeBindingRecords: projectSymbolGraph?.scopeBindingRecords?.length ?? 0,
+    scopeReferenceRecords: projectSymbolGraph?.scopeReferenceRecords?.length ?? 0,
+    jsxElementRecords: projectSymbolGraph?.jsxElementRecords?.length ?? 0,
+    jsxPropRecords: projectSymbolGraph?.jsxPropRecords?.length ?? 0,
     reExportIdentities: projectSymbolGraph?.reExportIdentities?.length ?? 0,
+    moduleDeclarationRecords: projectSymbolGraph?.moduleDeclarationRecords?.length ?? 0,
+    exportAssignmentRecords: projectSymbolGraph?.exportAssignmentRecords?.length ?? 0,
     unresolvedImportEdges: importEdges.filter(isMissingProjectImportEdge).length,
     suppliedImports: importSource.suppliedImports,
     matchedSuppliedImports: importSource.matchedSuppliedImports,
@@ -188,13 +211,13 @@ function sumStageSummary(stageSummaries, field) {
 function projectGraphDeltaStageFiles(files, outputFiles, input) {
   return {
     base: files
-      .map((file) => stageFile(file, file.baseSourceText, input))
+      .map((file) => stageFile(file, file.baseSourceText, input, 'base'))
       .filter(Boolean),
     worker: files
-      .map((file) => stageFile(file, workerStageSourceText(file), input))
+      .map((file) => stageFile(file, workerStageSourceText(file), input, 'worker'))
       .filter(Boolean),
     head: files
-      .map((file) => stageFile(file, headStageSourceText(file), input))
+      .map((file) => stageFile(file, headStageSourceText(file), input, 'head'))
       .filter(Boolean),
     output: outputFiles
   };
@@ -210,14 +233,23 @@ function headStageSourceText(file) {
   return file.headSourceText ?? file.baseSourceText;
 }
 
-function stageFile(file, sourceText, input) {
+function stageFile(file, sourceText, input, stageName) {
   if (typeof sourceText !== 'string' || !file.sourcePath) return undefined;
   return compactRecord({
     sourcePath: file.sourcePath,
     language: file.language ?? input.language,
     sourceText,
-    sourceHash: hashText(sourceText)
+    sourceHash: hashText(sourceText),
+    parserTriviaEvidence: parserTriviaEvidenceForStage(file, stageName)
   });
+}
+
+function parserTriviaEvidenceForStage(file, stageName) {
+  if (stageName === 'base') return file.baseParserTriviaEvidence ?? file.parserTriviaEvidence;
+  if (stageName === 'worker') return file.workerParserTriviaEvidence ?? file.parserTriviaEvidence;
+  if (stageName === 'head') return file.headParserTriviaEvidence ?? file.parserTriviaEvidence;
+  if (stageName === 'output') return file.outputParserTriviaEvidence ?? file.parserTriviaEvidence;
+  return file.parserTriviaEvidence;
 }
 
 function attachProjectSymbolGraph(projectImport, projectSymbolGraph) {

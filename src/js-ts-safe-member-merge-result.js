@@ -91,6 +91,10 @@ function memberConflictForReason(reason, input, index) {
 
 function blockedReasonCode(reason) {
   if (reason.includes('computed-key')) return 'computed-key';
+  if (reason.includes('decorator-member')) return 'decorator-member';
+  if (reason.includes('static-block-ordering')) return 'static-block-ordering';
+  if (reason.includes('accessor-pairing')) return 'accessor-pairing';
+  if (reason.includes('private-name-scope')) return 'private-name-scope';
   if (reason.includes('spread-like-member') || reason.includes('spread-member')) return 'spread-like-member';
   if (reason.includes('overload-collision')) return 'overload-collision';
   if (reason.includes('type-alias-conflict')) return 'type-alias-conflict';
@@ -109,6 +113,9 @@ function blockedReasonCode(reason) {
 
 function conflictCodeForReason(reasonCode) {
   if (reasonCode === 'computed-key') return JsTsSafeMergeConflictCodes.computedKey;
+  if (reasonCode === 'decorator-member') return JsTsSafeMergeConflictCodes.unsupportedDecorator;
+  if (reasonCode === 'static-block-ordering') return JsTsSafeMergeConflictCodes.topLevelOrderChanged;
+  if (reasonCode === 'accessor-pairing' || reasonCode === 'private-name-scope') return JsTsSafeMergeConflictCodes.duplicateName;
   if (reasonCode === 'overload-collision') return JsTsSafeMergeConflictCodes.unsupportedOverload;
   if (reasonCode === 'type-alias-conflict') return JsTsSafeMergeConflictCodes.typeAliasConflict;
   if (reasonCode === 'duplicate-member-name') return JsTsSafeMergeConflictCodes.duplicateName;
@@ -122,11 +129,15 @@ function conflictCodeForReason(reasonCode) {
 }
 
 function gateIdForReason(reasonCode) {
-  if (reasonCode === 'duplicate-member-name' || reasonCode === 'overload-collision') return JsTsSafeMergeGateIds.uniqueNames;
+  if (reasonCode === 'duplicate-member-name' || reasonCode === 'overload-collision' || reasonCode === 'accessor-pairing' || reasonCode === 'private-name-scope') {
+    return JsTsSafeMergeGateIds.uniqueNames;
+  }
   if (reasonCode === 'changed-existing-member' || reasonCode === 'removed-existing-member' || reasonCode === 'non-policy-source-change') {
     return JsTsSafeMergeGateIds.stableExistingDeclarations;
   }
-  if (reasonCode === 'existing-member-order-changed' || reasonCode === 'order-sensitive-region-kind') return JsTsSafeMergeGateIds.preserveBaseOrder;
+  if (reasonCode === 'existing-member-order-changed' || reasonCode === 'order-sensitive-region-kind' || reasonCode === 'static-block-ordering') {
+    return JsTsSafeMergeGateIds.preserveBaseOrder;
+  }
   return JsTsSafeMergeGateIds.parseLedger;
 }
 
@@ -137,13 +148,22 @@ function reasonDetails(reason, reasonCode) {
   if (['base', 'worker', 'head'].includes(parts[2])) details.side = parts[2];
   const kind = parts.find((part) => ['interface', 'type', 'class', 'object'].includes(part));
   if (kind) details.regionKind = kind;
-  if (reasonCode === 'duplicate-member-name' || reasonCode === 'overload-collision') details.memberName = parts.at(-3) ?? parts.at(-1);
+  if (reasonCode === 'duplicate-member-name'
+    || reasonCode === 'overload-collision'
+    || reasonCode === 'accessor-pairing'
+    || reasonCode === 'private-name-scope') {
+    details.memberName = parts.at(-3) ?? parts.at(-1);
+  }
   if (reasonCode === 'changed-existing-member' || reasonCode === 'removed-existing-member') details.memberName = parts.at(-3);
   return details;
 }
 
 function memberConflictMessage(reasonCode, details) {
   if (reasonCode === 'computed-key') return 'Computed member keys are not safe for automatic member merge.';
+  if (reasonCode === 'decorator-member') return 'Decorated class members are not safe for automatic unordered member merge.';
+  if (reasonCode === 'static-block-ordering') return 'Class static blocks make member order observable and block unordered member merge.';
+  if (reasonCode === 'accessor-pairing') return 'Getter/setter member pairs are not safe for automatic unordered member merge.';
+  if (reasonCode === 'private-name-scope') return 'Private class names must remain scoped to one class element declaration set.';
   if (reasonCode === 'spread-like-member') return 'Spread-like member syntax makes object member merge ambiguous.';
   if (reasonCode === 'overload-collision') return 'Member overloads or duplicate method signatures collide in an unordered member region.';
   if (reasonCode === 'changed-existing-member') return 'An existing member changed inside a safe member-addition region.';

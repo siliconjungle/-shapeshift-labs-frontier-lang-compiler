@@ -16,8 +16,6 @@ import type {
   SemanticIndexRecord,
   SemanticNode,
   SemanticPatchBundle,
-  SourceMapMappingRecord,
-  SourceMapRecord,
   SourcePreservationLevel,
   SourcePreservationRecord,
   SourceSpan,
@@ -25,6 +23,7 @@ import type {
   UniversalAstLayerRecord
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { SemanticImportSidecarAdmission, SemanticImportSidecarQuality, SemanticImportSidecarQualityRecord } from './semantic-sidecar-admission.js';
+import type { SemanticGraphLayerSummary } from './semantic-graph-layers.js';
 import type { SemanticMergeCandidateAdmissionRecord, SemanticMergeCandidateProjectionRisk } from './semantic-merge-candidates.js';
 import type { SemanticMergeConflictClass, SemanticMergeConflictSummary } from './semantic-merge-conflicts.js';
 import type { SemanticImportImpactSummary } from './semantic-impact.js';
@@ -263,6 +262,7 @@ export interface SemanticImportSidecar {
   readonly proofSpec: SemanticImportSidecarProofSpecSummary;
   readonly paradigmSemantics: SemanticImportSidecarParadigmSemanticsSummary;
   readonly dependencies: SemanticImportDependencySummary; readonly semanticImpact: SemanticImportImpactSummary;
+  readonly graphLayers: SemanticGraphLayerSummary;
   readonly patchHints: readonly SemanticImportPatchHint[];
   readonly quality: SemanticImportSidecarQuality;
   readonly admission: SemanticImportSidecarAdmission;
@@ -307,6 +307,7 @@ export interface SemanticImportSidecar {
     readonly paradigmSemanticsGroups: number;
     readonly paradigmSemanticsLoweringRecords: number;
     readonly dependencyRelations: number; readonly dependencyPredicates: readonly string[];
+    readonly graphLayers: number; readonly graphLayersUsable: number; readonly graphLayerStatus: SemanticGraphLayerSummary['status'];
     readonly semanticImpactRecords: number; readonly semanticImpactHighRiskRecords: number; readonly semanticImpactRequiredVerificationSteps: number;
     readonly patchHints: number;
     readonly evidenceWarnings: number;

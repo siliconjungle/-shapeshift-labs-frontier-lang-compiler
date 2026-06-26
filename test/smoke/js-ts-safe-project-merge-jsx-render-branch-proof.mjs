@@ -1,0 +1,176 @@
+import { assert } from './helpers.mjs';
+import { projectGraphDeltaConflicts } from '../../src/js-ts-safe-project-merge-graph-delta-conflicts.js';
+import { jsxRenderReturnBranchDelta } from '../../src/js-ts-safe-project-merge-jsx-render-branch-proof.js';
+import { jsxRenderRiskDelta } from './js-ts-safe-project-merge-jsx-graph-helpers.mjs';
+
+const conditionalRecords = {
+  base: conditionalRisk('base', 'ready', '<Button tone="base" />', '<Empty tone="base" />'),
+  worker: conditionalRisk('worker', 'ready', '<Button tone="worker" />', '<Empty tone="base" />'),
+  head: conditionalRisk('head', 'ready', '<Button tone="base" />', '<Empty tone="head" />'),
+  output: conditionalRisk('output', 'ready', '<Button tone="worker" />', '<Empty tone="head" />')
+};
+const conditionalDelta = jsxRenderRiskDelta(conditionalRecords);
+const conditionalMissing = projectGraphDeltaConflicts(conditionalDelta);
+assert.equal(conditionalMissing.length, 1);
+assert.equal(conditionalMissing[0].details.reasonCodes.includes('jsx-render-return-branch-proof-missing'), true);
+assert.equal(conditionalMissing[0].details.routeId, 'prove-jsx-render-return-branch-arm-preservation');
+assert.equal(conditionalMissing[0].details.jsxRenderReturnBranchProof.branchArmPreservationClaim, false);
+
+const conditionalProof = branchProof(conditionalMissing[0].details.identityKey, conditionalRecords, {
+  consequentOrigin: 'worker',
+  alternateOrigin: 'head'
+});
+const conditionalPassed = projectGraphDeltaConflicts(conditionalDelta, { jsxRenderReturnBranchProofs: [conditionalProof] });
+assert.equal(conditionalPassed.length, 0);
+
+const staleProofConflicts = projectGraphDeltaConflicts(conditionalDelta, {
+  jsxRenderReturnBranchProof: { ...conditionalProof, outputSourceHash: 'stale-output' }
+});
+assert.equal(staleProofConflicts.length, 1);
+assert.equal(staleProofConflicts[0].details.reasonCodes.includes('jsx-render-return-branch-proof-source-hash-mismatch'), true);
+assert.equal(staleProofConflicts[0].details.semanticEquivalenceClaim, false);
+
+const mismatchedArmConflicts = projectGraphDeltaConflicts(conditionalDelta, {
+  jsxRenderReturnBranchProof: { ...conditionalProof, outputConsequentHash: 'wrong-output-arm' }
+});
+assert.equal(mismatchedArmConflicts.length, 1);
+assert.equal(mismatchedArmConflicts[0].details.reasonCodes.includes('jsx-render-return-branch-proof-arm-hash-mismatch'), true);
+
+const logicalRecords = {
+  base: logicalRisk('base', 'ready', '<Button tone="base" />'),
+  worker: logicalRisk('worker', 'ready', '<Button tone="worker" />'),
+  head: logicalRisk('head', 'enabled', '<Button tone="base" />'),
+  output: logicalRisk('output', 'enabled', '<Button tone="worker" />')
+};
+const logicalDelta = jsxRenderRiskDelta(logicalRecords);
+const logicalMissing = projectGraphDeltaConflicts(logicalDelta);
+assert.equal(logicalMissing.length, 1);
+assert.equal(logicalMissing[0].details.reasonCodes.includes('jsx-render-return-branch-proof-missing'), true);
+const logicalProof = branchProof(logicalMissing[0].details.identityKey, logicalRecords, {
+  leftOrigin: 'head',
+  rightOrigin: 'worker'
+});
+const logicalPassed = projectGraphDeltaConflicts(logicalDelta, { jsxRenderReturnBranchProof: logicalProof });
+assert.equal(logicalPassed.length, 0);
+const badLogicalGuard = projectGraphDeltaConflicts(logicalDelta, {
+  jsxRenderReturnBranchProof: { ...logicalProof, leftHash: 'wrong-guard' }
+});
+assert.equal(badLogicalGuard.length, 1);
+assert.equal(badLogicalGuard[0].details.reasonCodes.includes('jsx-render-return-branch-proof-logical-guard-hash-mismatch'), true);
+
+function branchProof(identityKey, records, origins) {
+  const expected = jsxRenderReturnBranchDelta({
+    identityKey,
+    baseRecord: records.base,
+    workerRecord: records.worker,
+    headRecord: records.head,
+    outputRecord: records.output
+  });
+  const proof = {
+    schema: 'frontier.lang.jsxRenderReturnBranchProof.v1',
+    kind: 'frontier.lang.jsxRenderReturnBranchProof',
+    status: 'passed',
+    sourcePath: expected.sourcePath,
+    identityKey,
+    baseSourceHash: expected.baseSourceHash,
+    workerSourceHash: expected.workerSourceHash,
+    headSourceHash: expected.headSourceHash,
+    outputSourceHash: expected.outputSourceHash,
+    publicOwnerName: expected.publicOwnerName,
+    tagName: expected.tagName,
+    tagKey: expected.tagKey,
+    returnOrdinal: expected.returnOrdinal,
+    returnKind: expected.returnKind,
+    branchControlKind: expected.branchControlKind,
+    branchArmPreservationHash: expected.branchArmPreservationHash,
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    runtimeEquivalenceClaim: false,
+    renderEquivalenceClaim: false,
+    branchArmPreservationClaim: true,
+    claimScope: 'static-render-return-branch-arm-preservation-only'
+  };
+  if (expected.branchControlKind === 'conditional-expression') {
+    return {
+      ...proof,
+      conditionHash: expected.base.conditionHash,
+      outputConditionHash: expected.output.conditionHash,
+      consequentOrigin: origins.consequentOrigin,
+      consequentHash: expected[origins.consequentOrigin].consequentHash,
+      outputConsequentHash: expected.output.consequentHash,
+      alternateOrigin: origins.alternateOrigin,
+      alternateHash: expected[origins.alternateOrigin].alternateHash,
+      outputAlternateHash: expected.output.alternateHash
+    };
+  }
+  return {
+    ...proof,
+    operator: expected.output.operator,
+    leftOrigin: origins.leftOrigin,
+    leftHash: expected[origins.leftOrigin].leftHash,
+    outputLeftHash: expected.output.leftHash,
+    rightOrigin: origins.rightOrigin,
+    rightHash: expected[origins.rightOrigin].rightHash,
+    outputRightHash: expected.output.rightHash
+  };
+}
+
+function conditionalRisk(stage, conditionText, consequentText, alternateText) {
+  const conditionalBranchRecord = {
+    conditionText,
+    conditionHash: `condition:${conditionText}`,
+    consequentText,
+    consequentHash: `consequent:${consequentText}`,
+    alternateText,
+    alternateHash: `alternate:${alternateText}`,
+    signatureHash: `conditional:${conditionText}:${consequentText}:${alternateText}`
+  };
+  return renderRisk(stage, 'conditional-expression', {
+    conditionalBranchRecord,
+    expressionText: `${conditionText} ? ${consequentText} : ${alternateText}`,
+    expressionHash: conditionalBranchRecord.signatureHash
+  });
+}
+
+function logicalRisk(stage, leftText, rightText) {
+  const logicalBranchRecord = {
+    operator: '&&',
+    leftText,
+    leftHash: `left:${leftText}`,
+    rightText,
+    rightHash: `right:${rightText}`,
+    signatureHash: `logical:&&:${leftText}:${rightText}`
+  };
+  return renderRisk(stage, 'logical-expression', {
+    logicalBranchRecord,
+    expressionText: `${leftText} && ${rightText}`,
+    expressionHash: logicalBranchRecord.signatureHash
+  });
+}
+
+function renderRisk(stage, branchControlKind, renderReturn) {
+  const record = {
+    ordinal: 1,
+    returnKind: 'implicit-arrow-expression',
+    proofStatus: 'static-render-return-branch-evidence',
+    branchControlKind,
+    ...renderReturn,
+    signatureHash: renderReturn.expressionHash
+  };
+  return {
+    id: `jsx_render_branch_${stage}`,
+    sourcePath: 'src/view.tsx',
+    tagName: 'Button',
+    tagKey: 'Button#1',
+    publicContract: true,
+    publicOwnerName: 'View',
+    renderRiskKinds: ['render-return-boundary', 'render-return-branch-control-flow'],
+    renderRiskReasonCodes: [`jsx-render-return-${branchControlKind === 'logical-expression' ? 'logical' : 'conditional'}-branch-static-evidence`, 'jsx-render-return-branch-unsupported'],
+    renderReturnRecords: [record],
+    renderReturnCount: 1,
+    renderReturnBranchCount: 1,
+    renderReturnSignatureHash: `render-return:${stage}:${record.signatureHash}`,
+    renderRiskSignatureHash: `render-risk:render-return:${stage}:${record.signatureHash}`,
+    sourceHash: `source:${stage}`
+  };
+}

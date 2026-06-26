@@ -16,6 +16,7 @@ import { semanticEditInsertionAnchor } from './semanticEditInsertionAnchors.js';
 import { markCoveredSemanticEditOperations } from './semanticEditOperationCoverage.js';
 import { sourceTextForSpan } from './sourceTextForSpan.js';
 import { semanticEditIdentityFields, semanticEditOperationContentHash } from './semanticEditIdentityRecords.js';
+import { semanticStructuralDiff, semanticStructuralEdit } from './semanticStructuralDiffRecords.js';
 
 export { SemanticEditScriptAdmissionStatuses };
 
@@ -59,7 +60,8 @@ export function createSemanticEditScript(input = {}, options = {}) {
   );
   const summary = summarizeSemanticEditOperations(operations);
   const admission = semanticEditAdmission({ operations, summary, head, workerChangeSet, headChangeSet, input });
-  const evidence = semanticEditEvidence({ input, language, sourcePath, workerChangeSet, headChangeSet, headLineage, summary, admission });
+  const structuralDiff = semanticStructuralDiff({ input, language, sourcePath, workerChangeSet, headChangeSet, operations });
+  const evidence = semanticEditEvidence({ input, language, sourcePath, workerChangeSet, headChangeSet, headLineage, summary, admission, structuralDiff });
   const core = {
     kind: 'frontier.lang.semanticEditScript',
     version: 1,
@@ -73,12 +75,14 @@ export function createSemanticEditScript(input = {}, options = {}) {
     headChangeSetId: headChangeSet?.id,
     lineageInferenceId: headLineage?.id,
     operations,
-    summary,
+    summary: { ...summary, structural: structuralDiff.summary },
+    structuralDiff,
     admission,
     evidence,
     metadata: compactRecord({
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
+      structuralDiffStatus: structuralDiff.admission.status,
       workerReadiness: workerChangeSet.readiness,
       headReadiness: headChangeSet?.readiness,
       workerReasons: workerChangeSet.reasons,
@@ -134,11 +138,12 @@ function symbolsByAnchor(imported) {
 }
 
 function semanticEditOperation(region, index, context, input) {
+  const operationId = `semantic_edit_op_${idFragment([index, region.key ?? region.conflictKey ?? region.id, input.id ?? 'semantic_edit'].join(':'))}`;
   const anchorKey = region.key ?? region.conflictKey ?? region.id;
   const baseSymbol = context.baseSymbols.get(anchorKey);
   const workerSymbol = context.workerSymbols.get(anchorKey);
   const directHeadSymbol = context.headSymbols.get(anchorKey);
-  const classification = classifySemanticEdit({ region, anchorKey, baseSymbol, workerSymbol, headSymbol: directHeadSymbol, context });
+  const classification = classifySemanticEdit({ region, anchorKey, baseSymbol, workerSymbol, headSymbol: directHeadSymbol, context, scriptInput: input });
   const headSymbol = directHeadSymbol ?? reanchoredHeadSymbol(context, classification);
   const kind = semanticEditOperationKind(region);
   const baseText = spanText(context.base, baseSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.before?.sourceSpan ?? region.sourceSpan);
@@ -172,8 +177,24 @@ function semanticEditOperation(region, index, context, input) {
   });
   const identityRecord = semanticEditIdentityRecord({ kind, region, anchor });
   const identity = semanticEditIdentityFields(identityRecord);
+  const structuralEdit = semanticStructuralEdit({
+    operationId,
+    kind,
+    changeKind: region.changeKind,
+    anchor,
+    spans: {
+      base: baseSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.before?.sourceSpan,
+      worker: workerSymbol?.sourceSpan ?? region.metadata?.changedRegionProjection?.after?.sourceSpan ?? region.sourceSpan,
+      head: headSymbol?.sourceSpan
+    },
+    hashes,
+    status: classification.status,
+    confidence: classification.confidence,
+    reasonCodes: classification.reasonCodes,
+    reanchor: classification.reanchor
+  });
   return compactRecord({
-    id: `semantic_edit_op_${idFragment([index, anchorKey, input.id ?? 'semantic_edit'].join(':'))}`,
+    id: operationId,
     kind,
     changeKind: region.changeKind,
     anchor,
@@ -187,6 +208,7 @@ function semanticEditOperation(region, index, context, input) {
     hashes,
     status: classification.status,
     operationContentHash: semanticEditOperationContentHash({ ...identityRecord, ...identity, ...hashes, status: classification.status }),
+    structuralEdit,
     reanchor: classification.reanchor,
     readiness: classification.readiness,
     confidence: classification.confidence,
@@ -194,7 +216,8 @@ function semanticEditOperation(region, index, context, input) {
     evidenceIds: classification.evidenceIds,
     metadata: {
       autoMergeClaim: false,
-      semanticEquivalenceClaim: false
+      semanticEquivalenceClaim: false,
+      sourceBackprojection: classification.sourceBackprojection
     }
   });
 }
@@ -250,6 +273,20 @@ function semanticEditEvidence(input) {
       lineageInferenceId: input.headLineage?.id,
       summary: input.summary,
       admissionStatus: input.admission.status,
+      autoMergeClaim: false,
+      semanticEquivalenceClaim: false
+    }
+  }, {
+    id: input.input.structuralEvidenceId ?? `evidence_${idFragment(input.input.id ?? input.sourcePath ?? 'semantic_edit')}_structural_diff`,
+    kind: 'semantic-structural-diff',
+    status: 'needs-review',
+    path: input.sourcePath,
+    summary: `Recorded ${input.structuralDiff.summary.edits} runtime-neutral structural edit(s); replay diagnostics remain required for safety.`,
+    metadata: {
+      structuralDiffId: input.structuralDiff.id,
+      structuralDiffHash: input.structuralDiff.hash,
+      summary: input.structuralDiff.summary,
+      admissionStatus: input.structuralDiff.admission.status,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false
     }

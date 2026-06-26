@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { assert } from './helpers.mjs';
 import { assertSafeMergeFixture } from './js-ts-fixture-safe-merge-assertions.mjs';
+import { assertRealRepoCorpus } from './js-ts-real-repo-corpus-assertions.mjs';
 
 const compilerApi = await loadCompilerApi();
 const {
@@ -23,19 +24,25 @@ const corpus = JSON.parse(corpusText);
 
 assert.equal(corpus.schema, 'frontier.lang.jsTsSemanticMergeFixtureCorpus.v1');
 assert.deepEqual(corpus.metadata.dependencies, [], 'fixture corpus must stay dependency-free');
-assert.equal(Buffer.byteLength(corpusText, 'utf8') < 40_000, true, 'fixture corpus should stay small');
+assert.equal(Buffer.byteLength(corpusText, 'utf8') < 60_000, true, 'fixture corpus should stay small');
 assert.equal(Array.isArray(corpus.fixtures), true, 'fixture corpus should include fixtures');
 assert.equal(corpus.fixtures.length >= 8, true, 'fixture corpus should cover required JS/TS merge surfaces');
 
 const fixtureIds = new Set();
+const fixturesById = new Map();
 const covered = new Set();
+const coverageCounts = new Map();
 const outcomes = new Set();
 
 for (const fixture of corpus.fixtures) {
   validateFixtureMetadata(fixture);
   fixtureIds.add(fixture.id);
+  fixturesById.set(fixture.id, fixture);
   outcomes.add(fixture.expected.outcome);
-  for (const coverage of fixture.coverage) covered.add(coverage);
+  for (const coverage of fixture.coverage) {
+    covered.add(coverage);
+    coverageCounts.set(coverage, (coverageCounts.get(coverage) ?? 0) + 1);
+  }
 
   if (fixture.kind === 'merge') {
     assertMergeFixture(fixture);
@@ -57,8 +64,15 @@ for (const fixture of corpus.fixtures) {
 }
 
 assert.equal(fixtureIds.size, corpus.fixtures.length, 'fixture ids must be unique');
+for (const fixtureId of ['react-tsx-child-additions-shell', 'vite-config-import-shape-addition']) {
+  assert.equal(fixtureIds.has(fixtureId), true, `missing realistic-pattern fixture ${fixtureId}`);
+}
+assertRealRepoCorpus(corpus.realRepoCorpus, fixtureIds, assert, fixturesById);
 for (const coverage of corpus.coverageRequirements) {
   assert.equal(covered.has(coverage), true, `missing required fixture coverage ${coverage}`);
+}
+for (const coverage of ['import-shape-additions', 'tsx-jsx-child-additions', 'tsx-jsx-child-expressions']) {
+  assert.equal((coverageCounts.get(coverage) ?? 0) >= 2, true, `realistic-pattern coverage should have at least two fixtures for ${coverage}`);
 }
 assert.equal(outcomes.has('accepted'), true, 'expected at least one accepted fixture');
 assert.equal(outcomes.has('rejected'), true, 'expected at least one rejected fixture');
@@ -195,7 +209,8 @@ function assertSourcePreservation(fixture, sourceText, expected) {
   assert.equal(preservation.sourceBytes, Buffer.byteLength(sourceText, 'utf8'), `${fixture.id}: source byte length`);
   assert.equal(preservation.newline, 'lf', `${fixture.id}: newline style`);
   if (typeof expected.minComments === 'number') {
-    assert.equal(preservation.summary.comments >= expected.minComments, true, `${fixture.id}: comment trivia`);
+    const commentLikeTrivia = (preservation.summary.comments ?? 0) + (preservation.summary.sourceMapComments ?? 0);
+    assert.equal(commentLikeTrivia >= expected.minComments, true, `${fixture.id}: comment trivia`);
   }
   for (const kind of expected.directiveKinds ?? []) {
     assert.equal(preservation.summary.directiveKinds.includes(kind), true, `${fixture.id}: directive ${kind}`);

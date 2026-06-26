@@ -15,7 +15,9 @@ export function reExportIdentityRecord(identity, edge, resolveDocumentExportSymb
 }
 
 export function isReExportImportEdge(edge) {
-  return edge.importKind === 'reexport' || edge.importKind === 'namespace-reexport' || edge.exportStar === true;
+  if (edge.exportStar === true) return true;
+  if (edge.importKind !== 'reexport' && edge.importKind !== 'namespace-reexport') return false;
+  return Boolean(edge.importedName || edge.exportedName || edge.namespace || edge.localName);
 }
 
 export function reExportIdentityInputFromEdge(edge, id) {
@@ -25,6 +27,11 @@ export function reExportIdentityInputFromEdge(edge, id) {
     sourcePath: edge.sourcePath,
     sourceHash: edge.sourceHash,
     moduleSpecifier: edge.moduleSpecifier,
+    hasImportAttributes: edge.hasImportAttributes,
+    importAttributeCount: edge.importAttributeCount,
+    importAttributeKeys: edge.importAttributeKeys,
+    importAttributeHash: edge.importAttributeHash,
+    importAttributes: edge.importAttributes,
     symbolId: edge.targetSymbolId,
     relationId: edge.id,
     publicContract: edge.publicContract
@@ -41,6 +48,11 @@ export function exportStarReExportIdentityRecords(edge, targetExports) {
       sourcePath: edge.sourcePath,
       sourceHash: edge.sourceHash,
       moduleSpecifier: edge.moduleSpecifier,
+      hasImportAttributes: edge.hasImportAttributes,
+      importAttributeCount: edge.importAttributeCount,
+      importAttributeKeys: edge.importAttributeKeys,
+      importAttributeHash: edge.importAttributeHash,
+      importAttributes: edge.importAttributes,
       symbolId: edge.targetSymbolId,
       relationId: edge.id,
       importedName: symbol.name,
@@ -51,6 +63,48 @@ export function exportStarReExportIdentityRecords(edge, targetExports) {
       isExportStar: true,
       publicContract: edge.publicContract
     }));
+}
+
+export function commonJsAliasReExportIdentityRecords(importEdges, exportEdges, resolveDocumentExportSymbolId) {
+  const requireAliases = new Map();
+  for (const edge of importEdges ?? []) {
+    if (edge.importKind !== 'commonjs-require' || !edge.localName || !edge.targetDocumentId || !edge.moduleSpecifier) continue;
+    requireAliases.set(commonJsAliasKey(edge.sourceDocumentId, edge.localName), edge);
+  }
+  return (exportEdges ?? []).flatMap((edge) => {
+    if (!edge.exportedName || edge.moduleSpecifier) return [];
+    const member = commonJsAliasMember(edge.localName);
+    const importEdge = member ? requireAliases.get(commonJsAliasKey(edge.sourceDocumentId, member.alias)) : undefined;
+    if (!importEdge) return [];
+    return [compactRecord({
+      id: `reexport_commonjs_alias_${idFragment(edge.id)}_${idFragment(importEdge.id)}_${idFragment(member.importedName)}`,
+      sourceDocumentId: edge.sourceDocumentId,
+      sourcePath: edge.sourcePath,
+      sourceHash: edge.sourceHash,
+      moduleSpecifier: importEdge.moduleSpecifier,
+      symbolId: edge.targetSymbolId,
+      relationId: edge.id,
+      importRelationId: importEdge.id,
+      importedName: member.importedName,
+      exportedName: edge.exportedName,
+      localName: edge.localName,
+      originSymbolId: resolveDocumentExportSymbolId(importEdge.targetDocumentId, member.importedName),
+      exportedSymbolId: resolveDocumentExportSymbolId(edge.sourceDocumentId, edge.exportedName) ?? edge.targetSymbolId,
+      localSymbolId: edge.targetSymbolId,
+      commonJs: true,
+      reExport: true,
+      publicContract: edge.publicContract
+    })];
+  });
+}
+
+function commonJsAliasMember(localName) {
+  const match = String(localName ?? '').match(/^([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)$/);
+  return match ? { alias: match[1], importedName: match[2] } : undefined;
+}
+
+function commonJsAliasKey(sourceDocumentId, alias) {
+  return `${sourceDocumentId ?? ''}\u0000${alias}`;
 }
 
 function idFragment(value) {

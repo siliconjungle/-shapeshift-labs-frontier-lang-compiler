@@ -179,3 +179,55 @@ assert.equal(inlineComputedImport.semanticIndex.symbols.some((symbol) => symbol.
   && symbol.metadata.ownershipRegionKind === 'body'), true);
 const inlineComputedSidecar = createSemanticImportSidecar(inlineComputedImport);
 assert.equal(inlineComputedSidecar.symbols.some((symbol) => symbol.name === 'actions.inline.save-action:controlFlow:exit#1'), true);
+
+const parameterBindingBase = 'export function read({ title }) {\n  return title.trim();\n}\n';
+const parameterBindingHead = 'export function read({ title }) {\n  return title.trim().toLowerCase();\n}\n';
+const parameterRenameScript = createSemanticEditScript({
+  id: 'semantic_edit_typescript_parameter_binding_rename_blocked',
+  language: 'typescript',
+  sourcePath: 'src/parameter-binding.ts',
+  baseSourceText: parameterBindingBase,
+  workerSourceText: 'export function read({ title: name }) {\n  return name.trim();\n}\n',
+  headSourceText: parameterBindingHead,
+  generatedAt: 231
+});
+assert.equal(parameterRenameScript.admission.status, 'conflict');
+assert.equal(parameterRenameScript.admission.action, 'block');
+assert.equal(parameterRenameScript.admission.reasonCodes.includes('binding-pattern-rename-blocked'), true);
+assert.equal(parameterRenameScript.admission.reasonCodes.includes('binding-pattern-parameter-merge-requires-binding-use-evidence'), true);
+
+const parameterDefaultScript = createSemanticEditScript({
+  id: 'semantic_edit_typescript_parameter_binding_default_blocked',
+  language: 'typescript',
+  sourcePath: 'src/parameter-binding.ts',
+  baseSourceText: parameterBindingBase,
+  workerSourceText: 'export function read({ title = "" }) {\n  return title.trim();\n}\n',
+  headSourceText: parameterBindingHead,
+  generatedAt: 232
+});
+assert.equal(parameterDefaultScript.admission.status, 'conflict');
+assert.equal(parameterDefaultScript.admission.reasonCodes.includes('binding-pattern-default-initializer-blocked'), true);
+
+const parameterRestScript = createSemanticEditScript({
+  id: 'semantic_edit_typescript_parameter_binding_rest_blocked',
+  language: 'typescript',
+  sourcePath: 'src/parameter-binding.ts',
+  baseSourceText: parameterBindingBase,
+  workerSourceText: 'export function read({ title, ...rest }) {\n  return title.trim();\n}\n',
+  headSourceText: parameterBindingHead,
+  generatedAt: 233
+});
+assert.equal(parameterRestScript.admission.status, 'conflict');
+assert.equal(parameterRestScript.admission.reasonCodes.includes('binding-pattern-rest-spread-blocked'), true);
+
+const parameterArrayScript = createSemanticEditScript({
+  id: 'semantic_edit_typescript_parameter_binding_array_blocked',
+  language: 'typescript',
+  sourcePath: 'src/parameter-binding.ts',
+  baseSourceText: 'export function read([title]) {\n  return title.trim();\n}\n',
+  workerSourceText: 'export function read([name]) {\n  return name.trim();\n}\n',
+  headSourceText: 'export function read([title]) {\n  return title.trim().toLowerCase();\n}\n',
+  generatedAt: 234
+});
+assert.equal(parameterArrayScript.admission.status, 'conflict');
+assert.equal(parameterArrayScript.admission.reasonCodes.includes('binding-pattern-array-order-blocked'), true);

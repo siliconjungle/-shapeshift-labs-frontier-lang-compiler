@@ -86,6 +86,9 @@ export function projectSemanticEditScriptToSource(input = {}) {
       alreadyAppliedEditCount: deduped.edits.filter((edit) => edit.alreadyApplied).length,
       dedupedEditCount: deduped.skippedOperationIds.length,
       anchorMode: headSymbols.length ? 'javascript-like-symbols' : 'offsets',
+      structuralDiffId: script.structuralDiff?.id,
+      structuralDiffStatus: script.structuralDiff?.admission?.status,
+      structuralDiffSummary: script.structuralDiff?.summary,
       ...input.metadata
     })
   };
@@ -291,7 +294,11 @@ function semanticEditIdentity(operation) {
     semanticKey: operation.semanticKey,
     semanticIdentityHash: operation.semanticIdentityHash,
     sourceIdentityHash: operation.sourceIdentityHash,
-    operationContentHash: operation.operationContentHash
+    operationContentHash: operation.operationContentHash,
+    structuralEditId: operation.structuralEdit?.id,
+    structuralEditHash: operation.structuralEdit?.hash,
+    structuralKind: operation.structuralEdit?.structuralKind,
+    structuralActions: operation.structuralEdit?.actions
   });
 }
 

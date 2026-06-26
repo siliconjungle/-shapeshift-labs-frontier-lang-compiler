@@ -3,6 +3,10 @@ export function skipTopLevelTrivia(sourceText, offset) {
   while (index < sourceText.length) {
     const char = sourceText[index];
     const next = sourceText[index + 1];
+    if (char === '#' && next === '!' && isHashbangAtFileStart(sourceText, index)) {
+      index = consumeLineComment(sourceText, index + 2);
+      continue;
+    }
     if (/\s/.test(char)) {
       index += 1;
       continue;
@@ -20,6 +24,10 @@ export function skipTopLevelTrivia(sourceText, offset) {
     break;
   }
   return { offset: index };
+}
+
+function isHashbangAtFileStart(sourceText, offset) {
+  return offset === 0 || (offset === 1 && sourceText.charCodeAt(0) === 0xfeff);
 }
 
 function consumeLineComment(sourceText, offset) {

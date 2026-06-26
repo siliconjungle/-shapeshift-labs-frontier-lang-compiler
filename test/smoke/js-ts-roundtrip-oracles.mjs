@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import { assert } from './helpers.mjs';
 import {
+  compileNativeSource,
   createNativeSourcePreservation,
   createSemanticImportSidecar,
   importNativeSource,
@@ -135,15 +136,65 @@ for (const fixture of fixtures) {
   assertNoOpRoundtrip(fixture);
 }
 
+const generatedBoundaryImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/oracles/generated-boundary.ts',
+  sourceText: 'export const generatedBoundary: number = 1;\n'
+});
+const generatedBoundaryAdapter = {
+  id: 'js-ts-oracle-generated-boundary-adapter',
+  sourceLanguage: 'typescript',
+  target: 'javascript',
+  coverage: {
+    readiness: 'needs-review',
+    handledLossKinds: ['targetAdapterProjection', 'sourceMapApproximation']
+  },
+  project() {
+    return {
+      output: 'export const generatedBoundary = 1;\n',
+      readiness: 'needs-review'
+    };
+  }
+};
+const generatedBoundaryCompile = compileNativeSource(generatedBoundaryImport, {
+  target: 'javascript',
+  targetAdapters: [generatedBoundaryAdapter],
+  targetAdapter: 'js-ts-oracle-generated-boundary-adapter',
+  targetPath: 'dist/oracles/generated-boundary.generated.js',
+  emitOnBlocked: true
+});
+const generatedBoundaryGate = generatedBoundaryCompile.metadata.sourceMapGeneratedBoundaryGate;
+assert.equal(generatedBoundaryGate.status, 'blocked', 'generated JS adapter fallback must not admit generated/source merge');
+assert.equal(generatedBoundaryGate.exactBoundary, false, 'generated JS adapter fallback has no exact boundary');
+assert.equal(generatedBoundaryGate.missingInvariant, 'ecma-426-generated-position-only-no-range-boundary', 'blocked oracle names missing ECMA-426 range boundary');
+assert.equal(generatedBoundaryGate.reasonCodes.includes('ecma-426:missing-exact-source-generated-boundary'), true, 'blocked oracle reason');
+assert.equal(generatedBoundaryGate.reasonCodes.includes('ecma-426:payload-missing'), true, 'blocked oracle records missing ECMA-426 payload evidence');
+assert.equal(generatedBoundaryGate.autoMergeClaim, false, 'generated boundary gate does not claim auto merge');
+assert.equal(generatedBoundaryGate.semanticEquivalenceClaim, false, 'generated boundary gate does not claim semantic equivalence');
+assert.equal(generatedBoundaryCompile.metadata.roundtripEvidence.sourceMapGeneratedBoundaryGate.status, 'blocked', 'roundtrip evidence carries generated boundary gate');
+
 function assertNoOpRoundtrip(fixture) {
   const directPreservation = createNativeSourcePreservation(fixture);
   assertByteIdentical(directPreservation.sourceText, fixture.sourceText, `${fixture.id}: direct source preservation`);
   assert.equal(directPreservation.sourceBytes, Buffer.byteLength(fixture.sourceText, 'utf8'), `${fixture.id}: preserved byte length`);
   assert.equal(directPreservation.newline, fixture.newline, `${fixture.id}: newline style`);
-  assert.equal(directPreservation.summary.comments >= fixture.minComments, true, `${fixture.id}: comment trivia`);
+  assert.equal(directPreservation.summary.parserTriviaExactnessStatus, 'approximate', `${fixture.id}: parser trivia exactness is approximate`);
+  assert.equal(directPreservation.summary.exactParserTrivia, false, `${fixture.id}: scanner trivia is not exact parser proof`);
+  assert.equal(
+    directPreservation.summary.parserTriviaExactnessReasonCodes.includes('parser-trivia-proof-approximate'),
+    true,
+    `${fixture.id}: parser trivia approximation reason`
+  );
+  const commentLikeTrivia = (directPreservation.summary.comments ?? 0) + (directPreservation.summary.triviaByKind?.['source-map-comment'] ?? 0);
+  assert.equal(commentLikeTrivia >= fixture.minComments, true, `${fixture.id}: comment trivia`);
+  const anchoredTrivia = directPreservation.trivia
+    .filter((entry) => entry.kind === 'comment' || entry.kind === 'source-map-comment' || entry.kind === 'shebang');
+  assert.equal(anchoredTrivia.every((entry) => entry.ownershipAnchor?.mode === 'exact-source-span'), true, `${fixture.id}: trivia ownership anchors`);
+  assert.equal(anchoredTrivia.every((entry) => entry.ownershipAnchor?.losslessCst === false), true, `${fixture.id}: no lossless CST claim`);
   for (const kind of fixture.directiveKinds) {
     assert.equal(directPreservation.summary.directiveKinds.includes(kind), true, `${fixture.id}: directive ${kind}`);
   }
+  assert.equal(directPreservation.directives.every((entry) => entry.ownershipAnchor?.mode === 'exact-source-span'), true, `${fixture.id}: directive ownership anchors`);
 
   const importResult = importNativeSource({
     language: fixture.language,
@@ -174,6 +225,7 @@ function assertNoOpRoundtrip(fixture) {
   assert.equal(audit.sourcePreservation.exactSourceAvailable, true, `${fixture.id}: audit exact source`);
   assert.equal(audit.hashChecks.sourceHashVerified, true, `${fixture.id}: audit source hash`);
   assert.equal(audit.hashChecks.outputMatchesSourceHash, true, `${fixture.id}: audit output hash`);
+  assert.equal(audit.semanticEquivalenceClaim, false, `${fixture.id}: no semantic equivalence claim from roundtrip hash`);
 }
 
 function assertByteIdentical(actual, expected, label) {

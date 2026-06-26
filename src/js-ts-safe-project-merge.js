@@ -1,15 +1,57 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsSource } from './js-ts-safe-merge-composed.js';
 import { compactRecord } from './js-ts-safe-merge-context.js';
+import { createJsTsProjectMergeDeclarationGate } from './js-ts-safe-project-merge-declarations.js';
+import { createJsTsProjectMergeDeclarationEmitParityProof } from './js-ts-safe-project-merge-declaration-emit-parity.js';
+import { createJsTsProjectMergeDiagnosticsGate } from './js-ts-safe-project-merge-diagnostics.js';
 import { createJsTsProjectSafeMergeGraphArtifacts, createJsTsProjectSafeMergeGraphDelta } from './js-ts-safe-project-merge-graph.js';
 import { addProjectGraphDeltaConflictSummary } from './js-ts-safe-project-merge-graph-delta-conflicts.js';
 import { outputProjectGraphConflicts, projectGraphDeltaConflicts } from './js-ts-safe-project-merge-graph-conflicts.js';
+import { createProjectAdmissionRoutes, projectAdmissionRouteSummary } from './js-ts-safe-project-merge-admission-routes.js';
+import { maybeBlockAmbientProjectFile } from './js-ts-safe-project-merge-ambient.js';
+import { maybeMergeImportSpecifierRemovalFile } from './js-ts-safe-project-merge-import-removal.js';
+import { createJsTsProjectMergeQualityGate } from './js-ts-safe-project-merge-quality-gates.js';
+import { createJsTsProjectMergeProofEvidence } from './js-ts-safe-project-merge-proof-levels.js';
+import { projectProofEvidenceConflicts } from './js-ts-safe-project-merge-proof-conflicts.js';
+import { blockedFile, hashText, policyForFile, safeId, sourceLedgersForFile, syntheticFile, uniqueStrings } from './js-ts-safe-project-merge-core.js';
+import { normalizeProjectFiles } from './js-ts-safe-project-merge-files.js';
+import { applyProjectMoveRenameClassifications, classifyProjectMoveRenames } from './js-ts-safe-project-merge-move-rename.js';
+import { applyProjectSymbolRenameClassifications, classifyProjectSymbolRenames } from './js-ts-safe-project-merge-symbol-rename.js';
+import { applyProjectSplitMergeClassifications, classifyProjectSplitMerges } from './js-ts-safe-project-merge-split-merge.js';
+import { projectConfidence, projectEvidence, projectSummary, projectSummaryWithConfidenceEvidence } from './js-ts-safe-project-merge-summary.js';
 
 function safeMergeJsTsProject(input = {}) {
   const id = String(input.id ?? 'js_ts_project_safe_merge');
   const files = normalizeProjectFiles(input);
-  const fileResults = files.map((file) => mergeProjectFile(file, input, id));
+  const projectMoveRenames = classifyProjectMoveRenames(files, input, id);
+  const projectSymbolRenames = classifyProjectSymbolRenames(files, input);
+  const projectSplitMerges = classifyProjectSplitMerges(files);
+  const mergedFileResults = files.map((file) => mergeProjectFile(file, input, id, projectSymbolRenames));
+  const fileResults = applyProjectSplitMergeClassifications(
+    applyProjectSymbolRenameClassifications(
+      applyProjectMoveRenameClassifications(mergedFileResults, projectMoveRenames, files, input),
+      files,
+      input,
+      projectSymbolRenames
+    ),
+    projectSplitMerges,
+    files,
+    input
+  );
+  const symbolRenameSummary = {
+    ...projectSymbolRenames.summary,
+    ...(projectSymbolRenames.admissionSummary ?? {})
+  };
+  const moveRenameSummary = {
+    ...projectMoveRenames.summary,
+    ...(projectMoveRenames.admissionSummary ?? {})
+  };
+  const splitMergeSummary = {
+    ...projectSplitMerges.summary,
+    ...(projectSplitMerges.admissionSummary ?? {})
+  };
   const blockedFiles = fileResults.filter((file) => file.status === 'blocked');
+  const inputFilesByPath = new Map(files.map((file) => [file.sourcePath, file]));
   const outputFiles = fileResults
     .filter((file) => typeof file.outputSourceText === 'string')
     .map((file) => compactRecord({
@@ -17,27 +59,65 @@ function safeMergeJsTsProject(input = {}) {
       language: file.language,
       sourceText: file.outputSourceText,
       sourceHash: file.outputHash,
+      parserTriviaEvidence: outputParserTriviaEvidence(inputFilesByPath.get(file.sourcePath), file),
       operation: file.operation
     }));
+  const outputDeclarationGate = blockedFiles.length === 0
+    ? createJsTsProjectMergeDeclarationGate(input, outputFiles, id)
+    : undefined;
+  const declarationEmitParityProof = blockedFiles.length === 0
+    ? createJsTsProjectMergeDeclarationEmitParityProof(input, files, outputFiles, id)
+    : undefined;
   const projectGraphDelta = blockedFiles.length === 0 && input.includeProjectGraphDelta
     ? createJsTsProjectSafeMergeGraphDelta(input, files, outputFiles, id)
     : undefined;
   const graphArtifacts = projectGraphDelta?.stages?.output ?? (blockedFiles.length === 0 && input.includeOutputProjectSymbolGraph
     ? createJsTsProjectSafeMergeGraphArtifacts(input, outputFiles, id)
     : undefined);
+  const outputDiagnosticsGate = blockedFiles.length === 0
+    ? createJsTsProjectMergeDiagnosticsGate(input, outputFiles, id, { fileResults })
+    : undefined;
+  const outputQualityGate = blockedFiles.length === 0 ? createJsTsProjectMergeQualityGate(input, id) : undefined;
+  const proofEvidence = createJsTsProjectMergeProofEvidence({
+    id,
+    files,
+    fileResults,
+    outputDiagnosticsGate,
+    outputDeclarationGate,
+    outputQualityGate, externalSemanticEquivalenceProof: input.externalSemanticEquivalenceProof ?? input.semanticEquivalenceProof, semanticEquivalenceProof: input.semanticEquivalenceProof, language: input.language
+  });
   const outputGraphConflicts = outputProjectGraphConflicts(projectGraphDelta ? graphArtifacts?.projectSymbolGraph : graphArtifacts);
-  const deltaGraphConflicts = projectGraphDeltaConflicts(projectGraphDelta);
+  const deltaGraphConflicts = projectGraphDeltaConflicts(projectGraphDelta, { declarationEmitParityProof, outputDiagnosticsGate, outputDeclarationGate, runtimeOrderEvidence: input.runtimeOrderEvidence, projectRuntimeOrderEvidence: input.projectRuntimeOrderEvidence, evidence: input.evidence, commonJsRuntimeInteropProof: input.commonJsRuntimeInteropProof, commonJsRuntimeInteropProofs: input.commonJsRuntimeInteropProofs, globalAugmentationCompatibilityProof: input.globalAugmentationCompatibilityProof, globalAugmentationCompatibilityProofs: input.globalAugmentationCompatibilityProofs, jsxRenderReturnBranchProof: input.jsxRenderReturnBranchProof, jsxRenderReturnBranchProofs: input.jsxRenderReturnBranchProofs });
   const projectGraphDeltaWithConflicts = addProjectGraphDeltaConflictSummary(projectGraphDelta, deltaGraphConflicts);
+  const diagnosticsConflicts = outputDiagnosticsGate?.conflicts ?? [];
+  const declarationConflicts = outputDeclarationGate?.conflicts ?? [];
+  const qualityConflicts = outputQualityGate?.conflicts ?? [];
+  const proofConflicts = projectProofEvidenceConflicts(proofEvidence);
   const graphConflicts = [...outputGraphConflicts, ...deltaGraphConflicts];
-  const status = blockedFiles.length || graphConflicts.length ? 'blocked' : 'merged';
+  const outputConflicts = [...graphConflicts, ...diagnosticsConflicts, ...declarationConflicts, ...qualityConflicts, ...proofConflicts];
+  const status = blockedFiles.length || outputConflicts.length ? 'blocked' : 'merged';
   const reasonCodes = uniqueStrings([
     ...blockedFiles.flatMap((file) => file.admission.reasonCodes),
-    ...graphConflicts.map((conflict) => conflict.code)
+    ...outputConflicts.map((conflict) => conflict.code)
   ]);
   const conflictKeys = uniqueStrings([
     ...fileResults.flatMap((file) => file.conflictKeys),
-    ...graphConflicts.map((conflict) => conflict.details?.conflictKey)
+    ...outputConflicts.map((conflict) => conflict.details?.conflictKey)
   ]);
+  const baseSummary = projectSummary(fileResults, graphConflicts, Boolean(projectGraphDelta), outputDiagnosticsGate, outputDeclarationGate, outputQualityGate, moveRenameSummary, proofEvidence, symbolRenameSummary, splitMergeSummary);
+  const evidenceContext = {
+    fileResults,
+    outputDiagnosticsGate,
+    outputDeclarationGate,
+    outputQualityGate,
+    proofEvidence,
+    hasProjectGraphEvidence: Boolean(projectGraphDeltaWithConflicts || graphArtifacts?.projectSymbolGraph)
+  };
+  const evidence = projectEvidence(id, status, baseSummary, evidenceContext);
+  const confidence = projectConfidence(id, status, baseSummary, evidence, reasonCodes, conflictKeys, evidenceContext);
+  const admissionRoutes = createProjectAdmissionRoutes({ status, fileResults, conflicts: [...fileResults.flatMap((file) => file.conflicts), ...outputConflicts], missingEvidence: confidence.missingEvidence });
+  const admissionRouteSummary = projectAdmissionRouteSummary(admissionRoutes);
+  const summary = projectSummaryWithConfidenceEvidence(baseSummary, evidence, confidence);
   const core = {
     kind: 'frontier.lang.jsTsProjectSafeMerge',
     version: 1,
@@ -49,18 +129,31 @@ function safeMergeJsTsProject(input = {}) {
     outputProjectImport: graphArtifacts?.projectImport,
     outputProjectSymbolGraph: graphArtifacts?.projectSymbolGraph,
     projectGraphDelta: projectGraphDeltaWithConflicts,
-    conflicts: [...fileResults.flatMap((file) => file.conflicts), ...graphConflicts],
+    outputDiagnosticsGate,
+    outputDeclarationGate,
+    declarationEmitParityProof,
+    outputQualityGate,
+    conflicts: [...fileResults.flatMap((file) => file.conflicts), ...outputConflicts],
     admission: {
       status: status === 'merged' ? 'auto-merge-candidate' : 'blocked',
       action: status === 'merged' ? 'apply-project' : 'human-review',
       reviewRequired: status !== 'merged',
       autoApplyCandidate: status === 'merged',
       autoMergeClaim: false,
-      semanticEquivalenceClaim: false,
+      semanticEquivalenceClaim: proofEvidence.summary.semanticEquivalenceClaim === true,
+      semanticEquivalenceLevel: proofEvidence.semanticEquivalenceLevel,
+      proofEvidenceStatus: proofEvidence.status,
+      proofEvidenceLevels: proofEvidence.summary.evidenceLevels,
+      proofEvidenceIds: proofEvidence.records.map((record) => record.id),
+      routes: admissionRoutes,
+      routeSummary: admissionRouteSummary,
       reasonCodes,
       conflictKeys
     },
-    summary: projectSummary(fileResults, graphConflicts, Boolean(projectGraphDelta)),
+    proofEvidence,
+    confidence,
+    evidence,
+    summary,
     metadata: compactRecord({
       workerChangeSetId: input.workerChangeSetId,
       headChangeSetId: input.headChangeSetId,
@@ -71,20 +164,61 @@ function safeMergeJsTsProject(input = {}) {
       projectGraphConflicts: graphConflicts.length || undefined,
       outputProjectGraphConflicts: outputGraphConflicts.length || undefined,
       projectGraphDeltaConflicts: deltaGraphConflicts.length || undefined,
+      projectGraphSourceSpanConflicts: deltaGraphConflicts.filter((conflict) => conflict.code === 'project-source-span-delta-conflict').length || undefined,
+      projectGraphCompilerTypeConflicts: deltaGraphConflicts.filter((conflict) => conflict.code === 'project-public-compiler-type-delta-conflict').length || undefined,
+      projectGraphRuntimeRegionConflicts: deltaGraphConflicts.filter((conflict) => conflict.code === 'project-public-runtime-region-delta-conflict').length || undefined,
+      projectGraphScopeUseDefConflicts: deltaGraphConflicts.filter((conflict) => conflict.code === 'project-public-scope-use-def-delta-conflict' || conflict.code === 'project-public-scope-reference-delta-conflict').length || undefined,
+      projectGraphJsxPropConflicts: deltaGraphConflicts.filter((conflict) => conflict.code === 'project-jsx-public-prop-delta-conflict').length || undefined,
+      projectGraphJsxRenderRiskConflicts: deltaGraphConflicts.filter((conflict) => conflict.code === 'project-jsx-public-render-risk-delta-conflict').length || undefined,
+      projectGraphModuleDeclarationShapeConflicts: deltaGraphConflicts.filter((conflict) => conflict.code === 'project-module-declaration-shape-delta-conflict').length || undefined,
+      projectGraphExportAssignmentShapeConflicts: deltaGraphConflicts.filter((conflict) => conflict.code === 'project-export-assignment-shape-delta-conflict').length || undefined,
       projectGraphLimitConflicts: graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-limit').length || undefined,
+      outputDiagnostics: outputDiagnosticsGate?.summary?.diagnostics || undefined,
+      outputDiagnosticConflicts: diagnosticsConflicts.length || undefined,
+      outputDiagnosticSource: outputDiagnosticsGate?.metadata?.diagnosticSource,
+      outputCompilerOptions: outputDiagnosticsGate?.metadata?.compilerOptions,
+      outputCompilerOptionSources: outputDiagnosticsGate?.metadata?.compilerOptionSources,
+      outputProjectReferences: outputDiagnosticsGate?.metadata?.projectReferences,
+      outputProjectReferenceCount: outputDiagnosticsGate?.metadata?.projectReferenceCount,
+      outputDeclarations: outputDeclarationGate?.summary?.declarationFiles || undefined,
+      outputDeclarationConflicts: declarationConflicts.length || undefined,
+      declarationEmitParityProofStatus: declarationEmitParityProof?.status,
+      declarationEmitParityProofReasonCodes: declarationEmitParityProof?.reasonCodes,
+      outputQualityGateConflicts: qualityConflicts.length || undefined,
+      proofEvidence: proofEvidence.summary,
+      semanticEquivalenceLevel: proofEvidence.semanticEquivalenceLevel,
+      confidenceScore: confidence.score,
+      confidenceLevel: confidence.level,
+      projectAdmissionRoutes: admissionRoutes.length || undefined,
+      evidenceRecords: evidence.length || undefined,
+      failedEvidenceRecords: evidence.filter((record) => record.status === 'failed').length || undefined,
+      projectMoveRenameClassifications: moveRenameSummary.classifications || moveRenameSummary.symbolMoveAdmissions ? moveRenameSummary : undefined,
+      projectSymbolRenameClassifications: symbolRenameSummary.classifications || symbolRenameSummary.admissions ? symbolRenameSummary : undefined,
+      projectSplitMergeClassifications: splitMergeSummary.classifications || splitMergeSummary.splitMergeAdmissions ? splitMergeSummary : undefined,
       autoMergeClaim: false,
-      semanticEquivalenceClaim: false
+      semanticEquivalenceClaim: proofEvidence.summary.semanticEquivalenceClaim === true
     })
   };
   return { ...core, hash: hashSemanticValue(core) };
 }
 
-function mergeProjectFile(file, input, projectId) {
+function outputParserTriviaEvidence(file, resultFile) {
+  if (!file) return undefined;
+  if (file.outputParserTriviaEvidence) return file.outputParserTriviaEvidence;
+  const workerText = file.workerDeleted ? undefined : file.workerSourceText ?? file.baseSourceText;
+  return resultFile.outputHash && resultFile.outputHash === hashText(workerText)
+    ? file.workerParserTriviaEvidence ?? file.parserTriviaEvidence
+    : undefined;
+}
+
+function mergeProjectFile(file, input, projectId, projectSymbolRenames) {
   const base = file.baseSourceText;
   const worker = file.workerDeleted ? undefined : file.workerSourceText ?? base;
   const head = file.headDeleted ? undefined : file.headSourceText ?? base;
   const context = { sourcePath: file.sourcePath, language: file.language ?? input.language ?? 'typescript' };
   if (!file.sourcePath) return blockedFile(file, context, 'missing-source-path');
+  const ambientBlock = maybeBlockAmbientProjectFile(file, context, input);
+  if (ambientBlock) return ambientBlock;
   if (base === undefined && worker === undefined && head !== undefined) {
     return syntheticFile(file, context, head, 'head-only');
   }
@@ -109,10 +243,11 @@ function mergeProjectFile(file, input, projectId) {
       : blockedFile(file, context, 'head-file-delete-conflict');
   }
   const result = safeMergeJsTsSource({
-    ...input,
+    ...sourceMergeInputForProjectFile(input),
     ...context,
     deferReExportIdentityConflictsToProjectGraph: input.includeProjectGraphDelta === true || input.includeOutputProjectSymbolGraph === true,
     deferTopLevelRenamePublicExportContractToProjectGraph: input.includeProjectGraphDelta === true || input.includeOutputProjectSymbolGraph === true,
+    deferDirectExportRenamePublicContractToProjectSymbolRename: allowsProjectSymbolRenameForFile(input, projectSymbolRenames, file.sourcePath),
     id: `${projectId}_${safeId(file.sourcePath)}`,
     baseSourceText: base,
     workerSourceText: worker,
@@ -120,7 +255,10 @@ function mergeProjectFile(file, input, projectId) {
     sourceLedgers: sourceLedgersForFile(input, file.sourcePath),
     policy: file.policy ?? file.mergePolicy ?? policyForFile(input, file.sourcePath)
   });
-  if (result.status !== 'merged') return mergeBlockedFile(file, context, result);
+  if (result.status !== 'merged') {
+    return maybeMergeImportSpecifierRemovalFile(file, context, result, input)
+      ?? mergeBlockedFile(file, context, result);
+  }
   return compactRecord({
     kind: 'frontier.lang.jsTsProjectSafeMergeFile',
     version: 1,
@@ -142,6 +280,26 @@ function mergeProjectFile(file, input, projectId) {
   });
 }
 
+function allowsProjectSymbolRenameForFile(input, projectSymbolRenames, sourcePath) {
+  return (input.allowProjectSymbolRenames === true || input.allowCrossFileSymbolRenames === true)
+    && projectSymbolRenames?.byPath?.has(sourcePath);
+}
+
+function sourceMergeInputForProjectFile(input) {
+  const {
+    outputDiagnostics,
+    outputSyntaxDiagnostics,
+    mergedOutputSyntaxDiagnostics,
+    syntaxDiagnostics,
+    requireOutputSyntaxDiagnostics,
+    requireOutputSyntaxGate,
+    requireMergedOutputSyntaxDiagnostics,
+    requireSyntaxGate,
+    ...sourceInput
+  } = input;
+  return sourceInput;
+}
+
 function mergeBlockedFile(file, context, result) {
   return compactRecord({
     kind: 'frontier.lang.jsTsProjectSafeMergeFile',
@@ -156,165 +314,6 @@ function mergeBlockedFile(file, context, result) {
     summary: result.summary,
     conflictKeys: [`source#${file.sourcePath}`]
   });
-}
-
-function syntheticFile(file, context, sourceText, operation) {
-  return compactRecord({
-    kind: 'frontier.lang.jsTsProjectSafeMergeFile',
-    version: 1,
-    sourcePath: file.sourcePath,
-    language: context.language,
-    status: 'merged',
-    operation,
-    outputSourceText: sourceText,
-    outputHash: hashText(sourceText),
-    baseHash: hashText(file.baseSourceText),
-    workerHash: hashText(file.workerSourceText),
-    headHash: hashText(file.headSourceText),
-    conflicts: [],
-    admission: admittedSyntheticAdmission(operation),
-    summary: { conflicts: 0, synthetic: true },
-    conflictKeys: [`source#${file.sourcePath}`]
-  });
-}
-
-function blockedFile(file, context, reasonCode) {
-  const conflict = {
-    code: reasonCode,
-    gateId: 'project-file-presence',
-    message: `Project file cannot be safely merged: ${reasonCode}.`,
-    sourcePath: file.sourcePath,
-    details: { sourcePath: file.sourcePath }
-  };
-  return compactRecord({
-    kind: 'frontier.lang.jsTsProjectSafeMergeFile',
-    version: 1,
-    sourcePath: file.sourcePath,
-    language: context.language,
-    status: 'blocked',
-    operation: 'blocked-file-presence',
-    conflicts: [conflict],
-    admission: blockedAdmission(reasonCode),
-    summary: { conflicts: 1, synthetic: true },
-    conflictKeys: [`source#${file.sourcePath ?? 'unknown'}`]
-  });
-}
-
-function normalizeProjectFiles(input) {
-  if (Array.isArray(input.files)) return input.files.map(normalizeFileRecord).sort(bySourcePath);
-  const base = normalizeFileMap(input.baseFiles);
-  const worker = normalizeFileMap(input.workerFiles);
-  const head = normalizeFileMap(input.headFiles);
-  const paths = [...new Set([...base.keys(), ...worker.keys(), ...head.keys()])].sort();
-  return paths.map((sourcePath) => normalizeFileRecord({
-    sourcePath,
-    baseSourceText: base.get(sourcePath),
-    workerSourceText: worker.get(sourcePath),
-    headSourceText: head.get(sourcePath)
-  }));
-}
-
-function normalizeFileRecord(record = {}) {
-  return {
-    sourcePath: record.sourcePath ?? record.path,
-    language: record.language,
-    baseSourceText: stringOrUndefined(record.baseSourceText ?? record.baseText),
-    workerSourceText: stringOrUndefined(record.workerSourceText ?? record.workerText),
-    headSourceText: stringOrUndefined(record.headSourceText ?? record.headText),
-    workerDeleted: record.workerDeleted === true,
-    headDeleted: record.headDeleted === true,
-    policy: record.policy,
-    mergePolicy: record.mergePolicy
-  };
-}
-
-function normalizeFileMap(value) {
-  const map = new Map();
-  if (!value) return map;
-  if (value instanceof Map) {
-    for (const [sourcePath, sourceText] of value) map.set(String(sourcePath), String(sourceText));
-    return map;
-  }
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      if (!entry?.sourcePath && !entry?.path) continue;
-      map.set(String(entry.sourcePath ?? entry.path), String(entry.sourceText ?? entry.text ?? ''));
-    }
-    return map;
-  }
-  for (const [sourcePath, sourceText] of Object.entries(value)) map.set(sourcePath, String(sourceText));
-  return map;
-}
-
-function policyForFile(input, sourcePath) {
-  if (input.policyByPath?.[sourcePath]) return input.policyByPath[sourcePath];
-  if (input.mergePolicyByPath?.[sourcePath]) return input.mergePolicyByPath[sourcePath];
-  return input.policy ?? input.mergePolicy;
-}
-
-function sourceLedgersForFile(input, sourcePath) {
-  const byPath = input.sourceLedgersByPath?.[sourcePath] ?? input.sourceLedgers?.[sourcePath];
-  return byPath ?? (input.sourceLedgers?.base || input.sourceLedgers?.worker || input.sourceLedgers?.head ? input.sourceLedgers : undefined);
-}
-
-function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false) {
-  const byOperation = {};
-  for (const file of files) byOperation[file.operation] = (byOperation[file.operation] ?? 0) + 1;
-  const limitConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-limit');
-  const deltaConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-delta' || (hasProjectGraphDelta && conflict.gateId === 'project-graph-limit'));
-  const outputConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-symbol-graph' || (!hasProjectGraphDelta && conflict.gateId === 'project-graph-limit'));
-  return {
-    files: files.length,
-    mergedFiles: files.filter((file) => file.status === 'merged').length,
-    blockedFiles: files.filter((file) => file.status === 'blocked').length,
-    outputFiles: files.filter((file) => typeof file.outputSourceText === 'string').length,
-    projectGraphConflicts: graphConflicts.length,
-    outputProjectGraphConflicts: outputConflicts.length,
-    projectGraphDeltaConflicts: deltaConflicts.length,
-    projectGraphLimitConflicts: limitConflicts.length,
-    projectGraphPublicContractConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-public-contract-delta-conflict').length,
-    projectGraphReExportIdentityConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-re-export-identity-delta-conflict').length,
-    projectGraphImportTargetConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-import-target-delta-conflict').length,
-    semanticArtifactFiles: files.filter((file) => file.semanticArtifacts).length,
-    operations: byOperation
-  };
-}
-
-function admittedSyntheticAdmission(operation) {
-  return {
-    status: 'auto-merge-candidate',
-    action: operation === 'head-only' ? 'preserve-head' : 'apply',
-    reviewRequired: false,
-    autoApplyCandidate: true,
-    autoMergeClaim: false,
-    semanticEquivalenceClaim: false,
-    reasonCodes: []
-  };
-}
-
-function blockedAdmission(reasonCode) {
-  return {
-    status: 'blocked',
-    action: 'human-review',
-    reviewRequired: true,
-    autoApplyCandidate: false,
-    autoMergeClaim: false,
-    semanticEquivalenceClaim: false,
-    reasonCodes: [reasonCode]
-  };
-}
-
-function hashText(text) { return typeof text === 'string' ? hashSemanticValue(text) : undefined; }
-function stringOrUndefined(value) { return typeof value === 'string' ? value : undefined; }
-
-function safeId(value) {
-  return String(value ?? 'unknown').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'file';
-}
-
-function bySourcePath(left, right) { return String(left.sourcePath ?? '').localeCompare(String(right.sourcePath ?? '')); }
-
-function uniqueStrings(values) {
-  return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))];
 }
 
 export { safeMergeJsTsProject };

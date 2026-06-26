@@ -69,8 +69,13 @@ async function assertEstreeImport(index, estreeAdapter) {
   assert.equal(imported.semanticIndex.symbols.some((symbol) => symbol.name === name), true);
   assert.ok(imported.sourceMaps[0].mappings.length >= 1);
   assert.equal(imported.adapter.coverage.capabilityEvidence.declared.exactAst, true);
+  assert.equal(imported.adapter.coverage.capabilityEvidence.declared.tokens, true);
+  assert.equal(imported.adapter.coverage.capabilityEvidence.declared.trivia, true);
+  assert.equal(imported.adapter.coverage.capabilityEvidence.observed.tokens, false);
+  assert.equal(imported.adapter.coverage.capabilityEvidence.observed.trivia, false);
   assert.equal(imported.adapter.coverage.capabilityEvidence.observed.sourceRanges, true);
-  assert.equal(imported.adapter.coverage.capabilityEvidence.gaps.includes('tokens'), true);
+  assert.equal(imported.adapter.coverage.capabilityEvidence.gaps.includes('tokens'), false);
+  assert.equal(imported.metadata.sourcePreservation.summary.parserTriviaExactnessStatus, 'approximate');
 }
 
 async function assertReadyImport(imported, parser, symbolName) {

@@ -101,7 +101,8 @@ const composedStaleHeadHash = safeMergeJsTsSource({
 
 assert.equal(composedStaleHeadHash.status, 'merged');
 assert.equal(composedStaleHeadHash.semanticArtifacts.status, 'blocked');
-assert.equal(composedStaleHeadHash.semanticArtifacts.replay.status, 'blocked');
+assert.equal(composedStaleHeadHash.semanticArtifacts.replay.status, 'stale');
+assert.equal(composedStaleHeadHash.semanticArtifacts.replay.admission.rerunRoute.routeId, 'rerun-semantic-edit-replay-current-head');
 assert.equal(
   composedStaleHeadHash.semanticArtifacts.replay.admission.reasonCodes.includes('current-source-hash-mismatch'),
   true

@@ -1,14 +1,34 @@
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { JsTsSafeMergeConflictCodes, identifierRegExp } from './js-ts-safe-merge-constants.js';
 
 export function classifyStatement(text, start, end) {
-  const importInfo = parseImportInfo(text);
-  if (importInfo) {
+  const directiveInfo = parseDirectiveInfo(text);
+  const textHash = hashSemanticValue(text);
+  if (directiveInfo) {
+    const key = directiveLedgerKey(directiveInfo);
     return {
-      kind: 'import',
-      key: importLedgerKey(importInfo),
+      kind: 'directive',
+      key,
       text,
       start,
       end,
+      textHash,
+      ownershipAnchor: topLevelStatementOwnershipAnchor({ kind: 'directive', key, textHash, start, end, directiveInfo }),
+      directiveInfo,
+      names: []
+    };
+  }
+  const importInfo = parseImportInfo(text);
+  if (importInfo) {
+    const key = importLedgerKey(importInfo);
+    return {
+      kind: 'import',
+      key,
+      text,
+      start,
+      end,
+      textHash,
+      ownershipAnchor: topLevelStatementOwnershipAnchor({ kind: 'import', key, textHash, start, end }),
       importInfo,
       names: importInfo.specifiers.map((specifier) => specifier.localName).filter(Boolean)
     };
@@ -17,17 +37,31 @@ export function classifyStatement(text, start, end) {
   if (declarationInfo) {
     const unsupported = unsupportedDeclarationPolicy(text, declarationInfo);
     if (unsupported) return { unsupported, text, start, end };
+    const key = declarationLedgerKey(declarationInfo);
     return {
       kind: declarationInfo.kind,
-      key: declarationLedgerKey(declarationInfo),
+      key,
       text,
       start,
       end,
+      textHash,
+      ownershipAnchor: topLevelStatementOwnershipAnchor({ kind: declarationInfo.kind, key, textHash, start, end }),
       declarationInfo,
       names: declarationInfo.names
     };
   }
   return undefined;
+}
+
+function parseDirectiveInfo(text) {
+  const trimmed = text.trim();
+  const match = trimmed.match(/^(['"])(use\s+(?:strict|client|server))\1\s*;?$/);
+  if (!match) return undefined;
+  return { kind: 'runtime-directive', value: match[2], quote: match[1] };
+}
+
+function directiveLedgerKey(directiveInfo) {
+  return ['directive', directiveInfo.kind, directiveInfo.value].join(':');
 }
 
 function parseImportInfo(text) {
@@ -269,6 +303,16 @@ function importLedgerKey(importInfo) {
     importInfo.defaultLocalName ?? '',
     importInfo.namespaceLocalName ?? ''
   ].join(':');
+}
+
+function topLevelStatementOwnershipAnchor(input) {
+  const identityAnchor = input.kind === 'directive' && input.directiveInfo?.kind === 'runtime-directive' ? 'runtime-directive-prologue' : input.key;
+  return {
+    schema: 'frontier.lang.jsTsTopLevelStatementOwnershipAnchor.v1', version: 1, mode: 'top-level-ledger-entry',
+    key: ['js-ts-top-level', input.kind, identityAnchor].join('#'), identityAnchor, statementKind: input.kind,
+    start: input.start, end: input.end, textHash: input.textHash, losslessCst: false,
+    parserEvidence: 'frontier-js-ts-narrow-top-level-ledger', reasonCodes: ['top-level-ledger-statement-boundary', 'lossless-cst-unavailable']
+  };
 }
 
 export function importSpecifierCanonical(specifier) {

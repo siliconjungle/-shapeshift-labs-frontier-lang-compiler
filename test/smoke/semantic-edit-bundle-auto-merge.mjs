@@ -1,3 +1,4 @@
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { assert } from './helpers.mjs';
 import {
   createSemanticEditBundleAdmission,
@@ -134,6 +135,58 @@ assert.equal(nonOverlappingSecondReplay.summary.alreadyApplied, 1);
 assert.deepEqual(nonOverlappingSecondReplay.appliedOperations, []);
 assert.deepEqual(nonOverlappingSecondReplay.skippedOperations, [nonOverlapping.script.operations[0].id]);
 assert.equal(nonOverlappingSecondReplay.edits[0].reasonCodes.includes('head-offset-matches-replacement-span'), true);
+
+const overlapAlreadyAppliedCurrent = 'export const value = next + 1;\n';
+const overlapAlreadyAppliedDeleted = 'next';
+const overlapAlreadyAppliedStart = overlapAlreadyAppliedCurrent.indexOf(overlapAlreadyAppliedDeleted);
+const overlapAlreadyAppliedProjection = {
+  kind: 'frontier.lang.semanticEditProjection',
+  version: 1,
+  id: 'bundle_overlap_already_applied_projection',
+  status: 'projected',
+  sourcePath: 'src/replay-overlap.js',
+  language: 'javascript',
+  admission: { status: 'auto-merge-candidate' },
+  edits: [
+    {
+      operationId: 'bundle_overlap_outer_already_applied',
+      status: 'applied',
+      editKind: 'replace',
+      sourcePath: 'src/replay-overlap.js',
+      headStart: 0,
+      headEnd: overlapAlreadyAppliedCurrent.length,
+      deletedTextHash: hashSemanticValue('export const value = base + 1;\n'),
+      replacementTextHash: hashSemanticValue(overlapAlreadyAppliedCurrent),
+      replacementText: overlapAlreadyAppliedCurrent
+    },
+    {
+      operationId: 'bundle_overlap_inner_apply',
+      status: 'applied',
+      editKind: 'replace',
+      sourcePath: 'src/replay-overlap.js',
+      headStart: overlapAlreadyAppliedStart,
+      headEnd: overlapAlreadyAppliedStart + overlapAlreadyAppliedDeleted.length,
+      deletedTextHash: hashSemanticValue(overlapAlreadyAppliedDeleted),
+      replacementTextHash: hashSemanticValue('done'),
+      replacementText: 'done'
+    }
+  ]
+};
+const overlapAlreadyAppliedReplay = replaySemanticEditProjection({
+  id: 'bundle_overlap_already_applied_replay',
+  projection: overlapAlreadyAppliedProjection,
+  currentSourceText: overlapAlreadyAppliedCurrent
+});
+const overlapAlreadyAppliedCode = 'replay-edit-overlap:bundle_overlap_outer_already_applied:bundle_overlap_inner_apply';
+assert.equal(overlapAlreadyAppliedReplay.status, 'conflict');
+assert.equal(overlapAlreadyAppliedReplay.outputSourceText, undefined);
+assert.equal(overlapAlreadyAppliedReplay.admission.autoApplyCandidate, false);
+assert.equal(overlapAlreadyAppliedReplay.summary.conflicts, 2);
+assert.deepEqual(overlapAlreadyAppliedReplay.appliedOperations, []);
+assert.deepEqual(overlapAlreadyAppliedReplay.edits.map((edit) => edit.status), ['conflict', 'conflict']);
+assert.equal(overlapAlreadyAppliedReplay.summary.reasonCodes.includes(overlapAlreadyAppliedCode), true);
+assert.equal(overlapAlreadyAppliedReplay.diagnostics.some((diagnostic) => diagnostic.category === 'overlap' && diagnostic.code === overlapAlreadyAppliedCode), true);
+
 const nonOverlappingAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [nonOverlapping.script],
   semanticEditProjections: [nonOverlapping.projection],
@@ -158,7 +211,6 @@ assert.equal(nonOverlappingAdmission.reasonCodes.includes('semantic-edit-positiv
 const sameLineBase = 'export function update(state) { if (!state.ready) state.ready = true; return state.ready; }\n';
 const sameLineWorker = 'export function update(state) { if (!state.ready) state.ready = false; return state.ready; }\n';
 const sameLineHead = 'export function update(state) { if (state.pending && !state.ready) state.ready = true; return state.ready; }\n';
-const sameLineExpected = 'export function update(state) { if (state.pending && !state.ready) state.ready = false; return state.ready; }\n';
 const sameLineFlow = semanticEditFlow({
   id: 'bundle_same_line_semantic_independence',
   sourcePath: 'src/same-line.js',
@@ -183,21 +235,22 @@ const sameLineHeadKeys = diffNativeSources({
 assert.deepEqual(sameLineWorkerKeys, ['region:source#src/same-line.js#mutation#update:mutation:assignment#1']);
 assert.deepEqual(sameLineHeadKeys, ['region:source#src/same-line.js#controlFlow#update:controlFlow:branch#1']);
 assert.deepEqual(sameLineWorkerKeys.filter((key) => sameLineHeadKeys.includes(key)), []);
-assert.equal(sameLineFlow.script.admission.status, 'auto-merge-candidate');
+assert.equal(sameLineFlow.script.admission.status, 'conflict');
+assert.equal(sameLineFlow.script.admission.reasonCodes.includes('runtime-order-sensitive-merge-requires-explicit-evidence'), true);
 assert.equal(sameLineFlow.script.operations[0].kind, 'replaceMutation');
-assert.equal(sameLineFlow.projection.status, 'projected');
-assert.equal(sameLineFlow.projection.sourceText, sameLineExpected);
-assert.equal(sameLineFlow.projection.edits[0].symbolName, 'update:mutation:assignment#1');
-assert.equal(sameLineFlow.replay.status, 'accepted-clean');
-assert.equal(sameLineFlow.replay.outputSourceText, sameLineExpected);
+assert.equal(sameLineFlow.script.operations[0].reasonCodes.includes('mutation-assignment-merge-requires-assignment-order-evidence'), true);
+assert.equal(sameLineFlow.projection.status, 'blocked');
+assert.equal(sameLineFlow.projection.sourceText, undefined);
+assert.equal(sameLineFlow.replay.status, 'blocked');
 const sameLineAdmission = createSemanticEditBundleAdmission({
   semanticEditScripts: [sameLineFlow.script],
   semanticEditProjections: [sameLineFlow.projection],
   semanticEditReplays: [sameLineFlow.replay],
   evidence: [{ id: 'evidence_same_line_independent_regions', kind: 'check', status: 'passed' }]
 });
-assert.equal(sameLineAdmission.status, 'ready');
-assert.equal(sameLineAdmission.autoApplyCandidate, true);
+assert.equal(sameLineAdmission.status, 'blocked');
+assert.equal(sameLineAdmission.autoApplyCandidate, false);
+assert.equal(sameLineAdmission.reasonCodes.includes('semantic-edit-script-not-portable'), true);
 
 const sameAnchorConflict = semanticEditFlow({
   id: 'bundle_same_anchor_conflict_guard',

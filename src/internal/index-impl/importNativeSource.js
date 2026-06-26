@@ -14,9 +14,8 @@ export function importNativeSource(input) {
     ? createNativeSourcePreservation({
       language,
       sourcePath,
-      sourceHash: declaredSourceHash,
-      sourceText: input.sourceText,
-      metadata: { importIdPart }
+      sourceHash: declaredSourceHash, sourceText: input.sourceText,
+      parserTriviaEvidence: input.parserTriviaEvidence ?? input.nativeAst?.metadata?.parserTriviaEvidence ?? input.nativeAstMetadata?.parserTriviaEvidence, metadata: { importIdPart }
     })
     : undefined);
   const lightweight = !input.nativeAst && !input.nodes && input.sourceText

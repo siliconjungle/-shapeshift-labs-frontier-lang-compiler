@@ -7,6 +7,8 @@ import type {
 
 export type JsTsSafeMergeStatus = 'merged' | 'blocked';
 export type JsTsSafeMergeGateStatus = 'passed' | 'blocked' | 'skipped';
+export type JsTsSafeMergeSyntaxDiagnosticSeverity = 'error' | 'warning' | 'suggestion' | 'message' | string;
+export type JsTsSafeMergeSyntaxDiagnosticPhase = 'syntax' | 'semantic' | string;
 
 export declare const JsTsSafeMergeStatuses: Readonly<{
   readonly merged: 'merged';
@@ -70,9 +72,45 @@ export interface JsTsSafeMergeInput {
   readonly baseSourceLedger?: unknown;
   readonly workerSourceLedger?: unknown;
   readonly headSourceLedger?: unknown;
+  readonly requireOutputSyntaxDiagnostics?: boolean;
+  readonly requireOutputSyntaxGate?: boolean;
+  readonly requireMergedOutputSyntaxDiagnostics?: boolean;
+  readonly requireSyntaxGate?: boolean;
+  readonly outputDiagnostics?: readonly JsTsSafeMergeSyntaxDiagnostic[] | JsTsSafeMergeSyntaxDiagnostic;
+  readonly outputSyntaxDiagnostics?: readonly JsTsSafeMergeSyntaxDiagnostic[] | JsTsSafeMergeSyntaxDiagnostic;
+  readonly mergedOutputSyntaxDiagnostics?: readonly JsTsSafeMergeSyntaxDiagnostic[] | JsTsSafeMergeSyntaxDiagnostic;
+  readonly syntaxDiagnostics?: {
+    readonly output?: readonly JsTsSafeMergeSyntaxDiagnostic[] | JsTsSafeMergeSyntaxDiagnostic;
+    readonly merged?: readonly JsTsSafeMergeSyntaxDiagnostic[] | JsTsSafeMergeSyntaxDiagnostic;
+  };
   readonly policy?: JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[];
   readonly mergePolicy?: JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[];
   readonly unorderedRegions?: readonly JsTsSafeMemberMergePolicyRegion[];
+}
+
+export interface JsTsSafeMergeSyntaxDiagnostic {
+  readonly id?: string;
+  readonly source?: string;
+  readonly tool?: string;
+  readonly name?: string;
+  readonly code?: string;
+  readonly diagnosticCode?: string;
+  readonly severity?: JsTsSafeMergeSyntaxDiagnosticSeverity;
+  readonly category?: JsTsSafeMergeSyntaxDiagnosticSeverity | number | string;
+  readonly phase?: JsTsSafeMergeSyntaxDiagnosticPhase;
+  readonly diagnosticPhase?: JsTsSafeMergeSyntaxDiagnosticPhase;
+  readonly kind?: string;
+  readonly type?: string;
+  readonly syntax?: boolean;
+  readonly message?: string;
+  readonly messageText?: string;
+  readonly sourcePath?: string;
+  readonly fileName?: string;
+  readonly file?: { readonly fileName?: string };
+  readonly start?: number;
+  readonly end?: number;
+  readonly line?: number;
+  readonly column?: number;
 }
 
 export interface JsTsSafeMergeConflict {
@@ -112,6 +150,15 @@ export interface JsTsSafeMergeSummary {
   readonly semanticEditOperations?: number;
   readonly semanticEditAppliedOperations?: number;
   readonly semanticEditReplayStatus?: string;
+  readonly jsxAttributeTags?: number;
+  readonly jsxAttributeEdits?: number;
+  readonly jsxComponentPropContractCandidates?: number;
+  readonly jsxComponentPropContractAttributes?: number;
+  readonly jsxChildExpressionElements?: number;
+  readonly jsxChildExpressionEdits?: number;
+  readonly jsxChildAdditions?: number;
+  readonly jsxKeyedChildAdditions?: number;
+  readonly jsxKeyedFragmentAdditions?: number;
   readonly composedPhases?: number;
 }
 

@@ -44,11 +44,19 @@ const semanticPatchBundleComposition: compilerApi.SemanticPatchBundleComposition
   bundles: [typedSemanticPatchBundle],
   projections: []
 });
+const diagnosticsGate: compilerApi.JsTsProjectMergeDiagnosticsGate | undefined = compilerApi.createJsTsProjectMergeDiagnosticsGate({
+  outputDiagnostics: [{ code: 'CUSTOM', severity: 'warning', message: 'typed warning' }]
+}, [{ sourcePath: 'src/example.ts', sourceText: 'export const value = 1;\n' }]);
+const declarationGate: compilerApi.JsTsProjectMergeDeclarationGate | undefined = compilerApi.createJsTsProjectMergeDeclarationGate({
+  outputDeclarations: { 'src/example.d.ts': 'export declare const value = 1;\n' }
+}, [{ sourcePath: 'src/example.ts', sourceText: 'export const value = 1;\n' }]);
 const queriedSemanticPatchBundles: readonly compilerApi.SemanticPatchBundleRecord[] = compilerApi.querySemanticPatchBundleRecords(
   [typedSemanticPatchBundle],
   { ...semanticPatchBundleQuery, regionKey: 'source#src/example.js#function#run', evidenceId: 'evidence_example', admissionStatus: 'queued' }
 );
 semanticPatchBundleComposition.status satisfies compilerApi.SemanticPatchBundleCompositionStatus;
+if (diagnosticsGate) diagnosticsGate.status satisfies compilerApi.JsTsProjectMergeDiagnosticsGateStatus;
+if (declarationGate) declarationGate.status satisfies compilerApi.JsTsProjectMergeDeclarationGateStatus;
 
 void queriedSemanticPatchBundles;
 void typedSemanticPatchBundleIndex;
@@ -58,3 +66,5 @@ void semanticEditBundleStatus;
 void semanticPatchBundleOptions;
 void semanticPatchBundleOverlapQuery;
 void semanticPatchBundleComposition;
+void diagnosticsGate;
+void declarationGate;

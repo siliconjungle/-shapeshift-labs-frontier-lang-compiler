@@ -1,5 +1,6 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { compactRecord } from './js-ts-safe-merge-context.js';
+import { cssModuleUseSiteBlockerConflicts, isResolvedCssModuleImportEdge } from './js-ts-safe-project-merge-css-module-conflicts.js';
 import { projectGraphDeltaConflicts } from './js-ts-safe-project-merge-graph-delta-conflicts.js';
 
 function outputProjectGraphConflicts(projectSymbolGraph) {
@@ -7,6 +8,7 @@ function outputProjectGraphConflicts(projectSymbolGraph) {
   projectSymbolGraph = projectSymbolGraph?.projectSymbolGraph ?? projectSymbolGraph;
   const importEdges = Array.isArray(projectSymbolGraph?.importEdges) ? projectSymbolGraph.importEdges : [];
   const exportEdges = Array.isArray(projectSymbolGraph?.exportEdges) ? projectSymbolGraph.exportEdges : [];
+  const cssModuleBlockers = Array.isArray(projectSymbolGraph?.cssModuleUseSiteBlockers) ? projectSymbolGraph.cssModuleUseSiteBlockers : [];
   const missingModuleGroups = new Map();
   const missingSymbolGroups = new Map();
   for (const edge of importEdges) {
@@ -26,6 +28,7 @@ function outputProjectGraphConflicts(projectSymbolGraph) {
   }
   return [
     ...limitConflicts,
+    ...cssModuleUseSiteBlockerConflicts(cssModuleBlockers),
     ...[...missingModuleGroups.values()].map(projectGraphMissingImportConflict),
     ...[...missingSymbolGroups.values()].map(projectGraphMissingTargetConflict),
     ...duplicateReExportIdentityConflicts(projectSymbolGraph?.reExportIdentities)
@@ -48,7 +51,9 @@ function projectGraphMissingImportConflict(group) {
       resolvedModulePath: edge.resolvedModulePath,
       edgeIds: uniqueStrings(group.map((record) => record.id)),
       importKinds: uniqueStrings(group.map((record) => record.importKind)),
-      importedNames: uniqueStrings(group.map((record) => record.importedName))
+      importedNames: uniqueStrings(group.map((record) => record.importedName)),
+      moduleEdgeFailureReasonCodes: uniqueStrings(group.flatMap(moduleEdgeFailureReasonCodes)),
+      moduleEdgeEvidence: group.map(moduleEdgeEvidence)
     })
   };
 }
@@ -73,7 +78,9 @@ function projectGraphMissingTargetConflict(group) {
       edgeIds: uniqueStrings(group.map((record) => record.id)),
       importKinds: uniqueStrings(group.map((record) => record.importKind)),
       importedNames: uniqueStrings(group.map((record) => record.importedName)),
-      localNames: uniqueStrings(group.map((record) => record.localName))
+      localNames: uniqueStrings(group.map((record) => record.localName)),
+      moduleEdgeFailureReasonCodes: uniqueStrings(['project-output-symbol-unresolved', ...group.flatMap(moduleEdgeFailureReasonCodes)]),
+      moduleEdgeEvidence: group.map(moduleEdgeEvidence)
     })
   };
 }
@@ -86,6 +93,7 @@ function isMissingProjectImportTargetEdge(edge, exportEdges = []) {
   return hasResolvedProjectModule(edge)
     && Boolean(projectImportTargetName(edge))
     && !edge.resolvedTargetSymbolId
+    && !isResolvedCssModuleImportEdge(edge)
     && !commonJsRequireResolvedByExportAssignment(edge, exportEdges);
 }
 
@@ -160,6 +168,11 @@ function reExportIdentityKey(record) {
 function reExportIdentityFingerprint(record) {
   return hashSemanticValue({
     moduleSpecifier: record.moduleSpecifier,
+    hasImportAttributes: record.hasImportAttributes,
+    importAttributeCount: record.importAttributeCount,
+    importAttributeKeys: record.importAttributeKeys,
+    importAttributeHash: record.importAttributeHash,
+    importAttributes: record.importAttributes,
     exportedName: record.exportedName,
     importedName: record.importedName,
     localName: record.localName,
@@ -176,6 +189,11 @@ function reExportIdentityFingerprint(record) {
 function reExportIdentityDetails(record) {
   return compactRecord({
     moduleSpecifier: record.moduleSpecifier,
+    hasImportAttributes: record.hasImportAttributes,
+    importAttributeCount: record.importAttributeCount,
+    importAttributeKeys: record.importAttributeKeys,
+    importAttributeHash: record.importAttributeHash,
+    importAttributes: record.importAttributes,
     exportedName: record.exportedName,
     importedName: record.importedName,
     localName: record.localName,
@@ -188,6 +206,76 @@ function reExportIdentityDetails(record) {
     localSymbolId: record.localSymbolId
   });
 }
+
+function moduleEdgeFailureReasonCodes(edge) {
+  return [
+    edge?.packageRuntimeConditionReasonCode,
+    edge?.packageEnvironmentConditionReasonCode,
+    edge?.packageResolutionReasonCode,
+    typeof edge?.resolutionKind === 'string' && edge.resolutionKind.endsWith('-missing') ? edge.resolutionKind : undefined
+  ];
+}
+
+function moduleEdgeEvidence(edge) {
+  return compactRecord(Object.fromEntries(moduleEdgeEvidenceFields.map((field) => [field, edge?.[field]])));
+}
+
+const moduleEdgeEvidenceFields = [
+  'id',
+  'sourcePath',
+  'moduleSpecifier',
+  'resolutionKind',
+  'resolvedModulePath',
+  'targetDocumentId',
+  'resolvedTargetSymbolId',
+  'edgeKind',
+  'importKind',
+  'exportKind',
+  'importedName',
+  'exportedName',
+  'localName',
+  'isTypeOnly',
+  'resolutionPathVariant',
+  'packageName',
+  'packageSubpath',
+  'packageExportKey',
+  'packageExportCondition',
+  'packageExportTarget',
+  'packageImportKey',
+  'packageImportCondition',
+  'packageImportTarget',
+  'packageType',
+  'packageRuntimeCondition',
+  'packageRuntimeConditionEvidenceSource',
+  'packageRuntimeConditionEdgeKind',
+  'packageRuntimeConditionCandidates',
+  'packageRuntimeConditionReasonCode',
+  'packageEnvironmentCondition',
+  'packageEnvironmentConditionEvidenceSource',
+  'packageEnvironmentConditionCandidates',
+  'packageEnvironmentConditionReasonCode',
+  'packageWorkspaceRootAmbiguous',
+  'packageWorkspaceRoots',
+  'packageResolutionReasonCode',
+  'hostDependencyKind',
+  'hostDependencyBase',
+  'hostDependencyExpressionHash',
+  'hostDependencyStaticSpecifierEvidence',
+  'hostDependencyRuntimeResolutionClaim',
+  'hostDependencyResolutionProofRequired',
+  'dynamicImport',
+  'dynamicImportSpecifierKind',
+  'dynamicImportExpressionText',
+  'dynamicImportExpressionHash',
+  'dynamicImportStaticSpecifierEvidence',
+  'dynamicImportRuntimeResolutionClaim',
+  'dynamicImportResolutionProofRequired',
+  'hasImportAttributes',
+  'importAttributeCount',
+  'importAttributeKeys',
+  'importAttributeHash',
+  'importAttributes'
+];
 
 function stableKey(parts) {
   const values = parts.map((part) => part === undefined || part === null ? '' : String(part));

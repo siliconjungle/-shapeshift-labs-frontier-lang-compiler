@@ -1,5 +1,17 @@
 import { uniqueStrings } from '../../native-import-utils.js';
+import { jsTsFunctionParameterBindingPatternReasonCodes } from '../../js-ts-safe-merge-binding-patterns.js';
+import { attributeMap, parseJsxTags, sameAttrText } from '../../js-ts-safe-merge-jsx-attribute-parser.js';
+import { nativeImportSourceText } from './nativeImportSourceText.js';
+import { runtimeOrderEvidenceBinding } from './runtimeOrderEvidenceBinding.js';
 import { resolveSemanticLineage } from './semanticLineageResolutionRecords.js';
+import {
+  orderSensitiveHeadPeerConflict,
+  runtimeOrderReasonCodes,
+  templateLiteralBlockReasonCodes
+} from './semanticEditRuntimeOrderReasons.js';
+import { typeSyntaxEditClassification, typeSyntaxEditReasonCodes } from './semanticEditTypeSyntaxReasons.js';
+import { sourceTextForSpan } from './sourceTextForSpan.js';
+import { callsiteArgumentAppendMergeClassification } from './semanticEditCallsiteArgumentMerge.js';
 
 export const SemanticEditScriptAdmissionStatuses = Object.freeze([
   'auto-merge-candidate',
@@ -13,21 +25,41 @@ export const SemanticEditScriptAdmissionStatuses = Object.freeze([
 export function classifySemanticEdit(input) {
   if (!input.context.head) return editStatus('candidate', 'needs-review', 0.66, ['head-source-not-provided']);
   if (!input.anchorKey) return editStatus('blocked', 'blocked', 0, ['missing-semantic-anchor']);
+  const templateReasonCodes = templateLiteralBlockReasonCodes(input);
+  if (templateReasonCodes.length) return editStatus('blocked', 'blocked', 0.1, templateReasonCodes);
   if (input.context.workerChangeSet.beforeHash &&
     input.context.headChangeSet?.afterHash === input.context.workerChangeSet.beforeHash &&
     sameSourcePath(input.context.base, input.context.head)) {
-    return editStatus('portable', 'ready', 0.95, ['head-source-matches-base']);
+    const typeSyntax = typeSyntaxEditClassification(input);
+    if (typeSyntax?.status === 'blocked') return editStatus('blocked', 'blocked', 0.12, typeSyntax.reasonCodes, undefined, typeSyntax.evidenceIds);
+    return editStatus('portable', 'ready', typeSyntax ? 0.82 : 0.95,
+      uniqueStrings(['head-source-matches-base', ...(typeSyntax?.reasonCodes ?? [])]), undefined, typeSyntax?.evidenceIds ?? []);
   }
   if (input.region.changeKind === 'added') return classifyAddedRegion(input);
   if (!input.baseSymbol) return classifyMissingBaseAnchor(input);
   if (!input.headSymbol) return classifyMissingHeadAnchor(input);
   if (input.headSymbol.spanHash && input.baseSymbol.spanHash && input.headSymbol.spanHash === input.baseSymbol.spanHash) {
-    return editStatus('portable', 'ready', 0.9, ['head-anchor-matches-base']);
+    const jsxAttributeReasonCodes = jsxAttributeChangeReasonCodes(input);
+    if (jsxAttributeReasonCodes.length) return editStatus('conflict', 'blocked', 0.2, jsxAttributeReasonCodes);
+    const typeSyntax = typeSyntaxEditClassification(input);
+    if (typeSyntax?.status === 'blocked') return editStatus('blocked', 'blocked', 0.12, typeSyntax.reasonCodes, undefined, typeSyntax.evidenceIds);
+    const peerConflict = orderSensitiveHeadPeerConflict(input);
+    if (peerConflict) return editStatus('conflict', 'blocked', 0.2, peerConflict.reasonCodes, undefined, peerConflict.evidenceIds);
+    const runtimeOrderEvidence = runtimeOrderEvidenceBinding(input);
+    return editStatus('portable', 'ready', typeSyntax ? 0.82 : 0.9,
+      uniqueStrings(['head-anchor-matches-base', ...(typeSyntax?.reasonCodes ?? [])]), undefined,
+      uniqueStrings([...(typeSyntax?.evidenceIds ?? []), ...runtimeOrderEvidence.evidenceIds]));
   }
   if (input.headSymbol.spanHash && input.workerSymbol?.spanHash && input.headSymbol.spanHash === input.workerSymbol.spanHash) {
     return editStatus('already-applied', 'ready', 0.92, ['head-anchor-matches-worker']);
   }
-  return editStatus('conflict', 'blocked', 0.2, ['head-anchor-changed-since-base']);
+  const callsiteArgumentAppend = callsiteArgumentAppendMergeClassification(input);
+  if (callsiteArgumentAppend) {
+    return editStatus('portable', 'ready', 0.78, callsiteArgumentAppend.reasonCodes, undefined, callsiteArgumentAppend.evidenceIds, {
+      sourceBackprojection: callsiteArgumentAppend.sourceBackprojection
+    });
+  }
+  return editStatus('conflict', 'blocked', 0.2, headAnchorChangedSinceBaseReasonCodes(input));
 }
 
 export function summarizeSemanticEditOperations(operations) {
@@ -73,6 +105,8 @@ export function semanticEditAdmission(input) {
 }
 
 function classifyAddedRegion(input) {
+  const peerConflict = orderSensitiveHeadPeerConflict(input);
+  if (peerConflict) return editStatus('conflict', 'blocked', 0.2, peerConflict.reasonCodes, undefined, peerConflict.evidenceIds);
   if (!input.headSymbol) return editStatus('portable', 'ready', 0.86, ['added-anchor-absent-from-head']);
   if (input.headSymbol.spanHash && input.workerSymbol?.spanHash && input.headSymbol.spanHash === input.workerSymbol.spanHash) {
     return editStatus('already-applied', 'ready', 0.88, ['added-anchor-already-present-in-head']);
@@ -112,8 +146,59 @@ function classifyMissingHeadAnchor(input) {
   return editStatus('stale', 'needs-review', 0.25, ['head-anchor-missing']);
 }
 
-function editStatus(status, readiness, confidence, reasonCodes, reanchor, evidenceIds = []) {
-  return { status, readiness, confidence, reasonCodes, reanchor, evidenceIds };
+function headAnchorChangedSinceBaseReasonCodes(input) {
+  return uniqueStrings([
+    'head-anchor-changed-since-base',
+    ...typeSyntaxEditReasonCodes(input),
+    ...functionParameterBindingPatternReasonCodes(input),
+    ...runtimeOrderReasonCodes(input)
+  ]);
+}
+
+function jsxAttributeChangeReasonCodes(input) {
+  if (input.region?.regionKind !== 'controlFlow') return [];
+  const baseText = symbolSourceText(input.context.base, input.baseSymbol, input.region);
+  const workerText = symbolSourceText(input.context.worker, input.workerSymbol, input.region);
+  if (!jsxAttributeTextChanged(baseText, workerText)) return [];
+  return uniqueStrings([
+    'runtime-order-sensitive-merge-requires-explicit-evidence',
+    'jsx-attribute-merge-requires-jsx-attribute-evidence',
+    ...runtimeOrderReasonCodes(input)
+  ]);
+}
+
+function jsxAttributeTextChanged(baseText, workerText) {
+  if (typeof baseText !== 'string' || typeof workerText !== 'string') return false;
+  const baseTags = parseJsxTags(baseText);
+  const workerTags = parseJsxTags(workerText);
+  if (baseTags.reasonCodes.length || workerTags.reasonCodes.length) return false;
+  for (const baseTag of baseTags.tags) {
+    const workerTag = workerTags.byKey.get(baseTag.key);
+    if (!workerTag || workerTag.tagName !== baseTag.tagName) continue;
+    const baseAttrs = attributeMap(baseTag);
+    const workerAttrs = attributeMap(workerTag);
+    if (baseAttrs.reasonCodes.length || workerAttrs.reasonCodes.length) continue;
+    for (const baseAttr of baseAttrs.byName.values()) {
+      const workerAttr = workerAttrs.byName.get(baseAttr.name);
+      if (workerAttr && !sameAttrText(baseAttr, workerAttr)) return true;
+    }
+  }
+  return false;
+}
+
+function functionParameterBindingPatternReasonCodes(input) {
+  const baseText = symbolSourceText(input.context.base, input.baseSymbol, input.region);
+  const workerText = symbolSourceText(input.context.worker, input.workerSymbol, input.region);
+  return jsTsFunctionParameterBindingPatternReasonCodes(baseText, workerText);
+}
+
+function symbolSourceText(imported, symbol, region) {
+  const span = symbol?.sourceSpan ?? region?.metadata?.changedRegionProjection?.before?.sourceSpan ?? region?.sourceSpan;
+  return sourceTextForSpan(nativeImportSourceText(imported), span);
+}
+
+function editStatus(status, readiness, confidence, reasonCodes, reanchor, evidenceIds = [], metadata = {}) {
+  return { status, readiness, confidence, reasonCodes, reanchor, evidenceIds, ...metadata };
 }
 
 function reanchorRecord(fromAnchorKey, target, resolved) {

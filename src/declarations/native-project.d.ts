@@ -50,11 +50,13 @@ import type { JavaAstNativeImporterAdapterOptions, KotlinPsiNativeImporterAdapte
 import type { NativeTargetProjectionAdapterCoverageInput, NativeTargetProjectionAdapterSummary, NativeTargetProjectionAdapterInput, NativeTargetProjectionAdapterResult, NativeTargetProjectionAdapter, NativeTargetProjectionAdapterResolverInput, NativeTargetProjectionResult } from './target-adapters.js';
 import type { NativeImportRoundtripReadinessStatus, NativeImportRoundtripReadinessOptions, NativeImportRoundtripReadinessClassification } from './roundtrip.js';
 import type { NativeProjectModuleResolutionOptions } from './native-project-module-resolution.js';
+import type { NativeProjectSymbolGraphSourceFileRecord, NativeProjectSymbolGraphSourceSpanRecord } from './native-project-source-evidence.js';
+import type { NativeProjectSymbolGraphJsxElementRecord, NativeProjectSymbolGraphJsxPropRecord } from './native-project-jsx-graph.js';
+import type { NativeProjectSymbolGraphCompilerSymbolRecord, NativeProjectSymbolGraphCompilerTypeRecord, NativeProjectSymbolGraphRuntimeRegionRecord, NativeProjectSymbolGraphScopeBindingRecord, NativeProjectSymbolGraphScopeReferenceRecord } from './native-project-compiler-scope.js';
+import type { NativeProjectSymbolGraphExportAssignmentRecord, NativeProjectSymbolGraphModuleDeclarationRecord } from './native-project-module-declarations.js';
+import type { NativeProjectSymbolGraphCssModuleImportBindingRecord, NativeProjectSymbolGraphCssModuleUseSiteBlockerRecord, NativeProjectSymbolGraphCssModuleUseSiteGraphRecord, NativeProjectSymbolGraphCssModuleUseSiteRecord } from './native-project-css-modules.js';
 
-export interface NativeProjectSourceInput extends ImportNativeSourceOptions {
-  readonly adapter?: NativeImporterAdapter | string;
-  readonly adapterOptions?: Record<string, unknown>; readonly adapterMetadata?: Record<string, unknown>;
-}
+export interface NativeProjectSourceInput extends ImportNativeSourceOptions { readonly adapter?: NativeImporterAdapter | string; readonly adapterOptions?: Record<string, unknown>; readonly adapterMetadata?: Record<string, unknown>; }
 
 export interface ImportNativeProjectOptions {
   readonly id?: string;
@@ -103,11 +105,28 @@ export interface NativeProjectSymbolGraphModuleEdgeRecord {
   readonly resolvedModulePath?: string;
   readonly targetDocumentId?: string;
   readonly resolvedTargetSymbolId?: string;
+  readonly reExportResolved?: boolean; readonly reExportResolutionKind?: 'export-star' | 're-export-identity' | string;
+  readonly reExportIdentityId?: string; readonly reExportRelationId?: string; readonly reExportSourcePath?: string;
+  readonly reExportModuleSpecifier?: string; readonly reExportTargetSourcePath?: string; readonly reExportTargetDocumentId?: string;
   readonly resolutionKind?: 'relative-source' | 'relative-missing' | 'alias-source' | 'alias-missing' | 'path-alias-source' | 'path-alias-missing' | 'base-url-source' | 'base-url-missing' | 'package-source' | 'package-missing' | 'package-external' | 'package-import-source' | 'package-import-missing' | 'package-import-external' | string;
   readonly resolutionPathVariant?: 'exact' | 'extension-substitution' | 'extensionless' | 'index' | string;
-  readonly packageName?: string; readonly packageSubpath?: string; readonly packageExportCondition?: string;
-  readonly packageImportKey?: string; readonly packageImportCondition?: string; readonly packageImportTarget?: string;
-  readonly importKind?: string;
+  readonly packageName?: string; readonly packageSubpath?: string; readonly packageExportKey?: string; readonly packageExportCondition?: string; readonly packageExportTarget?: string;
+  readonly packageRuntimeCondition?: 'import' | 'require' | string; readonly packageRuntimeConditionEvidenceSource?: 'edge-kind' | 'source-extension' | 'package-type' | 'conflict' | string; readonly packageRuntimeConditionEdgeKind?: string; readonly packageRuntimeConditionCandidates?: readonly string[]; readonly packageRuntimeConditionReasonCode?: string;
+  readonly packageEnvironmentCondition?: string; readonly packageEnvironmentConditionEvidenceSource?: 'edge-metadata' | 'module-resolution' | string; readonly packageEnvironmentConditionCandidates?: readonly string[]; readonly packageEnvironmentConditionReasonCode?: string; readonly packageType?: 'module' | 'commonjs' | string; readonly packageWorkspaceRootAmbiguous?: boolean; readonly packageWorkspaceRoots?: readonly string[]; readonly packageResolutionReasonCode?: string;
+  readonly packageImportKey?: string; readonly packageImportCondition?: string; readonly packageImportTarget?: string; readonly importKind?: string;
+  readonly commonJs?: boolean; readonly interopHelper?: string;
+  readonly dynamicImport?: boolean;
+  readonly dynamicImportSpecifierKind?: 'literal' | 'identifier' | 'template' | 'member' | 'call' | 'binary' | 'conditional' | string;
+  readonly dynamicImportExpressionText?: string; readonly dynamicImportExpressionHash?: string;
+  readonly dynamicImportStaticSpecifierEvidence?: boolean;
+  readonly dynamicImportRuntimeResolutionClaim?: false;
+  readonly dynamicImportResolutionProofRequired?: boolean;
+  readonly hostDependency?: boolean; readonly hostDependencyKind?: 'import-meta-url' | string; readonly hostDependencyBase?: 'import.meta.url' | string;
+  readonly hostDependencyExpressionText?: string; readonly hostDependencyExpressionHash?: string; readonly hostDependencyStaticSpecifierEvidence?: boolean; readonly hostDependencyRuntimeResolutionClaim?: false; readonly hostDependencyResolutionProofRequired?: boolean;
+  readonly hasImportAttributes?: boolean;
+  readonly importAttributeCount?: number;
+  readonly importAttributeKeys?: readonly string[];
+  readonly importAttributeHash?: string; readonly importAttributes?: readonly { readonly key: string; readonly value: string }[];
   readonly exportKind?: string;
   readonly importedName?: string;
   readonly exportedName?: string;
@@ -126,6 +145,7 @@ export interface NativeProjectSymbolGraphReExportIdentityRecord {
   readonly sourcePath?: string;
   readonly sourceHash?: string;
   readonly moduleSpecifier?: string;
+  readonly hasImportAttributes?: boolean; readonly importAttributeCount?: number; readonly importAttributeKeys?: readonly string[]; readonly importAttributeHash?: string; readonly importAttributes?: readonly { readonly key: string; readonly value: string }[];
   readonly exportedName?: string;
   readonly importedName?: string;
   readonly localName?: string;
@@ -139,46 +159,27 @@ export interface NativeProjectSymbolGraphReExportIdentityRecord {
   readonly factId?: string;
 }
 
-export interface NativeProjectSymbolGraphPublicContractRegionRecord {
-  readonly id: string;
-  readonly key?: string;
-  readonly regionKind?: string;
-  readonly granularity?: string;
-  readonly language?: FrontierSourceLanguage | string;
-  readonly documentId?: string;
-  readonly sourcePath?: string;
-  readonly sourceHash?: string;
-  readonly symbolId?: string;
-  readonly symbolName?: string;
-  readonly symbolKind?: string;
-  readonly apiSurfaceKind?: string;
-  readonly signatureHash?: string;
-  readonly contractHash?: string;
-  readonly nativeAstNodeId?: string;
-  readonly sourceSpan?: SourceSpan;
-  readonly precision?: string;
-  readonly publicContract?: boolean;
-  readonly exportedName?: string;
-  readonly moduleSpecifier?: string;
-  readonly edgeKind?: string;
-  readonly factId?: string;
-}
+export interface NativeProjectSymbolGraphPublicContractRegionRecord { readonly id: string; readonly key?: string; readonly regionKind?: string; readonly granularity?: string; readonly language?: FrontierSourceLanguage | string; readonly documentId?: string; readonly sourcePath?: string; readonly sourceHash?: string; readonly symbolId?: string; readonly symbolName?: string; readonly symbolKind?: string; readonly apiSurfaceKind?: string; readonly signatureHash?: string; readonly contractHash?: string; readonly nativeAstNodeId?: string; readonly sourceSpan?: SourceSpan; readonly precision?: string; readonly publicContract?: boolean; readonly exportedName?: string; readonly moduleSpecifier?: string; readonly edgeKind?: string; readonly factId?: string; }
 
 export interface NativeProjectSymbolGraphSummary {
   readonly kind: 'frontier.lang.projectSymbolGraph';
   readonly version: 1;
   readonly projectRoot?: string;
-  readonly sourceCount: number;
-  readonly documentCount: number;
-  readonly symbolCount: number;
-  readonly occurrenceCount: number;
-  readonly relationCount: number;
-  readonly factCount: number;
+  readonly sourceCount: number; readonly documentCount: number; readonly symbolCount: number;
+  readonly occurrenceCount: number; readonly relationCount: number; readonly factCount: number;
   readonly fileHashes: readonly NativeProjectSymbolGraphFileHashRecord[];
+  readonly sourceFileRecords: readonly NativeProjectSymbolGraphSourceFileRecord[]; readonly sourceSpanRecords: readonly NativeProjectSymbolGraphSourceSpanRecord[];
   readonly importEdges: readonly NativeProjectSymbolGraphModuleEdgeRecord[];
   readonly exportEdges: readonly NativeProjectSymbolGraphModuleEdgeRecord[];
-  readonly reExportIdentities: readonly NativeProjectSymbolGraphReExportIdentityRecord[];
-  readonly publicContractRegions: readonly NativeProjectSymbolGraphPublicContractRegionRecord[];
+  readonly reExportIdentities: readonly NativeProjectSymbolGraphReExportIdentityRecord[]; readonly publicContractRegions: readonly NativeProjectSymbolGraphPublicContractRegionRecord[];
+  readonly moduleDeclarationRecords: readonly NativeProjectSymbolGraphModuleDeclarationRecord[];
+  readonly exportAssignmentRecords: readonly NativeProjectSymbolGraphExportAssignmentRecord[];
+  readonly compilerSymbolRecords: readonly NativeProjectSymbolGraphCompilerSymbolRecord[]; readonly compilerTypeRecords: readonly NativeProjectSymbolGraphCompilerTypeRecord[];
+  readonly runtimeRegionRecords: readonly NativeProjectSymbolGraphRuntimeRegionRecord[];
+  readonly scopeBindingRecords: readonly NativeProjectSymbolGraphScopeBindingRecord[]; readonly scopeReferenceRecords: readonly NativeProjectSymbolGraphScopeReferenceRecord[];
+  readonly jsxElementRecords: readonly NativeProjectSymbolGraphJsxElementRecord[]; readonly jsxPropRecords: readonly NativeProjectSymbolGraphJsxPropRecord[];
+  readonly cssModuleImportBindings: readonly NativeProjectSymbolGraphCssModuleImportBindingRecord[]; readonly cssModuleUseSites: readonly NativeProjectSymbolGraphCssModuleUseSiteRecord[];
+  readonly cssModuleUseSiteBlockers: readonly NativeProjectSymbolGraphCssModuleUseSiteBlockerRecord[]; readonly cssModuleUseSiteGraphs: readonly NativeProjectSymbolGraphCssModuleUseSiteGraphRecord[];
   readonly remainingFields: readonly NativeProjectSymbolGraphRemainingField[];
 }
 

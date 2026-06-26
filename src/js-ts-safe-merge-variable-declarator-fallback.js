@@ -16,8 +16,13 @@ function createVariableDeclaratorSemanticFallbackResult(input, topLevelResult, s
     headSourceText: input.headSourceText,
     currentSourceText
   });
-  if (!merge.ok || merge.sourceText === currentSourceText) return undefined;
   const resultBase = stagedFallback?.stagedTopLevelResult ?? topLevelResult;
+  if (!merge.ok) {
+    return merge.sourceShapeBlocked
+      ? variableDeclaratorBlockedResult(input, topLevelResult, resultBase, stagedFallback, merge)
+      : undefined;
+  }
+  if (merge.sourceText === currentSourceText) return undefined;
   const language = input.language ?? topLevelResult.language ?? 'typescript';
   const sourcePath = input.sourcePath ?? topLevelResult.sourcePath ?? 'inline.ts';
   const phase = stagedFallback
@@ -142,17 +147,28 @@ function mergeVariableStatement(base, worker, head, current) {
     const workerDeclarator = worker.declarators[index];
     const headDeclarator = head.declarators[index];
     const currentDeclarator = current.declarators[index];
-    if (![workerDeclarator, headDeclarator, currentDeclarator].every((entry) => entry?.name === baseDeclarator.name)) {
-      return blockedStatement('variable-declarator-name-order-changed');
+    const bindingPatternReasonCodes = classifyDeclaratorBindingPattern(baseDeclarator, workerDeclarator, headDeclarator, currentDeclarator);
+    if (bindingPatternReasonCodes.length) return blockedStatement(...bindingPatternReasonCodes);
+    if (![workerDeclarator, headDeclarator, currentDeclarator].every((entry) => entry?.key === baseDeclarator.key)) {
+      return blockedStatement(
+        ...declaratorKeyChangeReasonCodes(baseDeclarator, workerDeclarator, headDeclarator, currentDeclarator),
+        'variable-declarator-name-order-changed'
+      );
     }
     const workerChanged = !sameVariableDeclaratorText(baseDeclarator.text, workerDeclarator.text);
     const headChanged = !sameVariableDeclaratorText(baseDeclarator.text, headDeclarator.text);
     if (workerChanged && headChanged && !sameVariableDeclaratorText(workerDeclarator.text, headDeclarator.text)) {
-      return blockedStatement('variable-declarator-conflict');
+      return blockedStatement(
+        ...bindingDeclaratorConflictReasonCodes(baseDeclarator),
+        'variable-declarator-conflict'
+      );
     }
     if (!sameVariableDeclaratorText(currentDeclarator.text, headDeclarator.text)
       && !sameVariableDeclaratorText(currentDeclarator.text, workerDeclarator.text)) {
-      return blockedStatement('variable-declarator-current-diverged');
+      return blockedStatement(
+        ...bindingDeclaratorConflictReasonCodes(baseDeclarator),
+        'variable-declarator-current-diverged'
+      );
     }
     const replacement = workerChanged ? workerDeclarator.text : currentDeclarator.text;
     if (!sameVariableDeclaratorText(replacement, currentDeclarator.text)) changed = true;
@@ -162,6 +178,46 @@ function mergeVariableStatement(base, worker, head, current) {
     status: 'merged',
     replacement: changed ? `${current.prefix}${declarators.join(', ')}${current.suffix}` : undefined
   };
+}
+
+function classifyDeclaratorBindingPattern(base, worker, head, current) {
+  const declarators = [base, worker, head, current].filter(Boolean);
+  if (!declarators.some((entry) => entry.binding?.kind === 'binding-pattern')) return [];
+  const reasonCodes = uniqueStrings(declarators.flatMap((entry) => entry.binding?.reasonCodes ?? []));
+  if (reasonCodes.length) return reasonCodes;
+  if (!declarators.every((entry) => entry.binding?.kind === base.binding?.kind && entry.binding?.patternKind === base.binding?.patternKind)) {
+    return [
+      'binding-pattern-kind-changed',
+      'binding-pattern-merge-requires-binding-use-evidence'
+    ];
+  }
+  const patternTexts = declarators.map((entry) => entry.binding?.patternText);
+  if (patternTexts.some((text) => !sameVariableDeclaratorText(text, patternTexts[0]))) {
+    return [
+      'binding-pattern-shape-changed',
+      'binding-pattern-merge-requires-binding-use-evidence'
+    ];
+  }
+  const bindingNames = declarators.map((entry) => (entry.binding?.bindingNames ?? []).join('\0'));
+  if (bindingNames.some((names) => names !== bindingNames[0])) {
+    return [
+      'binding-pattern-binding-set-changed',
+      'binding-pattern-merge-requires-binding-use-evidence'
+    ];
+  }
+  return [];
+}
+
+function declaratorKeyChangeReasonCodes(base, worker, head, current) {
+  return [base, worker, head, current].some((entry) => entry?.binding?.kind === 'binding-pattern')
+    ? ['binding-pattern-kind-changed', 'binding-pattern-merge-requires-binding-use-evidence']
+    : [];
+}
+
+function bindingDeclaratorConflictReasonCodes(base) {
+  return base?.binding?.kind === 'binding-pattern'
+    ? ['binding-pattern-merge-requires-binding-use-evidence']
+    : [];
 }
 
 function semanticArtifactGates(artifacts) {
@@ -177,8 +233,70 @@ function gate(id, passed, reasonCodes = []) {
   return { id, status: passed ? 'passed' : 'blocked', reasonCodes: passed ? [] : uniqueStrings(reasonCodes) };
 }
 
+function variableDeclaratorBlockedResult(input, topLevelResult, resultBase, stagedFallback, merge) {
+  const reasonCodes = merge.reasonCodes;
+  const language = input.language ?? topLevelResult.language ?? 'typescript';
+  const sourcePath = input.sourcePath ?? topLevelResult.sourcePath ?? 'inline.ts';
+  return {
+    ...resultBase,
+    id: String(input.id ?? resultBase.id ?? topLevelResult.id),
+    status: JsTsSafeMergeStatuses.blocked,
+    mergedSourceText: undefined,
+    outputSourceText: undefined,
+    conflicts: [{
+      code: reasonCodes[0] ?? 'binding-pattern-merge-blocked',
+      gateId: 'variable-declarator-binding-pattern',
+      message: 'JS/TS variable declarator binding pattern requires binding/use evidence before automatic merge.',
+      side: 'worker',
+      sourcePath,
+      details: {
+        reasonCodes,
+        originalReasonCodes: topLevelResult.admission?.reasonCodes ?? []
+      }
+    }],
+    admission: {
+      status: 'blocked',
+      action: 'human-review',
+      reviewRequired: true,
+      autoApplyCandidate: false,
+      autoMergeClaim: false,
+      semanticEquivalenceClaim: false,
+      reasonCodes
+    },
+    summary: {
+      ...resultBase.summary,
+      changedExistingDeclarations: semanticFallbackChangedExistingDeclarations(topLevelResult, resultBase, stagedFallback),
+      conflicts: 1,
+      variableDeclaratorBindingPatternBlocks: 1,
+      composedPhases: stagedFallback ? 2 : 1
+    },
+    metadata: {
+      ...resultBase.metadata,
+      composed: {
+        phase: stagedFallback
+          ? 'staged-top-level-variable-declarator-binding-pattern-classification'
+          : 'variable-declarator-binding-pattern-classification',
+        phases: stagedFallback
+          ? ['top-level-neutralization', 'top-level-ledger', 'variable-declarator-binding-pattern']
+          : ['top-level-ledger', 'variable-declarator-binding-pattern'],
+        originalReasonCodes: topLevelResult.admission?.reasonCodes ?? [],
+        stagedTopLevelSummary: stagedFallback?.stagedTopLevelResult?.summary,
+        neutralization: stagedFallback?.neutralization?.summary,
+        variableDeclaratorFallback: merge.summary,
+        language
+      }
+    }
+  };
+}
+
 function blocked(...reasonCodes) {
-  return { ok: false, reasonCodes: uniqueStrings(reasonCodes) };
+  const normalized = uniqueStrings(reasonCodes);
+  return {
+    ok: false,
+    reasonCodes: normalized,
+    sourceShapeBlocked: normalized.some((reasonCode) => reasonCode.startsWith('binding-pattern-')),
+    summary: { reasonCodes: normalized }
+  };
 }
 
 function blockedStatement(...reasonCodes) {

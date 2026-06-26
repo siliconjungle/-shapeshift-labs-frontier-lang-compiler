@@ -1,7 +1,10 @@
 import type { EvidenceRecord, FrontierSourceLanguage, SemanticMergeReadiness, SourceSpan } from '@shapeshift-labs/frontier-lang-kernel';
 import type { ImportNativeSourceOptions, NativeSourceImportResult } from './import-adapter-core.js';
+import type { NativeProjectRuntimeOrderProofEvidence } from './native-project-runtime-executable-effect-evidence.js';
 import type { SemanticEditReplayDiagnostic } from './semantic-edit-replay-diagnostics.js';
+import type { SemanticStructuralDiff, SemanticStructuralDiffSummary, SemanticStructuralEdit, SemanticStructuralEditAction, SemanticStructuralEditKind } from './semantic-structural-diff.js';
 export type * from './semantic-edit-replay-diagnostics.js';
+export type * from './semantic-structural-diff.js';
 export type SemanticEditScriptOperationStatus = 'candidate' | 'portable' | 'already-applied' | 'covered' | 'needs-port' | 'conflict' | 'stale' | 'blocked';
 export type SemanticEditScriptAdmissionStatus = 'auto-merge-candidate' | 'needs-port' | 'conflict' | 'stale' | 'blocked' | 'evidence-only';
 export interface SemanticEditInsertionAnchorCandidate {
@@ -39,7 +42,7 @@ export interface SemanticEditScriptOperation {
   readonly semanticKey?: string;
   readonly semanticIdentityHash?: string;
   readonly sourceIdentityHash?: string;
-  readonly operationContentHash?: string;
+  readonly operationContentHash?: string; readonly structuralEdit?: SemanticStructuralEdit;
   readonly spans?: {
     readonly base?: SourceSpan; readonly worker?: SourceSpan; readonly head?: SourceSpan;
   };
@@ -81,7 +84,7 @@ export interface SemanticEditScriptSummary {
   readonly semanticKeys?: readonly string[];
   readonly semanticIdentityHashes?: readonly string[];
   readonly sourceIdentityHashes?: readonly string[];
-  readonly operationContentHashes?: readonly string[];
+  readonly operationContentHashes?: readonly string[]; readonly structural?: SemanticStructuralDiffSummary;
 }
 export interface SemanticEditScriptAdmission {
   readonly status: SemanticEditScriptAdmissionStatus;
@@ -109,7 +112,7 @@ export interface SemanticEditScript {
   readonly workerChangeSetId: string;
   readonly headChangeSetId?: string;
   readonly lineageInferenceId?: string;
-  readonly operations: readonly SemanticEditScriptOperation[];
+  readonly operations: readonly SemanticEditScriptOperation[]; readonly structuralDiff?: SemanticStructuralDiff;
   readonly summary: SemanticEditScriptSummary;
   readonly admission: SemanticEditScriptAdmission;
   readonly evidence: readonly EvidenceRecord[];
@@ -140,8 +143,7 @@ export interface SemanticEditProjectionEdit {
   readonly sourceIdentityStatus?: 'same-source' | 'moved-source' | string;
   readonly sourceIdentityAnchorKey?: string; readonly targetIdentityAnchorKey?: string;
   readonly sourceIdentitySourcePath?: string; readonly targetIdentitySourcePath?: string;
-  readonly operationContentHash?: string;
-  readonly editContentHash?: string;
+  readonly operationContentHash?: string; readonly editContentHash?: string; readonly structuralEditId?: string; readonly structuralEditHash?: string; readonly structuralKind?: SemanticStructuralEditKind | string; readonly structuralActions?: readonly (SemanticStructuralEditAction | string)[];
   readonly headStart: number; readonly headEnd: number;
   readonly workerStart?: number; readonly workerEnd?: number;
   readonly headAnchorStart?: number; readonly headAnchorEnd?: number;
@@ -192,7 +194,7 @@ export interface SemanticEditReplayEdit {
   readonly semanticKey?: string;
   readonly semanticIdentityHash?: string;
   readonly sourceIdentityHash?: string;
-  readonly editContentHash?: string;
+  readonly editContentHash?: string; readonly structuralEditId?: string; readonly structuralEditHash?: string; readonly structuralKind?: SemanticStructuralEditKind | string; readonly structuralActions?: readonly (SemanticStructuralEditAction | string)[];
   readonly editKind?: 'replace' | 'insert' | 'delete' | string;
   readonly editOrder?: number;
   readonly sourceRangeKind?: string;
@@ -306,8 +308,8 @@ export interface CreateSemanticEditScriptOptions {
   readonly headChangeSetId?: string;
   readonly lineageInferenceId?: string;
   readonly generatedAt?: number | string;
-  readonly evidenceId?: string;
-  readonly metadata?: Record<string, unknown>;
+  readonly evidenceId?: string; readonly structuralDiffId?: string; readonly structuralEvidenceId?: string; readonly evidence?: EvidenceRecord | readonly EvidenceRecord[]; readonly typeSyntaxEvidence?: EvidenceRecord | readonly EvidenceRecord[]; readonly typeCheckerEvidence?: EvidenceRecord | readonly EvidenceRecord[]; readonly typescriptEvidence?: EvidenceRecord | readonly EvidenceRecord[]; readonly diagnosticsEvidence?: EvidenceRecord | readonly EvidenceRecord[]; readonly declarationEvidence?: EvidenceRecord | readonly EvidenceRecord[];
+  readonly runtimeOrderEvidence?: NativeProjectRuntimeOrderProofEvidence | readonly NativeProjectRuntimeOrderProofEvidence[]; readonly effectOrderEvidence?: NativeProjectRuntimeOrderProofEvidence | readonly NativeProjectRuntimeOrderProofEvidence[]; readonly metadata?: Record<string, unknown>;
 }
 export interface CreateSemanticEditScriptRuntimeOptions {
   readonly metadata?: Record<string, unknown>;

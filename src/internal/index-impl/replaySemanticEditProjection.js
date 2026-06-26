@@ -6,6 +6,7 @@ import { normalizeNativeDiffImport } from './normalizeNativeDiffImport.js';
 import { replayReplacementText } from './replaySemanticEditLineEndings.js';
 import { replayDiagnostics, replayEditDiagnostics, replayEditsWithOverlapDiagnostics } from './semanticEditReplayDiagnostics.js';
 import { explicitSourceReplacementReplayRange } from './semanticEditReplaySourceReplacement.js';
+import { semanticReplayProofRoute } from '../../js-ts-safe-project-merge-semantic-replay-routes.js';
 import {
   findCurrentSymbol,
   findInsertionAnchor,
@@ -14,6 +15,8 @@ import {
   insertionRange
 } from './semanticEditReplayAnchors.js';
 import { bodyContentRange, removalRange, spanOffsets } from './semanticEditSourceRanges.js';
+import { replayOutputBinding, replayOutputSource } from './semanticEditReplayOutputBinding.js';
+import { isRerunnableStaleReasonCode, replayRerunRoute } from './semanticEditReplayRerunRoute.js';
 
 export function replaySemanticEditProjection(input = {}) {
   const projection = input.projection ?? input.semanticEditProjection;
@@ -21,9 +24,9 @@ export function replaySemanticEditProjection(input = {}) {
   const currentSourceText = input.currentSourceText ?? input.headSourceText;
   const sourcePath = input.currentSourcePath ?? input.headSourcePath ?? projection.sourcePath;
   const language = normalizeNativeLanguageId(input.language ?? projection.language);
-  const reasonCodes = baseReasonCodes(projection, currentSourceText);
+  const baseReasons = baseReasonCodes(projection, currentSourceText);
   const currentHash = typeof currentSourceText === 'string' ? hashSemanticValue(currentSourceText) : undefined;
-  if (input.currentSourceHash && currentHash !== input.currentSourceHash) reasonCodes.push('current-source-hash-mismatch');
+  if (input.currentSourceHash && currentHash !== input.currentSourceHash) baseReasons.push('current-source-hash-mismatch');
   const currentSymbols = currentSourceText && language
     ? currentSymbolIndex({ currentSourceText, sourcePath, language, parser: input.parser })
     : [];
@@ -35,8 +38,28 @@ export function replaySemanticEditProjection(input = {}) {
     }))
     : [];
   const edits = replayEditsWithOverlapDiagnostics(replayedEdits);
+  const replayedStatus = replayStatus(baseReasons, edits, projection);
+  const replayedOutputSourceText = replayOutputSource(replayedStatus, currentSourceText, edits);
+  const replayedOutputHash = replayedOutputSourceText === undefined ? undefined : hashSemanticValue(replayedOutputSourceText);
+  const outputBinding = replayOutputBinding(input, replayedOutputSourceText, replayedOutputHash, { replayStatus: replayedStatus });
+  const reasonCodes = reasonList([...baseReasons, ...(outputBinding.reasonCodes ?? [])]);
   const status = replayStatus(reasonCodes, edits, projection);
-  const outputSourceText = replayOutputSource(status, currentSourceText, edits);
+  const outputSourceText = outputBinding.status === 'failed' ? undefined : replayedOutputSourceText;
+  const outputHash = outputSourceText === undefined ? undefined : hashSemanticValue(outputSourceText);
+  const rerunRoute = replayRerunRoute(status, reasonCodes, input, currentHash);
+  const proofRoute = semanticReplayProofRoute(status, reasonCodes, rerunRoute, {
+    sourcePath,
+    replayId: input.id,
+    currentSourceHash: input.currentSourceHash,
+    currentHash,
+    outputHash,
+    outputBinding,
+    outputBindingStatus: outputBinding.status,
+    expectedOutputHash: outputBinding.expectedOutputHash,
+    projectionOutputHash: projection.projectedHash,
+    replayOutputHash: outputHash,
+    appliedOperations: edits.filter((edit) => edit.status === 'applied').map((edit) => edit.operationId).filter(Boolean)
+  });
   const diagnostics = replayDiagnostics({
     status,
     reasonCodes,
@@ -56,19 +79,30 @@ export function replaySemanticEditProjection(input = {}) {
     language,
     currentHash,
     projectedHash: projection.projectedHash,
-    outputHash: outputSourceText === undefined ? undefined : hashSemanticValue(outputSourceText),
+    outputHash,
     status,
     edits,
     appliedOperations: edits.filter((edit) => edit.status === 'applied').map((edit) => edit.operationId).filter(Boolean),
     skippedOperations: edits.filter((edit) => edit.status !== 'applied').map((edit) => edit.operationId).filter(Boolean),
     diagnostics,
-    admission: replayAdmission(status, reasonCodes, edits),
+    admission: replayAdmission(status, reasonCodes, edits, rerunRoute, proofRoute),
     outputSourceText,
     summary: replaySummary(edits, reasonCodes),
     metadata: compactRecord({
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
       anchorMode: currentSymbols.length ? 'javascript-like-symbols' : 'offsets',
+      structuralDiffId: projection.metadata?.structuralDiffId,
+      structuralDiffStatus: projection.metadata?.structuralDiffStatus,
+      structuralDiffSummary: projection.metadata?.structuralDiffSummary,
+      currentSourceBindingStatus: baseReasons.includes('current-source-hash-mismatch') ? 'stale' : input.currentSourceHash ? 'bound' : undefined,
+      expectedCurrentHash: input.currentSourceHash,
+      observedCurrentHash: currentHash,
+      rerunRoute,
+      proofRoute,
+      outputBindingStatus: outputBinding.status,
+      expectedOutputHash: outputBinding.expectedOutputHash,
+      replayedOutputHash: outputBinding.replayedOutputHash,
       ...input.metadata
     })
   };
@@ -165,6 +199,10 @@ function replayEditRecord(edit, status, range, reasonCodes, sourceText) {
     semanticIdentityHash: edit.semanticIdentityHash,
     sourceIdentityHash: edit.sourceIdentityHash,
     editContentHash: edit.editContentHash,
+    structuralEditId: edit.structuralEditId,
+    structuralEditHash: edit.structuralEditHash,
+    structuralKind: edit.structuralKind,
+    structuralActions: edit.structuralActions,
     editKind: edit.editKind,
     editOrder: edit.editOrder,
     sourceRangeKind: edit.sourceRangeKind,
@@ -207,7 +245,7 @@ function currentSymbolRangeLabel(edit) {
 }
 
 function replayStatus(reasonCodes, edits, projection) {
-  if (reasonCodes.length) return 'blocked';
+  if (reasonCodes.length) return reasonCodes.every(isRerunnableStaleReasonCode) ? 'stale' : 'blocked';
   if (!edits.length && !(projection.edits ?? []).length) return 'evidence-only';
   if (edits.some((edit) => edit.status === 'blocked')) return 'blocked';
   if (edits.some((edit) => edit.status === 'conflict')) return 'conflict';
@@ -216,18 +254,20 @@ function replayStatus(reasonCodes, edits, projection) {
   return edits.every((edit) => edit.status === 'applied' || edit.status === 'already-applied') ? 'accepted-clean' : 'needs-port';
 }
 
-function replayAdmission(status, reasonCodes, edits) {
+function replayAdmission(status, reasonCodes, edits, rerunRoute, proofRoute) {
   const apply = status === 'accepted-clean';
   const skip = status === 'already-applied';
-  return {
+  return compactRecord({
     status,
     action: apply ? 'apply' : skip ? 'skip' : status === 'stale' ? 'rerun-semantic-import' : status === 'blocked' ? 'block' : 'human-review',
     reviewRequired: !(apply || skip),
     autoApplyCandidate: apply,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
-    reasonCodes: reasonList([...reasonCodes, ...edits.flatMap((edit) => edit.reasonCodes ?? [])])
-  };
+    reasonCodes: reasonList([...reasonCodes, ...edits.flatMap((edit) => edit.reasonCodes ?? [])]),
+    rerunRoute,
+    proofRoute
+  });
 }
 
 function replaySummary(edits, reasonCodes) {
@@ -242,19 +282,6 @@ function replaySummary(edits, reasonCodes) {
   };
 }
 
-function replayOutputSource(status, sourceText, edits) {
-  if (typeof sourceText !== 'string') return undefined;
-  if (status === 'already-applied') return sourceText;
-  if (status !== 'accepted-clean') return undefined;
-  return edits.filter((edit) => edit.status === 'applied')
-    .sort(replaySourceEditSort)
-    .reduce((text, edit) => text.slice(0, edit.start) + editReplacement(edit, edits) + text.slice(edit.end), sourceText);
-}
-
-function replaySourceEditSort(left, right) {
-  return right.start - left.start || right.end - left.end || (right.editOrder ?? 0) - (left.editOrder ?? 0);
-}
-
 function projectionEditWithOrder(edit, index) {
   return {
     ...edit,
@@ -266,10 +293,6 @@ function projectionEditWithOrder(edit, index) {
   };
 }
 
-function editReplacement(edit, edits) {
-  return edits.find((candidate) => candidate.operationId === edit.operationId)?.replacementText ?? '';
-}
-
 function baseReasonCodes(projection, currentSourceText) {
   return reasonList([
     projection.status !== 'projected' ? 'projection-not-projected' : undefined,
@@ -278,18 +301,9 @@ function baseReasonCodes(projection, currentSourceText) {
   ]);
 }
 
-function sameRange(left, right) {
-  return left?.start === right?.start && left?.end === right?.end;
-}
-
-function rangesOverlap(left, right) {
-  return Boolean(left && right && left.start < right.end && right.start < left.end);
-}
-
-function containedRange(inner, outer) {
-  return Boolean(inner && outer && outer.start <= inner.start && inner.end <= outer.end);
-}
-
+function sameRange(left, right) { return left?.start === right?.start && left?.end === right?.end; }
+function rangesOverlap(left, right) { return Boolean(left && right && left.start < right.end && right.start < left.end); }
+function containedRange(inner, outer) { return Boolean(inner && outer && outer.start <= inner.start && inner.end <= outer.end); }
 function reasonList(values) { return uniqueStrings((values ?? []).filter(Boolean)); }
 function lineEndingStableText(value) {
   if (typeof value !== 'string') return undefined;

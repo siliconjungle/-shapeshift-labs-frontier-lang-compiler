@@ -45,7 +45,7 @@ function createKernelSourcePreservationRecords(input) {
         triviaByKind: input.sourcePreservation.summary?.triviaByKind ?? countBy((input.sourcePreservation.trivia ?? []).map((entry) => entry.kind ?? 'unknown')),
         directivesByKind: input.sourcePreservation.summary?.directivesByKind ?? countBy((input.sourcePreservation.directives ?? []).map((entry) => entry.kind ?? 'directive')),
         directiveKinds: input.sourcePreservation.summary?.directiveKinds ?? uniqueStrings((input.sourcePreservation.directives ?? []).map((entry) => entry.kind ?? 'directive')),
-        commentSpanIds: input.sourcePreservation.summary?.commentSpanIds ?? (input.sourcePreservation.trivia ?? []).filter((entry) => entry.kind === 'comment').map((entry) => entry.id).filter(Boolean),
+        commentSpanIds: input.sourcePreservation.summary?.commentSpanIds ?? (input.sourcePreservation.trivia ?? []).filter((entry) => isCommentKind(entry.kind)).map((entry) => entry.id).filter(Boolean),
         directiveSpanIds: input.sourcePreservation.summary?.directiveSpanIds ?? (input.sourcePreservation.directives ?? []).map((entry) => entry.id).filter(Boolean),
         inspectionTags: sourcePreservationInspectionTags({
           compilerRecord: 'nativeSourcePreservation',
@@ -242,7 +242,7 @@ function compactSourcePreservationRecord(record) {
     triviaByKind: record.summary?.triviaByKind ?? countBy((record.trivia ?? []).map((entry) => entry.kind ?? 'unknown')),
     directivesByKind: record.summary?.directivesByKind ?? countBy((record.directives ?? []).map((entry) => entry.kind ?? 'directive')),
     directiveKinds: record.summary?.directiveKinds ?? uniqueStrings((record.directives ?? []).map((entry) => entry.kind ?? 'directive')),
-    commentSpanIds: record.summary?.commentSpanIds ?? (record.trivia ?? []).filter((entry) => entry.kind === 'comment').map((entry) => entry.id).filter(Boolean),
+    commentSpanIds: record.summary?.commentSpanIds ?? (record.trivia ?? []).filter((entry) => isCommentKind(entry.kind)).map((entry) => entry.id).filter(Boolean),
     directiveSpanIds: record.summary?.directiveSpanIds ?? (record.directives ?? []).map((entry) => entry.id).filter(Boolean),
     truncated: record.summary?.truncated === true
   };
@@ -282,6 +282,10 @@ function sourceMapMappingInspectionMetadata(input, sourceMap, mapping) {
     inspectionTags: sourcePreservationInspectionTags(base),
     queryKeys: sourcePreservationQueryKeys(base)
   };
+}
+
+function isCommentKind(kind) {
+  return kind === 'comment' || kind === 'jsdoc-comment' || kind === 'block-comment';
 }
 
 export {

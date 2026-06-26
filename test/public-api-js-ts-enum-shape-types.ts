@@ -1,0 +1,42 @@
+import * as compilerApi from '../src/index.js';
+
+declare const typedCompilerTypeRecord: compilerApi.NativeProjectSymbolGraphCompilerTypeRecord;
+declare const computedEnumRuntimeProof: compilerApi.NativeProjectSymbolGraphCompilerComputedEnumRuntimeValueProof;
+declare const enumAdapterOptions: compilerApi.TypeScriptCompilerNativeImporterAdapterOptions;
+
+typedCompilerTypeRecord.enumKind satisfies string | undefined;
+typedCompilerTypeRecord.constEnum satisfies boolean | undefined;
+typedCompilerTypeRecord.enumMemberCount satisfies number | undefined;
+typedCompilerTypeRecord.enumNumericMemberCount satisfies number | undefined;
+typedCompilerTypeRecord.enumStringMemberCount satisfies number | undefined;
+typedCompilerTypeRecord.enumAutoMemberCount satisfies number | undefined;
+typedCompilerTypeRecord.enumComputedMemberCount satisfies number | undefined;
+typedCompilerTypeRecord.enumRuntimeShapeHash satisfies string | undefined;
+typedCompilerTypeRecord.enumEmittedRuntimeShapeHash satisfies string | undefined;
+typedCompilerTypeRecord.typeEquivalenceEnumRuntimeShapeHash satisfies string | undefined;
+typedCompilerTypeRecord.typeEquivalenceEnumEmittedRuntimeShapeHash satisfies string | undefined;
+typedCompilerTypeRecord.enumMembers?.[0] satisfies compilerApi.NativeProjectSymbolGraphCompilerEnumMemberRecord | undefined;
+typedCompilerTypeRecord.enumMembers?.[0]?.name satisfies string | undefined;
+typedCompilerTypeRecord.enumMembers?.[0]?.valueText satisfies string | undefined;
+typedCompilerTypeRecord.enumMembers?.[0]?.runtimeValueText satisfies string | undefined;
+typedCompilerTypeRecord.enumMembers?.[0]?.runtimeValueKind satisfies string | undefined;
+typedCompilerTypeRecord.enumRuntimeShapeProof satisfies compilerApi.NativeProjectSymbolGraphCompilerEnumRuntimeShapeProof | undefined;
+typedCompilerTypeRecord.enumRuntimeShapeProof?.enumEmittedRuntimeShapeHash satisfies string | undefined;
+typedCompilerTypeRecord.enumRuntimeShapeProof?.computedEnumRuntimeValueProof satisfies compilerApi.NativeProjectSymbolGraphCompilerComputedEnumRuntimeValueProof | undefined;
+typedCompilerTypeRecord.enumRuntimeShapeProof?.autoMergeClaim satisfies false | undefined;
+typedCompilerTypeRecord.enumRuntimeShapeProof?.semanticEquivalenceClaim satisfies false | undefined;
+typedCompilerTypeRecord.enumRuntimeShapeProof?.runtimeEquivalenceClaim satisfies false | undefined;
+typedCompilerTypeRecord.typeEquivalenceProof?.computedEnumRuntimeValueHash satisfies string | undefined;
+typedCompilerTypeRecord.typeEquivalenceProof?.computedEnumRuntimeValueProof satisfies compilerApi.NativeProjectSymbolGraphCompilerComputedEnumRuntimeValueProof | undefined;
+
+computedEnumRuntimeProof.schema satisfies string | undefined;
+computedEnumRuntimeProof.kind satisfies string | undefined;
+computedEnumRuntimeProof.enumEmittedRuntimeShapeHash satisfies string | undefined;
+computedEnumRuntimeProof.computedMembers?.[0]?.runtimeValueText satisfies string | undefined;
+computedEnumRuntimeProof.computedEnumRuntimeValueHash satisfies string | undefined;
+computedEnumRuntimeProof.computedEnumRuntimeEvaluationEquivalenceClaim satisfies false;
+computedEnumRuntimeProof.autoMergeClaim satisfies false;
+computedEnumRuntimeProof.semanticEquivalenceClaim satisfies false;
+computedEnumRuntimeProof.runtimeEquivalenceClaim satisfies false;
+enumAdapterOptions.computedEnumRuntimeValueProofs satisfies readonly unknown[] | Record<string, unknown> | undefined;
+enumAdapterOptions.computedEnumRuntimeValueProofProvider?.({ enumName: 'Status' }) satisfies unknown;

@@ -12,19 +12,19 @@ function createJavaScriptSyntaxImporterAdapter(options, deps) {
     language: options.language,
     parser: options.parser,
     version: options.version,
-    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', 'tokens', 'trivia', 'parserTriviaExactness', ...(options.capabilities ?? [])]),
     coverage: nativeImporterAdapterCoverage({
       exactness: 'exact-parser-ast',
       exactAst: true,
-      tokens: false,
-      trivia: false,
+      tokens: true,
+      trivia: true,
       diagnostics: true,
       sourceRanges: true,
       generatedRanges: false,
       semanticCoverage: declarationSemanticCoverage(),
       notes: [
         'Normalizes a caller-owned ESTree/Babel-compatible AST into native AST nodes and declaration-level semantic index records.',
-        'The wrapper ignores parser token/trivia/comment arrays unless a host adapter explicitly maps them into preservation evidence.'
+        'When parser token/comment arrays include exact ranges for the current source, they become exact source-preservation evidence.'
       ]
     }, options.coverage),
     supportedExtensions: options.supportedExtensions,
@@ -43,7 +43,11 @@ function createJavaScriptSyntaxImporterAdapter(options, deps) {
         parser: options.parser,
         astFormat: options.astFormat,
         maxNodes: options.maxNodes,
-        diagnostics: parseDiagnostics
+        diagnostics: parseDiagnostics,
+        includeTokens: options.includeTokens,
+        includeTrivia: options.includeTrivia,
+        maxTokens: options.maxTokens,
+        maxTrivia: options.maxTrivia
       });
     }
   };

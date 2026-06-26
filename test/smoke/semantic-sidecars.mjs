@@ -31,6 +31,11 @@ const graphLevelSourceSidecar = createSemanticImportSidecar(graphLevelSourceImpo
 const graphLevelRegions = graphLevelSourceSidecar.ownershipRegions.filter((region) => ['GraphOwner', 'graphOwner'].includes(region.symbolName));
 assert.equal(graphLevelSourceSidecar.summary.symbols, 2);
 assert.equal(graphLevelSourceSidecar.summary.ownershipRegions, 2);
+assert.equal(graphLevelSourceSidecar.graphLayers.kind, 'frontier.lang.semanticGraphLayers');
+assert.equal(graphLevelSourceSidecar.graphLayers.layerKinds.length, 6);
+assert.equal(graphLevelSourceSidecar.graphLayers.layers.genericSemanticEditAdmission.id, 'generic-semantic-edit-admission');
+assert.equal(graphLevelSourceSidecar.summary.graphLayers, 6);
+assert.equal(graphLevelSourceSidecar.summary.graphLayersUsable >= 1, true);
 assert.equal(graphLevelSourceSidecar.summary.emptySemanticIndex, false);
 assert.equal(graphLevelRegions.length, 2);
 assert.equal(new Set(graphLevelRegions.map((region) => region.id)).size, 2);
@@ -90,6 +95,18 @@ assert.equal(nativeResultOwnershipImport.semanticIndex.patchHints.length, native
 assert.equal(nativeResultOwnershipImport.ownershipRegions.length, nativeResultOwnershipImport.semanticIndex.ownershipRegions.length);
 assert.equal(nativeResultOwnershipImport.patchHints.length, nativeResultOwnershipImport.semanticIndex.patchHints.length);
 assert.equal(nativeResultOwnershipImport.semanticIndex.ownershipRegions.some((region) => region.symbolName === 'nativeResultOwner'), true);
+const jsTsGraphLayerImport = importNativeSource({
+  language: 'typescript',
+  sourcePath: 'src/semantic-graph-layers.ts',
+  sourceText: 'import { readFile } from "node:fs/promises";\nexport interface LoadOptions { path: string; }\nexport async function load(options: LoadOptions) {\n  const text = await readFile(options.path, "utf8");\n  return { text };\n}\n'
+});
+const jsTsGraphLayerSidecar = createSemanticImportSidecar(jsTsGraphLayerImport, { generatedAt: 134 });
+assert.equal(jsTsGraphLayerSidecar.graphLayers.layers.parserSourceSpanTrivia.status !== 'missing', true);
+assert.equal(jsTsGraphLayerSidecar.graphLayers.layers.scopeUseDef.status !== 'missing', true);
+assert.equal(jsTsGraphLayerSidecar.graphLayers.layers.moduleExportImport.summary.importEdges >= 1, true);
+assert.equal(jsTsGraphLayerSidecar.graphLayers.layers.typePublicApi.summary.typeSymbols >= 1, true);
+assert.equal(jsTsGraphLayerSidecar.graphLayers.layers.controlFlowEffect.summary.runtimeRegions >= 1, true);
+assert.equal(jsTsGraphLayerSidecar.graphLayers.layers.genericSemanticEditAdmission.summary.patchHints >= 1, true);
 const nativeLossSummaryOnlyImport = {
   ...scannedJsImport,
   id: 'import_scanned_js_native_loss_summary_only',

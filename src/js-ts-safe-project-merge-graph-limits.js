@@ -6,8 +6,13 @@ const PROJECT_GRAPH_INVALID_LIMIT_CODE = 'project-graph-limit-invalid';
 const LIMIT_FIELDS = [
   ['maxFiles', 'source-files'],
   ['maxSourceBytes', 'source-bytes'],
+  ['maxSourceSpans', 'source-spans'],
   ['maxImportEdges', 'import-edges'],
   ['maxExportEdges', 'export-edges'],
+  ['maxScopeBindings', 'scope-bindings'],
+  ['maxScopeReferences', 'scope-references'],
+  ['maxJsxElements', 'jsx-elements'],
+  ['maxJsxProps', 'jsx-props'],
   ['maxSerializedBytes', 'serialized-bytes']
 ];
 
@@ -58,10 +63,20 @@ function projectGraphInvalidLimitConflicts(limits, stage) {
 
 function projectGraphEdgeLimitConflicts(limits, stage, projectSymbolGraph) {
   const importEdges = Array.isArray(projectSymbolGraph?.importEdges) ? projectSymbolGraph.importEdges.length : 0;
+  const sourceSpans = Array.isArray(projectSymbolGraph?.sourceSpanRecords) ? projectSymbolGraph.sourceSpanRecords.length : 0;
   const exportEdges = Array.isArray(projectSymbolGraph?.exportEdges) ? projectSymbolGraph.exportEdges.length : 0;
+  const scopeBindings = Array.isArray(projectSymbolGraph?.scopeBindingRecords) ? projectSymbolGraph.scopeBindingRecords.length : 0;
+  const scopeReferences = Array.isArray(projectSymbolGraph?.scopeReferenceRecords) ? projectSymbolGraph.scopeReferenceRecords.length : 0;
+  const jsxElements = Array.isArray(projectSymbolGraph?.jsxElementRecords) ? projectSymbolGraph.jsxElementRecords.length : 0;
+  const jsxProps = Array.isArray(projectSymbolGraph?.jsxPropRecords) ? projectSymbolGraph.jsxPropRecords.length : 0;
   return [
     limitConflict(limits.maxImportEdges, stage, 'import-edges', importEdges),
-    limitConflict(limits.maxExportEdges, stage, 'export-edges', exportEdges)
+    limitConflict(limits.maxSourceSpans, stage, 'source-spans', sourceSpans),
+    limitConflict(limits.maxExportEdges, stage, 'export-edges', exportEdges),
+    limitConflict(limits.maxScopeBindings, stage, 'scope-bindings', scopeBindings),
+    limitConflict(limits.maxScopeReferences, stage, 'scope-references', scopeReferences),
+    limitConflict(limits.maxJsxElements, stage, 'jsx-elements', jsxElements),
+    limitConflict(limits.maxJsxProps, stage, 'jsx-props', jsxProps)
   ].filter(Boolean);
 }
 

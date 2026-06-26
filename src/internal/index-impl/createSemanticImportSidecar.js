@@ -1,4 +1,4 @@
-import{idFragment,maxSemanticMergeReadiness,uniqueRecordsById}from'../../native-import-utils.js';import{summarizeSemanticImportDependencies}from'../../semantic-import-dependencies.js';import{createSemanticImportImpact}from'../../semantic-import-impact.js';import{summarizeSemanticImportSidecarParadigmSemantics,summarizeSemanticImportSidecarProofSpec,summarizeSemanticImportSidecarUniversalAstLayers}from'../../semantic-import-layers.js';import{semanticPatchHintForRegion,summarizeSemanticImportRegionTaxonomy}from'../../semantic-import-regions.js';import{semanticImportSidecarEntry}from'../../semantic-import-sidecar-entry.js';import{summarizeKernelSourcePreservation}from'../../semantic-import-source-preservation.js';
+import{idFragment,maxSemanticMergeReadiness,uniqueRecordsById}from'../../native-import-utils.js';import{summarizeSemanticImportDependencies}from'../../semantic-import-dependencies.js';import{createSemanticGraphLayerSummary}from'../../semantic-import-graph-layers.js';import{createSemanticImportImpact}from'../../semantic-import-impact.js';import{summarizeSemanticImportSidecarParadigmSemantics,summarizeSemanticImportSidecarProofSpec,summarizeSemanticImportSidecarUniversalAstLayers}from'../../semantic-import-layers.js';import{semanticPatchHintForRegion,summarizeSemanticImportRegionTaxonomy}from'../../semantic-import-regions.js';import{semanticImportSidecarEntry}from'../../semantic-import-sidecar-entry.js';import{summarizeKernelSourcePreservation}from'../../semantic-import-source-preservation.js';
 import{createSemanticImportSidecarAdmission,createSemanticImportSidecarQuality}from'./createSemanticImportSidecarAdmission.js';
 import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';
 export function createSemanticImportSidecar(importResult, options = {}) {
@@ -55,6 +55,28 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     },
     readiness
   });
+  const graphLayers = createSemanticGraphLayerSummary({
+    importResult,
+    imports,
+    importEntries,
+    symbols,
+    ownershipRegions,
+    sourceMaps,
+    sourceMapMappings,
+    sourcePreservation,
+    universalAstLayers,
+    proofSpec,
+    paradigmSemantics,
+    dependencies,
+    semanticImpact,
+    patchHints,
+    quality,
+    admission,
+    mergeCandidates,
+    losses,
+    evidence,
+    readiness
+  });
   return {
     kind: 'frontier.lang.semanticImportSidecar',
     version: 1,
@@ -75,6 +97,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     proofSpec,
     paradigmSemantics,
     dependencies,
+    graphLayers,
     semanticImpact,
     patchHints,
     quality,
@@ -125,6 +148,9 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       paradigmSemanticsLoweringRecords: paradigmSemantics.loweringRecords,
       dependencyRelations: dependencies.total,
       dependencyPredicates: dependencies.predicates,
+      graphLayers: graphLayers.summary.total,
+      graphLayersUsable: graphLayers.summary.usable,
+      graphLayerStatus: graphLayers.status,
       semanticImpactRecords: semanticImpact.summary.total,
       semanticImpactHighRiskRecords: semanticImpact.summary.byRisk.high ?? 0,
       semanticImpactRequiredVerificationSteps: semanticImpact.summary.requiredVerificationSteps,

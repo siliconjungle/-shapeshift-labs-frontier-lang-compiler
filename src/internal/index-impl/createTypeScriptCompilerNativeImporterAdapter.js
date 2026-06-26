@@ -6,19 +6,21 @@ export function createTypeScriptCompilerNativeImporterAdapter(options = {}) {
     language: options.language ?? 'typescript',
     parser: options.parser ?? 'typescript-compiler-api',
     version: options.version,
-    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', ...(options.capabilities ?? [])]),
+    capabilities: uniqueStrings(['nativeAst', 'semanticIndex', 'sourceMaps', 'diagnostics', 'tokens', 'trivia', 'parserTriviaExactness', 'compilerSymbolFacts', 'compilerTypeFacts', 'compilerReferenceGraph', ...(options.capabilities ?? [])]),
     coverage: nativeImporterAdapterCoverage({
       exactness: 'exact-parser-ast',
       exactAst: true,
-      tokens: false,
-      trivia: false,
+      tokens: true,
+      trivia: true,
       diagnostics: true,
       sourceRanges: true,
       generatedRanges: false,
       semanticCoverage: declarationSemanticCoverage(),
       notes: [
         'Normalizes a caller-owned TypeScript SourceFile into native AST nodes and declaration-level semantic index records.',
-        'Type resolution, reference resolution, control flow, generated ranges, and parser token/trivia streams require host-supplied adapter evidence.'
+        'When the compiler scanner is available, SourceFile token/trivia spans become exact source-preservation evidence.',
+        'When a TypeScript checker is supplied, declaration records carry compiler symbol/type facts and reference relations for merge evidence.',
+        'Full reference resolution, control flow, and generated ranges require additional host-supplied adapter evidence.'
       ]
     }, options.coverage),
     supportedExtensions: options.supportedExtensions ?? ['.ts', '.tsx', '.js', '.jsx'],
@@ -42,7 +44,16 @@ export function createTypeScriptCompilerNativeImporterAdapter(options = {}) {
         program,
         typeChecker,
         maxNodes: options.maxNodes,
-        includeTokens: options.includeTokens
+        includeTokens: options.includeTokens,
+        includeTrivia: options.includeTrivia,
+        maxTokens: options.maxTokens,
+        maxTrivia: options.maxTrivia,
+        computedEnumRuntimeValueProofs: input.options?.computedEnumRuntimeValueProofs ?? options.computedEnumRuntimeValueProofs,
+        computedEnumRuntimeValueProof: input.options?.computedEnumRuntimeValueProof ?? options.computedEnumRuntimeValueProof,
+        computedEnumRuntimeValueProofProvider: input.options?.computedEnumRuntimeValueProofProvider ?? options.computedEnumRuntimeValueProofProvider,
+        computedEnumRuntimeValueTraceProvider: input.options?.computedEnumRuntimeValueTraceProvider ?? options.computedEnumRuntimeValueTraceProvider,
+        computedEnumRuntimeValueTraces: input.options?.computedEnumRuntimeValueTraces ?? options.computedEnumRuntimeValueTraces,
+        adapterId: options.id ?? 'frontier.typescript-compiler-native-importer'
       });
     }
   };

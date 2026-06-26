@@ -1,0 +1,30 @@
+import * as compilerApi from '../src/index.js';
+
+declare const typeRecord: compilerApi.NativeProjectSymbolGraphCompilerTypeRecord;
+declare const shapeRecord: compilerApi.NativeProjectSymbolGraphCompilerAdvancedTypeShapeRecord;
+
+typeRecord.templateLiteralTypeCount satisfies number | undefined;
+typeRecord.inferTypeCount satisfies number | undefined;
+typeRecord.typeEquivalenceTemplateLiteralTypeSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceInferTypeSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceProof?.templateLiteralTypeSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceProof?.inferTypeSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceProof?.templateLiteralTypeCount satisfies number | undefined;
+typeRecord.typeEquivalenceProof?.inferTypeCount satisfies number | undefined;
+typeRecord.unionTypeCount satisfies number | undefined;
+typeRecord.intersectionTypeCount satisfies number | undefined;
+typeRecord.tupleTypeCount satisfies number | undefined;
+typeRecord.typeEquivalenceUnionTypeSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceIntersectionTypeSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceTupleTypeSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceProof?.unionTypeSetHash satisfies string | undefined;
+shapeRecord.templateHeadText satisfies string | undefined;
+shapeRecord.templateSpanCount satisfies number | undefined;
+shapeRecord.templateSpanTexts?.[0] satisfies string | undefined;
+shapeRecord.templateSpanTypeTexts?.[0] satisfies string | undefined;
+shapeRecord.templateLiteralTexts?.[0] satisfies string | undefined;
+shapeRecord.typeParameterText satisfies string | undefined;
+shapeRecord.typeParameterName satisfies string | undefined;
+shapeRecord.constraintTypeText satisfies string | undefined;
+shapeRecord.memberTypeTexts?.[0] satisfies string | undefined;
+shapeRecord.tupleElementTypeTexts?.[0] satisfies string | undefined;

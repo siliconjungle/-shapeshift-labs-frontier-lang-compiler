@@ -12,6 +12,9 @@ import { createJsTsSafeMergeSemanticArtifacts } from './js-ts-safe-merge-semanti
 
 export { JsTsSafeMergeConflictCodes, JsTsSafeMergeGateIds, JsTsSafeMergeStatuses };
 
+const mergedOutputSyntaxDiagnosticCode = 'merged-output-syntax-diagnostic';
+const mergedOutputSyntaxDiagnosticsUnavailableCode = 'merged-output-syntax-diagnostics-unavailable';
+
 export function safeMergeJsTsImportsAndDeclarations(input = {}) {
   const context = createMergeContext(input);
   const baseSourceText = input.baseSourceText;
@@ -60,6 +63,7 @@ export function safeMergeJsTsImportsAndDeclarations(input = {}) {
   const mergedSourceText = applySourceMergePlan(headSourceText, mergePlan);
   const merged = scanJsTsTopLevelLedger(mergedSourceText, 'merged', context);
   if (!context.conflicts.length) validateLedgerUniqueness(merged, context);
+  if (!context.conflicts.length) validateMergedOutputSyntaxGate(input, context);
   if (context.conflicts.length) return blockedResult(context, { base, worker, head, merged });
 
   const result = {
@@ -178,4 +182,136 @@ function hasLedgerSpan(entry) {
   const hasOffsets = Number.isFinite(span.start) && Number.isFinite(span.end);
   const hasLines = Number.isFinite(span.startLine) && Number.isFinite(span.endLine);
   return hasOffsets || hasLines;
+}
+
+function validateMergedOutputSyntaxGate(input, context) {
+  const diagnostics = normalizeMergedOutputSyntaxDiagnostics(input, context.sourcePath);
+  if (!diagnostics) {
+    if (requiresMergedOutputSyntaxDiagnostics(input)) {
+      addConflict(context, {
+        code: mergedOutputSyntaxDiagnosticsUnavailableCode,
+        gateId: JsTsSafeMergeGateIds.parseLedger,
+        side: 'merged',
+        message: 'Merged JS/TS output syntax diagnostics are required but were not provided.',
+        details: { required: true, diagnosticSource: 'missing' }
+      });
+    }
+    return;
+  }
+  for (const diagnostic of diagnostics) {
+    if (diagnostic.severity !== 'error' || !isSyntaxDiagnostic(diagnostic)) continue;
+    addConflict(context, {
+      code: mergedOutputSyntaxDiagnosticCode,
+      gateId: JsTsSafeMergeGateIds.parseLedger,
+      side: 'merged',
+      message: `Merged JS/TS output syntax diagnostic ${diagnostic.code}: ${diagnostic.message}`,
+      details: { diagnostic }
+    });
+  }
+}
+
+function requiresMergedOutputSyntaxDiagnostics(input) {
+  return input.requireMergedOutputSyntaxDiagnostics === true
+    || input.requireOutputSyntaxDiagnostics === true
+    || input.requireOutputSyntaxGate === true
+    || input.requireSyntaxGate === true;
+}
+
+function normalizeMergedOutputSyntaxDiagnostics(input, sourcePath) {
+  const values = [
+    input.mergedOutputSyntaxDiagnostics,
+    input.outputSyntaxDiagnostics,
+    input.syntaxDiagnostics?.merged,
+    input.syntaxDiagnostics?.output,
+    input.outputDiagnostics
+  ];
+  if (!values.some((value) => value !== undefined)) return undefined;
+  const expectedPath = normalizeDiagnosticPath(sourcePath);
+  const diagnostics = values
+    .flatMap((value) => normalizeDiagnosticList(value))
+    .filter((diagnostic) => {
+      const diagnosticPath = normalizeDiagnosticPath(diagnostic.sourcePath);
+      return !expectedPath || !diagnosticPath || expectedPath === diagnosticPath;
+    });
+  return diagnostics;
+}
+
+function normalizeDiagnosticList(value) {
+  if (value === undefined) return [];
+  const values = Array.isArray(value) ? value : [value].filter(Boolean);
+  return values.map((diagnostic, index) => compactRecord({
+    id: diagnostic.id ?? `diagnostic_${index + 1}`,
+    source: diagnostic.source ?? diagnostic.tool ?? diagnostic.name,
+    code: String(diagnostic.code ?? diagnostic.diagnosticCode ?? diagnostic.name ?? 'syntax-diagnostic'),
+    severity: normalizeDiagnosticSeverity(diagnostic.severity ?? diagnostic.category),
+    message: String(diagnostic.message ?? diagnostic.messageText ?? ''),
+    sourcePath: normalizeDiagnosticPath(diagnostic.sourcePath ?? diagnostic.fileName ?? diagnostic.file?.fileName),
+    start: numberOrUndefined(diagnostic.start),
+    end: numberOrUndefined(diagnostic.end),
+    line: numberOrUndefined(diagnostic.line),
+    column: numberOrUndefined(diagnostic.column),
+    phase: normalizeDiagnosticPhase(diagnostic.phase ?? diagnostic.diagnosticPhase ?? diagnostic.kind ?? diagnostic.type),
+    syntax: diagnostic.syntax === true ? true : undefined
+  }));
+}
+
+function isSyntaxDiagnostic(diagnostic) {
+  if (diagnostic.syntax === true) return true;
+  const text = [
+    diagnostic.phase,
+    diagnostic.kind,
+    diagnostic.category,
+    diagnostic.type,
+    diagnostic.source,
+    diagnostic.ruleId,
+    diagnostic.name,
+    diagnostic.code
+  ].filter(Boolean).join(' ').toLowerCase();
+  return /\bsyntax\b|\bsyntactic\b|\bparse\b|\bparser\b/.test(text) || isTypeScriptSyntaxDiagnosticCode(diagnostic.code);
+}
+
+function isTypeScriptSyntaxDiagnosticCode(code) {
+  const match = /^TS(\d+)$/.exec(String(code ?? ''));
+  if (!match) return false;
+  const numeric = Number(match[1]);
+  return numeric >= 1000 && numeric < 2000;
+}
+
+function normalizeDiagnosticSeverity(value) {
+  if (typeof value === 'string') {
+    const lowered = value.toLowerCase();
+    if (lowered.includes('error')) return 'error';
+    if (lowered.includes('warn')) return 'warning';
+    if (lowered.includes('suggest')) return 'suggestion';
+    if (lowered.includes('message')) return 'message';
+  }
+  if (value === 1) return 'error';
+  if (value === 0) return 'warning';
+  if (value === 2) return 'suggestion';
+  if (value === 3) return 'message';
+  return 'error';
+}
+
+function normalizeDiagnosticPhase(value) {
+  if (typeof value !== 'string') return undefined;
+  const lowered = value.toLowerCase();
+  if (lowered.includes('syntax') || lowered.includes('syntactic') || lowered.includes('parse')) return 'syntax';
+  if (lowered.includes('semantic') || lowered.includes('type')) return 'semantic';
+  return value;
+}
+
+function normalizeDiagnosticPath(value) {
+  if (value === undefined || value === null) return undefined;
+  const raw = String(value).replace(/\\/g, '/').replace(/\/+/g, '/');
+  const parts = [];
+  for (const part of raw.split('/')) {
+    if (!part || part === '.') continue;
+    if (part === '..' && parts.length) parts.pop();
+    else if (part !== '..') parts.push(part);
+  }
+  return parts.join('/');
+}
+
+function numberOrUndefined(value) {
+  return Number.isFinite(value) ? value : undefined;
 }

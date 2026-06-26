@@ -23,13 +23,14 @@ export function replayEditDiagnostics(edit, status, range, reasonCodes, sourceTe
 export function replayEditsWithOverlapDiagnostics(edits) {
   const overlapDiagnostics = new Map();
   const ordered = edits
-    .filter((edit) => edit.status === 'applied' && hasNumericReplayRange(edit))
+    .filter((edit) => replayOverlapParticipant(edit) && hasNumericReplayRange(edit))
     .sort((left, right) => left.start - right.start || left.end - right.end || (left.editOrder ?? 0) - (right.editOrder ?? 0));
   for (let leftIndex = 0; leftIndex < ordered.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < ordered.length; rightIndex += 1) {
       const left = ordered[leftIndex];
       const right = ordered[rightIndex];
       if (!rangesOverlap(left, right)) continue;
+      if (left.status !== 'applied' && right.status !== 'applied') continue;
       const operationIds = [left.operationId, right.operationId].filter(Boolean);
       const fallbackId = `${left.editOrder ?? leftIndex}:${right.editOrder ?? rightIndex}`;
       const code = `replay-edit-overlap:${operationIds.join(':') || fallbackId}`;
@@ -79,7 +80,7 @@ function appendOverlapDiagnostic(overlapDiagnostics, edit, code, operationIds) {
 function appendReplayEditDiagnostic(edit, diagnostic) {
   return compactRecord({
     ...edit,
-    status: edit.status === 'applied' ? 'conflict' : edit.status,
+    status: replayOverlapParticipant(edit) ? 'conflict' : edit.status,
     reasonCodes: reasonList([...(edit.reasonCodes ?? []), diagnostic.code]),
     diagnostics: uniqueDiagnostics([...(edit.diagnostics ?? []), diagnostic])
   });
@@ -200,6 +201,10 @@ function rangesOverlap(left, right) {
 
 function hasNumericReplayRange(edit) {
   return typeof edit.start === 'number' && typeof edit.end === 'number';
+}
+
+function replayOverlapParticipant(edit) {
+  return edit.status === 'applied' || edit.status === 'already-applied';
 }
 
 function reasonList(values) { return uniqueStrings((values ?? []).filter(Boolean)); }

@@ -24,8 +24,9 @@ const disjointProject = safeMergeJsTsProject({
 });
 const disjointBarrel = disjointProject.outputFiles.find((file) => file.sourcePath === 'src/barrel.ts');
 const disjointNames = disjointProject.outputProjectSymbolGraph.reExportIdentities.map((identity) => identity.exportedName).sort();
-assert.equal(disjointProject.status, 'merged');
+assert.equal(disjointProject.status, 'blocked');
 assert.equal(disjointProject.summary.outputProjectGraphConflicts, 0);
+assert.equal(disjointProject.conflicts.some((entry) => entry.code === 'project-source-span-roundtrip-proof-failed'), true);
 assert.equal(disjointBarrel.sourceText, "export const stable = 1;\nexport * from './head.js';\nexport * from './worker.js';\n");
 assert.deepEqual(disjointNames, ['headOnly', 'workerOnly']);
 

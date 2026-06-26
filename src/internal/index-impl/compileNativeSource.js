@@ -1,5 +1,6 @@
-import{nativeLanguageCompileTarget}from'../../coverage-matrix-profiles.js';import{idFragment,uniqueByEvidenceId,uniqueByLossId}from'../../native-import-utils.js';
+import{nativeLanguageCompileTarget}from'../../coverage-matrix-profiles.js';import{idFragment,uniqueByEvidenceId,uniqueByLossId}from'../../native-import-utils.js';import{normalizeSourceMaps}from'../../native-source-maps.js';
 import{classifyNativeImportReadiness}from'./classifyNativeImportReadiness.js';import{createNativeRoundtripEvidence}from'./createNativeRoundtripEvidence.js';import{createProjectionTargetLossMatrix}from'./createProjectionTargetLossMatrix.js';import{importNativeSource}from'./importNativeSource.js';import{isNativeSourceImportResult}from'./isNativeSourceImportResult.js';import{nativeCompileSourceLanguage}from'./nativeCompileSourceLanguage.js';import{nativeCompileTarget}from'./nativeCompileTarget.js';import{nativeProjectionReview}from'./nativeProjectionReview.js';import{nativeSourceCompileEvidence}from'./nativeSourceCompileEvidence.js';import{nativeSourceCompileSourceMaps}from'./nativeSourceCompileSourceMaps.js';import{nativeSourceCompileTargetCoverage}from'./nativeSourceCompileTargetCoverage.js';import{nativeSourceCompileTargetLosses}from'./nativeSourceCompileTargetLosses.js';import{projectNativeImportToSource}from'./projectNativeImportToSource.js';import{resolveNativeTargetProjectionAdapter}from'./resolveNativeTargetProjectionAdapter.js';import{runNativeTargetProjectionAdapter}from'./runNativeTargetProjectionAdapter.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';
+import{classifySourceMapGeneratedBoundary}from'./sourceMapGeneratedBoundaryGate.js';
 export function compileNativeSource(input, options = {}) {
   const importResult = isNativeSourceImportResult(input) ? input : importNativeSource(input);
   const sourceLanguage = nativeCompileSourceLanguage(importResult, input);
@@ -105,7 +106,7 @@ export function compileNativeSource(input, options = {}) {
     scanKind: 'native-source-compile',
     semanticStatus: importResult.metadata?.semanticStatus ?? options.semanticStatus
   });
-  const sourceMaps = options.emitSourceMap === false
+  const emittedSourceMaps = options.emitSourceMap === false
     ? []
     : nativeSourceCompileSourceMaps({
       id: options.sourceMapId ?? `source_map_${idFragment(id)}_${idFragment(target)}`,
@@ -123,8 +124,32 @@ export function compileNativeSource(input, options = {}) {
       losses,
       compileResultId: id
     });
+  const sourceMaps = normalizeSourceMaps(emittedSourceMaps, {
+    document: importResult.document,
+    nativeSources: [importResult.nativeSource].filter(Boolean),
+    nativeAst: importResult.nativeAst ?? importResult.nativeSource?.ast,
+    nativeSource: importResult.nativeSource,
+    semanticIndex: importResult.semanticIndex ?? importResult.universalAst?.semanticIndex,
+    evidence,
+    losses,
+    sourcePreservation: importResult.metadata?.sourcePreservation ?? importResult.nativeSource?.metadata?.sourcePreservation,
+    target,
+    targetPath: options.targetPath ?? targetProjection?.targetPath,
+    targetHash: options.targetHash ?? outputHash,
+    sourcePath: importResult.sourcePath ?? importResult.nativeSource?.sourcePath,
+    sourceHash: importResult.nativeSource?.sourceHash ?? importResult.nativeAst?.sourceHash ?? importResult.sourceHash,
+    defaultSourceMapId: options.sourceMapId ?? `source_map_${idFragment(id)}_${idFragment(target)}`
+  });
+  if (targetProjection?.sourceMaps?.length) targetProjection.sourceMaps = sourceMaps;
   const sourceMap = sourceMaps[0];
-  const projectionReview = nativeProjectionReview({
+  const sourceMapGeneratedBoundaryGate = classifySourceMapGeneratedBoundary(sourceMaps, {
+    sourceLanguage,
+    target,
+    outputMode,
+    projectionMode: projection.mode
+  });
+  const projectionReview = {
+    ...nativeProjectionReview({
     mode: projection.mode, outputMode, language: projection.language, sourceLanguage, target,
     sourcePath: importResult.sourcePath ?? importResult.nativeSource?.sourcePath,
     exactSourceAvailable: projection.metadata?.exactSourceAvailable === true,
@@ -132,9 +157,12 @@ export function compileNativeSource(input, options = {}) {
     sourceHashVerified: projection.metadata?.sourceHashVerified === true,
     declarationCount: projection.declarations.length, sourceMapCount: sourceMaps.length,
     losses, targetLosses, readiness: readiness.readiness, targetCoverage, targetProjection
-  });
+    }),
+    sourceMapGeneratedBoundaryGate
+  };
   compileEvidence.metadata.projectionReview = projectionReview;
-  for (const record of sourceMaps) record.metadata = { ...(record.metadata ?? {}), projectionReview };
+  compileEvidence.metadata.sourceMapGeneratedBoundaryGate = sourceMapGeneratedBoundaryGate;
+  for (const record of sourceMaps) record.metadata = { ...(record.metadata ?? {}), projectionReview, sourceMapGeneratedBoundaryGate };
   const roundtripEvidence = createNativeRoundtripEvidence(importResult, {
     id: `evidence_${idPart}_${idFragment(target)}_native_roundtrip`,
     projection,
@@ -146,6 +174,25 @@ export function compileNativeSource(input, options = {}) {
     target,
     outputMode
   });
+  const roundtripBoundaryGate = {
+    schema: sourceMapGeneratedBoundaryGate.schema,
+    version: sourceMapGeneratedBoundaryGate.version,
+    status: sourceMapGeneratedBoundaryGate.status,
+    readiness: sourceMapGeneratedBoundaryGate.readiness,
+    action: sourceMapGeneratedBoundaryGate.action,
+    reviewRequired: sourceMapGeneratedBoundaryGate.reviewRequired,
+    exactBoundary: sourceMapGeneratedBoundaryGate.exactBoundary,
+    sourceMapIds: sourceMapGeneratedBoundaryGate.sourceMapIds,
+    sourceMapMappingIds: sourceMapGeneratedBoundaryGate.sourceMapMappingIds,
+    reasonCodes: sourceMapGeneratedBoundaryGate.reasonCodes,
+    summary: sourceMapGeneratedBoundaryGate.summary
+  };
+  roundtripEvidence.metadata.sourceMapGeneratedBoundaryGate = roundtripBoundaryGate;
+  roundtripEvidence.metadata.roundtripEvidence.sourceMapGeneratedBoundaryGate = roundtripBoundaryGate;
+  roundtripEvidence.metadata.roundtripEvidence.audit = {
+    ...roundtripEvidence.metadata.roundtripEvidence.audit,
+    sourceMapGeneratedBoundaryGate: roundtripBoundaryGate
+  };
   const resultEvidence = uniqueByEvidenceId([...evidence, roundtripEvidence]);
   return {
     kind: 'frontier.lang.nativeSourceCompileResult',
@@ -191,6 +238,7 @@ export function compileNativeSource(input, options = {}) {
       targetReadiness: targetCoverage.readiness,
       targetSupported: targetCoverage.supported,
       projectionReview,
+      sourceMapGeneratedBoundaryGate,
       ...options.metadata,
       roundtripEvidence: roundtripEvidence.metadata.roundtripEvidence
     }

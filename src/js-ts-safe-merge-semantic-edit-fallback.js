@@ -1,3 +1,4 @@
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { createSemanticEditScript } from './internal/index-impl/semanticEditScripts.js';
 import { projectSemanticEditScriptToSource } from './internal/index-impl/projectSemanticEditScriptToSource.js';
 import { replaySemanticEditProjection } from './internal/index-impl/replaySemanticEditProjection.js';
@@ -150,6 +151,9 @@ function createSemanticEditFallbackArtifacts(input, topLevelResult, stagedFallba
         projection,
         currentSourceText: replayCurrentSourceText,
         currentSourcePath: sourcePath,
+        currentSourceHash: typeof replayCurrentSourceText === 'string' ? hashSemanticValue(replayCurrentSourceText) : undefined,
+        expectedOutputSourceText: projection.sourceText,
+        expectedOutputHash: projection.projectedHash,
         language,
         parser: input.parser,
         metadata: stagedFallback?.metadata
@@ -224,11 +228,15 @@ function semanticEditFallbackBlockedResult(input, topLevelResult, artifacts) {
 }
 
 function shouldDeferTopLevelRenamePublicContract(input, admission) {
-  return input.deferTopLevelRenamePublicExportContractToProjectGraph === true
-    && admission.reasonCodes?.length === 1
-    && admission.reasonCodes.includes('top-level-rename-public-export-contract')
-    && admission.summary?.exported !== true
-    && workerPreservesRenamedExportAlias(input.workerSourceText, admission.summary);
+  if (input.deferTopLevelRenamePublicExportContractToProjectGraph !== true
+    || admission.reasonCodes?.length !== 1
+    || !admission.reasonCodes.includes('top-level-rename-public-export-contract')) {
+    return false;
+  }
+  if (admission.summary?.exported === true) {
+    return input.deferDirectExportRenamePublicContractToProjectSymbolRename === true;
+  }
+  return workerPreservesRenamedExportAlias(input.workerSourceText, admission.summary);
 }
 
 function deferredTopLevelRenameAdmission(admission) {

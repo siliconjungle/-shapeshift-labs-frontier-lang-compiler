@@ -81,11 +81,31 @@ export interface NativeTargetProjectionAdapterInput {
   readonly metadata: Record<string, unknown>;
 }
 
+export interface Ecma426SourceMapSection {
+  readonly offset: { readonly line: number; readonly column: number };
+  readonly map: Ecma426SourceMapPayload;
+}
+
+export interface Ecma426SourceMapPayload {
+  readonly version: 3;
+  readonly file?: string;
+  readonly sourceRoot?: string;
+  readonly sources?: readonly (string | null)[];
+  readonly sourcesContent?: readonly (string | null)[];
+  readonly names?: readonly string[];
+  readonly mappings?: string;
+  readonly ignoreList?: readonly number[];
+  readonly sections?: readonly Ecma426SourceMapSection[];
+  readonly [key: string]: unknown;
+}
+
+export type NativeSourceMapInput = SourceMapRecord | Ecma426SourceMapPayload | string;
+
 export interface NativeTargetProjectionAdapterResult {
   readonly id?: string;
   readonly output?: string;
   readonly outputHash?: string;
-  readonly sourceMaps?: readonly SourceMapRecord[];
+  readonly sourceMaps?: readonly NativeSourceMapInput[];
   readonly losses?: readonly NativeAstLossRecord[];
   readonly evidence?: readonly EvidenceRecord[];
   readonly diagnostics?: readonly NativeImporterAdapterDiagnostic[];
@@ -128,7 +148,7 @@ export interface NativeTargetProjectionResult {
   readonly output: string;
   readonly outputHash: string;
   readonly outputMode: 'target-adapter';
-  readonly sourceMaps: readonly SourceMapRecord[];
+  readonly sourceMaps: readonly NativeSourceMapInput[];
   readonly losses: readonly NativeAstLossRecord[];
   readonly lossSummary: NativeImportLossSummary;
   readonly readiness: NativeImportReadinessClassification;

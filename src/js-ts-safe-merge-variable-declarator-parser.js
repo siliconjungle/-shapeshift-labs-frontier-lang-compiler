@@ -1,3 +1,7 @@
+import {
+  analyzeJsTsBindingPattern,
+  leadingJsTsBindingPatternText
+} from './js-ts-safe-merge-binding-patterns.js';
 import { normalizeLineEndings, uniqueStrings } from './js-ts-safe-merge-context.js';
 
 function variableStatementsByKey(sourceText) {
@@ -27,14 +31,14 @@ function parseVariableStatement(statement) {
   const declaratorText = text.slice(prefixEnd, suffixStart);
   if (/[\r\n]/.test(declaratorText)) return undefined;
   const declarators = splitDeclarators(declaratorText, prefixEnd);
-  if (declarators.length < 2 || declarators.some((entry) => !entry.name)) return undefined;
+  if (declarators.length < 2 || declarators.some((entry) => !entry.key)) return undefined;
   return {
     start: statement.start,
     end: statement.end,
     text,
     prefix: text.slice(0, prefixEnd),
     suffix: text.slice(suffixStart),
-    names: declarators.map((entry) => entry.name),
+    names: declarators.map((entry) => entry.key),
     declarators
   };
 }
@@ -104,12 +108,38 @@ function declaratorPart(text, start, end, offset) {
   while (localStart < localEnd && /\s/u.test(text[localStart])) localStart += 1;
   while (localEnd > localStart && /\s/u.test(text[localEnd - 1])) localEnd -= 1;
   const value = text.slice(localStart, localEnd);
-  const name = /^[A-Za-z_$][\w$]*/u.exec(value)?.[0];
+  const binding = declaratorBinding(value);
   return {
-    name: name && value[name.length] !== '?' ? name : undefined,
+    name: binding?.name,
+    key: binding?.key,
+    binding,
     text: value,
     start: offset + localStart,
     end: offset + localEnd
+  };
+}
+
+function declaratorBinding(value) {
+  const identifier = /^[A-Za-z_$][\w$]*/u.exec(value)?.[0];
+  if (identifier && value[identifier.length] !== '?') {
+    return { kind: 'identifier', patternKind: 'identifier', name: identifier, key: identifier, reasonCodes: [] };
+  }
+  let start = 0;
+  while (start < value.length && /\s/u.test(value[start])) start += 1;
+  const open = value[start];
+  if (open !== '{' && open !== '[') return undefined;
+  const patternKind = open === '{' ? 'object' : 'array';
+  const patternText = leadingJsTsBindingPatternText(value.slice(start), patternKind);
+  if (!patternText) return undefined;
+  const pattern = analyzeJsTsBindingPattern(patternText, patternKind);
+  return {
+    kind: 'binding-pattern',
+    patternKind: pattern.patternKind,
+    name: `binding-pattern:${pattern.patternKind}`,
+    key: `binding-pattern:${pattern.patternKind}`,
+    patternText,
+    bindingNames: pattern.bindingNames,
+    reasonCodes: pattern.reasonCodes
   };
 }
 

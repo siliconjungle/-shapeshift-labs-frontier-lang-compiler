@@ -1,4 +1,4 @@
-import { idFragment } from './native-import-utils.js';
+import { caseSensitiveIdFragment, idFragment } from './native-import-utils.js';
 
 function nativeDeclaration(input, lineNumber, languageKind, symbolKind, name, fields = {}, hasBody = false, options = {}) {
   const nodeId = `native_${idFragment(languageKind)}_${lineNumber}_${idFragment(name)}`;
@@ -43,7 +43,7 @@ function nativeImportDeclaration(input, lineNumber, importPath, languageKind, sy
     languageKind: `${input.language}.${languageKind}`,
     name,
     symbolKind,
-    symbolId: options.symbolId ?? `symbol:${input.language}:import:${idFragment(name)}`,
+    symbolId: options.symbolId ?? `symbol:${input.language}:import:${idFragment(symbolKind === 'module' ? `${languageKind}:${lineNumber}:${name}` : name)}`,
     role: options.role ?? 'import',
     importPath: String(importPath),
     span: options.span ?? spanForLine(input, lineNumber),
@@ -59,13 +59,14 @@ function nativeImportBindingDeclaration(input, lineNumber, importPath, binding, 
   const importKind = binding.importKind ?? 'named';
   return nativeImportDeclaration(input, lineNumber, importPath, options.languageKind ?? 'ImportBinding', binding.symbolKind ?? 'import', {
     name: localName,
-    symbolId: options.symbolId ?? `symbol:${input.language}:import:${idFragment(`${importPath}:${localName}`)}`,
+    symbolId: options.symbolId ?? `symbol:${input.language}:import:${caseSensitiveIdFragment(`${importPath}:${localName}:${importedName}`)}`,
     span: options.span,
     fields: {
       localName,
       importedName,
       importKind,
       importPath: String(importPath),
+      ...(binding.namespace ? { namespace: binding.namespace } : {}),
       ...(binding.exportedName ? { exportedName: binding.exportedName } : {}),
       ...(binding.typeOnly ? { typeOnly: true } : {})
     },
@@ -76,6 +77,7 @@ function nativeImportBindingDeclaration(input, lineNumber, importPath, binding, 
       localName,
       importedName,
       importKind,
+      ...(binding.namespace ? { namespace: binding.namespace } : {}),
       ...(binding.exportedName ? { exportedName: binding.exportedName } : {}),
       ...(binding.typeOnly ? { typeOnly: true } : {}),
       ...options.metadata

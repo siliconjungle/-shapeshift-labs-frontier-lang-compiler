@@ -18,6 +18,7 @@ for (const coverage of [
   'conflicting-exports',
   'dependency-sensitive-edits',
   'composed-safe-merge',
+  'import-meta-host-context',
   'interfaces',
   'type-aliases',
   'type-interface-members',
@@ -60,6 +61,10 @@ assertCorpusFixture('comments-trivia-source-ledger', 'accepted');
 assertCorpusFixture('generated-source-map-boundary', 'rejected', ['generated-source-boundary', 'source-map-boundary']);
 assertCorpusFixture('unsafe-object-same-member-conflict', 'rejected', ['head-anchor-changed-since-base']);
 assertCorpusFixture('unsafe-control-flow-conflict', 'rejected', ['head-anchor-changed-since-base']);
+assertCorpusFixture('unsafe-import-meta-host-context-divergence', 'rejected', [
+  'effect-import-meta-merge-requires-host-context-evidence',
+  'runtime-order-import-meta-merge-requires-host-context-evidence'
+]);
 assertCorpusFixture('unsafe-delete-modify-conflict', 'rejected', ['head-anchor-changed-since-base']);
 assertCorpusFixture('safe-import-declaration-additions', 'accepted');
 assertCorpusFixture('safe-type-value-import-dependencies', 'accepted');
@@ -82,6 +87,7 @@ assertSafeMergeCorpusFixture('safe-composed-source-additions');
 assertSafeMergeCorpusFixture('safe-new-import-declaration-additions');
 assertSafeMergeCorpusFixture('safe-import-specifier-reorder');
 assertSafeMergeCorpusFixture('safe-existing-import-default-addition');
+assertSafeMergeCorpusFixture('unsafe-import-meta-host-context-divergence');
 assertSafeMergeCorpusFixture('unsafe-missing-source-ledger-span');
 assertSafeMergeCorpusFixture('unsafe-computed-key-declaration');
 assertSafeMergeCorpusFixture('unsafe-composed-member-conflict');

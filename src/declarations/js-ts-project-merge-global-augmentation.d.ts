@@ -1,0 +1,30 @@
+export interface JsTsProjectGlobalAugmentationCompatibilityProof {
+  readonly id?: string;
+  readonly kind?: 'frontier.lang.globalAugmentationCompatibilityProof' | string;
+  readonly schema?: 'frontier.lang.globalAugmentationCompatibilityProof.v1' | string;
+  readonly version?: 1;
+  readonly status: 'passed' | 'failed' | 'missing' | 'stale' | string;
+  readonly surfaceKind: 'global-augmentation' | string;
+  readonly sourcePath: string;
+  readonly sourceHash?: string;
+  readonly sourceHashes?: readonly string[];
+  readonly moduleName: 'global' | string;
+  readonly moduleDeclarationRecordId?: string;
+  readonly moduleDeclarationShapeHash?: string;
+  readonly moduleDeclarationSignatureHash?: string;
+  readonly sourceSpanHash?: string;
+  readonly declarationOutputGateId: string;
+  readonly declarationOutputHash: string;
+  readonly declarationEmitParityProofId?: string;
+  readonly consumerDiagnosticsGateId: string;
+  readonly consumerDiagnosticsHash: string;
+  readonly consumerEntrypoints: readonly string[];
+  readonly consumerDiagnosticsPassed: true;
+  readonly proofHash?: string;
+  readonly evidenceIds?: readonly string[];
+  readonly globalCompatibilityClaim: 'declaration-boundary-consumer-diagnostics-only';
+  readonly hostRuntimeInteractionClaim: false;
+  readonly autoMergeClaim: false;
+  readonly runtimeEquivalenceClaim: false;
+  readonly semanticEquivalenceClaim: false;
+}

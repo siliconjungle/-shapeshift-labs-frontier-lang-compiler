@@ -50,11 +50,16 @@ typedSemanticEditScript.admission.status satisfies compilerApi.SemanticEditScrip
 typedSemanticEditScript.summary.semanticKeys satisfies readonly string[] | undefined;
 typedSemanticEditScript.summary.operationContentHashes satisfies readonly string[] | undefined;
 typedSemanticEditScript.summary.covered satisfies number | undefined;
+typedSemanticEditScript.summary.structural satisfies compilerApi.SemanticStructuralDiffSummary | undefined;
+typedSemanticEditScript.structuralDiff satisfies compilerApi.SemanticStructuralDiff | undefined;
 typedSemanticEditScript.operations[0]?.status satisfies compilerApi.SemanticEditScriptOperationStatus | undefined;
 const coveredStatus: compilerApi.SemanticEditScriptOperationStatus = 'covered';
+const typedStructuralAction: compilerApi.SemanticStructuralEditAction = 'move';
+const typedStructuralKind: compilerApi.SemanticStructuralEditKind = 'move-update';
 typedSemanticEditScript.operations[0]?.semanticKey satisfies string | undefined;
 typedSemanticEditScript.operations[0]?.semanticIdentityHash satisfies string | undefined;
 typedSemanticEditScript.operations[0]?.operationContentHash satisfies string | undefined;
+typedSemanticEditScript.operations[0]?.structuralEdit satisfies compilerApi.SemanticStructuralEdit | undefined;
 typedSemanticEditScript.operations[0]?.spans?.worker satisfies object | undefined;
 typedSemanticEditScript.operations[0]?.insertion?.mode satisfies string | undefined;
 
@@ -75,6 +80,8 @@ typedSemanticEditProjectionEdit?.semanticIdentityHash satisfies string | undefin
 typedSemanticEditProjectionEdit?.operationContentHash satisfies string | undefined;
 typedSemanticEditProjectionEdit?.editContentHash satisfies string | undefined;
 typedSemanticEditProjectionEdit?.editKind satisfies string | undefined;
+typedSemanticEditProjectionEdit?.structuralKind satisfies string | undefined;
+typedSemanticEditProjectionEdit?.structuralActions satisfies readonly string[] | undefined;
 typedSemanticEditProjectionEdit?.replacementSpanTextHash satisfies string | undefined;
 typedSemanticEditProjectionEdit?.insertionAnchorKey satisfies string | undefined;
 
@@ -95,6 +102,8 @@ typedSemanticEditReplay.admission.autoMergeClaim satisfies false;
 typedSemanticEditReplay.admission.semanticEquivalenceClaim satisfies false;
 typedSemanticEditReplay.edits[0]?.status satisfies string | undefined;
 typedSemanticEditReplay.edits[0]?.editKind satisfies string | undefined;
+typedSemanticEditReplay.edits[0]?.structuralKind satisfies string | undefined;
+typedSemanticEditReplay.edits[0]?.structuralActions satisfies readonly string[] | undefined;
 typedSemanticEditReplay.outputSourceText satisfies string | undefined;
 const typedProjectionDeleteEditKind: NonNullable<compilerApi.SemanticEditProjectionEdit['editKind']> = 'delete';
 const typedReplayDeleteEditKind: NonNullable<compilerApi.SemanticEditReplayEdit['editKind']> = 'delete';
@@ -132,6 +141,8 @@ const typedSemanticLineageWithAnchorAliases: compilerApi.SemanticLineageEvent = 
 void typedSemanticEditScript;
 void typedSemanticEditScriptWithSourceAliases;
 void coveredStatus;
+void typedStructuralAction;
+void typedStructuralKind;
 void typedSemanticEditProjection;
 void typedSemanticEditProjectionEdit;
 void typedSemanticEditReplay;

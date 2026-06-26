@@ -15,6 +15,7 @@ export { createNativeImportCoverageMatrix } from './internal/index-impl/createNa
 export { createNativeImportResultContract } from './internal/index-impl/createNativeImportResultContract.js';
 export { createNativeParserAstFormatMatrix } from './internal/index-impl/createNativeParserAstFormatMatrix.js';
 export { createNativeParserFeatureMatrix } from './internal/index-impl/createNativeParserFeatureMatrix.js';
+export { createNativeProjectModuleResolutionFromPackageManifests } from './internal/index-impl/createNativeProjectModuleResolutionFromPackageManifests.js';
 export { createNativeRoundtripEvidence } from './internal/index-impl/createNativeRoundtripEvidence.js';
 export { createProjectImportAdmissionRecord } from './internal/index-impl/createProjectImportAdmissionRecord.js';
 export { createNativeSourcePreservation } from './internal/index-impl/createNativeSourcePreservation.js';
@@ -23,8 +24,12 @@ export { createProjectionTargetLossMatrix } from './internal/index-impl/createPr
 export { createPythonAstNativeImporterAdapter } from './internal/index-impl/createPythonAstNativeImporterAdapter.js';
 export { createRustSynNativeImporterAdapter } from './internal/index-impl/createRustSynNativeImporterAdapter.js';
 export { createSemanticImportSidecar } from './internal/index-impl/createSemanticImportSidecar.js';
+export { createSemanticGraphLayerSummary, SemanticGraphLayerKinds } from './semantic-import-graph-layers.js';
 export { compactSemanticSidecarExample } from './semantic-sidecar-example.js';
 export * from './js-ts-semantic-merge.js';
+export { createJsTsProjectMergeDeclarationEmitParityProof } from './js-ts-safe-project-merge-declaration-emit-parity.js';
+export { createJsTsProjectMergeDeclarationGate } from './js-ts-safe-project-merge-declarations.js';
+export { createJsTsProjectMergeDiagnosticsGate } from './js-ts-safe-project-merge-diagnostics.js';
 export { createSemanticSlice } from './internal/index-impl/createSemanticSlice.js';
 export { createSemanticSliceAdmissionRecord } from './internal/index-impl/createSemanticSliceAdmissionRecord.js';
 export { createSwiftSyntaxNativeImporterAdapter } from './internal/index-impl/createSwiftSyntaxNativeImporterAdapter.js';

@@ -1,5 +1,6 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { countBy, idFragment, uniqueStrings } from '../../native-import-utils.js';
+import { createParserTriviaExactnessRecord } from '../../native-source-preservation-ownership.js';
 import {
   detectNewlineStyle,
   isJavaScriptTypeScriptSource,
@@ -17,7 +18,7 @@ export function createNativeSourcePreservation(options) {
   const computedSourceHash = hashSemanticValue(sourceText);
   const declaredSourceHash = options.sourceHash;
   const sourceHash = computedSourceHash;
-  const tokensAndTrivia = scanPreservedSourceTokens(sourceText, {
+  const tokensAndTrivia = options.tokensAndTrivia ?? scanPreservedSourceTokens(sourceText, {
     language,
     sourcePath: options.sourcePath,
     sourceHash,
@@ -47,13 +48,26 @@ export function createNativeSourcePreservation(options) {
   const directivesByKind = countBy(directives.map((entry) => entry.kind ?? 'directive'));
   const directiveKinds = uniqueStrings(directives.map((entry) => entry.kind ?? 'directive'));
   const commentSpanIds = tokensAndTrivia.trivia
-    .filter((entry) => entry.kind === 'comment')
+    .filter((entry) => isCommentKind(entry.kind))
     .map((entry) => entry.id)
     .filter(Boolean);
   const directiveSpanIds = directives
     .map((entry) => entry.id)
     .filter(Boolean);
   const newline = detectNewlineStyle(sourceText);
+  const scannerEvidence = ledger ? 'frontier-lightweight-js-ts-source-ledger' : 'frontier-lightweight-lexical-scan';
+  const tokenTriviaParserEvidence = tokensAndTrivia.parserEvidence;
+  const parserEvidence = tokenTriviaParserEvidence ?? scannerEvidence;
+  const truncated = tokensAndTrivia.truncated || directiveScan.truncated || Boolean(ledger?.summary?.truncated);
+  const parserSpanCoverageProof = options.parserSpanCoverageProof ?? tokensAndTrivia.parserSpanCoverageProof;
+  const parserTriviaExactness = createParserTriviaExactnessRecord(options.parserTriviaEvidence ?? options.metadata?.parserTriviaEvidence, {
+    sourcePath: options.sourcePath,
+    sourceHash,
+    parserEvidence,
+    parserTokenTriviaEvidence: tokenTriviaParserEvidence ?? scannerEvidence,
+    parserSpanCoverageProof,
+    truncated
+  });
   return {
     kind: 'frontier.lang.nativeSourcePreservation',
     version: 1,
@@ -74,7 +88,7 @@ export function createNativeSourcePreservation(options) {
       tokens: tokensAndTrivia.tokens.length,
       trivia: tokensAndTrivia.trivia.length,
       directives: directives.length,
-      comments: tokensAndTrivia.trivia.filter((entry) => entry.kind === 'comment').length,
+      comments: tokensAndTrivia.trivia.filter((entry) => isCommentKind(entry.kind)).length,
       whitespace: tokensAndTrivia.trivia.filter((entry) => entry.kind === 'whitespace' || entry.kind === 'newline').length,
       ...(ledger ? {
         ledger: ledger.summary,
@@ -89,17 +103,30 @@ export function createNativeSourcePreservation(options) {
       commentSpanIds,
       directiveSpanIds,
       exactSourceAvailable: options.includeSourceText !== false,
-      truncated: tokensAndTrivia.truncated || directiveScan.truncated || Boolean(ledger?.summary?.truncated)
+      truncated,
+      parserTriviaExactnessStatus: parserTriviaExactness.status,
+      exactParserTrivia: parserTriviaExactness.exactParserTrivia,
+      parserSpanCoverageStatus: parserSpanCoverageProof?.status,
+      parserSpanCoverageReasonCodes: parserSpanCoverageProof?.reasonCodes,
+      parserSpanCoverageBlockReasonCodes: parserSpanCoverageProof?.blockReasonCodes,
+      parserTriviaExactnessReasonCodes: parserTriviaExactness.reasonCodes,
+      parserTriviaExactnessBlockReasonCodes: parserTriviaExactness.blockReasonCodes
     },
     metadata: {
       preservation: 'source-text-token-trivia-directive-evidence',
-      tokenization: 'frontier-lightweight-lexical-scan',
+      tokenization: tokensAndTrivia.parserEvidence ?? 'frontier-lightweight-lexical-scan',
       ...(ledger ? { sourceLedger: 'frontier-lightweight-js-ts-source-ledger' } : {}),
+      ...options.metadata,
+      ...(parserSpanCoverageProof ? { parserSpanCoverageProof } : {}),
+      parserTriviaExactness,
       ...(declaredSourceHash ? {
         declaredSourceHash,
         sourceHashVerified: declaredSourceHash === computedSourceHash
-      } : {}),
-      ...options.metadata
+      } : {})
     }
   };
+}
+
+function isCommentKind(kind) {
+  return kind === 'comment' || kind === 'jsdoc-comment' || kind === 'block-comment';
 }

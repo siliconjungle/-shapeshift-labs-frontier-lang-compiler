@@ -196,7 +196,7 @@ const caseSensitiveImport = importNativeSource({
   sourceText: 'import react from "react";\nimport React from "react";\nexport const pair = [react, React];\n'
 });
 const caseSensitiveSidecar = createSemanticImportSidecar(caseSensitiveImport);
-const caseSensitiveSymbols = caseSensitiveImport.semanticIndex.symbols.filter((symbol) => ['react', 'React'].includes(symbol.name));
+const caseSensitiveSymbols = caseSensitiveImport.semanticIndex.symbols.filter((symbol) => symbol.kind === 'import' && ['react', 'React'].includes(symbol.name));
 const caseSensitiveRegions = caseSensitiveSidecar.ownershipRegions.filter((region) => ['react', 'React'].includes(region.symbolName));
 assert.equal(new Set(caseSensitiveSymbols.map((symbol) => symbol.id)).size, 2);
 assert.equal(new Set(caseSensitiveRegions.map((region) => region.id)).size, 2);

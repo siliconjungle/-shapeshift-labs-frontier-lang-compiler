@@ -1,7 +1,7 @@
 const regexStartKeywords = new Set(['case', 'delete', 'else', 'in', 'instanceof', 'new', 'return', 'throw', 'typeof', 'void', 'yield']);
 
 export function isSourceMapComment(text) {
-  return /^(?:\/\/|\/\*)[#@]\s*sourceMappingURL=/.test(String(text).trim());
+  return /^(?:\/\/|\/\*)[#@]\s*source(?:Mapping)?URL=/.test(String(text).trim());
 }
 
 export function readToLineEnd(text, start) {

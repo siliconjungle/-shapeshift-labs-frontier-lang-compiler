@@ -1,6 +1,9 @@
 import { assert } from './helpers.mjs';
-import { importNativeProject } from './compiler-api.mjs';
+import { createTypeScriptCompilerNativeImporterAdapter, importNativeProject } from './compiler-api.mjs';
 import { createProjectDocumentExportSymbolResolver } from '../../src/internal/index-impl/projectSymbolGraphModuleResolution.js';
+
+const tsModule = await import('typescript');
+const typescript = tsModule.default ?? tsModule;
 
 const project = await importNativeProject({
   id: 'project_symbol_graph_named_import_resolution',
@@ -28,6 +31,82 @@ assert.equal(namedImportEdge.resolutionPathVariant, 'exact');
 assert.equal(graph.remainingFields.includes('moduleEdges[].resolutionKind'), false);
 assert.equal(graph.remainingFields.includes('moduleEdges[].resolvedTargetSymbolId'), false);
 assert.equal(project.semanticIndex.metadata.projectSymbolGraph, graph);
+
+const dynamicImportProject = await importNativeProject({
+  id: 'project_symbol_graph_dynamic_import_resolution',
+  projectRoot: 'src',
+  sources: [{
+    language: 'javascript',
+    sourcePath: 'src/index.js',
+    sourceText: "import('./lazy.js', { with: { type: 'json' } });\n",
+    metadata: { semanticImportExpected: true }
+  }, {
+    language: 'javascript',
+    sourcePath: 'src/lazy.js',
+    sourceText: 'export const lazy = 1;\n',
+    metadata: { semanticImportExpected: true }
+  }]
+});
+const dynamicImportEdge = dynamicImportProject.projectSymbolGraph.importEdges.find((edge) => edge.moduleSpecifier === './lazy.js' && edge.importKind === 'dynamic-import');
+assert.equal(dynamicImportEdge.resolvedModulePath, 'src/lazy.js');
+assert.equal(dynamicImportEdge.targetDocumentId, 'doc_src_lazy_js');
+assert.equal(dynamicImportEdge.resolutionKind, 'relative-source');
+
+const dynamicNonLiteralImportProject = await importNativeProject({
+  id: 'project_symbol_graph_dynamic_non_literal_import_resolution',
+  projectRoot: 'src',
+  adapters: [createTypeScriptCompilerNativeImporterAdapter({ typescript })],
+  sources: [{
+    language: 'typescript',
+    sourcePath: 'src/index.ts',
+    sourceText: "const runtimeTarget = './lazy.js';\nimport(runtimeTarget);\n",
+    metadata: { semanticImportExpected: true }
+  }]
+});
+const nonLiteralDynamicImportEdge = dynamicNonLiteralImportProject.projectSymbolGraph.importEdges.find((edge) => edge.moduleSpecifier === '<dynamic-import>' && edge.importKind === 'dynamic-import');
+assert.equal(nonLiteralDynamicImportEdge.resolvedModulePath, undefined);
+assert.equal(nonLiteralDynamicImportEdge.targetDocumentId, undefined);
+assert.equal(nonLiteralDynamicImportEdge.resolutionKind, 'dynamic-import-non-literal-missing');
+assert.equal(JSON.parse(JSON.stringify(nonLiteralDynamicImportEdge)).resolutionKind, 'dynamic-import-non-literal-missing');
+
+const commonJsProject = await importNativeProject({
+  id: 'project_symbol_graph_commonjs_require_export_assignment',
+  projectRoot: 'src',
+  sources: [{
+    language: 'javascript',
+    sourcePath: 'src/index.js',
+    sourceText: "const legacy = require('./legacy.js');\nconst { named } = require('./named.js');\nconst dynamicTarget = './dynamic.js';\nconst blocked = require(dynamicTarget);\nexports.used = legacy;\n",
+    metadata: { semanticImportExpected: true }
+  }, {
+    language: 'javascript',
+    sourcePath: 'src/legacy.js',
+    sourceText: 'const runtime = {};\nmodule.exports = runtime;\n',
+    metadata: { semanticImportExpected: true }
+  }, {
+    language: 'javascript',
+    sourcePath: 'src/named.js',
+    sourceText: 'const named = 1;\nexports.named = named;\n',
+    metadata: { semanticImportExpected: true }
+  }]
+});
+const commonJsGraph = commonJsProject.projectSymbolGraph;
+const commonJsDefaultImportEdge = commonJsGraph.importEdges.find((edge) => edge.moduleSpecifier === './legacy.js' && edge.importKind === 'commonjs-require' && edge.importedName === 'default');
+assert.equal(commonJsDefaultImportEdge.resolvedModulePath, 'src/legacy.js');
+assert.equal(commonJsDefaultImportEdge.targetDocumentId, 'doc_src_legacy_js');
+assert.equal(commonJsDefaultImportEdge.resolutionKind, 'relative-source');
+assert.equal(commonJsDefaultImportEdge.resolvedTargetSymbolId, 'symbol:javascript:export:module_exports');
+assert.equal(JSON.parse(JSON.stringify(commonJsDefaultImportEdge)).resolvedTargetSymbolId, 'symbol:javascript:export:module_exports');
+const commonJsModuleExportSymbol = commonJsProject.semanticIndex.symbols.find((symbol) => symbol.id === 'symbol:javascript:export:module_exports');
+assert.equal(commonJsModuleExportSymbol?.metadata.exportKind, 'assignment');
+assert.equal(commonJsModuleExportSymbol?.metadata.localName, 'runtime');
+assert.equal(commonJsModuleExportSymbol?.metadata.publicContract, true);
+assertEdge(commonJsGraph.exportEdges, { sourcePath: 'src/legacy.js', exportedName: 'module.exports', exportKind: 'assignment', localName: 'runtime' });
+assertEdge(commonJsGraph.importEdges, { moduleSpecifier: './named.js', importedName: 'named', resolvedTargetSymbolId: 'symbol:javascript:export:named' });
+const commonJsNamedExportSymbol = commonJsProject.semanticIndex.symbols.find((symbol) => symbol.id === 'symbol:javascript:export:named');
+assert.equal(commonJsNamedExportSymbol?.metadata.exportKind, 'commonjs-named');
+assert.equal(commonJsNamedExportSymbol?.metadata.localName, 'named');
+assert.equal(commonJsNamedExportSymbol?.metadata.publicContract, true);
+assert.equal(commonJsGraph.importEdges.some((edge) => edge.moduleSpecifier === './dynamic.js'), false);
 
 const fallbackExportResolver = createProjectDocumentExportSymbolResolver([{
   id: 'symbol:javascript:export:fallback',
@@ -169,6 +248,25 @@ assert.equal(externalPackageImportEdge.packageImportKey, '#external');
 assert.equal(externalPackageImportEdge.packageImportCondition, 'default');
 assert.equal(externalPackageImportEdge.packageImportTarget, 'react/jsx-runtime');
 
+const packageImportConditionMissingProject = await importNativeProject({
+  id: 'project_symbol_graph_package_import_condition_missing',
+  projectRoot: '.',
+  moduleResolution: {
+    imports: { '#only-dev': { development: './src/internal/dev.ts' } },
+    packageExportConditions: ['import', 'default']
+  },
+  sources: [
+    { language: 'typescript', sourcePath: 'src/index.ts', sourceText: "import { devOnly } from '#only-dev';\nexport const used = devOnly;\n", metadata: { semanticImportExpected: true } },
+    { language: 'typescript', sourcePath: 'src/internal/dev.ts', sourceText: 'export const devOnly = 1;\n', metadata: { semanticImportExpected: true } }
+  ]
+});
+
+const packageImportConditionMissingEdge = packageImportConditionMissingProject.projectSymbolGraph.importEdges.find((edge) => edge.moduleSpecifier === '#only-dev' && edge.importedName === 'devOnly');
+assert.equal(packageImportConditionMissingEdge.resolutionKind, 'package-import-condition-missing');
+assert.equal(packageImportConditionMissingEdge.packageImportKey, '#only-dev');
+for (const field of ['packageImportCondition', 'packageImportTarget', 'resolvedModulePath', 'targetDocumentId', 'resolvedTargetSymbolId']) assert.equal(packageImportConditionMissingEdge[field], undefined);
+assert.equal(JSON.parse(JSON.stringify(packageImportConditionMissingEdge)).resolutionKind, 'package-import-condition-missing');
+
 const reExportProject = await importNativeProject({
   id: 'project_symbol_graph_reexport_identity_resolution',
   projectRoot: 'src',
@@ -185,13 +283,15 @@ const reExportProject = await importNativeProject({
   }]
 });
 
-const reExportIdentity = reExportProject.projectSymbolGraph.reExportIdentities[0];
+const reExportIdentity = reExportProject.projectSymbolGraph.reExportIdentities
+  .find((identity) => identity.importedName === 'thing' && identity.exportedName === 'renamedThing');
+assert.ok(reExportIdentity);
 assert.equal(reExportIdentity.moduleSpecifier, './thing.js');
 assert.equal(reExportIdentity.importedName, 'thing');
 assert.equal(reExportIdentity.exportedName, 'renamedThing');
 assert.equal(reExportIdentity.originSymbolId, 'symbol:javascript:export:thing');
 assert.equal(reExportIdentity.exportedSymbolId, 'symbol:javascript:export:renamedthing');
-assert.equal(reExportIdentity.localSymbolId, 'symbol:javascript:import:thing_js_renamedthing');
+assert.equal(reExportIdentity.localSymbolId, 'symbol:javascript:import:thing_js_renamedthing_thing_1jq6cun');
 assert.deepEqual(reExportProject.projectSymbolGraph.remainingFields, []);
 
 const exportStarProject = await importNativeProject({
@@ -216,3 +316,5 @@ assert.deepEqual(exportStarNames, ['other', 'thing']);
 assert.equal(exportStarGraph.importEdges.find((edge) => edge.moduleSpecifier === './thing.js').exportStar, true);
 assert.equal(exportStarGraph.reExportIdentities.every((identity) => identity.isExportStar === true), true);
 assert.deepEqual(exportStarGraph.reExportIdentities.map((identity) => identity.originSymbolId).sort(), ['symbol:javascript:export:other', 'symbol:javascript:export:thing']);
+
+function assertEdge(edges, expected) { assert.equal(edges.some((candidate) => Object.entries(expected).every(([key, value]) => candidate[key] === value)), true, `missing edge ${JSON.stringify(expected)}`); }

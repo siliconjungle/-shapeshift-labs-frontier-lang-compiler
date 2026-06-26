@@ -8,6 +8,7 @@ import {
   maskDependencyLine
 } from './lightweight-dependency-language.js';
 import { lightweightEffectKinds } from './lightweight-dependency-effects.js';
+import { lightweightTopLevelRuntimeFacts } from './lightweight-dependency-top-level.js';
 import { sourceLines } from './native-region-scanner-core.js';
 
 export function lightweightDependencyRelations(input, declarations, documentId) {
@@ -18,6 +19,7 @@ export function lightweightDependencyRelations(input, declarations, documentId) 
   for (const scan of dependencyScanRanges(input, declarations, lines)) {
     scanDeclarationDependencies(input, documentId, scan, identifiers, lines, records);
   }
+  records.facts.push(...lightweightTopLevelRuntimeFacts(input, documentId, lines));
   return {
     relations: records.relations,
     occurrences: records.occurrences,
@@ -71,8 +73,9 @@ function scanDeclarationDependencies(input, documentId, scan, identifiers, lines
   const state = { inBlockComment: false };
   const factState = { braceDepth: 0, pendingSwitch: false, switchDepth: 0 };
   for (let lineNumber = scan.startLine; lineNumber <= scan.endLine; lineNumber += 1) {
-    const scanLine = maskDependencyLine(input, lines[lineNumber - 1]?.line ?? '', state);
-    addLightweightSemanticFacts(input, documentId, scan.declaration, scanLine, lineNumber, records, factState);
+    const rawLine = lines[lineNumber - 1]?.line ?? '';
+    const scanLine = maskDependencyLine(input, rawLine, state);
+    addLightweightSemanticFacts(input, documentId, scan.declaration, scanLine, lineNumber, records, factState, rawLine);
     for (const match of scanLine.matchAll(/[A-Za-z_$][\w$]*/g)) {
       const name = match[0];
       if (!isDependencyIdentifier(name) || !identifiers.has(name)) continue;
@@ -90,17 +93,17 @@ function scanDeclarationDependencies(input, documentId, scan, identifiers, lines
   }
 }
 
-function addLightweightSemanticFacts(input, documentId, declaration, line, lineNumber, records, factState) {
+function addLightweightSemanticFacts(input, documentId, declaration, line, lineNumber, records, factState, rawLine) {
   if (!shouldScanRuntimeFacts(input, declaration)) return;
   const text = String(line ?? '').trim();
   if (!text) return;
   for (const item of lightweightControlFlowKinds(text, factState)) {
     addFactRecord(input, documentId, declaration, 'controlFlow', item, lineNumber, records);
   }
-  for (const item of lightweightEffectKinds(text)) {
+  for (const item of lightweightEffectKinds(rawLine ?? text)) {
     addFactRecord(input, documentId, declaration, 'effect', item, lineNumber, records);
   }
-  for (const item of lightweightMutationKinds(text)) {
+  for (const item of lightweightMutationKinds(text, rawLine ?? text)) {
     addFactRecord(input, documentId, declaration, 'mutation', item, lineNumber, records);
   }
   updateLightweightFactState(text, factState);
@@ -149,17 +152,20 @@ function lightweightControlFlowKinds(line, state = {}) {
   if (hasBranchSyntax(line, state)) kinds.push('branch');
   if (/\b(for|while|do)\b/.test(line)) kinds.push('loop');
   if (/\b(return|yield)\b/.test(line)) kinds.push('exit');
+  if (/\b(break|continue)\b/.test(line)) kinds.push('transfer');
   if (/\b(throw|catch|finally|try)\b/.test(line)) kinds.push('exception');
   if (/\b(await|async)\b/.test(line)) kinds.push('async');
   return kinds;
 }
 
-function lightweightMutationKinds(line) {
+function lightweightMutationKinds(line, rawLine = line) {
   const kinds = [];
+  const sourceLine = String(rawLine ?? line);
   if (/\bdelete\s+[A-Za-z_$][\w$.[\]]*/.test(line)) kinds.push('delete');
   if (hasRuntimeAssignment(line)) kinds.push('assignment');
   if (/\+\+|--|(?:\+=|-=|\*=|\/=|%=|\|\|=|&&=|\?\?=)/.test(line)) kinds.push('update');
-  if (/\.(?:push|pop|shift|unshift|splice|sort|reverse|set|add|delete|clear)\s*\(/.test(line)) kinds.push('mutating-call');
+  if (/(?:\.|\?\.)\s*(?:push|pop|shift|unshift|splice|sort|reverse|set|add|delete|clear)\s*(?:\?\.)?\s*\(/.test(line)
+    || /(?:\?\.|\b[A-Za-z_$][\w$]*(?:\s*(?:\.|\?\.)\s*[A-Za-z_$][\w$]*|\s*\[[^\]]+\])*)\s*\[\s*(['"`])(?:push|pop|shift|unshift|splice|sort|reverse|set|add|delete|clear)\1\s*\]\s*(?:\?\.)?\s*\(/.test(sourceLine)) kinds.push('mutating-call');
   return kinds;
 }
 

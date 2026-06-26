@@ -3,9 +3,17 @@ import {
   nativeImportBindingDeclaration,
   nativeImportDeclaration
 } from './native-region-scanner-core.js';
+import { jsCommonJsExportDeclarations } from './native-region-scanner-js-commonjs.js';
+import { jsCommonJsHelperImportDeclarations } from './native-region-scanner-js-ts-helpers.js';
+import { jsCommonJsReExportDeclarations } from './native-region-scanner-js-reexports.js';
 import { idFragment } from './native-import-utils.js';
+import { importAttributeMetadataFromSource } from './internal/index-impl/moduleImportAttributeMetadata.js';
 
 export function jsImportDeclarations(input, lineNumber, trimmed) {
+  const commonJsReExport = jsCommonJsReExportDeclarations(input, lineNumber, trimmed);
+  if (commonJsReExport.length) return commonJsReExport;
+  const commonJsHelperImport = jsCommonJsHelperImportDeclarations(input, lineNumber, trimmed);
+  if (commonJsHelperImport.length) return commonJsHelperImport;
   const importEquals = trimmed.match(/^import\s+(type\s+)?([A-Za-z_$][\w$]*)\s*=\s*require\s*\(\s*(['"])([^'"]+)\3\s*\)/);
   if (importEquals) return jsImportModuleDeclarations(input, lineNumber, importEquals[4], 'ImportEqualsDeclaration', [{
     localName: importEquals[2],
@@ -19,7 +27,7 @@ export function jsImportDeclarations(input, lineNumber, trimmed) {
     const importPath = importMatch[4];
     const clause = importMatch[2]?.trim();
     const bindings = clause ? jsImportBindingsFromClause(clause, { typeOnly }) : [];
-    return jsImportModuleDeclarations(input, lineNumber, importPath, 'ImportDeclaration', bindings, { typeOnly, sideEffectOnly: bindings.length === 0 });
+    return jsImportModuleDeclarations(input, lineNumber, importPath, 'ImportDeclaration', bindings, { typeOnly, sideEffectOnly: bindings.length === 0, importKind: bindings.length === 0 ? 'side-effect' : 'module', ...importAttributeMetadataFromSource(trimmed) });
   }
   const exportMatch = trimmed.match(/^export\s+(type\s+)?(?:(\*)\s+from|\*\s+as\s+([A-Za-z_$][\w$]*)\s+from|\{([^}]+)\}\s+from)\s+(['"])([^'"]+)\5/);
   if (exportMatch) {
@@ -31,24 +39,31 @@ export function jsImportDeclarations(input, lineNumber, trimmed) {
         ? jsNamedImportBindings(exportMatch[4], { typeOnly, reexport: true })
         : [];
     return [
-      ...jsImportModuleDeclarations(input, lineNumber, importPath, 'ExportFromDeclaration', bindings, { typeOnly, reexport: true, exportStar: Boolean(exportMatch[2]) }),
-      ...jsExportModuleDeclarations(input, lineNumber, importPath, bindings, { typeOnly, exportStar: Boolean(exportMatch[2]) })
+      ...jsImportModuleDeclarations(input, lineNumber, importPath, 'ExportFromDeclaration', bindings, { typeOnly, reexport: true, exportStar: Boolean(exportMatch[2]), ...importAttributeMetadataFromSource(trimmed) }),
+      ...jsExportModuleDeclarations(input, lineNumber, importPath, bindings, { typeOnly, exportStar: Boolean(exportMatch[2]), ...importAttributeMetadataFromSource(trimmed) })
     ];
   }
   const destructuredRequireMatch = trimmed.match(/^(?:const|let|var)\s+\{([^}]+)\}\s*=\s*(?:await\s+)?(require|import)\s*\(\s*(['"])([^'"]+)\3\s*\)/);
   if (destructuredRequireMatch) {
-    const importKind = destructuredRequireMatch[2] === 'import' ? 'dynamic-import-binding' : 'commonjs-require';
+    const dynamicImport = destructuredRequireMatch[2] === 'import';
+    const importKind = dynamicImport ? 'dynamic-import-binding' : 'commonjs-require';
     const bindings = jsDestructuredImportBindings(destructuredRequireMatch[1], importKind);
     if (bindings.length) {
-      return jsImportModuleDeclarations(input, lineNumber, destructuredRequireMatch[4], 'DestructuredRequireDeclaration', bindings, { destructured: true });
+      return jsImportModuleDeclarations(input, lineNumber, destructuredRequireMatch[4], 'DestructuredRequireDeclaration', bindings, {
+        destructured: true,
+        ...(dynamicImport ? jsDynamicImportMetadata() : {})
+      });
     }
   }
-  const requireMatch = trimmed.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?(?:require|import)\s*\(\s*(['"])([^'"]+)\2\s*\)/);
-  if (requireMatch) return jsImportModuleDeclarations(input, lineNumber, requireMatch[3], 'CommonJsRequireDeclaration', [{
-    localName: requireMatch[1],
-    importedName: 'default',
-    importKind: trimmed.includes('import') ? 'dynamic-import-binding' : 'commonjs-require'
-  }]);
+  const requireMatch = trimmed.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?(require|import)\s*\(\s*(['"])([^'"]+)\3\s*\)/);
+  if (requireMatch) {
+    const dynamicImport = requireMatch[2] === 'import';
+    return jsImportModuleDeclarations(input, lineNumber, requireMatch[4], dynamicImport ? 'DynamicImportBindingDeclaration' : 'CommonJsRequireDeclaration', [{
+      localName: requireMatch[1],
+      importedName: 'default',
+      importKind: dynamicImport ? 'dynamic-import-binding' : 'commonjs-require'
+    }], dynamicImport ? jsDynamicImportMetadata() : {});
+  }
   const sideEffectRequireMatch = trimmed.match(/^require\s*\(\s*(['"])([^'"]+)\1\s*\)\s*;?$/);
   if (sideEffectRequireMatch) {
     return jsImportModuleDeclarations(input, lineNumber, sideEffectRequireMatch[2], 'CommonJsSideEffectRequireDeclaration', [], {
@@ -56,10 +71,14 @@ export function jsImportDeclarations(input, lineNumber, trimmed) {
       importKind: 'commonjs-require'
     });
   }
+  const dynamicImportMatch = trimmed.match(/^import\s*\(\s*(['"])([^'"]+)\1\s*(?:,\s*(.+))?\)\s*;?$/);
+  if (dynamicImportMatch) return jsImportModuleDeclarations(input, lineNumber, dynamicImportMatch[2], 'DynamicImportExpression', [], jsDynamicImportMetadata(dynamicImportMatch[3]));
   return [];
 }
 
 export function jsExportDeclarations(input, lineNumber, trimmed) {
+  const commonJsExport = jsCommonJsExportDeclarations(input, lineNumber, trimmed);
+  if (commonJsExport.length) return commonJsExport;
   if (/^export\s+(?:type\s+)?(?:\*|\{[^}]+\}\s+from\b)/.test(trimmed)) return [];
   const named = trimmed.match(/^export\s+(type\s+)?\{([^}]+)\}\s*;?$/);
   if (named) return jsLocalExportDeclarations(input, lineNumber, named[2], { typeOnly: Boolean(named[1]) });
@@ -71,7 +90,15 @@ export function jsExportDeclarations(input, lineNumber, trimmed) {
   if (assignment) return [nativeExportDeclaration(input, lineNumber, 'module.exports', 'ExportAssignment', {
     exportKind: 'assignment',
     localName: assignment[1]
-  }, { name: 'module.exports' })];
+  }, {
+    name: 'module.exports',
+    metadata: {
+      exportKind: 'assignment',
+      exportedName: 'module.exports',
+      localName: assignment[1],
+      publicContract: true
+    }
+  })];
   if (!trimmed.startsWith('export ')) return [];
   const defaultMatch = trimmed.match(/^export\s+default\s+(.+)$/);
   if (defaultMatch) return [nativeExportDeclaration(input, lineNumber, 'default', 'ExportDefaultDeclaration', {
@@ -109,6 +136,7 @@ function jsImportModuleDeclarations(input, lineNumber, importPath, languageKind,
     localName: binding.localName,
     importedName: binding.importedName,
     importKind: binding.importKind,
+    ...(binding.namespace ? { namespace: binding.namespace } : {}),
     ...(binding.exportedName ? { exportedName: binding.exportedName } : {}),
     ...(binding.typeOnly ? { typeOnly: true } : {})
   }));
@@ -121,7 +149,9 @@ function jsImportModuleDeclarations(input, lineNumber, importPath, languageKind,
         ...(metadata.sideEffectOnly ? { sideEffectOnly: true } : {}),
         ...(metadata.reexport ? { reexport: true } : {}),
         ...(metadata.exportStar ? { exportStar: true } : {}),
-        ...(metadata.destructured ? { destructured: true } : {})
+        ...(metadata.destructured ? { destructured: true } : {}),
+        ...(metadata.dynamicImport ? { dynamicImport: true } : {}),
+        ...(metadata.hasImportAttributes ? { hasImportAttributes: true } : {})
       },
       metadata: {
         moduleOnly: true,
@@ -131,6 +161,14 @@ function jsImportModuleDeclarations(input, lineNumber, importPath, languageKind,
     }),
     ...bindings.map((binding) => nativeImportBindingDeclaration(input, lineNumber, importPath, binding))
   ];
+}
+
+function jsDynamicImportMetadata(attributesSource) {
+  return {
+    importKind: 'dynamic-import',
+    dynamicImport: true,
+    ...importAttributeMetadataFromSource(attributesSource)
+  };
 }
 
 function jsExportModuleDeclarations(input, lineNumber, importPath, bindings = [], metadata = {}) {

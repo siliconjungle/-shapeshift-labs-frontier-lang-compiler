@@ -1,6 +1,9 @@
 import {
   uniqueStrings
 } from './native-import-utils.js';
+import {
+  HtmlCssNativeParserAstFormatProfileInputs
+} from './native-parser-html-css-format-profiles.js';
 
 export const NativeParserFeatureCategories = Object.freeze([
   'syntax',
@@ -55,6 +58,7 @@ export const NativeParserAstFormatProfiles = Object.freeze([
     supportsErrorRecovery: true,
     notes: ['TypeScript SourceFile trees can be parsed without a full Program; richer type/checker evidence remains host-owned.']
   }),
+  ...HtmlCssNativeParserAstFormatProfileInputs.map(([id, input]) => nativeParserAstFormatProfile(id, input)),
   nativeParserAstFormatProfile('python-ast', {
     kind: 'abstract-ast',
     languages: ['python'],
@@ -241,6 +245,14 @@ export function normalizeParserAstFormatId(format) {
 export function parserAstFormatIdForParser(parser) {
   const text = normalizeParserAstFormatId(parser);
   if (text.includes('typescript')) return 'typescript-compiler-api';
+  if (text.includes('parse5')) return 'parse5';
+  if (text.includes('htmlparser') || text.includes('domhandler')) return 'htmlparser2';
+  if (text.includes('rehype') || text === 'hast' || text.includes('unified-rehype')) return 'rehype';
+  if (text.includes('tree-sitter-html') || text.includes('treesitter-html')) return 'tree-sitter-html';
+  if (text.includes('postcss')) return 'postcss';
+  if (text.includes('csstree') || text.includes('css-tree')) return 'csstree';
+  if (text.includes('lightningcss') || text.includes('lightning-css')) return 'lightningcss';
+  if (text.includes('tree-sitter-css') || text.includes('treesitter-css')) return 'tree-sitter-css';
   if (text.includes('python') && text.includes('ast')) return 'python-ast';
   if (text === 'syn' || text.includes('rust-syn')) return 'rust-syn';
   if (text.includes('rust-analyzer') || text.includes('rowan')) return 'rust-analyzer-rowan';

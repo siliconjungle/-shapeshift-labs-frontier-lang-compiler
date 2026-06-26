@@ -49,7 +49,6 @@ import {
   summarizeNativeImportLosses,
   writeUniversalAstJson
 } from './compiler-api.mjs';
-
 const coverageMatrix = createNativeImportCoverageMatrix({
   generatedAt: 123,
   imports: [
@@ -69,7 +68,8 @@ assert.equal(coverageMatrix.summary.imports, 6);
 assert.ok(coverageMatrix.summary.sourceMapMappings >= 6);
 assert.ok(coverageMatrix.summary.lossKinds.opaqueNative >= 1);
 assert.ok(coverageMatrix.summary.adapterCoverage.total >= 1);
-assert.ok(coverageMatrix.summary.adapterCoverage.gaps.tokens >= 1);
+assert.ok(coverageMatrix.summary.adapterCoverage.effective.tokens >= 1);
+assert.ok(coverageMatrix.summary.adapterCoverage.effective.trivia >= 1);
 assert.ok(coverageMatrix.summary.adapterCoverage.effective.exactAst >= 1);
 assert.equal(NativeImportLanguageProfiles.some((profile) => profile.language === 'python'), true);
 const jsCoverage = coverageMatrix.languages.find((entry) => entry.language === 'javascript');
@@ -123,7 +123,7 @@ assert.equal(getNativeParserAstFormatProfile('javac').id, 'java-ast');
 assert.equal(getNativeParserAstFormatProfile('kotlin-compiler').id, 'kotlin-psi');
 assert.equal(getNativeParserAstFormatProfile('roslyn').id, 'roslyn-csharp');
 assert.equal(getNativeParserAstFormatProfile('SwiftSyntax').id, 'swift-syntax');
-assert.ok(parserFormatMatrix.summary.formats >= 11);
+assert.ok(parserFormatMatrix.summary.formats >= 19);
 assert.equal(parserFormatMatrix.summary.imports, 12);
 assert.ok(parserFormatMatrix.summary.nativeAstNodes >= 5);
 assert.ok(parserFormatMatrix.summary.effectiveCapabilities.exactAst >= 9);
@@ -237,7 +237,8 @@ const projectionLossMatrix = createProjectionTargetLossMatrix({
     scannedCImport,
     scannedRImport
   ],
-  adapters: [createEstreeNativeImporterAdapter()]
+  adapters: [createEstreeNativeImporterAdapter()],
+  targets: ['typescript', 'javascript', 'html', 'css', 'c']
 });
 assert.equal(projectionLossMatrix.kind, 'frontier.lang.projectionTargetLossMatrix');
 assert.equal(projectionLossMatrix.generatedAt, 321);
@@ -313,7 +314,6 @@ assert.equal(readUniversalAstJson(universalJson).document.id, 'mod_todo');
 assert.match(compileFrontierSource(source, { target: 'rust' }).output, /pub struct Todo/);
 assert.match(compileFrontierSource(source, { target: 'python' }).output, /class Todo/);
 assert.match(compileFrontierSource(source, { target: 'c' }).output, /typedef struct Todo/);
-
 const bad = compileFrontierSource('module Bad @id("mod_bad")\nentity Bad @id("ent_bad") { missing: UnknownType }', { target: 'typescript' });
 assert.equal(bad.ok, false);
 assert.equal(bad.ast, undefined);

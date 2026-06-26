@@ -63,6 +63,10 @@ export interface JavaScriptNativeImporterAdapterOptions {
   readonly babelParser?: { readonly parse: (sourceText: string, options: Record<string, unknown>) => unknown };
   readonly parserOptions?: Record<string, unknown> | ((input: NativeImporterAdapterParseInput) => Record<string, unknown>);
   readonly maxNodes?: number;
+  readonly includeTokens?: boolean;
+  readonly includeTrivia?: boolean;
+  readonly maxTokens?: number;
+  readonly maxTrivia?: number;
 }
 
 export interface TypeScriptCompilerNativeImporterAdapterOptions {
@@ -79,12 +83,29 @@ export interface TypeScriptCompilerNativeImporterAdapterOptions {
   readonly program?: { readonly getTypeChecker?: () => unknown } | unknown;
   readonly typeChecker?: unknown;
   readonly checker?: unknown;
+  readonly computedEnumRuntimeValueProofs?: readonly unknown[] | Record<string, unknown>;
+  readonly computedEnumRuntimeValueProof?: unknown;
+  readonly computedEnumRuntimeValueTraces?: readonly unknown[] | Record<string, unknown>;
+  readonly computedEnumRuntimeValueProofProvider?: (input: {
+    readonly sourcePath?: string;
+    readonly sourceHash?: string;
+    readonly enumName?: string;
+    readonly enumRuntimeShapeHash?: string;
+    readonly enumComputedMemberCount?: number;
+    readonly enumMembers?: readonly unknown[];
+    readonly computedMembers?: readonly unknown[];
+    readonly proofKind?: string;
+  }) => unknown;
+  readonly computedEnumRuntimeValueTraceProvider?: TypeScriptCompilerNativeImporterAdapterOptions['computedEnumRuntimeValueProofProvider'];
   readonly sourceFile?: unknown;
   readonly createSourceFile?: (input: NativeImporterAdapterParseInput, typescript?: unknown) => unknown;
   readonly scriptTarget?: unknown;
   readonly scriptKind?: unknown;
   readonly maxNodes?: number;
   readonly includeTokens?: boolean;
+  readonly includeTrivia?: boolean;
+  readonly maxTokens?: number;
+  readonly maxTrivia?: number;
 }
 
 export interface PythonAstNativeImporterAdapterOptions {

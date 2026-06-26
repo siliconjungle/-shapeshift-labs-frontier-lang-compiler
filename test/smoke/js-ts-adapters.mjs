@@ -2,6 +2,7 @@ import { assert, assertExactAdapterOutranksScanner } from './helpers.mjs';
 import {
   createBabelNativeImporterAdapter,
   createEstreeNativeImporterAdapter,
+  createSemanticImportSidecar,
   createTypeScriptCompilerNativeImporterAdapter,
   importNativeSource,
   runNativeImporterAdapter
@@ -28,8 +29,10 @@ export const estreeAdapterImport = await runNativeImporterAdapter(createEstreeNa
 assert.equal(estreeAdapterImport.adapter.parser, 'estree');
 assert.equal(estreeAdapterImport.adapter.coverage.exactness, 'exact-parser-ast');
 assert.equal(estreeAdapterImport.adapter.coverage.exactAst, true);
-assert.equal(estreeAdapterImport.adapter.coverage.tokens, false);
-assert.equal(estreeAdapterImport.adapter.coverage.trivia, false);
+assert.equal(estreeAdapterImport.adapter.coverage.tokens, true);
+assert.equal(estreeAdapterImport.adapter.coverage.trivia, true);
+assert.equal(estreeAdapterImport.adapter.coverage.observed.tokens, false);
+assert.equal(estreeAdapterImport.adapter.coverage.observed.trivia, false);
 assert.equal(estreeAdapterImport.adapter.coverage.diagnostics, true);
 assert.equal(estreeAdapterImport.adapter.coverage.sourceRanges, true);
 assert.equal(estreeAdapterImport.adapter.coverage.generatedRanges, false);
@@ -158,6 +161,7 @@ export const tsMock = {
   createSourceFile(fileName, sourceText, scriptTarget, setParentNodes, scriptKind) {
     tsCreateSourceFileCalls.push({ fileName, scriptTarget, setParentNodes, scriptKind });
     const functionName = sourceText.includes('fromTsx') ? 'fromTsx' : 'fromTs';
+    const referenceStart = sourceText.lastIndexOf(`${functionName}();`);
     const sourceFile = {
       kind: 0,
       fileName,
@@ -173,7 +177,7 @@ export const tsMock = {
       end: sourceText.length,
       name: { kind: 2, escapedText: functionName },
       children: []
-    }];
+    }, ...(referenceStart >= 0 ? [{ kind: 2, escapedText: functionName, text: functionName, pos: referenceStart, end: referenceStart + functionName.length }] : [])];
     return sourceFile;
   },
   forEachChild(node, visit) {
@@ -189,9 +193,16 @@ const tsTypeCheckerMock = {
   },
   getFullyQualifiedName(symbol) {
     return `"project".${symbol.name}`;
+  },
+  getTypeAtLocation(node) {
+    const name = String(node?.escapedText ?? node?.text ?? node?.name ?? 'unknown');
+    return { flags: 11, intrinsicName: name === 'fromTs' ? '() => boolean' : name };
+  },
+  typeToString(type) {
+    return type.intrinsicName;
   }
 };
-const tsFixtureSource = 'export function fromTs(): boolean { return true; }\n';
+const tsFixtureSource = 'export function fromTs(): boolean { return true; }\nfromTs();\n';
 export const tsAdapterImport = await runNativeImporterAdapter(createTypeScriptCompilerNativeImporterAdapter({
   typescript: tsMock,
   typeChecker: tsTypeCheckerMock
@@ -200,12 +211,33 @@ export const tsAdapterImport = await runNativeImporterAdapter(createTypeScriptCo
   sourceText: tsFixtureSource
 });
 assert.equal(tsAdapterImport.adapter.parser, 'typescript-compiler-api');
+assert.equal(tsAdapterImport.adapter.capabilities.includes('compilerSymbolFacts'), true);
+assert.equal(tsAdapterImport.adapter.capabilities.includes('compilerTypeFacts'), true);
+assert.equal(tsAdapterImport.adapter.capabilities.includes('compilerReferenceGraph'), true);
 assert.equal(tsCreateSourceFileCalls.find((call) => call.fileName === 'src/ts.ts')?.scriptKind, tsMock.ScriptKind.TS);
 const fromTsSymbol = tsAdapterImport.semanticIndex.symbols.find((symbol) => symbol.name === 'fromTs');
 assert.equal(Boolean(fromTsSymbol), true);
 assert.equal(fromTsSymbol.id.includes('compiler'), true);
 assert.equal(fromTsSymbol.metadata.compilerSymbol.fullyQualifiedName, '"project".fromTs');
 assert.equal(fromTsSymbol.metadata.compilerSymbol.flags, 7);
+assert.equal(fromTsSymbol.metadata.compilerType.typeText, '() => boolean');
+const fromTsCompilerFact = tsAdapterImport.semanticIndex.facts.find((fact) => fact.predicate === 'compilerSymbol' && fact.subjectId === fromTsSymbol.id);
+assert.equal(fromTsCompilerFact.value.fullyQualifiedName, '"project".fromTs');
+assert.equal(tsAdapterImport.semanticIndex.evidence[0].metadata.graphRecords.compilerSymbols, 1);
+const fromTsCompilerTypeFact = tsAdapterImport.semanticIndex.facts.find((fact) => fact.predicate === 'compilerType' && fact.subjectId === fromTsSymbol.id);
+assert.equal(fromTsCompilerTypeFact.value.typeText, '() => boolean');
+assert.equal(tsAdapterImport.semanticIndex.evidence[0].metadata.graphRecords.compilerTypes, 1);
+const fromTsReferenceRelation = tsAdapterImport.semanticIndex.relations.find((relation) => relation.predicate === 'references' && relation.targetId === fromTsSymbol.id);
+assert.equal(Boolean(fromTsReferenceRelation), true);
+assert.equal(tsAdapterImport.semanticIndex.facts.some((fact) => fact.predicate === 'compilerSymbolReference' && fact.objectId === fromTsSymbol.id), true);
+assert.equal(tsAdapterImport.metadata.compilerReferenceGraph.references, 1);
+const tsSidecar = createSemanticImportSidecar(tsAdapterImport);
+assert.equal(tsSidecar.imports[0].semanticFactPredicates.includes('compilerSymbol'), true);
+assert.equal(tsSidecar.imports[0].semanticFactSummary.compilerSymbol, 1);
+assert.equal(tsSidecar.imports[0].semanticFactPredicates.includes('compilerType'), true);
+assert.equal(tsSidecar.imports[0].semanticFactSummary.compilerType, 1);
+assert.equal(tsSidecar.imports[0].dependencyPredicates.includes('references'), true);
+assert.equal(tsSidecar.graphLayers.layers.scopeUseDef.summary.references, 1);
 assert.equal(tsSymbolCalls.includes('fromTs'), true);
 assert.equal(tsAdapterImport.sourceMaps[0].mappings.some((mapping) => mapping.semanticSymbolId === fromTsSymbol.id), true);
 const scannedTsFixtureImport = importNativeSource({

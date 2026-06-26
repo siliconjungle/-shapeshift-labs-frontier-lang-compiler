@@ -86,6 +86,14 @@ assert.equal(exactMapAudit.hashChecks.sourceHashVerified, true);
 assert.equal(exactMapAudit.hashChecks.outputMatchesSourceHash, true);
 assert.equal(exactMapAudit.semanticEquivalenceClaim, false);
 assert.equal(exactMapAudit.semanticEquivalence.claimed, false);
+const exactBoundaryGate = exactMapCompile.metadata.sourceMapGeneratedBoundaryGate;
+assert.equal(exactBoundaryGate.status, 'ready');
+assert.equal(exactBoundaryGate.exactBoundary, true);
+assert.equal(exactBoundaryGate.autoMergeClaim, false);
+assert.equal(exactBoundaryGate.semanticEquivalenceClaim, false);
+assert.equal(exactBoundaryGate.summary.exactBoundaryMappings >= 1, true);
+assert.equal(exactBoundaryGate.reasonCodes.includes('source-map-generated-boundary:exact'), true);
+assert.equal(exactMapCompile.sourceMaps[0].metadata.sourceMapGeneratedBoundaryGate.status, 'ready');
 const preservedRoundtrip = classifyNativeImportRoundtripReadiness(scannedJsImport);
 assert.equal(preservedRoundtrip.status, 'preserved-source');
 assert.equal(preservedRoundtrip.semanticMergeReadiness, 'needs-review');
@@ -101,6 +109,8 @@ const preservedAudit = scannedPreservedProjection.metadata.roundtripEvidence.aud
 assert.equal(preservedAudit.paths.preservedSource.available, true);
 assert.equal(preservedAudit.sourcePreservation.exactSourceAvailable, true);
 assert.equal(preservedAudit.commentsTrivia.comments >= 1, true);
+assert.equal(preservedAudit.hashChecks.sourceHashVerified, true);
+assert.equal(preservedAudit.semanticEquivalenceClaim, false);
 const stubAudit = createNativeRoundtripEvidence(scannedJsImport, { projection: stubNativeProjection }).metadata.roundtripEvidence.audit;
 assert.equal(stubAudit.disposition, 'stub-only');
 assert.equal(stubAudit.paths.stubOnly.selected, true);
@@ -152,6 +162,102 @@ assert.equal(estimatedMapAudit.hashChecks.targetOutputHashPresent, true);
 assert.equal(estimatedMapAudit.hashChecks.outputMatchesSourceHash, false);
 assert.equal(estimatedMapAudit.semanticEquivalenceClaim, false);
 assert.equal(estimatedMapAudit.semanticEquivalence.claimed, false);
+const estimatedBoundaryGate = estimatedMapCompile.metadata.sourceMapGeneratedBoundaryGate;
+assert.equal(estimatedBoundaryGate.status, 'blocked');
+assert.equal(estimatedBoundaryGate.exactBoundary, false);
+assert.equal(estimatedBoundaryGate.autoMergeClaim, false);
+assert.equal(estimatedBoundaryGate.semanticEquivalenceClaim, false);
+assert.equal(estimatedBoundaryGate.missingInvariant, 'ecma-426-generated-position-only-no-range-boundary');
+assert.equal(estimatedBoundaryGate.reasonCodes.includes('ecma-426:missing-exact-source-generated-boundary'), true);
+assert.equal(estimatedBoundaryGate.reasonCodes.includes('runtime-neutral:source-map-records-only'), true);
+const ecma426SourceMapImport = importNativeSource({
+  language: 'javascript',
+  sourcePath: 'src/roundtrip-ecma426-source.js',
+  sourceText: 'export const ecmaValue = 1;\n'
+});
+const ecma426SourceMapAdapter = {
+  id: 'roundtrip-ecma426-source-map-adapter',
+  sourceLanguage: 'javascript',
+  target: 'javascript',
+  coverage: {
+    readiness: 'needs-review',
+    handledLossKinds: ['targetAdapterProjection', 'sourceMapApproximation']
+  },
+  project() {
+    return {
+      output: 'export const ecmaValue = 1;\n',
+      readiness: 'needs-review',
+      sourceMaps: [{
+        id: 'roundtrip-ecma426-output-map',
+        version: 3,
+        file: 'dist/roundtrip-ecma426.js',
+        sources: ['../src/roundtrip-ecma426-source.js'],
+        names: ['ecmaValue'],
+        mappings: 'AAAAA'
+      }]
+    };
+  }
+};
+const ecma426SourceMapCompile = compileNativeSource(ecma426SourceMapImport, {
+  target: 'javascript',
+  targetAdapters: [ecma426SourceMapAdapter],
+  targetAdapter: 'roundtrip-ecma426-source-map-adapter',
+  targetPath: 'dist/roundtrip-ecma426.js',
+  emitOnBlocked: true
+});
+const ecma426SourceMap = ecma426SourceMapCompile.sourceMaps[0];
+assert.equal(ecma426SourceMap.metadata.ecma426SourceMap.status, 'valid');
+assert.equal(ecma426SourceMap.metadata.ecma426SourceMap.summary.decodedMappings, 1);
+assert.equal(ecma426SourceMap.mappings[0].metadata.sourceMapOrigin, 'ecma-426-payload');
+assert.equal(ecma426SourceMap.mappings[0].sourceSpan.startLine, 1);
+assert.equal(ecma426SourceMap.mappings[0].sourceSpan.endLine, undefined);
+assert.equal(ecma426SourceMap.mappings[0].generatedSpan.startColumn, 1);
+const ecma426BoundaryGate = ecma426SourceMapCompile.metadata.sourceMapGeneratedBoundaryGate;
+assert.equal(ecma426BoundaryGate.status, 'blocked');
+assert.equal(ecma426BoundaryGate.summary.validEcma426Payloads, 1);
+assert.equal(ecma426BoundaryGate.summary.decodedEcma426Mappings, 1);
+assert.equal(ecma426BoundaryGate.reasonCodes.includes('ecma-426:payload-valid'), true);
+assert.equal(ecma426BoundaryGate.reasonCodes.includes('ecma-426:payload-position-only'), true);
+assert.equal(ecma426SourceMapCompile.metadata.roundtripEvidence.sourceMapGeneratedBoundaryGate.status, 'blocked');
+assert.equal(ecma426SourceMapCompile.metadata.roundtripEvidence.audit.sourceMapGeneratedBoundaryGate.reasonCodes.includes('ecma-426:payload-position-only'), true);
+const invalidEcma426SourceMapAdapter = {
+  id: 'roundtrip-invalid-ecma426-source-map-adapter',
+  sourceLanguage: 'javascript',
+  target: 'javascript',
+  coverage: {
+    readiness: 'needs-review',
+    handledLossKinds: ['targetAdapterProjection', 'sourceMapApproximation']
+  },
+  project() {
+    return {
+      output: 'export const ecmaValue = 2;\n',
+      readiness: 'needs-review',
+      sourceMaps: [{
+        id: 'roundtrip-invalid-ecma426-output-map',
+        version: 3,
+        file: 'dist/roundtrip-invalid-ecma426.js',
+        sources: ['../src/roundtrip-ecma426-source.js'],
+        mappings: '!'
+      }]
+    };
+  }
+};
+const invalidEcma426Compile = compileNativeSource(ecma426SourceMapImport, {
+  target: 'javascript',
+  targetAdapters: [invalidEcma426SourceMapAdapter],
+  targetAdapter: 'roundtrip-invalid-ecma426-source-map-adapter',
+  targetPath: 'dist/roundtrip-invalid-ecma426.js',
+  emitOnBlocked: true
+});
+const invalidEcma426SourceMap = invalidEcma426Compile.sourceMaps[0];
+assert.equal(invalidEcma426SourceMap.metadata.ecma426SourceMap.status, 'blocked');
+assert.equal(invalidEcma426SourceMap.metadata.ecma426SourceMap.reasonCodes.includes('ecma-426:vlq-invalid-character'), true);
+assert.equal(invalidEcma426SourceMap.mappings.length, 0);
+const invalidEcma426BoundaryGate = invalidEcma426Compile.metadata.sourceMapGeneratedBoundaryGate;
+assert.equal(invalidEcma426BoundaryGate.status, 'blocked');
+assert.equal(invalidEcma426BoundaryGate.summary.invalidEcma426Payloads, 1);
+assert.equal(invalidEcma426BoundaryGate.reasonCodes.includes('ecma-426:payload-invalid'), true);
+assert.equal(invalidEcma426BoundaryGate.reasonCodes.includes('source-map:mappings-missing'), true);
 assert.throws(() => importNativeSource({
   language: 'javascript',
   sourcePath: 'bad-map.js',

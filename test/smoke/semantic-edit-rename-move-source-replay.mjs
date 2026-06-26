@@ -36,6 +36,13 @@ assert.equal(sourceTopLevelRenameScript.summary.byKind.removeBody, 1);
 assert.equal(sourceTopLevelRenameScript.summary.byKind.addBody, 1);
 assert.equal(sourceTopLevelRenameScript.operations.some((operation) => operation.anchor?.symbolName === 'step'), true);
 assert.equal(sourceTopLevelRenameScript.operations.some((operation) => operation.anchor?.symbolName === 'renamedStep'), true);
+assert.equal(sourceTopLevelRenameScript.structuralDiff.runtimeNeutral, true);
+assert.equal(sourceTopLevelRenameScript.structuralDiff.admission.status, 'review-required');
+assert.equal(sourceTopLevelRenameScript.structuralDiff.admission.semanticEquivalenceClaim, false);
+assert.equal(sourceTopLevelRenameScript.summary.structural.inserts, 3);
+assert.equal(sourceTopLevelRenameScript.summary.structural.deletes, 3);
+assert.equal(sourceTopLevelRenameScript.structuralDiff.edits.some((edit) => edit.structuralKind === 'insert'), true);
+assert.equal(sourceTopLevelRenameScript.structuralDiff.edits.some((edit) => edit.structuralKind === 'delete'), true);
 
 const sourceTopLevelRenameProjection = projectSemanticEditScriptToSource({
   id: 'semantic_edit_source_top_level_rename_sibling_projection',
@@ -56,6 +63,7 @@ const sourceTopLevelRenameReplay = replaySemanticEditProjection({
 });
 assert.equal(sourceTopLevelRenameReplay.status, 'accepted-clean');
 assert.equal(sourceTopLevelRenameReplay.outputSourceText, sourceTopLevelRenameExpected);
+assert.equal(sourceTopLevelRenameReplay.metadata.structuralDiffStatus, 'review-required');
 
 const sourceClassMethodRenameBase = [
   'export class Service {',
@@ -168,6 +176,14 @@ assert.equal(movedDeclarationScript.admission.status, 'auto-merge-candidate');
 assert.equal(movedDeclarationScript.summary.byKind.replaceBody, 2);
 assert.equal(movedDeclarationScript.operations.some((operation) => operation.anchor?.symbolName === 'second'), true);
 assert.equal(movedDeclarationScript.operations.some((operation) => operation.anchor?.symbolName === 'third'), true);
+assert.equal(movedDeclarationScript.structuralDiff.runtimeNeutral, true);
+assert.equal(movedDeclarationScript.structuralDiff.admission.status, 'review-required');
+assert.equal(movedDeclarationScript.structuralDiff.admission.reasonCodes.includes('replay-required-for-safety'), true);
+assert.equal(movedDeclarationScript.summary.structural.moves, 6);
+assert.equal(movedDeclarationScript.summary.structural.updates, 2);
+assert.equal(movedDeclarationScript.summary.structural.moveUpdates, 2);
+assert.equal(movedDeclarationScript.structuralDiff.edits.some((edit) => edit.symbolName === 'third' && edit.structuralKind === 'move'), true);
+assert.equal(movedDeclarationScript.structuralDiff.edits.some((edit) => edit.symbolName === 'second' && edit.structuralKind === 'move-update'), true);
 
 const movedDeclarationProjection = projectSemanticEditScriptToSource({
   id: 'semantic_edit_moved_declaration_sibling_projection',
@@ -185,6 +201,10 @@ assert.equal(movedDeclarationProjection.edits.length, 1);
 assert.equal(movedDeclarationProjection.edits[0].symbolName, 'second');
 assert.equal(movedDeclarationProjection.edits[0].sourceRangeKind, 'body-content');
 assert.equal(movedDeclarationProjection.edits[0].replacementText, '\n  return 20;\n');
+assert.equal(movedDeclarationProjection.edits[0].structuralKind, 'move-update');
+assert.deepEqual(movedDeclarationProjection.edits[0].structuralActions, ['move', 'update']);
+assert.equal(movedDeclarationProjection.metadata.structuralDiffStatus, 'review-required');
+assert.equal(movedDeclarationProjection.admission.semanticEquivalenceClaim, false);
 
 const movedDeclarationReplay = replaySemanticEditProjection({
   id: 'semantic_edit_moved_declaration_sibling_replay',
@@ -199,3 +219,7 @@ assert.equal(movedDeclarationReplay.outputSourceText.indexOf('export function se
 assert.equal(movedDeclarationReplay.edits.length, 1);
 assert.equal(movedDeclarationReplay.edits[0].symbolName, 'second');
 assert.equal(movedDeclarationReplay.edits[0].sourceRangeKind, 'body-content');
+assert.equal(movedDeclarationReplay.edits[0].structuralKind, 'move-update');
+assert.deepEqual(movedDeclarationReplay.edits[0].structuralActions, ['move', 'update']);
+assert.equal(movedDeclarationReplay.metadata.structuralDiffStatus, 'review-required');
+assert.equal(movedDeclarationReplay.admission.semanticEquivalenceClaim, false);

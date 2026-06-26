@@ -1,5 +1,5 @@
 import { assert } from './helpers.mjs';
-import { createSemanticEditScript, projectSemanticEditScriptToSource, replaySemanticEditProjection } from './compiler-api.mjs';
+import { createSemanticEditScript, projectSemanticEditScriptToSource, replaySemanticEditProjection } from '../../src/index.js';
 
 const sameContentAnchorBase = 'export class A {\n  run() { return 1; }\n}\nexport class B {\n  run() { return 1; }\n}\n';
 const sameContentAnchorWorker = 'export class A {\n  run() { return 1; }\n}\nexport class B {\n  run() { return 2; }\n}\n';
@@ -42,11 +42,12 @@ const sameContentAnchorStaleHash = replaySemanticEditProjection({
   currentSourceText: sameContentAnchorCurrent,
   currentSourceHash: 'hash_stale_head_oracle'
 });
-assert.equal(sameContentAnchorStaleHash.status, 'blocked');
+assert.equal(sameContentAnchorStaleHash.status, 'stale');
 assert.equal(sameContentAnchorStaleHash.outputSourceText, undefined);
-assert.equal(sameContentAnchorStaleHash.admission.action, 'block');
+assert.equal(sameContentAnchorStaleHash.admission.action, 'rerun-semantic-import');
 assert.equal(sameContentAnchorStaleHash.admission.reviewRequired, true);
 assert.equal(sameContentAnchorStaleHash.admission.reasonCodes.includes('current-source-hash-mismatch'), true);
+assert.equal(sameContentAnchorStaleHash.admission.rerunRoute.routeId, 'rerun-semantic-edit-replay-current-head');
 
 const sameContentAnchorMissing = replaySemanticEditProjection({
   id: 'semantic_edit_same_content_anchor_missing',

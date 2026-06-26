@@ -1,6 +1,7 @@
 import { JsTsSafeMergeConflictCodes } from './js-ts-safe-merge-constants.js';
 import { createMergeContext, sameStatementText } from './js-ts-safe-merge-context.js';
 import { scanJsTsTopLevelLedger, validateLedgerUniqueness } from './js-ts-safe-merge-ledger.js';
+import { analyzeTopLevelRenameUseDefEvidence, LexicalUseDefReasonCodes } from './js-ts-semantic-scope-use-def.js';
 import { uniqueStrings } from './native-import-utils.js';
 
 const supportedRenameDeclarationKinds = new Set(['function', 'class', 'type']);
@@ -29,19 +30,42 @@ function analyzeTopLevelRenameAdmission(input, topLevelResult) {
   if (!candidate) return undefined;
 
   const publicContractReasonCodes = publicContractRenameReasonCodes(base, worker, head, candidate);
+  const lexicalUseDefEvidence = analyzeTopLevelRenameUseDefEvidence({
+    sourcePath: input.sourcePath,
+    baseSourceText: input.baseSourceText,
+    workerSourceText: input.workerSourceText,
+    headSourceText: input.headSourceText,
+    ...candidate
+  });
   if (publicContractReasonCodes.length) {
     return {
       status: 'blocked',
       reasonCodes: publicContractReasonCodes,
-      summary: candidateSummary(candidate, publicContractReasonCodes),
+      summary: candidateSummary(candidate, publicContractReasonCodes, lexicalUseDefEvidence),
       ledgers: { base, worker, head }
     };
   }
 
+  const lexicalBlockerReasonCodes = lexicalUseDefEvidence.reasonCodes
+    .filter((code) => code !== LexicalUseDefReasonCodes.noLiveReferences);
+  if (lexicalBlockerReasonCodes.length) {
+    const reasonCodes = uniqueStrings([...publicContractReasonCodes, ...lexicalBlockerReasonCodes]);
+    return {
+      status: 'blocked',
+      reasonCodes,
+      summary: candidateSummary(candidate, reasonCodes, lexicalUseDefEvidence),
+      ledgers: { base, worker, head }
+    };
+  }
+
+  const candidateReasonCodes = [
+    'top-level-rename-source-shape-matches',
+    LexicalUseDefReasonCodes.noLiveReferences
+  ];
   return {
     status: 'candidate',
-    reasonCodes: ['top-level-rename-source-shape-matches'],
-    summary: candidateSummary(candidate, ['top-level-rename-source-shape-matches']),
+    reasonCodes: candidateReasonCodes,
+    summary: candidateSummary(candidate, candidateReasonCodes, lexicalUseDefEvidence),
     ledgers: { base, worker, head }
   };
 }
@@ -79,6 +103,7 @@ function topLevelRenameCandidate(base, worker, head) {
   return {
     fromEntry,
     toEntry,
+    headEntry: entriesByKey(head.entries).get(fromEntry.key),
     fromName,
     toName,
     declarationKind: fromEntry.declarationInfo.declarationKind
@@ -124,13 +149,14 @@ function renameDeclarationText(text, declarationKind, fromName, toName) {
   return undefined;
 }
 
-function candidateSummary(candidate, reasonCodes) {
+function candidateSummary(candidate, reasonCodes, lexicalUseDefEvidence) {
   return {
     fromName: candidate.fromName,
     toName: candidate.toName,
     declarationKind: candidate.declarationKind,
     exported: candidate.fromEntry.declarationInfo?.exported === true || candidate.toEntry.declarationInfo?.exported === true,
-    reasonCodes: uniqueStrings(reasonCodes)
+    reasonCodes: uniqueStrings(reasonCodes),
+    lexicalUseDefEvidence
   };
 }
 

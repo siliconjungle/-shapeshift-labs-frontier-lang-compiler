@@ -39,7 +39,7 @@ type ExpectedPublicRuntimeExport =
   | 'SemanticMergeCandidateProjectionRisks'
   | 'SemanticPatchBundleAdmissionStatuses' | 'SemanticPatchBundleOverlapKinds' | 'SemanticPatchBundleOverlapStatuses'
   | 'SemanticEditBundleAdmissionStatuses'
-  | 'SemanticEditScriptAdmissionStatuses'
+  | 'SemanticEditScriptAdmissionStatuses' | 'SemanticGraphLayerKinds'
   | 'SemanticHistoryAdmissionStatuses'
   | 'SemanticHistoryConflictReasons'
   | 'SemanticLineageEventKinds'
@@ -66,7 +66,7 @@ type ExpectedPublicRuntimeExport =
   | 'createNativeImportCoverageMatrix'
   | 'createNativeImportResultContract'
   | 'createNativeParserAstFormatMatrix'
-  | 'createNativeParserFeatureMatrix'
+  | 'createNativeParserFeatureMatrix' | 'createNativeProjectModuleResolutionFromPackageManifests'
   | 'createNativeRoundtripEvidence'
   | 'createProjectImportAdmissionRecord'
   | 'createProjectionReadinessMatrix'
@@ -77,7 +77,7 @@ type ExpectedPublicRuntimeExport =
   | 'createSemanticLineageMap'
   | 'createSemanticMergeCandidateAdmissionRecord'
   | 'createSemanticEditBundleAdmission'
-  | 'createSemanticEditScript'
+  | 'createSemanticEditScript' | 'createSemanticGraphLayerSummary'
   | 'createSemanticPatchBundleRecord' | 'compareSemanticPatchBundleRecords' | 'composeSemanticPatchBundleProjections'
   | 'createSemanticTransformIdentityRecord' | 'deriveSemanticTransformIdentityRecords'
   | 'createUniversalCapabilityMatrix'
@@ -101,6 +101,7 @@ type ExpectedPublicRuntimeExport =
   | 'createJsTsSemanticConflictSidecars'
   | 'createJsTsSemanticMergeConflictExplanation'
   | 'createJsTsSemanticMergeGateResult'
+  | 'createJsTsProjectMergeDeclarationEmitParityProof' | 'createJsTsProjectMergeDeclarationGate' | 'createJsTsProjectMergeDiagnosticsGate'
   | 'createSemanticImportSidecar'
   | 'createSemanticSlice'
   | 'createSemanticSliceAdmissionRecord'
@@ -221,7 +222,7 @@ typedJsTsSafeMergeSemanticArtifacts?.replay satisfies compilerApi.SemanticEditRe
 typedJsTsSafeMergeSemanticArtifacts?.alreadyAppliedReplay satisfies compilerApi.SemanticEditReplay | undefined;
 typedJsTsSafeMergeSemanticArtifacts?.admission.autoMergeClaim satisfies false | undefined;
 typedJsTsSafeMergeSemanticArtifacts?.admission.semanticEquivalenceClaim satisfies false | undefined;
-jsTsSafeMergeWithSemanticArtifacts.summary.importDeclarationAdditions satisfies number;
+jsTsSafeMergeWithSemanticArtifacts.summary.importDeclarationAdditions satisfies number; [jsTsSafeMergeWithSemanticArtifacts.summary.jsxAttributeEdits, jsTsSafeMergeWithSemanticArtifacts.summary.jsxChildExpressionEdits, jsTsSafeMergeWithSemanticArtifacts.summary.jsxChildAdditions, jsTsSafeMergeWithSemanticArtifacts.summary.jsxKeyedChildAdditions, jsTsSafeMergeWithSemanticArtifacts.summary.jsxKeyedFragmentAdditions] satisfies readonly (number | undefined)[];
 
 void typedJsTsSafeMergeSemanticArtifacts;
 

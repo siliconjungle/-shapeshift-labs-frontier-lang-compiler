@@ -1,0 +1,48 @@
+export type JsTsProjectJsxRenderReturnBranchControlKind = 'conditional-expression' | 'logical-expression' | string;
+export type JsTsProjectJsxRenderReturnBranchArmOrigin = 'base' | 'worker' | 'head' | 'output' | string;
+
+export interface JsTsProjectJsxRenderReturnBranchProof {
+  readonly id?: string;
+  readonly kind?: 'frontier.lang.jsxRenderReturnBranchProof' | string;
+  readonly schema?: 'frontier.lang.jsxRenderReturnBranchProof.v1' | string;
+  readonly version?: 1;
+  readonly status: 'passed' | 'verified' | 'failed' | 'missing' | 'stale' | string;
+  readonly evidenceId?: string;
+  readonly evidenceIds?: readonly string[];
+  readonly sourcePath: string;
+  readonly identityKey?: string;
+  readonly baseSourceHash: string;
+  readonly workerSourceHash: string;
+  readonly headSourceHash: string;
+  readonly outputSourceHash: string;
+  readonly publicOwnerName?: string;
+  readonly tagName?: string;
+  readonly tagKey?: string;
+  readonly returnOrdinal?: number;
+  readonly returnKind?: string;
+  readonly branchControlKind: JsTsProjectJsxRenderReturnBranchControlKind;
+  readonly conditionHash?: string;
+  readonly outputConditionHash?: string;
+  readonly consequentHash?: string;
+  readonly outputConsequentHash?: string;
+  readonly consequentOrigin?: JsTsProjectJsxRenderReturnBranchArmOrigin;
+  readonly alternateHash?: string;
+  readonly outputAlternateHash?: string;
+  readonly alternateOrigin?: JsTsProjectJsxRenderReturnBranchArmOrigin;
+  readonly operator?: string;
+  readonly leftHash?: string;
+  readonly outputLeftHash?: string;
+  readonly leftOrigin?: JsTsProjectJsxRenderReturnBranchArmOrigin;
+  readonly rightHash?: string;
+  readonly outputRightHash?: string;
+  readonly rightOrigin?: JsTsProjectJsxRenderReturnBranchArmOrigin;
+  readonly renderReturnSignatureHash?: string;
+  readonly branchArmPreservationHash: string;
+  readonly proofHash?: string;
+  readonly autoMergeClaim: false;
+  readonly semanticEquivalenceClaim: false;
+  readonly runtimeEquivalenceClaim: false;
+  readonly renderEquivalenceClaim: false;
+  readonly branchArmPreservationClaim: true;
+  readonly claimScope: 'static-render-return-branch-arm-preservation-only';
+}

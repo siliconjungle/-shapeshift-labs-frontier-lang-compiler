@@ -7,6 +7,14 @@ import {
   uniqueRecordsById,
   uniqueStrings
 } from './native-import-utils.js';
+import {
+  ecma426Metadata,
+  isSourceMapInput,
+  isUint8Array,
+  parseEcma426SourceMapInput,
+  parseEcma426SourceMapPayload,
+  sourceMapMappingsFromEcma426
+} from './native-source-maps-ecma426.js';
 
 function inferSourceMapMappings(input) {
   const semanticIndex = input.semanticIndex;
@@ -139,16 +147,31 @@ function normalizeSourceMaps(sourceMaps, context) {
     throw new Error('Native import sourceMaps must be an array');
   }
   const usedSourceMapIds = new Set();
-  return sourceMaps.map((sourceMap, index) => {
-    if (!sourceMap || typeof sourceMap !== 'object') {
-      throw new Error(`Native import source map ${index + 1} must be an object`);
+  return sourceMaps.map((sourceMapInput, index) => {
+    if (!isSourceMapInput(sourceMapInput)) {
+      throw new Error(`Native import source map ${index + 1} must be an object or ECMA-426 payload`);
     }
+    const sourceMap = typeof sourceMapInput === 'object' && !isUint8Array(sourceMapInput) ? sourceMapInput : {};
+    const ecma426 = parseEcma426SourceMapInput(sourceMapInput, sourceMap, {
+      ...context,
+      sourceMapIndex: index
+    });
     const id = reserveUniqueId(String(sourceMap.id ?? `${context.defaultSourceMapId}_${index + 1}`), usedSourceMapIds);
     const evidence = uniqueRecordsById([...(sourceMap.evidence ?? []), ...(context.evidence ?? [])]);
     const target = sourceMap.target ?? context.target;
-    const targetPath = sourceMap.targetPath ?? context.targetPath;
+    const targetPath = sourceMap.targetPath ?? context.targetPath ?? ecma426.file;
     const targetHash = sourceMap.targetHash ?? context.targetHash;
-    const mappings = normalizeSourceMapMappings(sourceMap.mappings ?? [], {
+    const ecma426Mappings = Array.isArray(sourceMap.mappings)
+      ? []
+      : sourceMapMappingsFromEcma426(ecma426, sourceMap, {
+        ...context,
+        id,
+        evidence,
+        target,
+        targetPath,
+        targetHash
+      });
+    const mappings = normalizeSourceMapMappings(Array.isArray(sourceMap.mappings) ? sourceMap.mappings : ecma426Mappings, {
       ...context,
       target,
       targetPath,
@@ -167,7 +190,13 @@ function normalizeSourceMaps(sourceMaps, context) {
       nativeAstId: sourceMap.nativeAstId ?? context.nativeAst?.id,
       nativeSourceId: sourceMap.nativeSourceId ?? context.nativeSource?.id,
       mappings,
-      evidence
+      evidence,
+      metadata: {
+        ...(sourceMap.metadata ?? {}),
+        ecma426SourceMap: ecma426.present
+          ? ecma426Metadata(ecma426)
+          : sourceMap.metadata?.ecma426SourceMap ?? ecma426Metadata(ecma426)
+      }
     });
     const issues = validateSourceMapRecord(normalized, {
       document: context.document,
@@ -255,6 +284,7 @@ function sourceMapMappingBaseId(mapping, index) {
 export {
   inferSourceMapMappings,
   lossIdsForNativeNode,
+  parseEcma426SourceMapPayload,
   normalizeSourceMapMappings,
   normalizeSourceMaps
 };

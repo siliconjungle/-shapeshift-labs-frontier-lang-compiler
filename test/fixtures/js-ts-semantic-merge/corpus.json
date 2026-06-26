@@ -7,6 +7,228 @@
     "dependencies": [],
     "expectedOutcomes": ["accepted", "rejected"]
   },
+  "realRepoCorpus": {
+    "schema": "frontier.lang.jsTsSemanticMergeRealRepoCorpus.v1",
+    "mode": "manifest-only",
+    "fetchRoot": "tmp/js-ts-semantic-merge-real-repos",
+    "localBehavior": {
+      "skipWhenMissing": true,
+      "missingCheckoutBehavior": "skip-external-fetch",
+      "committedSourceBytes": 0,
+      "checkoutProof": {
+        "runner": "bench/real-repo-corpus-suite.mjs",
+        "rootEnv": "FRONTIER_REAL_REPO_CORPUS_ROOT",
+        "networkRequired": false,
+        "readsSourceText": false,
+        "statuses": ["skipped-missing-checkout", "checked-out", "checked-out-no-proof-match"],
+        "executionStatuses": ["skipped", "executed"],
+        "presenceStatuses": ["checkout-root-unconfigured", "checkout-root-missing", "checkout-dir-not-declared", "checkout-dir-missing", "checkout-dir-present"],
+        "proofReasons": ["checkout-root-unconfigured", "checkout-root-missing", "checkout-dir-not-declared", "checkout-dir-missing", "declared-proof-globs-matched", "declared-proof-globs-missing"],
+        "evidenceRowFields": ["manifestMetadataStatus", "checkoutProofStatus", "checkoutProofExecution", "checkoutRootMode", "checkoutRootEnv", "checkoutRootPresent", "checkoutDirPresent", "checkoutPresenceStatus", "checkoutProofReason", "checkoutIdentityStatus", "checkoutIdentityExecution", "gitMetadataPresent", "gitMetadataKind", "gitDirPointerPresent", "gitHeadPresent", "gitConfigPresent", "gitRemoteOriginUrlPresent", "gitRemoteOriginMatchesManifest", "gitRefMatchesManifest", "dependencyInstallProofStatus", "dependencyInstallExecution", "repositoryCommandProofStatus", "repositoryCommandExecution", "commandDryRunStatus", "commandDryRunExecutionStatus", "commandDryRunPhaseCount", "commandDryRunPhases", "commandDryRunSkippedPhases", "commandDryRunReadyPhases", "commandDryRunOptInRequiredPhases", "commandDryRunExecutedPhases", "commandDryRunDefaultOffPhases", "commandRunStatus", "commandRunExecutionStatus", "commandRunReason", "commandRunEnabled", "commandRunPhaseCount", "commandRunPhases", "commandRunExecutedPhases", "commandRunFailedPhases", "commandRunTimedOutPhases", "commandRunSkippedPhases", "commandRunDefaultOffPhases", "commandRunOutputTruncatedPhases"],
+        "dependencyInstallExecution": "not-run-default-network-free",
+        "repositoryCommandProofStatus": "not-run-default-network-free",
+        "repositoryCommandExecution": "not-run-default-network-free",
+        "commandDryRun": {
+          "proofStatus": "metadata-only-default-off",
+          "phases": ["dependency-install", "build", "test"],
+          "readinessStatuses": ["skipped-missing-checkout", "ready-local-checkout"],
+          "executionStatuses": ["skipped-missing-checkout", "opt-in-required"],
+          "defaultExecution": "not-run-default-network-free",
+          "networkRequired": false,
+          "readsSourceText": false
+        },
+        "commandExecution": {
+          "proofStatus": "explicit-opt-in-local-runner",
+          "phases": ["dependency-install", "build", "test"],
+          "executionStatuses": ["skipped-missing-checkout", "blocked-safety-invariant", "blocked-opt-in-required", "blocked-identity-mismatch", "blocked-command-not-allowed", "executed", "failed", "timed-out"],
+          "defaultExecution": "not-run-default-network-free",
+          "networkRequired": false,
+          "readsSourceText": false,
+          "shell": false,
+          "envPolicy": "allowlist-only",
+          "outputEvidence": "sha256-hash-plus-capped-preview"
+        }
+      },
+      "packageManagerMatrix": [
+        { "manager": "npm", "lockFiles": ["package-lock.json", "npm-shrinkwrap.json"], "commands": ["npm ci", "npm run build", "npm test"], "status": "metadata-only" },
+        { "manager": "pnpm", "lockFiles": ["pnpm-lock.yaml"], "commands": ["pnpm install --frozen-lockfile", "pnpm build", "pnpm test"], "status": "metadata-only" },
+        { "manager": "yarn", "lockFiles": ["yarn.lock"], "commands": ["yarn install --immutable", "yarn build", "yarn test"], "status": "metadata-only" }
+      ]
+    },
+    "broadSuiteGaps": [
+      {
+        "id": "local-checkout-runner",
+        "status": "partial",
+        "reason": "local checkout proof records skipped versus checked-out repositories without cloning, installing, or reading source text"
+      },
+      {
+        "id": "package-manager-build-matrix",
+        "status": "partial",
+        "reason": "npm, pnpm, and yarn command metadata is recorded offline; checked-out repository install/build execution remains opt-in"
+      },
+      {
+        "id": "whole-program-typechecker-oracles",
+        "status": "partial",
+        "reason": "linked fixtures cover representative merge surfaces, not repository-wide TypeScript diagnostics or project references"
+      },
+      {
+        "id": "license-cache-policy",
+        "status": "manual",
+        "reason": "each real repository still requires LICENSE verification before source can be cached outside this manifest"
+      }
+    ],
+    "entries": [
+      {
+        "id": "typescript-compiler-services",
+        "source": { "type": "git", "url": "https://github.com/microsoft/TypeScript.git", "ref": "main" },
+        "checkoutDir": "typescript",
+        "licenseExpectation": "Apache-2.0; verify LICENSE before caching",
+        "fetchCommand": "git clone --filter=blob:none --depth=1 https://github.com/microsoft/TypeScript.git tmp/js-ts-semantic-merge-real-repos/typescript",
+        "pathGlobs": ["src/compiler/checker.ts", "src/services/*.ts"],
+        "shape": "large TS modules with overloads, type-only imports, exported declarations, and dense control flow",
+        "metrics": { "sampleFiles": 3, "maxBytesPerFile": 350000, "mergeSurfaces": ["imports", "type-only-imports", "overloads", "type-aliases", "control-flow"] },
+        "fixtureIds": ["overload-body-prefix-merge", "safe-type-value-import-dependencies", "unsafe-control-flow-conflict"],
+        "oracleCases": [
+          {
+            "fixtureId": "overload-body-prefix-merge",
+            "language": "typescript",
+            "surface": "overloads",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          },
+          {
+            "fixtureId": "safe-type-value-import-dependencies",
+            "language": "typescript",
+            "surface": "type-only-imports",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          }
+        ]
+      },
+      {
+        "id": "vite-plugin-config",
+        "source": { "type": "git", "url": "https://github.com/vitejs/vite.git", "ref": "main" },
+        "checkoutDir": "vite",
+        "licenseExpectation": "MIT; verify LICENSE before caching",
+        "fetchCommand": "git clone --filter=blob:none --depth=1 https://github.com/vitejs/vite.git tmp/js-ts-semantic-merge-real-repos/vite",
+        "pathGlobs": ["packages/vite/src/node/plugins/*.ts", "packages/vite/src/node/config.ts"],
+        "shape": "plugin/config TS with import churn, object members, exported helpers, and route-like ordered maps",
+        "metrics": { "sampleFiles": 4, "maxBytesPerFile": 180000, "mergeSurfaces": ["imports", "import-shape-additions", "object-members", "exports", "order-sensitive-member-regions", "import-meta-host-context"] },
+        "fixtureIds": ["safe-composed-source-additions", "unsafe-order-sensitive-member-region", "safe-existing-import-default-addition", "vite-config-import-shape-addition", "unsafe-import-meta-host-context-divergence"],
+        "oracleCases": [
+          {
+            "fixtureId": "safe-composed-source-additions",
+            "language": "typescript",
+            "surface": "exports",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          },
+          {
+            "fixtureId": "unsafe-order-sensitive-member-region",
+            "language": "typescript",
+            "surface": "order-sensitive-member-regions",
+            "expectedAdmissionStatus": "blocked"
+          },
+          {
+            "fixtureId": "vite-config-import-shape-addition",
+            "language": "typescript",
+            "surface": "import-shape-additions",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          },
+          {
+            "fixtureId": "unsafe-import-meta-host-context-divergence",
+            "language": "typescript",
+            "surface": "import-meta-host-context",
+            "expectedAdmissionStatus": "blocked"
+          }
+        ]
+      },
+      {
+        "id": "prettier-js-printers",
+        "source": { "type": "git", "url": "https://github.com/prettier/prettier.git", "ref": "main" },
+        "checkoutDir": "prettier",
+        "licenseExpectation": "MIT; verify LICENSE before caching",
+        "fetchCommand": "git clone --filter=blob:none --depth=1 https://github.com/prettier/prettier.git tmp/js-ts-semantic-merge-real-repos/prettier",
+        "pathGlobs": ["src/language-js/print/*.js", "src/language-js/parse/*.js"],
+        "shape": "JS parser/printer modules with comments, import specifier churn, generated-boundary exclusions, and function edits",
+        "metrics": { "sampleFiles": 4, "maxBytesPerFile": 220000, "mergeSurfaces": ["comments-trivia", "import-specifier-order", "generated-source-map-boundary", "control-flow"] },
+        "fixtureIds": ["comments-trivia-source-ledger", "safe-import-specifier-reorder", "generated-source-map-boundary", "unsafe-control-flow-conflict"],
+        "oracleCases": [
+          {
+            "fixtureId": "safe-import-specifier-reorder",
+            "language": "typescript",
+            "surface": "import-specifier-order",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          },
+          {
+            "fixtureId": "unsafe-control-flow-conflict",
+            "language": "javascript",
+            "surface": "control-flow",
+            "expectedAdmissionStatus": "conflict"
+          },
+          {
+            "fixtureId": "comments-trivia-source-ledger",
+            "language": "javascript",
+            "surface": "comments-trivia",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          },
+          {
+            "fixtureId": "generated-source-map-boundary",
+            "language": "javascript",
+            "surface": "generated-source-map-boundary",
+            "expectedAdmissionStatus": "blocked"
+          }
+        ]
+      },
+      {
+        "id": "next-app-router-tsx",
+        "source": { "type": "git", "url": "https://github.com/vercel/next.js.git", "ref": "canary" },
+        "checkoutDir": "next.js",
+        "licenseExpectation": "MIT; verify LICENSE before caching",
+        "fetchCommand": "git clone --filter=blob:none --depth=1 --branch canary https://github.com/vercel/next.js.git tmp/js-ts-semantic-merge-real-repos/next.js",
+        "pathGlobs": ["packages/next/src/client/components/*.tsx", "packages/next/src/server/app-render/*.tsx", "packages/next/src/shared/lib/router/**/*.ts"],
+        "shape": "App-router TSX and routing modules with JSX child insertions, prop contracts, async component boundaries, and type/value import churn",
+        "metrics": { "sampleFiles": 5, "maxBytesPerFile": 260000, "mergeSurfaces": ["tsx-jsx-child-additions", "tsx-jsx-child-expressions", "jsx-component-prop-contracts", "type-only-imports", "async-components"] },
+        "fixtureIds": ["tsx-jsx-child-additions-distinct-gaps", "react-tsx-child-additions-shell", "tsx-jsx-text-control-flow", "safe-type-value-import-dependencies"],
+        "oracleCases": [
+          {
+            "fixtureId": "tsx-jsx-child-additions-distinct-gaps",
+            "language": "tsx",
+            "surface": "tsx-jsx-child-additions",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          },
+          {
+            "fixtureId": "react-tsx-child-additions-shell",
+            "language": "tsx",
+            "surface": "tsx-jsx-child-expressions",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          },
+          {
+            "fixtureId": "safe-type-value-import-dependencies",
+            "language": "typescript",
+            "surface": "type-only-imports",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          }
+        ]
+      },
+      {
+        "id": "react-component-patterns",
+        "source": { "type": "git", "url": "https://github.com/facebook/react.git", "ref": "main" },
+        "checkoutDir": "react",
+        "licenseExpectation": "MIT; verify LICENSE before caching",
+        "fetchCommand": "git clone --filter=blob:none --depth=1 https://github.com/facebook/react.git tmp/js-ts-semantic-merge-real-repos/react",
+        "pathGlobs": ["packages/react/src/*.js", "packages/react-dom/src/client/*.js"],
+        "shape": "component/runtime modules with JSX-style child ordering, stable props, comments, and export helpers",
+        "metrics": { "sampleFiles": 3, "maxBytesPerFile": 180000, "mergeSurfaces": ["tsx-jsx-child-additions", "tsx-jsx-child-expressions", "comments-trivia", "exports"] },
+        "fixtureIds": ["react-tsx-child-additions-shell", "comments-trivia-source-ledger"],
+        "oracleCases": [
+          {
+            "fixtureId": "react-tsx-child-additions-shell",
+            "language": "tsx",
+            "surface": "tsx-jsx-child-additions",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          }
+        ]
+      }
+    ]
+  },
   "coverageRequirements": [
     "imports",
     "type-only-imports",
@@ -21,12 +243,15 @@
     "top-level-declarations",
     "declaration-safe-merge",
     "dependency-sensitive-edits",
+    "control-flow",
+    "import-meta-host-context",
     "composed-safe-merge",
     "type-interface-members",
     "interfaces",
     "type-alias-members",
     "type-aliases",
     "object-members",
+    "class-members",
     "member-safe-merge",
     "member-duplicate-keys",
     "order-sensitive-member-regions",
@@ -35,6 +260,8 @@
     "comments-trivia",
     "generated-source-map-boundary",
     "tsx-jsx-text",
+    "tsx-jsx-child-expressions",
+    "tsx-jsx-child-additions",
     "jsx-ish-source",
     "decorators",
     "overloads",
@@ -290,6 +517,54 @@
       ]
     },
     {
+      "id": "safe-class-member-independent-additions",
+      "title": "class method additions keep both members",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/ledger/s.ts",
+      "coverage": ["class-members", "member-safe-merge"],
+      "safeMerge": {
+        "mode": "members",
+        "policy": {
+          "unorderedRegions": [
+            { "kind": "class", "name": "S", "order": "non-semantic" }
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "accepted",
+        "safeMergeStatus": "merged"
+      },
+      "baseLines": [
+        "export class S {",
+        "  save(v: string) { return v; }",
+        "}",
+        ""
+      ],
+      "workerLines": [
+        "export class S {",
+        "  save(v: string) { return v; }",
+        "  load(v: string) { return v; }",
+        "}",
+        ""
+      ],
+      "headLines": [
+        "export class S {",
+        "  save(v: string) { return v; }",
+        "  static create() { return new S(); }",
+        "}",
+        ""
+      ],
+      "expectedLines": [
+        "export class S {",
+        "  save(v: string) { return v; }",
+        "  static create() { return new S(); }",
+        "  load(v: string) { return v; }",
+        "}",
+        ""
+      ]
+    },
+    {
       "id": "tsx-jsx-text-control-flow",
       "title": "TSX-ish JSX text edit survives coordinator-only prefix trivia",
       "kind": "merge",
@@ -328,6 +603,102 @@
         "// coordinator moved this file",
         "export function Label(props: { title: string }) {",
         "  return <span>Ready: {props.title}</span>;",
+        "}",
+        ""
+      ]
+    },
+    {
+      "id": "tsx-jsx-child-additions-distinct-gaps",
+      "title": "TSX child additions from distinct gaps merge under one JSX parent",
+      "kind": "safe-merge",
+      "language": "tsx",
+      "sourcePath": "src/ledger/product-card.tsx",
+      "coverage": ["tsx-jsx-child-additions", "tsx-jsx-child-expressions", "jsx-ish-source", "composed-safe-merge"],
+      "safeMerge": {
+        "mode": "source"
+      },
+      "expected": {
+        "outcome": "accepted",
+        "safeMergeStatus": "merged",
+        "admissionStatus": "auto-merge-candidate",
+        "reasonCodes": [],
+        "gateIds": [
+          "semantic-edit-script",
+          "semantic-edit-projection",
+          "semantic-edit-replay",
+          "semantic-edit-already-applied"
+        ],
+        "summary": {
+          "semanticEditOperations": 1,
+          "jsxChildExpressionElements": 1,
+          "jsxChildExpressionEdits": 1,
+          "jsxChildAdditions": 1
+        },
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "export function ProductCard({ title, price }) {",
+        "  return <article data-kind=\"product\"><h2>{title}</h2><span>{price}</span></article>;",
+        "}",
+        ""
+      ],
+      "workerLines": [
+        "export function ProductCard({ title, price }) {",
+        "  return <article data-kind=\"product\"><p className=\"eyebrow\">Featured</p><h2>{title}</h2><span>{price}</span></article>;",
+        "}",
+        ""
+      ],
+      "headLines": [
+        "export function ProductCard({ title, price }) {",
+        "  return <article data-kind=\"product\"><h2>{title}</h2><span>{price}</span><button type=\"button\">Buy</button></article>;",
+        "}",
+        ""
+      ],
+      "expectedLines": [
+        "export function ProductCard({ title, price }) {",
+        "  return <article data-kind=\"product\"><p className=\"eyebrow\">Featured</p><h2>{title}</h2><span>{price}</span><button type=\"button\">Buy</button></article>;",
+        "}",
+        ""
+      ]
+    },
+    {
+      "id": "react-tsx-child-additions-shell",
+      "title": "React shell child insertions merge in distinct JSX gaps",
+      "kind": "safe-merge",
+      "language": "tsx",
+      "sourcePath": "app/components/shell.tsx",
+      "coverage": ["tsx-jsx-child-additions", "tsx-jsx-child-expressions", "jsx-ish-source", "composed-safe-merge"],
+      "safeMerge": { "mode": "source" },
+      "expected": {
+        "outcome": "accepted",
+        "safeMergeStatus": "merged",
+        "admissionStatus": "auto-merge-candidate",
+        "reasonCodes": [],
+        "gateIds": ["semantic-edit-script", "semantic-edit-projection", "semantic-edit-replay", "semantic-edit-already-applied"],
+        "summary": { "semanticEditOperations": 1, "jsxChildExpressionElements": 1, "jsxChildExpressionEdits": 1, "jsxChildAdditions": 1 },
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "export function Shell({ title }) {",
+        "  return <main><h1>{title}</h1></main>;",
+        "}",
+        ""
+      ],
+      "workerLines": [
+        "export function Shell({ title }) {",
+        "  return <main><nav>Docs</nav><h1>{title}</h1></main>;",
+        "}",
+        ""
+      ],
+      "headLines": [
+        "export function Shell({ title }) {",
+        "  return <main><h1>{title}</h1><footer>Ready</footer></main>;",
+        "}",
+        ""
+      ],
+      "expectedLines": [
+        "export function Shell({ title }) {",
+        "  return <main><nav>Docs</nav><h1>{title}</h1><footer>Ready</footer></main>;",
         "}",
         ""
       ]
@@ -393,6 +764,7 @@
       "expected": {
         "outcome": "accepted",
         "oracle": "source-preservation",
+        "admissionStatus": "auto-merge-candidate",
         "minComments": 3,
         "minSemanticSymbols": 1,
         "directiveKinds": ["shebang", "runtime-directive", "module-directive"]
@@ -419,6 +791,7 @@
       "expected": {
         "outcome": "rejected",
         "oracle": "source-preservation",
+        "admissionStatus": "blocked",
         "minComments": 3,
         "minSemanticSymbols": 1,
         "directiveKinds": ["module-directive"],
@@ -610,7 +983,7 @@
       "kind": "merge",
       "language": "javascript",
       "sourcePath": "src/unsafe/calc.js",
-      "coverage": ["negative-unsafe-case"],
+      "coverage": ["control-flow", "negative-unsafe-case"],
       "expected": {
         "outcome": "rejected",
         "admissionStatus": "conflict",
@@ -636,6 +1009,44 @@
       "headLines": [
         "export function calc(value) {",
         "  return value * 2;",
+        "}",
+        ""
+      ]
+    },
+    {
+      "id": "unsafe-import-meta-host-context-divergence",
+      "title": "divergent import.meta host-context edits stay blocked",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "src/unsafe/import-meta-host.ts",
+      "coverage": ["control-flow", "import-meta-host-context", "negative-unsafe-case"],
+      "safeMerge": { "mode": "source" },
+      "expected": {
+        "outcome": "rejected",
+        "safeMergeStatus": "blocked",
+        "admissionStatus": "blocked",
+        "reasonCodes": [
+          "effect-import-meta-merge-requires-host-context-evidence",
+          "runtime-order-import-meta-merge-requires-host-context-evidence"
+        ],
+        "blockedGateIds": ["semantic-edit-script", "semantic-edit-projection", "semantic-edit-replay", "semantic-edit-already-applied"],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "export function assetUrl(name) {",
+        "  return new URL(name, import.meta.url).href;",
+        "}",
+        ""
+      ],
+      "workerLines": [
+        "export function assetUrl(name) {",
+        "  return new URL(name, import.meta.resolve(name)).href;",
+        "}",
+        ""
+      ],
+      "headLines": [
+        "export function assetUrl(name) {",
+        "  return new URL(name, import.meta.env.BASE_URL).href;",
         "}",
         ""
       ]
@@ -1023,6 +1434,44 @@
       "expectedLines": [
         "import fs, { readFile, stat } from 'node:fs';",
         "export const stable = readFile;",
+        ""
+      ]
+    },
+    {
+      "id": "vite-config-import-shape-addition",
+      "title": "Vite config import default and named additions merge on an existing declaration",
+      "kind": "safe-merge",
+      "language": "typescript",
+      "sourcePath": "packages/vite/src/node/config.ts",
+      "coverage": ["imports", "import-shape-additions", "import-safe-merge"],
+      "safeMerge": { "mode": "imports-declarations" },
+      "expected": {
+        "outcome": "accepted",
+        "safeMergeStatus": "merged",
+        "admissionStatus": "auto-merge-candidate",
+        "reasonCodes": [],
+        "gateIds": ["independent-import-specifiers"],
+        "blockedGateIds": [],
+        "minSemanticSymbols": 1
+      },
+      "baseLines": [
+        "import { normalize } from 'node:path';",
+        "export const plugin = { name: 'frontier' };",
+        ""
+      ],
+      "workerLines": [
+        "import path, { normalize } from 'node:path';",
+        "export const plugin = { name: 'frontier' };",
+        ""
+      ],
+      "headLines": [
+        "import { normalize, resolve } from 'node:path';",
+        "export const plugin = { name: 'frontier' };",
+        ""
+      ],
+      "expectedLines": [
+        "import path, { normalize, resolve } from 'node:path';",
+        "export const plugin = { name: 'frontier' };",
         ""
       ]
     },

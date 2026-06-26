@@ -1,5 +1,5 @@
 export function explicitSourceReplacementReplayRange(edit, symbolRange, sourceText) {
-  if (edit.sourceRangeKind !== 'cross-language-explicit-source-replacement' || !symbolRange || typeof sourceText !== 'string') {
+  if (!explicitSourceReplacementMode(edit.sourceRangeKind) || !symbolRange || typeof sourceText !== 'string') {
     return undefined;
   }
   const deleted = uniqueTextRange(sourceText, symbolRange, edit.deletedText, 'deleted-text');
@@ -11,6 +11,11 @@ export function explicitSourceReplacementReplayRange(edit, symbolRange, sourceTe
     ...relative,
     conflictReasonCodes: [deleted.reasonCode, replacement.reasonCode].filter(Boolean)
   };
+}
+
+function explicitSourceReplacementMode(mode) {
+  return mode === 'cross-language-explicit-source-replacement'
+    || mode === 'same-language-callsite-argument-append';
 }
 
 function uniqueTextRange(sourceText, symbolRange, needle, label) {

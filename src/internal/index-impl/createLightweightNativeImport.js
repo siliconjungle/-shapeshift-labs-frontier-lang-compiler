@@ -1,4 +1,4 @@
-import{idFragment,uniqueRecordsById}from'../../native-import-utils.js';import{lightweightDependencyRelations}from'../../lightweight-dependency-relations.js';import{lightweightCoverageLosses,scanNativeDeclarations}from'../../native-region-scanner.js';import{semanticOwnershipRegionForDeclaration,semanticPatchHintForRegion}from'../../semantic-import-regions.js';import{createSemanticIndexRecord,hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
+import{idFragment,uniqueRecordsById}from'../../native-import-utils.js';import{lightweightDependencyRelations}from'../../lightweight-dependency-relations.js';import{lightweightCoverageLosses,scanNativeDeclarations}from'../../native-region-scanner.js';import{semanticOwnershipRegionForDeclaration,semanticPatchHintForRegion}from'../../semantic-import-regions.js';import{createSemanticIndexRecord,hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';import{dynamicImportExpressionEdgeFields}from'./dynamicImportExpressionMetadata.js';
 export function createLightweightNativeImport(input) {
   const parser = input.parser ?? `${input.language}.lightweight-declaration-scan`;
   const rootId = 'native_root';
@@ -43,6 +43,8 @@ export function createLightweightNativeImport(input) {
     };
     if (declaration.symbolId) {
       const occurrenceId = `occ_${idFragment(declaration.nodeId)}_def`;
+      const relationId = `rel_${idFragment(documentId)}_${idFragment(declaration.nodeId)}`;
+      const moduleEdge = lightweightModuleEdge(declaration, input, documentId, relationId, ownershipRegion);
       symbols.push({
         id: declaration.symbolId,
         scheme: 'frontier',
@@ -68,10 +70,11 @@ export function createLightweightNativeImport(input) {
         nativeAstNodeId: declaration.nodeId
       });
       relations.push({
-        id: `rel_${idFragment(documentId)}_${idFragment(declaration.nodeId)}`,
+        id: relationId,
         sourceId: documentId,
-        predicate: declaration.role === 'import' ? 'imports' : 'defines',
-        targetId: declaration.symbolId
+        predicate: lightweightRelationPredicate(declaration),
+        targetId: declaration.symbolId,
+        ...(moduleEdge ? { metadata: { moduleEdge } } : {})
       });
       facts.push({
         id: `fact_${idFragment(declaration.nodeId)}_kind`,
@@ -92,6 +95,14 @@ export function createLightweightNativeImport(input) {
           granularity: ownershipRegion.granularity,
           key: ownershipRegion.key
         }
+      });
+      if (moduleEdge) facts.push({
+        id: `fact_${idFragment(relationId)}_${idFragment(declaration.symbolId)}_module_edge`,
+        predicate: 'moduleEdge',
+        subjectId: declaration.symbolId,
+        objectId: declaration.symbolId,
+        value: moduleEdge,
+        evidenceIds: [evidenceId]
       });
       mappings.push({
         id: `map_${idFragment(declaration.nodeId)}`,
@@ -189,4 +200,47 @@ export function createLightweightNativeImport(input) {
       } : {})
     }
   };
+}
+
+function lightweightRelationPredicate(declaration) {
+  if (declaration.role === 'import') return 'imports';
+  if (declaration.role === 'export') return 'exports';
+  return 'defines';
+}
+
+function lightweightModuleEdge(declaration, input, documentId, relationId, ownershipRegion) {
+  if (declaration.role !== 'import' && declaration.role !== 'export') return undefined;
+  const fields = declaration.fields ?? {};
+  const metadata = declaration.metadata ?? {};
+  const moduleSpecifier = fields.importPath ?? fields.moduleSpecifier ?? fields.exportPath ?? fields.source
+    ?? metadata.importPath ?? metadata.moduleSpecifier ?? metadata.exportPath ?? metadata.source;
+  return compactRecord({
+    kind: 'frontier.lang.moduleEdge',
+    version: 1,
+    id: relationId,
+    edgeKind: declaration.role === 'import' ? 'import' : moduleSpecifier || metadata.reexport ? 're-export' : 'export',
+    role: declaration.role,
+    sourceDocumentId: documentId,
+    sourcePath: input.sourcePath,
+    sourceHash: input.sourceHash,
+    moduleSpecifier,
+    symbolId: declaration.symbolId,
+    relationId,
+    ownershipRegionId: ownershipRegion.id,
+    ownershipRegionKey: ownershipRegion.key,
+    importKind: fields.importKind ?? metadata.importKind,
+    exportKind: fields.exportKind ?? metadata.exportKind,
+    importedName: fields.importedName ?? metadata.importedName,
+    exportedName: fields.exportedName ?? metadata.exportedName,
+    localName: fields.localName ?? metadata.localName,
+    namespace: fields.namespace ?? metadata.namespace,
+    exportStar: fields.exportStar ?? metadata.exportStar,
+    isTypeOnly: fields.typeOnly ?? fields.isTypeOnly ?? metadata.typeOnly ?? metadata.isTypeOnly,
+    ...dynamicImportExpressionEdgeFields(metadata),
+    publicContract: declaration.role === 'export' || metadata.publicContract
+  });
+}
+
+function compactRecord(record) {
+  return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
 }

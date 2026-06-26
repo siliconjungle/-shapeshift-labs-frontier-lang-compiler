@@ -1,9 +1,14 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { spanOffsets } from './semanticEditSourceRanges.js';
 
+const explicitSourceReplacementModes = new Set([
+  'cross-language-explicit-source-replacement',
+  'same-language-callsite-argument-append'
+]);
+
 export function explicitSourceReplacementEditForOperation(operation, identity, headSourceText, order) {
   const backprojection = operation.metadata?.sourceBackprojection;
-  if (backprojection?.mode !== 'cross-language-explicit-source-replacement') return undefined;
+  if (!explicitSourceReplacementModes.has(backprojection?.mode)) return undefined;
   const replacement = backprojection.sourceReplacementText;
   const range = spanOffsets(headSourceText, backprojection.sourceEditSpan ?? operation.spans?.head ?? operation.spans?.base);
   const anchorRange = spanOffsets(headSourceText, operation.anchor?.sourceSpan);
@@ -27,7 +32,7 @@ export function explicitSourceReplacementEditForOperation(operation, identity, h
       order,
       ...identity,
       editKind: 'replace',
-      sourceRangeKind: 'cross-language-explicit-source-replacement',
+      sourceRangeKind: backprojection.mode,
       start: range.start,
       end: range.end,
       headAnchorStart: anchorRange?.start,

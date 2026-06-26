@@ -1,8 +1,9 @@
 import{idFragment,uniqueByEvidenceId,uniqueByLossId,uniqueStrings}from'../../native-import-utils.js';import{createDocument,createPatch,createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';
 import{createNativeImportResultContract}from'./createNativeImportResultContract.js';import{createProjectImportAdmissionRecord}from'./createProjectImportAdmissionRecord.js';import{mergeSemanticIndexes}from'./mergeSemanticIndexes.js';import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';import{summarizeProjectSourcePreservation}from'./summarizeProjectSourcePreservation.js';
 import{createProjectDocumentExportSymbolResolver,createProjectDocumentExportSymbolsResolver,createProjectModuleSymbolResolver,resolveProjectModule}from'./projectSymbolGraphModuleResolution.js';
+import{createProjectCompilerGraphRecords}from'./projectSymbolGraphCompilerFacts.js';import{createProjectJsxGraphRecords}from'./projectSymbolGraphJsxRecords.js';import{createProjectRuntimeRegionRecords}from'./projectSymbolGraphRuntimeRegions.js';import{createProjectScopeUseDefRecords}from'./projectSymbolGraphScopeUseDefRecords.js';import{createProjectSourceEvidenceRecords}from'./projectSymbolGraphSourceRecords.js';import{createProjectCssModuleGraphRecords}from'./projectSymbolGraphCssModules.js';
 import{publicContractRegionRecord}from'./projectSymbolGraphPublicContracts.js';
-import{exportStarReExportIdentityRecords,isReExportImportEdge,reExportIdentityInputFromEdge,reExportIdentityRecord}from'./projectSymbolGraphReExports.js';
+import{commonJsAliasReExportIdentityRecords,exportStarReExportIdentityRecords,isReExportImportEdge,reExportIdentityInputFromEdge,reExportIdentityRecord}from'./projectSymbolGraphReExports.js';import{createProjectModuleDeclarationShapeRecords}from'./projectSymbolGraphModuleDeclarationShapes.js';import{resolveReExportIdentityImportTargets}from'./projectSymbolGraphReExportImportTargets.js';
 export function createNativeProjectImportResult(input, imports) {
   const idPart = idFragment(input.id ?? input.projectRoot ?? 'native_project');
   const nodes = {};
@@ -141,9 +142,7 @@ export function createNativeProjectImportResult(input, imports) {
     }
   };
 }
-
 const PROJECT_SYMBOL_GRAPH_REMAINING_FIELDS = Object.freeze([]);
-
 function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   const documents = semanticIndex?.documents ?? [];
   const symbolsById = new Map((semanticIndex?.symbols ?? []).map((symbol) => [symbol.id, symbol]));
@@ -155,7 +154,7 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   const resolveDocumentExportSymbols = createProjectDocumentExportSymbolsResolver(semanticIndex?.symbols ?? [], documents);
   const facts = semanticIndex?.facts ?? [];
   const moduleEdgeFacts = facts.filter((fact) => fact.predicate === 'moduleEdge');
-  const moduleEdgeByRelation = new Map(moduleEdgeFacts.map((fact) => [fact.subjectId, fact]));
+  const moduleEdgeByRelation = new Map(moduleEdgeFacts.map((fact) => [objectValue(fact.value).relationId ?? fact.subjectId, fact]));
   const relations = semanticIndex?.relations ?? [];
   const importEdges = relations
     .filter((relation) => relation.predicate === 'imports')
@@ -167,19 +166,19 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
   const reExportIdentities = uniqueRecords([
     ...facts
       .filter((fact) => fact.predicate === 'reExportIdentity' && fact.value)
+      .filter((fact) => hasConcreteReExportIdentity(objectValue(fact.value)))
       .map((fact) => reExportIdentityRecord(objectValue(fact.value), moduleEdgeById.get(objectValue(fact.value).relationId ?? fact.objectId), resolveDocumentExportSymbolId, { factId: fact.id })),
-    ...exportEdges
-      .filter((edge) => edge.isReExport)
-      .map((edge) => reExportIdentityRecord(reExportIdentityInputFromEdge(edge, `reexport_${idFragment(edge.id)}`), edge, resolveDocumentExportSymbolId)),
     ...importEdges
       .filter((edge) => isReExportImportEdge(edge))
       .flatMap((edge) => edge.exportStar
         ? exportStarReExportIdentityRecords(edge, resolveDocumentExportSymbols(edge.targetDocumentId))
-        : [reExportIdentityRecord(reExportIdentityInputFromEdge(edge, `reexport_${idFragment(edge.id)}`), edge, resolveDocumentExportSymbolId)])
+        : [reExportIdentityRecord(reExportIdentityInputFromEdge(edge, `reexport_${idFragment(edge.id)}`), edge, resolveDocumentExportSymbolId)]),...commonJsAliasReExportIdentityRecords(importEdges, exportEdges, resolveDocumentExportSymbolId)
   ]);
+  const resolvedImportEdges = resolveReExportIdentityImportTargets(importEdges, reExportIdentities);
   const publicContractRegions = uniqueRecords(facts
     .filter((fact) => fact.predicate === 'publicContractRegion' && fact.value)
     .map((fact) => publicContractRegionRecord(objectValue(fact.value), fact, symbolsById.get(fact.subjectId))));
+  const compilerGraphRecords = createProjectCompilerGraphRecords(semanticIndex, symbolsById, documentsById, publicContractRegions); const runtimeRegionRecords = createProjectRuntimeRegionRecords(semanticIndex, imports, publicContractRegions); const scopeUseDefRecords = createProjectScopeUseDefRecords(semanticIndex, imports, publicContractRegions); const jsxGraphRecords = createProjectJsxGraphRecords(semanticIndex, imports, publicContractRegions, resolvedImportEdges, exportEdges); const cssModuleGraphRecords = createProjectCssModuleGraphRecords(semanticIndex, imports, resolvedImportEdges, scopeUseDefRecords.scopeReferenceRecords, jsxGraphRecords.jsxPropRecords); const sourceEvidenceRecords = createProjectSourceEvidenceRecords(imports); const moduleDeclarationShapeRecords = createProjectModuleDeclarationShapeRecords(semanticIndex, exportEdges);
   const fileHashes = uniqueRecords([
     ...documents.map((document) => fileHashRecord(document)),
     ...facts
@@ -197,10 +196,20 @@ function createProjectSymbolGraphSummary(semanticIndex, imports, input) {
     relationCount: relations.length,
     factCount: facts.length,
     fileHashes,
-    importEdges,
+    importEdges: resolvedImportEdges,
     exportEdges,
-    reExportIdentities,
+    reExportIdentities, moduleDeclarationRecords: moduleDeclarationShapeRecords.moduleDeclarationRecords, exportAssignmentRecords: moduleDeclarationShapeRecords.exportAssignmentRecords,
     publicContractRegions,
+    sourceFileRecords: sourceEvidenceRecords.sourceFileRecords, sourceSpanRecords: sourceEvidenceRecords.sourceSpanRecords,
+    compilerSymbolRecords: compilerGraphRecords.compilerSymbolRecords,
+    compilerTypeRecords: compilerGraphRecords.compilerTypeRecords,
+    runtimeRegionRecords,
+    scopeBindingRecords: scopeUseDefRecords.scopeBindingRecords,
+    scopeReferenceRecords: scopeUseDefRecords.scopeReferenceRecords,
+    jsxElementRecords: jsxGraphRecords.jsxElementRecords,
+    jsxPropRecords: jsxGraphRecords.jsxPropRecords,
+    cssModuleImportBindings: cssModuleGraphRecords.cssModuleImportBindings, cssModuleUseSites: cssModuleGraphRecords.cssModuleUseSites,
+    cssModuleUseSiteBlockers: cssModuleGraphRecords.cssModuleUseSiteBlockers, cssModuleUseSiteGraphs: cssModuleGraphRecords.cssModuleUseSiteGraphs,
     remainingFields: PROJECT_SYMBOL_GRAPH_REMAINING_FIELDS
   };
 }
@@ -223,7 +232,8 @@ function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documents
     symbolMetadata.source,
     symbol?.kind === 'module' ? symbol.name : undefined
   );
-  const resolution = resolveProjectModule(document?.path, moduleSpecifier, documentsByPath, moduleResolution);
+  const runtimeEdgeMetadata = compactRecord({ importKind: firstString(moduleEdge.importKind, value.importKind, symbolMetadata.importKind), exportKind: firstString(moduleEdge.exportKind, value.exportKind, symbolMetadata.exportKind), dynamicImport: firstBoolean(moduleEdge.dynamicImport, value.dynamicImport, metadata.dynamicImport, symbolMetadata.dynamicImport), hostDependencyKind: firstString(moduleEdge.hostDependencyKind, value.hostDependencyKind, metadata.hostDependencyKind, symbolMetadata.hostDependencyKind), commonJs: firstBoolean(moduleEdge.commonJs, value.commonJs, metadata.commonJs, symbolMetadata.commonJs), interopHelper: firstString(moduleEdge.interopHelper, value.interopHelper, metadata.interopHelper, symbolMetadata.interopHelper), packageEnvironmentCondition: firstString(moduleEdge.packageEnvironmentCondition, value.packageEnvironmentCondition, metadata.packageEnvironmentCondition, symbolMetadata.packageEnvironmentCondition) });
+  const resolution = resolveProjectModule(document?.path, moduleSpecifier, documentsByPath, moduleResolution, runtimeEdgeMetadata);
   const record = {
     id: relation.id,
     sourceDocumentId: relation.sourceId,
@@ -239,11 +249,15 @@ function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documents
     resolutionPathVariant: resolution?.resolutionPathVariant,
     packageName: resolution?.packageName,
     packageSubpath: resolution?.packageSubpath,
+    packageExportKey: resolution?.packageExportKey,
     packageExportCondition: resolution?.packageExportCondition,
+    packageExportTarget: resolution?.packageExportTarget,
+    packageRuntimeCondition: resolution?.packageRuntimeCondition, packageRuntimeConditionEvidenceSource: resolution?.packageRuntimeConditionEvidenceSource, packageRuntimeConditionEdgeKind: resolution?.packageRuntimeConditionEdgeKind, packageRuntimeConditionCandidates: resolution?.packageRuntimeConditionCandidates, packageRuntimeConditionReasonCode: resolution?.packageRuntimeConditionReasonCode, packageEnvironmentCondition: resolution?.packageEnvironmentCondition, packageEnvironmentConditionEvidenceSource: resolution?.packageEnvironmentConditionEvidenceSource, packageEnvironmentConditionCandidates: resolution?.packageEnvironmentConditionCandidates, packageEnvironmentConditionReasonCode: resolution?.packageEnvironmentConditionReasonCode, packageWorkspaceRootAmbiguous: resolution?.packageWorkspaceRootAmbiguous, packageWorkspaceRoots: resolution?.packageWorkspaceRoots, packageResolutionReasonCode: resolution?.packageResolutionReasonCode,
+    packageType: resolution?.packageType,
     packageImportKey: resolution?.packageImportKey,
     packageImportCondition: resolution?.packageImportCondition,
     packageImportTarget: resolution?.packageImportTarget,
-    importKind: firstString(moduleEdge.importKind, value.importKind, symbolMetadata.importKind),
+    importKind: firstString(moduleEdge.importKind, value.importKind, symbolMetadata.importKind), commonJs: firstBoolean(moduleEdge.commonJs, value.commonJs, metadata.commonJs, symbolMetadata.commonJs), interopHelper: firstString(moduleEdge.interopHelper, value.interopHelper, metadata.interopHelper, symbolMetadata.interopHelper), dynamicImport: firstBoolean(moduleEdge.dynamicImport, value.dynamicImport, metadata.dynamicImport, symbolMetadata.dynamicImport), dynamicImportSpecifierKind: firstString(moduleEdge.dynamicImportSpecifierKind, value.dynamicImportSpecifierKind, metadata.dynamicImportSpecifierKind, symbolMetadata.dynamicImportSpecifierKind), dynamicImportExpressionText: firstString(moduleEdge.dynamicImportExpressionText, value.dynamicImportExpressionText, metadata.dynamicImportExpressionText, symbolMetadata.dynamicImportExpressionText), dynamicImportExpressionHash: firstString(moduleEdge.dynamicImportExpressionHash, value.dynamicImportExpressionHash, metadata.dynamicImportExpressionHash, symbolMetadata.dynamicImportExpressionHash), dynamicImportStaticSpecifierEvidence: firstBoolean(moduleEdge.dynamicImportStaticSpecifierEvidence, value.dynamicImportStaticSpecifierEvidence, metadata.dynamicImportStaticSpecifierEvidence, symbolMetadata.dynamicImportStaticSpecifierEvidence), dynamicImportRuntimeResolutionClaim: firstBoolean(moduleEdge.dynamicImportRuntimeResolutionClaim, value.dynamicImportRuntimeResolutionClaim, metadata.dynamicImportRuntimeResolutionClaim, symbolMetadata.dynamicImportRuntimeResolutionClaim), dynamicImportResolutionProofRequired: firstBoolean(moduleEdge.dynamicImportResolutionProofRequired, value.dynamicImportResolutionProofRequired, metadata.dynamicImportResolutionProofRequired, symbolMetadata.dynamicImportResolutionProofRequired), hostDependency: firstBoolean(moduleEdge.hostDependency, value.hostDependency, metadata.hostDependency, symbolMetadata.hostDependency), hostDependencyKind: firstString(moduleEdge.hostDependencyKind, value.hostDependencyKind, metadata.hostDependencyKind, symbolMetadata.hostDependencyKind), hostDependencyBase: firstString(moduleEdge.hostDependencyBase, value.hostDependencyBase, metadata.hostDependencyBase, symbolMetadata.hostDependencyBase), hostDependencyExpressionText: firstString(moduleEdge.hostDependencyExpressionText, value.hostDependencyExpressionText, metadata.hostDependencyExpressionText, symbolMetadata.hostDependencyExpressionText), hostDependencyExpressionHash: firstString(moduleEdge.hostDependencyExpressionHash, value.hostDependencyExpressionHash, metadata.hostDependencyExpressionHash, symbolMetadata.hostDependencyExpressionHash), hostDependencyStaticSpecifierEvidence: firstBoolean(moduleEdge.hostDependencyStaticSpecifierEvidence, value.hostDependencyStaticSpecifierEvidence, metadata.hostDependencyStaticSpecifierEvidence, symbolMetadata.hostDependencyStaticSpecifierEvidence), hostDependencyRuntimeResolutionClaim: firstBoolean(moduleEdge.hostDependencyRuntimeResolutionClaim, value.hostDependencyRuntimeResolutionClaim, metadata.hostDependencyRuntimeResolutionClaim, symbolMetadata.hostDependencyRuntimeResolutionClaim), hostDependencyResolutionProofRequired: firstBoolean(moduleEdge.hostDependencyResolutionProofRequired, value.hostDependencyResolutionProofRequired, metadata.hostDependencyResolutionProofRequired, symbolMetadata.hostDependencyResolutionProofRequired), hasImportAttributes: firstBoolean(moduleEdge.hasImportAttributes, value.hasImportAttributes, metadata.hasImportAttributes, symbolMetadata.hasImportAttributes), importAttributeCount: moduleEdge.importAttributeCount ?? value.importAttributeCount ?? metadata.importAttributeCount ?? symbolMetadata.importAttributeCount, importAttributeKeys: moduleEdge.importAttributeKeys ?? value.importAttributeKeys ?? metadata.importAttributeKeys ?? symbolMetadata.importAttributeKeys, importAttributeHash: firstString(moduleEdge.importAttributeHash, value.importAttributeHash, metadata.importAttributeHash, symbolMetadata.importAttributeHash), importAttributes: moduleEdge.importAttributes ?? value.importAttributes ?? metadata.importAttributes ?? symbolMetadata.importAttributes,
     exportKind: firstString(moduleEdge.exportKind, value.exportKind, symbolMetadata.exportKind),
     importedName: firstString(moduleEdge.importedName, value.importedName, symbolMetadata.importedName),
     exportedName: firstString(moduleEdge.exportedName, value.exportedName, symbolMetadata.exportedName),
@@ -252,7 +266,7 @@ function moduleEdgeRecord(relation, moduleEdgeByRelation, symbolsById, documents
     exportStar: firstBoolean(moduleEdge.exportStar, value.exportStar, symbolMetadata.exportStar),
     isTypeOnly: firstBoolean(moduleEdge.isTypeOnly, value.isTypeOnly, symbolMetadata.isTypeOnly, symbolMetadata.typeOnly),
     isReExport: firstBoolean(moduleEdge.isReExport, value.isReExport, symbolMetadata.reexport) ?? (relation.predicate === 'exports' && Boolean(moduleSpecifier)),
-    publicContract: firstBoolean(moduleEdge.publicContract, value.publicContract, metadata.publicContract),
+    publicContract: firstBoolean(moduleEdge.publicContract, value.publicContract, metadata.publicContract, symbolMetadata.publicContract),
     evidenceIds: uniqueStrings([...(relation.evidenceIds ?? []), ...(fact?.evidenceIds ?? [])])
   };
   return compactRecord({ ...record, resolvedTargetSymbolId: resolveTargetSymbolId(record) });
@@ -277,6 +291,8 @@ function objectValue(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
+function hasConcreteReExportIdentity(identity) { return Boolean(identity.exportedName || identity.importedName || identity.localName || identity.namespace); }
+
 function compactRecord(record) {
   return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
 }
@@ -292,17 +308,5 @@ function uniqueRecords(records) {
   }
   return result;
 }
-
-function firstString(...values) {
-  for (const value of values) {
-    if (value !== undefined && value !== null && String(value)) return String(value);
-  }
-  return undefined;
-}
-
-function firstBoolean(...values) {
-  for (const value of values) {
-    if (typeof value === 'boolean') return value;
-  }
-  return undefined;
-}
+function firstString(...values) { for (const value of values) if (value !== undefined && value !== null && String(value)) return String(value); return undefined; }
+function firstBoolean(...values) { for (const value of values) if (typeof value === 'boolean') return value; return undefined; }

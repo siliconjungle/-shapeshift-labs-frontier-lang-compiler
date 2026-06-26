@@ -9,6 +9,14 @@ import {
   removePreparedMemberAdditions,
   uniqueStrings
 } from './js-ts-semantic-merge-parse.js';
+import {
+  classBodyInvariantReasons,
+  classPrivateAddedCollisionReasons,
+  classPrivateScopeReasons,
+  isAccessorMember,
+  isPrivateMemberKey,
+  privateNameFromKey
+} from './js-ts-safe-member-class-invariants.js';
 import { mergeResult } from './js-ts-safe-member-merge-result.js';
 
 const NonSemanticRegionKinds = new Set(['property', 'type', 'config', 'content']);
@@ -155,6 +163,11 @@ function prepareRegion(input) {
   const baseMembers = parseMembers(base.value.body, kind);
   const workerMembers = parseMembers(worker.value.body, kind);
   const headMembers = parseMembers(head.value.body, kind);
+  if (kind === 'class') {
+    reasonCodes.push(...classBodyInvariantReasons(input.region, 'base', base.value.body));
+    reasonCodes.push(...classBodyInvariantReasons(input.region, 'worker', worker.value.body));
+    reasonCodes.push(...classBodyInvariantReasons(input.region, 'head', head.value.body));
+  }
   reasonCodes.push(...regionParseReasons(input.region, 'base', baseMembers));
   reasonCodes.push(...regionParseReasons(input.region, 'worker', workerMembers));
   reasonCodes.push(...regionParseReasons(input.region, 'head', headMembers));
@@ -170,6 +183,11 @@ function prepareRegion(input) {
   const workerAddedKeys = workerMembers.members.map((member) => member.key).filter((key) => !baseByKey.has(key));
   const headAddedKeys = headMembers.members.map((member) => member.key).filter((key) => !baseByKey.has(key));
   reasonCodes.push(...duplicateAddedReasons(input.region, workerAddedKeys, workerByKey, headByKey));
+  if (kind === 'class') {
+    reasonCodes.push(...classPrivateScopeReasons(input.region, 'worker', baseMembers.members, workerMembers.members, workerAddedKeys));
+    reasonCodes.push(...classPrivateScopeReasons(input.region, 'head', baseMembers.members, headMembers.members, headAddedKeys));
+    reasonCodes.push(...classPrivateAddedCollisionReasons(input.region, workerAddedKeys, headAddedKeys, workerByKey, headByKey));
+  }
   if (reasonCodes.length) return { ok: false, reasonCodes };
   return {
     ok: true,
@@ -209,7 +227,11 @@ function duplicateReasons(region, side, members) {
     }
   }
   return [...duplicateGroups].map(([key, group]) => {
-    const reason = group.some(isOverloadLikeMember) ? `overload-collision:${side}:${key}` : `duplicate-key:${side}:${key}`;
+    let reason;
+    if (group.some(isOverloadLikeMember)) reason = `overload-collision:${side}:${key}`;
+    else if (group.every(isAccessorMember)) reason = `accessor-pairing:${side}:${key}`;
+    else if (isPrivateMemberKey(key)) reason = `private-name-scope:${side}:${privateNameFromKey(key)}`;
+    else reason = `duplicate-key:${side}:${key}`;
     return regionReason(region, reason);
   });
 }
@@ -239,9 +261,11 @@ function duplicateAddedReasons(region, workerAddedKeys, workerByKey, headByKey) 
   return duplicateAddedKeys.map((key) => {
     const workerMember = workerByKey.get(key);
     const headMember = headByKey.get(key);
-    const reason = isOverloadLikeMember(workerMember) || isOverloadLikeMember(headMember)
-      ? `overload-collision:worker-head:${key}`
-      : `duplicate-added-key:${key}`;
+    let reason;
+    if (isOverloadLikeMember(workerMember) || isOverloadLikeMember(headMember)) reason = `overload-collision:worker-head:${key}`;
+    else if (isAccessorMember(workerMember) || isAccessorMember(headMember)) reason = `accessor-pairing:worker-head:${key}`;
+    else if (isPrivateMemberKey(key)) reason = `private-name-scope:worker-head:${privateNameFromKey(key)}`;
+    else reason = `duplicate-added-key:${key}`;
     return regionReason(region, reason);
   });
 }

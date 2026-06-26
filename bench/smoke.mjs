@@ -1,18 +1,46 @@
-import { measureFrontierCompile } from './compile-suite.mjs';
-import { collectNativeImports } from './native-import-suite.mjs';
-import { measureNativeMatrices } from './native-matrix-suite.mjs';
-import { measureNativeTransformations } from './native-transform-suite.mjs';
-import { measureSourceChangeSuites } from './source-change-suite.mjs';
-import { measureUniversalFixtureSuite } from './universal-fixture-suite.mjs';
+import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { measureRealRepoCorpus } from './real-repo-corpus-suite.mjs';
+
+const splitWorkspaceMode = !existsSync(new URL('../src/index.js', import.meta.url)) &&
+  !existsSync(new URL('./compile-suite.mjs', import.meta.url));
+
+if (splitWorkspaceMode) {
+  const realRepoCorpusMetrics = measureRealRepoCorpus();
+  assertRealRepoCorpusSmokeMetrics(realRepoCorpusMetrics);
+  console.log(JSON.stringify({
+    benchSmokeMode: 'real-repo-corpus-only-split-workspace',
+    ...realRepoCorpusMetrics
+  }));
+} else {
+const [
+  { measureFrontierCompile },
+  { collectNativeImports },
+  { measureNativeMatrices },
+  { measureNativeTransformations },
+  { measureSourceChangeSuites },
+  { measureUniversalFixtureSuite }
+] = await Promise.all([
+  import('./compile-suite.mjs'),
+  import('./native-import-suite.mjs'),
+  import('./native-matrix-suite.mjs'),
+  import('./native-transform-suite.mjs'),
+  import('./source-change-suite.mjs'),
+  import('./universal-fixture-suite.mjs')
+]);
 
 const compileMetrics = measureFrontierCompile();
 const importMetrics = await collectNativeImports();
 const matrixMetrics = measureNativeMatrices(importMetrics.nativeImportResults, importMetrics.adapters);
 const transformMetrics = measureNativeTransformations(importMetrics.nativeImportResults);
+const realRepoCorpusMetrics = measureRealRepoCorpus();
 const sourceChangeMetrics = measureSourceChangeSuites();
 const universalFixtureMetrics = measureUniversalFixtureSuite(importMetrics.adapters);
 
+assertRealRepoCorpusSmokeMetrics(realRepoCorpusMetrics);
+
 console.log(JSON.stringify({
+  benchSmokeMode: 'full-package',
   compiles: 250,
   bytes: compileMetrics.bytes,
   compileDurationMs: Number(compileMetrics.compileDurationMs.toFixed(2)),
@@ -134,5 +162,79 @@ console.log(JSON.stringify({
   universalFixtureLossCategories: universalFixtureMetrics.lossCategories,
   universalFixtureCandidateRecords: universalFixtureMetrics.candidateRecords,
   universalFixtureBestCandidateSortKey: universalFixtureMetrics.bestCandidateSortKey,
-  universalFixtureDurationMs: Number(universalFixtureMetrics.durationMs.toFixed(2))
+  universalFixtureDurationMs: Number(universalFixtureMetrics.durationMs.toFixed(2)),
+  ...realRepoCorpusMetrics
 }));
+}
+
+function assertRealRepoCorpusSmokeMetrics(realRepoCorpusMetrics) {
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusRealisticPatternOracleFixtures >= 2, true, 'real-repo realistic-pattern oracle fixtures');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusOracleMatrixRows >= 2, true, 'real-repo matrix row coverage');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCheckoutProofEntries, realRepoCorpusMetrics.realRepoCorpusEntries, 'real-repo checkout proof rows');
+  assert.equal(
+    realRepoCorpusMetrics.realRepoCorpusCheckoutSkipped + realRepoCorpusMetrics.realRepoCorpusCheckoutCheckedOut,
+    realRepoCorpusMetrics.realRepoCorpusEntries,
+    'real-repo checkout proof skipped/checked-out accounting'
+  );
+  assert.equal(
+    realRepoCorpusMetrics.realRepoCorpusCheckoutProofSkipped + realRepoCorpusMetrics.realRepoCorpusCheckoutProofExecuted,
+    realRepoCorpusMetrics.realRepoCorpusEntries,
+    'real-repo checkout proof skipped/executed accounting'
+  );
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCheckoutEvidenceRows.length, realRepoCorpusMetrics.realRepoCorpusEntries, 'real-repo checkout evidence rows');
+  assert.equal(
+    realRepoCorpusMetrics.realRepoCorpusCheckoutEvidenceSkipped + realRepoCorpusMetrics.realRepoCorpusCheckoutEvidenceExecuted,
+    realRepoCorpusMetrics.realRepoCorpusEntries,
+    'real-repo checkout evidence skipped/executed accounting'
+  );
+  assert.equal(
+    realRepoCorpusMetrics.realRepoCorpusCheckoutIdentitySkipped + realRepoCorpusMetrics.realRepoCorpusCheckoutIdentityExecuted,
+    realRepoCorpusMetrics.realRepoCorpusEntries,
+    'real-repo checkout identity skipped/executed accounting'
+  );
+  assert.equal(Number.isInteger(realRepoCorpusMetrics.realRepoCorpusCheckoutGitDirectories), true, 'real-repo git directory proof metric');
+  assert.equal(Number.isInteger(realRepoCorpusMetrics.realRepoCorpusCheckoutGitDirPointers), true, 'real-repo gitdir pointer proof metric');
+  assert.equal(Number.isInteger(realRepoCorpusMetrics.realRepoCorpusCheckoutGitConfigsPresent), true, 'real-repo git config proof metric');
+  assert.equal(Number.isInteger(realRepoCorpusMetrics.realRepoCorpusCheckoutGitOriginUrlsPresent), true, 'real-repo git origin proof metric');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusRepositoryCommandsRun, 0, 'real-repo default bench must not execute repository commands');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusDependencyInstallsRun, 0, 'real-repo default bench must not execute dependency installs');
+  assert.equal(
+    realRepoCorpusMetrics.realRepoCorpusRepositoryCommandDefaultOffRows,
+    realRepoCorpusMetrics.realRepoCorpusEntries,
+    'real-repo repository command default-off rows'
+  );
+  assert.equal(
+    realRepoCorpusMetrics.realRepoCorpusCommandDryRunPhaseRows,
+    realRepoCorpusMetrics.realRepoCorpusEntries * 3,
+    'real-repo command dry-run phase rows'
+  );
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandDryRunPhaseKinds, 3, 'real-repo command dry-run phase kinds');
+  assert.equal(
+    realRepoCorpusMetrics.realRepoCorpusCommandDryRunSkippedPhases,
+    realRepoCorpusMetrics.realRepoCorpusCheckoutEvidenceSkipped * 3,
+    'real-repo command dry-run skipped phase accounting'
+  );
+  assert.equal(
+    realRepoCorpusMetrics.realRepoCorpusCommandDryRunReadyPhases,
+    realRepoCorpusMetrics.realRepoCorpusCheckoutEvidenceExecuted * 3,
+    'real-repo command dry-run ready phase accounting'
+  );
+  assert.equal(
+    realRepoCorpusMetrics.realRepoCorpusCommandDryRunOptInRequiredPhases,
+    realRepoCorpusMetrics.realRepoCorpusCheckoutEvidenceExecuted * 3,
+    'real-repo command dry-run opt-in phase accounting'
+  );
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandDryRunExecutedPhases, 0, 'real-repo command dry-run executed phases');
+  assert.equal(
+    realRepoCorpusMetrics.realRepoCorpusCommandDryRunDefaultOffPhases,
+    realRepoCorpusMetrics.realRepoCorpusCommandDryRunPhaseRows,
+    'real-repo command dry-run default-off phases'
+  );
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandRunRows, realRepoCorpusMetrics.realRepoCorpusEntries, 'real-repo command-run rows');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandRunEnabledRows, 0, 'real-repo default command-run enabled rows');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandRunDefaultOffRows, realRepoCorpusMetrics.realRepoCorpusEntries, 'real-repo default command-run rows');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandRunExecutedPhases, 0, 'real-repo command-run executed phases');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandRunFailedPhases, 0, 'real-repo command-run failed phases');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandRunTimedOutPhases, 0, 'real-repo command-run timed-out phases');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandRunOutputTruncatedPhases, 0, 'real-repo command-run truncated output phases');
+}

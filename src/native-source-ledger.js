@@ -81,9 +81,7 @@ export function scanJavaScriptTypeScriptSourceLedger(sourceText, input = {}) {
     const next = sourceText[offset + 1];
     if (offset === 0 && char === '#' && next === '!') {
       const part = consume(readToLineEnd(sourceText, offset));
-      push(ledger.trivia, 'shebang', 'trivia', part.text, part.start, part.end);
-      push(ledger.comments, 'shebang', 'comment', part.text, part.start, part.end);
-      ledger.shebangs.push(sourceLedgerSpan({
+      const entry = sourceLedgerSpan({
         index: ledger.spans.length,
         kind: 'shebang',
         role: 'directive',
@@ -91,9 +89,12 @@ export function scanJavaScriptTypeScriptSourceLedger(sourceText, input = {}) {
         start: part.start,
         end: part.end,
         sourceHash,
-        sourcePath: input.sourcePath
-      }));
-      ledger.spans.push(ledger.shebangs[ledger.shebangs.length - 1]);
+        sourcePath: input.sourcePath,
+        metadata: { language: input.language ?? 'javascript' }
+      });
+      ledger.spans.push(entry);
+      ledger.shebangs.push(entry);
+      ledger.directives.push(entry);
       previous = undefined;
       continue;
     }
@@ -110,8 +111,8 @@ export function scanJavaScriptTypeScriptSourceLedger(sourceText, input = {}) {
     }
     if (char === '/' && next === '/') {
       const part = consume(readToLineEnd(sourceText, offset));
-      const kind = isSourceMapComment(part.text) ? 'source-map-comment' : 'comment';
-      const metadata = kind === 'source-map-comment' ? { sourceMap: true } : {};
+      const kind = preservedCommentKind(part.text);
+      const metadata = commentMetadata(kind);
       push(ledger.trivia, kind, 'trivia', part.text, part.start, part.end, metadata);
       push(ledger.comments, kind, 'comment', part.text, part.start, part.end, metadata);
       previous = undefined;
@@ -119,8 +120,8 @@ export function scanJavaScriptTypeScriptSourceLedger(sourceText, input = {}) {
     }
     if (char === '/' && next === '*') {
       const part = consume(readBlockCommentEnd(sourceText, offset));
-      const kind = isSourceMapComment(part.text) ? 'source-map-comment' : 'comment';
-      const metadata = kind === 'source-map-comment' ? { sourceMap: true } : {};
+      const kind = preservedCommentKind(part.text);
+      const metadata = commentMetadata(kind);
       push(ledger.trivia, kind, 'trivia', part.text, part.start, part.end, metadata);
       push(ledger.comments, kind, 'comment', part.text, part.start, part.end, metadata);
       previous = undefined;
@@ -189,6 +190,7 @@ export function scanJavaScriptTypeScriptSourceLedger(sourceText, input = {}) {
   }
 
   for (const directive of sourceLedgerDirectives(sourceText, input, sourceHash)) {
+    if (directive.kind === 'shebang' && ledger.shebangs.some((entry) => entry.span.start === directive.span.start && entry.span.end === directive.span.end)) continue;
     if (ledger.spans.length >= maxSpans) {
       truncated = true;
       break;
@@ -303,4 +305,16 @@ function directiveKind(trimmed) {
   if (/^['"]use\s+(?:strict|client|server)['"];?$/.test(trimmed)) return 'runtime-directive';
   if (/^(?:import|export)\b/.test(trimmed)) return 'module-directive';
   return undefined;
+}
+
+function preservedCommentKind(text) {
+  const value = String(text ?? '');
+  if (isSourceMapComment(value)) return 'source-map-comment';
+  if (value.startsWith('/**') && value[3] !== '/') return 'jsdoc-comment';
+  if (value.startsWith('/*')) return 'block-comment';
+  return 'comment';
+}
+
+function commentMetadata(kind) {
+  return kind === 'source-map-comment' ? { sourceMap: true } : kind === 'jsdoc-comment' ? { jsdoc: true } : kind === 'block-comment' ? { blockComment: true } : {};
 }

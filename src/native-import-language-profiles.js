@@ -33,6 +33,30 @@ export const NativeImportLanguageProfiles = Object.freeze([
       '.tsx sources are classified as typescript for declaration scanning; JSX element trees remain opaque without host parser evidence'
     ]
   }),
+  nativeImportLanguageProfile('html', {
+    aliases: ['htm'],
+    extensions: ['.html', '.htm'],
+    supportsLightweightScan: false,
+    defaultReadiness: 'blocked',
+    parserAdapters: ['parse5', 'htmlparser2', 'rehype', 'tree-sitter-html'],
+    lossKinds: ['declarationOnlyCoverage', 'opaqueNative', 'sourceMapApproximation', 'sourcePreservation', 'browserRuntime', 'hydrationRuntime'],
+    notes: [
+      'HTML semantic merge evidence is tree/attribute/source-span oriented; browser DOM normalization, custom elements, slots, templates, and hydration remain host-owned evidence',
+      'layout/render equivalence requires browser evidence and should remain fail-closed when only parser evidence is present'
+    ]
+  }),
+  nativeImportLanguageProfile('css', {
+    extensions: ['.css'],
+    supportsLightweightScan: false,
+    defaultReadiness: 'blocked',
+    parserAdapters: ['postcss', 'csstree', 'css-tree', 'lightningcss', 'tree-sitter-css'],
+    lossKinds: ['declarationOnlyCoverage', 'opaqueNative', 'sourceMapApproximation', 'sourcePreservation', 'cascadeRuntime', 'browserRuntime', 'cssModuleTransform', 'cssModuleUseSiteGraph'],
+    notes: [
+      'CSS semantic merge evidence is selector/declaration/cascade oriented; computed style, inheritance, layout, and browser-specific normalization remain host-owned evidence',
+      'CSS Modules require exported local class, ICSS, composes, generated class-name, and JS/TS/JSX use-site graph evidence before equivalence can be claimed',
+      'cascade/render equivalence requires browser evidence and should remain fail-closed when only parser evidence is present'
+    ]
+  }),
   nativeImportLanguageProfile('python', {
     aliases: ['py'],
     extensions: ['.py', '.pyi'],
@@ -100,7 +124,7 @@ function nativeImportLanguageProfile(language, input = {}) {
 
 
 export function normalizeProjectionMatrixTargets(targets) {
-  const canonicalTargets = { ts: 'typescript', js: 'javascript', rs: 'rust', py: 'python', h: 'c' };
+  const canonicalTargets = { ts: 'typescript', js: 'javascript', rs: 'rust', py: 'python', h: 'c', htm: 'html' };
   return uniqueStrings((Array.isArray(targets) ? targets : [targets])
     .map((target) => {
       if (target === undefined || target === null) return undefined;
@@ -115,6 +139,8 @@ export function nativeLanguageCompileTarget(language, aliases = []) {
   const ids = [language, ...aliases].map(normalizeNativeLanguageId);
   if (ids.includes('typescript')) return 'typescript';
   if (ids.includes('javascript')) return 'javascript';
+  if (ids.includes('html')) return 'html';
+  if (ids.includes('css')) return 'css';
   if (ids.includes('rust')) return 'rust';
   if (ids.includes('python')) return 'python';
   if (ids.includes('c')) return 'c';

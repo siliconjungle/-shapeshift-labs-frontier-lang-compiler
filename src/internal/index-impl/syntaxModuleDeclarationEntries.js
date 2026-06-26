@@ -1,8 +1,32 @@
-import{idFragment}from'../../native-import-utils.js';
-import{declarationRecord}from'./declarationRecord.js';
+import {
+  commonJsExpressionStatementEntries,
+  commonJsExportAssignmentEntries,
+  commonJsRequireVariableEntries
+} from './syntaxCommonJsModuleDeclarationEntries.js';
+import { dynamicImportExpressionMetadata } from './dynamicImportExpressionMetadata.js';
+import { hostModuleDependencyMetadata } from './importMetaUrlDependencyMetadata.js';
+import { moduleImportAttributeMetadata } from './moduleImportAttributeMetadata.js';
+import {
+  declarationName,
+  declarationTypeOnly,
+  exportBindingEntry,
+  exportModuleEntries,
+  identifierName,
+  importModuleEntries,
+  sourceValue
+} from './syntaxModuleEntryRecords.js';
+
+const UNKNOWN_DYNAMIC_IMPORT_MODULE_SPECIFIER = '<dynamic-import>';
+
 export function syntaxModuleDeclarationEntries(node, nativeNodeId, input) {
   const kind = String(node.type ?? node.kind ?? '');
   if (kind === 'ImportDeclaration') return importDeclarationEntries(node, nativeNodeId, input);
+  if (kind === 'VariableDeclarator') return commonJsRequireVariableEntries(node, nativeNodeId, input);
+  if (kind === 'ExpressionStatement') return commonJsExpressionStatementEntries(node, nativeNodeId, input);
+  if (kind === 'AssignmentExpression') return commonJsExportAssignmentEntries(node, nativeNodeId, input);
+  if (kind === 'ImportExpression') return dynamicImportExpressionEntries(node, nativeNodeId, input);
+  if (kind === 'CallExpression' && isDynamicImportCall(node)) return dynamicImportExpressionEntries(node, nativeNodeId, input);
+  if (kind === 'CallExpression' || kind === 'NewExpression') return hostModuleDependencyEntries(node, nativeNodeId, input);
   if (kind === 'ExportNamedDeclaration') return exportNamedDeclarationEntries(node, nativeNodeId, input);
   if (kind === 'ExportAllDeclaration') return exportAllDeclarationEntries(node, nativeNodeId, input);
   if (kind === 'ExportDefaultDeclaration') return exportDefaultDeclarationEntries(node, nativeNodeId, input);
@@ -17,8 +41,26 @@ function importDeclarationEntries(node, nativeNodeId, input) {
   return importModuleEntries(input, nativeNodeId, moduleSpecifier, bindings, {
     typeOnly,
     sideEffectOnly: bindings.length === 0,
-    importKind: bindings.length === 0 ? 'side-effect' : 'module'
+    importKind: bindings.length === 0 ? 'side-effect' : 'module',
+    ...moduleImportAttributeMetadata(node)
   });
+}
+
+function dynamicImportExpressionEntries(node, nativeNodeId, input) {
+  const importArgument = node.source ?? (node.arguments ?? [])[0];
+  if (!importArgument) return [];
+  const moduleSpecifier = sourceValue(importArgument) ?? UNKNOWN_DYNAMIC_IMPORT_MODULE_SPECIFIER;
+  return importModuleEntries(input, nativeNodeId, moduleSpecifier, [], {
+    importKind: 'dynamic-import',
+    dynamicImport: true,
+    ...dynamicImportExpressionMetadata(importArgument, moduleSpecifier),
+    ...moduleImportAttributeMetadata(node)
+  });
+}
+
+function hostModuleDependencyEntries(node, nativeNodeId, input) {
+  return hostModuleDependencyMetadata(node, { kind: String(node.type ?? node.kind ?? '') }).flatMap((dependency) =>
+    importModuleEntries(input, nativeNodeId, dependency.moduleSpecifier, [], dependency.metadata));
 }
 
 function exportNamedDeclarationEntries(node, nativeNodeId, input) {
@@ -32,12 +74,14 @@ function exportNamedDeclarationEntries(node, nativeNodeId, input) {
     ...(moduleSpecifier ? importModuleEntries(input, nativeNodeId, moduleSpecifier, reExportImportBindings(bindings), {
       typeOnly,
       reexport: true,
-      importKind: 'reexport'
+      importKind: 'reexport',
+      ...moduleImportAttributeMetadata(node)
     }) : []),
     ...exportModuleEntries(input, nativeNodeId, moduleSpecifier, bindings, {
       typeOnly,
       reExport: Boolean(moduleSpecifier),
-      exportKind: typeOnly ? 'type-named' : 'named'
+      exportKind: typeOnly ? 'type-named' : 'named',
+      ...moduleImportAttributeMetadata(node)
     })
   ];
 }
@@ -62,13 +106,15 @@ function exportAllDeclarationEntries(node, nativeNodeId, input) {
       typeOnly,
       reexport: true,
       exportStar: !exportedName,
-      importKind: exportedName ? 'namespace-reexport' : 'reexport'
+      importKind: exportedName ? 'namespace-reexport' : 'reexport',
+      ...moduleImportAttributeMetadata(node)
     }),
     ...exportModuleEntries(input, nativeNodeId, moduleSpecifier, bindings, {
       typeOnly,
       reExport: true,
       exportStar: !exportedName,
-      exportKind: exportedName ? 'namespace-reexport' : 'export-star'
+      exportKind: exportedName ? 'namespace-reexport' : 'export-star',
+      ...moduleImportAttributeMetadata(node)
     })
   ];
 }
@@ -151,129 +197,7 @@ function reExportImportBindings(bindings) {
   }));
 }
 
-function importModuleEntries(input, nativeNodeId, moduleSpecifier, bindings, metadata) {
-  return [{
-    declaration: compactRecord({
-      ...declarationRecord(input, nativeNodeId, moduleSpecifier, 'module', 'import'),
-      importPath: moduleSpecifier,
-      moduleSpecifier,
-      importKind: metadata.importKind,
-      isTypeOnly: metadata.typeOnly,
-      exportStar: metadata.exportStar,
-      metadata: moduleMetadata('syntax-import', bindings, metadata)
-    })
-  }, ...bindings.map((binding) => importBindingEntry(input, nativeNodeId, moduleSpecifier, binding))];
-}
-
-function importBindingEntry(input, nativeNodeId, moduleSpecifier, binding) {
-  return {
-    declaration: compactRecord({
-      ...declarationRecord(input, nativeNodeId, binding.localName, 'import', 'import'),
-      symbolId: `symbol:${input.language}:import:${idFragment(`${moduleSpecifier}:${binding.localName}:${binding.importedName}`)}`,
-      importPath: moduleSpecifier,
-      moduleSpecifier,
-      localName: binding.localName,
-      importedName: binding.importedName,
-      exportedName: binding.exportedName,
-      namespace: binding.namespace,
-      importKind: binding.importKind,
-      isTypeOnly: binding.isTypeOnly,
-      metadata: bindingMetadata('syntax-import-binding', moduleSpecifier, binding)
-    })
-  };
-}
-
-function exportModuleEntries(input, nativeNodeId, moduleSpecifier, bindings, metadata) {
-  const statementName = metadata.exportStar
-    ? `* from ${moduleSpecifier}`
-    : moduleSpecifier ? `{${bindings.map((binding) => binding.exportedName).join(',')}} from ${moduleSpecifier}` : `{${bindings.map((binding) => binding.exportedName).join(',')}}`;
-  return [{
-    declaration: compactRecord({
-      ...declarationRecord(input, nativeNodeId, statementName, 'module', 'export'),
-      exportPath: moduleSpecifier,
-      moduleSpecifier,
-      exportKind: metadata.exportKind,
-      exportStar: metadata.exportStar,
-      isTypeOnly: metadata.typeOnly,
-      reExport: metadata.reExport,
-      publicContract: true,
-      metadata: moduleMetadata('syntax-export', bindings, metadata)
-    })
-  }, ...bindings.map((binding) => exportBindingEntry(input, nativeNodeId, moduleSpecifier, binding))];
-}
-
-function exportBindingEntry(input, nativeNodeId, moduleSpecifier, binding) {
-  return {
-    declaration: compactRecord({
-      ...declarationRecord(input, nativeNodeId, binding.exportedName, 'export', 'export'),
-      symbolId: `symbol:${input.language}:export:${idFragment(binding.exportedName)}`,
-      exportPath: moduleSpecifier,
-      moduleSpecifier,
-      localName: binding.localName,
-      importedName: binding.importedName,
-      exportedName: binding.exportedName,
-      namespace: binding.namespace,
-      exportKind: binding.exportKind,
-      isTypeOnly: binding.isTypeOnly,
-      reExport: binding.reExport,
-      publicContract: true,
-      metadata: bindingMetadata('syntax-export-binding', moduleSpecifier, binding, true)
-    })
-  };
-}
-
-function moduleMetadata(scan, bindings, metadata) {
-  return compactRecord({
-    scan,
-    moduleOnly: true,
-    bindingCount: bindings.length,
-    importKind: metadata.importKind,
-    exportKind: metadata.exportKind,
-    isTypeOnly: metadata.typeOnly,
-    typeOnly: metadata.typeOnly,
-    sideEffectOnly: metadata.sideEffectOnly,
-    reexport: metadata.reexport,
-    reExport: metadata.reExport,
-    exportStar: metadata.exportStar,
-    publicContract: metadata.reExport || metadata.exportKind
-  });
-}
-
-function bindingMetadata(scan, moduleSpecifier, binding, publicContract = false) {
-  return compactRecord({
-    scan,
-    moduleSpecifier,
-    importPath: moduleSpecifier,
-    exportPath: moduleSpecifier,
-    localName: binding.localName,
-    importedName: binding.importedName,
-    exportedName: binding.exportedName,
-    namespace: binding.namespace,
-    importKind: binding.importKind,
-    exportKind: binding.exportKind,
-    isTypeOnly: binding.isTypeOnly,
-    typeOnly: binding.isTypeOnly,
-    reExport: binding.reExport,
-    publicContract
-  });
-}
-
-function sourceValue(source) {
-  return typeof source?.value === 'string' ? source.value : undefined;
-}
-
-function identifierName(node) {
-  return typeof node?.name === 'string' ? node.name : typeof node?.value === 'string' ? node.value : undefined;
-}
-
-function declarationName(node) {
-  return identifierName(node?.id) ?? identifierName(node?.name);
-}
-
-function declarationTypeOnly(kind) {
-  return kind === 'TSInterfaceDeclaration' || kind === 'TSTypeAliasDeclaration' || kind === 'InterfaceDeclaration' || kind === 'TypeAliasDeclaration';
-}
-
-function compactRecord(record) {
-  return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
+function isDynamicImportCall(node) {
+  const calleeKind = String(node.callee?.type ?? node.callee?.kind ?? '');
+  return calleeKind === 'Import' || calleeKind === 'ImportKeyword' || identifierName(node.callee) === 'import';
 }

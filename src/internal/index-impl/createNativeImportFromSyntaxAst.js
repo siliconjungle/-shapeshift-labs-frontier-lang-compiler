@@ -1,4 +1,13 @@
-import{adapterDiagnosticToLoss}from'./adapterDiagnosticToLoss.js';import{createAstNormalizationContext}from'./createAstNormalizationContext.js';import{mergeNativeLosses}from'./mergeNativeLosses.js';import{missingInjectedParserResult}from'./missingInjectedParserResult.js';import{normalizeSyntaxAstRoot}from'./normalizeSyntaxAstRoot.js';import{semanticIndexFromNativeDeclarations}from'./semanticIndexFromNativeDeclarations.js';import{truncatedAstLoss}from'./truncatedAstLoss.js';import{visitSyntaxAstNode}from'./visitSyntaxAstNode.js';
+import { adapterDiagnosticToLoss } from './adapterDiagnosticToLoss.js';
+import { createAstNormalizationContext } from './createAstNormalizationContext.js';
+import { mergeNativeLosses } from './mergeNativeLosses.js';
+import { missingInjectedParserResult } from './missingInjectedParserResult.js';
+import { normalizeSyntaxAstRoot } from './normalizeSyntaxAstRoot.js';
+import { semanticIndexFromNativeDeclarations } from './semanticIndexFromNativeDeclarations.js';
+import { createSyntaxAstSourcePreservation } from './syntaxAstSourcePreservation.js';
+import { truncatedAstLoss } from './truncatedAstLoss.js';
+import { visitSyntaxAstNode } from './visitSyntaxAstNode.js';
+
 export function createNativeImportFromSyntaxAst(ast, input, options) {
   const root = normalizeSyntaxAstRoot(ast, options.astFormat);
   if (!root) {
@@ -14,6 +23,7 @@ export function createNativeImportFromSyntaxAst(ast, input, options) {
     context.losses.push(truncatedAstLoss(input, context, options));
   }
   const semantic = semanticIndexFromNativeDeclarations(context.declarations, input, options);
+  const sourcePreservation = createSyntaxAstSourcePreservation(ast, input, options);
   return {
     rootId: context.rootId,
     nodes: context.nodes,
@@ -25,11 +35,17 @@ export function createNativeImportFromSyntaxAst(ast, input, options) {
     }, input)) ?? []),
     evidence: semantic.evidence,
     diagnostics: options.diagnostics,
+    ...(sourcePreservation ? { sourcePreservation } : {}),
     metadata: {
       astFormat: options.astFormat,
       parser: options.parser,
       normalizedNodeCount: Object.keys(context.nodes).length,
       declarationCount: context.declarations.length,
+      ...(sourcePreservation ? {
+        sourcePreservationId: sourcePreservation.id,
+        sourcePreservationSummary: sourcePreservation.summary,
+        parserTriviaExactness: sourcePreservation.metadata?.parserTriviaExactness
+      } : {}),
       truncated: context.truncated
     }
   };

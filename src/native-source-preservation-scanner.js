@@ -1,6 +1,11 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { idFragment, normalizeNativeLanguageId } from './native-import-utils.js';
 import { sourceLines } from './native-region-scanner-core.js';
+import {
+  createPreservedSourceOwnershipAnchor,
+  preservedOwnershipAnchorKind,
+  preservedSourceSegmentRole
+} from './native-source-preservation-ownership.js';
 
 function scanPreservedSourceTokens(sourceText, input) {
   const tokens = [];
@@ -59,7 +64,7 @@ function scanPreservedSourceTokens(sourceText, input) {
         offset += 1;
         column += 1;
       }
-      push(trivia, 'comment', text, start);
+      push(trivia, preservedCommentKind(text), text, start);
       continue;
     }
     if (char === '/' && next === '*') {
@@ -81,7 +86,7 @@ function scanPreservedSourceTokens(sourceText, input) {
           break;
         }
       }
-      push(trivia, 'comment', text, start);
+      push(trivia, preservedCommentKind(text), text, start);
       continue;
     }
     if (char === '#' && isHashCommentLanguage(input.language)) {
@@ -171,21 +176,33 @@ function scanPreservedSourceDirectives(sourceText, input) {
         continue;
       }
       const startColumn = Math.max(1, line.indexOf(trimmed) + 1);
+      const span = {
+        sourceId: input.sourceHash,
+        path: input.sourcePath,
+        start: offset + startColumn - 1,
+        end: offset + startColumn - 1 + trimmed.length,
+        startLine: number,
+        startColumn,
+        endLine: number,
+        endColumn: startColumn + trimmed.length
+      };
+      const textHash = hashSemanticValue(trimmed);
       directives.push({
         id: `directive_${idFragment(input.sourcePath ?? input.language)}_${directives.length + 1}`,
         kind: directiveKind,
         text: trimmed,
-        textHash: hashSemanticValue(trimmed),
-        span: {
-          sourceId: input.sourceHash,
-          path: input.sourcePath,
-          start: offset + startColumn - 1,
-          end: offset + startColumn - 1 + trimmed.length,
-          startLine: number,
-          startColumn,
-          endLine: number,
-          endColumn: startColumn + trimmed.length
-        },
+        textHash,
+        span,
+        ownershipAnchor: createPreservedSourceOwnershipAnchor({
+          kind: directiveKind,
+          role: 'directive',
+          text: trimmed,
+          textHash,
+          sourcePath: input.sourcePath,
+          sourceHash: input.sourceHash,
+          span,
+          anchorKind: preservedOwnershipAnchorKind(directiveKind, 'directive')
+        }),
         metadata: { language: input.language }
       });
     }
@@ -196,21 +213,33 @@ function scanPreservedSourceDirectives(sourceText, input) {
 
 function preservedSourceSegment(input) {
   const id = `${input.kind}_${input.index + 1}_${idFragment(input.start.offset)}`;
+  const textHash = hashSemanticValue(input.text);
+  const span = {
+    sourceId: input.sourceHash,
+    path: input.sourcePath,
+    start: input.start.offset,
+    end: input.end.offset,
+    startLine: input.start.line,
+    startColumn: input.start.column,
+    endLine: input.end.line,
+    endColumn: input.end.column
+  };
   return {
     id,
     kind: input.kind,
     text: input.text,
-    textHash: hashSemanticValue(input.text),
-    span: {
-      sourceId: input.sourceHash,
-      path: input.sourcePath,
-      start: input.start.offset,
-      end: input.end.offset,
-      startLine: input.start.line,
-      startColumn: input.start.column,
-      endLine: input.end.line,
-      endColumn: input.end.column
-    }
+    textHash,
+    span,
+    ownershipAnchor: createPreservedSourceOwnershipAnchor({
+      kind: input.kind,
+      role: preservedSourceSegmentRole(input.kind),
+      text: input.text,
+      textHash,
+      sourcePath: input.sourcePath,
+      sourceHash: input.sourceHash,
+      span,
+      anchorKind: preservedOwnershipAnchorKind(input.kind, preservedSourceSegmentRole(input.kind))
+    })
   };
 }
 
@@ -218,10 +247,18 @@ function preservedDirectiveKind(trimmed, language) {
   if (!trimmed) return undefined;
   if (/^#\s*(include|define|if|ifdef|ifndef|elif|else|endif|pragma)\b/.test(trimmed)) return 'preprocessor';
   if (/^#!\s*/.test(trimmed)) return 'shebang';
-  if (/^['"]use strict['"];?$/.test(trimmed)) return 'runtime-directive';
+  if (/^['"]use\s+(?:strict|client|server)['"];?$/.test(trimmed)) return 'runtime-directive';
   if (/^(import|export|package|module|namespace|use|using|from|require)\b/.test(trimmed)) return 'module-directive';
   if (normalizeNativeLanguageId(language) === 'python' && /^from\s+\S+\s+import\b/.test(trimmed)) return 'module-directive';
   return undefined;
+}
+
+function preservedCommentKind(text) {
+  const value = String(text ?? '');
+  if (/[#@]\s*sourceMappingURL=|[#@]\s*sourceURL=/.test(value)) return 'source-map-comment';
+  if (value.startsWith('/**') && value[3] !== '/') return 'jsdoc-comment';
+  if (value.startsWith('/*')) return 'block-comment';
+  return 'comment';
 }
 
 function preservedHashLineKind(text) {
@@ -260,6 +297,7 @@ function isIdentifierPart(char) {
 }
 
 export {
+  createPreservedSourceOwnershipAnchor,
   detectNewlineStyle,
   scanPreservedSourceDirectives,
   scanPreservedSourceTokens

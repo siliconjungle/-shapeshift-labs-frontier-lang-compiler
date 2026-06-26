@@ -1,4 +1,5 @@
 import{idFragment,caseSensitiveIdFragment}from'../../native-import-utils.js';import{semanticOwnershipRegionForDeclaration}from'../../semantic-import-regions.js';import{createSemanticIndexRecord,hashSemanticValue}from'@shapeshift-labs/frontier-lang-kernel';
+import{dynamicImportExpressionEdgeFields}from'./dynamicImportExpressionMetadata.js';import{hostDependencyEdgeFields}from'./importMetaUrlDependencyMetadata.js';import{moduleImportAttributeEdgeFields}from'./moduleImportAttributeMetadata.js';
 import{relationPredicateForDeclaration}from'./relationPredicateForDeclaration.js';
 export function semanticIndexFromNativeDeclarations(declarations, input, options) {
   const documentId = `doc_${idFragment(input.sourcePath ?? input.language)}_${idFragment(input.sourceHash)}`;
@@ -94,7 +95,7 @@ export function semanticIndexFromNativeDeclarations(declarations, input, options
         granularity: ownershipRegion.granularity,
         key: ownershipRegion.key
       }
-    }, ...projectSymbolGraphFacts({ moduleEdge, publicContractRegion, reExportIdentity, relationId, symbolId, evidenceId }));
+    }, ...projectSymbolGraphFacts({ moduleEdge, publicContractRegion, reExportIdentity, relationId, symbolId, evidenceId, compilerSymbol: declaration.metadata?.compilerSymbol, compilerSymbolIdentityHash: declaration.metadata?.compilerSymbolIdentityHash, compilerType: declaration.metadata?.compilerType, compilerTypeIdentityHash: declaration.metadata?.compilerTypeIdentityHash }));
     mappings.push({
       id: `map_${idFragment(declaration.nativeNode.id)}_${idFragment(symbolId)}`,
       nativeAstNodeId: declaration.nativeNode.id,
@@ -124,7 +125,8 @@ export function semanticIndexFromNativeDeclarations(declarations, input, options
           fileHashes: input.sourceHash ? 1 : 0,
           moduleEdges: facts.filter((fact) => fact.predicate === 'moduleEdge').length,
           reExportIdentities: facts.filter((fact) => fact.predicate === 'reExportIdentity').length,
-          publicContractRegions: facts.filter((fact) => fact.predicate === 'publicContractRegion').length
+          publicContractRegions: facts.filter((fact) => fact.predicate === 'publicContractRegion').length,
+          compilerSymbols: facts.filter((fact) => fact.predicate === 'compilerSymbol').length, compilerTypes: facts.filter((fact) => fact.predicate === 'compilerType').length
         }
       }
   }];
@@ -199,6 +201,8 @@ function moduleEdgeForDeclaration(declaration, input, documentId, relationId, ow
     namespace: declaration.namespace ?? declaration.metadata?.namespace,
     isTypeOnly: declaration.isTypeOnly ?? declaration.metadata?.isTypeOnly ?? declaration.metadata?.typeOnly,
     exportStar: declaration.exportStar ?? declaration.metadata?.exportStar,
+    ...dynamicImportExpressionEdgeFields(declaration.metadata), ...hostDependencyEdgeFields(declaration.metadata),
+    ...moduleImportAttributeEdgeFields(declaration.metadata),
     isReExport: edgeKind === 're-export',
     publicContract: publicContractForDeclaration(declaration, edgeKind)
   });
@@ -256,16 +260,18 @@ function reExportIdentityForDeclaration(declaration, input, documentId, relation
     localName: declaration.localName ?? declaration.metadata?.localName, namespace: declaration.namespace ?? declaration.metadata?.namespace,
     isTypeOnly: declaration.isTypeOnly ?? declaration.metadata?.isTypeOnly ?? declaration.metadata?.typeOnly, exportStar: declaration.exportStar ?? declaration.metadata?.exportStar,
     symbolId: declaration.symbolId, relationId, ownershipRegionId: ownershipRegion.id, ownershipRegionKey: ownershipRegion.key,
-    publicContract: true
+    publicContract: true, hasImportAttributes: moduleEdge?.hasImportAttributes, importAttributeCount: moduleEdge?.importAttributeCount, importAttributeKeys: moduleEdge?.importAttributeKeys, importAttributeHash: moduleEdge?.importAttributeHash, importAttributes: moduleEdge?.importAttributes
   });
 }
 
-function projectSymbolGraphFacts({ moduleEdge, publicContractRegion, reExportIdentity, relationId, symbolId, evidenceId }) {
+function projectSymbolGraphFacts({ moduleEdge, publicContractRegion, reExportIdentity, relationId, symbolId, evidenceId, compilerSymbol, compilerSymbolIdentityHash, compilerType, compilerTypeIdentityHash }) {
   return [
+    compilerSymbol ? { id: graphFactId(relationId, symbolId, 'compiler_symbol'), predicate: 'compilerSymbol', subjectId: symbolId, value: { ...compilerSymbol, identityHash: compilerSymbolIdentityHash }, evidenceIds: [evidenceId] } : undefined,
+    compilerType ? { id: graphFactId(relationId, symbolId, 'compiler_type'), predicate: 'compilerType', subjectId: symbolId, value: { ...compilerType, identityHash: compilerTypeIdentityHash }, evidenceIds: [evidenceId] } : undefined,
     moduleEdge ? {
       id: graphFactId(relationId, symbolId, 'module_edge'),
       predicate: 'moduleEdge',
-      subjectId: relationId,
+      subjectId: symbolId,
       objectId: symbolId,
       value: moduleEdge,
       evidenceIds: [evidenceId]

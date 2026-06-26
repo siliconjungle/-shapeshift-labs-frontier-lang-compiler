@@ -60,6 +60,8 @@ export type NativeSourceTokenKind =
   | 'operator'
   | 'punctuation'
   | 'comment'
+  | 'jsdoc-comment'
+  | 'block-comment'
   | 'source-map-comment'
   | 'whitespace'
   | 'newline'
@@ -145,6 +147,22 @@ export interface NativeSourceLedger {
   readonly summary: NativeSourceLedgerSummary;
 }
 
+export type ParserTriviaExactnessStatus = 'exact' | 'approximate' | 'blocked' | (string & {});
+export type ParserTriviaOwnershipStatus = 'exact' | 'blocked' | (string & {});
+export type ParserTriviaOwnershipRelation =
+  | 'directive-prologue'
+  | 'source-directive'
+  | 'leading-comment'
+  | 'trailing-comment'
+  | 'jsdoc-comment'
+  | 'block-comment'
+  | 'file-comment'
+  | 'generated-source-boundary'
+  | 'file-entrypoint-directive'
+  | (string & {});
+export interface ParserTriviaEvidenceInput { readonly [key: string]: unknown; readonly status?: ParserTriviaExactnessStatus; readonly exactParserTrivia?: boolean; readonly exact?: boolean; readonly losslessCst?: boolean; readonly sourceHash?: string; readonly sourceId?: string; readonly roundtripHash?: string; readonly evidenceSourceHash?: string; readonly parserEvidence?: string; readonly adapterId?: string; readonly parserAdapterId?: string; readonly parserId?: string; readonly adapter?: string; readonly evidenceId?: string; readonly id?: string; readonly blocked?: boolean; readonly reasonCodes?: readonly string[]; readonly blockReasonCodes?: readonly string[]; readonly metadata?: Record<string, unknown>; }
+export interface ParserTriviaExactnessRecord { readonly schema: 'frontier.lang.parserTriviaExactness.v1'; readonly version: 1; readonly status: ParserTriviaExactnessStatus; readonly exactParserTrivia: boolean; readonly losslessCst?: boolean; readonly sourcePath?: string; readonly sourceHash?: string; readonly evidenceSourceHash?: string; readonly sourceHashVerified?: boolean; readonly parserEvidence?: string; readonly adapterId?: string; readonly evidenceId?: string; readonly reasonCodes: readonly string[]; readonly blockReasonCodes: readonly string[]; readonly reviewRequired: boolean; readonly autoMergeClaim: false; readonly semanticEquivalenceClaim: false; }
+
 export interface NativeSourcePreservation {
   readonly kind: 'frontier.lang.nativeSourcePreservation';
   readonly version: 1;
@@ -174,8 +192,19 @@ export interface NativeSourcePreservation {
     readonly braces?: number;
     readonly exactSourceAvailable: boolean;
     readonly truncated: boolean;
+    readonly parserTriviaExactnessStatus?: string;
+    readonly exactParserTrivia?: boolean;
+    readonly parserTriviaExactnessReasonCodes?: readonly string[];
+    readonly parserTriviaExactnessBlockReasonCodes?: readonly string[];
   };
-  readonly metadata?: Record<string, unknown>;
+  readonly metadata?: Record<string, unknown> & { readonly parserTriviaExactness?: ParserTriviaExactnessRecord };
+}
+
+export interface NativeSourceTokenTriviaScan {
+  readonly tokens: readonly NativeSourcePreservedToken[];
+  readonly trivia: readonly NativeSourcePreservedToken[];
+  readonly truncated?: boolean;
+  readonly parserEvidence?: string;
 }
 
 export interface CreateNativeSourcePreservationOptions {
@@ -192,7 +221,9 @@ export interface CreateNativeSourcePreservationOptions {
   readonly includeSourceLedger?: boolean;
   readonly maxTokens?: number;
   readonly maxTrivia?: number;
+  readonly tokensAndTrivia?: NativeSourceTokenTriviaScan;
   readonly maxDirectives?: number;
   readonly maxLedgerSpans?: number;
+  readonly parserTriviaEvidence?: ParserTriviaEvidenceInput;
   readonly metadata?: Record<string, unknown>;
 }
