@@ -59,13 +59,13 @@ const cssDependencyMissingProof = safeMergeJsTsProject({
 });
 assert.equal(cssDependencyMissingProof.status, 'merged');
 assert.equal(cssDependencyMissingProof.summary.cssDependencySurfaceFiles, 1);
-assert.equal(cssDependencyMissingProof.summary.cssDependencyGraphEvidenceFiles, 0);
-assert.equal(cssDependencyMissingProof.summary.cssDependencyGraphMissingProofFiles, 1);
+assert.equal(cssDependencyMissingProof.summary.cssDependencyGraphEvidenceFiles, 1);
+assert.equal(cssDependencyMissingProof.summary.cssDependencyGraphMissingProofFiles, 0);
 assert.equal(cssDependencyMissingProof.summary.cssDependencyGraphBlockedFiles, 0);
-assert.equal(cssDependencyMissingProof.confidence.missingSignals.includes('css-dependency-graph-evidence-missing'), true);
+assert.equal(cssDependencyMissingProof.confidence.missingSignals.includes('css-dependency-graph-evidence-missing'), false);
 const cssDependencySurface = matrixSurface(cssDependencyMissingProof, 'css-dependency-graph-evidence');
-assert.equal(cssDependencySurface.proofStatuses['css-dependency-graph'], 'missing');
-assert.equal(cssDependencySurface.missingRouteIds.includes('prove-css-dependency-graph'), true);
+assert.equal(cssDependencySurface.proofStatuses['css-dependency-graph'], 'passed');
+assert.equal(cssDependencySurface.missingRouteIds.includes('prove-css-dependency-graph'), false);
 assert.equal(matrixSurface(cssDependencyMissingProof, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
 
 const keyframesCssBase = [
@@ -84,8 +84,8 @@ const cssKeyframesDependencyBlocked = safeMergeJsTsProject({
 });
 assert.equal(cssKeyframesDependencyBlocked.status, 'blocked');
 assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencySurfaceFiles, 1);
-assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphEvidenceFiles, 0);
-assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphMissingProofFiles, 1);
+assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphEvidenceFiles, 1);
+assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphMissingProofFiles, 0);
 assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphBlockedFiles, 1);
 assert.equal(matrixSurface(cssKeyframesDependencyBlocked, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'failed');
 
