@@ -1,5 +1,7 @@
 import { HtmlCssProjectMergeMissingSignals, htmlCssProjectMergeAdmissionMatrixRows, htmlCssProjectMergeMatrixProofStatus, htmlCssProjectMergeMissingEvidenceItems, htmlCssProjectMergeMissingEvidenceRoutes } from './js-ts-safe-project-merge-html-css-matrix.js';
+import { sourceTextMergeMatrixProofStatus, sourceTextMergeMissingEvidenceItem } from './js-ts-safe-project-merge-source-text-candidate.js';
 const ProjectMergeMissingSignals = Object.freeze({
+  sourceTextMergeCandidate: 'source-text-merge-candidate-not-produced',
   outputDiagnosticsGate: 'output-diagnostics-gate-not-run',
   declarationGate: 'declaration-gate-not-run',
   qualityGates: 'quality-gates-not-run',
@@ -17,6 +19,7 @@ const ProjectMergeMissingSignals = Object.freeze({
 });
 
 const ProjectMergeMissingEvidenceRoutes = Object.freeze({
+  [ProjectMergeMissingSignals.sourceTextMergeCandidate]: route('produce-source-text-merge-candidate', 'source-files', 'run-conservative-three-way-source-merge'),
   [ProjectMergeMissingSignals.outputDiagnosticsGate]: route('run-output-diagnostics', 'project-output', 'supply-output-diagnostics'),
   [ProjectMergeMissingSignals.declarationGate]: route('emit-output-declarations', 'project-output', 'supply-declaration-output'),
   [ProjectMergeMissingSignals.qualityGates]: route('attach-quality-gates', 'quality-gates', 'attach-passing-quality-gates'),
@@ -34,6 +37,7 @@ const ProjectMergeMissingEvidenceRoutes = Object.freeze({
 });
 
 const ProjectMergeAdmissionMatrixRows = Object.freeze([
+  matrixRow('source-text-merge-candidate', 'baseline', ['source-text-merge-candidate'], [ProjectMergeMissingSignals.sourceTextMergeCandidate]),
   matrixRow('parser-source-span-trivia', 'partial', ['source-span-roundtrip'], [ProjectMergeMissingSignals.sourceSpanRoundtrip, ProjectMergeMissingSignals.semanticArtifacts]),
   matrixRow('scope-use-def-graph', 'partial', ['project-graph-delta'], [ProjectMergeMissingSignals.projectGraphEvidence, ProjectMergeMissingSignals.projectGraphDeltaEvidence]),
   matrixRow('module-export-import-graph', 'partial', ['project-graph-delta'], [ProjectMergeMissingSignals.projectGraphEvidence, ProjectMergeMissingSignals.projectGraphDeltaEvidence]),
@@ -54,6 +58,8 @@ const ProjectMergeAdmissionMatrixRows = Object.freeze([
 
 function missingEvidenceItems(summary, context = {}) {
   const items = [];
+  const sourceTextMissing = sourceTextMergeMissingEvidenceItem(summary, ProjectMergeMissingSignals.sourceTextMergeCandidate, missingEvidenceItem);
+  if (sourceTextMissing) items.push(sourceTextMissing);
   if (!context.hasProjectGraphEvidence) items.push(missingEvidenceItem({
     code: ProjectMergeMissingSignals.projectGraphEvidence,
     scope: 'project-graph',
@@ -254,6 +260,8 @@ function matrixProofStatus(level, summary, proofEvidence) {
   if (levelStatuses[level]) return levelStatuses[level];
   const htmlCssStatus = htmlCssProjectMergeMatrixProofStatus(level, summary);
   if (htmlCssStatus) return htmlCssStatus;
+  const sourceTextStatus = sourceTextMergeMatrixProofStatus(level, summary);
+  if (sourceTextStatus) return sourceTextStatus;
   if (level === 'project-graph-delta') return summary.projectGraphDeltaEvidenceIncluded ? (summary.projectGraphDeltaConflicts ? 'failed' : 'passed') : 'missing';
   if (level === 'project-graph-evidence') return summary.projectGraphConflicts ? 'failed' : summary.projectGraphEvidenceIncluded || summary.projectGraphDeltaEvidenceIncluded ? 'passed' : 'missing';
   if (level === 'css-module-use-site-graph') return summary.projectGraphCssModuleUseSiteConflicts ? 'failed' : summary.projectGraphCssModuleUseSiteGraphs ? 'passed' : summary.projectGraphEvidenceIncluded ? 'absent' : 'missing';
@@ -292,12 +300,10 @@ function countField(items, field) {
 
 function countRoute(items, field = 'id') {
   const counts = {};
-  for (const item of items) {
-    const key = field === 'lane' ? item?.routeLane ?? item?.route?.lane : item?.routeId ?? item?.route?.id;
-    if (key) counts[key] = (counts[key] ?? 0) + 1;
-  }
+  for (const item of items) countRouteItem(counts, item, field);
   return counts;
 }
+function countRouteItem(counts, item, field) { const key = field === 'lane' ? item?.routeLane ?? item?.route?.lane : item?.routeId ?? item?.route?.id; if (key) counts[key] = (counts[key] ?? 0) + 1; }
 
 function route(id, lane, next) { return Object.freeze({ id, lane, next }); }
 function shouldRecommendRerun(missingEvidence = [], options = {}) {
@@ -307,13 +313,7 @@ function shouldRecommendRerun(missingEvidence = [], options = {}) {
   if (reasonCodes.length) return reasonCodes.every((code) => rerunReasonCodes.has(code));
   return missingEvidence[0]?.action === 'rerun-gate' && missingEvidence[0]?.kind === 'quality-gate';
 }
-function isSemanticEquivalenceMissing(item) {
-  return item?.proofLevel === 'semantic-equivalence-unknown'
-    || item?.code === ProjectMergeMissingSignals.semanticEquivalenceProof;
-}
-
-function compactRecord(record) {
-  return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
-}
+function isSemanticEquivalenceMissing(item) { return item?.proofLevel === 'semantic-equivalence-unknown' || item?.code === ProjectMergeMissingSignals.semanticEquivalenceProof; }
+function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
 
 export { compactMissingEvidenceTelemetry, confidenceRecommendedAction, createProjectMergeAdmissionMatrixAudit, missingEvidenceItems, missingEvidenceRouteForSignal, missingEvidenceSignals, prioritizedMissingEvidence };

@@ -134,6 +134,7 @@ const smokeModules = [
   './smoke/js-ts-real-repo-corpus-command-execution-proof.mjs',
   './smoke/js-ts-semantic-merge-oracles.mjs',
   './smoke/js-ts-semantic-merge-admission-matrix.mjs',
+  './smoke/js-ts-semantic-merge-admission-matrix-source-text.mjs',
   './smoke/js-ts-semantic-merge-admission-matrix-types.mjs',
   './smoke/js-ts-semantic-merge-admission-matrix-scope.mjs',
   './smoke/js-ts-semantic-merge-admission-matrix-parser.mjs',

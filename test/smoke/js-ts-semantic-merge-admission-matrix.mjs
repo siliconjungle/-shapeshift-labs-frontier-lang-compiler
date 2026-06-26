@@ -3,6 +3,7 @@ import { JsTsSafeMergeConflictCodes } from '../../src/js-ts-safe-merge.js';
 import { safeMergeJsTsSource } from '../../src/js-ts-semantic-merge.js';
 import { createSemanticEditScript, projectSemanticEditScriptToSource, replaySemanticEditProjection, safeMergeJsTsProject } from '../../src/index.js';
 const semanticMergeMatrixCells = [
+  { id: 'source-text-merge/baseline-candidate-recorded', status: 'done', evidence: 'js-ts-project-source-text-merge-candidate', note: 'project admission records the conservative concrete source merge candidate as the baseline reviewed by semantic proof surfaces' },
   { id: 'class-method-rename/admitted', status: 'done', evidence: 'js-ts-safe-merge-rename-move-fallback', note: 'composed safe merge admits class method rename when head changes a sibling method' },
   { id: 'top-level-rename/semantic-edit-admitted', status: 'done', evidence: 'semantic-edit-rename-move-source-replay', note: 'semantic edit projection can replay a top-level rename over an independent sibling edit' },
   {

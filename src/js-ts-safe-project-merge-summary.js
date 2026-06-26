@@ -1,6 +1,7 @@
 import { compactMissingEvidenceTelemetry, confidenceRecommendedAction, createProjectMergeAdmissionMatrixAudit, missingEvidenceItems, missingEvidenceSignals, prioritizedMissingEvidence } from './js-ts-safe-project-merge-missing-evidence.js';
 import { failedEvidenceMissingItems, fileAdmissionEvidenceRecords } from './js-ts-safe-project-merge-evidence-routing.js'; import { compactProjectMergeRoutingCalibration } from './js-ts-safe-project-merge-routing-calibration.js';
 import { htmlCssProjectSummary } from './js-ts-safe-project-merge-html-css-summary.js';
+import { sourceTextMergeCandidateEvidenceRecord, sourceTextMergeSummary } from './js-ts-safe-project-merge-source-text-candidate.js';
 
 function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false, outputDiagnosticsGate = undefined, outputDeclarationGate = undefined, outputQualityGate = undefined, moveRenameSummary = undefined, proofEvidence = undefined, symbolRenameSummary = undefined, splitMergeSummary = undefined, projectSymbolGraph = undefined) {
   const byOperation = {};
@@ -11,9 +12,7 @@ function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false
   const proofLevelStatuses = proofEvidence?.summary?.levelStatuses ?? {};
   return {
     files: files.length,
-    mergedFiles: files.filter((file) => file.status === 'merged').length,
-    blockedFiles: files.filter((file) => file.status === 'blocked').length,
-    outputFiles: files.filter((file) => typeof file.outputSourceText === 'string').length,
+    ...sourceTextMergeSummary(files),
     ...htmlCssProjectSummary(files),
     projectGraphConflicts: graphConflicts.length,
     projectGraphDeltaEvidenceIncluded: hasProjectGraphDelta ? 1 : 0, projectGraphEvidenceIncluded: projectSymbolGraph || hasProjectGraphDelta ? 1 : 0,
@@ -113,6 +112,7 @@ function projectSummaryWithConfidenceEvidence(summary, evidence = [], confidence
 
 function projectEvidence(id, status, summary, context = {}) {
   return uniqueRecords([
+    sourceTextMergeCandidateEvidenceRecord(id, summary),
     projectMergeEvidenceRecord(id, status, summary, context),
     graphEvidenceRecord(id, summary, context),
     ...fileAdmissionEvidenceRecords(context.fileResults),
@@ -168,6 +168,9 @@ function projectConfidence(id, status, summary, evidence = [], reasonCodes = [],
       mergedFiles: summary.mergedFiles,
       blockedFiles: summary.blockedFiles,
       outputFiles: summary.outputFiles,
+      sourceTextMergeCandidateStatus: summary.sourceTextMergeCandidateStatus,
+      sourceTextMergeCandidateFiles: summary.sourceTextMergeCandidateFiles,
+      sourceTextMergeBlockedFiles: summary.sourceTextMergeBlockedFiles,
       projectGraphConflicts: summary.projectGraphConflicts,
       outputDiagnosticConflicts: summary.outputDiagnosticConflicts,
       outputDeclarationConflicts: summary.outputDeclarationConflicts,
@@ -293,6 +296,7 @@ function confidenceLevel(score, status) {
 function compactConfidenceDimensions(status, summary, context, routingCalibration = {}) {
   return compactRecord({
     merge: status === 'merged' ? 'merged' : 'blocked',
+    sourceText: summary.sourceTextMergeCandidateStatus ?? 'absent',
     graph: context.hasProjectGraphEvidence ? (summary.projectGraphConflicts ? 'failed' : 'passed') : 'missing',
     diagnostics: gateConfidenceDimension(context.outputDiagnosticsGate),
     declarations: gateConfidenceDimension(context.outputDeclarationGate),
@@ -303,14 +307,7 @@ function compactConfidenceDimensions(status, summary, context, routingCalibratio
 
 function gateConfidenceDimension(gate) { return !gate ? 'missing' : gate.status === 'passed' ? 'passed' : gate.status === 'skipped' ? 'missing' : 'failed'; }
 
-function uniqueRecords(records) {
-  const seen = new Set();
-  return records.filter((record) => {
-    if (!record?.id || seen.has(record.id)) return false;
-    seen.add(record.id);
-    return true;
-  });
-}
+function uniqueRecords(records) { const seen = new Set(); return records.filter((record) => !record?.id || seen.has(record.id) ? false : (seen.add(record.id), true)); }
 
 function uniqueStrings(values) { return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))]; }
 function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
