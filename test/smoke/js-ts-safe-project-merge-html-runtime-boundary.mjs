@@ -1,6 +1,27 @@
 import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
 
+function runtimeEvidence(reasonCode, boundary, label) {
+  return {
+    runtimeCommand: `node test/html-runtime/${label}.mjs`,
+    runtimeProbeId: `html:${reasonCode}:${boundary}`,
+    runtimeEvidenceHash: `html-runtime-evidence:${reasonCode}:${boundary}:${label}`,
+    runtimeSignals: runtimeSignals(reasonCode, boundary)
+  };
+}
+
+function runtimeSignals(reasonCode, boundary) {
+  const text = `${reasonCode ?? ''} ${boundary ?? ''}`.toLowerCase();
+  if (text.includes('iframe-srcdoc')) return ['html-iframe-srcdoc-runtime'];
+  if (text.includes('iframe')) return ['html-iframe-runtime'];
+  if (text.includes('event-handler')) return ['html-event-handler-runtime'];
+  if (text.includes('inline-style') || text.includes('style')) return ['html-inline-style-runtime'];
+  if (text.includes('form-submitter')) return ['html-form-submitter-runtime'];
+  if (text.includes('form-control')) return ['html-form-control-runtime'];
+  if (text.includes('form')) return ['html-form-runtime'];
+  return ['html-browser-runtime'];
+}
+
 const htmlEventHandlerBase = '<button data-frontier-key="save" onclick="save()">Save</button>\n';
 const htmlEventHandlerWorker = '<button data-frontier-key="save" onclick="saveNow()">Save</button>\n';
 const htmlEventHandlerHead = htmlEventHandlerBase;
@@ -45,7 +66,8 @@ const htmlEventHandlerWrongProofProject = safeMergeJsTsProject({
       side: 'worker',
       boundary: 'html-event-handler-attribute',
       boundaryAttributes: ['onclick'],
-      sourceTexts: { base: htmlEventHandlerBase, worker: htmlEventHandlerWorker, head: htmlEventHandlerHead, output: htmlEventHandlerBase }
+      sourceTexts: { base: htmlEventHandlerBase, worker: htmlEventHandlerWorker, head: htmlEventHandlerHead, output: htmlEventHandlerBase },
+      ...runtimeEvidence('event-handler-runtime-boundary', 'html-event-handler-attribute', 'event-handler-wrong-output')
     }]
   },
   files: [{ sourcePath: 'src/view.html', baseSourceText: htmlEventHandlerBase, workerSourceText: htmlEventHandlerWorker, headSourceText: htmlEventHandlerHead }]
@@ -54,6 +76,26 @@ assert.equal(htmlEventHandlerWrongProofProject.status, 'blocked');
 assert.equal(htmlEventHandlerWrongProofProject.summary.htmlProofGapBlockedFiles, 1);
 assert.equal(htmlEventHandlerWrongProofProject.conflicts.some((conflict) => conflict.details.reasonCode === 'event-handler-runtime-boundary'), true);
 assert.equal(htmlEventHandlerWrongProofProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
+
+const htmlEventHandlerSourceOnlyProofProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_event_handler_runtime_source_only_proof',
+  htmlRuntimeBoundaryProofsByPath: {
+    'src/view.html': [{
+      id: 'html_event_handler_source_only',
+      kind: 'html-source-bound-runtime-boundary-proof',
+      status: 'passed',
+      sourcePath: 'src/view.html',
+      reasonCode: 'event-handler-runtime-boundary',
+      side: 'worker',
+      boundary: 'html-event-handler-attribute',
+      boundaryAttributes: ['onclick'],
+      sourceTexts: { base: htmlEventHandlerBase, worker: htmlEventHandlerWorker, head: htmlEventHandlerHead, output: htmlEventHandlerWorker }
+    }]
+  },
+  files: [{ sourcePath: 'src/view.html', baseSourceText: htmlEventHandlerBase, workerSourceText: htmlEventHandlerWorker, headSourceText: htmlEventHandlerHead }]
+});
+assert.equal(htmlEventHandlerSourceOnlyProofProject.status, 'blocked');
+assert.equal(htmlEventHandlerSourceOnlyProofProject.summary.htmlProofGapBlockedFiles, 1);
 
 const htmlEventHandlerProvenProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_html_event_handler_runtime_source_bound_proof',
@@ -67,7 +109,8 @@ const htmlEventHandlerProvenProject = safeMergeJsTsProject({
       side: 'worker',
       boundary: 'html-event-handler-attribute',
       boundaryAttributes: ['onclick'],
-      sourceTexts: { base: htmlEventHandlerBase, worker: htmlEventHandlerWorker, head: htmlEventHandlerHead, output: htmlEventHandlerWorker }
+      sourceTexts: { base: htmlEventHandlerBase, worker: htmlEventHandlerWorker, head: htmlEventHandlerHead, output: htmlEventHandlerWorker },
+      ...runtimeEvidence('event-handler-runtime-boundary', 'html-event-handler-attribute', 'event-handler')
     }]
   },
   files: [{ sourcePath: 'src/view.html', baseSourceText: htmlEventHandlerBase, workerSourceText: htmlEventHandlerWorker, headSourceText: htmlEventHandlerHead }]
@@ -82,6 +125,8 @@ assert.match(htmlEventHandlerProvenProject.outputFiles[0].sourceText, /saveNow\(
 assert.equal(htmlEventHandlerProvenProject.files[0].result.browserRuntimeEquivalenceClaim, true);
 assert.equal(htmlEventHandlerProvenProject.files[0].admission.browserRuntimeEquivalenceClaim, true);
 assert.equal(htmlEventHandlerProvenProject.files[0].result.runtimeBoundaryProofs[0].sourcePath, 'src/view.html');
+assert.equal(htmlEventHandlerProvenProject.files[0].result.runtimeBoundaryProofs[0].runtimeEvidenceBound, true);
+assert.equal(htmlEventHandlerProvenProject.files[0].result.runtimeBoundaryProofs[0].runtimeSignals.includes('html-event-handler-runtime'), true);
 assert.equal(matrixSurface(htmlEventHandlerProvenProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
 assert.equal(matrixSurface(htmlEventHandlerProvenProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
 
@@ -109,7 +154,8 @@ const htmlSubmitterWrongProofProject = safeMergeJsTsProject({
       side: 'worker',
       boundary: 'html-form-submitter-runtime-attribute',
       boundaryAttributes: ['formmethod'],
-      sourceTexts: { base: htmlSubmitterBase, worker: htmlSubmitterWorker, head: htmlSubmitterBase, output: htmlSubmitterWorker }
+      sourceTexts: { base: htmlSubmitterBase, worker: htmlSubmitterWorker, head: htmlSubmitterBase, output: htmlSubmitterWorker },
+      ...runtimeEvidence('form-submitter-runtime-boundary', 'html-form-submitter-runtime-attribute', 'submitter-wrong-attribute')
     }]
   },
   files: [{ sourcePath: 'src/form.html', baseSourceText: htmlSubmitterBase, workerSourceText: htmlSubmitterWorker, headSourceText: htmlSubmitterBase }]
@@ -129,7 +175,8 @@ const htmlSubmitterProvenProject = safeMergeJsTsProject({
       side: 'worker',
       boundary: 'html-form-submitter-runtime-attribute',
       boundaryAttributes: ['type'],
-      sourceTexts: { base: htmlSubmitterBase, worker: htmlSubmitterWorker, head: htmlSubmitterBase, output: htmlSubmitterWorker }
+      sourceTexts: { base: htmlSubmitterBase, worker: htmlSubmitterWorker, head: htmlSubmitterBase, output: htmlSubmitterWorker },
+      ...runtimeEvidence('form-submitter-runtime-boundary', 'html-form-submitter-runtime-attribute', 'submitter')
     }]
   },
   files: [{ sourcePath: 'src/form.html', baseSourceText: htmlSubmitterBase, workerSourceText: htmlSubmitterWorker, headSourceText: htmlSubmitterBase }]
@@ -170,7 +217,8 @@ const htmlControlProvenProject = safeMergeJsTsProject({
       side: 'worker',
       boundary: 'html-form-control-runtime-attribute',
       boundaryAttributes: ['checked'],
-      sourceTexts: { base: htmlControlBase, worker: htmlControlWorker, head: htmlControlBase, output: htmlControlWorker }
+      sourceTexts: { base: htmlControlBase, worker: htmlControlWorker, head: htmlControlBase, output: htmlControlWorker },
+      ...runtimeEvidence('form-control-runtime-boundary', 'html-form-control-runtime-attribute', 'control')
     }]
   },
   files: [{ sourcePath: 'src/control.html', baseSourceText: htmlControlBase, workerSourceText: htmlControlWorker, headSourceText: htmlControlBase }]
@@ -205,7 +253,8 @@ const htmlInlineStyleProvenProject = safeMergeJsTsProject({
       side: 'worker',
       boundary: 'html-inline-style-attribute',
       boundaryAttributes: ['style'],
-      sourceTexts: { base: htmlInlineStyleBase, worker: htmlInlineStyleWorker, head: htmlInlineStyleBase, output: htmlInlineStyleWorker }
+      sourceTexts: { base: htmlInlineStyleBase, worker: htmlInlineStyleWorker, head: htmlInlineStyleBase, output: htmlInlineStyleWorker },
+      ...runtimeEvidence('inline-style-runtime-boundary', 'html-inline-style-attribute', 'inline-style')
     }]
   },
   files: [{ sourcePath: 'src/view.html', baseSourceText: htmlInlineStyleBase, workerSourceText: htmlInlineStyleWorker, headSourceText: htmlInlineStyleBase }]
@@ -227,7 +276,7 @@ assert.equal(htmlIframeBlockedProject.conflicts.some((conflict) => conflict.deta
 assert.match(htmlIframeBlockedProject.conflicts.find((conflict) => conflict.details.reasonCode === 'iframe-runtime-boundary').details.proofGap.nextProof, /htmlRuntimeBoundaryProofsByPath/);
 const htmlIframeProvenProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_html_iframe_runtime_source_bound_proof',
-  htmlRuntimeBoundaryProofsByPath: { 'src/frame.html': [{ id: 'html_iframe_runtime_source_bound', kind: 'html-source-bound-runtime-boundary-proof', status: 'passed', sourcePath: 'src/frame.html', reasonCode: 'iframe-runtime-boundary', side: 'worker', boundary: 'html-iframe-runtime-attribute', boundaryAttributes: ['src'], sourceTexts: { base: htmlIframeBase, worker: htmlIframeWorker, head: htmlIframeHead, output: htmlIframeOutput } }] },
+  htmlRuntimeBoundaryProofsByPath: { 'src/frame.html': [{ id: 'html_iframe_runtime_source_bound', kind: 'html-source-bound-runtime-boundary-proof', status: 'passed', sourcePath: 'src/frame.html', reasonCode: 'iframe-runtime-boundary', side: 'worker', boundary: 'html-iframe-runtime-attribute', boundaryAttributes: ['src'], sourceTexts: { base: htmlIframeBase, worker: htmlIframeWorker, head: htmlIframeHead, output: htmlIframeOutput }, ...runtimeEvidence('iframe-runtime-boundary', 'html-iframe-runtime-attribute', 'iframe') }] },
   files: [{ sourcePath: 'src/frame.html', baseSourceText: htmlIframeBase, workerSourceText: htmlIframeWorker, headSourceText: htmlIframeHead }]
 });
 assert.equal(htmlIframeProvenProject.status, 'merged');
@@ -244,7 +293,7 @@ assert.equal(htmlSrcdocBlockedProject.status, 'blocked');
 assert.equal(htmlSrcdocBlockedProject.conflicts.some((conflict) => conflict.details.reasonCode === 'iframe-srcdoc-runtime-boundary'), true);
 const htmlSrcdocProvenProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_html_iframe_srcdoc_runtime_source_bound_proof',
-  htmlRuntimeBoundaryProofsByPath: { 'src/srcdoc.html': [{ id: 'html_iframe_srcdoc_source_bound', kind: 'html-source-bound-runtime-boundary-proof', status: 'passed', sourcePath: 'src/srcdoc.html', reasonCode: 'iframe-srcdoc-runtime-boundary', side: 'worker', boundary: 'html-iframe-srcdoc-attribute', boundaryAttributes: ['srcdoc'], sourceTexts: { base: htmlSrcdocBase, worker: htmlSrcdocWorker, head: htmlSrcdocHead, output: htmlSrcdocOutput } }] },
+  htmlRuntimeBoundaryProofsByPath: { 'src/srcdoc.html': [{ id: 'html_iframe_srcdoc_source_bound', kind: 'html-source-bound-runtime-boundary-proof', status: 'passed', sourcePath: 'src/srcdoc.html', reasonCode: 'iframe-srcdoc-runtime-boundary', side: 'worker', boundary: 'html-iframe-srcdoc-attribute', boundaryAttributes: ['srcdoc'], sourceTexts: { base: htmlSrcdocBase, worker: htmlSrcdocWorker, head: htmlSrcdocHead, output: htmlSrcdocOutput }, ...runtimeEvidence('iframe-srcdoc-runtime-boundary', 'html-iframe-srcdoc-attribute', 'iframe-srcdoc') }] },
   files: [{ sourcePath: 'src/srcdoc.html', baseSourceText: htmlSrcdocBase, workerSourceText: htmlSrcdocWorker, headSourceText: htmlSrcdocHead }]
 });
 assert.equal(htmlSrcdocProvenProject.status, 'merged');

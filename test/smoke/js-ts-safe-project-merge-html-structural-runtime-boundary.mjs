@@ -11,8 +11,21 @@ function sourceBoundProof({ id, sourcePath, reasonCode, side = 'worker', boundar
     side,
     boundary,
     boundaryAttributes,
-    sourceTexts: { base, worker, head, output }
+    sourceTexts: { base, worker, head, output },
+    runtimeCommand: `node test/html-runtime/${id}.mjs`,
+    runtimeProbeId: `html:${reasonCode}:${boundary}`,
+    runtimeEvidenceHash: `html-runtime-evidence:${reasonCode}:${boundary}:${id}`,
+    runtimeSignals: runtimeSignals(reasonCode, boundary)
   };
+}
+
+function runtimeSignals(reasonCode, boundary) {
+  const text = `${reasonCode ?? ''} ${boundary ?? ''}`.toLowerCase();
+  if (text.includes('template')) return ['html-template-runtime'];
+  if (text.includes('slot')) return ['html-slot-runtime'];
+  if (text.includes('custom-element')) return ['html-custom-element-runtime'];
+  if (text.includes('framework-directive')) return ['html-framework-directive-runtime'];
+  return ['html-browser-runtime'];
 }
 
 const templateBase = '<template data-frontier-key="row"><span>A</span></template>\n';

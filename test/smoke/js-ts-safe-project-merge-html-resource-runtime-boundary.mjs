@@ -1,6 +1,15 @@
 import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
 
+function resourceRuntimeEvidence(label) {
+  return {
+    runtimeCommand: `node test/html-runtime/${label}.mjs`,
+    runtimeProbeId: `html:resource-loading-runtime-boundary:html-resource-loading-attribute`,
+    runtimeEvidenceHash: `html-runtime-evidence:resource-loading-runtime-boundary:html-resource-loading-attribute:${label}`,
+    runtimeSignals: ['html-resource-loading-runtime']
+  };
+}
+
 const linkBase = '<link data-frontier-key="theme" rel="stylesheet" href="/a.css">\n';
 const linkWorker = '<link data-frontier-key="theme" rel="stylesheet" href="/b.css">\n';
 const linkBlockedProject = safeMergeJsTsProject({
@@ -25,7 +34,8 @@ const linkWrongProofProject = safeMergeJsTsProject({
       side: 'worker',
       boundary: 'html-resource-loading-attribute',
       boundaryAttributes: ['media'],
-      sourceTexts: { base: linkBase, worker: linkWorker, head: linkBase, output: linkWorker }
+      sourceTexts: { base: linkBase, worker: linkWorker, head: linkBase, output: linkWorker },
+      ...resourceRuntimeEvidence('link-wrong-attribute')
     }]
   },
   files: [{ sourcePath: 'src/resource.html', baseSourceText: linkBase, workerSourceText: linkWorker, headSourceText: linkBase }]
@@ -45,7 +55,8 @@ const linkProvenProject = safeMergeJsTsProject({
       side: 'worker',
       boundary: 'html-resource-loading-attribute',
       boundaryAttributes: ['href'],
-      sourceTexts: { base: linkBase, worker: linkWorker, head: linkBase, output: linkWorker }
+      sourceTexts: { base: linkBase, worker: linkWorker, head: linkBase, output: linkWorker },
+      ...resourceRuntimeEvidence('link')
     }]
   },
   files: [{ sourcePath: 'src/resource.html', baseSourceText: linkBase, workerSourceText: linkWorker, headSourceText: linkBase }]
@@ -88,7 +99,8 @@ const mediaProvenProject = safeMergeJsTsProject({
       side: 'worker',
       boundary: 'html-resource-loading-attribute',
       boundaryAttributes: ['poster'],
-      sourceTexts: { base: mediaBase, worker: mediaWorker, head: mediaBase, output: mediaWorker }
+      sourceTexts: { base: mediaBase, worker: mediaWorker, head: mediaBase, output: mediaWorker },
+      ...resourceRuntimeEvidence('media')
     }]
   },
   files: [{ sourcePath: 'src/media.html', baseSourceText: mediaBase, workerSourceText: mediaWorker, headSourceText: mediaBase }]
