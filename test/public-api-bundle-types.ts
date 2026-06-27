@@ -68,6 +68,7 @@ typedProjectSafeMerge.summary.cssSelectorTargetMoveFiles satisfies number;
 typedProjectSafeMerge.summary.cssScopedCascadeFiles satisfies number;
 typedProjectSafeMerge.summary.cssScopedCascadeEvidenceFiles satisfies number;
 typedProjectSafeMerge.summary.cssScopedCascadeBlockedFiles satisfies number;
+typedProjectSafeMerge.summary.cssDuplicateCascadeKeyBlockedFiles satisfies number;
 typedProjectSafeMerge.summary.cssDependencySurfaceFiles satisfies number;
 typedProjectSafeMerge.summary.cssDependencyGraphEvidenceFiles satisfies number;
 typedProjectSafeMerge.summary.cssDependencyGraphMissingProofFiles satisfies number;

@@ -13,6 +13,7 @@ function htmlCssProjectSummary(files) {
     htmlIdentityEvidenceFailedFiles: htmlFiles.filter(hasHtmlIdentityEvidenceFailure).length, cssSelectorTargetConflictFiles: cssFiles.filter(hasCssSelectorTargetConflict).length, htmlCssStructuralTargetEvidenceFailedFiles: htmlCssFiles.filter((file) => hasHtmlIdentityEvidenceFailure(file) || hasCssSelectorTargetConflict(file)).length,
     cssSelectorTargetRebasedFiles: cssFiles.filter(hasCssSelectorTargetRebase).length,
     cssScopedCascadeFiles: cssFiles.filter(hasCssScopedCascadeScope).length, cssScopedCascadeEvidenceFiles: cssFiles.filter(hasCssScopedCascadeEvidence).length, cssScopedCascadeBlockedFiles: cssFiles.filter(hasCssScopedCascadeMissingProof).length,
+    cssDuplicateCascadeKeyBlockedFiles: cssFiles.filter(hasCssDuplicateCascadeKeyConflict).length,
     cssDependencySurfaceFiles: cssFiles.filter(hasCssDependencySurface).length, cssDependencyGraphEvidenceFiles: cssFiles.filter((file) => hasCssDependencySurface(file) && hasCssDependencyGraphEvidence(file)).length, cssDependencyGraphMissingProofFiles: cssFiles.filter(hasCssDependencyGraphMissingProof).length, cssDependencyGraphBlockedFiles: cssFiles.filter(hasCssDependencyGraphBlockedConflict).length,
     htmlCssBrowserRuntimeProofs: htmlCssFiles.filter(hasBrowserRuntimeProof).length
   };
@@ -81,6 +82,9 @@ function hasFrameworkBoundaryConflict(file) {
   return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => HtmlFrameworkBoundaryReasonCodes.has(conflict?.details?.reasonCode));
 }
 function hasCssSelectorTargetRebase(file) { return (file?.result?.selectorTargetEvidence?.rebasedChangeCount ?? 0) > 0; }
+function hasCssDuplicateCascadeKeyConflict(file) {
+  return cssFileConflicts(file).some((conflict) => conflict.code === 'css-duplicate-cascade-key-blocked' || conflict?.details?.reasonCode === 'css-duplicate-cascade-key-order-unproved');
+}
 function hasCssScopedCascadeScope(file) {
   return cssScopedRuleCount(file) > 0 || hasCssScopedCascadeProofReason(file) || file?.result?.parserEvidence?.scopedCascadeGraphHashPresent === false;
 }
