@@ -37,16 +37,25 @@ const ambiguousDefaultAliasProject = safeMergeJsTsProject({
   workerFiles: defaultReExportAliasFiles({ anonymousDefault: true }),
   headFiles: defaultReExportAliasFiles({ anonymousDefault: true })
 });
-const ambiguousDefaultAliasConflict = ambiguousDefaultAliasProject.conflicts
-  .find((conflict) => conflict.code === 'project-public-scope-use-def-ambiguous-evidence');
+const anonymousDefaultImportAlias = ambiguousDefaultAliasProject.outputProjectSymbolGraph.scopeBindingRecords
+  .find((record) => record.sourcePath === 'src/default-consumer.ts' && record.name === 'renderTodo');
 const ambiguousDefaultAliasReference = ambiguousDefaultAliasProject.outputProjectSymbolGraph.scopeReferenceRecords
   .find((record) => record.sourcePath === 'src/default-consumer.ts' && record.name === 'renderTodo');
-assert.equal(ambiguousDefaultAliasProject.status, 'blocked');
-assert.equal(ambiguousDefaultAliasProject.admission.reasonCodes.includes('project-public-scope-use-def-ambiguous-evidence'), true);
-assert.equal(ambiguousDefaultAliasReference?.aliasResolutionStatus, 'blocked');
-assert.equal(ambiguousDefaultAliasReference.reasonCodes.includes('lexical-scope-import-alias-target-unresolved'), true);
-assert.equal(ambiguousDefaultAliasReference.resolvedUseHash, undefined);
-assert.equal(ambiguousDefaultAliasConflict?.details.reasonCodes.includes('lexical-scope-import-alias-target-unresolved'), true);
+assert.equal(ambiguousDefaultAliasProject.status, 'merged');
+assert.equal(ambiguousDefaultAliasProject.admission.reasonCodes.includes('project-public-scope-use-def-ambiguous-evidence'), false);
+assert.equal(anonymousDefaultImportAlias?.aliasResolutionEvidenceKind, 'source-bound-default-export');
+assert.equal(anonymousDefaultImportAlias.originSourcePath, 'src/default-dep.ts');
+assert.equal(anonymousDefaultImportAlias.originExportedName, 'default');
+assert.equal(anonymousDefaultImportAlias.originSourceSymbolKind, 'function');
+assert.equal(typeof anonymousDefaultImportAlias.originSourceHash, 'string');
+assert.equal(typeof anonymousDefaultImportAlias.resolvedExportUseHash, 'string');
+assert.equal(typeof anonymousDefaultImportAlias.resolvedUseHash, 'string');
+assert.equal(ambiguousDefaultAliasReference?.aliasResolutionEvidenceKind, 'source-bound-default-export');
+assert.equal(ambiguousDefaultAliasReference.originSourcePath, 'src/default-dep.ts');
+assert.equal(ambiguousDefaultAliasReference.originSourceSymbolKind, 'function');
+assert.equal(ambiguousDefaultAliasReference.aliasResolutionStatus, undefined);
+assert.equal(typeof ambiguousDefaultAliasReference.resolvedExportUseHash, 'string');
+assert.equal(typeof ambiguousDefaultAliasReference.resolvedUseHash, 'string');
 
 function defaultReExportAliasFiles(options = {}) {
   return {

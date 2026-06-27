@@ -1,7 +1,11 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { idFragment } from '../../native-import-utils.js';
 import { LexicalUseDefReasonCodes } from '../../js-ts-semantic-scope-use-def-utils.js';
-import { resolveRelativeProjectModule } from './projectSymbolGraphModuleResolution.js';
+import {
+  exportAliasRecords,
+  importAliasRecords,
+  nativeImportSourceText
+} from './projectSymbolGraphScopeUseDefAliasRecords.js';
 
 function createScopeGraphContext(semanticIndex, imports, publicKeys) {
   const sourceTextsByPath = new Map(imports
@@ -32,63 +36,6 @@ function createScopeGraphContext(semanticIndex, imports, publicKeys) {
   };
 }
 
-function importAliasRecords(semanticIndex, documentsByPath) {
-  return (semanticIndex?.symbols ?? []).flatMap((symbol) => {
-    if (symbol?.kind !== 'import') return [];
-    const metadata = objectValue(symbol.metadata);
-    const sourcePath = symbol.definitionSpan?.path ?? metadata.sourcePath;
-    const moduleSpecifier = firstString(metadata.moduleSpecifier, metadata.importPath, metadata.source);
-    const localName = firstString(metadata.localName, symbol.name);
-    if (!sourcePath || !localName || !moduleSpecifier) return [];
-    const importedName = firstString(metadata.importedName, metadata.exportedName, localName);
-    const resolved = moduleSpecifier.startsWith('.')
-      ? resolveRelativeProjectModule(sourcePath, moduleSpecifier, documentsByPath)
-      : undefined;
-    return [compactRecord({
-      symbolId: symbol.id,
-      sourcePath,
-      localName,
-      importedName,
-      exportedName: firstString(metadata.exportedName),
-      moduleSpecifier,
-      importKind: firstString(metadata.importKind),
-      isTypeOnly: metadata.isTypeOnly === true || metadata.typeOnly === true || undefined,
-      resolvedSourcePath: resolved?.path,
-      targetDocumentId: resolved?.documentId,
-      resolutionKind: resolved?.kind,
-      resolutionPathVariant: resolved?.resolutionPathVariant
-    })];
-  });
-}
-
-function exportAliasRecords(semanticIndex, documentsByPath, sourceTextsByPath) {
-  return (semanticIndex?.symbols ?? []).flatMap((symbol) => {
-    if (symbol?.kind !== 'export') return [];
-    const metadata = objectValue(symbol.metadata);
-    const sourcePath = symbol.definitionSpan?.path ?? metadata.sourcePath;
-    const exportedName = firstString(metadata.exportedName, symbol.name);
-    if (!sourcePath || !exportedName || exportedName.startsWith('{')) return [];
-    const moduleSpecifier = firstString(metadata.moduleSpecifier, metadata.importPath, metadata.exportPath, metadata.source);
-    const resolved = moduleSpecifier?.startsWith('.')
-      ? resolveRelativeProjectModule(sourcePath, moduleSpecifier, documentsByPath)
-      : undefined;
-    return [compactRecord({
-      symbolId: symbol.id,
-      sourcePath,
-      localName: firstString(metadata.localName, defaultExportLocalName(sourceTextsByPath.get(sourcePath), exportedName, moduleSpecifier), exportedName),
-      importedName: firstString(metadata.importedName, metadata.localName, exportedName),
-      exportedName,
-      exportKind: firstString(metadata.exportKind),
-      moduleSpecifier,
-      resolvedSourcePath: resolved?.path,
-      targetDocumentId: resolved?.documentId,
-      resolutionKind: resolved?.kind,
-      resolutionPathVariant: resolved?.resolutionPathVariant,
-      isTypeOnly: metadata.isTypeOnly === true || metadata.typeOnly === true || undefined
-    })];
-  });
-}
-
 function attachAliasMetadata(bindings, directUseHashes, context) {
   const bindingsByLocal = groupFirst(bindings, (binding) => localKey(binding.sourcePath, binding.name));
   return bindings.map((binding) => {
@@ -107,13 +54,20 @@ function attachAliasMetadata(bindings, directUseHashes, context) {
       importAlias: aliasHashRecord(importAlias),
       exportAliases: exportAliases.map(aliasHashRecord).sort(compareJson)
     }) : undefined;
-    const resolvedUseHash = resolved?.resolvedBindingUseHash ? hashSemanticValue({
+    const resolvedUseEvidenceHash = resolved?.resolvedBindingUseHash ?? resolved?.resolvedExportUseHash;
+    const resolvedUseHash = resolvedUseEvidenceHash ? hashSemanticValue({
       kind: 'frontier.lang.projectScopeImportResolvedUseHash',
       binding: binding.signatureHash,
       moduleSpecifier: importAlias.moduleSpecifier,
       importedName: importAlias.importedName,
       resolvedBinding: resolved.resolvedBindingSignatureHash,
-      resolvedUseHash: resolved.resolvedBindingUseHash
+      resolvedBindingUseHash: resolved.resolvedBindingUseHash,
+      resolvedExportUseHash: resolved.resolvedExportUseHash,
+      resolvedUseHash: resolvedUseEvidenceHash,
+      originSourcePath: resolved.originSourcePath,
+      originSourceHash: resolved.originSourceHash,
+      originExportedName: resolved.originExportedName,
+      aliasResolutionEvidenceKind: resolved.aliasResolutionEvidenceKind
     }) : undefined;
     return compactRecord({
       ...binding,
@@ -145,6 +99,8 @@ function resolveImportAliasBinding(importAlias, bindingsByLocal, directUseHashes
   if (!importAlias.resolvedSourcePath || !importAlias.importedName || importAlias.importedName === '*') return undefined;
   const origin = resolveExportOrigin(context, importAlias.resolvedSourcePath, importAlias.importedName);
   const target = bindingsByLocal.get(localKey(origin?.sourcePath ?? importAlias.resolvedSourcePath, origin?.localName ?? importAlias.importedName));
+  const sourceBoundOrigin = target ? undefined : sourceBoundDefaultExportOrigin(origin, importAlias);
+  if (sourceBoundOrigin) return sourceBoundOrigin;
   if (!target) return compactRecord({
     resolvedExportName: importAlias.importedName,
     originSourcePath: origin?.sourcePath,
@@ -164,6 +120,40 @@ function resolveImportAliasBinding(importAlias, bindingsByLocal, directUseHashes
     resolvedBindingSignatureHash: target.signatureHash,
     resolvedBindingUseHash: directUseHashes.get(target.id),
     resolvedPublicOwnerName: target.publicOwnerName
+  });
+}
+
+function sourceBoundDefaultExportOrigin(origin, importAlias) {
+  if (importAlias.importedName !== 'default' || origin?.exportedName !== 'default') return undefined;
+  if (!origin.sourcePath || !origin.sourceHash || !origin.sourceSpan || !origin.sourceSymbolId || !origin.sourceSymbolSignatureHash) return undefined;
+  const resolvedExportUseHash = hashSemanticValue({
+    kind: 'frontier.lang.projectScopeImportResolvedSourceBoundDefaultExportUseHash',
+    moduleSpecifier: importAlias.moduleSpecifier,
+    importedName: importAlias.importedName,
+    resolvedSourcePath: importAlias.resolvedSourcePath,
+    originSourcePath: origin.sourcePath,
+    originSourceHash: origin.sourceHash,
+    originExportedName: origin.exportedName,
+    originSymbolId: origin.symbolId,
+    originSignatureHash: origin.signatureHash,
+    originSourceSymbolId: origin.sourceSymbolId,
+    originSourceSymbolKind: origin.sourceSymbolKind,
+    originSourceSymbolSignatureHash: origin.sourceSymbolSignatureHash,
+    originSourceSpan: semanticSourceSpanForHash(origin.sourceSpan)
+  });
+  return compactRecord({
+    resolvedExportName: importAlias.importedName,
+    originSourcePath: origin.sourcePath,
+    originSourceHash: origin.sourceHash,
+    originSourceSpan: origin.sourceSpan,
+    originExportedName: origin.exportedName,
+    originSymbolId: origin.symbolId,
+    originSignatureHash: origin.signatureHash,
+    originSourceSymbolId: origin.sourceSymbolId,
+    originSourceSymbolKind: origin.sourceSymbolKind,
+    originSourceSymbolSignatureHash: origin.sourceSymbolSignatureHash,
+    aliasResolutionEvidenceKind: 'source-bound-default-export',
+    resolvedExportUseHash
   });
 }
 
@@ -194,7 +184,18 @@ function resolveExportOrigin(context, sourcePath, exportedName, seen = new Set()
   if (alias.moduleSpecifier && alias.resolvedSourcePath) {
     return resolveExportOrigin(context, alias.resolvedSourcePath, alias.importedName ?? alias.localName, seen);
   }
-  return { sourcePath, localName: alias.localName ?? alias.exportedName, exportedName: alias.exportedName, symbolId: alias.symbolId };
+  return {
+    sourcePath,
+    sourceHash: alias.sourceHash,
+    sourceSpan: alias.sourceSpan,
+    localName: alias.localName ?? alias.exportedName,
+    exportedName: alias.exportedName,
+    symbolId: alias.symbolId,
+    signatureHash: alias.signatureHash,
+    sourceSymbolId: alias.sourceSymbolId,
+    sourceSymbolKind: alias.sourceSymbolKind,
+    sourceSymbolSignatureHash: alias.sourceSymbolSignatureHash
+  };
 }
 
 function attachReferenceAliasMetadata(references, bindings) {
@@ -215,35 +216,25 @@ function attachReferenceAliasMetadata(references, bindings) {
       importedName: binding?.importedName,
       resolvedSourcePath: binding?.resolvedSourcePath,
       originSourcePath: binding?.originSourcePath,
+      originSourceHash: binding?.originSourceHash,
+      originSourceSpan: binding?.originSourceSpan,
+      originSignatureHash: binding?.originSignatureHash,
+      originSourceSymbolId: binding?.originSourceSymbolId,
+      originSourceSymbolKind: binding?.originSourceSymbolKind,
+      originSourceSymbolSignatureHash: binding?.originSourceSymbolSignatureHash,
       resolvedExportName: binding?.resolvedExportName,
+      resolvedExportUseHash: binding?.resolvedExportUseHash,
       resolvedBindingId: binding?.resolvedBindingId,
       resolvedBindingName: binding?.resolvedBindingName,
       resolvedBindingUseHash: binding?.resolvedBindingUseHash,
       aliasResolutionStatus: binding?.aliasResolutionStatus,
+      aliasResolutionEvidenceKind: binding?.aliasResolutionEvidenceKind,
       aliasResolutionReasonCodes: binding?.aliasResolutionReasonCodes,
       status: binding?.aliasResolutionStatus ?? reference.status,
       reasonCodes: reasonCodes.length ? reasonCodes : undefined,
       resolvedUseHash
     });
   });
-}
-
-function defaultExportLocalName(sourceText, exportedName, moduleSpecifier) {
-  if (exportedName !== 'default' || moduleSpecifier || typeof sourceText !== 'string') return undefined;
-  return firstString(
-    sourceText.match(/\bexport\s+default\s+(?:async\s+)?function\*?\s+([A-Za-z_$][\w$]*)/)?.[1],
-    sourceText.match(/\bexport\s+default\s+(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/)?.[1],
-    sourceText.match(/\bexport\s+default\s+([A-Za-z_$][\w$]*)\s*;(?=\s*(?:$|\n))/)?.[1],
-    sourceText.match(/\bexport\s+default\s+([A-Za-z_$][\w$]*)\s*(?=$)/)?.[1]
-  );
-}
-
-function nativeImportSourceText(imported) {
-  return imported?.metadata?.sourcePreservation?.sourceText
-    ?? imported?.nativeSource?.metadata?.sourcePreservation?.sourceText
-    ?? imported?.nativeAst?.metadata?.sourcePreservation?.sourceText
-    ?? imported?.universalAst?.metadata?.sourcePreservation?.sourceText
-    ?? imported?.sourceText;
 }
 
 function aliasHashRecord(alias) {
@@ -258,17 +249,23 @@ function aliasHashRecord(alias) {
   })) : undefined;
 }
 
+function semanticSourceSpanForHash(span) {
+  return span ? compactRecord({
+    path: span.path,
+    start: span.start,
+    end: span.end,
+    startLine: span.startLine,
+    startColumn: span.startColumn,
+    endLine: span.endLine,
+    endColumn: span.endColumn
+  }) : undefined;
+}
+
 function localKey(sourcePath, name) { return sourcePath && name ? `${sourcePath}\0${name}` : undefined; }
 function exportKey(sourcePath, name) { return sourcePath && name ? `${sourcePath}\0${name}` : undefined; }
 function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
-function objectValue(value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
 function compareJson(left, right) { return left < right ? -1 : left > right ? 1 : 0; }
 function uniqueStrings(values) { return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))]; }
-
-function firstString(...values) {
-  for (const value of values) if (value !== undefined && value !== null && String(value)) return String(value);
-  return undefined;
-}
 
 function groupByKey(records, keyFn) {
   const result = new Map();
