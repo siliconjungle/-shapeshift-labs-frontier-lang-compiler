@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
 
 function resourceRuntimeEvidence(label) {
@@ -7,6 +8,15 @@ function resourceRuntimeEvidence(label) {
     runtimeProbeId: `html:resource-loading-runtime-boundary:html-resource-loading-attribute`,
     runtimeEvidenceHash: `html-runtime-evidence:resource-loading-runtime-boundary:html-resource-loading-attribute:${label}`,
     runtimeSignals: ['html-resource-loading-runtime']
+  };
+}
+
+function sourceHashBinding(base, worker, head, output) {
+  return {
+    baseSourceHash: hashSemanticValue(base),
+    workerSourceHash: hashSemanticValue(worker),
+    headSourceHash: hashSemanticValue(head),
+    outputSourceHash: hashSemanticValue(output)
   };
 }
 
@@ -66,6 +76,49 @@ assert.equal(linkProvenProject.summary.htmlCssBrowserRuntimeProofs, 1);
 assert.equal(linkProvenProject.files[0].result.runtimeBoundaryProofs[0].boundary, 'html-resource-loading-attribute');
 assert.equal(linkProvenProject.files[0].result.runtimeBoundaryProofs[0].boundaryAttributes[0], 'href');
 assert.match(linkProvenProject.outputFiles[0].sourceText, /href="\/b.css"/);
+
+const preloadBase = '<link data-frontier-key="hero-preload" rel="preload" as="image" href="/hero.jpg" imagesrcset="/hero-600.jpg 600w, /hero-1200.jpg 1200w" imagesizes="100vw" media="(min-width: 600px)" integrity="sha256-old" crossorigin="anonymous" referrerpolicy="origin">\n';
+const preloadWorker = '<link data-frontier-key="hero-preload" rel="preload" as="image" href="/hero.jpg" imagesrcset="/hero-800.jpg 800w, /hero-1600.jpg 1600w" imagesizes="80vw" media="(min-width: 720px)" integrity="sha256-new" crossorigin="use-credentials" referrerpolicy="no-referrer">\n';
+const preloadBoundaryAttributes = ['imagesrcset', 'imagesizes', 'media', 'integrity', 'crossorigin', 'referrerpolicy'];
+const preloadBlockedProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_preload_resource_runtime_block',
+  files: [{ sourcePath: 'src/preload.html', baseSourceText: preloadBase, workerSourceText: preloadWorker, headSourceText: preloadBase }]
+});
+assert.equal(preloadBlockedProject.status, 'blocked');
+const preloadBlockedConflict = preloadBlockedProject.conflicts.find((conflict) => conflict.details.reasonCode === 'resource-loading-runtime-boundary');
+assert.ok(preloadBlockedConflict);
+assert.equal(preloadBlockedConflict.details.boundary, 'html-resource-loading-attribute');
+assert.equal(preloadBlockedConflict.details.boundaryAttributes.includes('imagesrcset'), true);
+
+const preloadProvenProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_preload_resource_runtime_hash_bound_proof',
+  htmlRuntimeBoundaryProofsByPath: {
+    'src/preload.html': [{
+      id: 'html_preload_resource_hash_bound',
+      kind: 'html-source-bound-runtime-boundary-proof',
+      status: 'passed',
+      sourcePath: 'src/preload.html',
+      reasonCode: 'resource-loading-runtime-boundary',
+      side: 'worker',
+      boundary: 'html-resource-loading-attribute',
+      boundaryAttributes: preloadBoundaryAttributes,
+      ...sourceHashBinding(preloadBase, preloadWorker, preloadBase, preloadWorker),
+      ...resourceRuntimeEvidence('preload-responsive-image')
+    }]
+  },
+  files: [{ sourcePath: 'src/preload.html', baseSourceText: preloadBase, workerSourceText: preloadWorker, headSourceText: preloadBase }]
+});
+assert.equal(preloadProvenProject.status, 'merged');
+const preloadRuntimeProof = preloadProvenProject.files[0].result.runtimeBoundaryProofs[0];
+assert.deepEqual([...preloadRuntimeProof.boundaryAttributes].sort(), [...preloadBoundaryAttributes].sort());
+assert.equal(preloadRuntimeProof.baseSourceHash, hashSemanticValue(preloadBase));
+assert.equal(preloadRuntimeProof.workerSourceHash, hashSemanticValue(preloadWorker));
+assert.equal(preloadRuntimeProof.headSourceHash, hashSemanticValue(preloadBase));
+assert.equal(preloadRuntimeProof.outputSourceHash, hashSemanticValue(preloadWorker));
+assert.equal(preloadRuntimeProof.runtimeSignals.includes('html-resource-loading-runtime'), true);
+assert.equal(preloadRuntimeProof.requiredRuntimeSignals.includes('html-resource-loading-runtime'), true);
+assert.equal(preloadRuntimeProof.runtimeEvidenceBound, true);
+assert.match(preloadProvenProject.outputFiles[0].sourceText, /imagesrcset="\/hero-800\.jpg 800w, \/hero-1600\.jpg 1600w"/);
 
 const baseBase = '<base data-frontier-key="base" href="/old/">\n';
 const baseWorker = '<base data-frontier-key="base" href="/new/">\n';

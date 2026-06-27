@@ -1,83 +1,9 @@
 import { assert } from './helpers.mjs';
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { parseCssSemanticSheet } from '@shapeshift-labs/frontier-lang-css';
-import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
-import { fileAdmissionEvidenceRecords } from '../../src/js-ts-safe-project-merge-evidence-routing.js';
-
-const nestedScopedCssBase = [
-  '@layer components {',
-  '  @scope (.card) {',
-  '    .button {',
-  '      color: red;',
-  '      padding-left: 1rem;',
-  '    }',
-  '  }',
-  '}',
-  ''
-].join('\n');
-const nestedScopedCssWorker = nestedScopedCssBase.replace('color: red', 'color: blue');
-const nestedScopedCssHead = nestedScopedCssBase.replace('padding-left: 1rem;', 'padding-left: 1rem;\n      background-color: white;');
-const nestedScopedCssMissingProof = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_nested_layer_scope_missing_proof',
-  files: [{ sourcePath: 'src/nested.css', baseSourceText: nestedScopedCssBase, workerSourceText: nestedScopedCssWorker, headSourceText: nestedScopedCssHead }]
-});
-assert.equal(nestedScopedCssMissingProof.status, 'blocked');
-assert.equal(nestedScopedCssMissingProof.summary.cssScopedCascadeFiles, 1);
-assert.equal(nestedScopedCssMissingProof.summary.cssScopedCascadeEvidenceFiles, 0);
-assert.equal(nestedScopedCssMissingProof.summary.cssScopedCascadeBlockedFiles, 1);
-assert.equal(nestedScopedCssMissingProof.conflicts.some((conflict) => conflict.details.reasonCode === 'css-scoped-cascade-equivalence-unproved'), true);
-
-const nestedScopedCssHashOnly = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_nested_layer_scope_hash_only',
-  cssMergeOptionsByPath: { 'src/nested.css': { scopedCascadeGraphHash: 'hash_nested_scoped_cascade' } },
-  files: [{ sourcePath: 'src/nested.css', baseSourceText: nestedScopedCssBase, workerSourceText: nestedScopedCssWorker, headSourceText: nestedScopedCssHead }]
-});
-assert.equal(nestedScopedCssHashOnly.status, 'blocked');
-assert.equal(nestedScopedCssHashOnly.summary.cssScopedCascadeEvidenceFiles, 0);
-assert.equal(nestedScopedCssHashOnly.summary.cssScopedCascadeBlockedFiles, 1);
-const nestedScopedCssOutput = '@layer components {\n  @scope (.card) {\n    .button {\n      color: blue;\n      padding-left: 1rem;\n      background-color: white;\n    }\n  }\n}\n';
-const nestedScopedCssShapeKey = '@layer components::@scope (.card)';
-const nestedScopedCssShapeHash = 'hash_nested_scoped_cascade_shape';
-const nestedScopedCssWithProof = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_nested_layer_scope_with_proof',
-  cssMergeOptionsByPath: { 'src/nested.css': { scopedCascadeGraphHashesByShapeKey: { [nestedScopedCssShapeKey]: nestedScopedCssShapeHash }, cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_nested_layer_scope', sourcePath: 'src/nested.css', graphHash: nestedScopedCssShapeHash, shapeKey: nestedScopedCssShapeKey, base: nestedScopedCssBase, worker: nestedScopedCssWorker, head: nestedScopedCssHead, output: nestedScopedCssOutput, scopes: ['@layer components', '@scope (.card)'], cascadeKeys: ['@layer components::@scope (.card)::.button::color', '@layer components::@scope (.card)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
-  files: [{ sourcePath: 'src/nested.css', baseSourceText: nestedScopedCssBase, workerSourceText: nestedScopedCssWorker, headSourceText: nestedScopedCssHead }]
-});
-assert.equal(nestedScopedCssWithProof.status, 'merged');
-assert.equal(nestedScopedCssWithProof.summary.cssScopedCascadeFiles, 1);
-assert.equal(nestedScopedCssWithProof.summary.cssScopedCascadeEvidenceFiles, 1);
-assert.equal(nestedScopedCssWithProof.summary.cssScopedCascadeShapeEvidenceFiles, 1);
-assert.equal(nestedScopedCssWithProof.summary.cssScopedCascadeBlockedFiles, 0);
-assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /@layer components/);
-assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /@scope \(\.card\)/);
-assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /color: blue/);
-assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /background-color: white/);
-assert.equal(nestedScopedCssWithProof.files[0].result.scopedCascadeProofs.length, 2);
-assert.equal(nestedScopedCssWithProof.files[0].result.scopedCascadeProofs.every((proof) => proof.scopedCascadeGraphShapeKey === nestedScopedCssShapeKey), true);
-
-const containerScopedCssBase = '@container card (min-width: 300px) {\n  .button {\n    color: red;\n    padding-left: 1rem;\n  }\n}\n';
-const containerScopedCssWorker = containerScopedCssBase.replace('color: red', 'color: blue');
-const containerScopedCssHead = containerScopedCssBase.replace('padding-left: 1rem;', 'padding-left: 1rem;\n    background-color: white;');
-const containerScopedCssOutput = '@container card (min-width: 300px) {\n  .button {\n    color: blue;\n    padding-left: 1rem;\n    background-color: white;\n  }\n}\n';
-const containerScopedCssShapeKey = '@container card (min-width: 300px)';
-const containerScopedCssShapeHash = 'hash_container_scoped_cascade_shape';
-const containerScopedCssWrongShape = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_container_scope_wrong_shape',
-  cssMergeOptionsByPath: { 'src/card.css': { scopedCascadeGraphHashesByShapeKey: { [containerScopedCssShapeKey]: containerScopedCssShapeHash }, cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_container_wrong_shape', sourcePath: 'src/card.css', graphHash: containerScopedCssShapeHash, shapeKey: '@media (min-width: 300px)', base: containerScopedCssBase, worker: containerScopedCssWorker, head: containerScopedCssHead, output: containerScopedCssOutput, scopes: ['@container card (min-width: 300px)'], cascadeKeys: ['@container card (min-width: 300px)::.button::color', '@container card (min-width: 300px)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
-  files: [{ sourcePath: 'src/card.css', baseSourceText: containerScopedCssBase, workerSourceText: containerScopedCssWorker, headSourceText: containerScopedCssHead }]
-});
-assert.equal(containerScopedCssWrongShape.status, 'blocked');
-assert.equal(containerScopedCssWrongShape.summary.cssScopedCascadeShapeEvidenceFiles, 0);
-assert.equal(containerScopedCssWrongShape.conflicts.some((conflict) => conflict.code === 'css-scoped-cascade-proof-blocked'), true);
-const containerScopedCssWithProof = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_container_scope_with_proof',
-  cssMergeOptionsByPath: { 'src/card.css': { scopedCascadeGraphHashesByShapeKey: { [containerScopedCssShapeKey]: containerScopedCssShapeHash }, cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_container_scope', sourcePath: 'src/card.css', graphHash: containerScopedCssShapeHash, shapeKey: containerScopedCssShapeKey, base: containerScopedCssBase, worker: containerScopedCssWorker, head: containerScopedCssHead, output: containerScopedCssOutput, scopes: ['@container card (min-width: 300px)'], cascadeKeys: ['@container card (min-width: 300px)::.button::color', '@container card (min-width: 300px)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
-  files: [{ sourcePath: 'src/card.css', baseSourceText: containerScopedCssBase, workerSourceText: containerScopedCssWorker, headSourceText: containerScopedCssHead }]
-});
-assert.equal(containerScopedCssWithProof.status, 'merged');
-assert.equal(containerScopedCssWithProof.summary.cssScopedCascadeEvidenceFiles, 1);
-assert.equal(containerScopedCssWithProof.summary.cssScopedCascadeShapeEvidenceFiles, 1);
-assert.equal(containerScopedCssWithProof.outputFiles[0].sourceText, containerScopedCssOutput);
+import { safeMergeJsTsProject } from './compiler-api.mjs';
+import { matrixSurface } from './html-css-merge-test-helpers.mjs';
+import { projectCssDependencyProofOptionsForBlockedMerge } from '../../src/js-ts-safe-project-merge-css-dependency-proofs.js';
 
 const dependencyCssBase = [
   ':root {',
@@ -164,6 +90,100 @@ assert.equal(cssDependencyWithProof.files[0].result.dependencyGraphProofs.length
 assert.equal(cssDependencyWithProof.outputFiles[0].sourceText, dependencyCssOutput);
 assert.equal(matrixSurface(cssDependencyWithProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'passed');
 
+const fallbackDependencyCssBase = [
+  ':root {',
+  '  --primary: red;',
+  '  --secondary: purple;',
+  '}',
+  '.button {',
+  '  color: var(--theme, var(--primary, blue));',
+  '  border-color: red;',
+  '}',
+  ''
+].join('\n');
+const fallbackDependencyCssWorker = fallbackDependencyCssBase.replace('var(--theme, var(--primary, blue))', 'var(--theme, var(--secondary, blue))');
+const fallbackDependencyCssHead = fallbackDependencyCssBase.replace('border-color: red;', 'border-color: blue;');
+const fallbackDependencyCssOutput = [
+  ':root {',
+  '  --primary: red;',
+  '  --secondary: purple;',
+  '}',
+  '',
+  '.button {',
+  '  color: var(--theme, var(--secondary, blue));',
+  '  border-color: blue;',
+  '}',
+  ''
+].join('\n');
+const cssVarFallbackMissingProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_var_fallback_dependency_graph_missing',
+  disableProjectCssDependencyGraphProofSynthesis: true,
+  files: [{ sourcePath: 'src/theme.css', baseSourceText: fallbackDependencyCssBase, workerSourceText: fallbackDependencyCssWorker, headSourceText: fallbackDependencyCssHead }]
+});
+assert.equal(cssVarFallbackMissingProof.status, 'blocked');
+assert.equal(cssVarFallbackMissingProof.summary.cssDependencySurfaceFiles, 1);
+assert.equal(cssVarFallbackMissingProof.summary.cssDependencyGraphBlockedFiles, 1);
+assert.equal(matrixSurface(cssVarFallbackMissingProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'failed');
+const cssVarFallbackProofOptions = projectCssDependencyProofOptionsForBlockedMerge({
+  projectInput: {},
+  sourcePath: 'src/theme.css',
+  firstResult: cssVarFallbackMissingProof.files[0].result,
+  base: fallbackDependencyCssBase,
+  worker: fallbackDependencyCssWorker,
+  head: fallbackDependencyCssHead
+});
+const cssVarFallbackSynthesizedProof = cssVarFallbackProofOptions.mergeOptions.cssDependencyGraphProofs[0];
+assert.equal(cssVarFallbackSynthesizedProof.proofLevel, 'css-var-fallback-dependency-graph-project-source-bound');
+assert.equal(cssVarFallbackSynthesizedProof.cascadeKey, '.button::color');
+assert.equal(cssVarFallbackSynthesizedProof.varFallbackReferenceHashes.base.length, 1);
+assert.equal(cssVarFallbackSynthesizedProof.varFallbackReferenceHashes.worker.length, 1);
+assert.notEqual(cssVarFallbackSynthesizedProof.varFallbackReferenceHashes.base[0], cssVarFallbackSynthesizedProof.varFallbackReferenceHashes.worker[0]);
+
+const cssVarFallbackAutoProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_var_fallback_dependency_graph_auto_proven',
+  files: [{ sourcePath: 'src/theme.css', baseSourceText: fallbackDependencyCssBase, workerSourceText: fallbackDependencyCssWorker, headSourceText: fallbackDependencyCssHead }]
+});
+assert.equal(cssVarFallbackAutoProof.status, 'merged');
+assert.equal(cssVarFallbackAutoProof.summary.cssDependencyGraphBlockedFiles, 0);
+assert.equal(cssVarFallbackAutoProof.files[0].result.dependencyGraphProofs.length, 1);
+assert.equal(cssVarFallbackAutoProof.files[0].result.dependencyGraphProofs[0].proofLevel, 'css-var-fallback-dependency-graph-project-source-bound');
+assert.equal(cssVarFallbackAutoProof.outputFiles[0].sourceText, fallbackDependencyCssOutput);
+assert.equal(matrixSurface(cssVarFallbackAutoProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'passed');
+
+const fallbackDependencyGraphHash = (sourceText) => parseCssSemanticSheet(sourceText, { sourcePath: 'src/theme.css' }).dependencyGraphEvidence.dependencyGraphHash;
+const cssVarFallbackStaleProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_var_fallback_dependency_graph_stale_proof',
+  disableProjectCssDependencyGraphProofSynthesis: true,
+  cssMergeOptionsByPath: {
+    'src/theme.css': {
+      cssDependencyGraphProofs: [{
+        id: 'proof_css_var_fallback_dependency_graph_stale',
+        kind: 'css-source-bound-dependency-graph-proof',
+        status: 'passed',
+        proofLevel: 'css-var-fallback-dependency-graph-project-source-bound',
+        sourcePath: 'src/theme.css',
+        reasonCode: 'css-dependency-graph-proof-unproved',
+        side: 'worker',
+        cascadeKey: '.button::color',
+        baseSourceHash: hashSemanticValue(fallbackDependencyCssBase),
+        workerSourceHash: hashSemanticValue(fallbackDependencyCssWorker),
+        headSourceHash: hashSemanticValue(fallbackDependencyCssHead),
+        outputSourceHash: hashSemanticValue(fallbackDependencyCssOutput),
+        dependencyGraphHashes: {
+          base: fallbackDependencyGraphHash(fallbackDependencyCssBase),
+          worker: 'stale-css-var-fallback-dependency-graph-hash',
+          head: fallbackDependencyGraphHash(fallbackDependencyCssHead)
+        }
+      }]
+    }
+  },
+  files: [{ sourcePath: 'src/theme.css', baseSourceText: fallbackDependencyCssBase, workerSourceText: fallbackDependencyCssWorker, headSourceText: fallbackDependencyCssHead }]
+});
+assert.equal(cssVarFallbackStaleProof.status, 'blocked');
+assert.equal(cssVarFallbackStaleProof.summary.cssDependencyGraphBlockedFiles, 1);
+assert.equal(cssVarFallbackStaleProof.conflicts.some((conflict) => conflict.code === 'css-dependency-graph-proof-blocked'), true);
+assert.equal(matrixSurface(cssVarFallbackStaleProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'failed');
+
 const keyframesCssBase = [
   '@keyframes fade { from { opacity: 0; } to { opacity: 1; } }',
   '.spinner {',
@@ -184,120 +204,3 @@ assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphEvidenceFil
 assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphMissingProofFiles, 0);
 assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphBlockedFiles, 1);
 assert.equal(matrixSurface(cssKeyframesDependencyBlocked, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'failed');
-
-const icssModuleSource = [
-  ':export {',
-  '  accentColor: var(--accent);',
-  '}',
-  '.root {',
-  '  color: var(--accent);',
-  '}',
-  ''
-].join('\n');
-const icssModuleComponentSource = [
-  'import styles from ' + JSON.stringify('./Theme.module.css') + ';',
-  'export function ThemeButton() {',
-  '  const accent = styles.accentColor;',
-  '  return <button className={styles.root} data-accent={accent} />;',
-  '}',
-  ''
-].join('\n');
-const provenIcssModuleImport = importNativeSource({
-  language: 'css',
-  sourcePath: 'src/Theme.module.css',
-  sourceText: icssModuleSource,
-  metadata: {
-    cssModuleEvidence: {
-      moduleHash: 'css-module:theme',
-      exports: [{ name: 'root' }],
-      icssExports: [{ name: 'accentColor', value: 'var(--accent)' }],
-      generatedClassNameMapHash: 'css-module-generated-map:theme',
-      jsTsUseSiteGraphHash: 'css-module-use-sites:theme',
-      icssGraphHash: 'icss-graph:theme'
-    },
-    bundlerTransformHash: 'bundler-transform:theme',
-    sourceMapProofHash: 'source-map-proof:theme'
-  }
-});
-const provenIcssModuleProject = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_module_icss_use_site',
-  includeOutputProjectSymbolGraph: true,
-  outputProjectImports: [provenIcssModuleImport],
-  files: [
-    { language: 'css', sourcePath: 'src/Theme.module.css', headSourceText: icssModuleSource },
-    { language: 'tsx', sourcePath: 'src/ThemeButton.tsx', baseSourceText: icssModuleComponentSource, workerSourceText: icssModuleComponentSource, headSourceText: icssModuleComponentSource }
-  ]
-});
-assert.equal(provenIcssModuleProject.status, 'merged');
-const provenIcssBinding = provenIcssModuleProject.outputProjectSymbolGraph.cssModuleImportBindings[0];
-assert.equal(provenIcssBinding.cssModuleExportNames.includes('accentColor'), true);
-assert.equal(provenIcssBinding.cssModuleExportNames.includes('root'), true);
-const provenIcssTokenUseSite = provenIcssModuleProject.outputProjectSymbolGraph.cssModuleUseSites.find((site) => site.exportName === 'accentColor');
-assert.equal(provenIcssTokenUseSite?.useSiteKind, 'scope-member-read');
-assert.equal(provenIcssTokenUseSite.cssModuleSourcePath, 'src/Theme.module.css');
-assert.equal(typeof provenIcssTokenUseSite.cssModuleExportHash, 'string');
-assert.equal(provenIcssModuleProject.summary.projectGraphCssModuleUseSiteConflicts, 0);
-assert.equal(provenIcssModuleProject.summary.projectGraphCssModuleUseSiteBlockers, 0);
-assert.equal(provenIcssModuleProject.summary.projectGraphCssModuleUseSiteGraphs, 1);
-assert.equal(matrixSurface(provenIcssModuleProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'passed');
-
-const unprovedIcssModuleImport = importNativeSource({
-  language: 'css',
-  sourcePath: 'src/Theme.module.css',
-  sourceText: icssModuleSource,
-  metadata: {
-    cssModuleEvidence: {
-      moduleHash: 'css-module:theme',
-      exports: [{ name: 'root' }],
-      icssExports: [{ name: 'accentColor', value: 'var(--accent)' }],
-      generatedClassNameMapHash: 'css-module-generated-map:theme',
-      jsTsUseSiteGraphHash: 'css-module-use-sites:theme'
-    },
-    bundlerTransformHash: 'bundler-transform:theme',
-    sourceMapProofHash: 'source-map-proof:theme'
-  }
-});
-const unprovedIcssModuleProject = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_module_icss_use_site_missing_graph',
-  includeOutputProjectSymbolGraph: true,
-  outputProjectImports: [unprovedIcssModuleImport],
-  files: [
-    { language: 'css', sourcePath: 'src/Theme.module.css', headSourceText: icssModuleSource },
-    { language: 'tsx', sourcePath: 'src/ThemeButton.tsx', baseSourceText: icssModuleComponentSource, workerSourceText: icssModuleComponentSource, headSourceText: icssModuleComponentSource }
-  ]
-});
-assert.equal(unprovedIcssModuleProject.status, 'blocked');
-assert.equal(unprovedIcssModuleProject.outputProjectSymbolGraph.cssModuleImportBindings[0].cssModuleExportNames.includes('accentColor'), false);
-assert.equal(unprovedIcssModuleProject.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-export-name-unresolved'), true);
-assert.equal(matrixSurface(unprovedIcssModuleProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'failed');
-
-const genericAdmissionEvidence = fileAdmissionEvidenceRecords([{
-  summary: {
-    genericAdmissionEvidence: [
-      { id: 'safe_exact', kind: 'js-ts-project-generic-admission', status: 'passed', details: { exactBranchOutput: true } },
-      { id: 'blocked_conflict', kind: 'js-ts-project-generic-admission', status: 'failed', details: { reasonCode: 'generic-conflict' } }
-    ]
-  },
-  metadata: {
-    genericAdmissions: [{
-      id: 'review_missing',
-      kind: 'js-ts-project-generic-admission',
-      status: 'missing',
-      admissionRoute: { status: 'missing', reasonCodes: ['missing-proof'] }
-    }]
-  }
-}]);
-const genericAdmissionById = new Map(genericAdmissionEvidence.map((record) => [record.id, record]));
-assert.equal(genericAdmissionById.get('safe_exact').admissionOutcome, 'safe');
-assert.equal(genericAdmissionById.get('safe_exact').admissionOutcomeReasonCode, 'passed-exact-branch-output');
-assert.equal(genericAdmissionById.get('blocked_conflict').admissionOutcome, 'blocked');
-assert.equal(genericAdmissionById.get('blocked_conflict').admissionOutcomeReasonCode, 'generic-conflict');
-assert.equal(genericAdmissionById.get('review_missing').admissionOutcome, 'review');
-assert.equal(genericAdmissionById.get('review_missing').admissionOutcomeReasonCode, 'missing-proof');
-
-function matrixSurface(result, surface) {
-  const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);
-  assert.ok(record, `missing ${surface} matrix surface`);
-  return record;
-}
-function scopedProof({ id, sourcePath, graphHash, shapeKey, base, worker, head, output, scopes, cascadeKeys, properties, sides }) { return { id, kind: 'css-source-bound-scoped-cascade-proof', status: 'passed', sourcePath, reasonCode: 'css-scoped-cascade-equivalence-unproved', sides, selectors: ['.button'], scopes, cascadeKeys, properties, scopedCascadeGraphHash: graphHash, scopedCascadeGraphShapeKey: shapeKey, scopedCascadeGraphHashesByShapeKey: shapeKey ? { [shapeKey]: graphHash } : undefined, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output) }; }

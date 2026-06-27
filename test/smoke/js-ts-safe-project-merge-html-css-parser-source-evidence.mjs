@@ -95,6 +95,43 @@ assert.equal(staleHtmlAttributeSummary.htmlParserEvidenceFiles, 0);
 assert.equal(staleHtmlAttributeSummary.htmlParserEvidenceFailedFiles, 1);
 assert.equal(htmlCssProjectMergeMatrixProofStatus('html-parser-source-evidence', staleHtmlAttributeSummary), 'failed');
 
+const metadataOnlyHtmlSummary = htmlCssProjectSummary([
+  htmlFile({
+    kind: 'frontier.lang.htmlSafeMergeParserEvidence',
+    version: 1,
+    parserNames: ['parse5'],
+    sourceCodeLocationInfo: true,
+    parserBackedSourceSpans: true,
+    parserBackedAttributeSpans: true,
+    parserBackedTriviaSpans: true,
+    parseErrors: 0,
+    recordCount: 5,
+    sourceSpanRecordCount: 5,
+    sourceSpanMissingRecordCount: 0,
+    attributeSpanElementCount: 2,
+    attributeSpanMissingElementCount: 0,
+    structuralSpanRecordCount: 5,
+    structuralSpanMissingRecordCount: 0,
+    leadingTriviaSpanRecordCount: 0
+  })
+]);
+assert.equal(metadataOnlyHtmlSummary.htmlParserEvidenceFiles, 0);
+assert.equal(metadataOnlyHtmlSummary.htmlParserEvidenceFailedFiles, 1);
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-parser-source-evidence', metadataOnlyHtmlSummary), 'failed');
+
+const sideSpoofedHtmlSummary = htmlCssProjectSummary([
+  htmlFile({
+    ...validHtmlParserEvidence,
+    sides: {
+      base: htmlParserSide(),
+      worker: htmlParserSide()
+    }
+  })
+]);
+assert.equal(sideSpoofedHtmlSummary.htmlParserEvidenceFiles, 0);
+assert.equal(sideSpoofedHtmlSummary.htmlParserEvidenceFailedFiles, 1);
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-parser-source-evidence', sideSpoofedHtmlSummary), 'failed');
+
 const metadataOnlyCssSummary = htmlCssProjectSummary([
   cssFile({
     kind: 'frontier.lang.cssSafeMergeParserEvidence',
@@ -110,6 +147,35 @@ const metadataOnlyCssSummary = htmlCssProjectSummary([
 assert.equal(metadataOnlyCssSummary.cssParserEvidenceFiles, 0);
 assert.equal(metadataOnlyCssSummary.cssParserEvidenceFailedFiles, 1);
 assert.equal(htmlCssProjectMergeMatrixProofStatus('css-parser-source-evidence', metadataOnlyCssSummary), 'failed');
+
+const sideSpoofedCssSummary = htmlCssProjectSummary([
+  cssFile({
+    ...validCssParserEvidence,
+    sides: {
+      base: cssParserSide(),
+      worker: cssParserSide(),
+      theirs: cssParserSide()
+    }
+  })
+]);
+assert.equal(sideSpoofedCssSummary.cssParserEvidenceFiles, 0);
+assert.equal(sideSpoofedCssSummary.cssParserEvidenceFailedFiles, 1);
+assert.equal(htmlCssProjectMergeMatrixProofStatus('css-parser-source-evidence', sideSpoofedCssSummary), 'failed');
+
+const extraSideSpoofedCssSummary = htmlCssProjectSummary([
+  cssFile({
+    ...validCssParserEvidence,
+    sides: {
+      base: cssParserSide(),
+      worker: cssParserSide(),
+      head: cssParserSide(),
+      output: cssParserSide()
+    }
+  })
+]);
+assert.equal(extraSideSpoofedCssSummary.cssParserEvidenceFiles, 0);
+assert.equal(extraSideSpoofedCssSummary.cssParserEvidenceFailedFiles, 1);
+assert.equal(htmlCssProjectMergeMatrixProofStatus('css-parser-source-evidence', extraSideSpoofedCssSummary), 'failed');
 
 const staleCssTriviaSummary = htmlCssProjectSummary([
   cssFile({

@@ -1,3 +1,5 @@
+import { CssDependencyAtRuleNames, CssDependencyCodeFragments, CssDependencyMissingProofReasonCodes, CssDependencySurfacePatterns, CssRuntimeDescriptorReasonCodes, CssRuntimeEquivalenceReasonCodes, HtmlFrameworkBoundaryReasonCodes, HtmlRuntimeBoundaryReasonCodes, RequiredParserEvidenceSideNames, ScopedCascadeMissingProofReasonCodes } from './js-ts-safe-project-merge-html-css-summary-constants.js';
+
 function htmlCssProjectSummary(files) {
   const htmlFiles = files.filter(isHtmlProjectFile), cssFiles = files.filter(isCssProjectFile), htmlCssFiles = [...htmlFiles, ...cssFiles];
   return {
@@ -30,7 +32,7 @@ function isBlocked(file) { return file.status === 'blocked'; }
 function stripQuery(sourcePath) { return String(sourcePath ?? '').replace(/[?#].*$/, ''); }
 function hasHtmlParserEvidence(file) {
   const evidence = file?.result?.parserEvidence;
-  const sides = parserEvidenceSides(evidence);
+  const sides = requiredParserEvidenceSides(evidence);
   return evidence?.kind === 'frontier.lang.htmlSafeMergeParserEvidence' &&
     evidence.parseErrors === 0 &&
     Array.isArray(evidence.parserNames) &&
@@ -42,7 +44,7 @@ function hasHtmlParserEvidence(file) {
 }
 function hasCssParserEvidence(file) {
   const evidence = file?.result?.parserEvidence;
-  const sides = parserEvidenceSides(evidence);
+  const sides = requiredParserEvidenceSides(evidence);
   return evidence?.kind === 'frontier.lang.cssSafeMergeParserEvidence' &&
     evidence.parseErrors === 0 &&
     Array.isArray(evidence.parserNames) &&
@@ -57,7 +59,15 @@ function hasHtmlParserEvidenceFailure(file) {
 function hasCssParserEvidenceFailure(file) {
   return isCssProjectFile(file) && Boolean(file?.result?.parserEvidence) && !hasCssParserEvidence(file);
 }
-function parserEvidenceSides(evidence) { return Object.values(evidence?.sides ?? {}); }
+function requiredParserEvidenceSides(evidence) {
+  const sides = evidence?.sides;
+  if (!isPlainObject(sides)) return [];
+  const sideNames = Object.keys(sides);
+  return sideNames.length === RequiredParserEvidenceSideNames.length &&
+    RequiredParserEvidenceSideNames.every((name) => isPlainObject(sides[name]))
+    ? RequiredParserEvidenceSideNames.map((name) => sides[name])
+    : [];
+}
 function hasHtmlParserSpanCounts(evidence) {
   return hasNonNegativeCounts(evidence, ['recordCount', 'sourceSpanRecordCount', 'attributeSpanElementCount', 'structuralSpanRecordCount', 'leadingTriviaSpanRecordCount']) &&
     hasZeroCounts(evidence, ['sourceSpanMissingRecordCount', 'attributeSpanMissingElementCount', 'structuralSpanMissingRecordCount']);
@@ -192,13 +202,19 @@ function hasCssDependencyConflictSurface(file) {
 function hasCssDependencyGraphBlockedConflict(file) {
   return cssFileConflicts(file).some((conflict) => isCssDependencyConflict(conflict) || CssDependencyMissingProofReasonCodes.has(conflict?.details?.reasonCode));
 }
-function hasCssRuntimeDescriptorSurface(file) { return hasCssPropertyDescriptorSurface(file) || hasCssPageDescriptorSurface(file); }
-function hasCssRuntimeDescriptorEvidence(file) { return hasCssPropertyDescriptorEvidence(file) || hasCssPageDescriptorEvidence(file); }
+function hasCssRuntimeDescriptorSurface(file) { return hasCssFontFaceDescriptorSurface(file) || hasCssPropertyDescriptorSurface(file) || hasCssPageDescriptorSurface(file); }
+function hasCssRuntimeDescriptorEvidence(file) { return hasCssFontFaceDescriptorEvidence(file) || hasCssPropertyDescriptorEvidence(file) || hasCssPageDescriptorEvidence(file); }
+function hasCssFontFaceDescriptorSurface(file) {
+  return cssDependencyEvidenceRecords(file).some((evidence) => cssFontFaceDescriptorEvidenceCount(evidence) > 0) || /@font-face\b/i.test(cssDependencySourceText(file));
+}
 function hasCssPropertyDescriptorSurface(file) {
   return cssDependencyEvidenceRecords(file).some((evidence) => cssPropertyDescriptorEvidenceCount(evidence) > 0) || /@property\b/i.test(cssDependencySourceText(file));
 }
 function hasCssPageDescriptorSurface(file) {
   return cssDependencyEvidenceRecords(file).some((evidence) => cssPageDescriptorEvidenceCount(evidence) > 0) || /@page\b/i.test(cssDependencySourceText(file));
+}
+function hasCssFontFaceDescriptorEvidence(file) {
+  return cssDependencyEvidenceRecords(file).some((evidence) => cssFontFaceDescriptorEvidenceCount(evidence) > 0);
 }
 function hasCssPropertyDescriptorEvidence(file) {
   return cssDependencyEvidenceRecords(file).some((evidence) => (evidence.propertyRegistrations ?? 0) > 0 && (evidence.propertyRegistrationDescriptors ?? 0) > 0);
@@ -209,23 +225,42 @@ function hasCssPageDescriptorEvidence(file) {
 function hasCssRuntimeDescriptorBlockedConflict(file) {
   return cssFileConflicts(file).some((conflict) => CssRuntimeDescriptorReasonCodes.has(conflict?.details?.reasonCode) || CssRuntimeDescriptorReasonCodes.has(conflict?.details?.proofGap?.code));
 }
-function cssDescriptorEvidenceCount(evidence) { return cssPropertyDescriptorEvidenceCount(evidence) + cssPageDescriptorEvidenceCount(evidence); }
+function cssDescriptorEvidenceCount(evidence) { return cssFontFaceDescriptorEvidenceCount(evidence) + cssPropertyDescriptorEvidenceCount(evidence) + cssPageDescriptorEvidenceCount(evidence); }
+function cssFontFaceDescriptorEvidenceCount(evidence) {
+  const fontFaces = evidence?.records?.fontFaces;
+  const srcDescriptors = fontFaceSrcDescriptorRecords(evidence);
+  const sourceBoundFamilies = Array.isArray(fontFaces) ? fontFaces.filter(hasSourceBoundDescriptorRecord).length : 0;
+  return sourceBoundFamilies > 0 && srcDescriptors.length > 0 ? sourceBoundFamilies + srcDescriptors.length : 0;
+}
 function cssPropertyDescriptorEvidenceCount(evidence) { return (evidence.propertyRegistrations ?? 0) + (evidence.propertyRegistrationDescriptors ?? 0); }
 function cssPageDescriptorEvidenceCount(evidence) { return (evidence.pageDescriptors ?? 0) + (evidence.pageMarginDescriptors ?? 0); }
+function fontFaceSrcDescriptorRecords(evidence) {
+  return (evidence?.records?.urlAssetReferences ?? []).filter((record) => record?.sourceKind === 'font-face-src' && hasSourceBoundDescriptorRecord(record));
+}
+function hasSourceBoundDescriptorRecord(record) {
+  return isPlainObject(record?.sourceSpan) && Number.isInteger(record.sourceSpan.startOffset) && typeof record.sourceHash === 'string';
+}
 function cssDependencyEvidenceRecords(file) {
   const result = file?.result ?? {};
-  return [result.dependencyEvidence, result.cssDependencyEvidence, result.dependencyGraphEvidence, result.cssDependencyGraphEvidence, result.parserEvidence?.dependencyEvidence, result.parserEvidence?.cssDependencyEvidence, result.parserEvidence?.dependencyGraphEvidence, result.parserEvidence?.cssDependencyGraphEvidence].filter(isPlainObject);
+  const records = [result.dependencyEvidence, result.cssDependencyEvidence, result.dependencyGraphEvidence, result.cssDependencyGraphEvidence, result.parserEvidence?.dependencyEvidence, result.parserEvidence?.cssDependencyEvidence, result.parserEvidence?.dependencyGraphEvidence, result.parserEvidence?.cssDependencyGraphEvidence].filter(isPlainObject);
+  return [...records, ...records.flatMap(cssDependencyEvidenceSides)];
 }
+function cssDependencyEvidenceSides(evidence) { return Object.values(evidence?.sides ?? {}).filter(isPlainObject); }
 function cssDependencySourceText(file) {
   return [file?.outputSourceText, file?.sourceText, file?.result?.mergedSourceText].filter((value) => typeof value === 'string').join('\n');
 }
 function cssFileConflicts(file) { return file?.result?.conflicts ?? file?.conflicts ?? []; }
 function isCssDependencyConflict(conflict) {
+  if (isCssRuntimeEquivalenceConflict(conflict)) return false;
   const details = conflict?.details ?? {};
   const codes = [conflict?.code, details.reasonCode, details.proofGap?.code].map((value) => String(value ?? ''));
   return codes.some((code) => CssDependencyCodeFragments.some((fragment) => code.includes(fragment))) || isCssDependencyAtRule(details.before) || isCssDependencyAtRule(details.after);
 }
 function isCssDependencyAtRule(shape) { return CssDependencyAtRuleNames.has(String(shape?.atRuleName ?? '').toLowerCase()); }
+function isCssRuntimeEquivalenceConflict(conflict) {
+  const details = conflict?.details ?? {};
+  return CssRuntimeEquivalenceReasonCodes.has(String(details.reasonCode ?? '')) || CssRuntimeEquivalenceReasonCodes.has(String(details.proofGap?.code ?? ''));
+}
 function hasBrowserRuntimeProof(file) {
   return hasAdmittedBrowserRuntimeProof(file) && browserRuntimeProofRecords(file).some(isRuntimeEvidenceBoundProof);
 }
@@ -278,14 +313,6 @@ function duplicateExplicitIdentityKeys(evidence) {
   });
 }
 
-const ScopedCascadeMissingProofReasonCodes = new Set(['css-scoped-cascade-equivalence-unproved', 'css-media-cascade-scope-unproved', 'css-supports-cascade-scope-unproved', 'css-container-cascade-scope-unproved', 'css-layer-cascade-scope-unproved', 'css-scope-cascade-scope-unproved']);
-const HtmlRuntimeBoundaryReasonCodes = new Set(['script-runtime-boundary', 'style-runtime-boundary', 'template-runtime-boundary', 'slot-runtime-boundary', 'custom-element-runtime-boundary', 'event-handler-runtime-boundary', 'inline-style-runtime-boundary', 'iframe-runtime-boundary', 'iframe-srcdoc-runtime-boundary', 'form-runtime-boundary', 'form-submitter-runtime-boundary', 'form-control-runtime-boundary', 'document-base-runtime-boundary', 'document-metadata-runtime-boundary', 'resource-loading-runtime-boundary']);
-const HtmlFrameworkBoundaryReasonCodes = new Set(['framework-directive-boundary', 'custom-element-runtime-boundary']);
-const CssDependencyMissingProofReasonCodes = new Set(['css-dependency-graph-evidence-missing', 'css-custom-property-dependency-graph-unproved', 'css-var-fallback-dependency-graph-unproved', 'css-animation-name-keyframes-graph-unproved', 'css-font-face-dependency-graph-unproved', 'css-url-asset-dependency-graph-unproved']);
-const CssDependencyAtRuleNames = new Set(['keyframes', 'font-face', 'property', 'page']);
-const CssDependencyCodeFragments = ['custom-property', 'var-fallback', 'variable-dependency', 'dependency-graph', 'keyframes', 'animation-name', 'font-face', 'url-asset', 'asset-dependency', 'property', 'page'];
-const CssRuntimeDescriptorReasonCodes = new Set(['css-runtime-descriptor-evidence-missing']);
-const CssDependencySurfacePatterns = [/(^|[;{\s])--[-_A-Za-z][\w-]*\s*:/, /\bvar\s*\(/i, /@(?:-[\w]+-)?keyframes\b/i, /(^|[;{\s])animation(?:-name)?\s*:/i, /@font-face\b/i, /@property\b/i, /@page\b/i, /\burl\s*\(/i];
 function isPlainObject(value) { return Boolean(value && typeof value === 'object' && !Array.isArray(value)); }
 
 export { htmlCssProjectSummary };

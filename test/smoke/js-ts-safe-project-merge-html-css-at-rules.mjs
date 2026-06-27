@@ -131,9 +131,53 @@ assert.equal(pageProven.files[0].result.dependencyGraphEvidence.pageMarginDescri
 assert.equal(pageProven.files[0].result.cascadeRuntimeProofs[0].runtimeSignals.includes('css-page-runtime'), true);
 assert.equal(pageProven.outputFiles[0].sourceText, pageOutput);
 
+const fontFacePath = 'src/fonts.css';
+const fontFaceBase = '@font-face { font-family: "Inter"; src: url("./inter.woff2") format("woff2"); }\n.button { color: red; font-family: "Inter"; }\n';
+const fontFaceWorker = fontFaceBase.replace('./inter.woff2', './inter-v2.woff2');
+const fontFaceHead = fontFaceBase.replace('color: red', 'color: blue');
+const fontFaceOutput = '@font-face { font-family: "Inter"; src: url("./inter-v2.woff2") format("woff2"); }\n\n.button {\n  color: blue;\n  font-family: "Inter";\n}\n';
+const fontFaceUnproved = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_font_face_unproved',
+  files: [{ sourcePath: fontFacePath, baseSourceText: fontFaceBase, workerSourceText: fontFaceWorker, headSourceText: fontFaceHead }]
+});
+assert.equal(fontFaceUnproved.status, 'blocked');
+assert.equal(fontFaceUnproved.summary.cssRuntimeDescriptorFiles, 1);
+assert.equal(fontFaceUnproved.summary.cssRuntimeDescriptorEvidenceFiles, 1);
+assert.equal(fontFaceUnproved.summary.cssRuntimeDescriptorBlockedFiles, 0);
+assert.equal(fontFaceUnproved.summary.cssDependencyGraphBlockedFiles, 0);
+assert.equal(fontFaceUnproved.summary.htmlCssBrowserRuntimeProofs, 0);
+assert.equal(fontFaceUnproved.conflicts.some((item) => item.details.reasonCode === 'css-font-face-runtime-equivalence-unproved'), true);
+assert.equal(matrixSurface(fontFaceUnproved, 'css-runtime-descriptor-evidence').proofStatuses['css-runtime-descriptor-evidence'], 'passed');
+assert.equal(matrixSurface(fontFaceUnproved, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'passed');
+assert.equal(matrixSurface(fontFaceUnproved, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
+assert.equal(fontFaceUnproved.files[0].result.browserCascadeEquivalenceClaim, false);
+assert.equal(fontFaceUnproved.files[0].result.admission.browserCascadeEquivalenceClaim, false);
+assert.equal(fontFaceUnproved.files[0].result.dependencyGraphEvidence.sides.base.records.fontFaces[0].family, 'Inter');
+assert.equal(fontFaceUnproved.files[0].result.dependencyGraphEvidence.sides.base.records.urlAssetReferences[0].sourceKind, 'font-face-src');
+assert.equal(fontFaceUnproved.files[0].result.candidateMergedSourceText, fontFaceOutput);
+const fontFaceProven = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_font_face_proven',
+  cssMergeOptionsByPath: { [fontFacePath]: { cssCascadeRuntimeProofs: [runtimeProof({ id: 'proof_css_project_font_face_runtime', sourcePath: fontFacePath, reasonCode: 'css-font-face-runtime-equivalence-unproved', shapeKey: 'at-rule:font-face::', base: fontFaceBase, worker: fontFaceWorker, head: fontFaceHead, output: fontFaceOutput })] } },
+  files: [{ sourcePath: fontFacePath, baseSourceText: fontFaceBase, workerSourceText: fontFaceWorker, headSourceText: fontFaceHead }]
+});
+assert.equal(fontFaceProven.status, 'merged');
+assert.equal(fontFaceProven.summary.cssRuntimeDescriptorFiles, 1);
+assert.equal(fontFaceProven.summary.cssRuntimeDescriptorEvidenceFiles, 1);
+assert.equal(fontFaceProven.summary.cssDependencyGraphBlockedFiles, 0);
+assert.equal(fontFaceProven.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(fontFaceProven.files[0].result.cascadeRuntimeProofs[0].runtimeSignals.includes('css-font-face-runtime'), true);
+assert.equal(fontFaceProven.files[0].result.cascadeRuntimeProofs[0].browserRenderEquivalenceClaim, false);
+assert.equal(fontFaceProven.outputFiles[0].sourceText, fontFaceOutput);
+
 function runtimeProof({ id, sourcePath, reasonCode, shapeKey, base, worker, head, output }) {
-  const runtimeSignal = reasonCode.includes('property') ? 'css-property-registration-runtime' : 'css-page-runtime';
+  const runtimeSignal = runtimeSignalForReason(reasonCode);
   return { id, kind: 'css-source-bound-cascade-runtime-proof', status: 'passed', sourcePath, reasonCode, side: 'worker', shapeKey, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output), runtimeCommand: 'playwright test css-project-runtime-at-rules.spec.ts', runtimeProbeId: `${shapeKey}:project-probe`, runtimeEvidenceHash: hashSemanticValue(`${sourcePath}:${reasonCode}:${shapeKey}:project-runtime`), runtimeSignals: [runtimeSignal] };
+}
+
+function runtimeSignalForReason(reasonCode) {
+  if (reasonCode.includes('font-face')) return 'css-font-face-runtime';
+  if (reasonCode.includes('property')) return 'css-property-registration-runtime';
+  return 'css-page-runtime';
 }
 
 function matrixSurface(result, surface) {

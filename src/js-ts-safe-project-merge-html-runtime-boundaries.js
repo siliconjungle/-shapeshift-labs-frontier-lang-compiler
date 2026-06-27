@@ -160,6 +160,7 @@ function requiredHtmlRuntimeBoundarySignals(reasonCode, boundary) {
   if (text.includes('form-submitter')) return ['html-form-submitter-runtime', 'form-submitter-runtime', 'html-form-runtime'];
   if (text.includes('form-control')) return ['html-form-control-runtime', 'form-control-runtime', 'html-form-runtime'];
   if (text.includes('form')) return ['html-form-runtime', 'form-runtime'];
+  if (text.includes('navigation')) return ['html-navigation-runtime', 'navigation-runtime'];
   if (text.includes('document-base')) return ['html-document-base-runtime', 'document-base-runtime'];
   if (text.includes('document-metadata')) return ['html-document-metadata-runtime', 'document-metadata-runtime'];
   if (text.includes('resource-loading')) return ['html-resource-loading-runtime', 'resource-loading-runtime'];
@@ -245,6 +246,7 @@ function htmlRuntimeAttributeSpec(name, tagName) {
   if (tagName === 'form' && FormRuntimeAttributes.has(name)) return { boundary: 'html-form-runtime-attribute', reasonCode: 'form-runtime-boundary' };
   if (FormSubmitterTags.has(tagName) && FormSubmitterRuntimeAttributes.has(name)) return { boundary: 'html-form-submitter-runtime-attribute', reasonCode: 'form-submitter-runtime-boundary' };
   if (FormControlTags.has(tagName) && FormControlRuntimeAttributes.has(name)) return { boundary: 'html-form-control-runtime-attribute', reasonCode: 'form-control-runtime-boundary' };
+  if (tagName === 'a' && AnchorNavigationRuntimeAttributes.has(name)) return { boundary: 'html-anchor-navigation-runtime-attribute', reasonCode: 'navigation-runtime-boundary' };
   if (tagName === 'base' && BaseRuntimeAttributes.has(name)) return { boundary: 'html-document-base-runtime-attribute', reasonCode: 'document-base-runtime-boundary' };
   if (tagName === 'meta' && MetaRuntimeAttributes.has(name)) return { boundary: 'html-document-metadata-runtime-attribute', reasonCode: 'document-metadata-runtime-boundary' };
   if (ResourceLoadingTags.has(tagName) && ResourceLoadingAttributes.has(name)) return { boundary: 'html-resource-loading-attribute', reasonCode: 'resource-loading-runtime-boundary' };
@@ -252,7 +254,8 @@ function htmlRuntimeAttributeSpec(name, tagName) {
 }
 
 function isHtmlFrameworkDirectiveAttribute(name) {
-  return name.startsWith(':') ||
+  return isAngularFrameworkDirectiveAttribute(name) ||
+    name.startsWith(':') ||
     name.startsWith('@') ||
     /^v(?:-|:)/.test(name) ||
     /^x(?:-|:)/.test(name) ||
@@ -261,10 +264,17 @@ function isHtmlFrameworkDirectiveAttribute(name) {
     /^data-ng-/.test(name);
 }
 
+function isAngularFrameworkDirectiveAttribute(name) {
+  return AngularTwoWayBindingAttributePattern.test(name) ||
+    AngularPropertyBindingAttributePattern.test(name) ||
+    AngularEventBindingAttributePattern.test(name) ||
+    AngularStructuralOrReferenceAttributePattern.test(name) ||
+    AngularCanonicalBindingAttributePattern.test(name);
+}
+
 function parseHtmlAttributes(text) {
   const attributes = [];
-  const pattern = /([:@A-Za-z_][\w:.-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
-  for (const match of text.matchAll(pattern)) attributes.push({ name: match[1], value: match[2] ?? match[3] ?? match[4] ?? true });
+  for (const match of text.matchAll(HtmlAttributePattern)) attributes.push({ name: match[1], value: match[2] ?? match[3] ?? match[4] ?? true });
   return attributes;
 }
 
@@ -283,12 +293,19 @@ function asArray(value) {
 }
 
 const HtmlRuntimeBoundaryProofKinds = new Set(['html-runtime-boundary-proof', 'html-source-bound-runtime-boundary-proof']);
+const HtmlAttributePattern = /(?:^|\s+)(\[\([\w:.-]+\)\]|\[[\w:.-]+\]|\([\w:.-]+\)|[*#][A-Za-z_][\w:.-]*|[:@A-Za-z_][\w:.[\]-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+const AngularTwoWayBindingAttributePattern = /^\[\([\w:.-]+\)\]$/;
+const AngularPropertyBindingAttributePattern = /^\[[\w:.-]+\]$/;
+const AngularEventBindingAttributePattern = /^\([\w:.-]+\)$/;
+const AngularStructuralOrReferenceAttributePattern = /^[*#][a-z_][\w:.-]*$/;
+const AngularCanonicalBindingAttributePattern = /^(?:bind|on|bindon|ref|let)-[\w:.-]+$/;
 const IframeRuntimeAttributes = new Set(['allow', 'allowfullscreen', 'allowpaymentrequest', 'credentialless', 'csp', 'fetchpriority', 'loading', 'name', 'referrerpolicy', 'sandbox', 'src']);
 const FormRuntimeAttributes = new Set(['accept-charset', 'action', 'autocomplete', 'enctype', 'method', 'novalidate', 'target']);
 const FormSubmitterTags = new Set(['button', 'input']);
 const FormSubmitterRuntimeAttributes = new Set(['form', 'formaction', 'formenctype', 'formmethod', 'formnovalidate', 'formtarget', 'type']);
 const FormControlTags = new Set(['button', 'fieldset', 'input', 'optgroup', 'option', 'output', 'select', 'textarea']);
 const FormControlRuntimeAttributes = new Set(['accept', 'autocomplete', 'capture', 'checked', 'disabled', 'form', 'list', 'max', 'maxlength', 'min', 'minlength', 'multiple', 'name', 'pattern', 'readonly', 'required', 'selected', 'size', 'step', 'value']);
+const AnchorNavigationRuntimeAttributes = new Set(['download', 'href', 'ping', 'referrerpolicy', 'target']);
 const BaseRuntimeAttributes = new Set(['href', 'target']);
 const MetaRuntimeAttributes = new Set(['charset', 'content', 'http-equiv', 'media', 'name', 'property']);
 const ResourceLoadingTags = new Set(['audio', 'embed', 'img', 'link', 'object', 'source', 'track', 'video']);

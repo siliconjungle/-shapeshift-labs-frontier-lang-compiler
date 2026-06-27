@@ -2,7 +2,8 @@ import { hashText, safeId } from './js-ts-safe-project-merge-core.js';
 
 const CssDependencyGraphProofGap = 'css-dependency-graph-proof-unproved';
 const CssDependencyGraphConflict = 'css-dependency-graph-proof-blocked';
-const ProjectProofLevel = 'css-custom-property-dependency-graph-project-source-bound';
+const CustomPropertyProjectProofLevel = 'css-custom-property-dependency-graph-project-source-bound';
+const VarFallbackProjectProofLevel = 'css-var-fallback-dependency-graph-project-source-bound';
 const SourceBoundDependencyGraphProofKind = 'css-source-bound-dependency-graph-proof';
 const SynthesizableDependencyKinds = new Set(['custom-property-definition', 'custom-property-reference']);
 
@@ -48,26 +49,43 @@ function canSynthesizeDependencyChange(change) {
 }
 
 function projectCssDependencyGraphProof({ sourcePath, evidence, change, firstResult, base, worker, head, index }) {
+  const dependencyKinds = uniqueStrings([...(change.before?.dependencyKinds ?? []), ...(change.after?.dependencyKinds ?? [])]);
+  const varFallbackReferenceHashes = varFallbackHashesForChange(evidence, change);
   return {
     id: `project_css_dependency_graph_${safeId(sourcePath)}_${index}`,
     kind: SourceBoundDependencyGraphProofKind,
     status: 'passed',
-    proofLevel: ProjectProofLevel,
+    proofLevel: Object.keys(varFallbackReferenceHashes).length ? VarFallbackProjectProofLevel : CustomPropertyProjectProofLevel,
     sourcePath,
     reasonCode: change.reasonCode,
     side: change.side,
     cascadeKey: change.cascadeKey,
-    dependencyKinds: uniqueStrings([...(change.before?.dependencyKinds ?? []), ...(change.after?.dependencyKinds ?? [])]),
+    dependencyKinds,
     baseSourceHash: hashText(base),
     workerSourceHash: hashText(worker),
     headSourceHash: hashText(head),
     outputSourceHash: firstResult.candidateMergedSourceHash,
     dependencyGraphHashes: dependencyGraphHashes(evidence),
     cssDependencyGraphHashes: cssDependencyGraphHashes(evidence),
+    varFallbackReferenceHashes,
     browserCascadeEquivalenceClaim: false,
     browserRenderEquivalenceClaim: false,
     semanticEquivalenceClaim: false
   };
+}
+
+function varFallbackHashesForChange(evidence, change) {
+  const hashes = compactRecord({
+    base: varFallbackHashesForCascadeKey(evidence.sides?.base, change.cascadeKey),
+    [change.side]: varFallbackHashesForCascadeKey(evidence.sides?.[change.side], change.cascadeKey)
+  });
+  return Object.fromEntries(Object.entries(hashes).filter(([, values]) => values.length > 0));
+}
+
+function varFallbackHashesForCascadeKey(sideEvidence, cascadeKey) {
+  return uniqueStrings((sideEvidence?.records?.customPropertyReferences ?? [])
+    .filter((record) => record.cascadeKey === cascadeKey && record.hasFallback === true)
+    .map((record) => record.fallbackHash));
 }
 
 function dependencyGraphHashes(evidence) {

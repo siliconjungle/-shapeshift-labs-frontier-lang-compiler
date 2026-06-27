@@ -1,5 +1,6 @@
 import { assert } from './helpers.mjs';
 import { importNativeProject, importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
+import { matrixSurface } from './html-css-merge-test-helpers.mjs';
 
 const cssModuleSpecifier = './Button.module.css';
 const buttonSourceText = [
@@ -46,7 +47,6 @@ const readyCssModuleSourceText = [
   '.label { display: block; }',
   ''
 ].join('\n');
-
 const project = await importNativeProject({
   language: 'mixed',
   sources: [
@@ -277,41 +277,3 @@ const readyCssModuleSurface = matrixSurface(readyCssModuleProject, 'css-modules-
 assert.equal(readyCssModuleSurface.proofStatuses['css-module-use-site-graph'], 'passed');
 assert.equal((readyCssModuleSurface.missingRouteIds ?? []).includes('prove-css-module-use-site-graph'), false);
 assert.equal(matrixSurface(readyCssModuleProject, 'css-modules-generated-class-name-map').proofStatuses['css-module-generated-class-name-map'], 'passed'); assert.equal(matrixSurface(readyCssModuleProject, 'css-modules-bundler-transform-identity').proofStatuses['css-module-bundler-transform-identity'], 'passed'); assert.equal(matrixSurface(readyCssModuleProject, 'css-modules-source-map-identity').proofStatuses['css-module-source-map-identity'], 'passed');
-
-const unsafeHelperButtonSourceText = [
-  `import readyStyles from '${readyCssModuleSpecifier}';`,
-  'const cx = (...values) => values.filter(Boolean).join(" ");',
-  'function choose(value) { return value; }',
-  'export function UnsafeHelperButton() {',
-  '  return <button className={cx(readyStyles.root, choose(readyStyles.label))} />;',
-  '}',
-  ''
-].join('\n');
-const unsafeHelperProject = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_module_unsafe_helper_call',
-  includeOutputProjectSymbolGraph: true,
-  outputProjectImports: [readyCssModuleImport],
-  files: [
-    {
-      language: 'css',
-      sourcePath: 'src/Ready.module.css',
-      headSourceText: readyCssModuleSourceText
-    },
-    {
-      language: 'tsx',
-      sourcePath: 'src/UnsafeReady.tsx',
-      baseSourceText: unsafeHelperButtonSourceText,
-      workerSourceText: unsafeHelperButtonSourceText,
-      headSourceText: unsafeHelperButtonSourceText
-    }
-  ]
-});
-assert.equal(unsafeHelperProject.status, 'blocked');
-assert.equal(unsafeHelperProject.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-helper-call-unproved'), true);
-assert.equal(unsafeHelperProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].status, 'blocked');
-
-function matrixSurface(result, surface) {
-  const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);
-  assert.ok(record, `missing ${surface} matrix surface`);
-  return record;
-}
