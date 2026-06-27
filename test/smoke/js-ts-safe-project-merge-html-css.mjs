@@ -115,7 +115,7 @@ assert.equal(htmlDuplicateIdentityProject.summary.htmlIdentityEvidenceFiles, 0);
 assert.equal(htmlDuplicateIdentityProject.summary.htmlIdentityEvidenceFailedFiles, 1);
 assert.equal(htmlDuplicateIdentityProject.summary.htmlDuplicateIdentityEvidenceFiles, 1);
 assert.equal(htmlDuplicateIdentityProject.summary.htmlDuplicateIdentityKeys, 3);
-assert.equal(htmlDuplicateIdentityProject.conflicts.some((conflict) => conflict.code === 'html-duplicate-identity-blocked'), true);
+assert.equal(htmlDuplicateIdentityProject.conflicts.some((conflict) => conflict.code === 'html-duplicate-explicit-identity'), true);
 assert.equal(htmlDuplicateIdentityProject.conflicts.some((conflict) => conflict.details.reasonCode === 'html-duplicate-explicit-identity'), true);
 const htmlDuplicateIdentitySurface = matrixSurface(htmlDuplicateIdentityProject, 'html-identity-evidence');
 assert.equal(htmlDuplicateIdentitySurface.proofStatuses['html-identity-evidence'], 'failed');
