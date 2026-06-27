@@ -14,9 +14,11 @@ function maybeMergeHtmlCssProjectFile(options) {
   if (!merge) return undefined;
   const resultId = `${projectId}_${safeId(file.sourcePath)}`;
   const mergeOptions = htmlCssMergeOptionsForProjectFile(input, file.sourcePath, language);
-  const result = merge({ ...sourceInput, ...mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head });
+  const runtimeBoundaryProofs = language === 'html' ? htmlRuntimeBoundaryProofCandidates(input, file.sourcePath, mergeOptions) : [];
+  const runtimeBoundaryMergeOptions = runtimeBoundaryProofs.length ? { htmlRuntimeBoundaryProofs: runtimeBoundaryProofs, htmlSourceBoundRuntimeBoundaryProofs: runtimeBoundaryProofs } : {};
+  const result = merge({ ...sourceInput, ...mergeOptions, ...context, ...runtimeBoundaryMergeOptions, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head });
   const admittedResult = language === 'html' && result.status === 'merged'
-    ? blockHtmlProofGapChanges({ result, id: resultId, sourcePath: file.sourcePath, base, worker, head, runtimeBoundaryProofs: htmlRuntimeBoundaryProofCandidates(input, file.sourcePath, mergeOptions) }) ?? result
+    ? blockHtmlProofGapChanges({ result, id: resultId, sourcePath: file.sourcePath, base, worker, head, runtimeBoundaryProofs }) ?? result
     : result;
   return admittedResult.status === 'merged' ? mergedHtmlCssFile(file, context, admittedResult, language) : blockedHtmlCssFile(file, context, admittedResult);
 }
@@ -291,9 +293,23 @@ function mergedHtmlCssFile(file, context, result, language) {
 }
 
 function blockedHtmlCssFile(file, context, result) {
-  return compactRecord({
-    kind: 'frontier.lang.jsTsProjectSafeMergeFile', version: 1, sourcePath: file.sourcePath, language: context.language, status: 'blocked', operation: 'blocked-merge',
-    result, conflicts: result.conflicts ?? [], admission: result.admission, summary: result.summary, conflictKeys: [`source#${file.sourcePath}`]
+  const conflicts = normalizeHtmlCssConflicts(result.conflicts ?? [], context.language);
+  const admission = blockedHtmlCssAdmission(result.admission, context.language);
+  const normalizedResult = compactRecord({ ...result, conflicts, admission });
+  return compactRecord({ kind: 'frontier.lang.jsTsProjectSafeMergeFile', version: 1, sourcePath: file.sourcePath, language: context.language, status: 'blocked', operation: 'blocked-merge', result: normalizedResult, conflicts, admission, summary: result.summary, conflictKeys: [`source#${file.sourcePath}`] });
+}
+
+function blockedHtmlCssAdmission(admission = {}, language) {
+  return compactRecord({ ...admission, browserRuntimeEquivalenceClaim: language === 'html' ? false : admission.browserRuntimeEquivalenceClaim, browserCascadeEquivalenceClaim: language === 'css' ? false : admission.browserCascadeEquivalenceClaim, browserRenderEquivalenceClaim: language === 'css' ? false : admission.browserRenderEquivalenceClaim });
+}
+
+function normalizeHtmlCssConflicts(conflicts, language) {
+  if (language !== 'html') return conflicts;
+  return conflicts.map((conflict) => {
+    const reasonCode = conflict.details?.reasonCode;
+    if (conflict.code !== 'html-proof-gap-blocked' || !reasonCode) return conflict;
+    const proofGap = { ...(conflict.details?.proofGap ?? {}), summary: conflict.details?.proofGap?.summary ?? htmlProofGapSummary(reasonCode), nextProof: conflict.details?.proofGap?.nextProof ?? htmlProofGapNextProof(reasonCode) };
+    return { ...conflict, details: { ...(conflict.details ?? {}), proofGap } };
   });
 }
 
