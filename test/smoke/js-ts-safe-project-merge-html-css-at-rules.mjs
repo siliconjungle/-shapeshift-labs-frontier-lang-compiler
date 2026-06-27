@@ -67,13 +67,24 @@ const propertyUnproved = safeMergeJsTsProject({
   files: [{ sourcePath: propertyPath, baseSourceText: propertyBase, workerSourceText: propertyWorker, headSourceText: propertyHead }]
 });
 assert.equal(propertyUnproved.status, 'blocked');
+assert.equal(propertyUnproved.summary.cssRuntimeDescriptorFiles, 1);
+assert.equal(propertyUnproved.summary.cssRuntimeDescriptorEvidenceFiles, 1);
+assert.equal(propertyUnproved.summary.cssRuntimeDescriptorBlockedFiles, 0);
+assert.equal(propertyUnproved.summary.cssPropertyDescriptorFiles, 1);
+assert.equal(propertyUnproved.summary.cssPropertyDescriptorEvidenceFiles, 1);
+assert.equal(propertyUnproved.summary.cssPageDescriptorFiles, 0);
+assert.equal(propertyUnproved.summary.htmlCssBrowserRuntimeProofs, 0);
 assert.equal(propertyUnproved.conflicts.some((item) => item.details.reasonCode === 'css-property-runtime-equivalence-unproved'), true);
+assert.equal(matrixSurface(propertyUnproved, 'css-runtime-descriptor-evidence').proofStatuses['css-runtime-descriptor-evidence'], 'passed');
 const propertyProven = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_property_proven',
   cssMergeOptionsByPath: { [propertyPath]: { cssCascadeRuntimeProofs: [runtimeProof({ id: 'proof_css_project_property_runtime', sourcePath: propertyPath, reasonCode: 'css-property-runtime-equivalence-unproved', shapeKey: 'at-rule:property::--brand-hue', base: propertyBase, worker: propertyWorker, head: propertyHead, output: propertyOutput })] } },
   files: [{ sourcePath: propertyPath, baseSourceText: propertyBase, workerSourceText: propertyWorker, headSourceText: propertyHead }]
 });
 assert.equal(propertyProven.status, 'merged');
+assert.equal(propertyProven.summary.cssRuntimeDescriptorFiles, 1);
+assert.equal(propertyProven.summary.cssRuntimeDescriptorEvidenceFiles, 1);
+assert.equal(propertyProven.summary.cssPropertyDescriptorEvidenceFiles, 1);
 assert.equal(propertyProven.summary.htmlCssBrowserRuntimeProofs, 1);
 assert.equal(propertyProven.outputFiles[0].sourceText, propertyOutput);
 
@@ -87,16 +98,33 @@ const pageUnproved = safeMergeJsTsProject({
   files: [{ sourcePath: pagePath, baseSourceText: pageBase, workerSourceText: pageWorker, headSourceText: pageHead }]
 });
 assert.equal(pageUnproved.status, 'blocked');
+assert.equal(pageUnproved.summary.cssRuntimeDescriptorFiles, 1);
+assert.equal(pageUnproved.summary.cssRuntimeDescriptorEvidenceFiles, 1);
+assert.equal(pageUnproved.summary.cssRuntimeDescriptorBlockedFiles, 0);
+assert.equal(pageUnproved.summary.cssPropertyDescriptorFiles, 0);
+assert.equal(pageUnproved.summary.cssPageDescriptorFiles, 1);
+assert.equal(pageUnproved.summary.cssPageDescriptorEvidenceFiles, 1);
+assert.equal(pageUnproved.summary.htmlCssBrowserRuntimeProofs, 0);
 assert.equal(pageUnproved.conflicts.some((item) => item.details.reasonCode === 'css-page-runtime-equivalence-unproved'), true);
+assert.equal(matrixSurface(pageUnproved, 'css-runtime-descriptor-evidence').proofStatuses['css-runtime-descriptor-evidence'], 'passed');
 const pageProven = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_page_proven',
   cssMergeOptionsByPath: { [pagePath]: { cssCascadeRuntimeProofs: [runtimeProof({ id: 'proof_css_project_page_runtime', sourcePath: pagePath, reasonCode: 'css-page-runtime-equivalence-unproved', shapeKey: 'at-rule:page::', base: pageBase, worker: pageWorker, head: pageHead, output: pageOutput })] } },
   files: [{ sourcePath: pagePath, baseSourceText: pageBase, workerSourceText: pageWorker, headSourceText: pageHead }]
 });
 assert.equal(pageProven.status, 'merged');
+assert.equal(pageProven.summary.cssRuntimeDescriptorFiles, 1);
+assert.equal(pageProven.summary.cssRuntimeDescriptorEvidenceFiles, 1);
+assert.equal(pageProven.summary.cssPageDescriptorEvidenceFiles, 1);
 assert.equal(pageProven.summary.htmlCssBrowserRuntimeProofs, 1);
 assert.equal(pageProven.outputFiles[0].sourceText, pageOutput);
 
 function runtimeProof({ id, sourcePath, reasonCode, shapeKey, base, worker, head, output }) {
   return { id, kind: 'css-source-bound-cascade-runtime-proof', status: 'passed', sourcePath, reasonCode, side: 'worker', shapeKey, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output) };
+}
+
+function matrixSurface(result, surface) {
+  const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);
+  assert.ok(record, `missing ${surface} matrix surface`);
+  return record;
 }
