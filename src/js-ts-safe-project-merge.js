@@ -20,6 +20,7 @@ import { applyProjectSymbolRenameClassifications, classifyProjectSymbolRenames }
 import { applyProjectSplitMergeClassifications, classifyProjectSplitMerges } from './js-ts-safe-project-merge-split-merge.js';
 import { projectConfidence, projectEvidence, projectSummary, projectSummaryWithConfidenceEvidence } from './js-ts-safe-project-merge-summary.js';
 import { maybeMergeHtmlCssProjectFile, projectFileLanguage } from './js-ts-safe-project-merge-html-css.js';
+import { createProjectCssModuleMergeEvidence, mergeOutputProjectImports, projectCssModuleOutputProjectImports } from './js-ts-safe-project-merge-css-module-proofs.js';
 
 function safeMergeJsTsProject(input = {}) {
   const id = String(input.id ?? 'js_ts_project_safe_merge');
@@ -27,7 +28,8 @@ function safeMergeJsTsProject(input = {}) {
   const projectMoveRenames = classifyProjectMoveRenames(files, input, id);
   const projectSymbolRenames = classifyProjectSymbolRenames(files, input);
   const projectSplitMerges = classifyProjectSplitMerges(files);
-  const mergedFileResults = files.map((file) => mergeProjectFile(file, input, id, projectSymbolRenames));
+  const projectCssModuleMergeEvidence = createProjectCssModuleMergeEvidence(input, files, id);
+  const mergedFileResults = files.map((file) => mergeProjectFile(file, input, id, projectSymbolRenames, projectCssModuleMergeEvidence));
   const fileResults = applyProjectSplitMergeClassifications(
     applyProjectSymbolRenameClassifications(
       applyProjectMoveRenameClassifications(mergedFileResults, projectMoveRenames, files, input),
@@ -63,6 +65,7 @@ function safeMergeJsTsProject(input = {}) {
       parserTriviaEvidence: outputParserTriviaEvidence(inputFilesByPath.get(file.sourcePath), file),
       operation: file.operation
     }));
+  const graphInput = mergeOutputProjectImports(input, projectCssModuleOutputProjectImports(projectCssModuleMergeEvidence, fileResults, input));
   const outputDeclarationGate = blockedFiles.length === 0
     ? createJsTsProjectMergeDeclarationGate(input, outputFiles, id)
     : undefined;
@@ -70,10 +73,10 @@ function safeMergeJsTsProject(input = {}) {
     ? createJsTsProjectMergeDeclarationEmitParityProof(input, files, outputFiles, id)
     : undefined;
   const projectGraphDelta = blockedFiles.length === 0 && input.includeProjectGraphDelta
-    ? createJsTsProjectSafeMergeGraphDelta(input, files, outputFiles, id)
+    ? createJsTsProjectSafeMergeGraphDelta(graphInput, files, outputFiles, id)
     : undefined;
   const graphArtifacts = projectGraphDelta?.stages?.output ?? (blockedFiles.length === 0 && input.includeOutputProjectSymbolGraph
-    ? createJsTsProjectSafeMergeGraphArtifacts(input, outputFiles, id)
+    ? createJsTsProjectSafeMergeGraphArtifacts(graphInput, outputFiles, id)
     : undefined);
   const outputDiagnosticsGate = blockedFiles.length === 0
     ? createJsTsProjectMergeDiagnosticsGate(input, outputFiles, id, { fileResults })
@@ -212,7 +215,7 @@ function outputParserTriviaEvidence(file, resultFile) {
     : undefined;
 }
 
-function mergeProjectFile(file, input, projectId, projectSymbolRenames) {
+function mergeProjectFile(file, input, projectId, projectSymbolRenames, projectCssModuleMergeEvidence) {
   const base = file.baseSourceText;
   const worker = file.workerDeleted ? undefined : file.workerSourceText ?? base;
   const head = file.headDeleted ? undefined : file.headSourceText ?? base;
@@ -243,7 +246,7 @@ function mergeProjectFile(file, input, projectId, projectSymbolRenames) {
       ? syntheticFile(file, context, undefined, 'head-deleted-worker-unchanged')
       : blockedFile(file, context, 'head-file-delete-conflict');
   }
-  const nonJsTsMerge = maybeMergeHtmlCssProjectFile({ file, input, projectId, context, base, worker, head, sourceInput: sourceMergeInputForProjectFile(input) });
+  const nonJsTsMerge = maybeMergeHtmlCssProjectFile({ file, input, projectId, context, base, worker, head, sourceInput: sourceMergeInputForProjectFile(input), projectCssModuleMergeEvidence });
   if (nonJsTsMerge) return nonJsTsMerge;
   const result = safeMergeJsTsSource({
     ...sourceMergeInputForProjectFile(input),

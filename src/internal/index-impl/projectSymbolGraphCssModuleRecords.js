@@ -185,6 +185,13 @@ function cssModuleUseSiteGraphRecords(importBindings, useSites, blockers) {
 }
 
 function cssModuleUseSiteGraphRecord(cssModuleSourcePath, bindings, graphUseSites, graphBlockers) {
+  const jsTsUseSiteGraphHash = hashSemanticValue({
+    kind: 'frontier.lang.cssModuleJsTsUseSiteGraph.v1',
+    cssModuleSourcePath,
+    bindings: bindings.map(cssModuleUseSiteBindingSignature).sort(stableStringCompare),
+    useSites: graphUseSites.map(cssModuleUseSiteSignature).sort(stableStringCompare),
+    blockers: graphBlockers.map(cssModuleUseSiteBlockerSignature).sort(stableStringCompare)
+  });
   const graphHash = hashSemanticValue({
     kind: 'frontier.lang.cssModuleUseSiteGraph.v1',
     cssModuleSourcePath,
@@ -208,12 +215,55 @@ function cssModuleUseSiteGraphRecord(cssModuleSourcePath, bindings, graphUseSite
     cssModuleExportNamesHash: bindings.find((binding) => binding.cssModuleExportNamesHash)?.cssModuleExportNamesHash,
     bundlerTransformHash: bindings.find((binding) => binding.bundlerTransformHash)?.bundlerTransformHash,
     sourceMapProofHash: bindings.find((binding) => binding.sourceMapProofHash)?.sourceMapProofHash,
+    jsTsUseSiteGraphHash,
     status: graphBlockers.length ? 'blocked' : 'ready',
     graphHash,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   });
 }
+
+function cssModuleUseSiteBindingSignature(binding) {
+  return JSON.stringify({
+    sourcePath: binding.sourcePath,
+    sourceHash: binding.sourceHash,
+    moduleSpecifier: binding.moduleSpecifier,
+    resolvedModulePath: binding.resolvedModulePath,
+    importKind: binding.importKind,
+    importedName: binding.importedName,
+    localName: binding.localName
+  });
+}
+
+function cssModuleUseSiteSignature(site) {
+  return JSON.stringify({
+    jsSourcePath: site.jsSourcePath,
+    jsSourceHash: site.jsSourceHash,
+    exportName: site.exportName,
+    useSiteKind: site.useSiteKind,
+    accessKind: site.accessKind,
+    receiverLocalName: site.receiverLocalName,
+    localReferenceName: site.localReferenceName,
+    expressionText: site.expressionText,
+    sourceSpan: semanticSpanForHash(site.sourceSpan),
+    conditionalRuntimePresence: site.conditionalRuntimePresence
+  });
+}
+
+function cssModuleUseSiteBlockerSignature(blocker) {
+  return JSON.stringify({
+    sourcePath: blocker.sourcePath,
+    sourceHash: blocker.sourceHash,
+    moduleSpecifier: blocker.moduleSpecifier,
+    localName: blocker.localName,
+    expressionText: blocker.expressionText,
+    reasonCode: blocker.reasonCode,
+    writeOperation: blocker.writeOperation,
+    sourceSpan: semanticSpanForHash(blocker.sourceSpan)
+  });
+}
+
+function stableStringCompare(left, right) { return left.localeCompare(right); }
 
 function cssModuleExportHash(binding, exportName) {
   if (!exportName || !Array.isArray(binding.cssModuleExportNames) || !binding.cssModuleExportNames.includes(exportName)) return undefined;
@@ -260,13 +310,4 @@ function uniqueSortedStrings(values) {
   return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))].sort();
 }
 
-export {
-  cssModuleAccessBlocker,
-  cssModuleBindingBlocker,
-  cssModuleImportBindingRecord,
-  cssModuleMissingExportBlockers,
-  cssModulePropBlocker,
-  cssModuleTransformBlockers,
-  cssModuleUseSiteGraphRecords,
-  cssModuleUseSiteRecord
-};
+export { cssModuleAccessBlocker, cssModuleBindingBlocker, cssModuleImportBindingRecord, cssModuleMissingExportBlockers, cssModulePropBlocker, cssModuleTransformBlockers, cssModuleUseSiteGraphRecords, cssModuleUseSiteRecord };

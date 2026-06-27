@@ -2,6 +2,7 @@ import { safeMergeCssSource } from '@shapeshift-labs/frontier-lang-css';
 import { safeMergeHtmlSource } from '@shapeshift-labs/frontier-lang-html';
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { hashText, safeId, uniqueStrings } from './js-ts-safe-project-merge-core.js';
+import { projectCssModuleMergeOptionsForFile, projectCssModuleProofOptionsForBlockedMerge } from './js-ts-safe-project-merge-css-module-proofs.js';
 import { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult } from './js-ts-safe-project-merge-html-runtime-boundaries.js';
 
 function projectFileLanguage(file, input) {
@@ -9,15 +10,26 @@ function projectFileLanguage(file, input) {
 }
 
 function maybeMergeHtmlCssProjectFile(options) {
-  const { file, input, projectId, context, base, worker, head, sourceInput } = options;
+  const { file, input, projectId, context, base, worker, head, sourceInput, projectCssModuleMergeEvidence } = options;
   const language = String(context.language ?? '').toLowerCase();
   const merge = language === 'html' ? safeMergeHtmlSource : language === 'css' ? safeMergeCssSource : undefined;
   if (!merge) return undefined;
   const resultId = `${projectId}_${safeId(file.sourcePath)}`;
-  const mergeOptions = htmlCssMergeOptionsForProjectFile(input, file.sourcePath, language);
+  const mergeOptions = {
+    ...htmlCssMergeOptionsForProjectFile(input, file.sourcePath, language),
+    ...(language === 'css' ? projectCssModuleMergeOptionsForFile(projectCssModuleMergeEvidence, file.sourcePath) : {})
+  };
   const runtimeBoundaryProofs = language === 'html' ? htmlRuntimeBoundaryProofCandidates(input, file.sourcePath, mergeOptions) : [];
   const runtimeBoundaryMergeOptions = runtimeBoundaryProofs.length ? { htmlRuntimeBoundaryProofs: runtimeBoundaryProofs, htmlSourceBoundRuntimeBoundaryProofs: runtimeBoundaryProofs } : {};
-  const result = merge({ ...sourceInput, ...mergeOptions, ...context, ...runtimeBoundaryMergeOptions, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head });
+  let result = merge({ ...sourceInput, ...mergeOptions, ...context, ...runtimeBoundaryMergeOptions, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: language === 'css' || sourceInput.includeBlockedMergeCandidate === true });
+  if (language === 'css' && result.status === 'blocked') {
+    const proofOptions = projectCssModuleProofOptionsForBlockedMerge({ evidence: projectCssModuleMergeEvidence, sourcePath: file.sourcePath, mergeOptions, firstResult: result, base, worker, head });
+    if (proofOptions?.mergeOptions) {
+      result = merge({ ...sourceInput, ...mergeOptions, ...proofOptions.mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head });
+    } else if (proofOptions?.result) {
+      result = proofOptions.result;
+    }
+  }
   const admittedResult = language === 'html' && result.status === 'merged'
     ? blockHtmlProofGapChanges({ result, id: resultId, sourcePath: file.sourcePath, base, worker, head, runtimeBoundaryProofs }) ?? result
     : result;

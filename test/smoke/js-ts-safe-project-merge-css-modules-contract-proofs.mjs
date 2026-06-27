@@ -4,6 +4,7 @@ import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
 
 const sourcePath = 'src/Button.module.css';
+const buttonCssModuleSpecifier = './Button.module' + '.css';
 const generatedClassNameMap = { root: 'Button_root__hash', label: 'Button_label__hash' };
 const jsTsUseSiteGraphHash = 'hash_css_module_use_sites';
 const baseSourceText = [
@@ -91,12 +92,78 @@ assert.equal(provenProject.files[0].result.workerChangedCssModuleContracts, 1);
 assert.equal(provenProject.outputFiles[0].sourceText, outputSourceText);
 assert.equal(matrixSurface(provenProject, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'passed');
 
+const projectSynthesizedProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_contract_project_synthesized_proof',
+  includeOutputProjectSymbolGraph: true,
+  cssMergeOptionsByPath: {
+    [sourcePath]: {
+      generatedClassNameMap,
+      bundlerTransformHash: 'bundler-transform:button-module',
+      sourceMapProofHash: 'source-map-proof:button-module'
+    }
+  },
+  files: [
+    { language: 'css', sourcePath, baseSourceText, workerSourceText, headSourceText },
+    {
+      language: 'tsx',
+      sourcePath: 'src/Button.tsx',
+      baseSourceText: [
+        `import styles from '${buttonCssModuleSpecifier}';`,
+        'export function Button() { return <button className={styles.root} />; }',
+        ''
+      ].join('\n'),
+      workerSourceText: [
+        `import styles from '${buttonCssModuleSpecifier}';`,
+        'export function Button() { return <button className={styles.root} />; }',
+        ''
+      ].join('\n'),
+      headSourceText: [
+        `import styles from '${buttonCssModuleSpecifier}';`,
+        'export function Button() { return <button className={styles.root} />; }',
+        ''
+      ].join('\n')
+    }
+  ]
+});
+assert.equal(projectSynthesizedProof.status, 'merged');
+const synthesizedCssFile = projectSynthesizedProof.files.find((file) => file.sourcePath === sourcePath);
+assert.equal(synthesizedCssFile.result.cssModuleContractProofs.length >= 1, true);
+assert.equal(synthesizedCssFile.result.cssModuleContractProofs.some((proof) => proof.proofLevel === 'css-module-contract-project-source-bound'), true);
+assert.equal(synthesizedCssFile.result.cssModuleContractProofs.every((proof) => proof.jsTsUseSiteGraphHash?.startsWith('fnv1a32:')), true);
+assert.equal(synthesizedCssFile.result.cssModuleContractProofs.every((proof) => proof.bundlerTransformHash === 'bundler-transform:button-module'), true);
+assert.equal(synthesizedCssFile.result.cssModuleContractProofs.every((proof) => proof.sourceMapProofHash === 'source-map-proof:button-module'), true);
+assert.equal(projectSynthesizedProof.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].status, 'ready');
+assert.equal(typeof projectSynthesizedProof.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].jsTsUseSiteGraphHash, 'string');
+
+const projectMissingBundlerProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_contract_project_synthesis_missing_transform_proof',
+  cssMergeOptionsByPath: {
+    [sourcePath]: { generatedClassNameMap }
+  },
+  files: projectSynthesizedProofInputFiles()
+});
+assert.equal(projectMissingBundlerProof.status, 'blocked');
+assert.equal(projectMissingBundlerProof.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-bundler-transform-identity-unproved'), true);
+assert.equal(projectMissingBundlerProof.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-source-map-proof-unproved'), true);
+
 function mergeButtonModuleProject(id, cssOptions = {}) {
   return safeMergeJsTsProject({
     id,
     cssMergeOptionsByPath: { [sourcePath]: cssOptions },
     files: [{ language: 'css', sourcePath, baseSourceText, workerSourceText, headSourceText }]
   });
+}
+
+function projectSynthesizedProofInputFiles() {
+  const buttonTsx = [
+    `import styles from '${buttonCssModuleSpecifier}';`,
+    'export function Button() { return <button className={styles.root} />; }',
+    ''
+  ].join('\n');
+  return [
+    { language: 'css', sourcePath, baseSourceText, workerSourceText, headSourceText },
+    { language: 'tsx', sourcePath: 'src/Button.tsx', baseSourceText: buttonTsx, workerSourceText: buttonTsx, headSourceText: buttonTsx }
+  ];
 }
 
 function matrixSurface(result, surface) {
