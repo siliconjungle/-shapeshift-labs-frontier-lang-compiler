@@ -1,4 +1,6 @@
 import { assert } from './helpers.mjs';
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
+import { parseCssSemanticSheet } from '@shapeshift-labs/frontier-lang-css';
 import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
 import { fileAdmissionEvidenceRecords } from '../../src/js-ts-safe-project-merge-evidence-routing.js';
 
@@ -57,16 +59,58 @@ const cssDependencyMissingProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_dependency_graph_missing',
   files: [{ sourcePath: 'src/spinner.css', baseSourceText: dependencyCssBase, workerSourceText: dependencyCssWorker, headSourceText: dependencyCssHead }]
 });
-assert.equal(cssDependencyMissingProof.status, 'merged');
+assert.equal(cssDependencyMissingProof.status, 'blocked');
 assert.equal(cssDependencyMissingProof.summary.cssDependencySurfaceFiles, 1);
 assert.equal(cssDependencyMissingProof.summary.cssDependencyGraphEvidenceFiles, 1);
 assert.equal(cssDependencyMissingProof.summary.cssDependencyGraphMissingProofFiles, 0);
-assert.equal(cssDependencyMissingProof.summary.cssDependencyGraphBlockedFiles, 0);
-assert.equal(cssDependencyMissingProof.confidence.missingSignals.includes('css-dependency-graph-evidence-missing'), false);
+assert.equal(cssDependencyMissingProof.summary.cssDependencyGraphBlockedFiles, 1);
+assert.equal(cssDependencyMissingProof.confidence.missingSignals.includes('css-dependency-graph-evidence-missing'), true);
 const cssDependencySurface = matrixSurface(cssDependencyMissingProof, 'css-dependency-graph-evidence');
-assert.equal(cssDependencySurface.proofStatuses['css-dependency-graph'], 'passed');
-assert.equal(cssDependencySurface.missingRouteIds.includes('prove-css-dependency-graph'), false);
+assert.equal(cssDependencySurface.proofStatuses['css-dependency-graph'], 'failed');
+assert.equal(cssDependencySurface.missingRouteIds.includes('prove-css-dependency-graph'), true);
 assert.equal(matrixSurface(cssDependencyMissingProof, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
+
+const dependencyCssOutput = [
+  ':root {',
+  '  --motion-name: slide;',
+  '  --spinner-asset: url("./spinner.svg");',
+  '}',
+  '',
+  '.spinner {',
+  '  animation-name: var(--motion-name, fade);',
+  '  background-image: var(--spinner-asset, url("./fallback.svg"));',
+  '  color: blue;',
+  '}',
+  ''
+].join('\n');
+const dependencyGraphHash = (sourceText) => parseCssSemanticSheet(sourceText, { sourcePath: 'src/spinner.css' }).dependencyGraphEvidence.dependencyGraphHash;
+const cssDependencyWithProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_dependency_graph_proven',
+  cssMergeOptionsByPath: {
+    'src/spinner.css': {
+      cssDependencyGraphProofs: [{
+        id: 'proof_css_dependency_graph_motion_name',
+        kind: 'css-source-bound-dependency-graph-proof',
+        status: 'passed',
+        sourcePath: 'src/spinner.css',
+        reasonCode: 'css-dependency-graph-proof-unproved',
+        side: 'worker',
+        cascadeKey: ':root::--motion-name',
+        baseSourceHash: hashSemanticValue(dependencyCssBase),
+        workerSourceHash: hashSemanticValue(dependencyCssWorker),
+        headSourceHash: hashSemanticValue(dependencyCssHead),
+        outputSourceHash: hashSemanticValue(dependencyCssOutput),
+        dependencyGraphHashes: { base: dependencyGraphHash(dependencyCssBase), worker: dependencyGraphHash(dependencyCssWorker), head: dependencyGraphHash(dependencyCssHead) }
+      }]
+    }
+  },
+  files: [{ sourcePath: 'src/spinner.css', baseSourceText: dependencyCssBase, workerSourceText: dependencyCssWorker, headSourceText: dependencyCssHead }]
+});
+assert.equal(cssDependencyWithProof.status, 'merged');
+assert.equal(cssDependencyWithProof.summary.cssDependencyGraphBlockedFiles, 0);
+assert.equal(cssDependencyWithProof.files[0].result.dependencyGraphProofs.length, 1);
+assert.equal(cssDependencyWithProof.outputFiles[0].sourceText, dependencyCssOutput);
+assert.equal(matrixSurface(cssDependencyWithProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'passed');
 
 const keyframesCssBase = [
   '@keyframes fade { from { opacity: 0; } to { opacity: 1; } }',

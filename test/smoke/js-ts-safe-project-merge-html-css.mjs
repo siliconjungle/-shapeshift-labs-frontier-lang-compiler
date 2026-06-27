@@ -178,7 +178,12 @@ assert.equal(cssSelectorMoveSurface.missingRouteIds.includes('prove-css-selector
 
 const cssSelectorMoveRebasedProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_selector_move_rebased',
-  cssMergeOptionsByPath: { 'src/button.css': { selectorTargetEquivalences: [{ fromSelectors: ['.button'], toSelectors: ['.primary'] }] } },
+  cssMergeOptionsByPath: {
+    'src/button.css': {
+      selectorTargetGraphHash: 'target-graph-v1',
+      selectorTargetEquivalences: [{ sourcePath: 'src/button.css', fromSelectors: ['.button'], toSelectors: ['.primary'], fromSpecificity: [[0, 1, 0]], toSpecificity: [[0, 1, 0]], graphHash: 'target-graph-v1' }]
+    }
+  },
   files: [{
     sourcePath: 'src/button.css',
     baseSourceText: '.button { color: red; }\n',
@@ -235,9 +240,14 @@ const cssSpecificSelectorListRebased = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_specific_selector_list_rebased',
   cssMergeOptionsByPath: {
     'src/button.css': {
+      selectorTargetGraphHash: 'specific-target-graph-v1',
       selectorTargetEquivalences: [{
+        sourcePath: 'src/button.css',
         fromSelectors: ['.card > .button:hover', '.toolbar .button::before'],
-        toSelectors: ['.card > .primary:hover', '.toolbar .button::before']
+        toSelectors: ['.card > .primary:hover', '.toolbar .button::before'],
+        fromSpecificity: [[0, 3, 0], [0, 3, 0]],
+        toSpecificity: [[0, 3, 0], [0, 3, 0]],
+        graphHash: 'specific-target-graph-v1'
       }]
     }
   },
@@ -251,7 +261,7 @@ const cssSpecificSelectorListRebased = safeMergeJsTsProject({
 assert.equal(cssSpecificSelectorListRebased.status, 'merged');
 assert.equal(cssSpecificSelectorListRebased.summary.cssSelectorTargetRebasedFiles, 1);
 assert.equal(cssSpecificSelectorListRebased.summary.cssSelectorSpecificityEvidenceFiles, 1);
-assert.equal(cssSpecificSelectorListRebased.summary.cssSelectorTargetGraphEvidenceFiles, 0);
+assert.equal(cssSpecificSelectorListRebased.summary.cssSelectorTargetGraphEvidenceFiles, 1);
 assert.match(cssSpecificSelectorListRebased.outputFiles[0].sourceText, /\.card > \.primary:hover, \.toolbar \.button::before \{/);
 assert.match(cssSpecificSelectorListRebased.outputFiles[0].sourceText, /background-color: white/);
 assert.equal(cssSpecificSelectorListRebased.files[0].result.selectorTargetEvidence.rebaseProofs[0].cascadeKey, '.card > .primary:hover,.toolbar .button::before::background-color');
