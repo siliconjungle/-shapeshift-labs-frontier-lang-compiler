@@ -137,6 +137,9 @@ function htmlProofGapSummary(reasonCode) {
   if (reasonCode === 'form-runtime-boundary') return 'HTML form runtime attributes affect submission, navigation, encoding, or validation and require source-bound host evidence.';
   if (reasonCode === 'form-submitter-runtime-boundary') return 'HTML submitter attributes affect form submission behavior and require source-bound host evidence.';
   if (reasonCode === 'form-control-runtime-boundary') return 'HTML form-control attributes affect user input, validation, state, or submission data and require source-bound host evidence.';
+  if (reasonCode === 'document-base-runtime-boundary') return 'HTML base attributes affect URL resolution or navigation targets and require source-bound host evidence.';
+  if (reasonCode === 'document-metadata-runtime-boundary') return 'HTML metadata attributes can affect document loading, policy, refresh, viewport, or discovery behavior and require source-bound host evidence.';
+  if (reasonCode === 'resource-loading-runtime-boundary') return 'HTML resource-loading attributes affect fetched resources, selection, privacy, media behavior, or layout and require source-bound host evidence.';
   return 'HTML proof gap requires source-bound evidence before structural merge admission.';
 }
 
@@ -146,6 +149,7 @@ function htmlProofGapNextProof(reasonCode) {
   if (reasonCode === 'inline-style-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary "html-inline-style-attribute", boundaryAttributes ["style"], and exact base/worker/head/output source text or hashes.';
   if (reasonCode === 'iframe-runtime-boundary' || reasonCode === 'iframe-srcdoc-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary, boundaryAttributes, and exact base/worker/head/output source text or hashes.';
   if (reasonCode === 'form-runtime-boundary' || reasonCode === 'form-submitter-runtime-boundary' || reasonCode === 'form-control-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary, boundaryAttributes, and exact base/worker/head/output source text or hashes.';
+  if (reasonCode === 'document-base-runtime-boundary' || reasonCode === 'document-metadata-runtime-boundary' || reasonCode === 'resource-loading-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary, boundaryAttributes, and exact base/worker/head/output source text or hashes.';
   return 'Attach source-bound HTML parser, identity, and runtime-boundary evidence for the changed file before structural admission.';
 }
 

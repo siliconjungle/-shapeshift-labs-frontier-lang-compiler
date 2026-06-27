@@ -139,6 +139,9 @@ function htmlRuntimeAttributeSpec(name, tagName) {
   if (tagName === 'form' && FormRuntimeAttributes.has(name)) return { boundary: 'html-form-runtime-attribute', reasonCode: 'form-runtime-boundary' };
   if (FormSubmitterTags.has(tagName) && FormSubmitterRuntimeAttributes.has(name)) return { boundary: 'html-form-submitter-runtime-attribute', reasonCode: 'form-submitter-runtime-boundary' };
   if (FormControlTags.has(tagName) && FormControlRuntimeAttributes.has(name)) return { boundary: 'html-form-control-runtime-attribute', reasonCode: 'form-control-runtime-boundary' };
+  if (tagName === 'base' && BaseRuntimeAttributes.has(name)) return { boundary: 'html-document-base-runtime-attribute', reasonCode: 'document-base-runtime-boundary' };
+  if (tagName === 'meta' && MetaRuntimeAttributes.has(name)) return { boundary: 'html-document-metadata-runtime-attribute', reasonCode: 'document-metadata-runtime-boundary' };
+  if (ResourceLoadingTags.has(tagName) && ResourceLoadingAttributes.has(name)) return { boundary: 'html-resource-loading-attribute', reasonCode: 'resource-loading-runtime-boundary' };
   return undefined;
 }
 
@@ -170,5 +173,9 @@ const FormSubmitterTags = new Set(['button', 'input']);
 const FormSubmitterRuntimeAttributes = new Set(['form', 'formaction', 'formenctype', 'formmethod', 'formnovalidate', 'formtarget', 'type']);
 const FormControlTags = new Set(['button', 'fieldset', 'input', 'optgroup', 'option', 'output', 'select', 'textarea']);
 const FormControlRuntimeAttributes = new Set(['accept', 'autocomplete', 'capture', 'checked', 'disabled', 'form', 'list', 'max', 'maxlength', 'min', 'minlength', 'multiple', 'name', 'pattern', 'readonly', 'required', 'selected', 'size', 'step', 'value']);
+const BaseRuntimeAttributes = new Set(['href', 'target']);
+const MetaRuntimeAttributes = new Set(['charset', 'content', 'http-equiv', 'media', 'name', 'property']);
+const ResourceLoadingTags = new Set(['audio', 'embed', 'img', 'link', 'object', 'source', 'track', 'video']);
+const ResourceLoadingAttributes = new Set(['as', 'autoplay', 'blocking', 'color', 'controls', 'controlslist', 'crossorigin', 'data', 'decoding', 'default', 'disablepictureinpicture', 'disableremoteplayback', 'fetchpriority', 'height', 'href', 'imagesizes', 'imagesrcset', 'integrity', 'ismap', 'kind', 'label', 'loading', 'loop', 'media', 'muted', 'poster', 'preload', 'referrerpolicy', 'rel', 'sizes', 'src', 'srcset', 'srclang', 'type', 'usemap', 'width']);
 
 export { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult };
