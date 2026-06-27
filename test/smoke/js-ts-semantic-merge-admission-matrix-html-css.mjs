@@ -1,5 +1,7 @@
 import { assert } from './helpers.mjs';
+import { readFileSync } from 'node:fs';
 import { safeMergeJsTsProject } from '../../src/index.js';
+import { htmlCssProjectMergeMatrixProofStatus } from '../../src/js-ts-safe-project-merge-html-css-matrix.js';
 
 const matrixCells = [
   { id: 'source-text-merge/baseline-candidate-recorded', status: 'done', support: 'baseline', evidence: 'js-ts-project-source-text-merge-candidate', note: 'project admission records the conservative concrete source merge candidate as the baseline reviewed by semantic proof surfaces' },
@@ -104,6 +106,111 @@ assert.equal(generatedClassNameMapSurface.missingRouteIds.includes('prove-css-mo
 assert.equal(bundlerTransformIdentitySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), true);
 assert.equal(sourceMapIdentitySurface.missingRouteIds.includes('prove-css-module-source-map-identity'), true);
 
+const htmlCssSummaryFieldOracles = [
+  {
+    surface: 'html-parser-source-evidence',
+    readmeLabel: 'HTML parser/source evidence',
+    cellId: 'html-parser-source-evidence',
+    support: 'bounded-evidence',
+    proofLevel: 'html-parser-source-evidence',
+    routeId: 'prove-html-parser-source-evidence',
+    fields: ['htmlFiles', 'htmlParserEvidenceFiles', 'htmlParserEvidenceFailedFiles'],
+    expectedProofStatus: (summary) => summary.htmlFiles ? (summary.htmlParserEvidenceFailedFiles ? 'failed' : summary.htmlParserEvidenceFiles === summary.htmlFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.htmlFiles && summary.htmlParserEvidenceFiles !== summary.htmlFiles)
+  },
+  {
+    surface: 'css-parser-source-evidence',
+    readmeLabel: 'CSS parser/source evidence',
+    cellId: 'css-parser-source-evidence',
+    support: 'bounded-evidence',
+    proofLevel: 'css-parser-source-evidence',
+    routeId: 'prove-css-parser-source-evidence',
+    fields: ['cssFiles', 'cssParserEvidenceFiles', 'cssParserEvidenceFailedFiles'],
+    expectedProofStatus: (summary) => summary.cssFiles ? (summary.cssParserEvidenceFailedFiles ? 'failed' : summary.cssParserEvidenceFiles === summary.cssFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.cssFiles && summary.cssParserEvidenceFiles !== summary.cssFiles)
+  },
+  {
+    surface: 'html-identity-evidence',
+    readmeLabel: 'HTML identity evidence',
+    cellId: 'html-identity-evidence',
+    support: 'bounded-evidence',
+    proofLevel: 'html-identity-evidence',
+    routeId: 'prove-html-identity-evidence',
+    fields: ['htmlFiles', 'htmlIdentityEvidenceFiles', 'htmlIdentityEvidenceFailedFiles'],
+    expectedProofStatus: (summary) => summary.htmlFiles ? (summary.htmlIdentityEvidenceFailedFiles ? 'failed' : summary.htmlIdentityEvidenceFiles === summary.htmlFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.htmlFiles && summary.htmlIdentityEvidenceFiles !== summary.htmlFiles)
+  },
+  {
+    surface: 'css-selector-target-evidence',
+    readmeLabel: 'CSS selector target evidence',
+    cellId: 'css-selector-target-evidence',
+    support: 'bounded-evidence',
+    proofLevel: 'css-selector-target-evidence',
+    routeId: 'prove-css-selector-target-evidence',
+    fields: ['cssFiles', 'cssSelectorTargetEvidenceFiles', 'cssSelectorTargetConflictFiles'],
+    expectedProofStatus: (summary) => summary.cssFiles ? (summary.cssSelectorTargetConflictFiles ? 'failed' : summary.cssSelectorTargetEvidenceFiles === summary.cssFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.cssFiles && (summary.cssSelectorTargetEvidenceFiles !== summary.cssFiles || summary.cssSelectorTargetConflictFiles))
+  },
+  {
+    surface: 'html-structural-merge-admission',
+    readmeLabel: 'HTML structural merge admission',
+    cellId: 'html-structural-merge-admission',
+    support: 'partial',
+    proofLevel: 'html-structural-merge',
+    routeId: 'admit-html-structural-merge',
+    fields: ['htmlFiles', 'htmlMergedFiles', 'htmlBlockedFiles'],
+    expectedProofStatus: (summary) => summary.htmlFiles ? (summary.htmlBlockedFiles ? 'failed' : summary.htmlMergedFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.htmlBlockedFiles)
+  },
+  {
+    surface: 'css-cascade-merge-admission',
+    readmeLabel: 'CSS cascade merge admission',
+    cellId: 'css-cascade-merge-admission',
+    support: 'partial',
+    proofLevel: 'css-cascade-merge',
+    routeId: 'admit-css-cascade-merge',
+    fields: ['cssFiles', 'cssMergedFiles', 'cssBlockedFiles'],
+    expectedProofStatus: (summary) => summary.cssFiles ? (summary.cssBlockedFiles ? 'failed' : summary.cssMergedFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.cssBlockedFiles)
+  },
+  {
+    surface: 'css-dependency-graph-evidence',
+    readmeLabel: 'CSS dependency graph evidence',
+    cellId: 'css-dependency-graph-evidence',
+    support: 'bounded-evidence',
+    proofLevel: 'css-dependency-graph',
+    routeId: 'prove-css-dependency-graph',
+    fields: ['cssDependencySurfaceFiles', 'cssDependencyGraphEvidenceFiles', 'cssDependencyGraphMissingProofFiles', 'cssDependencyGraphBlockedFiles'],
+    expectedProofStatus: (summary) => summary.cssDependencySurfaceFiles ? (summary.cssDependencyGraphBlockedFiles ? 'failed' : summary.cssDependencyGraphEvidenceFiles === summary.cssDependencySurfaceFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.cssDependencySurfaceFiles && (summary.cssDependencyGraphEvidenceFiles !== summary.cssDependencySurfaceFiles || summary.cssDependencyGraphMissingProofFiles || summary.cssDependencyGraphBlockedFiles))
+  },
+  {
+    surface: 'css-runtime-descriptor-evidence',
+    readmeLabel: 'CSS runtime descriptor evidence',
+    cellId: 'css-runtime-descriptor-evidence',
+    support: 'bounded-evidence',
+    proofLevel: 'css-runtime-descriptor-evidence',
+    routeId: 'prove-css-runtime-descriptor-evidence',
+    fields: ['cssRuntimeDescriptorFiles', 'cssRuntimeDescriptorEvidenceFiles', 'cssRuntimeDescriptorBlockedFiles'],
+    expectedProofStatus: (summary) => summary.cssRuntimeDescriptorFiles ? (summary.cssRuntimeDescriptorBlockedFiles ? 'failed' : summary.cssRuntimeDescriptorEvidenceFiles === summary.cssRuntimeDescriptorFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.cssRuntimeDescriptorFiles && (summary.cssRuntimeDescriptorEvidenceFiles !== summary.cssRuntimeDescriptorFiles || summary.cssRuntimeDescriptorBlockedFiles))
+  },
+  {
+    surface: 'html-css-browser-runtime-proof',
+    readmeLabel: 'HTML/CSS browser runtime proof',
+    cellId: 'browser-runtime-proof-bounded',
+    support: 'bounded-evidence',
+    proofLevel: 'browser-runtime-proof',
+    routeId: 'prove-html-css-browser-runtime',
+    fields: ['htmlCssFiles', 'htmlCssMergedFiles', 'htmlCssBrowserRuntimeProofs'],
+    expectedProofStatus: (summary) => summary.htmlCssFiles ? (summary.htmlCssBrowserRuntimeProofs ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.htmlCssMergedFiles && !summary.htmlCssBrowserRuntimeProofs)
+  }
+];
+
+assertReadmeHtmlCssMatrixRows();
+assertHtmlCssSummaryBackedMatrix(oracleHtmlCssProject);
+
 function assertSurface(project, surface, status, proofLevel, proofStatus) {
   const record = projectMatrixSurface(project, surface);
   assert.equal(record.status, status);
@@ -115,4 +222,56 @@ function projectMatrixSurface(project, surface) {
   const record = project.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);
   assert.ok(record, `missing ${surface} matrix surface`);
   return record;
+}
+
+function assertHtmlCssSummaryBackedMatrix(project) {
+  assert.ok(project.summary, `${project.id}: missing project summary`);
+  assert.ok(project.confidence?.admissionMatrixAudit, `${project.id}: missing admission matrix audit`);
+  for (const oracle of htmlCssSummaryFieldOracles) {
+    for (const field of oracle.fields) {
+      assert.equal(Object.prototype.hasOwnProperty.call(project.summary, field), true, `${oracle.surface}: summary missing ${field}`);
+    }
+    const record = projectMatrixSurface(project, oracle.surface);
+    const expectedProofStatus = oracle.expectedProofStatus(project.summary);
+    assert.equal(record.status, oracle.support, `${oracle.surface}: support status`);
+    assert.deepEqual(record.proofLevels, [oracle.proofLevel], `${oracle.surface}: proof levels`);
+    assert.equal(record.routeIds.includes(oracle.routeId), true, `${oracle.surface}: route id`);
+    assert.equal(record.proofStatuses[oracle.proofLevel], expectedProofStatus, `${oracle.surface}: summary-backed proof status`);
+    assert.equal(htmlCssProjectMergeMatrixProofStatus(oracle.proofLevel, project.summary), expectedProofStatus, `${oracle.surface}: status helper`);
+    assert.equal(record.missingRouteIds.includes(oracle.routeId), oracle.expectedMissingRoute(project.summary), `${oracle.surface}: summary-backed missing route`);
+  }
+}
+
+function assertReadmeHtmlCssMatrixRows() {
+  const readmeRows = readReadmeMatrixRows();
+  const forbiddenBroadClaim = /\b(?:full|complete|unbounded|guaranteed)\s+(?:browser|render|cascade|runtime)\s+equivalence\b/i;
+  for (const oracle of htmlCssSummaryFieldOracles) {
+    const staticCell = matrixCells.find((cell) => cell.id === `html-css/${oracle.cellId}`);
+    assert.ok(staticCell, `missing static matrix cell ${oracle.cellId}`);
+    assert.equal(staticCell.support, oracle.support, `${oracle.cellId}: static support`);
+    assert.equal(staticCell.evidence, 'js-ts-safe-project-merge-html-css', `${oracle.cellId}: static evidence`);
+
+    const readmeRow = readmeRows.get(oracle.readmeLabel);
+    assert.ok(readmeRow, `README missing ${oracle.readmeLabel}`);
+    assert.equal(readmeRow.status, oracle.support, `${oracle.readmeLabel}: README status`);
+    assert.equal(readmeRow.evidence.includes(oracle.proofLevel), true, `${oracle.readmeLabel}: README proof level`);
+    assert.equal(forbiddenBroadClaim.test(readmeRow.evidence), false, `${oracle.readmeLabel}: README broad equivalence claim`);
+  }
+  const browserRow = readmeRows.get('HTML/CSS browser runtime proof');
+  assert.match(browserRow.evidence, /browser\/render\/cascade equivalence claims false unless a bounded browser proof bundle is attached/);
+  assert.match(browserRow.evidence, /Missing proof routes to `prove-html-css-browser-runtime`/);
+}
+
+function readReadmeMatrixRows() {
+  const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
+  const rows = new Map();
+  for (const line of readme.split('\n')) {
+    if (!line.startsWith('| ')) continue;
+    const cells = line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|');
+    if (cells.length < 3) continue;
+    const [surface, status, ...evidenceParts] = cells.map((cell) => cell.trim());
+    if (surface === 'Surface' || surface === '---') continue;
+    rows.set(surface, { status, evidence: evidenceParts.join('|').trim() });
+  }
+  return rows;
 }

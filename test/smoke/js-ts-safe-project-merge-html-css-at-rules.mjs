@@ -95,10 +95,10 @@ assert.equal(propertyProven.files[0].result.cascadeRuntimeProofs[0].runtimeSigna
 assert.equal(propertyProven.outputFiles[0].sourceText, propertyOutput);
 
 const pagePath = 'src/print.css';
-const pageBase = '@page { margin: 1cm; }\n.article { color: red; }\n';
-const pageWorker = pageBase.replace('margin: 1cm', 'margin: 0.75cm');
+const pageBase = '@page chapter:left { margin: 1cm; @top-left { content: "Chapter"; } }\n.article { color: red; }\n';
+const pageWorker = pageBase.replace('content: "Chapter"', 'content: "Appendix"');
 const pageHead = pageBase.replace('color: red', 'color: blue');
-const pageOutput = '@page { margin: 0.75cm; }\n\n.article {\n  color: blue;\n}\n';
+const pageOutput = '@page chapter:left { margin: 1cm; @top-left { content: "Appendix"; } }\n\n.article {\n  color: blue;\n}\n';
 const pageUnproved = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_page_unproved',
   files: [{ sourcePath: pagePath, baseSourceText: pageBase, workerSourceText: pageWorker, headSourceText: pageHead }]
@@ -113,9 +113,13 @@ assert.equal(pageUnproved.summary.cssPageDescriptorEvidenceFiles, 1);
 assert.equal(pageUnproved.summary.htmlCssBrowserRuntimeProofs, 0);
 assert.equal(pageUnproved.conflicts.some((item) => item.details.reasonCode === 'css-page-runtime-equivalence-unproved'), true);
 assert.equal(matrixSurface(pageUnproved, 'css-runtime-descriptor-evidence').proofStatuses['css-runtime-descriptor-evidence'], 'passed');
+assert.equal(matrixSurface(pageUnproved, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
+assert.equal(pageUnproved.files[0].result.dependencyGraphEvidence.pageDescriptors, 1);
+assert.equal(pageUnproved.files[0].result.dependencyGraphEvidence.pageMarginDescriptors, 1);
+assert.equal(pageUnproved.files[0].result.dependencyGraphEvidence.sides.base.records.pageMarginDescriptors[0].marginBox, '@top-left');
 const pageProven = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_page_proven',
-  cssMergeOptionsByPath: { [pagePath]: { cssCascadeRuntimeProofs: [runtimeProof({ id: 'proof_css_project_page_runtime', sourcePath: pagePath, reasonCode: 'css-page-runtime-equivalence-unproved', shapeKey: 'at-rule:page::', base: pageBase, worker: pageWorker, head: pageHead, output: pageOutput })] } },
+  cssMergeOptionsByPath: { [pagePath]: { cssCascadeRuntimeProofs: [runtimeProof({ id: 'proof_css_project_page_runtime', sourcePath: pagePath, reasonCode: 'css-page-runtime-equivalence-unproved', shapeKey: 'at-rule:page::chapter:left', base: pageBase, worker: pageWorker, head: pageHead, output: pageOutput })] } },
   files: [{ sourcePath: pagePath, baseSourceText: pageBase, workerSourceText: pageWorker, headSourceText: pageHead }]
 });
 assert.equal(pageProven.status, 'merged');
@@ -123,6 +127,7 @@ assert.equal(pageProven.summary.cssRuntimeDescriptorFiles, 1);
 assert.equal(pageProven.summary.cssRuntimeDescriptorEvidenceFiles, 1);
 assert.equal(pageProven.summary.cssPageDescriptorEvidenceFiles, 1);
 assert.equal(pageProven.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(pageProven.files[0].result.dependencyGraphEvidence.pageMarginDescriptors, 1);
 assert.equal(pageProven.files[0].result.cascadeRuntimeProofs[0].runtimeSignals.includes('css-page-runtime'), true);
 assert.equal(pageProven.outputFiles[0].sourceText, pageOutput);
 

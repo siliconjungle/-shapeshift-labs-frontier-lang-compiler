@@ -5,7 +5,7 @@ function htmlCssProjectSummary(files) {
     htmlMergedFiles: htmlFiles.filter(isMerged).length, cssMergedFiles: cssFiles.filter(isMerged).length, htmlCssMergedFiles: htmlCssFiles.filter(isMerged).length,
     htmlBlockedFiles: htmlFiles.filter(isBlocked).length, cssBlockedFiles: cssFiles.filter(isBlocked).length, htmlCssBlockedFiles: htmlCssFiles.filter(isBlocked).length,
     htmlParserEvidenceFiles: htmlFiles.filter(hasHtmlParserEvidence).length, cssParserEvidenceFiles: cssFiles.filter(hasCssParserEvidence).length, htmlCssParserEvidenceFiles: htmlCssFiles.filter((file) => hasHtmlParserEvidence(file) || hasCssParserEvidence(file)).length,
-    htmlParserEvidenceFailedFiles: htmlFiles.filter(hasParserEvidenceFailure).length, cssParserEvidenceFailedFiles: cssFiles.filter(hasParserEvidenceFailure).length, htmlCssParserEvidenceFailedFiles: htmlCssFiles.filter(hasParserEvidenceFailure).length,
+    htmlParserEvidenceFailedFiles: htmlFiles.filter(hasHtmlParserEvidenceFailure).length, cssParserEvidenceFailedFiles: cssFiles.filter(hasCssParserEvidenceFailure).length, htmlCssParserEvidenceFailedFiles: htmlCssFiles.filter((file) => hasHtmlParserEvidenceFailure(file) || hasCssParserEvidenceFailure(file)).length,
     htmlIdentityEvidenceFiles: htmlFiles.filter(hasHtmlIdentityEvidence).length, cssSelectorTargetEvidenceFiles: cssFiles.filter(hasCssSelectorTargetEvidence).length, htmlCssStructuralTargetEvidenceFiles: htmlCssFiles.filter((file) => hasHtmlIdentityEvidence(file) || hasCssSelectorTargetEvidence(file)).length,
     cssSelectorTargetGraphEvidenceFiles: cssFiles.filter(hasCssSelectorTargetGraphEvidence).length, cssSelectorSpecificityEvidenceFiles: cssFiles.filter(hasCssSelectorSpecificityEvidence).length, cssSelectorTargetMoveFiles: cssFiles.filter(hasCssSelectorTargetMove).length,
     htmlExplicitIdentityEvidenceFiles: htmlFiles.filter(hasHtmlExplicitIdentityEvidence).length, htmlPathOnlyIdentityResidualFiles: htmlFiles.filter(hasHtmlPathOnlyIdentityResidual).length, htmlDuplicateIdentityEvidenceFiles: htmlFiles.filter(hasHtmlDuplicateIdentityEvidence).length, htmlDuplicateIdentityKeys: htmlFiles.reduce((sum, file) => sum + htmlDuplicateIdentityKeyCount(file), 0),
@@ -30,13 +30,61 @@ function isBlocked(file) { return file.status === 'blocked'; }
 function stripQuery(sourcePath) { return String(sourcePath ?? '').replace(/[?#].*$/, ''); }
 function hasHtmlParserEvidence(file) {
   const evidence = file?.result?.parserEvidence;
-  return evidence?.parseErrors === 0 && evidence.sourceCodeLocationInfo === true && evidence.parserBackedSourceSpans === true && evidence.parserNames?.includes('parse5');
+  const sides = parserEvidenceSides(evidence);
+  return evidence?.kind === 'frontier.lang.htmlSafeMergeParserEvidence' &&
+    evidence.parseErrors === 0 &&
+    Array.isArray(evidence.parserNames) &&
+    evidence.parserNames.includes('parse5') &&
+    hasHtmlParserSpanCounts(evidence) &&
+    htmlParserSideEvidenceValid(evidence) &&
+    sides.length > 0 &&
+    sides.every((side) => side.parserName === 'parse5' && hasHtmlParserSpanCounts(side) && htmlParserSideEvidenceValid(side));
 }
 function hasCssParserEvidence(file) {
   const evidence = file?.result?.parserEvidence;
-  return evidence?.parseErrors === 0 && evidence.sourceCodeLocationInfo === true && evidence.parserBackedSourceSpans === true && evidence.parserBackedDeclarationSpans === true && evidence.parserBackedTriviaHashes === true;
+  const sides = parserEvidenceSides(evidence);
+  return evidence?.kind === 'frontier.lang.cssSafeMergeParserEvidence' &&
+    evidence.parseErrors === 0 &&
+    Array.isArray(evidence.parserNames) &&
+    evidence.parserNames.includes('postcss') &&
+    cssParserEvidenceValid(evidence) &&
+    sides.length > 0 &&
+    sides.every((side) => side.parserName === 'postcss' && cssParserSideEvidenceValid(side));
 }
-function hasParserEvidenceFailure(file) { return (file?.result?.parserEvidence?.parseErrors ?? 0) > 0; }
+function hasHtmlParserEvidenceFailure(file) {
+  return isHtmlProjectFile(file) && Boolean(file?.result?.parserEvidence) && !hasHtmlParserEvidence(file);
+}
+function hasCssParserEvidenceFailure(file) {
+  return isCssProjectFile(file) && Boolean(file?.result?.parserEvidence) && !hasCssParserEvidence(file);
+}
+function parserEvidenceSides(evidence) { return Object.values(evidence?.sides ?? {}); }
+function hasHtmlParserSpanCounts(evidence) {
+  return hasNonNegativeCounts(evidence, ['recordCount', 'sourceSpanRecordCount', 'attributeSpanElementCount', 'structuralSpanRecordCount', 'leadingTriviaSpanRecordCount']) &&
+    hasZeroCounts(evidence, ['sourceSpanMissingRecordCount', 'attributeSpanMissingElementCount', 'structuralSpanMissingRecordCount']);
+}
+function htmlParserSideEvidenceValid(evidence) {
+  return evidence?.sourceCodeLocationInfo === true &&
+    evidence.parserBackedSourceSpans === true &&
+    ((evidence.attributeSpanElementCount ?? 0) === 0 || evidence.parserBackedAttributeSpans === true) &&
+    (evidence.leadingTriviaSpanRecordCount === 0 || evidence.parserBackedTriviaSpans === true);
+}
+function cssParserSideEvidenceValid(evidence) {
+  return cssParserEvidenceValid(evidence) &&
+    hasNonNegativeCounts(evidence, ['recordCount', 'declarationCount']);
+}
+function cssParserEvidenceValid(evidence) {
+  return evidence?.sourceCodeLocationInfo === true &&
+    evidence.parserBackedSourceSpans === true &&
+    evidence.parserBackedDeclarationSpans === true &&
+    evidence.parserBackedTriviaHashes === true &&
+    evidence.parseErrors === 0;
+}
+function hasNonNegativeCounts(record, keys) {
+  return keys.every((key) => Number.isInteger(record?.[key]) && record[key] >= 0);
+}
+function hasZeroCounts(record, keys) {
+  return keys.every((key) => record?.[key] === 0);
+}
 function hasHtmlIdentityEvidence(file) {
   const evidence = file?.result?.identityEvidence;
   return evidence?.parserBackedStructuralSpans === true && evidence.structuralAddressability === true && !hasDuplicateExplicitIdentityKeys(evidence);

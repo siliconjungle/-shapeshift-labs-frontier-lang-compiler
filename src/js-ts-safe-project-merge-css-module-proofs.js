@@ -1,10 +1,10 @@
-import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { parseCssSemanticSheet } from '@shapeshift-labs/frontier-lang-css';
+import { cssModuleGeneratedClassNameMapHash, cssModuleGeneratedClassNameMapProof } from './js-ts-safe-project-merge-css-module-generated-map.js';
+import { isCssModulePath, projectCssModuleProofFiles, projectJsTsSourcesStable } from './js-ts-safe-project-merge-css-module-project-files.js';
 import { createJsTsProjectSafeMergeGraphArtifacts } from './js-ts-safe-project-merge-graph.js';
 import { hashText, safeId } from './js-ts-safe-project-merge-core.js';
 import { importNativeSource } from './internal/index-impl/importNativeSource.js';
 
-const CssModulePathPattern = /\.module\.css(?:[?#].*)?$/i;
 const CssModuleContractProofGap = 'css-module-contract-source-proof-unproved';
 
 function createProjectCssModuleMergeEvidence(input, files, projectId) {
@@ -108,6 +108,14 @@ function mergeOutputProjectImports(input, imports) {
 function missingTransformProofBlockedResult({ firstResult, sourcePath, mergeOptions }) {
   if (!firstResult || !hasOnlyCssModuleContractProofGap(firstResult)) return undefined;
   const conflicts = [];
+  const generatedClassNameMapProof = cssModuleGeneratedClassNameMapProof(mergeOptions);
+  if (generatedClassNameMapProof.status === 'hash-mismatch') {
+    conflicts.push(cssModuleProofConflict(firstResult.id, sourcePath, 'css-module-generated-class-map-hash-mismatch', {
+      proofBoundary: 'css-module-generated-class-name-map',
+      declaredGeneratedClassNameMapHash: generatedClassNameMapProof.declaredGeneratedClassNameMapHash,
+      computedGeneratedClassNameMapHash: generatedClassNameMapProof.computedGeneratedClassNameMapHash
+    }));
+  }
   if (!firstString(mergeOptions.bundlerTransformHash, mergeOptions.cssModuleBundlerTransformHash)) {
     conflicts.push(cssModuleProofConflict(firstResult.id, sourcePath, 'css-module-bundler-transform-identity-unproved'));
   }
@@ -167,14 +175,6 @@ function parseCssModuleSheet(sourceText, options) {
   }
 }
 
-function cssModuleGeneratedClassNameMapHash(mergeOptions) {
-  return firstString(mergeOptions.generatedClassNameMapHash, mergeOptions.cssModuleGeneratedClassNameMapHash)
-    ?? (mergeOptions.generatedClassNameMap ? hashSemanticValue({
-      kind: 'frontier.lang.css.modules.generatedClassNameMap.v1',
-      generatedClassNameMap: mergeOptions.generatedClassNameMap
-    }) : undefined);
-}
-
 function hasOnlyCssModuleContractProofGap(result) {
   const conflicts = result?.conflicts ?? [];
   return conflicts.length > 0 && conflicts.every((conflict) => conflict.details?.reasonCode === CssModuleContractProofGap);
@@ -182,14 +182,15 @@ function hasOnlyCssModuleContractProofGap(result) {
 
 function cssModuleProofImport(input, file) {
   const mergeOptions = cssMergeOptionsForProjectFile(input, file.sourcePath);
+  const generatedClassNameMapProof = cssModuleGeneratedClassNameMapProof(mergeOptions);
   return importNativeSource({
     language: 'css',
     sourcePath: file.sourcePath,
     sourceText: file.sourceText,
     sourceHash: file.sourceHash,
     metadata: {
-      generatedClassNameMap: mergeOptions.generatedClassNameMap,
-      generatedClassNameMapHash: cssModuleGeneratedClassNameMapHash(mergeOptions),
+      generatedClassNameMap: generatedClassNameMapProof.generatedClassNameMap,
+      generatedClassNameMapHash: generatedClassNameMapProof.generatedClassNameMapHash,
       cssModuleCompositionGraphHash: mergeOptions.cssModuleCompositionGraphHash,
       icssGraphHash: mergeOptions.icssGraphHash,
       bundlerTransformHash: firstString(mergeOptions.bundlerTransformHash, mergeOptions.cssModuleBundlerTransformHash),
@@ -202,14 +203,17 @@ function cssModuleOutputProjectImport(evidence, file, input) {
   const mergeOptions = cssMergeOptionsForProjectFile(input, file.sourcePath);
   const graph = evidence.graphsByPath?.get(file.sourcePath);
   const proof = file.result?.cssModuleContractProofs?.[0] ?? file.result?.admission?.cssModuleContractProofs?.[0];
+  const generatedClassNameMapProof = cssModuleGeneratedClassNameMapProof(mergeOptions);
   return importNativeSource({
     language: 'css',
     sourcePath: file.sourcePath,
     sourceText: file.outputSourceText,
     sourceHash: file.outputHash,
     metadata: {
-      generatedClassNameMap: mergeOptions.generatedClassNameMap,
-      generatedClassNameMapHash: proof?.generatedClassNameMapHash ?? cssModuleGeneratedClassNameMapHash(mergeOptions),
+      generatedClassNameMap: generatedClassNameMapProof.generatedClassNameMap,
+      generatedClassNameMapHash: generatedClassNameMapProof.status === 'hash-mismatch'
+        ? undefined
+        : proof?.generatedClassNameMapHash ?? generatedClassNameMapProof.generatedClassNameMapHash,
       jsTsUseSiteGraphHash: proof?.jsTsUseSiteGraphHash ?? graph?.jsTsUseSiteGraphHash,
       cssModuleCompositionGraphHash: proof?.cssModuleCompositionGraphHash ?? mergeOptions.cssModuleCompositionGraphHash,
       icssGraphHash: proof?.icssGraphHash ?? mergeOptions.icssGraphHash,
@@ -227,41 +231,6 @@ function normalizeProjectImports(value) {
   return [];
 }
 
-function projectCssModuleProofFiles(files, input) {
-  return files.flatMap((file) => {
-    const sourceText = isCssModulePath(file.sourcePath)
-      ? cssModuleProofSourceText(file)
-      : stableJsTsSourceText(file, input);
-    if (typeof sourceText !== 'string') return [];
-    return [{
-      sourcePath: file.sourcePath,
-      language: file.language ?? languageForPath(file.sourcePath, input),
-      sourceText,
-      sourceHash: hashText(sourceText)
-    }];
-  });
-}
-
-function projectJsTsSourcesStable(files, input) {
-  return files
-    .filter((file) => isJsTsLanguage(file.language ?? languageForPath(file.sourcePath, input)))
-    .every((file) => typeof stableJsTsSourceText(file, input) === 'string');
-}
-
-function cssModuleProofSourceText(file) {
-  return firstString(file.workerSourceText, file.headSourceText, file.baseSourceText);
-}
-
-function stableJsTsSourceText(file, input) {
-  if (!isJsTsLanguage(file.language ?? languageForPath(file.sourcePath, input))) return undefined;
-  const base = file.baseSourceText;
-  const worker = file.workerDeleted ? undefined : file.workerSourceText ?? base;
-  const head = file.headDeleted ? undefined : file.headSourceText ?? base;
-  if (typeof worker === 'string' && worker === head) return worker;
-  if (typeof base === 'string' && base === worker && base === head) return base;
-  return undefined;
-}
-
 function cssMergeOptionsForProjectFile(input, sourcePath) {
   const byPath = input.cssMergeOptionsByPath ?? input.styleMergeOptionsByPath;
   return {
@@ -270,7 +239,8 @@ function cssMergeOptionsForProjectFile(input, sourcePath) {
   };
 }
 
-function cssModuleProofConflict(id, sourcePath, reasonCode) {
+function cssModuleProofConflict(id, sourcePath, reasonCode, details = {}) {
+  const { proofBoundary = cssModuleProofBoundaryForReason(reasonCode), ...extraDetails } = details;
   return {
     code: 'css-module-project-proof-blocked',
     gateId: 'css-semantic-merge',
@@ -278,6 +248,8 @@ function cssModuleProofConflict(id, sourcePath, reasonCode) {
     details: {
       reasonCode,
       conflictKey: `css#${id}#${reasonCode}#${sourcePath ?? 'source'}`,
+      ...(proofBoundary ? { proofBoundary } : {}),
+      ...extraDetails,
       proofGap: {
         code: reasonCode,
         status: 'not-claimed',
@@ -288,22 +260,11 @@ function cssModuleProofConflict(id, sourcePath, reasonCode) {
   };
 }
 
-function isCssModulePath(path) {
-  return CssModulePathPattern.test(String(path ?? ''));
-}
-
-function languageForPath(sourcePath, input) {
-  const path = String(sourcePath ?? '').toLowerCase();
-  if (path.endsWith('.css')) return 'css';
-  if (path.endsWith('.tsx')) return 'tsx';
-  if (path.endsWith('.jsx')) return 'jsx';
-  if (path.endsWith('.ts') || path.endsWith('.mts') || path.endsWith('.cts')) return 'typescript';
-  if (path.endsWith('.js') || path.endsWith('.mjs') || path.endsWith('.cjs')) return 'javascript';
-  return input.language;
-}
-
-function isJsTsLanguage(language) {
-  return ['javascript', 'typescript', 'jsx', 'tsx', 'js', 'ts'].includes(String(language ?? '').toLowerCase());
+function cssModuleProofBoundaryForReason(reasonCode) {
+  if (reasonCode === 'css-module-generated-class-map-hash-mismatch' || reasonCode === 'css-module-generated-class-map-unproved') return 'css-module-generated-class-name-map';
+  if (reasonCode === 'css-module-bundler-transform-identity-unproved') return 'css-module-bundler-transform-identity';
+  if (reasonCode === 'css-module-source-map-proof-unproved') return 'css-module-source-map-identity';
+  return undefined;
 }
 
 function firstString(...values) {
