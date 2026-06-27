@@ -32,6 +32,25 @@ const dependencyCssModuleSourceText = [
   '}',
   ''
 ].join('\n');
+const localDependencyCssModuleSpecifier = './LocalComposed.module.css';
+const localDependencyButtonSourceText = [
+  `import localStyles from '${localDependencyCssModuleSpecifier}';`,
+  'export function LocalComposedButton() {',
+  '  return <button className={localStyles.root}>{localStyles.primaryColor}</button>;',
+  '}',
+  ''
+].join('\n');
+const localDependencyCssModuleSourceText = [
+  '.base { display: block; }',
+  '.root {',
+  '  composes: base;',
+  '  color: red;',
+  '}',
+  ':export {',
+  '  primaryColor: red;',
+  '}',
+  ''
+].join('\n');
 
 const unresolvedDependencyCssModuleImport = importNativeSource({
   language: 'css',
@@ -68,6 +87,38 @@ assert.equal(unresolvedDependencyReasonCodes.includes('css-module-icss-graph-unp
 const unresolvedDependencyGraph = unresolvedDependencyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0];
 assert.equal(unresolvedDependencyGraph.status, 'blocked');
 assert.equal(unresolvedDependencyGraph.blockerCount, 2);
+
+const localDependencyCssModuleImport = importNativeSource({
+  language: 'css',
+  sourcePath: 'src/LocalComposed.module.css',
+  sourceText: localDependencyCssModuleSourceText,
+  metadata: {
+    generatedClassNameMap: { base: '_base_111', root: '_root_222' },
+    jsTsUseSiteGraphHash: 'css-module-use-sites:local-composed',
+    bundlerTransformHash: 'bundler-transform:local-composed',
+    sourceMapProofHash: 'source-map-proof:local-composed'
+  }
+});
+const localDependencyCssModuleProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_local_dependency_graphs_inferred',
+  includeOutputProjectSymbolGraph: true,
+  outputProjectImports: [localDependencyCssModuleImport],
+  files: [
+    { language: 'css', sourcePath: 'src/LocalComposed.module.css', headSourceText: localDependencyCssModuleSourceText },
+    { language: 'tsx', sourcePath: 'src/LocalComposed.tsx', baseSourceText: localDependencyButtonSourceText, workerSourceText: localDependencyButtonSourceText, headSourceText: localDependencyButtonSourceText }
+  ]
+});
+assert.equal(localDependencyCssModuleProject.status, 'merged');
+const localDependencyBinding = localDependencyCssModuleProject.outputProjectSymbolGraph.cssModuleImportBindings[0];
+assert.equal(localDependencyBinding.cssModuleEvidenceSource, 'inferred-source');
+assert.equal(typeof localDependencyBinding.cssModuleCompositionGraphHash, 'string');
+assert.equal(typeof localDependencyBinding.icssGraphHash, 'string');
+const localDependencyReasonCodes = localDependencyCssModuleProject.conflicts
+  .filter((conflict) => conflict.code === 'project-css-module-use-site-proof-blocked')
+  .map((conflict) => conflict.details.reasonCode);
+assert.equal(localDependencyReasonCodes.includes('css-module-composition-resolution-unproved'), false);
+assert.equal(localDependencyReasonCodes.includes('css-module-icss-graph-unproved'), false);
+assert.equal(localDependencyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].status, 'ready');
 
 const readyCssModuleImport = importNativeSource({
   language: 'css',
