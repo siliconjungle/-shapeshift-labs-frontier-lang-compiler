@@ -36,6 +36,25 @@ export interface NativeProjectSymbolGraphCompilerAdvancedTypeMissingProof {
   readonly semanticEquivalenceClaim: false;
 }
 
+export interface NativeProjectSymbolGraphCompilerAdvancedTypeSourceBoundProof {
+  readonly kind: 'typescript-checker-public-api-advanced-type-source-bound-proof' | string;
+  readonly status?: 'passed' | 'failed' | string;
+  readonly proofLevel?: 'typescript-checker-public-api-advanced-type-source-bound-shape-evidence' | string;
+  readonly requiredEvidence?: 'typescript-checker-public-api-type-equivalence' | string;
+  readonly checkerInvariant?: string;
+  readonly requiredSignals?: readonly string[];
+  readonly missingSignals?: readonly string[];
+  readonly unsupportedSignals?: readonly string[];
+  readonly advancedTypeShapeCount?: number;
+  readonly advancedTypeShapeKinds?: readonly string[];
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly sourceBound?: boolean;
+  readonly autoMergeClaim: false;
+  readonly semanticEquivalenceClaim: false;
+  readonly runtimeEquivalenceClaim: false;
+}
+
 declare module './native-project-compiler-scope.js' {
   interface NativeProjectSymbolGraphCompilerAdvancedTypeShapeRecord {
     readonly memberTypeTexts?: readonly string[];
@@ -53,6 +72,7 @@ declare module './native-project-compiler-scope.js' {
   }
   interface NativeProjectSymbolGraphCompilerTypeRecord {
     readonly advancedTypeProofRequirement?: NativeProjectSymbolGraphCompilerAdvancedTypeProofRequirement;
+    readonly advancedTypeSourceBoundProof?: NativeProjectSymbolGraphCompilerAdvancedTypeSourceBoundProof;
     readonly advancedTypeMissingProof?: NativeProjectSymbolGraphCompilerAdvancedTypeMissingProof;
     readonly unionTypeCount?: number;
     readonly intersectionTypeCount?: number;

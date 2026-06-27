@@ -135,7 +135,7 @@ function unsupportedComponentPropRenderFlow(tag, attribute, options = {}) {
 }
 
 function staticComponentPropCallsiteValue(valueEvidence) {
-  return valueEvidence?.proofStatus === 'static-literal-jsx-prop-value-evidence' || valueEvidence?.proofStatus === 'static-reference-jsx-prop-value-evidence';
+  return valueEvidence?.proofStatus === 'static-literal-jsx-prop-value-evidence' || valueEvidence?.proofStatus === 'static-reference-jsx-prop-value-evidence' || valueEvidence?.proofStatus === 'static-optional-reference-jsx-prop-value-evidence';
 }
 
 function componentPropRenderFlowScope(fallbackScope, lookupScope) {

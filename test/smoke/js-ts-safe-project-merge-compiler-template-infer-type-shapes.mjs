@@ -22,6 +22,10 @@ assert.equal(typeof templateRecord?.typeEquivalenceTemplateLiteralTypeSetHash, '
 assert.equal(templateRecord?.typeEquivalenceProof?.templateLiteralTypeSetHash, templateRecord?.typeEquivalenceTemplateLiteralTypeSetHash);
 assert.equal(templateRecord?.typeEquivalenceCheckerEvidence?.templateLiteralTypeSpanTypeTexts?.length, 1);
 assert.equal(templateRecord?.typeEquivalenceCheckerEvidence?.templateLiteralTypeLiteralTexts?.[0]?.[0], 'route:');
+assert.equal(templateRecord?.advancedTypeSourceBoundProof?.status, 'passed');
+assert.equal(templateRecord?.advancedTypeSourceBoundProof?.sourcePath, 'src/template.ts');
+assert.equal(templateRecord?.advancedTypeSourceBoundProof?.sourceHash, templateRecord?.sourceHash);
+assert.equal(templateRecord?.advancedTypeSourceBoundProof?.semanticEquivalenceClaim, false);
 assert.equal(publicCompilerTypeDeltaConflicts(templateBaseGraph, templateChangedGraph, templateChangedGraph, templateChangedGraph).length, 0);
 
 const templateMissingProofGraph = await compilerGraph(
@@ -62,6 +66,10 @@ function assertMissingSignal(conflicts, signal) {
   assert.equal(Boolean(conflict), true);
   assert.equal(conflict.details.typeEquivalenceEvidence.missingRecords.some((record) => (
     record.missingSignals?.includes(signal)
+  )), true);
+  assert.equal(conflict.details.typeEquivalenceEvidence.missingRecords.some((record) => (
+    record.advancedTypeSourceBoundProof?.status === 'failed'
+      && record.advancedTypeSourceBoundProof?.missingSignals?.includes(signal)
   )), true);
 }
 

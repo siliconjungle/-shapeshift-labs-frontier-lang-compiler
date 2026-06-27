@@ -21,6 +21,7 @@ function cssModuleUseSiteBlockerConflict(blocker) {
       cssModuleImportBindingId: blocker.cssModuleImportBindingId,
       cssModuleSourcePath: blocker.cssModuleSourcePath,
       expressionText: blocker.expressionText,
+      proofBoundary: blocker.proofBoundary,
       writeOperation: blocker.writeOperation,
       jsxPropRecordId: blocker.jsxPropRecordId,
       failClosed: blocker.failClosed === true,
@@ -35,6 +36,7 @@ function cssModuleUseSiteBlockerConflictKey(blocker) {
     blocker.cssModuleSourcePath ?? blocker.moduleSpecifier ?? 'unknown-module',
     blocker.sourcePath ?? 'unknown-source',
     blocker.localName ?? 'unknown-local',
+    blocker.proofBoundary ?? 'unknown-boundary',
     blocker.reasonCode ?? 'unknown-reason',
     spanKey(blocker.sourceSpan),
     blocker.expressionText

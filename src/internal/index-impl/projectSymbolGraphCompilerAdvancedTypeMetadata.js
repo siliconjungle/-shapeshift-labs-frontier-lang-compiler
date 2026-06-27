@@ -21,6 +21,7 @@ function compilerAdvancedTypeMetadata(value, source = {}) {
       advancedTypeShapeCount: counts.advancedTypeShapeCount || undefined,
       advancedTypeShapeKinds: value.advancedTypeShapeKinds ?? nonEmptyArray(uniqueStrings(advancedTypeShapes.map((shape) => shape.kind))),
       advancedTypeProofRequirement: proofRequirement.requirement,
+      advancedTypeSourceBoundProof: proofRequirement.sourceBoundProof,
       advancedTypeMissingProof: proofRequirement.missingProof,
       typeReferenceTargetCount: counts.typeReferenceTargetCount || undefined,
       conditionalTypeCount: counts.conditionalTypeCount || undefined,
@@ -141,6 +142,7 @@ function advancedTypeProofRequirement(advancedTypeShapes, counts, source = {}) {
   });
   return {
     requirement,
+    sourceBoundProof: advancedTypeSourceBoundProof(advancedTypeShapes, counts, sourceBinding, requiredSignals, missingSignals, unsupportedSignals),
     missingProof: status === 'requires-type-equivalence-proof' ? undefined : compactRecord({
       kind: AdvancedTypeProofRequirementKind,
       requiredEvidence: AdvancedTypeProofRequiredEvidence,
@@ -154,6 +156,28 @@ function advancedTypeProofRequirement(advancedTypeShapes, counts, source = {}) {
       semanticEquivalenceClaim: false
     })
   };
+}
+
+function advancedTypeSourceBoundProof(advancedTypeShapes, counts, sourceBinding, requiredSignals, missingSignals, unsupportedSignals) {
+  if (!counts.advancedTypeShapeCount) return undefined;
+  return compactRecord({
+    kind: 'typescript-checker-public-api-advanced-type-source-bound-proof',
+    status: missingSignals.length || unsupportedSignals.length ? 'failed' : 'passed',
+    proofLevel: 'typescript-checker-public-api-advanced-type-source-bound-shape-evidence',
+    requiredEvidence: AdvancedTypeProofRequiredEvidence,
+    checkerInvariant: 'advanced type shape texts and public API source path/hash complete',
+    requiredSignals,
+    missingSignals: nonEmptyArray(missingSignals),
+    unsupportedSignals: nonEmptyArray(unsupportedSignals),
+    advancedTypeShapeCount: counts.advancedTypeShapeCount,
+    advancedTypeShapeKinds: nonEmptyArray(uniqueStrings(advancedTypeShapes.map((shape) => shape.kind))),
+    sourcePath: sourceBinding.sourcePath,
+    sourceHash: sourceBinding.sourceHash,
+    sourceBound: sourceBinding.required ? sourceBinding.bound : undefined,
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    runtimeEquivalenceClaim: false
+  });
 }
 
 function advancedTypeRequiredProofSignals(counts, sourceBinding) {

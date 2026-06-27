@@ -4,12 +4,13 @@ import { safeMergeJsTsProject } from './compiler-api.mjs';
 const propValueSource = [
   'function Child(_props) { return null; }',
   'function StaticLabel({ label, tone, dynamic }) { return <span data-label={label} data-tone={tone} data-dynamic={dynamic} />; }',
+  'function StaticOptionalLabel({ optional, dynamic }) { return <span data-optional={optional} data-dynamic={dynamic} />; }',
   'function MemberChild({ label }) { return <span data-label={label} />; }',
   'function Transforming({ label }) { return <span data-label={formatLabel(label)} />; }',
   'const UI = { Child: MemberChild };',
   'export function View({ label, values, id, Component }) {',
   '  const Target = Component;',
-  '  return <section><Child title="Hello" count={1} label={label} nested={values[id]} delayed={makeLabel(id)} optional={values?.label} optionalDeep={values?.meta?.label} optionalComputed={values?.[id]} optionalCall={makeLabel?.(id)} disabled /><StaticLabel label={label} tone="calm" dynamic={makeLabel(id)} /><Transforming label={label} /><Target label={label} /><UI.Child label={label} /></section>;',
+  '  return <section><Child title="Hello" count={1} label={label} nested={values[id]} delayed={makeLabel(id)} optional={values?.label} optionalDeep={values?.meta?.label} optionalComputed={values?.[id]} optionalCall={makeLabel?.(id)} disabled /><StaticLabel label={label} tone="calm" dynamic={makeLabel(id)} /><StaticOptionalLabel optional={values?.label} dynamic={values?.[id]} /><Transforming label={label} /><Target label={label} /><UI.Child label={label} /></section>;',
   '}',
   ''
 ].join('\n');
@@ -91,6 +92,31 @@ assert.equal(staticDynamicProp.componentPropRenderFlowReasonCode, 'jsx-render-co
 assert.equal(staticDynamicProp.componentPropRenderFlowDynamicBlockerReasonCode, 'jsx-render-prop-value-call-expression-unsupported');
 assert.equal(staticDynamicProp.componentPropRenderFlowClaim, false);
 assert.equal(staticDynamicProp.componentPropRenderFlowRenderEquivalenceClaim, false);
+
+const staticOptionalFlowProp = propValueRecord('StaticOptionalLabel', 'optional');
+assert.equal(staticOptionalFlowProp.propValueProofStatus, 'static-optional-reference-jsx-prop-value-evidence');
+assert.equal(staticOptionalFlowProp.propValueReasonCode, 'jsx-render-prop-value-static-optional-reference-evidence');
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowStatus, 'static-component-prop-render-flow-evidence');
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowReasonCode, 'jsx-render-component-prop-flow-static-passthrough-evidence');
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowClaim, true);
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowClaimScope, 'static-prop-passthrough-only');
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowRenderEquivalenceClaim, false);
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowScope, 'same-file-plain-component-static-prop-passthrough');
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowTargetName, 'StaticOptionalLabel');
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowComponentPropName, 'optional');
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowRenderedPropName, 'data-optional');
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowPassthroughExpressionText, 'optional');
+assert.equal(staticOptionalFlowProp.componentPropRenderFlowBindingKind, 'destructured-parameter');
+assert.equal(typeof staticOptionalFlowProp.componentPropRenderFlowSignatureHash, 'string');
+
+const staticOptionalDynamicProp = propValueRecord('StaticOptionalLabel', 'dynamic');
+assert.equal(staticOptionalDynamicProp.propValueProofStatus, 'dynamic-jsx-prop-value-unsupported');
+assert.equal(staticOptionalDynamicProp.propValueDynamicBlockerReasonCode, 'jsx-render-prop-value-computed-reference-unsupported');
+assert.equal(staticOptionalDynamicProp.componentPropRenderFlowStatus, 'component-prop-render-flow-unsupported');
+assert.equal(staticOptionalDynamicProp.componentPropRenderFlowReasonCode, 'jsx-render-component-prop-flow-dynamic-value-unsupported');
+assert.equal(staticOptionalDynamicProp.componentPropRenderFlowDynamicBlockerReasonCode, 'jsx-render-prop-value-computed-reference-unsupported');
+assert.equal(staticOptionalDynamicProp.componentPropRenderFlowClaim, false);
+assert.equal(staticOptionalDynamicProp.componentPropRenderFlowRenderEquivalenceClaim, false);
 
 const transformingLabelProp = propValueRecord('Transforming', 'label');
 assert.equal(transformingLabelProp.propValueProofStatus, 'static-reference-jsx-prop-value-evidence');

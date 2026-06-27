@@ -118,6 +118,7 @@ function missingSharedCompilerTypeEquivalenceEvidence(workerRecord, headRecord) 
       enumComputedMemberCount: record.enumComputedMemberCount,
       typeEquivalenceEnumRuntimeShapeHash: record.typeEquivalenceEnumRuntimeShapeHash,
       advancedTypeProofRequirement: record.advancedTypeProofRequirement,
+      advancedTypeSourceBoundProof: record.advancedTypeSourceBoundProof,
       advancedTypeMissingProof: record.advancedTypeMissingProof,
       typeEquivalenceSignatureSetHash: record.typeEquivalenceSignatureSetHash,
       typeEquivalenceCallSignatureSetHash: record.typeEquivalenceCallSignatureSetHash, typeEquivalenceConstructSignatureSetHash: record.typeEquivalenceConstructSignatureSetHash,

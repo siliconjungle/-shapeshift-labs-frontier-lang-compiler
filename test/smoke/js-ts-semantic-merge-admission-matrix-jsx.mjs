@@ -32,6 +32,12 @@ const semanticMergeJsxMatrixCells = [
     note: 'simple static optional-chain prop values emit optional segment/index evidence while optional computed members and optional calls fail closed with dynamic blocker metadata'
   },
   {
+    id: 'jsx-tsx-element-prop-graph/static-optional-component-prop-flow-evidence',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-jsx-prop-values',
+    note: 'same-file component prop passthrough can consume static optional-chain callsite evidence while optional computed members remain unsupported and render equivalence stays unproved'
+  },
+  {
     id: 'jsx-tsx-element-prop-graph/static-object-spread-prop-precedence-evidence',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-jsx-graph',

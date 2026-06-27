@@ -135,6 +135,7 @@ function cssModuleBindingBlocker(binding, input = {}) {
   const sourceHash = input.sourceHash ?? binding.sourceHash;
   const reasonCode = input.reasonCode ?? 'css-module-import-resolution-unproved';
   const expressionText = input.expressionText ?? binding.localName ?? binding.moduleSpecifier;
+  const proofBoundary = input.proofBoundary ?? cssModuleProofBoundaryForReason(reasonCode);
   const blockerHash = hashSemanticValue({
     kind: 'frontier.lang.cssModuleUseSiteBlocker.v1',
     binding: binding.signatureHash,
@@ -155,6 +156,7 @@ function cssModuleBindingBlocker(binding, input = {}) {
     cssModuleSourcePath: binding.cssModuleSourcePath,
     expressionText,
     reasonCode,
+    proofBoundary,
     writeOperation: input.writeOperation,
     jsxPropRecordId: input.jsxPropRecordId,
     failClosed: true,
@@ -258,6 +260,13 @@ function cssModuleExportRecordNames(value) {
 function cssModuleGeneratedClassNameMapHash(evidence) {
   const map = objectValue(evidence?.generatedClassNameMap) ?? objectValue(evidence?.classMap) ?? objectValue(evidence?.exports);
   return map ? hashSemanticValue({ kind: 'frontier.lang.cssModuleGeneratedClassNameMap.v1', map }) : undefined;
+}
+
+function cssModuleProofBoundaryForReason(reasonCode) {
+  if (reasonCode === 'css-module-generated-class-map-unproved') return 'css-module-generated-class-name-map';
+  if (reasonCode === 'css-module-bundler-transform-identity-unproved') return 'css-module-bundler-transform-identity';
+  if (reasonCode === 'css-module-source-map-proof-unproved') return 'css-module-source-map-identity';
+  return 'css-module-use-site-graph';
 }
 
 function arrayValue(value) {

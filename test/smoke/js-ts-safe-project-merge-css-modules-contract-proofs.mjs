@@ -1,7 +1,7 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { parseCssSemanticSheet } from '@shapeshift-labs/frontier-lang-css';
 import { assert } from './helpers.mjs';
-import { safeMergeJsTsProject } from './compiler-api.mjs';
+import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
 
 const sourcePath = 'src/Button.module.css';
 const buttonCssModuleSpecifier = './Button.module' + '.css';
@@ -134,6 +134,10 @@ assert.equal(synthesizedCssFile.result.cssModuleContractProofs.every((proof) => 
 assert.equal(synthesizedCssFile.result.cssModuleContractProofs.every((proof) => proof.sourceMapProofHash === 'source-map-proof:button-module'), true);
 assert.equal(projectSynthesizedProof.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].status, 'ready');
 assert.equal(typeof projectSynthesizedProof.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].jsTsUseSiteGraphHash, 'string');
+const projectSynthesizedSurface = matrixSurface(projectSynthesizedProof, 'css-modules-use-site-graph');
+assert.equal(projectSynthesizedSurface.proofStatuses['css-module-generated-class-name-map'], 'passed');
+assert.equal(projectSynthesizedSurface.proofStatuses['css-module-bundler-transform-identity'], 'passed');
+assert.equal(projectSynthesizedSurface.proofStatuses['css-module-source-map-identity'], 'passed');
 
 const projectMissingBundlerProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_module_contract_project_synthesis_missing_transform_proof',
@@ -145,6 +149,78 @@ const projectMissingBundlerProof = safeMergeJsTsProject({
 assert.equal(projectMissingBundlerProof.status, 'blocked');
 assert.equal(projectMissingBundlerProof.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-bundler-transform-identity-unproved'), true);
 assert.equal(projectMissingBundlerProof.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-source-map-proof-unproved'), true);
+
+const transformBoundaryProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_transform_boundaries_only',
+  includeOutputProjectSymbolGraph: true,
+  files: [
+    { language: 'css', sourcePath, headSourceText: baseSourceText },
+    {
+      language: 'tsx',
+      sourcePath: 'src/Button.tsx',
+      baseSourceText: staticButtonSourceText(),
+      workerSourceText: staticButtonSourceText(),
+      headSourceText: staticButtonSourceText()
+    }
+  ]
+});
+assert.equal(transformBoundaryProject.status, 'blocked');
+assert.equal(transformBoundaryProject.summary.projectGraphCssModuleUseSiteProofBlockers, 0);
+assert.equal(transformBoundaryProject.summary.projectGraphCssModuleGeneratedClassNameMapBlockers, 1);
+assert.equal(transformBoundaryProject.summary.projectGraphCssModuleBundlerTransformIdentityBlockers, 1);
+assert.equal(transformBoundaryProject.summary.projectGraphCssModuleSourceMapIdentityBlockers, 1);
+assert.equal(transformBoundaryProject.summary.projectGraphCssModuleTransformProofBlockers, 3);
+const transformBoundaryConflicts = transformBoundaryProject.conflicts.filter((conflict) => conflict.code === 'project-css-module-use-site-proof-blocked');
+assert.equal(transformBoundaryConflicts.length, 3);
+assert.equal(transformBoundaryConflicts.some((conflict) => conflict.details.proofBoundary === 'css-module-generated-class-name-map'), true);
+assert.equal(transformBoundaryConflicts.some((conflict) => conflict.details.proofBoundary === 'css-module-bundler-transform-identity'), true);
+assert.equal(transformBoundaryConflicts.some((conflict) => conflict.details.proofBoundary === 'css-module-source-map-identity'), true);
+const transformBoundarySurface = matrixSurface(transformBoundaryProject, 'css-modules-use-site-graph');
+assert.equal(transformBoundarySurface.proofStatuses['css-module-use-site-graph'], 'passed');
+assert.equal(transformBoundarySurface.proofStatuses['css-module-transform-proof'], 'failed');
+assert.equal(transformBoundarySurface.proofStatuses['css-module-generated-class-name-map'], 'failed');
+assert.equal(transformBoundarySurface.proofStatuses['css-module-bundler-transform-identity'], 'failed');
+assert.equal(transformBoundarySurface.proofStatuses['css-module-source-map-identity'], 'failed');
+assert.equal(transformBoundarySurface.missingRouteIds.includes('prove-css-module-use-site-graph'), false);
+assert.equal(transformBoundarySurface.missingRouteIds.includes('prove-css-module-generated-class-name-map'), true);
+assert.equal(transformBoundarySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), true);
+assert.equal(transformBoundarySurface.missingRouteIds.includes('prove-css-module-source-map-identity'), true);
+
+const useSiteOnlyProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_use_site_only_boundary',
+  includeOutputProjectSymbolGraph: true,
+  outputProjectImports: [importNativeSource({
+    language: 'css',
+    sourcePath,
+    sourceText: baseSourceText,
+    metadata: {
+      generatedClassNameMap: { root: 'Button_root__hash' },
+      bundlerTransformHash: 'bundler-transform:button-module',
+      sourceMapProofHash: 'source-map-proof:button-module'
+    }
+  })],
+  files: [
+    { language: 'css', sourcePath, headSourceText: baseSourceText },
+    {
+      language: 'tsx',
+      sourcePath: 'src/Button.tsx',
+      baseSourceText: missingExportButtonSourceText(),
+      workerSourceText: missingExportButtonSourceText(),
+      headSourceText: missingExportButtonSourceText()
+    }
+  ]
+});
+assert.equal(useSiteOnlyProject.status, 'blocked');
+assert.equal(useSiteOnlyProject.summary.projectGraphCssModuleUseSiteProofBlockers >= 1, true);
+assert.equal(useSiteOnlyProject.summary.projectGraphCssModuleTransformProofBlockers, 0);
+const useSiteOnlySurface = matrixSurface(useSiteOnlyProject, 'css-modules-use-site-graph');
+assert.equal(useSiteOnlySurface.proofStatuses['css-module-use-site-graph'], 'failed');
+assert.equal(useSiteOnlySurface.proofStatuses['css-module-transform-proof'], 'passed');
+assert.equal(useSiteOnlySurface.proofStatuses['css-module-generated-class-name-map'], 'passed');
+assert.equal(useSiteOnlySurface.proofStatuses['css-module-bundler-transform-identity'], 'passed');
+assert.equal(useSiteOnlySurface.proofStatuses['css-module-source-map-identity'], 'passed');
+assert.equal(useSiteOnlySurface.missingRouteIds.includes('prove-css-module-use-site-graph'), true);
+assert.equal(useSiteOnlySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), false);
 
 function mergeButtonModuleProject(id, cssOptions = {}) {
   return safeMergeJsTsProject({
@@ -164,6 +240,22 @@ function projectSynthesizedProofInputFiles() {
     { language: 'css', sourcePath, baseSourceText, workerSourceText, headSourceText },
     { language: 'tsx', sourcePath: 'src/Button.tsx', baseSourceText: buttonTsx, workerSourceText: buttonTsx, headSourceText: buttonTsx }
   ];
+}
+
+function staticButtonSourceText() {
+  return [
+    `import styles from '${buttonCssModuleSpecifier}';`,
+    'export function Button() { return <button className={styles.root} />; }',
+    ''
+  ].join('\n');
+}
+
+function missingExportButtonSourceText() {
+  return [
+    `import styles from '${buttonCssModuleSpecifier}';`,
+    'export function Button() { return <button className={styles.missing} />; }',
+    ''
+  ].join('\n');
 }
 
 function matrixSurface(result, surface) {

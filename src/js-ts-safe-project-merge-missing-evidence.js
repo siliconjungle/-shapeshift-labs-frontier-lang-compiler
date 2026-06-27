@@ -1,4 +1,5 @@
 import { HtmlCssProjectMergeMissingSignals, htmlCssProjectMergeAdmissionMatrixRows, htmlCssProjectMergeMatrixProofStatus, htmlCssProjectMergeMissingEvidenceItems, htmlCssProjectMergeMissingEvidenceRoutes } from './js-ts-safe-project-merge-html-css-matrix.js';
+import { CssModuleProjectMergeMissingSignals, cssModuleProjectMergeAdmissionMatrixRows, cssModuleProjectMergeMatrixProofStatus, cssModuleProjectMergeMissingEvidenceItems, cssModuleProjectMergeMissingEvidenceRoutes } from './js-ts-safe-project-merge-css-module-matrix.js';
 import { sourceTextMergeMatrixProofStatus, sourceTextMergeMissingEvidenceItem } from './js-ts-safe-project-merge-source-text-candidate.js';
 const ProjectMergeMissingSignals = Object.freeze({
   sourceTextMergeCandidate: 'source-text-merge-candidate-not-produced',
@@ -14,7 +15,7 @@ const ProjectMergeMissingSignals = Object.freeze({
   semanticEditReplayOutputMismatch: 'semantic-edit-replay-proof-output-mismatch',
   unsupportedJsTsSurface: 'unsupported-js-ts-surface-proof-not-available',
   ...HtmlCssProjectMergeMissingSignals,
-  cssModuleUseSiteGraph: 'css-module-use-site-graph-proof-blocked',
+  ...CssModuleProjectMergeMissingSignals,
   semanticEquivalenceProof: 'semantic-equivalence-proof-not-available',
   semanticEquivalenceProofFailed: 'semantic-equivalence-proof-failed'
 });
@@ -33,7 +34,7 @@ const ProjectMergeMissingEvidenceRoutes = Object.freeze({
   [ProjectMergeMissingSignals.semanticEditReplayOutputMismatch]: route('reject-semantic-edit-replay-output-mismatch', 'source-files', 'inspect-semantic-edit-replay-output-binding'),
   [ProjectMergeMissingSignals.unsupportedJsTsSurface]: route('prove-unsupported-js-ts-surface', 'semantic-proof', 'supply-unsupported-surface-evidence'),
   ...htmlCssProjectMergeMissingEvidenceRoutes(route, ProjectMergeMissingSignals),
-  [ProjectMergeMissingSignals.cssModuleUseSiteGraph]: route('prove-css-module-use-site-graph', 'layout-style-graph', 'supply-css-module-transform-and-use-site-proof'),
+  ...cssModuleProjectMergeMissingEvidenceRoutes(route, ProjectMergeMissingSignals),
   [ProjectMergeMissingSignals.semanticEquivalenceProof]: route('external-semantic-equivalence-proof', 'semantic-proof', 'attach-external-equivalence-proof'),
   [ProjectMergeMissingSignals.semanticEquivalenceProofFailed]: route('reject-semantic-equivalence-proof', 'semantic-proof', 'inspect-external-equivalence-proof-binding')
 });
@@ -49,7 +50,7 @@ const ProjectMergeAdmissionMatrixRows = Object.freeze([
   matrixRow('generic-semantic-edit-admission', 'partial', ['source-span-roundtrip', 'semantic-edit-replay-clean'], [ProjectMergeMissingSignals.sourceSpanRoundtrip, ProjectMergeMissingSignals.semanticArtifacts, ProjectMergeMissingSignals.semanticEditReplayProof, ProjectMergeMissingSignals.semanticEditReplayOutputMismatch]),
   matrixRow('unsupported-js-ts-surface-coverage', 'partial', ['unsupported-js-ts-surface-review'], [ProjectMergeMissingSignals.unsupportedJsTsSurface]),
   ...htmlCssProjectMergeAdmissionMatrixRows(matrixRow, ProjectMergeMissingSignals),
-  matrixRow('css-modules-use-site-graph', 'partial', ['css-module-use-site-graph', 'css-module-transform-proof', 'project-graph-evidence'], [ProjectMergeMissingSignals.cssModuleUseSiteGraph]),
+  ...cssModuleProjectMergeAdmissionMatrixRows(matrixRow, ProjectMergeMissingSignals),
   matrixRow('semantic-equivalence-proof', 'bounded-evidence', ['semantic-equivalence-external', 'semantic-equivalence-unknown'], [ProjectMergeMissingSignals.semanticEquivalenceProof, ProjectMergeMissingSignals.semanticEquivalenceProofFailed]),
   matrixRow('cross-file-symbol-rename', 'partial', ['diagnostics-clean', 'declaration-output-stable', 'project-graph-delta'], [ProjectMergeMissingSignals.outputDiagnosticsGate, ProjectMergeMissingSignals.declarationGate, ProjectMergeMissingSignals.projectGraphEvidence, ProjectMergeMissingSignals.projectGraphDeltaEvidence]),
   matrixRow('symbol-move-between-files', 'partial', ['diagnostics-clean', 'declaration-output-stable', 'project-graph-delta'], [ProjectMergeMissingSignals.outputDiagnosticsGate, ProjectMergeMissingSignals.declarationGate, ProjectMergeMissingSignals.projectGraphEvidence, ProjectMergeMissingSignals.projectGraphDeltaEvidence]),
@@ -140,11 +141,7 @@ function missingEvidenceItems(summary, context = {}) {
     summary: 'Executable semantic equivalence is still unknown; keep semanticEquivalenceClaim false and require human or external proof for equivalence claims.',
     nextAction: 'Attach a source/output/gate-bound external semantic equivalence proof or keep the route in human review.'
   }));
-  if (summary.projectGraphCssModuleUseSiteConflicts) items.push(missingEvidenceItem({
-    code: ProjectMergeMissingSignals.cssModuleUseSiteGraph, scope: 'layout-style-graph', kind: 'css-module-use-site-proof', proofLevel: 'css-module-use-site-graph', action: 'review',
-    summary: `CSS Module use-site graph has ${summary.projectGraphCssModuleUseSiteConflicts} blocker(s); supply generated class maps, bundler transform identity, source-map proof, and narrow use-site evidence before admission.`,
-    suggestedInput: { includeOutputProjectSymbolGraph: true, cssModuleEvidence: true }
-  }));
+  items.push(...cssModuleProjectMergeMissingEvidenceItems(summary, ProjectMergeMissingSignals, missingEvidenceItem));
   items.push(...htmlCssProjectMergeMissingEvidenceItems(summary, ProjectMergeMissingSignals, missingEvidenceItem));
   return items;
 }
@@ -265,8 +262,8 @@ function matrixProofStatus(level, summary, proofEvidence) {
   if (sourceTextStatus) return sourceTextStatus;
   if (level === 'project-graph-delta') return summary.projectGraphDeltaEvidenceIncluded ? (summary.projectGraphDeltaConflicts ? 'failed' : 'passed') : 'missing';
   if (level === 'project-graph-evidence') return summary.projectGraphConflicts ? 'failed' : summary.projectGraphEvidenceIncluded || summary.projectGraphDeltaEvidenceIncluded ? 'passed' : 'missing';
-  if (level === 'css-module-use-site-graph') return summary.projectGraphCssModuleUseSiteConflicts ? 'failed' : summary.projectGraphCssModuleUseSiteGraphs ? 'passed' : summary.projectGraphEvidenceIncluded ? 'absent' : 'missing';
-  if (level === 'css-module-transform-proof') return summary.projectGraphCssModuleUseSiteConflicts ? 'failed' : summary.projectGraphCssModuleImportBindings ? 'passed' : summary.projectGraphEvidenceIncluded ? 'absent' : 'missing';
+  const cssModuleStatus = cssModuleProjectMergeMatrixProofStatus(level, summary);
+  if (cssModuleStatus) return cssModuleStatus;
   if (level === 'semantic-artifacts') return summary.semanticArtifactFiles ? 'present' : 'missing';
   return 'absent';
 }

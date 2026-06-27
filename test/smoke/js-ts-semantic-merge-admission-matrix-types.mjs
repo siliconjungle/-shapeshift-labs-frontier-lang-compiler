@@ -108,12 +108,18 @@ const sourceBoundAdvancedType = compilerAdvancedTypeMetadata({
 }, publicAdvancedTypeSource);
 assert.equal(sourceBoundAdvancedType.record.advancedTypeProofRequirement.status, 'requires-type-equivalence-proof');
 assert.equal(sourceBoundAdvancedType.record.advancedTypeProofRequirement.sourceBound, true);
+assert.equal(sourceBoundAdvancedType.record.advancedTypeSourceBoundProof.status, 'passed');
+assert.equal(sourceBoundAdvancedType.record.advancedTypeSourceBoundProof.sourcePath, publicAdvancedTypeSource.sourcePath);
+assert.equal(sourceBoundAdvancedType.record.advancedTypeSourceBoundProof.sourceHash, publicAdvancedTypeSource.sourceHash);
+assert.equal(sourceBoundAdvancedType.record.advancedTypeSourceBoundProof.semanticEquivalenceClaim, false);
 assert.equal(sourceBoundAdvancedType.record.advancedTypeMissingProof, undefined);
 
 const blankInferEvidence = compilerAdvancedTypeMetadata({
   advancedTypeShapes: [{ ...completeInferShape, typeText: '   ' }]
 }, publicAdvancedTypeSource);
 assert.equal(blankInferEvidence.record.advancedTypeProofRequirement.status, 'missing-compiler-evidence');
+assert.equal(blankInferEvidence.record.advancedTypeSourceBoundProof.status, 'failed');
+assert.equal(blankInferEvidence.record.advancedTypeSourceBoundProof.missingSignals.includes('compiler-infer-type-type-texts'), true);
 assert.equal(blankInferEvidence.record.advancedTypeMissingProof.reasonCode, 'typescript-public-api-advanced-type-shape-proof-missing');
 assert.equal(blankInferEvidence.record.advancedTypeMissingProof.missingSignals.includes('compiler-infer-type-type-texts'), true);
 
@@ -121,12 +127,16 @@ const sourceUnboundInferEvidence = compilerAdvancedTypeMetadata({
   advancedTypeShapes: [completeInferShape]
 }, { sourcePath: publicAdvancedTypeSource.sourcePath, publicContract: true });
 assert.equal(sourceUnboundInferEvidence.record.advancedTypeProofRequirement.status, 'missing-compiler-evidence');
+assert.equal(sourceUnboundInferEvidence.record.advancedTypeSourceBoundProof.status, 'failed');
+assert.equal(sourceUnboundInferEvidence.record.advancedTypeSourceBoundProof.missingSignals.includes('compiler-public-api-advanced-type-source-hash'), true);
 assert.equal(sourceUnboundInferEvidence.record.advancedTypeMissingProof.missingSignals.includes('compiler-public-api-advanced-type-source-hash'), true);
 
 const staleInferEvidence = compilerAdvancedTypeMetadata({
   advancedTypeShapes: [{ ...completeInferShape, sourceHash: 'source:stale' }]
 }, publicAdvancedTypeSource);
 assert.equal(staleInferEvidence.record.advancedTypeProofRequirement.status, 'requires-review');
+assert.equal(staleInferEvidence.record.advancedTypeSourceBoundProof.status, 'failed');
+assert.equal(staleInferEvidence.record.advancedTypeSourceBoundProof.unsupportedSignals.includes('compiler-public-api-advanced-type-source-hash-stale'), true);
 assert.equal(staleInferEvidence.record.advancedTypeMissingProof.reasonCode, 'typescript-public-api-advanced-type-shape-proof-requires-review');
 assert.equal(staleInferEvidence.record.advancedTypeMissingProof.unsupportedSignals.includes('compiler-public-api-advanced-type-source-hash-stale'), true);
 
@@ -134,4 +144,6 @@ const claimBearingInferEvidence = compilerAdvancedTypeMetadata({
   advancedTypeShapes: [{ ...completeInferShape, semanticEquivalenceClaim: true }]
 }, publicAdvancedTypeSource);
 assert.equal(claimBearingInferEvidence.record.advancedTypeProofRequirement.status, 'requires-review');
+assert.equal(claimBearingInferEvidence.record.advancedTypeSourceBoundProof.status, 'failed');
+assert.equal(claimBearingInferEvidence.record.advancedTypeSourceBoundProof.unsupportedSignals.includes('compiler-advanced-type-shape-claim-bearing'), true);
 assert.equal(claimBearingInferEvidence.record.advancedTypeMissingProof.unsupportedSignals.includes('compiler-advanced-type-shape-claim-bearing'), true);

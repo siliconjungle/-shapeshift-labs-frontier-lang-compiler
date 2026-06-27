@@ -73,6 +73,7 @@ export interface NativeProjectSymbolGraphCssModuleUseSiteBlockerRecord {
   readonly cssModuleSourcePath?: string;
   readonly expressionText?: string;
   readonly reasonCode?: string;
+  readonly proofBoundary?: 'css-module-generated-class-name-map' | 'css-module-bundler-transform-identity' | 'css-module-source-map-identity' | 'css-module-use-site-graph' | string;
   readonly writeOperation?: string;
   readonly jsxPropRecordId?: string;
   readonly failClosed: true;

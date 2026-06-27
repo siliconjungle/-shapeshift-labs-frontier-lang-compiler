@@ -1,5 +1,6 @@
 import { compactMissingEvidenceTelemetry, confidenceRecommendedAction, createProjectMergeAdmissionMatrixAudit, missingEvidenceItems, missingEvidenceSignals, prioritizedMissingEvidence } from './js-ts-safe-project-merge-missing-evidence.js';
 import { failedEvidenceMissingItems, fileAdmissionEvidenceRecords } from './js-ts-safe-project-merge-evidence-routing.js'; import { compactProjectMergeRoutingCalibration } from './js-ts-safe-project-merge-routing-calibration.js';
+import { cssModuleProjectSummaryFields } from './js-ts-safe-project-merge-css-module-summary.js';
 import { htmlCssProjectSummary } from './js-ts-safe-project-merge-html-css-summary.js';
 import { sourceTextMergeCandidateEvidenceRecord, sourceTextMergeSummary } from './js-ts-safe-project-merge-source-text-candidate.js';
 
@@ -17,7 +18,8 @@ function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false
     projectGraphConflicts: graphConflicts.length,
     projectGraphDeltaEvidenceIncluded: hasProjectGraphDelta ? 1 : 0, projectGraphEvidenceIncluded: projectSymbolGraph || hasProjectGraphDelta ? 1 : 0,
     outputProjectGraphConflicts: outputConflicts.length, projectGraphCssModuleUseSiteConflicts: cssModuleConflicts.length,
-    projectGraphDeltaConflicts: deltaConflicts.length, projectGraphCssModuleUseSiteBlockers: projectSymbolGraph?.cssModuleUseSiteBlockers?.length ?? cssModuleConflicts.length,
+    projectGraphDeltaConflicts: deltaConflicts.length,
+    ...cssModuleProjectSummaryFields(projectSymbolGraph, cssModuleConflicts),
     projectGraphLimitConflicts: limitConflicts.length, projectGraphCssModuleUseSiteGraphs: projectSymbolGraph?.cssModuleUseSiteGraphs?.length ?? 0, projectGraphCssModuleUseSites: projectSymbolGraph?.cssModuleUseSites?.length ?? 0, projectGraphCssModuleImportBindings: projectSymbolGraph?.cssModuleImportBindings?.length ?? 0,
     projectGraphPublicContractConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-public-contract-delta-conflict').length,
     projectGraphSourceSpanConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-source-span-delta-conflict').length,
