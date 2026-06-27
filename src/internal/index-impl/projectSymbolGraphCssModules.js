@@ -35,7 +35,7 @@ function createProjectCssModuleGraphRecords(semanticIndex, imports, importEdges,
     .map((edge, index) => cssModuleImportBindingRecord(edge, index, documentsById, cssSourcesWithDependencyGraphsByPath)));
   const bindingsByLocal = groupBindingsByLocal(importBindings);
   const { useSites: lexicalUseSites, blockers: lexicalBlockers } = cssModuleLexicalUseSites(importBindings, sourceTextsByPath);
-  const { useSites: jsxUseSites, blockers: jsxBlockers } = cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords);
+  const { useSites: jsxUseSites, blockers: jsxBlockers } = cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords, importEdges);
   const namedImportBlockers = importBindings
     .filter((binding) => binding.importKind === 'named')
     .map((binding) => cssModuleNamedExportBlocker(binding));

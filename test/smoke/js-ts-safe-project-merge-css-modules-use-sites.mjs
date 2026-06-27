@@ -35,8 +35,9 @@ const missingButtonSourceText = [
 const readyCssModuleSpecifier = './Ready.module.css';
 const readyButtonSourceText = [
   `import readyStyles from '${readyCssModuleSpecifier}';`,
+  'const cx = (...values) => values.filter(Boolean).join(" ");',
   'export function ReadyButton() {',
-  '  return <button className={readyStyles.root}>{readyStyles.label}</button>;',
+  '  return <button className={cx(readyStyles.root, readyStyles.label)}>{readyStyles.label}</button>;',
   '}',
   ''
 ].join('\n');
@@ -100,6 +101,11 @@ assert.equal(helperRoot.receiverLocalName, 'styles');
 assert.equal(helperRoot.expressionText, 'styles.root');
 assert.equal(helperRoot.conditionalRuntimePresence, undefined);
 assert.equal(typeof helperRoot.jsxPropRecordId, 'string');
+assert.equal(helperRoot.helperCallProofLevel, 'css-module-class-helper-source-bounded-token-graph');
+assert.equal(helperRoot.helperCalleeName, 'cx');
+assert.equal(helperRoot.helperCalleeRoot, 'cx');
+assert.equal(helperRoot.helperCalleeSource, 'local-name-convention');
+assert.equal(typeof helperRoot.helperCallGraphHash, 'string');
 
 const helperActive = graph.cssModuleUseSites.find((record) => record.useSiteKind === 'jsx-className-helper' && record.exportName === 'active');
 assert.equal(helperActive?.accessKind, 'dot');
@@ -107,6 +113,8 @@ assert.equal(helperActive.receiverLocalName, 'styles');
 assert.equal(helperActive.expressionText, 'styles.active');
 assert.equal(helperActive.conditionalRuntimePresence, true);
 assert.equal(typeof helperActive.jsxPropRecordId, 'string');
+assert.equal(helperActive.helperCallProofLevel, 'css-module-class-helper-source-bounded-token-graph');
+assert.equal(helperActive.helperCallGraphHash, helperRoot.helperCallGraphHash);
 
 const helperLabel = graph.cssModuleUseSites.find((record) => record.useSiteKind === 'jsx-className-helper' && record.exportName === 'label');
 assert.equal(helperLabel?.accessKind, 'static-bracket');
@@ -114,6 +122,8 @@ assert.equal(helperLabel.receiverLocalName, 'styles');
 assert.equal(helperLabel.expressionText, "styles['label']");
 assert.equal(helperLabel.conditionalRuntimePresence, undefined);
 assert.equal(typeof helperLabel.jsxPropRecordId, 'string');
+assert.equal(helperLabel.helperCallProofLevel, 'css-module-class-helper-source-bounded-token-graph');
+assert.equal(helperLabel.helperCallGraphHash, helperRoot.helperCallGraphHash);
 
 const optionalLabel = graph.cssModuleUseSites.find((record) => record.useSiteKind === 'jsx-className' && record.exportName === 'label' && record.conditionalRuntimePresence === true);
 assert.equal(optionalLabel?.accessKind, 'dot');
@@ -130,7 +140,7 @@ assert.equal(typeof staticBracketClassName.jsxPropRecordId, 'string');
 const blockerReasonCodes = graph.cssModuleUseSiteBlockers.map((record) => record.reasonCode);
 assert.equal(blockerReasonCodes.includes('css-module-dynamic-member-access-unproved'), true);
 assert.equal(blockerReasonCodes.includes('css-module-member-write-unsupported'), true);
-assert.equal(blockerReasonCodes.includes('css-module-helper-call-unproved'), true);
+assert.equal(blockerReasonCodes.includes('css-module-helper-call-unproved'), false);
 assert.equal(blockerReasonCodes.includes('css-module-string-literal-classname-unproved'), true);
 assert.equal(blockerReasonCodes.includes('css-module-generated-class-map-unproved'), true);
 assert.equal(blockerReasonCodes.includes('css-module-bundler-transform-identity-unproved'), true);
@@ -151,6 +161,9 @@ assert.equal(useSiteGraph.status, 'blocked');
 assert.equal(useSiteGraph.autoMergeClaim, false);
 assert.equal(useSiteGraph.semanticEquivalenceClaim, false);
 assert.equal(typeof useSiteGraph.graphHash, 'string');
+assert.equal(typeof useSiteGraph.cssModuleClassNameHelperGraphHash, 'string');
+assert.deepEqual(useSiteGraph.cssModuleClassNameHelperProofLevels, ['css-module-class-helper-source-bounded-token-graph']);
+assert.deepEqual(useSiteGraph.cssModuleClassNameHelperSources, ['local-name-convention']);
 
 const mergeProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_modules_use_sites',
@@ -173,17 +186,17 @@ const mergeProject = safeMergeJsTsProject({
 assert.equal(mergeProject.status, 'blocked');
 assert.equal(mergeProject.conflicts.some((conflict) => conflict.code === 'project-output-symbol-unresolved'), false);
 const cssModuleProofConflicts = mergeProject.conflicts.filter((conflict) => conflict.code === 'project-css-module-use-site-proof-blocked');
-assert.equal(cssModuleProofConflicts.length >= 7, true);
+assert.equal(cssModuleProofConflicts.length >= 6, true);
 const cssModuleConflictReasonCodes = cssModuleProofConflicts.map((conflict) => conflict.details.reasonCode);
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-dynamic-member-access-unproved'), true);
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-member-write-unsupported'), true);
-assert.equal(cssModuleConflictReasonCodes.includes('css-module-helper-call-unproved'), true);
+assert.equal(cssModuleConflictReasonCodes.includes('css-module-helper-call-unproved'), false);
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-string-literal-classname-unproved'), true);
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-generated-class-map-unproved'), true);
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-bundler-transform-identity-unproved'), true);
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-source-map-proof-unproved'), true);
-assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteConflicts >= 7, true);
-assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteBlockers >= 7, true);
+assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteConflicts >= 6, true);
+assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteBlockers >= 6, true);
 assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteGraphs, 1);
 const blockedCssModuleSurface = matrixSurface(mergeProject, 'css-modules-use-site-graph');
 assert.equal(blockedCssModuleSurface.proofStatuses['css-module-use-site-graph'], 'failed');
@@ -246,7 +259,12 @@ assert.equal(readyCssModuleProject.status, 'merged');
 const readyCssModuleGraph = readyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0];
 assert.equal(readyCssModuleGraph.status, 'ready');
 assert.equal(readyCssModuleGraph.blockerCount, 0);
+assert.equal(typeof readyCssModuleGraph.cssModuleClassNameHelperGraphHash, 'string');
+assert.deepEqual(readyCssModuleGraph.cssModuleClassNameHelperProofLevels, ['css-module-class-helper-source-bounded-token-graph']);
 assert.equal(typeof readyCssModuleGraph.cssModuleExportNamesHash, 'string');
+const readyHelperUseSites = readyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSites.filter((site) => site.useSiteKind === 'jsx-className-helper');
+assert.equal(readyHelperUseSites.length >= 2, true);
+assert.equal(readyHelperUseSites.every((site) => site.helperCallProofLevel === 'css-module-class-helper-source-bounded-token-graph'), true);
 assert.equal(readyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSites.every((site) => typeof site.cssModuleExportHash === 'string'), true);
 assert.equal(readyCssModuleProject.summary.projectGraphCssModuleUseSiteConflicts, 0);
 assert.equal(readyCssModuleProject.summary.projectGraphCssModuleUseSiteBlockers, 0);
@@ -258,6 +276,38 @@ assert.equal(readyCssModuleSurface.proofStatuses['css-module-use-site-graph'], '
 assert.equal(readyCssModuleSurface.proofStatuses['css-module-transform-proof'], 'passed');
 assert.equal(readyCssModuleSurface.proofStatuses['project-graph-evidence'], 'passed');
 assert.equal((readyCssModuleSurface.missingRouteIds ?? []).includes('prove-css-module-use-site-graph'), false);
+
+const unsafeHelperButtonSourceText = [
+  `import readyStyles from '${readyCssModuleSpecifier}';`,
+  'const cx = (...values) => values.filter(Boolean).join(" ");',
+  'function choose(value) { return value; }',
+  'export function UnsafeHelperButton() {',
+  '  return <button className={cx(readyStyles.root, choose(readyStyles.label))} />;',
+  '}',
+  ''
+].join('\n');
+const unsafeHelperProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_unsafe_helper_call',
+  includeOutputProjectSymbolGraph: true,
+  outputProjectImports: [readyCssModuleImport],
+  files: [
+    {
+      language: 'css',
+      sourcePath: 'src/Ready.module.css',
+      headSourceText: readyCssModuleSourceText
+    },
+    {
+      language: 'tsx',
+      sourcePath: 'src/UnsafeReady.tsx',
+      baseSourceText: unsafeHelperButtonSourceText,
+      workerSourceText: unsafeHelperButtonSourceText,
+      headSourceText: unsafeHelperButtonSourceText
+    }
+  ]
+});
+assert.equal(unsafeHelperProject.status, 'blocked');
+assert.equal(unsafeHelperProject.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-helper-call-unproved'), true);
+assert.equal(unsafeHelperProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].status, 'blocked');
 
 function matrixSurface(result, surface) {
   const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);

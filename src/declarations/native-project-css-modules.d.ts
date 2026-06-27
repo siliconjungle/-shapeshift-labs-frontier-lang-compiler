@@ -51,6 +51,13 @@ export interface NativeProjectSymbolGraphCssModuleUseSiteRecord {
   readonly jsxPropRecordId?: string;
   readonly scopeReferenceRecordId?: string;
   readonly conditionalRuntimePresence?: boolean;
+  readonly helperCallProofLevel?: 'css-module-class-helper-source-bounded-token-graph' | string;
+  readonly helperCallGraphHash?: string;
+  readonly helperCalleeName?: string;
+  readonly helperCalleeRoot?: string;
+  readonly helperCalleeSource?: 'known-package-import' | 'local-name-convention' | string;
+  readonly helperModuleSpecifier?: string;
+  readonly helperImportEdgeId?: string;
   readonly signatureHash?: string;
 }
 
@@ -91,6 +98,9 @@ export interface NativeProjectSymbolGraphCssModuleUseSiteGraphRecord {
   readonly cssModuleCompositionGraphSource?: 'supplied' | 'source-local' | 'project-source' | string;
   readonly icssGraphHash?: string;
   readonly icssGraphSource?: 'supplied' | 'source-export-only' | 'project-source' | string;
+  readonly cssModuleClassNameHelperGraphHash?: string;
+  readonly cssModuleClassNameHelperProofLevels?: readonly string[];
+  readonly cssModuleClassNameHelperSources?: readonly string[];
   readonly bundlerTransformHash?: string;
   readonly sourceMapProofHash?: string;
   readonly status: 'ready' | 'blocked' | string;

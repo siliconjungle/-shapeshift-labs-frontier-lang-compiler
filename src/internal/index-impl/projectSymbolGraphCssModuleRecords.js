@@ -7,6 +7,7 @@ import {
   semanticSpanForHash,
   sourceSpanForRange
 } from './projectSymbolGraphCssModuleUtils.js';
+import { cssModuleUseSiteGraphHashes } from './projectSymbolGraphCssModuleGraphHashes.js';
 
 function cssModuleImportBindingRecord(edge, index, documentsById, cssSourcesByPath) {
   const cssSourcePath = edge.resolvedModulePath ?? cssModuleSpecifierPath(edge.moduleSpecifier);
@@ -71,7 +72,12 @@ function cssModuleUseSiteRecord(binding, input) {
     accessKind: input.accessKind,
     exportName: input.exportName,
     expressionText: input.expressionText,
-    sourceSpan: semanticSpanForHash(input.sourceSpan)
+    sourceSpan: semanticSpanForHash(input.sourceSpan),
+    helperCallProofLevel: input.helperCallProofLevel,
+    helperCallGraphHash: input.helperCallGraphHash,
+    helperCalleeName: input.helperCalleeName,
+    helperCalleeSource: input.helperCalleeSource,
+    helperModuleSpecifier: input.helperModuleSpecifier
   });
   return compactRecord({
     id: `css_module_use_${idFragment(binding.id)}_${idFragment(signatureHash)}`,
@@ -93,6 +99,13 @@ function cssModuleUseSiteRecord(binding, input) {
     jsxPropRecordId: input.jsxPropRecordId,
     scopeReferenceRecordId: input.scopeReferenceRecordId,
     conditionalRuntimePresence: input.conditionalRuntimePresence,
+    helperCallProofLevel: input.helperCallProofLevel,
+    helperCallGraphHash: input.helperCallGraphHash,
+    helperCalleeName: input.helperCalleeName,
+    helperCalleeRoot: input.helperCalleeRoot,
+    helperCalleeSource: input.helperCalleeSource,
+    helperModuleSpecifier: input.helperModuleSpecifier,
+    helperImportEdgeId: input.helperImportEdgeId,
     signatureHash
   });
 }
@@ -187,20 +200,7 @@ function cssModuleUseSiteGraphRecords(importBindings, useSites, blockers) {
 }
 
 function cssModuleUseSiteGraphRecord(cssModuleSourcePath, bindings, graphUseSites, graphBlockers) {
-  const jsTsUseSiteGraphHash = hashSemanticValue({
-    kind: 'frontier.lang.cssModuleJsTsUseSiteGraph.v1',
-    cssModuleSourcePath,
-    bindings: bindings.map(cssModuleUseSiteBindingSignature).sort(stableStringCompare),
-    useSites: graphUseSites.map(cssModuleUseSiteSignature).sort(stableStringCompare),
-    blockers: graphBlockers.map(cssModuleUseSiteBlockerSignature).sort(stableStringCompare)
-  });
-  const graphHash = hashSemanticValue({
-    kind: 'frontier.lang.cssModuleUseSiteGraph.v1',
-    cssModuleSourcePath,
-    bindings: bindings.map((binding) => binding.signatureHash).sort(),
-    useSites: graphUseSites.map((site) => site.signatureHash).sort(),
-    blockers: graphBlockers.map((blocker) => blocker.signatureHash).sort()
-  });
+  const graphHashes = cssModuleUseSiteGraphHashes(cssModuleSourcePath, bindings, graphUseSites, graphBlockers);
   return compactRecord({
     kind: 'frontier.lang.cssModuleUseSiteGraph',
     version: 1,
@@ -219,57 +219,18 @@ function cssModuleUseSiteGraphRecord(cssModuleSourcePath, bindings, graphUseSite
     cssModuleCompositionGraphSource: bindings.find((binding) => binding.cssModuleCompositionGraphSource)?.cssModuleCompositionGraphSource,
     icssGraphHash: bindings.find((binding) => binding.icssGraphHash)?.icssGraphHash,
     icssGraphSource: bindings.find((binding) => binding.icssGraphSource)?.icssGraphSource,
+    cssModuleClassNameHelperGraphHash: graphHashes.cssModuleClassNameHelperGraphHash,
+    cssModuleClassNameHelperProofLevels: graphHashes.cssModuleClassNameHelperProofLevels,
+    cssModuleClassNameHelperSources: graphHashes.cssModuleClassNameHelperSources,
     bundlerTransformHash: bindings.find((binding) => binding.bundlerTransformHash)?.bundlerTransformHash,
     sourceMapProofHash: bindings.find((binding) => binding.sourceMapProofHash)?.sourceMapProofHash,
-    jsTsUseSiteGraphHash,
+    jsTsUseSiteGraphHash: graphHashes.jsTsUseSiteGraphHash,
     status: graphBlockers.length ? 'blocked' : 'ready',
-    graphHash,
+    graphHash: graphHashes.graphHash,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   });
 }
-
-function cssModuleUseSiteBindingSignature(binding) {
-  return JSON.stringify({
-    sourcePath: binding.sourcePath,
-    sourceHash: binding.sourceHash,
-    moduleSpecifier: binding.moduleSpecifier,
-    resolvedModulePath: binding.resolvedModulePath,
-    importKind: binding.importKind,
-    importedName: binding.importedName,
-    localName: binding.localName
-  });
-}
-
-function cssModuleUseSiteSignature(site) {
-  return JSON.stringify({
-    jsSourcePath: site.jsSourcePath,
-    jsSourceHash: site.jsSourceHash,
-    exportName: site.exportName,
-    useSiteKind: site.useSiteKind,
-    accessKind: site.accessKind,
-    receiverLocalName: site.receiverLocalName,
-    localReferenceName: site.localReferenceName,
-    expressionText: site.expressionText,
-    sourceSpan: semanticSpanForHash(site.sourceSpan),
-    conditionalRuntimePresence: site.conditionalRuntimePresence
-  });
-}
-
-function cssModuleUseSiteBlockerSignature(blocker) {
-  return JSON.stringify({
-    sourcePath: blocker.sourcePath,
-    sourceHash: blocker.sourceHash,
-    moduleSpecifier: blocker.moduleSpecifier,
-    localName: blocker.localName,
-    expressionText: blocker.expressionText,
-    reasonCode: blocker.reasonCode,
-    writeOperation: blocker.writeOperation,
-    sourceSpan: semanticSpanForHash(blocker.sourceSpan)
-  });
-}
-
-function stableStringCompare(left, right) { return left.localeCompare(right); }
 
 function cssModuleExportHash(binding, exportName) {
   if (!exportName || !Array.isArray(binding.cssModuleExportNames) || !binding.cssModuleExportNames.includes(exportName)) return undefined;

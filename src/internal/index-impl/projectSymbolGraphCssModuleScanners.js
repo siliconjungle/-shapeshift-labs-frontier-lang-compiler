@@ -16,6 +16,12 @@ import {
   cssModuleStaticExpressionAccess,
   identifierOccurrences
 } from './projectSymbolGraphCssModuleMemberAccess.js';
+import {
+  cssModuleClassHelperCalleeEvidence,
+  cssModuleClassHelperCallProof,
+  cssModuleHelperArgumentIsConditional,
+  cssModuleMemberWriteOperation
+} from './projectSymbolGraphCssModuleClassHelpers.js';
 
 function cssModuleLexicalUseSites(importBindings, sourceTextsByPath) {
   const useSites = [];
@@ -43,7 +49,7 @@ function cssModuleMemberUseSites(binding, sourceText, blockers) {
       blockers.push(cssModuleAccessBlocker(binding, sourceText, occurrence.start, access.end ?? occurrence.end, access.reasonCode, access.expressionText));
       continue;
     }
-    const writeOperation = memberWriteOperation(sourceText, occurrence.start, access.end);
+    const writeOperation = cssModuleMemberWriteOperation(sourceText, occurrence.start, access.end);
     if (writeOperation) {
       blockers.push(cssModuleAccessBlocker(binding, sourceText, occurrence.start, access.end, 'css-module-member-write-unsupported', sourceText.slice(occurrence.start, access.end), { writeOperation }));
       continue;
@@ -93,9 +99,10 @@ function cssModuleDestructuringUseSites(binding, sourceText, blockers) {
   return useSites;
 }
 
-function cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords) {
+function cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords, importEdges = []) {
   const useSites = [];
   const blockers = [];
+  const helperCalleeEvidence = cssModuleClassHelperCalleeEvidence(importEdges);
   for (const prop of jsxPropRecords ?? []) {
     const root = prop.propValueReferenceRoot;
     const sourceBindings = root ? bindingsByLocal.get(localKey(prop.sourcePath, root)) ?? [] : [];
@@ -103,8 +110,8 @@ function cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords) {
     const classNameBindings = bindingsForSourcePath(bindingsByLocal, prop.sourcePath);
     if (prop.propName !== 'className' || !classNameBindings.length) continue;
     useSites.push(...cssModuleJsxStaticComputedUseSites(classNameBindings, prop));
-    useSites.push(...cssModuleJsxHelperUseSites(classNameBindings, prop));
-    blockers.push(...cssModuleJsxBlockers(classNameBindings, prop));
+    useSites.push(...cssModuleJsxHelperUseSites(classNameBindings, prop, helperCalleeEvidence));
+    blockers.push(...cssModuleJsxBlockers(classNameBindings, prop, helperCalleeEvidence));
   }
   return { useSites, blockers };
 }
@@ -148,15 +155,16 @@ function cssModuleJsxStaticComputedUseSites(classNameBindings, prop) {
   });
 }
 
-function cssModuleJsxHelperUseSites(classNameBindings, prop) {
+function cssModuleJsxHelperUseSites(classNameBindings, prop, helperCalleeEvidence) {
   const expressionText = prop.propValueExpressionText ?? prop.propValueDynamicText ?? '';
   if (!cssModuleExpressionHasCall(expressionText)) return [];
   const useSites = [];
   for (const binding of classNameBindings) {
+    const helperProof = cssModuleClassHelperCallProof(expressionText, binding, prop, helperCalleeEvidence);
     for (const occurrence of identifierOccurrences(expressionText, binding.localName)) {
       const access = cssModuleMemberAccess(expressionText, occurrence.end);
       if (!access || access.status === 'blocked') continue;
-      if (memberWriteOperation(expressionText, occurrence.start, access.end)) continue;
+      if (cssModuleMemberWriteOperation(expressionText, occurrence.start, access.end)) continue;
       useSites.push(cssModuleUseSiteRecord(binding, {
         useSiteKind: 'jsx-className-helper',
         accessKind: access.accessKind,
@@ -167,14 +175,21 @@ function cssModuleJsxHelperUseSites(classNameBindings, prop) {
         sourceHash: prop.sourceHash,
         sourceSpan: prop.sourceSpan,
         jsxPropRecordId: prop.id,
-        conditionalRuntimePresence: cssModuleHelperArgumentIsConditional(expressionText, occurrence.start) || undefined
+        conditionalRuntimePresence: cssModuleHelperArgumentIsConditional(expressionText, occurrence.start) || undefined,
+        helperCallProofLevel: helperProof?.proofLevel,
+        helperCallGraphHash: helperProof?.helperCallGraphHash,
+        helperCalleeName: helperProof?.helperCalleeName,
+        helperCalleeRoot: helperProof?.helperCalleeRoot,
+        helperCalleeSource: helperProof?.helperCalleeSource,
+        helperModuleSpecifier: helperProof?.helperModuleSpecifier,
+        helperImportEdgeId: helperProof?.helperImportEdgeId
       }));
     }
   }
   return useSites;
 }
 
-function cssModuleJsxBlockers(classNameBindings, prop) {
+function cssModuleJsxBlockers(classNameBindings, prop, helperCalleeEvidence) {
   if (prop.propValueKind === 'string') {
     return classNameBindings.map((binding) => cssModulePropBlocker(binding, prop, 'css-module-string-literal-classname-unproved'));
   }
@@ -183,41 +198,16 @@ function cssModuleJsxBlockers(classNameBindings, prop) {
   return classNameBindings.flatMap((binding) => {
     if (!expressionText.includes(binding.localName)) return [];
     const reasonCodes = [];
-    if (cssModuleExpressionHasCall(expressionText)) reasonCodes.push('css-module-helper-call-unproved');
+    const helperProof = cssModuleClassHelperCallProof(expressionText, binding, prop, helperCalleeEvidence);
+    if (cssModuleExpressionHasCall(expressionText) && !helperProof) reasonCodes.push('css-module-helper-call-unproved');
     if (cssModuleExpressionHasBlockedAccess(expressionText, binding.localName)) reasonCodes.push('css-module-dynamic-member-access-unproved');
     if (!reasonCodes.length && cssModuleStaticExpressionAccess(expressionText, binding.localName)) return [];
     if (!reasonCodes.length && prop.propValueDynamicBlockerReasonCode) {
-      reasonCodes.push(jsxDynamicReason(prop.propValueDynamicBlockerReasonCode));
+      const dynamicReason = jsxDynamicReason(prop.propValueDynamicBlockerReasonCode);
+      if (dynamicReason !== 'css-module-helper-call-unproved' || !helperProof) reasonCodes.push(dynamicReason);
     }
     return [...new Set(reasonCodes)].map((reasonCode) => cssModulePropBlocker(binding, prop, reasonCode));
   });
-}
-
-function memberWriteOperation(sourceText, start, end) {
-  if (hasPrefixUpdateOperator(sourceText, start)) return 'update';
-  let index = end;
-  while (index < sourceText.length && /\s/.test(sourceText[index])) index += 1;
-  if (sourceText.slice(index, index + 2) === '++' || sourceText.slice(index, index + 2) === '--') return 'update';
-  return assignmentOperatorAt(sourceText, index) ? 'assignment' : undefined;
-}
-
-function assignmentOperatorAt(code, index) {
-  for (const operator of ['>>>=', '**=', '<<=', '>>=', '&&=', '||=', '??=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '=']) {
-    if (!code.startsWith(operator, index)) continue;
-    if (operator === '=' && (code[index + 1] === '=' || code[index + 1] === '>')) return undefined;
-    return operator;
-  }
-  return undefined;
-}
-
-function hasPrefixUpdateOperator(code, tokenStart) {
-  let index = tokenStart - 1;
-  while (index >= 0 && /\s/.test(code[index])) index -= 1;
-  const operator = code.slice(index - 1, index + 1);
-  if (operator !== '++' && operator !== '--') return false;
-  let before = index - 2;
-  while (before >= 0 && /\s/.test(code[before])) before -= 1;
-  return before < 0 || !/[A-Za-z0-9_$)\]]/.test(code[before]);
 }
 
 function destructuringProperty(text) {
@@ -247,16 +237,6 @@ function splitTopLevelComma(text, baseOffset) {
   }
   parts.push({ text: text.slice(start), offset: baseOffset + start });
   return parts;
-}
-
-function cssModuleHelperArgumentIsConditional(expressionText, occurrenceStart) {
-  const prefix = expressionText.slice(0, occurrenceStart);
-  const suffix = expressionText.slice(occurrenceStart);
-  const lastComma = prefix.lastIndexOf(',');
-  const argumentPrefix = prefix.slice(lastComma + 1);
-  const nextComma = suffix.indexOf(',');
-  const argumentText = `${argumentPrefix}${nextComma === -1 ? suffix : suffix.slice(0, nextComma)}`;
-  return /(?:&&|\|\||\?)/.test(argumentText);
 }
 
 function jsxDynamicReason(reasonCode) {
