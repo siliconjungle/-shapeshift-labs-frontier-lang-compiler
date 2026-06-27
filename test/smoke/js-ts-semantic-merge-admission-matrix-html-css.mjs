@@ -53,6 +53,12 @@ assertSurface(oracleHtmlCssProject, 'css-cascade-merge-admission', 'partial', 'c
 assertSurface(oracleHtmlCssProject, 'css-dependency-graph-evidence', 'bounded-evidence', 'css-dependency-graph', 'absent');
 const oracleBrowserSurface = assertSurface(oracleHtmlCssProject, 'html-css-browser-runtime-proof', 'bounded-evidence', 'browser-runtime-proof', 'missing');
 assert.equal(oracleBrowserSurface.missingRouteIds.includes('prove-html-css-browser-runtime'), true);
+const oracleBrowserMissingEvidence = oracleHtmlCssProject.confidence.missingEvidence.find((item) => item.code === 'html-css-browser-runtime-proof-not-available');
+assert.ok(oracleBrowserMissingEvidence, 'missing browser runtime proof evidence item');
+assert.equal(oracleBrowserMissingEvidence.routeNext, 'produce-playwright-assertion-runtime-proof-bundle');
+assert.match(oracleBrowserMissingEvidence.summary, /runFrontierPlaywrightAssertionRuntimeProof/);
+assert.equal(oracleBrowserMissingEvidence.suggestedInput.playwrightAssertionRuntimeProof, true);
+assert.equal(oracleBrowserMissingEvidence.suggestedInput.proofBuilderInput, true);
 assert.equal(oracleHtmlCssProject.admission.semanticEquivalenceClaim, false);
 
 function assertSurface(project, surface, status, proofLevel, proofStatus) {
