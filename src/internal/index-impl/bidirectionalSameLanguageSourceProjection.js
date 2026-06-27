@@ -37,7 +37,10 @@ export function createSameLanguageTargetSourceProjection(context = {}) {
     ? replaySemanticEditProjection({
       id: `semantic_edit_replay_${idFragment(context.id)}_same_language_target`,
       projection,
-      currentSourceText: sourceText
+      currentSourceText: sourceText,
+      currentSourceHash: script.headHash,
+      expectedOutputSourceText: projection.sourceText,
+      expectedOutputHash: projection.projectedHash
     })
     : undefined;
   const sourceProjectionHint = projectionHint(context, script, projection, replay);

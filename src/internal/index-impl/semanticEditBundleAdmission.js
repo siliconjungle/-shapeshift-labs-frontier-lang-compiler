@@ -64,6 +64,8 @@ function summarizeSemanticEditBundle(scripts, projections, replays, evidence, in
     portableScripts: scripts.filter((script) => script.admission?.status === 'auto-merge-candidate').length,
     portableProjections: projections.filter((projection) => projection.status === 'projected' && projection.admission?.status === 'auto-merge-candidate').length,
     acceptedClean: replays.filter((replay) => replay.status === 'accepted-clean').length,
+    boundedCurrentHeadReplays: replays.filter(isBoundedCurrentHeadReplay).length,
+    unboundAcceptedCleanReplays: replays.filter((replay) => replay.status === 'accepted-clean' && !isBoundedCurrentHeadReplay(replay)).length,
     alreadyApplied: replays.filter((replay) => replay.status === 'already-applied').length,
     conflicts: countStatuses(scriptStatusEntries, replayStatusEntries, ['conflict']),
     stale: countStatuses(scriptStatusEntries, replayStatusEntries, ['stale']),
@@ -75,6 +77,9 @@ function summarizeSemanticEditBundle(scripts, projections, replays, evidence, in
     projectionStatuses,
     replayStatuses,
     replayActions,
+    replayProofRouteIds: uniqueStrings(replays.map((replay) => replayProofRoute(replay)?.routeId)),
+    replayCurrentSourceBindingStatuses: uniqueStrings(replays.map((replay) => replay.metadata?.currentSourceBindingStatus)),
+    replayOutputBindingStatuses: uniqueStrings(replays.map((replay) => replay.metadata?.outputBindingStatus)),
     sourcePaths: sourcePaths(scripts, projections, replays),
     scriptIds: uniqueStrings(scripts.map((script) => script.id)),
     projectionIds: uniqueStrings(projections.map((projection) => projection.id)),
@@ -112,6 +117,7 @@ function derivedReasonCodes(summary, status) {
     (summary.scripts || summary.projections) && !summary.replays ? 'semantic-edit-replay-missing' : undefined,
     summary.scripts && summary.portableScripts !== summary.scripts ? 'semantic-edit-script-not-portable' : undefined,
     summary.projections && summary.portableProjections !== summary.projections ? 'semantic-edit-projection-not-portable' : undefined,
+    summary.unboundAcceptedCleanReplays ? 'semantic-edit-replay-current-head-proof-missing' : undefined,
     summary.acceptedClean && !summary.passedTestEvidence ? 'semantic-edit-tests-passed-evidence-missing' : undefined,
     summary.failedTestEvidence ? 'semantic-edit-tests-failed' : undefined,
     summary.conflictEvidence ? 'semantic-edit-conflict-evidence' : undefined,
@@ -128,6 +134,7 @@ function derivedReasonCodes(summary, status) {
 function hasPositiveAutoMergeProof(summary) {
   return summary.acceptedClean > 0 &&
     summary.acceptedClean + summary.alreadyApplied === summary.replays &&
+    summary.boundedCurrentHeadReplays === summary.acceptedClean &&
     summary.scripts > 0 &&
     summary.projections > 0 &&
     summary.portableScripts === summary.scripts &&
@@ -136,6 +143,23 @@ function hasPositiveAutoMergeProof(summary) {
     summary.failedTestEvidence === 0 &&
     summary.conflictEvidence === 0 &&
     summary.staleEvidence === 0;
+}
+
+function isBoundedCurrentHeadReplay(replay) {
+  if (replay?.status !== 'accepted-clean') return false;
+  const route = replayProofRoute(replay);
+  return route?.routeId === 'admit-independent-semantic-edit-current-head-commutation' &&
+    route?.proofKind === 'bounded-current-head-commutation' &&
+    route?.status === 'passed' &&
+    route?.outputBindingStatus === 'bound' &&
+    typeof route.expectedCurrentHash === 'string' &&
+    route.expectedCurrentHash === route.replayCurrentHash &&
+    typeof route.expectedOutputHash === 'string' &&
+    route.expectedOutputHash === route.replayOutputHash;
+}
+
+function replayProofRoute(replay) {
+  return replay?.admission?.proofRoute ?? replay?.metadata?.proofRoute;
 }
 
 function readinessForStatus(status) {

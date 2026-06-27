@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import {
   createSemanticEditBundleAdmission,
   createSemanticEditScript,
@@ -31,10 +32,17 @@ function semanticEditFlow(input) {
     workerSourceText: input.worker,
     headSourceText: input.head ?? input.base
   });
+  const currentSourceText = input.current ?? input.head ?? input.base;
+  const replayBinding = input.bindReplay === false ? {} : {
+    currentSourceHash: hashSemanticValue(currentSourceText),
+    expectedOutputSourceText: projection.sourceText,
+    expectedOutputHash: projection.projectedHash
+  };
   const replay = replaySemanticEditProjection({
     id: `${input.id}_replay`,
     projection,
-    currentSourceText: input.current ?? input.head ?? input.base
+    currentSourceText,
+    ...replayBinding
   });
   return { script, projection, replay };
 }
@@ -284,37 +292,3 @@ assert.equal(alreadyBundle.admission.autoApplyCandidate, false);
 assert.equal(alreadyBundle.admission.semanticEditAdmission.status, 'already-applied');
 assert.equal(querySemanticPatchBundleRecords([alreadyBundle], { semanticEditAdmissionStatus: 'already-applied' }).length, 1);
 assert.equal(querySemanticPatchBundleRecords([alreadyBundle], { semanticEditAdmissionAction: 'skip' }).length, 1);
-const stale = semanticEditFlow({
-  id: 'bundle_stale',
-  sourcePath: 'src/d.js',
-  base: 'export function d() { return 1; }\n',
-  worker: 'export function d() { return 2; }\n',
-  current: 'export function renamed() { return 1; }\n'
-});
-const conflict = semanticEditFlow({
-  id: 'bundle_conflict',
-  sourcePath: 'src/e.js',
-  base: 'export function e() { return 1; }\n',
-  worker: 'export function e() { return 2; }\n',
-  current: 'export function e() { return 4; }\n'
-});
-assert.equal(createSemanticEditBundleAdmission({ semanticEditReplays: [stale.replay] }).status, 'stale');
-assert.equal(createSemanticEditBundleAdmission({ semanticEditReplays: [conflict.replay] }).status, 'conflict');
-const blockedAdmission = createSemanticEditBundleAdmission({
-  semanticEditProjections: [{
-    id: 'bundle_blocked_projection',
-    status: 'blocked',
-    admission: { status: 'blocked', reasonCodes: ['projection-blocked'] }
-  }]
-});
-assert.equal(blockedAdmission.status, 'blocked');
-assert.equal(blockedAdmission.action, 'block');
-assert.equal(blockedAdmission.readiness, 'blocked');
-assert.equal(blockedAdmission.reasonCodes.includes('semantic-edit-blocked'), true);
-const missingReplayAdmission = createSemanticEditBundleAdmission({
-  semanticEditScripts: [first.script],
-  semanticEditProjections: [first.projection]
-});
-assert.equal(missingReplayAdmission.status, 'needs-review');
-assert.equal(missingReplayAdmission.action, 'review');
-assert.equal(missingReplayAdmission.reasonCodes.includes('semantic-edit-replay-missing'), true);

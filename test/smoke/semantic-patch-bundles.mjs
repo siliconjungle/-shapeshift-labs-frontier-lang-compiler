@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import {
   createSemanticEditScript,
   createSemanticHistoryRecord,
@@ -109,7 +110,10 @@ const semanticEditReplay = replaySemanticEditProjection({
   id: 'counter_patch_bundle_semantic_replay',
   projection: semanticEditProjection,
   currentSourceText: beforeSourceText,
-  currentSourcePath: 'src/counter-core.js'
+  currentSourcePath: 'src/counter-core.js',
+  currentSourceHash: hashSemanticValue(beforeSourceText),
+  expectedOutputSourceText: semanticEditProjection.sourceText,
+  expectedOutputHash: semanticEditProjection.projectedHash
 });
 const semanticEditAutoMergeProof = {
   id: 'evidence_counter_semantic_edit_auto_merge',

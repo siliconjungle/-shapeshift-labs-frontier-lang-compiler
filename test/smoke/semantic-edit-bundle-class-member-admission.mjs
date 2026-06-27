@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import {
   compareSemanticPatchBundleRecords,
   createSemanticEditBundleAdmission,
@@ -92,7 +93,10 @@ function semanticEditFlow(input) {
   const replay = replaySemanticEditProjection({
     id: `${input.id}_replay`,
     projection,
-    currentSourceText: input.head
+    currentSourceText: input.head,
+    currentSourceHash: hashSemanticValue(input.head),
+    expectedOutputSourceText: projection.sourceText,
+    expectedOutputHash: projection.projectedHash
   });
   return { script, projection, replay };
 }

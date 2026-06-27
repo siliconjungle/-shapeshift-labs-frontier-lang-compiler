@@ -26,7 +26,10 @@ export function createBidirectionalSourceEditProjectionArtifacts(context = {}, s
     ? replaySemanticEditProjection({
       id: `semantic_edit_replay_${idFragment(context.id)}_source_backprojection`,
       projection,
-      currentSourceText: sourceText
+      currentSourceText: sourceText,
+      currentSourceHash: sourceEditScript.headHash,
+      expectedOutputSourceText: projection.sourceText,
+      expectedOutputHash: projection.projectedHash
     })
     : undefined;
   return {

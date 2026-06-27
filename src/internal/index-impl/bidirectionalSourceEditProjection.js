@@ -38,6 +38,7 @@ export function createBidirectionalSourceEditProjection(context = {}) {
     language: source.language,
     sourcePath: projectionSourcePath(source, matches),
     baseHash: sourceHash(source),
+    headHash: sourceHash(source),
     workerChangeSetId: targetChangeSet.id,
     operations,
     summary: summarizeSemanticEditOperations(operations),

@@ -64,6 +64,10 @@ assert.equal(duplicateOverlap.kind, 'frontier.lang.semanticPatchBundleOverlapRec
 assert.equal(duplicateOverlap.admission.status, 'duplicate');
 assert.equal(duplicateOverlap.admission.autoMergeClaim, false);
 assert.equal(duplicateOverlap.admission.reviewRequired, true);
+assert.equal(duplicateOverlap.admission.proofKind, 'semantic-patch-bundle-non-overlap');
+assert.equal(duplicateOverlap.admission.nonOverlapProof, false);
+assert.equal(duplicateOverlap.admission.autoApplyBlocker, true);
+assert.equal(duplicateOverlap.admission.requiredBeforeAdmission.includes('non-overlap-proof'), true);
 assert.equal(duplicateOverlap.overlapKinds.includes('operation-content'), true);
 assert.equal(duplicateOverlap.overlapKinds.includes('edit-content'), true);
 assert.equal(duplicateOverlap.overlapKinds.includes('semantic-edit-replay'), true);
@@ -78,6 +82,9 @@ assert.equal(duplicateOverlap.shared.sourceIdentityHashes.length, 1);
 assert.equal(duplicateOverlap.admission.reasonCodes.includes('same-replay-output'), true);
 assert.equal(duplicateOverlap.admission.reasonCodes.includes('same-region-key'), true);
 assert.equal(duplicateOverlap.admission.reasonCodes.includes('same-conflict-key'), true);
+assert.equal(duplicateOverlap.summary.nonOverlapProof, false);
+assert.equal(duplicateOverlap.summary.blockingOverlapSignals > 0, true);
+assert.equal(duplicateOverlap.summary.replayOutputSignals, 1);
 assert.equal(duplicateOverlap.score >= 100, true);
 
 const alternateChangeSet = diffNativeSources({
@@ -140,6 +147,9 @@ const replayCurrentBundle = createSemanticPatchBundleRecord(alternateChangeSet, 
 const replayCurrentOverlap = compareSemanticPatchBundleRecords(duplicateA, replayCurrentBundle, { includeSourcePaths: false });
 assert.equal(replayCurrentOverlap.overlapKinds.includes('replay-current'), true);
 assert.equal(replayCurrentOverlap.admission.reasonCodes.includes('same-replay-current'), true);
+assert.equal(replayCurrentOverlap.admission.reasonCodes.includes('same-replay-current-without-same-output'), true);
+assert.equal(replayCurrentOverlap.admission.autoApplyBlocker, true);
+assert.equal(replayCurrentOverlap.summary.replayCurrentOnlySignals, 1);
 assert.equal(querySemanticPatchBundleOverlaps([duplicateA, replayCurrentBundle], {
   semanticEditReplayCurrentHash: replay.currentHash
 }).length, 1);
@@ -206,6 +216,11 @@ const independentBundle = createSemanticPatchBundleRecord({
 const independent = compareSemanticPatchBundleRecords(duplicateA, independentBundle);
 assert.equal(independent.admission.status, 'independent');
 assert.equal(independent.admission.reviewRequired, false);
+assert.equal(independent.admission.nonOverlapProof, true);
+assert.equal(independent.admission.autoApplyBlocker, false);
+assert.deepEqual(independent.admission.requiredBeforeAdmission, []);
+assert.equal(independent.summary.nonOverlapProof, true);
+assert.equal(independent.summary.blockingOverlapSignals, 0);
 assert.equal(querySemanticPatchBundleOverlaps([duplicateA, independentBundle], { includeIndependent: true }).length, 1);
 
 const transformBase = createSemanticTransformIdentityRecord(script.operations[0], {

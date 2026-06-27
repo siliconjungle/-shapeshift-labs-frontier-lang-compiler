@@ -24,10 +24,14 @@ function semanticEditFlow(input) {
     workerSourceText: input.worker,
     headSourceText: input.head ?? input.base
   });
+  const currentSourceText = input.current ?? input.head ?? input.base;
   const replay = replaySemanticEditProjection({
     id: `${input.id}_replay`,
     projection,
-    currentSourceText: input.current ?? input.head ?? input.base
+    currentSourceText,
+    currentSourceHash: hashSemanticValue(currentSourceText),
+    expectedOutputSourceText: projection.sourceText,
+    expectedOutputHash: projection.projectedHash
   });
   return { script, projection, replay };
 }

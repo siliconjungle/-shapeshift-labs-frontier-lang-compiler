@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { scannedJsImport } from './scanned-js.mjs';
 import { scannedCImport } from './scanned-languages.mjs';
 import {
@@ -183,7 +184,10 @@ const editReplay = replaySemanticEditProjection({
   id: 'conversion_artifact_semantic_replay',
   projection: editProjection,
   currentSourceText: editBase,
-  currentSourcePath: 'src/conversion-edit.js'
+  currentSourcePath: 'src/conversion-edit.js',
+  currentSourceHash: hashSemanticValue(editBase),
+  expectedOutputSourceText: editProjection.sourceText,
+  expectedOutputHash: editProjection.projectedHash
 });
 const editArtifacts = createUniversalConversionArtifacts({
   id: 'semantic-edit-route',

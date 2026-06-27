@@ -61,6 +61,8 @@ function createJsTsSafeMergeSemanticArtifacts(input = {}, merge = {}) {
     currentSourceText: headSourceText,
     currentSourceHash: headReplaySourceHash(input),
     currentSourcePath: sourcePath,
+    expectedOutputSourceText: mergedSourceText,
+    expectedOutputHash: projection.projectedHash,
     language
   });
   const alreadyAppliedReplay = replaySemanticEditProjection({

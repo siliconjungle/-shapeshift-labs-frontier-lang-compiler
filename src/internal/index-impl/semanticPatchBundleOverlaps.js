@@ -64,6 +64,10 @@ export function compareSemanticPatchBundleRecords(left={},right={},options={}){
       duplicateSignals:shared.operationContentHashes.length+shared.editContentHashes.length+shared.semanticTransformContentHashes.length+shared.semanticEditReplayIds.length+shared.semanticEditReplayOutputHashes.length,
       semanticSignals:shared.semanticEditKeys.length+shared.semanticIdentityHashes.length+shared.sourceIdentityHashes.length+shared.semanticTransformIdentityHashes.length+shared.projectionIdentityHashes.length,
       sourceSignals:shared.regionKeys.length+shared.conflictKeys.length+shared.sourcePaths.length+shared.semanticEditReplayCurrentHashes.length,
+      nonOverlapProof:admission.status==='independent',
+      blockingOverlapSignals:admission.status==='independent'?0:countShared(shared),
+      replayCurrentOnlySignals:shared.semanticEditReplayCurrentHashes.length&&!shared.semanticEditReplayOutputHashes.length?shared.semanticEditReplayCurrentHashes.length:0,
+      replayOutputSignals:shared.semanticEditReplayOutputHashes.length,
       baseHashMismatch:admission.reasonCodes.includes('base-hash-mismatch'),
       targetHashMismatch:admission.reasonCodes.includes('target-hash-mismatch'),
       replayOutputHashMismatch:admission.reasonCodes.includes('replay-output-hash-mismatch')
@@ -168,6 +172,7 @@ function overlapAdmission(shared,{leftIndex,rightIndex,options}){
     shared.semanticEditReplayIds.length?'same-semantic-edit-replay':undefined,
     shared.semanticEditReplayOutputHashes.length?'same-replay-output':undefined,
     shared.semanticEditReplayCurrentHashes.length?'same-replay-current':undefined,
+    shared.semanticEditReplayCurrentHashes.length&&!shared.semanticEditReplayOutputHashes.length?'same-replay-current-without-same-output':undefined,
     shared.semanticTransformIdentityHashes.length?'same-semantic-transform':undefined,
     shared.projectionIdentityHashes.length?'same-projection-identity':undefined,
     shared.regionKeys.length?'same-region-key':undefined,
@@ -181,6 +186,10 @@ function overlapAdmission(shared,{leftIndex,rightIndex,options}){
     status,
     reviewRequired:options.reviewIndependent?true:status!=='independent',
     autoMergeClaim:false,
+    proofKind:'semantic-patch-bundle-non-overlap',
+    nonOverlapProof:status==='independent',
+    autoApplyBlocker:status!=='independent',
+    requiredBeforeAdmission:status==='independent'?[]:['non-overlap-proof'],
     reasonCodes,
     sharedKeyCount:countShared(shared)
   };

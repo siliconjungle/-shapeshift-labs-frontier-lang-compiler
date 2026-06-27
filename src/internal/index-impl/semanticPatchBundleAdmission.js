@@ -212,7 +212,7 @@ function hasPositiveApplyAction(transformAdmission, semanticEditAdmission) {
 
 function hasPositiveApplyAttempt(transformAdmission, semanticEditAdmission) {
   return hasPositiveApplyAction(transformAdmission, semanticEditAdmission) ||
-    Number(semanticEditAdmission.summary?.acceptedClean ?? 0) > 0 ||
+    hasAcceptedCleanSemanticEditReplay(semanticEditAdmission) ||
     strings(transformAdmission.reasonCodes).includes('transform-readiness:auto-merge-candidate');
 }
 
@@ -248,7 +248,11 @@ function hasAcceptedCleanSemanticEditReplay(admission) {
   const acceptedClean = count(summary.acceptedClean);
   const alreadyApplied = count(summary.alreadyApplied);
   const replays = count(summary.replays);
-  return acceptedClean > 0 && replays > 0 && acceptedClean + alreadyApplied === replays;
+  const boundedCurrentHeadReplays = count(summary.boundedCurrentHeadReplays);
+  return acceptedClean > 0 &&
+    replays > 0 &&
+    acceptedClean + alreadyApplied === replays &&
+    boundedCurrentHeadReplays === acceptedClean;
 }
 
 function semanticEditReplayRequirementReasonCodes(admission) {
@@ -257,10 +261,15 @@ function semanticEditReplayRequirementReasonCodes(admission) {
   const projections = count(summary.projections);
   const replays = count(summary.replays);
   const acceptedClean = count(summary.acceptedClean);
+  const unboundAcceptedCleanReplays = count(summary.unboundAcceptedCleanReplays);
+  const boundedCurrentHeadReplays = count(summary.boundedCurrentHeadReplays);
   return [
     scripts > 0 && projections === 0 ? 'semantic-edit-projection-missing' : undefined,
     (scripts > 0 || projections > 0) && replays === 0 ? 'semantic-edit-replay-missing' : undefined,
     replays > 0 && acceptedClean === 0 ? 'semantic-edit-replay-accepted-clean-missing' : undefined,
+    acceptedClean > 0 && (unboundAcceptedCleanReplays > 0 || boundedCurrentHeadReplays !== acceptedClean)
+      ? 'semantic-edit-replay-current-head-proof-missing'
+      : undefined,
     'semantic-edit-replay-required'
   ].filter(Boolean);
 }

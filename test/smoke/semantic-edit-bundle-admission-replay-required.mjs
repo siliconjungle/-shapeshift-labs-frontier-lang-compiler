@@ -42,6 +42,41 @@ assert.equal(scriptOnlyAutoMergeShapedAdmission.reasonCodes.includes('semantic-e
 assert.equal(scriptOnlyAutoMergeShapedAdmission.reasonCodes.includes('auto-merge-positive-proof'), false);
 assert.equal(scriptOnlyAutoMergeShapedAdmission.reasonCodes.includes('semantic-edit-positive-auto-merge-proof'), false);
 
+const summaryOnlyReplayAdmission = createSemanticPatchBundleAdmission({}, {
+  conflictKeys: [],
+  semanticEditAdmission: {
+    status: 'ready',
+    action: 'admit',
+    readiness: 'ready',
+    reviewRequired: false,
+    autoApplyCandidate: true,
+    summary: {
+      scripts: 1,
+      projections: 1,
+      replays: 1,
+      portableScripts: 1,
+      portableProjections: 1,
+      acceptedClean: 1,
+      alreadyApplied: 0
+    },
+    reasonCodes: [
+      'semantic-edit-replay-accepted-clean',
+      'semantic-edit-positive-auto-merge-proof'
+    ]
+  },
+  evidenceRecords: [passedAutoMergeProof]
+});
+
+assert.equal(summaryOnlyReplayAdmission.status, 'needs-review');
+assert.equal(summaryOnlyReplayAdmission.readiness, 'needs-review');
+assert.equal(summaryOnlyReplayAdmission.reviewRequired, true);
+assert.equal(summaryOnlyReplayAdmission.autoApplyCandidate, false);
+assert.equal(summaryOnlyReplayAdmission.semanticEditAdmission.status, 'needs-review');
+assert.equal(summaryOnlyReplayAdmission.semanticEditAdmission.action, 'review');
+assert.equal(summaryOnlyReplayAdmission.reasonCodes.includes('semantic-edit-replay-current-head-proof-missing'), true);
+assert.equal(summaryOnlyReplayAdmission.reasonCodes.includes('semantic-edit-replay-required'), true);
+assert.equal(summaryOnlyReplayAdmission.reasonCodes.includes('auto-merge-positive-proof'), false);
+
 const replayedAutoMergeShapedAdmission = createSemanticPatchBundleAdmission({}, {
   conflictKeys: [],
   semanticEditAdmission: {
@@ -57,6 +92,8 @@ const replayedAutoMergeShapedAdmission = createSemanticPatchBundleAdmission({}, 
       portableScripts: 1,
       portableProjections: 1,
       acceptedClean: 1,
+      boundedCurrentHeadReplays: 1,
+      unboundAcceptedCleanReplays: 0,
       alreadyApplied: 0
     },
     reasonCodes: [
