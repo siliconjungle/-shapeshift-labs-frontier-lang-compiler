@@ -38,6 +38,10 @@ function sourceSpanRoundtripEvidence(id, fileResults, level, legacyLevel) {
       projectionEdits: sumBy(facts, (fact) => fact.projectionEdits),
       spanLinkedProjectionEdits: sumBy(facts, (fact) => fact.spanLinkedProjectionEdits),
       replayVerifiedFiles: facts.filter((fact) => fact.replayOutputMatchesMerged).length,
+      sourceHashBoundSourceResults: facts.filter((fact) => fact.sourceHashBound).length,
+      outputHashBoundSourceResults: facts.filter((fact) => fact.outputHashBound).length,
+      hashBindingFailedSourceResults: facts.filter((fact) => fact.hashBindingStatus === 'failed').length,
+      sourceSpanRoundtripHashBindingReasonCodes: uniqueStrings(facts.flatMap((fact) => fact.hashBindingReasonCodes ?? [])),
       parserTriviaExactnessStatus: parserTriviaExactness.status,
       exactParserTriviaFiles: parserTriviaExactness.exact,
       approximateParserTriviaFiles: parserTriviaExactness.approximate,
@@ -60,10 +64,11 @@ function sourceSpanRoundtripFacts(file) {
   const projectedSourceMatchesMerged = artifacts?.summary?.projectedSourceMatchesMerged === true;
   const replayOutputMatchesMerged = artifacts?.summary?.replayOutputMatchesMerged === true;
   const parserTriviaExactness = parserTriviaExactnessForFile(file, artifacts);
+  const hashBinding = sourceSpanRoundtripHashBinding(file, artifacts);
   const roundtripProofRequired = sourceSpanRoundtripRequired(file);
-  const status = parserTriviaExactness.status === 'blocked' || file.result?.status !== 'merged' || artifacts?.status === 'blocked'
+  const status = parserTriviaExactness.status === 'blocked' || file.result?.status !== 'merged' || artifacts?.status === 'blocked' || hashBinding.status === 'failed'
     ? 'failed'
-    : !artifacts || artifacts.status !== 'verified' || !gatesPassed || !projectedSourceMatchesMerged || !replayOutputMatchesMerged || !sourceSpanOperations || !spanLinkedProjectionEdits
+    : !artifacts || artifacts.status !== 'verified' || !gatesPassed || !projectedSourceMatchesMerged || !replayOutputMatchesMerged || !sourceSpanOperations || !spanLinkedProjectionEdits || hashBinding.status !== 'bound'
       ? 'missing'
       : 'passed';
   return {
@@ -79,11 +84,81 @@ function sourceSpanRoundtripFacts(file) {
     roundtripProofAdmissionBlocker: roundtripProofRequired && status === 'failed',
     projectedSourceMatchesMerged,
     replayOutputMatchesMerged,
+    sourceHashBound: hashBinding.sourceHashBound,
+    outputHashBound: hashBinding.outputHashBound,
+    hashBindingStatus: hashBinding.status,
+    hashBindingReasonCodes: hashBinding.reasonCodes,
+    expectedCurrentHash: hashBinding.expectedCurrentHash,
+    replayCurrentHash: hashBinding.replayCurrentHash,
+    expectedOutputHash: hashBinding.expectedOutputHash,
+    projectionOutputHash: hashBinding.projectionOutputHash,
+    replayOutputHash: hashBinding.replayOutputHash,
     parserTriviaExactnessStatus: parserTriviaExactness.status,
     exactParserTrivia: parserTriviaExactness.exactParserTrivia,
     parserTriviaExactnessReasonCodes: parserTriviaExactness.reasonCodes,
     parserTriviaExactnessBlockReasonCodes: parserTriviaExactness.blockReasonCodes
   };
+}
+
+function sourceSpanRoundtripHashBinding(file, artifacts) {
+  if (!artifacts) return { status: 'missing', sourceHashBound: false, outputHashBound: false, reasonCodes: ['source-span-roundtrip-artifacts-missing'] };
+  const expectedCurrentHash = firstString(file.headHash, file.result?.headHash);
+  const expectedOutputHash = firstString(file.outputHash, file.result?.outputHash);
+  const projectionOutputHash = firstString(artifacts.projection?.projectedHash, artifacts.projection?.outputHash);
+  const replayCurrentHash = firstString(
+    artifacts.replay?.currentHash,
+    artifacts.replay?.metadata?.observedCurrentHash,
+    artifacts.replay?.metadata?.proofRoute?.replayCurrentHash
+  );
+  const replayExpectedCurrentHash = firstString(
+    artifacts.replay?.metadata?.expectedCurrentHash,
+    artifacts.replay?.metadata?.proofRoute?.expectedCurrentHash
+  );
+  const replayOutputHash = firstString(
+    artifacts.replay?.outputHash,
+    artifacts.replay?.metadata?.replayedOutputHash,
+    artifacts.replay?.metadata?.proofRoute?.replayOutputHash
+  );
+  const alreadyAppliedCurrentHash = firstString(
+    artifacts.alreadyAppliedReplay?.currentHash,
+    artifacts.alreadyAppliedReplay?.metadata?.observedCurrentHash
+  );
+  const alreadyAppliedOutputHash = firstString(
+    artifacts.alreadyAppliedReplay?.outputHash,
+    artifacts.alreadyAppliedReplay?.metadata?.replayedOutputHash
+  );
+  const reasonCodes = uniqueStrings([
+    expectedOutputHash ? undefined : 'source-span-roundtrip-output-hash-missing',
+    projectionOutputHash ? undefined : 'source-span-roundtrip-projection-output-hash-missing',
+    expectedOutputHash && projectionOutputHash && projectionOutputHash !== expectedOutputHash ? 'source-span-roundtrip-projection-output-hash-mismatch' : undefined,
+    replayOutputHash ? undefined : 'source-span-roundtrip-replay-output-hash-missing',
+    expectedOutputHash && replayOutputHash && replayOutputHash !== expectedOutputHash ? 'source-span-roundtrip-replay-output-hash-mismatch' : undefined,
+    expectedCurrentHash && !replayCurrentHash ? 'source-span-roundtrip-replay-current-source-hash-missing' : undefined,
+    expectedCurrentHash && replayCurrentHash && replayCurrentHash !== expectedCurrentHash ? 'source-span-roundtrip-replay-current-source-hash-mismatch' : undefined,
+    expectedCurrentHash && replayExpectedCurrentHash && replayExpectedCurrentHash !== expectedCurrentHash ? 'source-span-roundtrip-replay-expected-current-source-hash-mismatch' : undefined,
+    artifacts.replay?.metadata?.currentSourceBindingStatus && artifacts.replay.metadata.currentSourceBindingStatus !== 'bound' ? 'source-span-roundtrip-replay-current-source-not-bound' : undefined,
+    artifacts.replay?.metadata?.outputBindingStatus && artifacts.replay.metadata.outputBindingStatus !== 'bound' ? 'source-span-roundtrip-replay-output-not-bound' : undefined,
+    artifacts.alreadyAppliedReplay && !alreadyAppliedCurrentHash ? 'source-span-roundtrip-already-applied-current-source-hash-missing' : undefined,
+    artifacts.alreadyAppliedReplay && expectedOutputHash && alreadyAppliedCurrentHash && alreadyAppliedCurrentHash !== expectedOutputHash ? 'source-span-roundtrip-already-applied-current-source-hash-mismatch' : undefined,
+    artifacts.alreadyAppliedReplay && !alreadyAppliedOutputHash ? 'source-span-roundtrip-already-applied-output-hash-missing' : undefined,
+    artifacts.alreadyAppliedReplay && expectedOutputHash && alreadyAppliedOutputHash && alreadyAppliedOutputHash !== expectedOutputHash ? 'source-span-roundtrip-already-applied-output-hash-mismatch' : undefined
+  ]);
+  const sourceHashBound = expectedCurrentHash ? replayCurrentHash === expectedCurrentHash : true;
+  const outputHashBound = Boolean(expectedOutputHash)
+    && projectionOutputHash === expectedOutputHash
+    && replayOutputHash === expectedOutputHash
+    && (!artifacts.alreadyAppliedReplay || alreadyAppliedCurrentHash === expectedOutputHash && alreadyAppliedOutputHash === expectedOutputHash);
+  return compactRecord({
+    status: reasonCodes.length ? 'failed' : 'bound',
+    sourceHashBound,
+    outputHashBound,
+    reasonCodes,
+    expectedCurrentHash,
+    replayCurrentHash,
+    expectedOutputHash,
+    projectionOutputHash,
+    replayOutputHash
+  });
 }
 
 function parserTriviaExactnessForFile(file, artifacts) {
@@ -171,6 +246,7 @@ function isLineColumnSpan(value) {
 }
 function sumBy(values, valueFor) { return values.reduce((total, value) => total + Number(valueFor(value) ?? 0), 0); }
 function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
+function firstString(...values) { return values.find((value) => typeof value === 'string' && value.length > 0); }
 function uniqueStrings(values) { return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))]; }
 
 export { sourceSpanRoundtripEvidence };

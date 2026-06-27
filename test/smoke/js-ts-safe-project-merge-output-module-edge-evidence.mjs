@@ -37,6 +37,20 @@ const conflicts = outputProjectGraphConflicts({
     hostDependencyKind: 'worker-constructor',
     hostDependencyRuntimeResolutionClaim: false
   }, {
+    id: 'edge-package-import-worker',
+    sourcePath: 'packages/app/src/host.ts',
+    moduleSpecifier: '#worker-entry',
+    importKind: 'worker-constructor',
+    resolutionKind: 'package-import-runtime-ambiguous-missing',
+    packageName: '@pkg/app',
+    packageImportKey: '#worker-entry',
+    packageImportCondition: 'import|require',
+    packageRuntimeConditionEvidenceSource: 'host-runtime-ambiguous',
+    packageRuntimeConditionEdgeKind: 'host-worker-constructor',
+    packageRuntimeConditionReasonCode: 'package-runtime-condition-host-ambiguous-missing',
+    hostDependencyKind: 'worker-constructor',
+    hostDependencyRuntimeResolutionClaim: false
+  }, {
     id: 'edge-host-dynamic',
     sourcePath: 'packages/app/src/host-dynamic.ts',
     moduleSpecifier: '<host-dependency>',
@@ -96,6 +110,20 @@ assert.equal(hostConflict.details.moduleEdgeEvidence[0].hostDependencyKind, 'wor
 assert.equal(hostConflict.details.moduleEdgeEvidence[0].hostDependencyRuntimeResolutionClaim, false);
 assert.equal(hostConflict.details.moduleEdgeEvidence[0].packageRuntimeConditionEvidenceSource, 'host-runtime-ambiguous');
 
+const packageImportHostConflict = conflictFor('#worker-entry');
+assert.equal(packageImportHostConflict.details.moduleEdgeFailureReasonCodes.includes('package-import-runtime-ambiguous-missing'), true);
+assert.equal(packageImportHostConflict.details.moduleEdgeFailureReasonCodes.includes('package-runtime-condition-host-ambiguous-missing'), true);
+assert.equal(packageImportHostConflict.details.moduleEdgeEvidence[0].packageName, '@pkg/app');
+assert.equal(packageImportHostConflict.details.moduleEdgeEvidence[0].packageImportKey, '#worker-entry');
+assert.equal(packageImportHostConflict.details.moduleEdgeEvidence[0].packageImportCondition, 'import|require');
+assert.equal(packageImportHostConflict.details.moduleEdgeEvidence[0].hostDependencyRuntimeResolutionClaim, false);
+assert.equal(packageImportHostConflict.details.routeId, 'prove-package-import-host-runtime-resolution');
+assert.equal(packageImportHostConflict.details.routeLane, 'module-export-import-graph');
+assert.equal(packageImportHostConflict.details.routeNext, 'supply-package-import-host-runtime-proof');
+assert.equal(packageImportHostConflict.details.autoMergeClaim, false);
+assert.equal(packageImportHostConflict.details.semanticEquivalenceClaim, false);
+assert.equal(packageImportHostConflict.details.runtimeEquivalenceClaim, false);
+
 const hostDynamicConflict = conflictFor('<host-dependency>');
 assert.equal(hostDynamicConflict.details.moduleEdgeFailureReasonCodes.includes('host-dependency-non-literal-missing'), true);
 assert.equal(hostDynamicConflict.details.moduleEdgeEvidence[0].hostDependencyKind, 'worker-constructor');
@@ -122,9 +150,9 @@ assert.equal(missingSymbolConflict.details.moduleEdgeEvidence[0].importedName, '
 assert.equal(missingSymbolConflict.details.moduleEdgeEvidence[0].localName, 'renamedMissingApi');
 assert.deepEqual(missingSymbolConflict.details.moduleEdgeEvidence[0].importAttributes, [{ key: 'type', value: 'typescript' }]);
 assert.equal(missingSymbolConflict.details.moduleEdgeEvidence[0].resolvedTargetSymbolId, undefined);
-assert.equal(missingSymbolConflict.details.autoMergeClaim, undefined);
-assert.equal(missingSymbolConflict.details.semanticEquivalenceClaim, undefined);
-assert.equal(missingSymbolConflict.details.runtimeEquivalenceClaim, undefined);
+assert.equal(missingSymbolConflict.details.autoMergeClaim, false);
+assert.equal(missingSymbolConflict.details.semanticEquivalenceClaim, false);
+assert.equal(missingSymbolConflict.details.runtimeEquivalenceClaim, false);
 
 function conflictFor(moduleSpecifier) {
   const conflict = conflicts.find((candidate) =>

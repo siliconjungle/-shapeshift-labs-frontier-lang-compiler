@@ -35,9 +35,10 @@ function changedIdentityConflicts(input) {
     if (workerFingerprint === headFingerprint) {
       const missingTypeEvidence = missingSharedCompilerTypeEquivalenceEvidence(workerRecord, headRecord);
       const missingInferenceSyntaxEvidence = missingSharedCompilerTypeInferenceSyntaxEvidence(workerRecord, headRecord);
+      const missingDecoratorRuntimeEvidence = missingSharedDecoratorRuntimeExecutionEvidence(baseRecord, workerRecord, headRecord);
       const missingDeclarationEvidence = missingDeclarationEmitParityEvidence(input.declarationEmitParityProof, input);
-      if (!missingTypeEvidence && !missingInferenceSyntaxEvidence && !missingDeclarationEvidence) return [];
-      const missingEvidence = missingDeclarationEvidence ?? missingTypeEvidence ?? missingInferenceSyntaxEvidence;
+      if (!missingTypeEvidence && !missingInferenceSyntaxEvidence && !missingDecoratorRuntimeEvidence && !missingDeclarationEvidence) return [];
+      const missingEvidence = missingDeclarationEvidence ?? missingTypeEvidence ?? missingInferenceSyntaxEvidence ?? missingDecoratorRuntimeEvidence;
       return [projectGraphDeltaConflict({
         ...input,
         identityKey,
@@ -48,6 +49,7 @@ function changedIdentityConflicts(input) {
         reasonCode: missingEvidence.reasonCode,
         typeEquivalenceEvidence: missingTypeEvidence,
         typeInferenceSyntaxEvidence: missingInferenceSyntaxEvidence,
+        decoratorRuntimeExecutionEvidence: missingDecoratorRuntimeEvidence,
         declarationEmitParityEvidence: missingDeclarationEvidence,
         message: `Worker and head both changed ${input.label} ${JSON.stringify(identityKey)} to the same compiler public API fingerprint, but required public API evidence is missing.`
       })];
@@ -76,6 +78,7 @@ function projectGraphDeltaConflict(input) {
       output: input.details(input.outputRecord),
       typeEquivalenceEvidence: input.typeEquivalenceEvidence,
       typeInferenceSyntaxEvidence: input.typeInferenceSyntaxEvidence,
+      decoratorRuntimeExecutionEvidence: input.decoratorRuntimeExecutionEvidence,
       declarationEmitParityEvidence: input.declarationEmitParityEvidence
     })
   };
@@ -179,6 +182,66 @@ function hasPassedCompilerTypeEquivalenceProof(record) {
 function hasMissingAdvancedTypeProof(record) {
   const status = record?.advancedTypeMissingProof?.status ?? record?.advancedTypeProofRequirement?.status;
   return status === 'missing-compiler-evidence' || status === 'requires-review';
+}
+function missingSharedDecoratorRuntimeExecutionEvidence(baseRecord, workerRecord, headRecord) {
+  const requiringProof = [workerRecord, headRecord].filter((record) => requiresDecoratorRuntimeExecutionProof(baseRecord, record));
+  if (!requiringProof.length) return undefined;
+  const missing = requiringProof.filter((record) => !hasPassedDecoratorRuntimeExecutionProof(record));
+  if (!missing.length) return undefined;
+  return {
+    reasonCode: 'typescript-public-api-decorator-runtime-execution-proof-missing',
+    requiredEvidence: 'frontier.lang.typescript.decoratorRuntimeExecutionProof',
+    proofLevel: 'typescript-checker-public-api-decorator-source-bound-runtime-execution',
+    routeId: 'prove-decorator-runtime-execution-equivalence',
+    routeLane: 'decorator-runtime-boundaries',
+    routeNext: 'supply-decorator-runtime-execution-proof',
+    failClosed: true,
+    semanticEquivalenceClaim: false,
+    runtimeEquivalenceClaim: false,
+    missingRecords: missing.map((record) => compactRecord({
+      sourcePath: record.sourcePath, sourceHash: record.sourceHash,
+      symbolId: record.symbolId,
+      symbolName: record.symbolName,
+      fullyQualifiedName: record.fullyQualifiedName,
+      decoratorMetadataCount: record.decoratorMetadataCount,
+      decoratorMetadataHash: record.decoratorMetadataHash,
+      decoratorRuntimeExecutionHash: record.decoratorRuntimeExecutionHash,
+      decoratorRuntimeExecutionProofStatus: record.decoratorRuntimeExecutionProof?.status,
+      decoratorRuntimeExecutionProofSourcePath: record.decoratorRuntimeExecutionProof?.sourcePath,
+      decoratorRuntimeExecutionProofSourceHash: record.decoratorRuntimeExecutionProof?.sourceHash,
+      decoratorRuntimeExecutionProofReasonCodes: record.decoratorRuntimeExecutionProofReasonCodes,
+      missingSignals: decoratorRuntimeExecutionMissingSignals(record),
+      runtimeExecutionEquivalenceGap: record.decoratorMetadataProof?.runtimeExecutionEquivalenceGap,
+      conflictRouting: record.decoratorMetadataProof?.conflictRouting,
+      semanticEquivalenceClaim: record.decoratorRuntimeExecutionProof?.semanticEquivalenceClaim ?? false,
+      runtimeEquivalenceClaim: record.decoratorRuntimeExecutionProof?.runtimeEquivalenceClaim ?? false,
+      decoratorExecutionEquivalenceClaim: record.decoratorRuntimeExecutionProof?.decoratorExecutionEquivalenceClaim ?? false
+    }))
+  };
+}
+function requiresDecoratorRuntimeExecutionProof(baseRecord, record) {
+  if (!record?.decoratorMetadataCount || !record.decoratorMetadataHash) return false;
+  return !baseRecord || baseRecord.decoratorMetadataHash !== record.decoratorMetadataHash;
+}
+function hasPassedDecoratorRuntimeExecutionProof(record) {
+  const proof = record?.decoratorRuntimeExecutionProof;
+  return Boolean(proof
+    && proof.status === 'passed'
+    && record.decoratorRuntimeExecutionHash
+    && proof.decoratorRuntimeExecutionHash === record.decoratorRuntimeExecutionHash
+    && proof.sourcePath === record.sourcePath
+    && proof.sourceHash === record.sourceHash
+    && proof.autoMergeClaim === false
+    && proof.semanticEquivalenceClaim === false
+    && proof.runtimeEquivalenceClaim === false
+    && proof.decoratorExecutionEquivalenceClaim === false
+    && proof.decoratorEmitRuntimeEquivalenceClaim === false
+    && !(record.decoratorRuntimeExecutionProofReasonCodes?.length));
+}
+function decoratorRuntimeExecutionMissingSignals(record) {
+  return uniqueStrings(record?.decoratorRuntimeExecutionProofReasonCodes?.length
+    ? record.decoratorRuntimeExecutionProofReasonCodes
+    : ['typescript-decorator-runtime-execution-proof-missing']);
 }
 function recordsByIdentityKey(records, identityKey) { const result = new Map(); for (const record of records ?? []) { const key = identityKey(record); if (!key || result.has(key)) continue; result.set(key, record); } return result; }
 function optionalFingerprint(record, fingerprint) { return record ? fingerprint(record) : undefined; }

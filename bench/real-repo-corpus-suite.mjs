@@ -18,6 +18,19 @@ const realRepoCorpusFixtureCandidates = [
   }
 ];
 
+const RealRepoCorpusOracleCoverage = Object.freeze({
+  oracleCases: 14,
+  matrixRows: Object.freeze([
+    'control-flow-effect',
+    'jsx-tsx-element-prop',
+    'module-export-import',
+    'parser-source-span-trivia',
+    'type-public-api'
+  ]),
+  unmappedSurfaces: Object.freeze(['order-sensitive-member-regions']),
+  coverageRatioBasis: 'entriesWithOracleCases/entries'
+});
+
 function measureRealRepoCorpus(options = {}) {
   const start = performance.now();
   const fixture = loadRealRepoCorpusFixture();
@@ -31,6 +44,7 @@ function measureRealRepoCorpus(options = {}) {
   const oracleSurfaces = new Set();
   const oracleLanguages = new Set();
   const oracleMatrixRows = new Set();
+  const oracleUnmappedSurfaces = new Set();
   const gapStatuses = new Set();
   const gapIds = new Set();
   const packageManagers = new Set((manifest.localBehavior?.packageManagerMatrix ?? []).map((row) => row.manager));
@@ -64,7 +78,9 @@ function measureRealRepoCorpus(options = {}) {
       oracleFixtureIds.add(oracleCase.fixtureId);
       oracleSurfaces.add(oracleCase.surface);
       oracleLanguages.add(oracleCase.language);
-      for (const row of matrixRowsForOracleSurface(oracleCase.surface)) oracleMatrixRows.add(row);
+      const matrixRows = matrixRowsForOracleSurface(oracleCase.surface);
+      if (matrixRows.length === 0) oracleUnmappedSurfaces.add(oracleCase.surface);
+      for (const row of matrixRows) oracleMatrixRows.add(row);
       if (realisticPatternFixtureIds.has(oracleCase.fixtureId)) realisticPatternOracleFixtureIds.add(oracleCase.fixtureId);
       if (oracleCase.expectedAdmissionStatus === 'auto-merge-candidate') oracleAutoMergeCandidates += 1;
       if (oracleCase.expectedAdmissionStatus === 'blocked') oracleBlocked += 1;
@@ -98,9 +114,13 @@ function measureRealRepoCorpus(options = {}) {
     realRepoCorpusOracleSurfaces: oracleSurfaces.size,
     realRepoCorpusOracleLanguages: oracleLanguages.size,
     realRepoCorpusOracleMatrixRows: oracleMatrixRows.size,
+    realRepoCorpusOracleMatrixRowIds: [...oracleMatrixRows].sort(),
+    realRepoCorpusOracleUnmappedSurfaces: oracleUnmappedSurfaces.size,
+    realRepoCorpusOracleUnmappedSurfaceIds: [...oracleUnmappedSurfaces].sort(),
     realRepoCorpusRealisticPatternOracleFixtures: realisticPatternOracleFixtureIds.size,
     realRepoCorpusHasReactPatternEntry: entries.some((entry) => entry.id === 'react-component-patterns'),
     realRepoCorpusOracleCoverageRatio: entries.length > 0 ? Number((entriesWithOracleCases / entries.length).toFixed(2)) : 0,
+    realRepoCorpusOracleCoverageRatioBasis: RealRepoCorpusOracleCoverage.coverageRatioBasis,
     realRepoCorpusBroadSuiteGaps: gapIds.size,
     realRepoCorpusBroadSuiteGapStatuses: gapStatuses.size,
     realRepoCorpusBroadSuiteMissingGaps: [...(manifest.broadSuiteGaps ?? [])].filter((gap) => gap.status === 'missing').length,
@@ -173,6 +193,7 @@ function measureRealRepoCorpus(options = {}) {
     realRepoCorpusCommandRunOutputTruncatedPhases: commandExecution.commandRunOutputTruncatedPhases,
     realRepoCorpusDurationMs: Number((performance.now() - start).toFixed(2))
   };
+  assertRealRepoCorpusOracleCoverageMetrics(metrics);
   assert.equal(metrics.realRepoCorpusRealisticPatternOracleFixtures >= 2, true, 'realistic-pattern oracle fixture coverage');
   assert.equal(metrics.realRepoCorpusHasReactPatternEntry, true, 'React manifest-only pattern entry');
   assert.equal(metrics.realRepoCorpusPackageManagerMatrixEntries >= 3, true, 'package-manager matrix metadata');
@@ -243,6 +264,20 @@ function fixtureExpectedAdmissionStatus(fixture) {
   return undefined;
 }
 
+function assertRealRepoCorpusOracleCoverageMetrics(metrics) {
+  assert.equal(metrics.realRepoCorpusOracleCases, RealRepoCorpusOracleCoverage.oracleCases, 'real-repo README oracle case count');
+  assert.deepEqual(metrics.realRepoCorpusOracleMatrixRowIds, RealRepoCorpusOracleCoverage.matrixRows, 'real-repo README matrix row ids');
+  assert.deepEqual(metrics.realRepoCorpusOracleUnmappedSurfaceIds, RealRepoCorpusOracleCoverage.unmappedSurfaces, 'real-repo known non-matrix oracle surfaces');
+  assert.equal(metrics.realRepoCorpusOracleCaseFixturesPresent, metrics.realRepoCorpusOracleCases, 'real-repo oracle fixtures present');
+  assert.equal(metrics.realRepoCorpusOracleAdmissionMatches, metrics.realRepoCorpusOracleCases, 'real-repo oracle fixture admission matches');
+  assert.equal(
+    metrics.realRepoCorpusOracleCoverageRatio,
+    metrics.realRepoCorpusEntries > 0 ? Number((metrics.realRepoCorpusEntriesWithOracles / metrics.realRepoCorpusEntries).toFixed(2)) : 0,
+    'real-repo oracle coverage ratio basis'
+  );
+  assert.equal(metrics.realRepoCorpusOracleCoverageRatioBasis, RealRepoCorpusOracleCoverage.coverageRatioBasis, 'real-repo oracle coverage ratio basis label');
+}
+
 function matrixRowsForOracleSurface(surface) {
   if ([
     'imports',
@@ -261,7 +296,7 @@ function matrixRowsForOracleSurface(surface) {
     'dependency-sensitive-edits'
   ].includes(surface)) return ['type-public-api'];
   if (surface.startsWith('tsx-jsx-') || surface === 'jsx-component-prop-contracts') return ['jsx-tsx-element-prop'];
-  if (surface === 'control-flow' || surface === 'async-components') return ['control-flow-effect'];
+  if (surface === 'control-flow' || surface === 'async-components' || surface === 'import-meta-host-context') return ['control-flow-effect'];
   if (surface === 'comments-trivia' || surface === 'generated-source-map-boundary') return ['parser-source-span-trivia'];
   return [];
 }
@@ -270,4 +305,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
   console.log(JSON.stringify(measureRealRepoCorpus()));
 }
 
-export { loadRealRepoCorpusFixture, measureRealRepoCorpus, readRealRepoCorpusFixture };
+export { RealRepoCorpusOracleCoverage, assertRealRepoCorpusOracleCoverageMetrics, loadRealRepoCorpusFixture, measureRealRepoCorpus, readRealRepoCorpusFixture };

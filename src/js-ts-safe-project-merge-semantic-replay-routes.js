@@ -33,8 +33,12 @@ function semanticReplayNextAction(nextMissingEvidence, missingSignal) {
 
 function semanticReplayProofRoute(status, reasonCodes, rerunRoute, binding = {}) {
   if (rerunRoute) return rerunRoute;
-  const outputMismatchReasons = reasonCodes.filter(isReplayOutputMismatchReasonCode);
-  if (status === 'blocked' && outputMismatchReasons.length) return {
+  const routeReasonCodes = uniqueStrings([
+    ...reasonCodes,
+    ...semanticReplayOutputMismatchReasonCodes(binding)
+  ]);
+  const outputMismatchReasons = routeReasonCodes.filter(isReplayOutputMismatchReasonCode);
+  if ((status === 'blocked' || status === 'accepted-clean') && outputMismatchReasons.length) return {
     routeId: 'reject-semantic-edit-replay-output-mismatch',
     routeLane: 'source-files',
     routeNext: 'inspect-semantic-edit-replay-output-binding',
@@ -46,7 +50,7 @@ function semanticReplayProofRoute(status, reasonCodes, rerunRoute, binding = {})
   return semanticReplayCurrentHeadCommutationProofRoute({
     ...binding,
     status,
-    reasonCodes
+    reasonCodes: routeReasonCodes
   });
 }
 
@@ -60,16 +64,23 @@ function semanticReplayCurrentHeadCommutationProofRoute(input = {}) {
   if (!expectedCurrentHash || expectedCurrentHash !== replayCurrentHash) return undefined;
   const expectedOutputHash = firstString(
     input.expectedOutputHash,
-    input.outputBinding?.expectedOutputHash,
+    input.outputBinding?.expectedOutputHash
+  );
+  const projectionOutputHash = firstString(
     input.projectionOutputHash,
-    input.projectedHash
+    input.projectedHash,
+    input.outputBinding?.projectionOutputHash,
+    input.outputBinding?.projectedHash
   );
   const replayOutputHash = firstString(
     input.replayOutputHash,
     input.outputHash,
-    input.outputBinding?.replayedOutputHash
+    input.outputBinding?.replayedOutputHash,
+    input.outputBinding?.replayOutputHash
   );
   if (!expectedOutputHash || expectedOutputHash !== replayOutputHash) return undefined;
+  if (projectionOutputHash && projectionOutputHash !== expectedOutputHash) return undefined;
+  if (projectionOutputHash && projectionOutputHash !== replayOutputHash) return undefined;
   return compactRecord({
     routeId: 'admit-independent-semantic-edit-current-head-commutation',
     routeLane: 'source-files',
@@ -85,12 +96,42 @@ function semanticReplayCurrentHeadCommutationProofRoute(input = {}) {
     expectedCurrentHash,
     replayCurrentHash,
     expectedOutputHash,
-    projectionOutputHash: input.projectionOutputHash,
+    projectionOutputHash,
     replayOutputHash,
     outputBindingStatus,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   });
+}
+
+function semanticReplayOutputMismatchReasonCodes(binding = {}) {
+  const expectedOutputHash = firstString(
+    binding.expectedOutputHash,
+    binding.outputBinding?.expectedOutputHash
+  );
+  const projectionOutputHash = firstString(
+    binding.projectionOutputHash,
+    binding.projectedHash,
+    binding.outputBinding?.projectionOutputHash,
+    binding.outputBinding?.projectedHash
+  );
+  const replayOutputHash = firstString(
+    binding.replayOutputHash,
+    binding.outputHash,
+    binding.outputBinding?.replayedOutputHash,
+    binding.outputBinding?.replayOutputHash
+  );
+  return uniqueStrings([
+    expectedOutputHash && replayOutputHash && expectedOutputHash !== replayOutputHash
+      ? 'semantic-edit-replay-output-hash-mismatch'
+      : undefined,
+    expectedOutputHash && projectionOutputHash && expectedOutputHash !== projectionOutputHash
+      ? 'semantic-edit-projection-output-hash-mismatch'
+      : undefined,
+    projectionOutputHash && replayOutputHash && projectionOutputHash !== replayOutputHash
+      ? 'semantic-edit-replay-projection-output-hash-mismatch'
+      : undefined
+  ]);
 }
 
 function staleReplayEvidenceRoute(input, stale) {
@@ -156,6 +197,8 @@ function missingReplayEvidenceRoute(input, failedOrMissing) {
 function isReplayOutputMismatchReasonCode(code) {
   return code === 'semantic-edit-replay-output-source-mismatch'
     || code === 'semantic-edit-replay-output-hash-mismatch'
+    || code === 'semantic-edit-projection-output-source-mismatch'
+    || code === 'semantic-edit-projection-output-hash-mismatch'
     || code === 'semantic-edit-replay-projection-output-source-mismatch'
     || code === 'semantic-edit-replay-projection-output-hash-mismatch'
     || code === 'semantic-edit-replay-output-mismatch';

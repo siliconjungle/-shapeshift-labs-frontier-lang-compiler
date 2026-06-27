@@ -2,6 +2,7 @@ import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { cssModuleUseSiteBlockerConflicts, isResolvedCssModuleImportEdge } from './js-ts-safe-project-merge-css-module-conflicts.js';
 import { projectGraphDeltaConflicts } from './js-ts-safe-project-merge-graph-delta-conflicts.js';
+import { moduleEdgeResolutionRoute } from './js-ts-safe-project-merge-module-resolution-routes.js';
 
 function outputProjectGraphConflicts(projectSymbolGraph) {
   const limitConflicts = Array.isArray(projectSymbolGraph?.limitConflicts) ? projectSymbolGraph.limitConflicts : [];
@@ -37,6 +38,8 @@ function outputProjectGraphConflicts(projectSymbolGraph) {
 
 function projectGraphMissingImportConflict(group) {
   const edge = group[0] ?? {};
+  const moduleEdgeFailureReasons = uniqueStrings(group.flatMap(moduleEdgeFailureReasonCodes));
+  const route = moduleEdgeResolutionRoute(moduleEdgeFailureReasons, { targetKind: 'module', hasPackageImportEdge: group.some((record) => record?.packageImportKey) });
   return {
     code: 'project-output-module-unresolved',
     gateId: 'project-symbol-graph',
@@ -52,8 +55,15 @@ function projectGraphMissingImportConflict(group) {
       edgeIds: uniqueStrings(group.map((record) => record.id)),
       importKinds: uniqueStrings(group.map((record) => record.importKind)),
       importedNames: uniqueStrings(group.map((record) => record.importedName)),
-      moduleEdgeFailureReasonCodes: uniqueStrings(group.flatMap(moduleEdgeFailureReasonCodes)),
-      moduleEdgeEvidence: group.map(moduleEdgeEvidence)
+      moduleEdgeFailureReasonCodes: moduleEdgeFailureReasons,
+      moduleEdgeEvidence: group.map(moduleEdgeEvidence),
+      requiredProof: route.requiredProof,
+      routeId: route.routeId,
+      routeLane: route.routeLane,
+      routeNext: route.routeNext,
+      autoMergeClaim: false,
+      semanticEquivalenceClaim: false,
+      runtimeEquivalenceClaim: false
     })
   };
 }
@@ -61,6 +71,8 @@ function projectGraphMissingImportConflict(group) {
 function projectGraphMissingTargetConflict(group) {
   const edge = group[0] ?? {};
   const targetName = projectImportTargetName(edge);
+  const moduleEdgeFailureReasons = uniqueStrings(['project-output-symbol-unresolved', ...group.flatMap(moduleEdgeFailureReasonCodes)]);
+  const route = moduleEdgeResolutionRoute(moduleEdgeFailureReasons, { targetKind: 'symbol', hasPackageImportEdge: group.some((record) => record?.packageImportKey) });
   return {
     code: 'project-output-symbol-unresolved',
     gateId: 'project-symbol-graph',
@@ -79,8 +91,15 @@ function projectGraphMissingTargetConflict(group) {
       importKinds: uniqueStrings(group.map((record) => record.importKind)),
       importedNames: uniqueStrings(group.map((record) => record.importedName)),
       localNames: uniqueStrings(group.map((record) => record.localName)),
-      moduleEdgeFailureReasonCodes: uniqueStrings(['project-output-symbol-unresolved', ...group.flatMap(moduleEdgeFailureReasonCodes)]),
-      moduleEdgeEvidence: group.map(moduleEdgeEvidence)
+      moduleEdgeFailureReasonCodes: moduleEdgeFailureReasons,
+      moduleEdgeEvidence: group.map(moduleEdgeEvidence),
+      requiredProof: route.requiredProof,
+      routeId: route.routeId,
+      routeLane: route.routeLane,
+      routeNext: route.routeNext,
+      autoMergeClaim: false,
+      semanticEquivalenceClaim: false,
+      runtimeEquivalenceClaim: false
     })
   };
 }

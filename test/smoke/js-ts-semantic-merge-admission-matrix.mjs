@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import { assertReadmeRealRepoBenchmarkSuiteRow } from './js-ts-semantic-merge-admission-matrix-readme-real-repo.mjs';
 import { JsTsSafeMergeConflictCodes } from '../../src/js-ts-safe-merge.js';
 import { safeMergeJsTsSource } from '../../src/js-ts-semantic-merge.js';
 import { createSemanticEditScript, projectSemanticEditScriptToSource, replaySemanticEditProjection, safeMergeJsTsProject } from '../../src/index.js';
@@ -119,7 +120,8 @@ const semanticMergeMatrixCells = [
   { id: 'compiler-type-graph/overload-equivalence-unsupported-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-compiler-type-graph', note: 'exported overload records carry declaration/signature counts and unsupported type-equivalence reason codes' }, { id: 'compiler-type-graph/index-signature-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-compiler-index-signatures', note: 'public index signatures emit key/value/readonly checker records, proof hashes, and missing-proof blockers without claiming broad type equivalence' }, { id: 'compiler-type-graph/composite-type-shape-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-compiler-composite-type-shapes', note: 'public union, intersection, and tuple type shapes emit member/element checker records, proof hashes, and missing-proof blockers without claiming broad type equivalence' }, { id: 'compiler-type-graph/enum-runtime-shape-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-compiler-enum-shape', note: 'exported enums emit compiler-backed member value/runtime-shape records and fail closed when enum shape proof is missing or computed runtime values are unproven' }, { id: 'compiler-type-graph/inference-syntax-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-compiler-inference-syntax', note: 'satisfies, as const, and const type parameters emit compiler-backed static inference syntax records/proof hashes without claiming broad inference equivalence' }, { id: 'compiler-type-graph/template-infer-type-shape-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-compiler-template-infer-type-shapes', note: 'template literal type spans and infer type parameters emit compiler-backed shape hashes and fail closed when required evidence is missing' }, { id: 'compiler-type-graph/class-private-accessor-shape-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-compiler-class-private-accessor-shape', note: 'public class compiler records include private member/accessor-field static shape records, proof hashes, and missing-proof admission blockers without claiming runtime equivalence' },
   { id: 'source-span/source-url-generated-boundary-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-source-span-graph', note: 'JS/TS source ledger classifies sourceURL boundaries and shebang file-entrypoint directives with deterministic ownership evidence' },
   { id: 'semantic-replay/applied-already-applied-overlap-blocked', status: 'done', evidence: 'semantic-edit-bundle-auto-merge', note: 'replay blocks overlaps between already-applied ranges and edits that would still write source' },
-  { id: 'semantic-replay/output-binding-spoof-blocked', status: 'done', evidence: 'js-ts-safe-project-merge-semantic-replay-proof', note: 'replay output source/hash binding blocks spoofed expected outputs before admission' }
+  { id: 'semantic-replay/output-binding-spoof-blocked', status: 'done', evidence: 'js-ts-safe-project-merge-semantic-replay-proof', note: 'replay output source/hash binding blocks spoofed expected outputs before admission' },
+  { id: 'semantic-replay/projection-output-hash-mismatch-blocked', status: 'done', evidence: 'js-ts-safe-project-merge-semantic-replay-proof', note: 'bounded current-head replay proof rejects projection output hashes that disagree with expected and replayed output hashes' }
 ];
 assert.equal(semanticMergeMatrixCells.every((cell) => cell.status === 'done'), true);
 const supportStatuses = ['baseline', 'bounded-evidence', 'partial', 'blocked', 'absent'];
@@ -313,8 +315,6 @@ assert.equal(oracleImportRemovalProject.summary.confidenceDimensions.proof, 'par
 assert.equal(oracleImportRemovalProject.summary.confidenceDimensions.semanticEquivalence, 'unknown');
 assert.equal(oracleImportRemovalProject.summary.missingEvidenceMatrix.byRoute['produce-source-span-roundtrip-evidence'], undefined);
 
-function projectMatrixSurface(project, surface) {
-  const record = project.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);
-  assert.ok(record, `missing ${surface} matrix surface`);
-  return record;
-}
+assertReadmeRealRepoBenchmarkSuiteRow(assert);
+
+function projectMatrixSurface(project, surface) { const record = project.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface); assert.ok(record, `missing ${surface} matrix surface`); return record; }

@@ -1,5 +1,6 @@
 import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from '../../src/index.js';
+import { sourceSpanRoundtripEvidence } from '../../src/js-ts-safe-project-merge-source-span-roundtrip-proof.js';
 
 const base = [
   'export function step(v: number) {',
@@ -33,6 +34,9 @@ assert.equal(operation.anchor.sourceSpan.start, undefined);
 assert.equal(sourceSpanProof.status, 'passed');
 assert.equal(sourceSpanProof.metadata.sourceSpanOperations, 1);
 assert.equal(sourceSpanProof.metadata.spanLinkedProjectionEdits, 1);
+assert.equal(sourceSpanProof.metadata.sourceHashBoundSourceResults, 1);
+assert.equal(sourceSpanProof.metadata.outputHashBoundSourceResults, 1);
+assert.equal(sourceSpanProof.metadata.hashBindingFailedSourceResults, 0);
 assert.equal(sourceSpanProof.metadata.missingSignal, undefined);
 assert.equal(replayProof.status, 'passed');
 assert.equal(replayProof.metadata.boundedAdmissionRoute.routeId, 'admit-independent-semantic-edit-current-head-commutation');
@@ -41,6 +45,43 @@ assert.equal(genericSurface.proofStatuses['semantic-edit-replay-clean'], 'passed
 assert.equal(genericSurface.missingRouteIds.includes('produce-source-span-roundtrip-evidence'), false);
 assert.equal(project.admission.autoMergeClaim, false);
 assert.equal(project.admission.semanticEquivalenceClaim, false);
+
+const staleHashArtifacts = structuredClone(project.files[0].result.semanticArtifacts);
+staleHashArtifacts.projection.projectedHash = project.files[0].workerHash;
+staleHashArtifacts.replay.currentHash = project.files[0].baseHash;
+staleHashArtifacts.replay.outputHash = project.files[0].workerHash;
+staleHashArtifacts.replay.metadata.expectedCurrentHash = project.files[0].baseHash;
+staleHashArtifacts.replay.metadata.observedCurrentHash = project.files[0].baseHash;
+staleHashArtifacts.replay.metadata.expectedOutputHash = project.files[0].workerHash;
+staleHashArtifacts.replay.metadata.replayedOutputHash = project.files[0].workerHash;
+staleHashArtifacts.replay.metadata.proofRoute.expectedCurrentHash = project.files[0].baseHash;
+staleHashArtifacts.replay.metadata.proofRoute.replayCurrentHash = project.files[0].baseHash;
+staleHashArtifacts.replay.metadata.proofRoute.expectedOutputHash = project.files[0].workerHash;
+staleHashArtifacts.replay.metadata.proofRoute.projectionOutputHash = project.files[0].workerHash;
+staleHashArtifacts.replay.metadata.proofRoute.replayOutputHash = project.files[0].workerHash;
+staleHashArtifacts.alreadyAppliedReplay.currentHash = project.files[0].workerHash;
+staleHashArtifacts.alreadyAppliedReplay.outputHash = project.files[0].workerHash;
+staleHashArtifacts.alreadyAppliedReplay.metadata.expectedCurrentHash = project.files[0].workerHash;
+staleHashArtifacts.alreadyAppliedReplay.metadata.observedCurrentHash = project.files[0].workerHash;
+const staleHashFile = {
+  ...project.files[0],
+  semanticArtifacts: staleHashArtifacts,
+  result: { ...project.files[0].result, semanticArtifacts: staleHashArtifacts }
+};
+const staleHashProof = sourceSpanRoundtripEvidence(
+  'js_ts_project_source_span_roundtrip_stale_hash_oracle',
+  [staleHashFile],
+  'source-span-roundtrip',
+  'parser-roundtrip'
+);
+assert.equal(staleHashProof.status, 'failed');
+assert.equal(staleHashProof.metadata.failedSourceResults, 1);
+assert.equal(staleHashProof.metadata.admissionBlockingFailedSourceResults, 1);
+assert.equal(staleHashProof.metadata.hashBindingFailedSourceResults, 1);
+assert.equal(staleHashProof.metadata.sourceSpanRoundtripHashBindingReasonCodes.includes('source-span-roundtrip-projection-output-hash-mismatch'), true);
+assert.equal(staleHashProof.metadata.sourceSpanRoundtripHashBindingReasonCodes.includes('source-span-roundtrip-replay-current-source-hash-mismatch'), true);
+assert.equal(staleHashProof.metadata.sourceSpanRoundtripHashBindingReasonCodes.includes('source-span-roundtrip-replay-output-hash-mismatch'), true);
+assert.equal(staleHashProof.metadata.sourceSpanRoundtripAdmissionBlockerSourcePaths.includes('src/probe.ts'), true);
 
 function proofRecord(projectResult, level) {
   const record = projectResult.proofEvidence.records.find((entry) => entry.level === level);

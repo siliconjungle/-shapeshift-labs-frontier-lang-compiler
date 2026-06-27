@@ -1,6 +1,6 @@
 import { assert } from './helpers.mjs';
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
-import { createSemanticEditScript, projectSemanticEditScriptToSource, replaySemanticEditProjection, safeMergeJsTsProject } from '../../src/index.js';
+import { createSemanticEditBundleAdmission, createSemanticEditScript, projectSemanticEditScriptToSource, replaySemanticEditProjection, safeMergeJsTsProject } from '../../src/index.js';
 import { semanticEditReplayCleanEvidence } from '../../src/js-ts-safe-project-merge-semantic-replay-proof.js';
 
 const sameLineReplayConflict = safeMergeJsTsProject({
@@ -165,24 +165,12 @@ const renameBase = 'export function step() {\n  return 1;\n}\nexport const keep 
 const renameWorker = renameBase.replace('function step', 'function nextStep');
 const renameHead = renameBase.replace('keep = 0', 'keep = 1');
 const renameExpected = 'export function nextStep() {\n  return 1;\n}\nexport const keep = 1;\n';
-const renameProjection = projectSemanticEditScriptToSource({
-  script: createSemanticEditScript({
-    id: 'semantic_replay_output_binding_spoof',
-    language: 'typescript',
-    sourcePath: 'src/replay-output.ts',
-    baseSourceText: renameBase,
-    workerSourceText: renameWorker,
-    headSourceText: renameHead
-  }),
-  workerSourceText: renameWorker,
-  headSourceText: renameHead
-});
+const renameScript = createSemanticEditScript({ id: 'semantic_replay_output_binding_spoof', language: 'typescript', sourcePath: 'src/replay-output.ts', baseSourceText: renameBase, workerSourceText: renameWorker, headSourceText: renameHead });
+const renameProjection = projectSemanticEditScriptToSource({ script: renameScript, workerSourceText: renameWorker, headSourceText: renameHead });
 
 const unboundReplay = replaySemanticEditProjection({
-  projection: renameProjection,
-  currentSourceText: renameHead,
-  expectedOutputSourceText: renameExpected,
-  expectedOutputHash: hashSemanticValue(renameExpected)
+  projection: renameProjection, currentSourceText: renameHead,
+  expectedOutputSourceText: renameExpected, expectedOutputHash: hashSemanticValue(renameExpected)
 });
 assert.equal(unboundReplay.status, 'accepted-clean');
 assert.equal(unboundReplay.admission.proofRoute, undefined);
@@ -190,22 +178,45 @@ assert.equal(unboundReplay.admission.autoMergeClaim, false);
 assert.equal(unboundReplay.admission.semanticEquivalenceClaim, false);
 
 const boundedReplay = replaySemanticEditProjection({
-  projection: renameProjection,
-  currentSourceText: renameHead,
-  currentSourceHash: hashSemanticValue(renameHead),
-  expectedOutputSourceText: renameExpected,
-  expectedOutputHash: hashSemanticValue(renameExpected)
+  projection: renameProjection, currentSourceText: renameHead, currentSourceHash: hashSemanticValue(renameHead),
+  expectedOutputSourceText: renameExpected, expectedOutputHash: hashSemanticValue(renameExpected)
 });
 assert.equal(boundedReplay.status, 'accepted-clean');
 assert.equal(boundedReplay.metadata.currentSourceBindingStatus, 'bound');
 assert.equal(boundedReplay.metadata.outputBindingStatus, 'bound');
-assert.equal(boundedReplay.admission.proofRoute.routeId, 'admit-independent-semantic-edit-current-head-commutation');
-assert.equal(boundedReplay.admission.proofRoute.routeNext, 'apply-source-bound-semantic-edit-replay');
-assert.equal(boundedReplay.admission.proofRoute.proofKind, 'bounded-current-head-commutation');
+assert.deepEqual([boundedReplay.admission.proofRoute.routeId, boundedReplay.admission.proofRoute.routeNext, boundedReplay.admission.proofRoute.proofKind], ['admit-independent-semantic-edit-current-head-commutation', 'apply-source-bound-semantic-edit-replay', 'bounded-current-head-commutation']);
 assert.equal(boundedReplay.admission.proofRoute.autoMergeClaim, false);
 assert.equal(boundedReplay.admission.proofRoute.semanticEquivalenceClaim, false);
 assert.equal(boundedReplay.admission.autoMergeClaim, false);
 assert.equal(boundedReplay.admission.semanticEquivalenceClaim, false);
+
+const mismatchedProjectionHash = hashSemanticValue(renameExpected.replace('keep = 1', 'keep = 8'));
+const projectionHashMismatchedReplay = replaySemanticEditProjection({
+  projection: { ...renameProjection, projectedHash: mismatchedProjectionHash },
+  currentSourceText: renameHead, currentSourceHash: hashSemanticValue(renameHead),
+  expectedOutputSourceText: renameExpected, expectedOutputHash: hashSemanticValue(renameExpected)
+});
+assert.equal(projectionHashMismatchedReplay.status, 'accepted-clean');
+assert.equal(projectionHashMismatchedReplay.outputHash, hashSemanticValue(renameExpected));
+assert.deepEqual([projectionHashMismatchedReplay.admission.proofRoute.routeId, projectionHashMismatchedReplay.admission.proofRoute.routeNext], ['reject-semantic-edit-replay-output-mismatch', 'inspect-semantic-edit-replay-output-binding']);
+for (const code of ['semantic-edit-projection-output-hash-mismatch', 'semantic-edit-replay-projection-output-hash-mismatch']) {
+  assert.equal(projectionHashMismatchedReplay.admission.proofRoute.reasonCodes.includes(code), true);
+}
+assert.equal(projectionHashMismatchedReplay.admission.proofRoute.semanticEquivalenceClaim, false);
+assert.equal(projectionHashMismatchedReplay.admission.proofRoute.autoMergeClaim, false);
+
+const projectionHashMismatchedBundleAdmission = createSemanticEditBundleAdmission({
+  semanticEditScripts: [renameScript], semanticEditProjections: [{ ...renameProjection, projectedHash: mismatchedProjectionHash }], semanticEditReplays: [projectionHashMismatchedReplay],
+  evidence: [{ id: 'evidence_projection_hash_mismatch_replay_tests', kind: 'test', status: 'passed', scope: 'semantic-edit:auto-merge' }]
+});
+assert.deepEqual([
+  projectionHashMismatchedBundleAdmission.status,
+  projectionHashMismatchedBundleAdmission.action,
+  projectionHashMismatchedBundleAdmission.autoApplyCandidate,
+  projectionHashMismatchedBundleAdmission.summary.acceptedClean,
+  projectionHashMismatchedBundleAdmission.summary.boundedCurrentHeadReplays
+], ['needs-review', 'review', false, 1, 0]);
+assert.equal(projectionHashMismatchedBundleAdmission.reasonCodes.includes('semantic-edit-replay-current-head-proof-missing'), true);
 
 const spoofedReplay = replaySemanticEditProjection({
   projection: renameProjection,

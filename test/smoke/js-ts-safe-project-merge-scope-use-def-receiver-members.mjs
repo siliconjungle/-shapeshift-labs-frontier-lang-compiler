@@ -54,6 +54,19 @@ const receiverConflict = receiverConflicts.find((conflict) => conflict.details?.
 assert.equal(receiverConflict?.details.reasonCode, 'project-public-scope-use-def-delta-conflict');
 assert.notEqual(receiverConflict.details.worker.publicOwnerUseHash, receiverConflict.details.head.publicOwnerUseHash);
 
+const receiverLiteralKindConflicts = projectScopeUseDefDeltaConflicts(scopeReferenceDelta({
+  base: counterComputedReceiverReferenceRecord('this.label', 'base'),
+  worker: counterComputedReceiverReferenceRecord('this["label"]', 'worker'),
+  head: counterComputedReceiverReferenceRecord('this[`label`]', 'head')
+}));
+const receiverLiteralKindConflict = receiverLiteralKindConflicts
+  .find((conflict) => conflict.code === 'project-public-scope-reference-delta-conflict');
+assert.equal(receiverLiteralKindConflict?.details.reasonCode, 'project-public-scope-reference-delta-conflict');
+assert.equal(receiverLiteralKindConflict.details.worker.receiverKind, 'this');
+assert.equal(receiverLiteralKindConflict.details.worker.memberName, 'label');
+assert.equal(receiverLiteralKindConflict.details.worker.memberLiteralKind, 'string-literal');
+assert.equal(receiverLiteralKindConflict.details.head.memberLiteralKind, 'static-template-literal');
+
 const compilerReceiverSource = [
   'class BaseCounter {',
   '  render(label: string) { return label; }',
@@ -130,6 +143,37 @@ function counterOwnerRecord(memberName) {
   return project.outputProjectSymbolGraph.scopeBindingRecords.find((record) => record.name === 'Counter' && record.bindingKind === 'class');
 }
 
+function counterComputedReceiverFiles(accessExpression) {
+  return {
+    'src/counter-literal.ts': [
+      'export class Counter {',
+      '  label = "count";',
+      '  read() {',
+      `    return ${accessExpression};`,
+      '  }',
+      '}',
+      ''
+    ].join('\n')
+  };
+}
+
+function counterComputedReceiverReferenceRecord(accessExpression, stage) {
+  const project = safeMergeJsTsProject({
+    id: `js_ts_project_safe_merge_scope_use_def_receiver_literal_kind_delta_${stage}`,
+    language: 'typescript',
+    includeOutputProjectSymbolGraph: true,
+    baseFiles: counterComputedReceiverFiles(accessExpression),
+    workerFiles: counterComputedReceiverFiles(accessExpression),
+    headFiles: counterComputedReceiverFiles(accessExpression)
+  });
+  assert.equal(project.status, 'merged');
+  return project.outputProjectSymbolGraph.scopeReferenceRecords.find((record) => (
+    record.receiverKind === 'this'
+    && record.memberName === 'label'
+    && record.publicOwnerName === 'Counter'
+  ));
+}
+
 async function typeScriptCompilerImport(sourcePath, sourceText) {
   const compilerOptions = { target: ts.ScriptTarget.Latest, module: ts.ModuleKind.ESNext, noResolve: true };
   const sourceFile = ts.createSourceFile(sourcePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
@@ -156,6 +200,16 @@ function scopeDelta(stages) {
     stages: Object.fromEntries(Object.entries(stages).map(([stage, record]) => [stage, {
       projectSymbolGraph: { scopeBindingRecords: record ? [record] : [] },
       summary: { scopeBindingRecords: record ? 1 : 0 }
+    }])),
+    summary: { stages: Object.keys(stages).length }
+  };
+}
+
+function scopeReferenceDelta(stages) {
+  return {
+    stages: Object.fromEntries(Object.entries(stages).map(([stage, record]) => [stage, {
+      projectSymbolGraph: { scopeBindingRecords: [], scopeReferenceRecords: record ? [record] : [] },
+      summary: { scopeReferenceRecords: record ? 1 : 0 }
     }])),
     summary: { stages: Object.keys(stages).length }
   };

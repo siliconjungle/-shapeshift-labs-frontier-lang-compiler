@@ -5,14 +5,15 @@ const schedulerEffectNames = ['setTimeout', 'setInterval', 'clearTimeout', 'clea
 function splitEffectFactOccurrences(group, sourceText) {
   const concreteKinds = group.factKinds.filter((kind) => kind !== 'async');
   const line = sourceLine(sourceText, group.line);
+  const asyncRanges = group.factKinds.includes('async') ? effectOccurrenceRanges(line, 'async') : [];
   if (!concreteKinds.length && group.factKinds.includes('async')) {
-    const ranges = effectOccurrenceRanges(line, 'async');
-    return ranges.length > 1
-      ? ranges.map((range, occurrenceIndex) => ({ ...group, factKinds: ['async'], occurrenceRange: range, occurrenceOrdinalHint: occurrenceIndex + 1 }))
+    return asyncRanges.length
+      ? asyncRanges.map((range, occurrenceIndex) => ({ ...group, factKinds: ['async'], occurrenceRange: range, occurrenceOrdinalHint: occurrenceIndex + 1 }))
       : [group];
   }
   if (!concreteKinds.length) return [group];
-  return concreteKinds.flatMap((factKind, index) => {
+  const concreteRanges = concreteKinds.flatMap((factKind) => effectOccurrenceRanges(line, factKind));
+  const concreteGroups = concreteKinds.flatMap((factKind, index) => {
     const base = {
       ...group,
       facts: group.facts.filter((fact) => fact.value?.kind === factKind
@@ -24,6 +25,19 @@ function splitEffectFactOccurrences(group, sourceText) {
       ? ranges.map((range, occurrenceIndex) => ({ ...base, occurrenceRange: range, occurrenceOrdinalHint: occurrenceIndex + 1 }))
       : [base];
   });
+  const uncoveredAsyncRanges = asyncRanges.filter((range) => !concreteRanges.some((concreteRange) => rangesOverlap(range, concreteRange)));
+  return uncoveredAsyncRanges.length
+    ? [
+      ...concreteGroups,
+      ...uncoveredAsyncRanges.map((range, occurrenceIndex) => ({
+        ...group,
+        facts: group.facts.filter((fact) => fact.value?.kind === 'async'),
+        factKinds: ['async'],
+        occurrenceRange: range,
+        occurrenceOrdinalHint: occurrenceIndex + 1
+      }))
+    ]
+    : concreteGroups;
 }
 
 function splitMutationFactOccurrences(group, sourceText) {
@@ -52,7 +66,8 @@ function effectOccurrenceRanges(line, factKind) {
     ...tokenExpressionRanges(line, ['document', 'window', 'navigator', 'location', 'history'], 'browser-effect')
   ]);
   if (factKind === 'tagged-template') return taggedTemplateRanges(line);
-  if (factKind === 'async') return awaitEffectRanges(line);
+  if (factKind === 'template-interpolation' || factKind === 'template-literal') return templateLiteralRanges(line);
+  if (factKind === 'async') return asyncEffectRanges(line);
   if (factKind === 'generator') return yieldEffectRanges(line);
   return [];
 }
@@ -139,6 +154,31 @@ function awaitEffectRanges(line) {
     .map((match) => ({ start: match.index, end: statementEnd(text, match.index), kind: 'async-effect' }));
 }
 
+function asyncEffectRanges(line) {
+  const awaitRanges = awaitEffectRanges(line);
+  const importRanges = dynamicImportRanges(line)
+    .filter((range) => !awaitRanges.some((awaitRange) => rangesOverlap(range, awaitRange)));
+  return sortedRanges([...awaitRanges, ...importRanges]);
+}
+
+function dynamicImportRanges(line) {
+  const text = String(line ?? '');
+  const ranges = [];
+  for (let index = 0; index < text.length; index += 1) {
+    if (!dynamicImportAt(text, index)) continue;
+    const open = text.indexOf('(', index);
+    const close = matchingParenIndex(text, open);
+    ranges.push({ start: index, end: close === undefined ? statementEnd(text, open) : close + 1, kind: 'dynamic-import' });
+    index = close === undefined ? ranges[ranges.length - 1].end : close;
+  }
+  return ranges;
+}
+
+function dynamicImportAt(text, index) {
+  if (text.slice(index, index + 6) !== 'import' || isIdentifierPart(text[index - 1]) || isIdentifierPart(text[index + 6])) return false;
+  return text[skipSpaces(text, index + 6)] === '(';
+}
+
 function yieldEffectRanges(line) {
   const text = String(line ?? '');
   return [...text.matchAll(/\byield\s*\*?/g)]
@@ -159,6 +199,18 @@ function taggedTemplateRanges(line) {
     const start = match.index + match[0].indexOf(match[1]);
     const tick = text.indexOf('`', start);
     ranges.push({ start, end: templateEnd(text, tick), kind: 'tagged-template' });
+  }
+  return ranges;
+}
+
+function templateLiteralRanges(line) {
+  const text = String(line ?? '');
+  const ranges = [];
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] !== '`') continue;
+    const end = templateEnd(text, index);
+    ranges.push({ start: index, end, kind: 'template-literal' });
+    index = Math.max(index, end - 1);
   }
   return ranges;
 }
@@ -196,6 +248,10 @@ function constructorStartBefore(text, index) {
 
 function sortedRanges(ranges) {
   return ranges.slice().sort((left, right) => left.start - right.start || left.end - right.end);
+}
+
+function rangesOverlap(left, right) {
+  return Math.max(left.start, right.start) < Math.min(left.end, right.end);
 }
 
 function sourceLine(sourceText, lineNumber) {

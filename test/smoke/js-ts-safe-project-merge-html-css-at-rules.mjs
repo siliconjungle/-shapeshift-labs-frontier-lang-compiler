@@ -1,6 +1,8 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
+import { htmlCssProjectSummary } from '../../src/js-ts-safe-project-merge-html-css-summary.js';
+import { htmlCssProjectMergeMatrixProofStatus } from '../../src/js-ts-safe-project-merge-html-css-matrix.js';
 
 const sourcePath = 'src/anim.css';
 const base = '@keyframes fade { from { opacity: 0; } to { opacity: 1; } }\n.button { color: red; }\n';
@@ -168,6 +170,52 @@ assert.equal(fontFaceProven.summary.htmlCssBrowserRuntimeProofs, 1);
 assert.equal(fontFaceProven.files[0].result.cascadeRuntimeProofs[0].runtimeSignals.includes('css-font-face-runtime'), true);
 assert.equal(fontFaceProven.files[0].result.cascadeRuntimeProofs[0].browserRenderEquivalenceClaim, false);
 assert.equal(fontFaceProven.outputFiles[0].sourceText, fontFaceOutput);
+
+const forgedPropertyDescriptorSummary = htmlCssProjectSummary([{
+  language: 'css',
+  sourcePath: 'src/forged-property.css',
+  status: 'merged',
+  outputSourceText: '@property --brand-hue { syntax: "<number>"; inherits: false; initial-value: 210; }\n',
+  result: {
+    dependencyGraphEvidence: {
+      kind: 'frontier.lang.cssDependencyGraphEvidence',
+      propertyRegistrations: 1,
+      propertyRegistrationDescriptors: 3,
+      records: {
+        propertyRegistrations: [{ kind: 'property-registration', name: '--brand-hue' }],
+        propertyRegistrationDescriptors: [{ kind: 'property-registration-descriptor', name: '--brand-hue', descriptorName: 'syntax' }]
+      }
+    }
+  }
+}]);
+assert.equal(forgedPropertyDescriptorSummary.cssRuntimeDescriptorFiles, 1);
+assert.equal(forgedPropertyDescriptorSummary.cssPropertyDescriptorFiles, 1);
+assert.equal(forgedPropertyDescriptorSummary.cssPropertyDescriptorEvidenceFiles, 0);
+assert.equal(forgedPropertyDescriptorSummary.cssRuntimeDescriptorEvidenceFiles, 0);
+assert.equal(htmlCssProjectMergeMatrixProofStatus('css-runtime-descriptor-evidence', forgedPropertyDescriptorSummary), 'missing');
+
+const forgedPageDescriptorSummary = htmlCssProjectSummary([{
+  language: 'css',
+  sourcePath: 'src/forged-page.css',
+  status: 'merged',
+  outputSourceText: '@page chapter:left { margin: 1cm; @top-left { content: "Chapter"; } }\n',
+  result: {
+    dependencyGraphEvidence: {
+      kind: 'frontier.lang.cssDependencyGraphEvidence',
+      pageDescriptors: 1,
+      pageMarginDescriptors: 1,
+      records: {
+        pageDescriptors: [{ kind: 'page-descriptor', pageSelector: 'chapter:left', property: 'margin' }],
+        pageMarginDescriptors: [{ kind: 'page-margin-descriptor', marginBox: '@top-left', property: 'content' }]
+      }
+    }
+  }
+}]);
+assert.equal(forgedPageDescriptorSummary.cssRuntimeDescriptorFiles, 1);
+assert.equal(forgedPageDescriptorSummary.cssPageDescriptorFiles, 1);
+assert.equal(forgedPageDescriptorSummary.cssPageDescriptorEvidenceFiles, 0);
+assert.equal(forgedPageDescriptorSummary.cssRuntimeDescriptorEvidenceFiles, 0);
+assert.equal(htmlCssProjectMergeMatrixProofStatus('css-runtime-descriptor-evidence', forgedPageDescriptorSummary), 'missing');
 
 function runtimeProof({ id, sourcePath, reasonCode, shapeKey, base, worker, head, output }) {
   const runtimeSignal = runtimeSignalForReason(reasonCode);

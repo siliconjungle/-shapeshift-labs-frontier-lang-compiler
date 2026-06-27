@@ -140,6 +140,8 @@ function jsxHookEffectRisk(stage, callbackHash, cleanupReturnHash) {
       proofStatus: 'static-effect-callback-source-evidence',
       callbackKind: 'arrow-function',
       callbackHash,
+      cleanupProofStatus: cleanupReturnHash ? 'static-effect-cleanup-source-evidence' : undefined,
+      cleanupReturnKind: cleanupReturnHash ? 'arrow-function' : undefined,
       cleanupReturnHash,
       cleanupReturnPresent: Boolean(cleanupReturnHash),
       runtimeEquivalenceClaim: false,

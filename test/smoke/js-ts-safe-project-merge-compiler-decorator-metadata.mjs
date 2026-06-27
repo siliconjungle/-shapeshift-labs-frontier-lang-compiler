@@ -137,6 +137,24 @@ assert.equal(compilerConflict?.details?.worker?.decoratorMetadataProof?.runtimeE
 assert.equal(compilerConflict?.details?.worker?.decoratorMetadataProof?.conflictRouting?.routeLane, 'decorator-runtime-boundaries');
 assert.equal(compilerConflict?.details?.head?.decoratorMetadataProof?.runtimeExecutionEquivalenceGap?.routeId, 'prove-decorator-runtime-execution-equivalence');
 
+const sameDecoratorWorkerType = await serviceCompilerType({ 'src/service.ts': files['src/service.ts'].replace('@fieldDec value', '@sharedField value') }, 'decorators_same_delta_worker');
+const sameDecoratorHeadType = await serviceCompilerType({ 'src/service.ts': files['src/service.ts'].replace('@fieldDec value', '@sharedField value') }, 'decorators_same_delta_head');
+const sameDecoratorConflicts = publicCompilerTypeDeltaConflicts(graphWithType(serviceType), graphWithType(sameDecoratorWorkerType), graphWithType(sameDecoratorHeadType), graphWithType(sameDecoratorWorkerType));
+const sameDecoratorConflict = sameDecoratorConflicts.find((conflict) => conflict.details?.reasonCode === 'typescript-public-api-decorator-runtime-execution-proof-missing');
+assert.equal(sameDecoratorConflicts.length, 1);
+assert.equal(Boolean(sameDecoratorConflict), true);
+assert.equal(sameDecoratorConflict.details.decoratorRuntimeExecutionEvidence.requiredEvidence, 'frontier.lang.typescript.decoratorRuntimeExecutionProof');
+assert.equal(sameDecoratorConflict.details.decoratorRuntimeExecutionEvidence.routeId, 'prove-decorator-runtime-execution-equivalence');
+assert.equal(sameDecoratorConflict.details.decoratorRuntimeExecutionEvidence.routeLane, 'decorator-runtime-boundaries');
+assert.equal(sameDecoratorConflict.details.decoratorRuntimeExecutionEvidence.failClosed, true);
+assert.equal(sameDecoratorConflict.details.decoratorRuntimeExecutionEvidence.semanticEquivalenceClaim, false);
+assert.equal(sameDecoratorConflict.details.decoratorRuntimeExecutionEvidence.missingRecords[0].decoratorMetadataHash, sameDecoratorWorkerType.decoratorMetadataHash);
+assert.equal(sameDecoratorConflict.details.decoratorRuntimeExecutionEvidence.missingRecords[0].missingSignals.includes('typescript-decorator-runtime-execution-proof-missing'), true);
+assert.equal(sameDecoratorConflict.details.decoratorRuntimeExecutionEvidence.missingRecords[0].runtimeExecutionEquivalenceGap.routeId, 'prove-decorator-runtime-execution-equivalence');
+
+const sameDecoratorProofType = await serviceCompilerType({ 'src/service.ts': files['src/service.ts'].replace('@fieldDec value', '@sharedField value') }, 'decorators_same_delta_proof', importsWithDecoratorRuntimeExecutionProof);
+assert.equal(publicCompilerTypeDeltaConflicts(graphWithType(serviceType), graphWithType(sameDecoratorProofType), graphWithType(sameDecoratorProofType), graphWithType(sameDecoratorProofType)).length, 0);
+
 const proofWorkerServiceType = await serviceCompilerType(
   { 'src/service.ts': files['src/service.ts'].replace('@fieldDec value', '@workerField value') },
   'decorators_worker_delta_proof',

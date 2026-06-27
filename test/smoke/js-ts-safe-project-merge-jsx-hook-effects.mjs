@@ -1,5 +1,8 @@
 import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
+import { projectGraphDeltaConflicts } from '../../src/js-ts-safe-project-merge-graph-delta-conflicts.js';
+import { jsxHookEffectSourceDelta } from '../../src/js-ts-safe-project-merge-jsx-hook-effect-proof.js';
+import { jsxHookEffectRisk, jsxRenderRiskDelta } from './js-ts-safe-project-merge-jsx-graph-helpers.mjs';
 
 function projectFor(sourceText, id) {
   return safeMergeJsTsProject({
@@ -104,3 +107,126 @@ assert.equal(dynamicCleanupSection.hookEffectRecords[0].cleanupProofStatus, 'dyn
 assert.equal(dynamicCleanupSection.hookEffectRecords[0].dynamicCleanupReturnText, 'cleanups[current]');
 assert.equal(dynamicCleanupSection.hookEffectRecords[0].dynamicCleanupReturnKind, 'computed-reference');
 assert.equal(dynamicCleanupSection.hookEffectRecords[0].dynamicCleanupReturnBlockerReasonCode, 'jsx-render-hook-effect-cleanup-computed-reference-unsupported');
+
+const hookEffectProofRecords = {
+  base: jsxHookEffectRisk('base', 'effect:callback:base', 'effect:cleanup:base'),
+  worker: jsxHookEffectRisk('worker', 'effect:callback:worker', 'effect:cleanup:base'),
+  head: jsxHookEffectRisk('head', 'effect:callback:base', 'effect:cleanup:head'),
+  output: jsxHookEffectRisk('output', 'effect:callback:worker', 'effect:cleanup:head')
+};
+const hookEffectProofDelta = jsxRenderRiskDelta(hookEffectProofRecords);
+const missingProofConflicts = projectGraphDeltaConflicts(hookEffectProofDelta);
+assert.equal(missingProofConflicts.length, 1);
+assert.equal(missingProofConflicts[0].details.reasonCodes.includes('jsx-render-hook-effect-source-proof-missing'), true);
+assert.equal(missingProofConflicts[0].details.routeId, 'prove-jsx-hook-effect-callback-cleanup-source-preservation');
+assert.equal(missingProofConflicts[0].details.jsxHookEffectSourceProof.hookEffectSourcePreservationClaim, false);
+
+const hookEffectSourceProof = sourceProof(missingProofConflicts[0].details.identityKey, hookEffectProofRecords, {
+  callbackOrigin: 'worker',
+  cleanupReturnOrigin: 'head'
+});
+const passedProofConflicts = projectGraphDeltaConflicts(hookEffectProofDelta, {
+  evidence: [hookEffectSourceProof]
+});
+assert.equal(passedProofConflicts.length, 0);
+
+const staleProofConflicts = projectGraphDeltaConflicts(hookEffectProofDelta, {
+  evidence: [{ ...hookEffectSourceProof, outputSourceHash: 'stale-output-source' }]
+});
+assert.equal(staleProofConflicts.length, 1);
+assert.equal(staleProofConflicts[0].details.reasonCodes.includes('jsx-render-hook-effect-source-proof-source-hash-mismatch'), true);
+assert.equal(staleProofConflicts[0].details.runtimeEquivalenceClaim, false);
+
+const claimBearingProofConflicts = projectGraphDeltaConflicts(hookEffectProofDelta, {
+  evidence: [{ ...hookEffectSourceProof, runtimeEquivalenceClaim: true }]
+});
+assert.equal(claimBearingProofConflicts.length, 1);
+assert.equal(claimBearingProofConflicts[0].details.reasonCodes.includes('jsx-render-hook-effect-source-proof-claim-flags-missing'), true);
+
+const dynamicHookEffectRecords = {
+  base: hookEffectProofRecords.base,
+  worker: dynamicHookEffectRisk('worker', 'effect:cleanup:base'),
+  head: hookEffectProofRecords.head,
+  output: dynamicHookEffectRisk('output', 'effect:cleanup:head')
+};
+const dynamicHookEffectDelta = jsxRenderRiskDelta(dynamicHookEffectRecords);
+const dynamicHookEffectExpected = jsxHookEffectSourceDelta({
+  identityKey: missingProofConflicts[0].details.identityKey,
+  baseRecord: dynamicHookEffectRecords.base,
+  workerRecord: dynamicHookEffectRecords.worker,
+  headRecord: dynamicHookEffectRecords.head,
+  outputRecord: dynamicHookEffectRecords.output
+});
+const dynamicProofConflicts = projectGraphDeltaConflicts(dynamicHookEffectDelta, {
+  evidence: [sourceProof(missingProofConflicts[0].details.identityKey, dynamicHookEffectRecords, {
+    callbackOrigin: 'worker',
+    cleanupReturnOrigin: 'head',
+    expected: dynamicHookEffectExpected
+  })]
+});
+assert.equal(dynamicProofConflicts.length, 1);
+assert.equal(dynamicProofConflicts[0].details.reasonCodes.includes('jsx-render-hook-effect-source-proof-dynamic-effect-unsupported'), true);
+assert.equal(dynamicProofConflicts[0].details.jsxHookEffectSourceProof.hookEffectSourcePreservationClaim, false);
+
+function sourceProof(identityKey, records, origins) {
+  const expected = origins.expected ?? jsxHookEffectSourceDelta({
+    identityKey,
+    baseRecord: records.base,
+    workerRecord: records.worker,
+    headRecord: records.head,
+    outputRecord: records.output
+  });
+  return {
+    schema: 'frontier.lang.jsxHookEffectSourceProof.v1',
+    kind: 'frontier.lang.jsxHookEffectSourceProof',
+    status: 'passed',
+    sourcePath: expected.sourcePath,
+    identityKey,
+    baseSourceHash: expected.baseSourceHash,
+    workerSourceHash: expected.workerSourceHash,
+    headSourceHash: expected.headSourceHash,
+    outputSourceHash: expected.outputSourceHash,
+    publicOwnerName: expected.publicOwnerName,
+    tagName: expected.tagName,
+    tagKey: expected.tagKey,
+    hookName: expected.hookName,
+    hookOrdinal: expected.hookOrdinal,
+    callbackOrigin: origins.callbackOrigin,
+    callbackHash: expected[origins.callbackOrigin].callbackHash,
+    outputCallbackHash: expected.output.callbackHash,
+    cleanupReturnOrigin: origins.cleanupReturnOrigin,
+    cleanupReturnHash: expected[origins.cleanupReturnOrigin].cleanupReturnHash,
+    outputCleanupReturnHash: expected.output.cleanupReturnHash,
+    hookEffectSourcePreservationHash: expected.hookEffectSourcePreservationHash,
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    runtimeEquivalenceClaim: false,
+    renderEquivalenceClaim: false,
+    hookEffectSourcePreservationClaim: true,
+    claimScope: 'static-hook-effect-callback-cleanup-source-preservation-only'
+  };
+}
+
+function dynamicHookEffectRisk(stage, cleanupReturnHash) {
+  const record = jsxHookEffectRisk(stage, `effect:callback:${stage}`, cleanupReturnHash);
+  return {
+    ...record,
+    renderRiskReasonCodes: [
+      ...record.renderRiskReasonCodes,
+      'jsx-render-hook-effect-unsupported',
+      'jsx-render-hook-effect-callback-call-expression-unsupported'
+    ],
+    hookEffectRecords: [{
+      ...record.hookEffectRecords[0],
+      proofStatus: 'dynamic-effect-callback-unsupported',
+      callbackKind: undefined,
+      callbackText: undefined,
+      dynamicCallbackText: 'makeEffect(theme)',
+      dynamicCallbackKind: 'call-expression',
+      dynamicCallbackBlockerReasonCode: 'jsx-render-hook-effect-callback-call-expression-unsupported',
+      signatureHash: `hook-effect-signature:${stage}:dynamic:${cleanupReturnHash}`
+    }],
+    hookEffectSignatureHash: `hook-effect:${stage}:dynamic:${cleanupReturnHash}`,
+    renderRiskSignatureHash: `render-risk:hook-effect:${stage}:dynamic`
+  };
+}

@@ -28,6 +28,12 @@ const semanticMergeParserMatrixCells = [
     note: 'Failed source-span roundtrip proof blocks project admission instead of allowing trivia-loss output to remain a merged result'
   },
   {
+    id: 'parser-source-span-trivia/source-span-roundtrip-hash-binding',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-source-span-roundtrip-line-column',
+    note: 'Passed source-span roundtrip proof now requires current-source and projected/replayed output hashes to match the changed project output'
+  },
+  {
     id: 'parser-source-span-trivia/parser-token-text-mismatch-blocker',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-parser-trivia-evidence',

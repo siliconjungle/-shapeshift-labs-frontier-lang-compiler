@@ -80,6 +80,12 @@ const semanticMergeJsxMatrixCells = [
     note: 'effect callback references, optional callback references, and dynamic callback/cleanup blockers emit structured target evidence without claiming executable effect equivalence'
   },
   {
+    id: 'jsx-tsx-element-prop-graph/static-hook-effect-source-proof-bridge',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-jsx-hook-effects',
+    note: 'single static hook-effect deltas accept source-bound callback/cleanup preservation proof while stale hashes, dynamic callbacks, and runtime/render equivalence claims fail closed'
+  },
+  {
     id: 'jsx-tsx-element-prop-graph/same-file-component-provider-lookup',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-jsx-context-consumers',

@@ -69,6 +69,72 @@ assert.deepEqual(htmlAnchorProvenProject.files[0].result.runtimeBoundaryProofs[0
 assert.equal(htmlAnchorProvenProject.files[0].result.runtimeBoundaryProofs[0].runtimeSignals.includes('html-navigation-runtime'), true);
 assert.match(htmlAnchorProvenProject.outputFiles[0].sourceText, /href="\/docs\/v2"/);
 
+const htmlAreaBase = '<map name="nav"><area data-frontier-key="docs-area" href="/docs" alt="Docs"></map>\n';
+const htmlAreaWorker = '<map name="nav"><area data-frontier-key="docs-area" href="/docs/v2" alt="Docs"></map>\n';
+const htmlAreaHead = '<map class="site-map" name="nav"><area data-frontier-key="docs-area" href="/docs" alt="Docs"></map>\n';
+const htmlAreaOutput = '<map class="site-map" name="nav"><area alt="Docs" data-frontier-key="docs-area" href="/docs/v2" /></map>\n';
+const htmlAreaBlockedProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_area_navigation_runtime_block',
+  files: [{ sourcePath: 'src/map.html', baseSourceText: htmlAreaBase, workerSourceText: htmlAreaWorker, headSourceText: htmlAreaHead }]
+});
+assert.equal(htmlAreaBlockedProject.status, 'blocked');
+assert.equal(htmlAreaBlockedProject.summary.htmlRuntimeBoundaryEvidenceFiles, 1);
+assert.equal(htmlAreaBlockedProject.summary.htmlProofGapBlockedFiles, 1);
+const htmlAreaBlockedConflict = htmlAreaBlockedProject.conflicts.find((conflict) => conflict.details.reasonCode === 'navigation-runtime-boundary');
+assert.ok(htmlAreaBlockedConflict);
+assert.equal(htmlAreaBlockedConflict.details.boundary, 'html-area-navigation-runtime-attribute');
+assert.deepEqual(htmlAreaBlockedConflict.details.boundaryAttributes, ['href']);
+assert.equal(htmlAreaBlockedProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
+
+const htmlAreaWrongProofProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_area_navigation_runtime_wrong_boundary_proof',
+  htmlRuntimeBoundaryProofsByPath: {
+    'src/map.html': [{
+      id: 'html_area_navigation_wrong_boundary',
+      kind: 'html-source-bound-runtime-boundary-proof',
+      status: 'passed',
+      sourcePath: 'src/map.html',
+      reasonCode: 'navigation-runtime-boundary',
+      side: 'worker',
+      boundary: 'html-anchor-navigation-runtime-attribute',
+      boundaryAttributes: ['href'],
+      sourceTexts: { base: htmlAreaBase, worker: htmlAreaWorker, head: htmlAreaHead, output: htmlAreaOutput },
+      ...runtimeEvidence('navigation-runtime-boundary', 'html-anchor-navigation-runtime-attribute', 'area-navigation-wrong-boundary')
+    }]
+  },
+  files: [{ sourcePath: 'src/map.html', baseSourceText: htmlAreaBase, workerSourceText: htmlAreaWorker, headSourceText: htmlAreaHead }]
+});
+assert.equal(htmlAreaWrongProofProject.status, 'blocked');
+assert.equal(htmlAreaWrongProofProject.summary.htmlProofGapBlockedFiles, 1);
+assert.equal(htmlAreaWrongProofProject.conflicts.some((conflict) => conflict.details.reasonCode === 'navigation-runtime-boundary'), true);
+
+const htmlAreaProvenProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_area_navigation_runtime_source_bound_proof',
+  htmlRuntimeBoundaryProofsByPath: {
+    'src/map.html': [{
+      id: 'html_area_navigation_source_bound',
+      kind: 'html-source-bound-runtime-boundary-proof',
+      status: 'passed',
+      sourcePath: 'src/map.html',
+      reasonCode: 'navigation-runtime-boundary',
+      side: 'worker',
+      boundary: 'html-area-navigation-runtime-attribute',
+      boundaryAttributes: ['href'],
+      sourceTexts: { base: htmlAreaBase, worker: htmlAreaWorker, head: htmlAreaHead, output: htmlAreaOutput },
+      ...runtimeEvidence('navigation-runtime-boundary', 'html-area-navigation-runtime-attribute', 'area-navigation')
+    }]
+  },
+  files: [{ sourcePath: 'src/map.html', baseSourceText: htmlAreaBase, workerSourceText: htmlAreaWorker, headSourceText: htmlAreaHead }]
+});
+assert.equal(htmlAreaProvenProject.status, 'merged');
+assert.equal(htmlAreaProvenProject.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(htmlAreaProvenProject.files[0].result.browserRuntimeEquivalenceClaim, true);
+assert.equal(htmlAreaProvenProject.files[0].admission.browserRuntimeEquivalenceClaim, true);
+assert.equal(htmlAreaProvenProject.files[0].result.runtimeBoundaryProofs[0].boundary, 'html-area-navigation-runtime-attribute');
+assert.deepEqual(htmlAreaProvenProject.files[0].result.runtimeBoundaryProofs[0].boundaryAttributes, ['href']);
+assert.equal(htmlAreaProvenProject.files[0].result.runtimeBoundaryProofs[0].runtimeSignals.includes('html-navigation-runtime'), true);
+assert.match(htmlAreaProvenProject.outputFiles[0].sourceText, /href="\/docs\/v2"/);
+
 const htmlIframeBase = '<iframe data-frontier-key="preview" src="/a.html" title="Preview"></iframe>\n';
 const htmlIframeWorker = '<iframe data-frontier-key="preview" src="/b.html" title="Preview"></iframe>\n';
 const htmlIframeHead = '<iframe class="embed" data-frontier-key="preview" src="/a.html" title="Preview"></iframe>\n';

@@ -1,4 +1,5 @@
 import { CssDependencyAtRuleNames, CssDependencyCodeFragments, CssDependencyMissingProofReasonCodes, CssDependencySurfacePatterns, CssRuntimeDescriptorReasonCodes, CssRuntimeEquivalenceReasonCodes, HtmlFrameworkBoundaryReasonCodes, HtmlRuntimeBoundaryReasonCodes, RequiredParserEvidenceSideNames, ScopedCascadeMissingProofReasonCodes } from './js-ts-safe-project-merge-html-css-summary-constants.js';
+import { cssDescriptorEvidenceCount, cssFontFaceDescriptorEvidenceCount, cssPageDescriptorEvidenceCount, cssPropertyDescriptorEvidenceCount, hasSourceBoundPageDescriptorEvidence, hasSourceBoundPropertyDescriptorEvidence } from './js-ts-safe-project-merge-css-runtime-descriptor-evidence.js';
 
 function htmlCssProjectSummary(files) {
   const htmlFiles = files.filter(isHtmlProjectFile), cssFiles = files.filter(isCssProjectFile), htmlCssFiles = [...htmlFiles, ...cssFiles];
@@ -217,28 +218,13 @@ function hasCssFontFaceDescriptorEvidence(file) {
   return cssDependencyEvidenceRecords(file).some((evidence) => cssFontFaceDescriptorEvidenceCount(evidence) > 0);
 }
 function hasCssPropertyDescriptorEvidence(file) {
-  return cssDependencyEvidenceRecords(file).some((evidence) => (evidence.propertyRegistrations ?? 0) > 0 && (evidence.propertyRegistrationDescriptors ?? 0) > 0);
+  return cssDependencyEvidenceRecords(file).some(hasSourceBoundPropertyDescriptorEvidence);
 }
 function hasCssPageDescriptorEvidence(file) {
-  return cssDependencyEvidenceRecords(file).some((evidence) => cssPageDescriptorEvidenceCount(evidence) > 0);
+  return cssDependencyEvidenceRecords(file).some(hasSourceBoundPageDescriptorEvidence);
 }
 function hasCssRuntimeDescriptorBlockedConflict(file) {
   return cssFileConflicts(file).some((conflict) => CssRuntimeDescriptorReasonCodes.has(conflict?.details?.reasonCode) || CssRuntimeDescriptorReasonCodes.has(conflict?.details?.proofGap?.code));
-}
-function cssDescriptorEvidenceCount(evidence) { return cssFontFaceDescriptorEvidenceCount(evidence) + cssPropertyDescriptorEvidenceCount(evidence) + cssPageDescriptorEvidenceCount(evidence); }
-function cssFontFaceDescriptorEvidenceCount(evidence) {
-  const fontFaces = evidence?.records?.fontFaces;
-  const srcDescriptors = fontFaceSrcDescriptorRecords(evidence);
-  const sourceBoundFamilies = Array.isArray(fontFaces) ? fontFaces.filter(hasSourceBoundDescriptorRecord).length : 0;
-  return sourceBoundFamilies > 0 && srcDescriptors.length > 0 ? sourceBoundFamilies + srcDescriptors.length : 0;
-}
-function cssPropertyDescriptorEvidenceCount(evidence) { return (evidence.propertyRegistrations ?? 0) + (evidence.propertyRegistrationDescriptors ?? 0); }
-function cssPageDescriptorEvidenceCount(evidence) { return (evidence.pageDescriptors ?? 0) + (evidence.pageMarginDescriptors ?? 0); }
-function fontFaceSrcDescriptorRecords(evidence) {
-  return (evidence?.records?.urlAssetReferences ?? []).filter((record) => record?.sourceKind === 'font-face-src' && hasSourceBoundDescriptorRecord(record));
-}
-function hasSourceBoundDescriptorRecord(record) {
-  return isPlainObject(record?.sourceSpan) && Number.isInteger(record.sourceSpan.startOffset) && typeof record.sourceHash === 'string';
 }
 function cssDependencyEvidenceRecords(file) {
   const result = file?.result ?? {};

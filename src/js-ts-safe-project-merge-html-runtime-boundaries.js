@@ -247,6 +247,7 @@ function htmlRuntimeAttributeSpec(name, tagName) {
   if (FormSubmitterTags.has(tagName) && FormSubmitterRuntimeAttributes.has(name)) return { boundary: 'html-form-submitter-runtime-attribute', reasonCode: 'form-submitter-runtime-boundary' };
   if (FormControlTags.has(tagName) && FormControlRuntimeAttributes.has(name)) return { boundary: 'html-form-control-runtime-attribute', reasonCode: 'form-control-runtime-boundary' };
   if (tagName === 'a' && AnchorNavigationRuntimeAttributes.has(name)) return { boundary: 'html-anchor-navigation-runtime-attribute', reasonCode: 'navigation-runtime-boundary' };
+  if (tagName === 'area' && AnchorNavigationRuntimeAttributes.has(name)) return { boundary: 'html-area-navigation-runtime-attribute', reasonCode: 'navigation-runtime-boundary' };
   if (tagName === 'base' && BaseRuntimeAttributes.has(name)) return { boundary: 'html-document-base-runtime-attribute', reasonCode: 'document-base-runtime-boundary' };
   if (tagName === 'meta' && MetaRuntimeAttributes.has(name)) return { boundary: 'html-document-metadata-runtime-attribute', reasonCode: 'document-metadata-runtime-boundary' };
   if (ResourceLoadingTags.has(tagName) && ResourceLoadingAttributes.has(name)) return { boundary: 'html-resource-loading-attribute', reasonCode: 'resource-loading-runtime-boundary' };

@@ -1,7 +1,9 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { caseSensitiveIdFragment, idFragment, uniqueRecordsById, uniqueStrings } from './native-import-utils.js';
+import { dynamicImportRange } from './semantic-import-dynamic-import-range.js';
 import { splitEffectFactOccurrences, splitMutationFactOccurrences } from './semantic-import-effect-occurrences.js';
 import { semanticFactOrderInfo, semanticFactRuntimeOrderEvidence, semanticFactRuntimeOrderSignatureEvidence } from './semantic-import-runtime-order-evidence.js';
+import { matchingParenIndex, statementEnd } from './semantic-import-source-range-utils.js';
 
 const semanticFactRegionKinds = new Set(['controlFlow', 'effect', 'mutation']);
 const schedulerEffectNames = ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback', 'queueMicrotask', 'setImmediate', 'clearImmediate'];
@@ -151,7 +153,7 @@ function effectRange(line, kinds) {
   if (kinds.includes('host')) return tokenExpressionRange(line, ['console', 'process', 'Deno', 'Bun'], 'host-effect');
   if (kinds.includes('browser')) return namedCallRange(line, ['Worker', 'SharedWorker'], 'browser-constructor')
     ?? tokenExpressionRange(line, ['document', 'window', 'navigator', 'location', 'history'], 'browser-effect');
-  if (kinds.includes('async')) return keywordExpressionRange(line, /(await|async)\b/, 'async-effect');
+  if (kinds.includes('async')) return asyncEffectRange(line);
   if (kinds.includes('generator')) return keywordExpressionRange(line, /\byield\b|\bfunction\s*\*/, 'generator-effect');
   if (kinds.includes('getter')) return getterAccessRange(line);
   return undefined;
@@ -239,6 +241,10 @@ function tokenExpressionRange(line, tokens, kind) {
   return match ? { start: match.index, end: statementEnd(line, match.index), kind } : undefined;
 }
 
+function asyncEffectRange(line) {
+  return keywordExpressionRange(line, /(await|async)\b/, 'async-effect') ?? dynamicImportRange(line);
+}
+
 function getterAccessRange(line) {
   const pattern = /\b[A-Za-z_$][\w$]*(?:(?:\s*\?\.\s*|\s*\.\s*)[A-Za-z_$][\w$]*|\s*\[[^\]]+\])+/g;
   for (const match of line.matchAll(pattern)) {
@@ -275,34 +281,6 @@ function nextNonSpace(line, index) {
     if (!/\s/.test(line[cursor])) return line[cursor];
   }
   return '';
-}
-
-function statementEnd(line, start) {
-  const semicolon = line.indexOf(';', Math.max(0, start));
-  return semicolon === -1 ? line.length : semicolon + 1;
-}
-
-function matchingParenIndex(line, open) {
-  if (open < 0) return undefined;
-  let depth = 0;
-  let quote;
-  let escaped = false;
-  for (let index = open; index < line.length; index += 1) {
-    const char = line[index];
-    if (quote) {
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === quote) quote = undefined;
-      continue;
-    }
-    if (char === '\'' || char === '"' || char === '`') {
-      quote = char;
-      continue;
-    }
-    if (char === '(') depth += 1;
-    else if (char === ')' && --depth === 0) return index;
-  }
-  return undefined;
 }
 
 function semanticFactRegionKey(prefix = 'source', sourcePath, regionKind, symbolName, index) {

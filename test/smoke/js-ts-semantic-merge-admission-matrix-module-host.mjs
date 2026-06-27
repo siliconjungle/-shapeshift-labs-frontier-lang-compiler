@@ -87,6 +87,12 @@ const semanticMergeModuleHostMatrixCells = [
     note: 'manifest-derived conditional exports prove static import.meta.resolve package targets, while non-resolver host package specifiers fail closed when import/require targets diverge'
   },
   {
+    id: 'module-export-import-graph/package-import-host-runtime-route',
+    status: 'done',
+    evidence: 'project-symbol-graph-resolution + js-ts-safe-project-merge-output-module-edge-evidence',
+    note: 'package imports with divergent import/require targets fail closed for host dependency edges and route to package-import host-runtime proof with no runtime equivalence claim'
+  },
+  {
     id: 'module-export-import-graph/manifest-duplicate-workspace-package-blocker',
     status: 'done',
     evidence: 'project-symbol-graph-package-manifests',
@@ -200,6 +206,33 @@ assert.equal(packageCssResourceResolution.packageSubpath, './button.module.css')
 assert.equal(packageCssResourceResolution.packageRuntimeConditionReasonCode, 'package-runtime-condition-host-resource-import-ambiguous-missing');
 assert.equal(packageCssResourceResolution.packageRuntimeConditionHostResourceKind, 'css-module');
 assert.equal(packageCssResourceResolution.path, 'packages/theme/button.module.css');
+
+const packageImportHostRuntimeResolution = resolveProjectModule('packages/app/src/host.ts', '#worker-entry', new Map(), {
+  packages: {
+    '@pkg/app': {
+      root: 'packages/app',
+      imports: {
+        '#worker-entry': {
+          import: './worker.mjs',
+          require: './worker.cjs'
+        }
+      }
+    }
+  },
+  packageExportConditions: ['import', 'require', 'default']
+}, {
+  importKind: 'worker-constructor',
+  hostDependencyKind: 'worker-constructor',
+  hostDependencyRuntimeResolutionClaim: false
+});
+assert.equal(packageImportHostRuntimeResolution.kind, 'package-import-runtime-ambiguous-missing');
+assert.equal(packageImportHostRuntimeResolution.packageName, '@pkg/app');
+assert.equal(packageImportHostRuntimeResolution.packageImportKey, '#worker-entry');
+assert.equal(packageImportHostRuntimeResolution.packageImportCondition, 'import|require');
+assert.equal(packageImportHostRuntimeResolution.packageRuntimeConditionEvidenceSource, 'host-runtime-ambiguous');
+assert.equal(packageImportHostRuntimeResolution.packageRuntimeConditionEdgeKind, 'host-worker-constructor');
+assert.equal(packageImportHostRuntimeResolution.packageRuntimeConditionReasonCode, 'package-runtime-condition-host-ambiguous-missing');
+assert.equal(packageImportHostRuntimeResolution.path, undefined);
 
 const conditionalRuntimeExportValue = {
   import: './esm.js',

@@ -1,4 +1,5 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
+import { jsxHookEffectSourceProofAssessment } from './js-ts-safe-project-merge-jsx-hook-effect-proof.js';
 import { jsxRenderReturnBranchProofAssessment } from './js-ts-safe-project-merge-jsx-render-branch-proof.js';
 import {
   hasRenderRisk,
@@ -49,9 +50,12 @@ function projectJsxRenderRiskDeltaConflicts(projectGraphDelta, options = {}) {
     const headRecord = head.get(identityKey);
     const fingerprints = [jsxRenderRiskFingerprint(baseRecord), jsxRenderRiskFingerprint(workerRecord), jsxRenderRiskFingerprint(headRecord)];
     if (fingerprints[0] === fingerprints[1] || fingerprints[0] === fingerprints[2] || fingerprints[1] === fingerprints[2]) return [];
-    const branchProof = jsxRenderReturnBranchProofAssessment({ identityKey, baseRecord, workerRecord, headRecord, outputRecord: output.get(identityKey) }, options);
+    const outputRecord = output.get(identityKey);
+    const branchProof = jsxRenderReturnBranchProofAssessment({ identityKey, baseRecord, workerRecord, headRecord, outputRecord }, options);
     if (branchProof?.status === 'passed') return [];
-    return [projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, output.get(identityKey), branchProof)];
+    const hookEffectProof = jsxHookEffectSourceProofAssessment({ identityKey, baseRecord, workerRecord, headRecord, outputRecord }, options);
+    if (hookEffectProof?.status === 'passed') return [];
+    return [projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, branchProof, hookEffectProof)];
   });
 }
 function projectJsxChildOrderDeltaConflicts(projectGraphDelta) {
@@ -112,7 +116,7 @@ function projectJsxChildOrderDeltaConflict(identityKey, baseRecord, workerRecord
     })
   };
 }
-function projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, branchProof) {
+function projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, branchProof, hookEffectProof) {
   const sourcePath = workerRecord?.sourcePath ?? headRecord?.sourcePath ?? baseRecord?.sourcePath;
   return {
     code: 'project-jsx-public-render-risk-delta-conflict',
@@ -121,18 +125,19 @@ function projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord
     sourcePath,
     details: compactRecord({
       reasonCode: 'project-jsx-public-render-risk-delta-conflict',
-      reasonCodes: uniqueStrings([...jsxRenderRiskReasonCodes(baseRecord, workerRecord, headRecord, outputRecord), ...(branchProof?.reasonCodes ?? [])]),
+      reasonCodes: uniqueStrings([...jsxRenderRiskReasonCodes(baseRecord, workerRecord, headRecord, outputRecord), ...(branchProof?.reasonCodes ?? []), ...(hookEffectProof?.reasonCodes ?? [])]),
       conflictKey: `project-graph-delta#jsx-render-risk#${identityKey}`,
       identityKey,
       sourcePath,
-      routeId: branchProof?.routeId,
-      routeLane: branchProof?.routeLane,
-      routeNext: branchProof?.routeNext,
+      routeId: branchProof?.routeId ?? hookEffectProof?.routeId,
+      routeLane: branchProof?.routeLane ?? hookEffectProof?.routeLane,
+      routeNext: branchProof?.routeNext ?? hookEffectProof?.routeNext,
       base: jsxRenderRiskDetails(baseRecord),
       worker: jsxRenderRiskDetails(workerRecord),
       head: jsxRenderRiskDetails(headRecord),
       output: jsxRenderRiskDetails(outputRecord),
       jsxRenderReturnBranchProof: branchProof?.record,
+      jsxHookEffectSourceProof: hookEffectProof?.record,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
       runtimeEquivalenceClaim: false,

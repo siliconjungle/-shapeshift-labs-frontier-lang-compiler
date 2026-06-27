@@ -54,7 +54,7 @@ const semanticMergeTypeMatrixCells = [
     id: 'compiler-type-graph/decorator-runtime-execution-proof',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-compiler-decorator-metadata',
-    note: 'decorator runtime execution gaps clear only when source-bound proof records bind static decorator metadata, runtime trace hashes, and false semantic/runtime claim flags'
+    note: 'decorator runtime execution gaps clear only when source-bound proof records bind static decorator metadata, runtime trace hashes, and false semantic/runtime claim flags; same worker/head decorator metadata deltas fail closed without that proof'
   },
   {
     id: 'compiler-type-graph/class-private-accessor-runtime-proof-bridge',

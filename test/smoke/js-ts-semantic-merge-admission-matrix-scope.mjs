@@ -18,6 +18,12 @@ const semanticMergeScopeMatrixCells = [
     status: 'done',
     evidence: 'js-ts-safe-project-merge-scope-use-def-parameters',
     note: 'function and arrow parameter lists collect object, nested object, array, alias, default-initializer, and rest parameter bindings without treating property keys as parameter bindings'
+  },
+  {
+    id: 'scope-use-def-graph/receiver-computed-literal-kind-delta-evidence',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-scope-use-def-receiver-members',
+    note: 'receiver member reference delta conflicts preserve receiver kind and computed member literal kind so same-name string and static-template receiver reads remain review routed'
   }
 ];
 

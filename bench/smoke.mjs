@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { measureRealRepoCorpus } from './real-repo-corpus-suite.mjs';
+import { assertRealRepoCorpusOracleCoverageMetrics, measureRealRepoCorpus } from './real-repo-corpus-suite.mjs';
 
 const splitWorkspaceMode = !existsSync(new URL('../src/index.js', import.meta.url)) &&
   !existsSync(new URL('./compile-suite.mjs', import.meta.url));
@@ -168,8 +168,8 @@ console.log(JSON.stringify({
 }
 
 function assertRealRepoCorpusSmokeMetrics(realRepoCorpusMetrics) {
+  assertRealRepoCorpusOracleCoverageMetrics(realRepoCorpusMetrics);
   assert.equal(realRepoCorpusMetrics.realRepoCorpusRealisticPatternOracleFixtures >= 2, true, 'real-repo realistic-pattern oracle fixtures');
-  assert.equal(realRepoCorpusMetrics.realRepoCorpusOracleMatrixRows >= 2, true, 'real-repo matrix row coverage');
   assert.equal(realRepoCorpusMetrics.realRepoCorpusCheckoutProofEntries, realRepoCorpusMetrics.realRepoCorpusEntries, 'real-repo checkout proof rows');
   assert.equal(
     realRepoCorpusMetrics.realRepoCorpusCheckoutSkipped + realRepoCorpusMetrics.realRepoCorpusCheckoutCheckedOut,

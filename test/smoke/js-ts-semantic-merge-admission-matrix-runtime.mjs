@@ -32,6 +32,12 @@ const semanticMergeRuntimeMatrixCells = [
     note: 'dynamic import async effects carry same-line specifier kind/text evidence with false runtime-resolution and equivalence claims so specifier-sensitive changes require explicit proof'
   },
   {
+    id: 'control-flow-effect-graph/dynamic-import-source-bound-occurrence-evidence',
+    status: 'done',
+    evidence: 'semantic-effect-runtime-dynamic-import-order',
+    note: 'same-line dynamic import async occurrences get source-bound regions for uncovered import() calls and keep dynamic resolution and runtime-equivalence claims false without trace proof'
+  },
+  {
     id: 'control-flow-effect-graph/class-static-block-order-evidence',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-class-static-block-runtime',
