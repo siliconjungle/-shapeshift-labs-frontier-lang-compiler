@@ -23,7 +23,9 @@ export interface NativeProjectSymbolGraphCssModuleImportBindingRecord {
   readonly generatedClassNameMapHash?: string;
   readonly jsTsUseSiteGraphHash?: string;
   readonly cssModuleCompositionGraphHash?: string;
+  readonly cssModuleCompositionGraphSource?: 'supplied' | 'source-local' | 'project-source' | string;
   readonly icssGraphHash?: string;
+  readonly icssGraphSource?: 'supplied' | 'source-export-only' | 'project-source' | string;
   readonly bundlerTransformHash?: string;
   readonly sourceMapProofHash?: string;
   readonly signatureHash?: string;
@@ -85,6 +87,10 @@ export interface NativeProjectSymbolGraphCssModuleUseSiteGraphRecord {
   readonly blockerCount: number;
   readonly generatedClassNameMapHash?: string;
   readonly cssModuleExportNamesHash?: string;
+  readonly cssModuleCompositionGraphHash?: string;
+  readonly cssModuleCompositionGraphSource?: 'supplied' | 'source-local' | 'project-source' | string;
+  readonly icssGraphHash?: string;
+  readonly icssGraphSource?: 'supplied' | 'source-export-only' | 'project-source' | string;
   readonly bundlerTransformHash?: string;
   readonly sourceMapProofHash?: string;
   readonly status: 'ready' | 'blocked' | string;

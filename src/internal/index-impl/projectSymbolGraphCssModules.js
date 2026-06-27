@@ -15,6 +15,7 @@ import {
   cssModuleTransformBlockers,
   cssModuleUseSiteGraphRecords
 } from './projectSymbolGraphCssModuleRecords.js';
+import { withProjectCssModuleDependencyGraphs } from './projectSymbolGraphCssModuleDependencyGraphs.js';
 import {
   cssModuleJsxUseSites,
   cssModuleLexicalUseSites
@@ -27,10 +28,11 @@ function createProjectCssModuleGraphRecords(semanticIndex, imports, importEdges,
   const cssSourcesByPath = new Map(imports
     .map((imported) => [sourcePathForImport(imported), cssModuleSourceRecord(imported)])
     .filter(([sourcePath]) => sourcePath));
+  const cssSourcesWithDependencyGraphsByPath = withProjectCssModuleDependencyGraphs(cssSourcesByPath);
   const documentsById = new Map((semanticIndex?.documents ?? []).map((document) => [document.id, document]));
   const importBindings = uniqueRecords(importEdges
     .filter(isCssModuleBindingEdge)
-    .map((edge, index) => cssModuleImportBindingRecord(edge, index, documentsById, cssSourcesByPath)));
+    .map((edge, index) => cssModuleImportBindingRecord(edge, index, documentsById, cssSourcesWithDependencyGraphsByPath)));
   const bindingsByLocal = groupBindingsByLocal(importBindings);
   const { useSites: lexicalUseSites, blockers: lexicalBlockers } = cssModuleLexicalUseSites(importBindings, sourceTextsByPath);
   const { useSites: jsxUseSites, blockers: jsxBlockers } = cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords);
@@ -43,7 +45,7 @@ function createProjectCssModuleGraphRecords(semanticIndex, imports, importEdges,
   const missingTransformBlockers = usedImportBindings
     .flatMap((binding) => cssModuleTransformBlockers(binding));
   const missingDependencyGraphBlockers = usedImportBindings
-    .flatMap((binding) => cssModuleDependencyGraphBlockers(binding, cssSourcesByPath));
+    .flatMap((binding) => cssModuleDependencyGraphBlockers(binding, cssSourcesWithDependencyGraphsByPath));
   const bindingsById = new Map(importBindings.map((binding) => [binding.id, binding]));
   const missingExportBlockers = cssModuleMissingExportBlockers(bindingsById, cssModuleUseSites);
   const cssModuleUseSiteBlockers = uniqueRecords([

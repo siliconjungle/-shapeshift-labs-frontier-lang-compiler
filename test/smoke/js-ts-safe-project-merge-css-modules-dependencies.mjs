@@ -32,6 +32,18 @@ const dependencyCssModuleSourceText = [
   '}',
   ''
 ].join('\n');
+const dependencyBaseCssModuleSourceText = [
+  '.base {',
+  '  display: inline-flex;',
+  '}',
+  ''
+].join('\n');
+const dependencyTokensCssModuleSourceText = [
+  ':export {',
+  '  importedColor: red;',
+  '}',
+  ''
+].join('\n');
 const localDependencyCssModuleSpecifier = './LocalComposed.module.css';
 const localDependencyButtonSourceText = [
   `import localStyles from '${localDependencyCssModuleSpecifier}';`,
@@ -119,6 +131,58 @@ const localDependencyReasonCodes = localDependencyCssModuleProject.conflicts
 assert.equal(localDependencyReasonCodes.includes('css-module-composition-resolution-unproved'), false);
 assert.equal(localDependencyReasonCodes.includes('css-module-icss-graph-unproved'), false);
 assert.equal(localDependencyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].status, 'ready');
+
+const projectDependencyCssModuleProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_project_dependency_graphs_inferred',
+  includeOutputProjectSymbolGraph: true,
+  outputProjectImports: [
+    importNativeSource({
+      language: 'css',
+      sourcePath: 'src/Composed.module.css',
+      sourceText: dependencyCssModuleSourceText,
+      metadata: {
+        generatedClassNameMap: { root: '_root_333' },
+        bundlerTransformHash: 'bundler-transform:composed',
+        sourceMapProofHash: 'source-map-proof:composed'
+      }
+    }),
+    importNativeSource({
+      language: 'css',
+      sourcePath: 'src/base.module.css',
+      sourceText: dependencyBaseCssModuleSourceText
+    }),
+    importNativeSource({
+      language: 'css',
+      sourcePath: 'src/tokens.module.css',
+      sourceText: dependencyTokensCssModuleSourceText
+    })
+  ],
+  files: [
+    { language: 'css', sourcePath: 'src/Composed.module.css', headSourceText: dependencyCssModuleSourceText },
+    { language: 'css', sourcePath: 'src/base.module.css', headSourceText: dependencyBaseCssModuleSourceText },
+    { language: 'css', sourcePath: 'src/tokens.module.css', headSourceText: dependencyTokensCssModuleSourceText },
+    { language: 'tsx', sourcePath: 'src/Composed.tsx', baseSourceText: dependencyButtonSourceText, workerSourceText: dependencyButtonSourceText, headSourceText: dependencyButtonSourceText }
+  ]
+});
+assert.equal(projectDependencyCssModuleProject.status, 'merged');
+const projectDependencyBinding = projectDependencyCssModuleProject.outputProjectSymbolGraph.cssModuleImportBindings[0];
+assert.equal(projectDependencyBinding.cssModuleEvidenceSource, 'inferred-source');
+assert.equal(projectDependencyBinding.cssModuleCompositionGraphSource, 'project-source');
+assert.equal(projectDependencyBinding.icssGraphSource, 'project-source');
+assert.equal(typeof projectDependencyBinding.cssModuleCompositionGraphHash, 'string');
+assert.equal(typeof projectDependencyBinding.icssGraphHash, 'string');
+const projectDependencyGraph = projectDependencyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0];
+assert.equal(projectDependencyGraph.status, 'ready');
+assert.equal(projectDependencyGraph.cssModuleCompositionGraphSource, 'project-source');
+assert.equal(projectDependencyGraph.icssGraphSource, 'project-source');
+assert.equal(typeof projectDependencyGraph.cssModuleCompositionGraphHash, 'string');
+assert.equal(typeof projectDependencyGraph.icssGraphHash, 'string');
+const projectDependencyReasonCodes = projectDependencyCssModuleProject.conflicts
+  .filter((conflict) => conflict.code === 'project-css-module-use-site-proof-blocked')
+  .map((conflict) => conflict.details.reasonCode);
+assert.equal(projectDependencyReasonCodes.includes('css-module-composition-resolution-unproved'), false);
+assert.equal(projectDependencyReasonCodes.includes('css-module-icss-graph-unproved'), false);
+assert.equal(matrixSurface(projectDependencyCssModuleProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'passed');
 
 const readyCssModuleImport = importNativeSource({
   language: 'css',
