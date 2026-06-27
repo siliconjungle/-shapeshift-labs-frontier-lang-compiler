@@ -278,9 +278,19 @@ assert.equal(scopedCssMissingProof.summary.cssScopedCascadeEvidenceFiles, 0);
 assert.equal(scopedCssMissingProof.summary.cssScopedCascadeBlockedFiles, 1);
 assert.equal(scopedCssMissingProof.conflicts.some((conflict) => conflict.details.reasonCode === 'css-scoped-cascade-equivalence-unproved'), true);
 
+const scopedCssHashOnly = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_scope_hash_only',
+  cssMergeOptionsByPath: { 'src/button.css': { scopedCascadeGraphHash: 'hash_scoped_cascade' } },
+  files: [{ sourcePath: 'src/button.css', baseSourceText: scopedCssBase, workerSourceText: scopedCssWorker, headSourceText: scopedCssHead }]
+});
+assert.equal(scopedCssHashOnly.status, 'blocked');
+assert.equal(scopedCssHashOnly.summary.cssScopedCascadeEvidenceFiles, 0);
+assert.equal(scopedCssHashOnly.summary.cssScopedCascadeBlockedFiles, 1);
+assert.equal(scopedCssHashOnly.conflicts.some((conflict) => conflict.code === 'css-scoped-cascade-proof-blocked'), true);
+const scopedCssOutput = '@media (min-width: 700px) {\n  .button {\n    color: blue;\n    padding-left: 1rem;\n    background-color: white;\n  }\n}\n';
 const scopedCssWithProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_scope_with_proof',
-  cssMergeOptionsByPath: { 'src/button.css': { scopedCascadeGraphHash: 'hash_scoped_cascade' } },
+  cssMergeOptionsByPath: { 'src/button.css': { scopedCascadeGraphHash: 'hash_scoped_cascade', cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_project_media_scope', sourcePath: 'src/button.css', graphHash: 'hash_scoped_cascade', base: scopedCssBase, worker: scopedCssWorker, head: scopedCssHead, output: scopedCssOutput, scope: '@media (min-width: 700px)', cascadeKeys: ['@media (min-width: 700px)::.button::color', '@media (min-width: 700px)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
   files: [{ sourcePath: 'src/button.css', baseSourceText: scopedCssBase, workerSourceText: scopedCssWorker, headSourceText: scopedCssHead }]
 });
 assert.equal(scopedCssWithProof.status, 'merged');
@@ -288,6 +298,7 @@ assert.equal(scopedCssWithProof.summary.cssMergedFiles, 1);
 assert.equal(scopedCssWithProof.summary.cssScopedCascadeFiles, 1);
 assert.equal(scopedCssWithProof.summary.cssScopedCascadeEvidenceFiles, 1);
 assert.equal(scopedCssWithProof.summary.cssScopedCascadeBlockedFiles, 0);
+assert.equal(scopedCssWithProof.files[0].result.scopedCascadeProofs.length, 2);
 assert.equal(matrixSurface(scopedCssWithProof, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'passed');
 
 const layerScopedReasonSummary = htmlCssProjectSummary([{
@@ -302,3 +313,4 @@ assert.equal(layerScopedReasonSummary.cssScopedCascadeBlockedFiles, 1);
 
 function matrixSurface(result, surface) { const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface); assert.ok(record, `missing ${surface} matrix surface`); return record; }
 function selectorProof({ id, graphHash, base, worker, head, fromSelectors, toSelectors, specificity }) { return { id, kind: 'css-source-bound-selector-target-proof', status: 'passed', sourcePath: 'src/button.css', reasonCode: 'css-selector-target-rebase-unproved', moveSide: 'worker', rebasedSide: 'head', fromSelectors, toSelectors, fromSpecificity: specificity, toSpecificity: specificity, selectorTargetGraphHash: graphHash, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head) }; }
+function scopedProof({ id, sourcePath, graphHash, base, worker, head, output, scope, cascadeKeys, properties, sides }) { return { id, kind: 'css-source-bound-scoped-cascade-proof', status: 'passed', sourcePath, reasonCode: 'css-scoped-cascade-equivalence-unproved', sides, selectors: ['.button'], scopes: [scope], cascadeKeys, properties, scopedCascadeGraphHash: graphHash, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output) }; }

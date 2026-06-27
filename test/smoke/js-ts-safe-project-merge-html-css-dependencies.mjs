@@ -27,9 +27,18 @@ assert.equal(nestedScopedCssMissingProof.summary.cssScopedCascadeEvidenceFiles, 
 assert.equal(nestedScopedCssMissingProof.summary.cssScopedCascadeBlockedFiles, 1);
 assert.equal(nestedScopedCssMissingProof.conflicts.some((conflict) => conflict.details.reasonCode === 'css-scoped-cascade-equivalence-unproved'), true);
 
+const nestedScopedCssHashOnly = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_nested_layer_scope_hash_only',
+  cssMergeOptionsByPath: { 'src/nested.css': { scopedCascadeGraphHash: 'hash_nested_scoped_cascade' } },
+  files: [{ sourcePath: 'src/nested.css', baseSourceText: nestedScopedCssBase, workerSourceText: nestedScopedCssWorker, headSourceText: nestedScopedCssHead }]
+});
+assert.equal(nestedScopedCssHashOnly.status, 'blocked');
+assert.equal(nestedScopedCssHashOnly.summary.cssScopedCascadeEvidenceFiles, 0);
+assert.equal(nestedScopedCssHashOnly.summary.cssScopedCascadeBlockedFiles, 1);
+const nestedScopedCssOutput = '@layer components {\n  @scope (.card) {\n    .button {\n      color: blue;\n      padding-left: 1rem;\n      background-color: white;\n    }\n  }\n}\n';
 const nestedScopedCssWithProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_nested_layer_scope_with_proof',
-  cssMergeOptionsByPath: { 'src/nested.css': { scopedCascadeGraphHash: 'hash_nested_scoped_cascade' } },
+  cssMergeOptionsByPath: { 'src/nested.css': { scopedCascadeGraphHash: 'hash_nested_scoped_cascade', cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_nested_layer_scope', sourcePath: 'src/nested.css', graphHash: 'hash_nested_scoped_cascade', base: nestedScopedCssBase, worker: nestedScopedCssWorker, head: nestedScopedCssHead, output: nestedScopedCssOutput, scopes: ['@layer components', '@scope (.card)'], cascadeKeys: ['@layer components::@scope (.card)::.button::color', '@layer components::@scope (.card)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
   files: [{ sourcePath: 'src/nested.css', baseSourceText: nestedScopedCssBase, workerSourceText: nestedScopedCssWorker, headSourceText: nestedScopedCssHead }]
 });
 assert.equal(nestedScopedCssWithProof.status, 'merged');
@@ -40,6 +49,20 @@ assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /@layer compone
 assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /@scope \(\.card\)/);
 assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /color: blue/);
 assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /background-color: white/);
+assert.equal(nestedScopedCssWithProof.files[0].result.scopedCascadeProofs.length, 2);
+
+const containerScopedCssBase = '@container card (min-width: 300px) {\n  .button {\n    color: red;\n    padding-left: 1rem;\n  }\n}\n';
+const containerScopedCssWorker = containerScopedCssBase.replace('color: red', 'color: blue');
+const containerScopedCssHead = containerScopedCssBase.replace('padding-left: 1rem;', 'padding-left: 1rem;\n    background-color: white;');
+const containerScopedCssOutput = '@container card (min-width: 300px) {\n  .button {\n    color: blue;\n    padding-left: 1rem;\n    background-color: white;\n  }\n}\n';
+const containerScopedCssWithProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_container_scope_with_proof',
+  cssMergeOptionsByPath: { 'src/card.css': { scopedCascadeGraphHash: 'hash_container_scoped_cascade', cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_container_scope', sourcePath: 'src/card.css', graphHash: 'hash_container_scoped_cascade', base: containerScopedCssBase, worker: containerScopedCssWorker, head: containerScopedCssHead, output: containerScopedCssOutput, scopes: ['@container card (min-width: 300px)'], cascadeKeys: ['@container card (min-width: 300px)::.button::color', '@container card (min-width: 300px)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
+  files: [{ sourcePath: 'src/card.css', baseSourceText: containerScopedCssBase, workerSourceText: containerScopedCssWorker, headSourceText: containerScopedCssHead }]
+});
+assert.equal(containerScopedCssWithProof.status, 'merged');
+assert.equal(containerScopedCssWithProof.summary.cssScopedCascadeEvidenceFiles, 1);
+assert.equal(containerScopedCssWithProof.outputFiles[0].sourceText, containerScopedCssOutput);
 
 const dependencyCssBase = [
   ':root {',
@@ -248,3 +271,4 @@ function matrixSurface(result, surface) {
   assert.ok(record, `missing ${surface} matrix surface`);
   return record;
 }
+function scopedProof({ id, sourcePath, graphHash, base, worker, head, output, scopes, cascadeKeys, properties, sides }) { return { id, kind: 'css-source-bound-scoped-cascade-proof', status: 'passed', sourcePath, reasonCode: 'css-scoped-cascade-equivalence-unproved', sides, selectors: ['.button'], scopes, cascadeKeys, properties, scopedCascadeGraphHash: graphHash, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output) }; }

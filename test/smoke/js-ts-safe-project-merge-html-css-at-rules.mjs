@@ -56,3 +56,47 @@ assert.equal(proven.status, 'merged');
 assert.equal(proven.summary.cssMergedFiles, 1);
 assert.equal(proven.summary.htmlCssBrowserRuntimeProofs, 1);
 assert.equal(proven.outputFiles[0].sourceText, output);
+
+const propertyPath = 'src/props.css';
+const propertyBase = '@property --brand-hue { syntax: "<number>"; inherits: false; initial-value: 210; }\n.button { color: red; }\n';
+const propertyWorker = propertyBase.replace('initial-value: 210', 'initial-value: 250');
+const propertyHead = propertyBase.replace('color: red', 'color: blue');
+const propertyOutput = '@property --brand-hue { syntax: "<number>"; inherits: false; initial-value: 250; }\n\n.button {\n  color: blue;\n}\n';
+const propertyUnproved = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_property_unproved',
+  files: [{ sourcePath: propertyPath, baseSourceText: propertyBase, workerSourceText: propertyWorker, headSourceText: propertyHead }]
+});
+assert.equal(propertyUnproved.status, 'blocked');
+assert.equal(propertyUnproved.conflicts.some((item) => item.details.reasonCode === 'css-property-runtime-equivalence-unproved'), true);
+const propertyProven = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_property_proven',
+  cssMergeOptionsByPath: { [propertyPath]: { cssCascadeRuntimeProofs: [runtimeProof({ id: 'proof_css_project_property_runtime', sourcePath: propertyPath, reasonCode: 'css-property-runtime-equivalence-unproved', shapeKey: 'at-rule:property::--brand-hue', base: propertyBase, worker: propertyWorker, head: propertyHead, output: propertyOutput })] } },
+  files: [{ sourcePath: propertyPath, baseSourceText: propertyBase, workerSourceText: propertyWorker, headSourceText: propertyHead }]
+});
+assert.equal(propertyProven.status, 'merged');
+assert.equal(propertyProven.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(propertyProven.outputFiles[0].sourceText, propertyOutput);
+
+const pagePath = 'src/print.css';
+const pageBase = '@page { margin: 1cm; }\n.article { color: red; }\n';
+const pageWorker = pageBase.replace('margin: 1cm', 'margin: 0.75cm');
+const pageHead = pageBase.replace('color: red', 'color: blue');
+const pageOutput = '@page { margin: 0.75cm; }\n\n.article {\n  color: blue;\n}\n';
+const pageUnproved = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_page_unproved',
+  files: [{ sourcePath: pagePath, baseSourceText: pageBase, workerSourceText: pageWorker, headSourceText: pageHead }]
+});
+assert.equal(pageUnproved.status, 'blocked');
+assert.equal(pageUnproved.conflicts.some((item) => item.details.reasonCode === 'css-page-runtime-equivalence-unproved'), true);
+const pageProven = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_page_proven',
+  cssMergeOptionsByPath: { [pagePath]: { cssCascadeRuntimeProofs: [runtimeProof({ id: 'proof_css_project_page_runtime', sourcePath: pagePath, reasonCode: 'css-page-runtime-equivalence-unproved', shapeKey: 'at-rule:page::', base: pageBase, worker: pageWorker, head: pageHead, output: pageOutput })] } },
+  files: [{ sourcePath: pagePath, baseSourceText: pageBase, workerSourceText: pageWorker, headSourceText: pageHead }]
+});
+assert.equal(pageProven.status, 'merged');
+assert.equal(pageProven.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(pageProven.outputFiles[0].sourceText, pageOutput);
+
+function runtimeProof({ id, sourcePath, reasonCode, shapeKey, base, worker, head, output }) {
+  return { id, kind: 'css-source-bound-cascade-runtime-proof', status: 'passed', sourcePath, reasonCode, side: 'worker', shapeKey, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output) };
+}

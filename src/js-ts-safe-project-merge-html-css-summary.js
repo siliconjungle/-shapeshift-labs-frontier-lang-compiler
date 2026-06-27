@@ -100,13 +100,17 @@ function hasCssScopedCascadeScope(file) {
   return cssScopedRuleCount(file) > 0 || hasCssScopedCascadeProofReason(file) || file?.result?.parserEvidence?.scopedCascadeGraphHashPresent === false;
 }
 function hasCssScopedCascadeEvidence(file) {
-  return hasCssScopedCascadeScope(file) && !hasCssScopedCascadeMissingProof(file) && file?.result?.parserEvidence?.scopedCascadeGraphHashPresent === true;
+  return hasCssScopedCascadeScope(file) && !hasCssScopedCascadeMissingProof(file) && hasCssScopedCascadeProof(file);
 }
 function hasCssScopedCascadeMissingProof(file) {
   return hasCssScopedCascadeProofReason(file);
 }
 function hasCssScopedCascadeProofReason(file) {
   return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => ScopedCascadeMissingProofReasonCodes.has(conflict?.details?.reasonCode));
+}
+function hasCssScopedCascadeProof(file) {
+  return [...(file?.result?.scopedCascadeProofs ?? []), ...(file?.result?.admission?.cssScopedCascadeProofs ?? file?.admission?.cssScopedCascadeProofs ?? [])]
+    .some((proof) => proof?.status === 'passed' && ScopedCascadeMissingProofReasonCodes.has(proof.reasonCode));
 }
 function cssScopedRuleCount(file) {
   const sides = Object.values(file?.result?.selectorTargetEvidence?.sides ?? {});
