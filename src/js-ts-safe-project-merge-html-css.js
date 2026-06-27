@@ -2,6 +2,7 @@ import { safeMergeCssSource } from '@shapeshift-labs/frontier-lang-css';
 import { safeMergeHtmlSource } from '@shapeshift-labs/frontier-lang-html';
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { hashText, safeId, uniqueStrings } from './js-ts-safe-project-merge-core.js';
+import { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult } from './js-ts-safe-project-merge-html-runtime-boundaries.js';
 
 function projectFileLanguage(file, input) {
   return file.language ?? inferLanguageFromPath(file.sourcePath) ?? input.language ?? 'typescript';
@@ -103,139 +104,9 @@ function duplicateHtmlExplicitIdentityKeys(identityEvidence) {
   });
 }
 
-function htmlRuntimeBoundaryChanges(base, worker, head) {
-  const baseEventHandlers = htmlEventHandlerBoundaryFingerprint(base);
-  return [
-    htmlRuntimeBoundaryChange('worker', base, worker, baseEventHandlers),
-    htmlRuntimeBoundaryChange('head', base, head, baseEventHandlers)
-  ].filter(Boolean);
-}
-
-function htmlRuntimeBoundaryChange(side, base, sourceText, baseEventHandlers) {
-  if (sourceText === base) return undefined;
-  const eventHandlers = htmlEventHandlerBoundaryFingerprint(sourceText);
-  if (eventHandlers === baseEventHandlers) return undefined;
-  return {
-    side,
-    reasonCode: 'event-handler-runtime-boundary',
-    boundary: 'html-event-handler-attribute',
-    boundaryAttributes: htmlEventHandlerBoundaryAttributeNames(sourceText)
-  };
-}
-
-function htmlRuntimeBoundaryProofForChange(proofs, change, binding) {
-  return proofs.find((proof) => isHtmlRuntimeBoundaryProofForChange(proof, change, binding));
-}
-
-function isHtmlRuntimeBoundaryProofForChange(proof, change, binding) {
-  return Boolean(proof && typeof proof === 'object') &&
-    HtmlRuntimeBoundaryProofKinds.has(proof.kind) &&
-    proof.status === 'passed' &&
-    proof.sourcePath === binding.sourcePath &&
-    htmlProofCoversValue(proof.reasonCode, proof.reasonCodes, change.reasonCode) &&
-    htmlProofCoversValue(proof.side, proof.sides, change.side) &&
-    proof.boundary === change.boundary &&
-    sameStringSet(proof.boundaryAttributes ?? proof.changedBoundaryAttributes, change.boundaryAttributes) &&
-    htmlRuntimeBoundaryProofSourceBound(proof, binding);
-}
-
-function htmlRuntimeBoundaryProofSourceBound(proof, binding) {
-  return htmlRuntimeBoundaryProofSourceMatches(proof, 'base', binding.base) &&
-    htmlRuntimeBoundaryProofSourceMatches(proof, 'worker', binding.worker) &&
-    htmlRuntimeBoundaryProofSourceMatches(proof, 'head', binding.head) &&
-    htmlRuntimeBoundaryProofSourceMatches(proof, 'output', binding.output);
-}
-
-function htmlRuntimeBoundaryProofSourceMatches(proof, role, sourceText) {
-  if (typeof sourceText !== 'string') return false;
-  const hash = hashText(sourceText);
-  const textFields = role === 'output' ? ['outputSourceText', 'mergedSourceText'] : [`${role}SourceText`];
-  const hashFields = role === 'output' ? ['outputSourceHash', 'mergedSourceHash'] : [`${role}SourceHash`];
-  const aliases = role === 'output' ? ['output', 'merged'] : [role];
-  return textFields.some((field) => proof[field] === sourceText) ||
-    aliases.some((alias) => proof.sourceTexts?.[alias] === sourceText || proof.sources?.[alias] === sourceText) ||
-    hashFields.some((field) => proof[field] === hash) ||
-    aliases.some((alias) => proof.sourceHashes?.[alias] === hash || proof.hashes?.[alias] === hash);
-}
-
-function htmlRuntimeBoundaryProofRecord(proof, change, binding) {
-  return compactRecord({
-    id: proof.id,
-    kind: proof.kind,
-    status: 'passed',
-    proofLevel: proof.proofLevel ?? 'html-runtime-boundary-source-bound',
-    reasonCode: change.reasonCode,
-    side: change.side,
-    boundary: change.boundary,
-    boundaryAttributes: change.boundaryAttributes,
-    sourcePath: binding.sourcePath,
-    baseSourceHash: hashText(binding.base),
-    workerSourceHash: hashText(binding.worker),
-    headSourceHash: hashText(binding.head),
-    outputSourceHash: hashText(binding.output)
-  });
-}
-
-function htmlRuntimeBoundaryProvenResult(result, runtimeBoundaryProofs) {
-  return compactRecord({
-    ...result,
-    runtimeBoundaryProofs,
-    browserRuntimeEquivalenceClaim: true,
-    admission: compactRecord({
-      ...(result.admission ?? {}),
-      browserRuntimeEquivalenceClaim: true,
-      htmlRuntimeBoundaryProofs: runtimeBoundaryProofs,
-      reasonCodes: uniqueStrings([...(result.admission?.reasonCodes ?? []), 'html-runtime-boundary-source-bound'])
-    })
-  });
-}
-
-function htmlEventHandlerBoundaryFingerprint(sourceText) {
-  return htmlEventHandlerBoundaryAttributes(sourceText)
-    .map((attribute) => `${attribute.tagName}:${attribute.name}=${String(attribute.value)}`)
-    .sort()
-    .join('\n');
-}
-
-function htmlEventHandlerBoundaryAttributeNames(sourceText) {
-  return uniqueStrings(htmlEventHandlerBoundaryAttributes(sourceText).map((attribute) => attribute.name));
-}
-
-function htmlEventHandlerBoundaryAttributes(sourceText) {
-  const attributes = [];
-  for (const tag of String(sourceText ?? '').matchAll(/<[A-Za-z][\w:-]*(?:\s+[^<>]*?)?\/?>/g)) {
-    const parsed = /^<([A-Za-z][\w:-]*)([\s\S]*?)\/?>$/.exec(tag[0]);
-    if (!parsed) continue;
-    const tagName = parsed[1].toLowerCase();
-    for (const attribute of parseHtmlAttributes(parsed[2] ?? '')) {
-      if (/^on[\w:.-]+$/i.test(attribute.name)) attributes.push({ ...attribute, name: attribute.name.toLowerCase(), tagName });
-    }
-  }
-  return attributes;
-}
-
-function parseHtmlAttributes(text) {
-  const attributes = [];
-  const pattern = /([:@A-Za-z_][\w:.-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
-  for (const match of text.matchAll(pattern)) attributes.push({ name: match[1], value: match[2] ?? match[3] ?? match[4] ?? true });
-  return attributes;
-}
-
-function htmlProofCoversValue(value, values, expected) {
-  return value === expected || (Array.isArray(values) && values.includes(expected));
-}
-
-function sameStringSet(actual, expected) {
-  const actualSet = uniqueStrings(asArray(actual).map((value) => String(value)));
-  const expectedSet = uniqueStrings(asArray(expected).map((value) => String(value)));
-  return actualSet.length === expectedSet.length && expectedSet.every((value) => actualSet.includes(value));
-}
-
 function asArray(value) {
   return Array.isArray(value) ? value : value === undefined ? [] : [value];
 }
-
-const HtmlRuntimeBoundaryProofKinds = new Set(['html-runtime-boundary-proof', 'html-source-bound-runtime-boundary-proof']);
 
 function htmlProofGapConflict(id, sourcePath, reasonCode, details = {}, code = 'html-proof-gap-blocked') {
   return {
@@ -263,6 +134,9 @@ function htmlProofGapSummary(reasonCode) {
   if (reasonCode === 'event-handler-runtime-boundary') return 'HTML event handler attributes execute in the browser runtime and require source-bound host evidence.';
   if (reasonCode === 'inline-style-runtime-boundary') return 'HTML inline style attributes affect browser cascade and rendering and require source-bound host evidence.';
   if (reasonCode === 'iframe-runtime-boundary' || reasonCode === 'iframe-srcdoc-runtime-boundary') return reasonCode === 'iframe-runtime-boundary' ? 'HTML iframe runtime attributes affect nested browsing-context execution and require source-bound host evidence.' : 'HTML iframe srcdoc attributes define nested browsing-context content and require source-bound host evidence.';
+  if (reasonCode === 'form-runtime-boundary') return 'HTML form runtime attributes affect submission, navigation, encoding, or validation and require source-bound host evidence.';
+  if (reasonCode === 'form-submitter-runtime-boundary') return 'HTML submitter attributes affect form submission behavior and require source-bound host evidence.';
+  if (reasonCode === 'form-control-runtime-boundary') return 'HTML form-control attributes affect user input, validation, state, or submission data and require source-bound host evidence.';
   return 'HTML proof gap requires source-bound evidence before structural merge admission.';
 }
 
@@ -271,6 +145,7 @@ function htmlProofGapNextProof(reasonCode) {
   if (reasonCode === 'event-handler-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary, boundaryAttributes, and exact base/worker/head/output source text or hashes.';
   if (reasonCode === 'inline-style-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary "html-inline-style-attribute", boundaryAttributes ["style"], and exact base/worker/head/output source text or hashes.';
   if (reasonCode === 'iframe-runtime-boundary' || reasonCode === 'iframe-srcdoc-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary, boundaryAttributes, and exact base/worker/head/output source text or hashes.';
+  if (reasonCode === 'form-runtime-boundary' || reasonCode === 'form-submitter-runtime-boundary' || reasonCode === 'form-control-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary, boundaryAttributes, and exact base/worker/head/output source text or hashes.';
   return 'Attach source-bound HTML parser, identity, and runtime-boundary evidence for the changed file before structural admission.';
 }
 

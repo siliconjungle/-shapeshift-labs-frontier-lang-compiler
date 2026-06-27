@@ -31,7 +31,7 @@ const oracleHtmlCssProject = safeMergeJsTsProject({
     'src/button.css': '.button { color: blue; padding: 1rem; }\n'
   },
   headFiles: {
-    'src/view.html': '<main id="app"><h1>Todo</h1><button data-frontier-key="save" type="button" disabled>Save</button></main>\n',
+    'src/view.html': '<main id="app"><h1>Todo</h1><button data-frontier-key="save" type="button" aria-label="Save item">Save</button></main>\n',
     'src/button.css': '.button { color: red; padding: 1rem; background-color: white; }\n'
   }
 });

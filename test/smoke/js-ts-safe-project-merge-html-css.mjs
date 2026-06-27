@@ -10,7 +10,7 @@ const htmlBase = [
   ''
 ].join('\n');
 const htmlWorker = htmlBase.replace('Todo</h1>', 'Todos</h1>');
-const htmlHead = htmlBase.replace('type="button"', 'type="button" disabled');
+const htmlHead = htmlBase.replace('type="button"', 'type="button" aria-label="Save item"');
 const cssBase = [
   '.button {',
   '  color: red;',
@@ -78,7 +78,7 @@ const outputByPath = new Map(mixedProject.outputFiles.map((file) => [file.source
 assert.equal(outputByPath.get('src/view.html').language, 'html');
 assert.equal(outputByPath.get('src/view.html').operation, 'merged-html-source');
 assert.match(outputByPath.get('src/view.html').sourceText, /<h1>Todos<\/h1>/);
-assert.match(outputByPath.get('src/view.html').sourceText, /disabled/);
+assert.match(outputByPath.get('src/view.html').sourceText, /aria-label="Save item"/);
 assert.equal(outputByPath.get('src/button.css').language, 'css');
 assert.equal(outputByPath.get('src/button.css').operation, 'merged-css-source');
 assert.match(outputByPath.get('src/button.css').sourceText, /color: blue/);
