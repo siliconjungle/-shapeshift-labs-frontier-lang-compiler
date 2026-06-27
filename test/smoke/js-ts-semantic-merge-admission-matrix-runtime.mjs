@@ -68,6 +68,12 @@ const semanticMergeRuntimeMatrixCells = [
     note: 'same-scope const string-literal computed effect targets resolve to static key evidence with binding metadata while mutable and dynamic targets remain dynamic and runtime-equivalence-false'
   },
   {
+    id: 'control-flow-effect-graph/effect-target-proof-bridge',
+    status: 'done',
+    evidence: 'semantic-effect-runtime-effect-target-order',
+    note: 'effect-target proofs bind project source hashes, runtime region identity, target-order hash, target-resolution traces, dynamic computed/bound literal/optional/tagged/constructor trace slots, command/trace/evidence hashes, signature hash, and false equivalence claims before suppressing a runtime-region delta conflict'
+  },
+  {
     id: 'control-flow-effect-graph/literal-computed-mutation-target-evidence',
     status: 'done',
     evidence: 'semantic-effect-runtime-mutation-target-order',

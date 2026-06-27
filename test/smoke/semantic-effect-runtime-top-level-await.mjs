@@ -7,6 +7,7 @@ import {
   safeMergeJsTsProject,
   safeMergeJsTsSource
 } from './compiler-api.mjs';
+import { effectTargetProofFields } from './runtime-order-proof-helpers.mjs';
 
 const sourceText = [
   'const ready = true;',
@@ -149,6 +150,7 @@ function topLevelAwaitProof(record, stages) {
     topLevelAwaitOrderHash: topLevelAwaitOrderHash(record),
     topLevelAwaitSuspensionTraceHash: 'fixture-top-level-await-suspension-trace-hash',
     moduleEvaluationTraceHash: 'fixture-module-evaluation-trace-hash',
+    ...effectTargetProofFields(record),
     command: 'fixture-top-level-await-runtime-proof',
     traceHash: 'fixture-top-level-await-trace-root-hash',
     evidenceHash: 'fixture-top-level-await-proof-hash',

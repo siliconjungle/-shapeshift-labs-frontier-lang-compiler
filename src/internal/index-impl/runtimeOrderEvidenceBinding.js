@@ -41,6 +41,9 @@ function validateRuntimeOrderEvidence(candidate, input) {
   if (!fieldMatches(candidate.regionKind, [expected.regionKind])) reasonCodes.push('runtime-order-explicit-evidence-region-kind-mismatch');
   if (!runtimeKindMatches(candidate, expected)) reasonCodes.push('runtime-order-explicit-evidence-runtime-kind-mismatch');
   if (expected.signatureHashes.length && !fieldMatches(candidate.signatureHash, expected.signatureHashes)) reasonCodes.push('runtime-order-explicit-evidence-signature-hash-mismatch');
+  if (!firstString(candidate.command, candidate.probeCommand, candidate.runtimeCommand)) reasonCodes.push('runtime-order-explicit-evidence-command-missing');
+  if (!firstString(candidate.traceHash, candidate.probeTraceHash, candidate.runtimeTraceHash)) reasonCodes.push('runtime-order-explicit-evidence-trace-hash-missing');
+  if (!firstString(candidate.evidenceHash, candidate.proofHash, candidate.probeEvidenceHash)) reasonCodes.push('runtime-order-explicit-evidence-evidence-hash-missing');
   if (candidate.autoMergeClaim !== false || candidate.semanticEquivalenceClaim !== false || candidate.runtimeEquivalenceClaim !== false) reasonCodes.push('runtime-order-explicit-evidence-claim-flags-missing');
   reasonCodes.push(...runtimeOrderProofSurfaceReasonCodes(candidate, expected));
   if (reasonCodes.length) return invalid(reasonCodes);
@@ -137,6 +140,7 @@ function factSignatureFromSymbolName(symbolName, regionKind) {
   return text.slice(markerIndex + marker.length).replace(/#\d+$/, '') || undefined;
 }
 function fieldMatches(value, expectedValues) { return value !== undefined && value !== null && expectedValues.includes(String(value)); }
+function firstString(...values) { return values.find((value) => typeof value === 'string' && value.length > 0); }
 function stableKey(parts) {
   const values = parts.map((part) => part === undefined || part === null ? '' : String(part));
   return values.some(Boolean) ? values.join('#') : undefined;

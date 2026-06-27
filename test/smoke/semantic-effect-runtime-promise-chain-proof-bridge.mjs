@@ -2,6 +2,7 @@ import { assert } from './helpers.mjs';
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
 import { projectRuntimeRegionDeltaConflicts } from '../../src/js-ts-safe-project-merge-runtime-region-conflicts.js';
+import { effectTargetProofFields } from './runtime-order-proof-helpers.mjs';
 
 const promiseChainSource = 'export function loadWithHandlers(api, report, cleanup) {\n  return fetch(api).then(parse).catch(report).finally(cleanup);\n}\n';
 const promiseChainWorkerSource = promiseChainSource.replace('fetch(api)', 'fetch(api, { cache: "reload" })');
@@ -101,6 +102,7 @@ function promiseChainProof(record, stages) {
     promiseChainHandlerOrderTraceHash: 'fixture-promise-chain-handler-order-trace-hash',
     promiseChainRejectionFlowTraceHash: 'fixture-promise-chain-rejection-flow-trace-hash',
     promiseChainFinalizerTraceHash: 'fixture-promise-chain-finalizer-trace-hash',
+    ...effectTargetProofFields(record),
     promiseChainRuntimeEquivalenceClaim: false,
     promiseHandlerExecutionEquivalenceClaim: false,
     promiseRejectionFlowEquivalenceClaim: false,

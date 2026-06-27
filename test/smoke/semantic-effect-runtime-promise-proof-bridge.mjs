@@ -2,6 +2,7 @@ import { assert } from './helpers.mjs';
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
 import { projectRuntimeRegionDeltaConflicts } from '../../src/js-ts-safe-project-merge-runtime-region-conflicts.js';
+import { effectTargetProofFields } from './runtime-order-proof-helpers.mjs';
 
 const promiseAllSource = 'export async function loadBoth(api) {\n  return Promise.all([fetch(api.a), fetch(api.b)]);\n}\n';
 const promiseAllWorkerSource = promiseAllSource.replace('fetch(api.a)', 'fetch(api.a, { cache: "reload" })');
@@ -162,6 +163,7 @@ function promiseCombinatorProof(record, stages) {
     promiseCombinatorSettlementTraceHash: 'fixture-promise-combinator-settlement-trace-hash',
     promiseCombinatorElementOrderTraceHash: 'fixture-promise-combinator-element-order-trace-hash',
     promiseAllSettlementTraceHash: 'fixture-promise-all-settlement-trace-hash',
+    ...effectTargetProofFields(record),
     promiseCombinatorRuntimeEquivalenceClaim: false,
     promiseConcurrencyEquivalenceClaim: false,
     promiseSettlementEquivalenceClaim: false,

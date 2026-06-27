@@ -1,5 +1,6 @@
 import { assert } from './helpers.mjs';
-import { createSemanticEditScript } from './compiler-api.mjs';
+import { createSemanticEditScript, createSemanticImportSidecar, importNativeSource } from './compiler-api.mjs';
+import { effectTargetProofFields } from './runtime-order-proof-helpers.mjs';
 
 const sourceText = [
   'export function routeWork(queue, state) {',
@@ -80,6 +81,7 @@ const validEvidence = {
   command: 'fixture-runtime-order-proof',
   traceHash: 'fixture-runtime-order-trace-hash',
   evidenceHash: 'fixture-runtime-order-proof-hash',
+  ...effectTargetProofFields(runtimeRecordFromSource(workerSourceText, blockedOperation.anchor.key)),
   autoMergeClaim: false,
   semanticEquivalenceClaim: false,
   runtimeEquivalenceClaim: false
@@ -118,9 +120,48 @@ assert.equal(staleScript.admission.status, 'conflict');
 assert.equal(staleOperation.status, 'conflict');
 assert.equal(staleOperation.reasonCodes.includes('runtime-order-explicit-evidence-source-hash-mismatch'), true);
 
+const missingEffectTargetTraceScript = createSemanticEditScript({
+  id: 'semantic_runtime_effect_target_trace_missing',
+  language: 'typescript',
+  sourcePath: 'src/runtime-executable-evidence.ts',
+  baseSourceText: sourceText,
+  workerSourceText,
+  headSourceText,
+  runtimeOrderEvidence: { ...validEvidence, effectTargetResolutionTraceHash: undefined },
+  generatedAt: 306
+});
+const missingEffectTargetTraceOperation = runtimeOperation(missingEffectTargetTraceScript);
+assert.equal(missingEffectTargetTraceScript.admission.status, 'conflict');
+assert.equal(missingEffectTargetTraceOperation.reasonCodes.includes('runtime-order-explicit-evidence-effect-target-resolution-trace-missing'), true);
+
+const missingEffectTargetHashScript = createSemanticEditScript({
+  id: 'semantic_runtime_effect_target_hash_missing',
+  language: 'typescript',
+  sourcePath: 'src/runtime-executable-evidence.ts',
+  baseSourceText: sourceText,
+  workerSourceText,
+  headSourceText,
+  runtimeOrderEvidence: { ...validEvidence, effectTargetOrderHash: undefined },
+  generatedAt: 307
+});
+const missingEffectTargetHashOperation = runtimeOperation(missingEffectTargetHashScript);
+assert.equal(missingEffectTargetHashScript.admission.status, 'conflict');
+assert.equal(missingEffectTargetHashOperation.reasonCodes.includes('runtime-order-explicit-evidence-effect-target-order-hash-missing'), true);
+
 function runtimeOperation(script) {
   const operation = script.operations
     .find((candidate) => candidate.anchor.symbolName === 'routeWork:effect:network#1');
   assert.ok(operation, 'expected routeWork network-effect operation');
   return operation;
+}
+
+function runtimeRecordFromSource(sourceText, key) {
+  const sidecar = createSemanticImportSidecar(importNativeSource({
+    language: 'typescript',
+    sourcePath: 'src/runtime-executable-evidence.ts',
+    sourceText
+  }), { generatedAt: 308 });
+  const record = sidecar.ownershipRegions.find((candidate) => candidate.key === key);
+  assert.ok(record, `expected runtime record for ${key}`);
+  return record;
 }

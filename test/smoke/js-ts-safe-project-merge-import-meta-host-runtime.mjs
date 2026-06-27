@@ -2,6 +2,7 @@ import { assert } from './helpers.mjs';
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
 import { projectRuntimeRegionDeltaConflicts } from '../../src/js-ts-safe-project-merge-runtime-region-conflicts.js';
+import { effectTargetProofFields } from './runtime-order-proof-helpers.mjs';
 
 const baseSource = 'export function assetUrl(name) {\n  return new URL(name, import.meta.url).href;\n}\n';
 const workerSource = baseSource.replace('import.meta.url', 'import.meta.resolve(name)');
@@ -107,6 +108,7 @@ function importMetaHostContextProof(record, stages) {
     signatureHash: record.signatureHash,
     importMetaHostContextHash: importMetaHostContextHash(record),
     importMetaHostResolutionTraceHash: 'fixture-import-meta-host-resolution-trace-hash',
+    ...effectTargetProofFields(record),
     command: 'fixture-import-meta-host-context-proof',
     traceHash: 'fixture-import-meta-host-context-trace-root-hash',
     evidenceHash: 'fixture-import-meta-host-context-proof-hash',

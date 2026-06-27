@@ -1,5 +1,6 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { uniqueStrings } from '../../native-import-utils.js';
+import { effectTargetProofReasonCodes, effectTargetSurfaceExpectation } from './runtimeOrderEffectTargetProofSurface.js';
 
 function runtimeOrderSurfaceExpectations(region) {
   const resourceOrderRecords = resourceManagementOrderRecords(region);
@@ -9,6 +10,7 @@ function runtimeOrderSurfaceExpectations(region) {
   const generatorKinds = runtimeKinds(region);
   return {
     importMetaHostContextHash: importMetaHostContextHash(region),
+    ...effectTargetSurfaceExpectation(region),
     promiseCombinatorOrderHash: promiseCombinatorOrderHash(region, promiseCombinatorRecords),
     promiseCombinatorNeedsElementTrace: promiseCombinatorRecords.some((record) => record.arrayElementOrdinal),
     promiseCombinatorMethods: uniqueStrings(promiseCombinatorRecords.map((record) => record.methodName)),
@@ -28,6 +30,7 @@ function runtimeOrderSurfaceExpectations(region) {
 function runtimeOrderProofSurfaceReasonCodes(candidate, expected) {
   return uniqueStrings([
     ...importMetaHostContextProofReasonCodes(candidate, expected),
+    ...effectTargetProofReasonCodes(candidate, expected),
     ...promiseCombinatorProofReasonCodes(candidate, expected),
     ...promiseChainProofReasonCodes(candidate, expected),
     ...resourceManagementProofReasonCodes(candidate, expected),

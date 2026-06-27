@@ -2,6 +2,7 @@ import { assert } from './helpers.mjs';
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
 import { projectRuntimeRegionDeltaConflicts } from '../../src/js-ts-safe-project-merge-runtime-region-conflicts.js';
+import { effectTargetProofFields } from './runtime-order-proof-helpers.mjs';
 
 const source = 'export async function* stream(source) {\n  yield await source.first();\n}\n';
 const workerSource = source.replace('source.first()', 'source.first(true)');
@@ -121,6 +122,7 @@ function asyncGeneratorProtocolProof(record, stages) {
     asyncIteratorProtocolTraceHash: 'fixture-async-iterator-protocol-trace-hash',
     asyncGeneratorCancellationTraceHash: 'fixture-async-generator-cancellation-trace-hash',
     asyncGeneratorBackpressureTraceHash: 'fixture-async-generator-backpressure-trace-hash',
+    ...effectTargetProofFields(record),
     command: 'fixture-async-generator-protocol-proof',
     traceHash: 'fixture-async-generator-trace-root-hash',
     evidenceHash: 'fixture-async-generator-proof-hash',
