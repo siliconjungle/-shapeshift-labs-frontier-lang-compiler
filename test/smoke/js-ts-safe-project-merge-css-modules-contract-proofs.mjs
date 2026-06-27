@@ -135,9 +135,10 @@ assert.equal(synthesizedCssFile.result.cssModuleContractProofs.every((proof) => 
 assert.equal(projectSynthesizedProof.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].status, 'ready');
 assert.equal(typeof projectSynthesizedProof.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].jsTsUseSiteGraphHash, 'string');
 const projectSynthesizedSurface = matrixSurface(projectSynthesizedProof, 'css-modules-use-site-graph');
-assert.equal(projectSynthesizedSurface.proofStatuses['css-module-generated-class-name-map'], 'passed');
-assert.equal(projectSynthesizedSurface.proofStatuses['css-module-bundler-transform-identity'], 'passed');
-assert.equal(projectSynthesizedSurface.proofStatuses['css-module-source-map-identity'], 'passed');
+assert.equal(projectSynthesizedSurface.proofStatuses['css-module-use-site-graph'], 'passed');
+assert.equal(matrixSurface(projectSynthesizedProof, 'css-modules-generated-class-name-map').proofStatuses['css-module-generated-class-name-map'], 'passed');
+assert.equal(matrixSurface(projectSynthesizedProof, 'css-modules-bundler-transform-identity').proofStatuses['css-module-bundler-transform-identity'], 'passed');
+assert.equal(matrixSurface(projectSynthesizedProof, 'css-modules-source-map-identity').proofStatuses['css-module-source-map-identity'], 'passed');
 
 const projectMissingBundlerProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_module_contract_project_synthesis_missing_transform_proof',
@@ -177,14 +178,20 @@ assert.equal(transformBoundaryConflicts.some((conflict) => conflict.details.proo
 assert.equal(transformBoundaryConflicts.some((conflict) => conflict.details.proofBoundary === 'css-module-source-map-identity'), true);
 const transformBoundarySurface = matrixSurface(transformBoundaryProject, 'css-modules-use-site-graph');
 assert.equal(transformBoundarySurface.proofStatuses['css-module-use-site-graph'], 'passed');
-assert.equal(transformBoundarySurface.proofStatuses['css-module-transform-proof'], 'failed');
-assert.equal(transformBoundarySurface.proofStatuses['css-module-generated-class-name-map'], 'failed');
-assert.equal(transformBoundarySurface.proofStatuses['css-module-bundler-transform-identity'], 'failed');
-assert.equal(transformBoundarySurface.proofStatuses['css-module-source-map-identity'], 'failed');
 assert.equal(transformBoundarySurface.missingRouteIds.includes('prove-css-module-use-site-graph'), false);
-assert.equal(transformBoundarySurface.missingRouteIds.includes('prove-css-module-generated-class-name-map'), true);
-assert.equal(transformBoundarySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), true);
-assert.equal(transformBoundarySurface.missingRouteIds.includes('prove-css-module-source-map-identity'), true);
+assert.equal(transformBoundarySurface.missingRouteIds.includes('prove-css-module-generated-class-name-map'), false);
+const transformGeneratedClassNameMapSurface = matrixSurface(transformBoundaryProject, 'css-modules-generated-class-name-map');
+const transformBundlerIdentitySurface = matrixSurface(transformBoundaryProject, 'css-modules-bundler-transform-identity');
+const transformSourceMapIdentitySurface = matrixSurface(transformBoundaryProject, 'css-modules-source-map-identity');
+assert.equal(transformGeneratedClassNameMapSurface.status, 'bounded-evidence');
+assert.equal(transformBundlerIdentitySurface.status, 'bounded-evidence');
+assert.equal(transformSourceMapIdentitySurface.status, 'bounded-evidence');
+assert.equal(transformGeneratedClassNameMapSurface.proofStatuses['css-module-generated-class-name-map'], 'failed');
+assert.equal(transformBundlerIdentitySurface.proofStatuses['css-module-bundler-transform-identity'], 'failed');
+assert.equal(transformSourceMapIdentitySurface.proofStatuses['css-module-source-map-identity'], 'failed');
+assert.equal(transformGeneratedClassNameMapSurface.missingRouteIds.includes('prove-css-module-generated-class-name-map'), true);
+assert.equal(transformBundlerIdentitySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), true);
+assert.equal(transformSourceMapIdentitySurface.missingRouteIds.includes('prove-css-module-source-map-identity'), true);
 
 const useSiteOnlyProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_module_use_site_only_boundary',
@@ -215,12 +222,14 @@ assert.equal(useSiteOnlyProject.summary.projectGraphCssModuleUseSiteProofBlocker
 assert.equal(useSiteOnlyProject.summary.projectGraphCssModuleTransformProofBlockers, 0);
 const useSiteOnlySurface = matrixSurface(useSiteOnlyProject, 'css-modules-use-site-graph');
 assert.equal(useSiteOnlySurface.proofStatuses['css-module-use-site-graph'], 'failed');
-assert.equal(useSiteOnlySurface.proofStatuses['css-module-transform-proof'], 'passed');
-assert.equal(useSiteOnlySurface.proofStatuses['css-module-generated-class-name-map'], 'passed');
-assert.equal(useSiteOnlySurface.proofStatuses['css-module-bundler-transform-identity'], 'passed');
-assert.equal(useSiteOnlySurface.proofStatuses['css-module-source-map-identity'], 'passed');
 assert.equal(useSiteOnlySurface.missingRouteIds.includes('prove-css-module-use-site-graph'), true);
-assert.equal(useSiteOnlySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), false);
+const useSiteOnlyGeneratedClassNameMapSurface = matrixSurface(useSiteOnlyProject, 'css-modules-generated-class-name-map');
+const useSiteOnlyBundlerIdentitySurface = matrixSurface(useSiteOnlyProject, 'css-modules-bundler-transform-identity');
+const useSiteOnlySourceMapIdentitySurface = matrixSurface(useSiteOnlyProject, 'css-modules-source-map-identity');
+assert.equal(useSiteOnlyGeneratedClassNameMapSurface.proofStatuses['css-module-generated-class-name-map'], 'passed');
+assert.equal(useSiteOnlyBundlerIdentitySurface.proofStatuses['css-module-bundler-transform-identity'], 'passed');
+assert.equal(useSiteOnlySourceMapIdentitySurface.proofStatuses['css-module-source-map-identity'], 'passed');
+assert.equal(useSiteOnlyBundlerIdentitySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), false);
 
 function mergeButtonModuleProject(id, cssOptions = {}) {
   return safeMergeJsTsProject({

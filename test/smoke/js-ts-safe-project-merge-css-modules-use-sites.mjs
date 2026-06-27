@@ -200,9 +200,11 @@ assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteBlockers >= 6, tru
 assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteGraphs, 1);
 const blockedCssModuleSurface = matrixSurface(mergeProject, 'css-modules-use-site-graph');
 assert.equal(blockedCssModuleSurface.proofStatuses['css-module-use-site-graph'], 'failed');
-assert.equal(blockedCssModuleSurface.proofStatuses['css-module-transform-proof'], 'failed');
 assert.equal(blockedCssModuleSurface.missingRouteIds.includes('prove-css-module-use-site-graph'), true);
 assert.equal(blockedCssModuleSurface.nextMissingRouteId, 'prove-css-module-use-site-graph');
+const blockedGeneratedClassNameMapSurface = matrixSurface(mergeProject, 'css-modules-generated-class-name-map'), blockedBundlerIdentitySurface = matrixSurface(mergeProject, 'css-modules-bundler-transform-identity'), blockedSourceMapIdentitySurface = matrixSurface(mergeProject, 'css-modules-source-map-identity');
+assert.equal(blockedGeneratedClassNameMapSurface.proofStatuses['css-module-generated-class-name-map'], 'failed'); assert.equal(blockedBundlerIdentitySurface.proofStatuses['css-module-bundler-transform-identity'], 'failed'); assert.equal(blockedSourceMapIdentitySurface.proofStatuses['css-module-source-map-identity'], 'failed');
+assert.equal(blockedGeneratedClassNameMapSurface.missingRouteIds.includes('prove-css-module-generated-class-name-map'), true); assert.equal(blockedBundlerIdentitySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), true); assert.equal(blockedSourceMapIdentitySurface.missingRouteIds.includes('prove-css-module-source-map-identity'), true);
 
 const missingCssModuleProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_missing_css_module',
@@ -273,9 +275,8 @@ assert.equal(readyCssModuleProject.summary.projectGraphCssModuleUseSites >= 2, t
 assert.equal(readyCssModuleProject.summary.projectGraphCssModuleImportBindings, 1);
 const readyCssModuleSurface = matrixSurface(readyCssModuleProject, 'css-modules-use-site-graph');
 assert.equal(readyCssModuleSurface.proofStatuses['css-module-use-site-graph'], 'passed');
-assert.equal(readyCssModuleSurface.proofStatuses['css-module-transform-proof'], 'passed');
-assert.equal(readyCssModuleSurface.proofStatuses['project-graph-evidence'], 'passed');
 assert.equal((readyCssModuleSurface.missingRouteIds ?? []).includes('prove-css-module-use-site-graph'), false);
+assert.equal(matrixSurface(readyCssModuleProject, 'css-modules-generated-class-name-map').proofStatuses['css-module-generated-class-name-map'], 'passed'); assert.equal(matrixSurface(readyCssModuleProject, 'css-modules-bundler-transform-identity').proofStatuses['css-module-bundler-transform-identity'], 'passed'); assert.equal(matrixSurface(readyCssModuleProject, 'css-modules-source-map-identity').proofStatuses['css-module-source-map-identity'], 'passed');
 
 const unsafeHelperButtonSourceText = [
   `import readyStyles from '${readyCssModuleSpecifier}';`,

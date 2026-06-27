@@ -7,7 +7,7 @@ const CssModuleProjectMergeMissingSignals = Object.freeze({
 
 function cssModuleProjectMergeMissingEvidenceRoutes(route, signals) {
   return {
-    [signals.cssModuleUseSiteGraph]: route('prove-css-module-use-site-graph', 'layout-style-graph', 'supply-css-module-transform-and-use-site-proof'),
+    [signals.cssModuleUseSiteGraph]: route('prove-css-module-use-site-graph', 'layout-style-graph', 'supply-css-module-use-site-graph-proof'),
     [signals.cssModuleGeneratedClassNameMap]: route('prove-css-module-generated-class-name-map', 'layout-style-graph', 'supply-css-module-generated-class-name-map'),
     [signals.cssModuleBundlerTransformIdentity]: route('prove-css-module-bundler-transform-identity', 'layout-style-graph', 'supply-css-module-bundler-transform-identity-proof'),
     [signals.cssModuleSourceMapIdentity]: route('prove-css-module-source-map-identity', 'layout-style-graph', 'supply-css-module-source-map-identity-proof')
@@ -15,19 +15,12 @@ function cssModuleProjectMergeMissingEvidenceRoutes(route, signals) {
 }
 
 function cssModuleProjectMergeAdmissionMatrixRows(matrixRow, signals) {
-  return [matrixRow('css-modules-use-site-graph', 'partial', [
-    'css-module-use-site-graph',
-    'css-module-transform-proof',
-    'css-module-generated-class-name-map',
-    'css-module-bundler-transform-identity',
-    'css-module-source-map-identity',
-    'project-graph-evidence'
-  ], [
-    signals.cssModuleUseSiteGraph,
-    signals.cssModuleGeneratedClassNameMap,
-    signals.cssModuleBundlerTransformIdentity,
-    signals.cssModuleSourceMapIdentity
-  ])];
+  return [
+    matrixRow('css-modules-use-site-graph', 'partial', ['css-module-use-site-graph'], [signals.cssModuleUseSiteGraph]),
+    matrixRow('css-modules-generated-class-name-map', 'bounded-evidence', ['css-module-generated-class-name-map'], [signals.cssModuleGeneratedClassNameMap]),
+    matrixRow('css-modules-bundler-transform-identity', 'bounded-evidence', ['css-module-bundler-transform-identity'], [signals.cssModuleBundlerTransformIdentity]),
+    matrixRow('css-modules-source-map-identity', 'bounded-evidence', ['css-module-source-map-identity'], [signals.cssModuleSourceMapIdentity])
+  ];
 }
 
 function cssModuleProjectMergeMissingEvidenceItems(summary, signals, missingEvidenceItem) {

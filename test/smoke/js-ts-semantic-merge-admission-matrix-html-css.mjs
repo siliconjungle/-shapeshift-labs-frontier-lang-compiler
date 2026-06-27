@@ -10,6 +10,11 @@ const matrixCells = [
   { id: 'html-css/html-structural-merge-admission', status: 'done', support: 'partial', evidence: 'js-ts-safe-project-merge-html-css', note: 'HTML structural merges require parser-backed identity evidence and keep runtime/browser proof as a separate row' },
   { id: 'html-css/css-cascade-merge-admission', status: 'done', support: 'partial', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS cascade merges require selector target, specificity, scoped cascade, and dependency evidence before admission' },
   { id: 'html-css/css-dependency-graph-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS dependency graph evidence is absent until custom property, animation, font, and asset dependency surfaces require it' },
+  { id: 'html-css/css-runtime-descriptor-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS runtime descriptor evidence for property and page at-rules is parser/source bounded and separate from browser proof' },
+  { id: 'css-modules/use-site-graph-proof', status: 'done', support: 'partial', evidence: 'js-ts-safe-project-merge-css-modules-use-sites', note: 'CSS Module use-site graph proof is a distinct project graph row and does not absorb transform proof gaps' },
+  { id: 'css-modules/generated-class-name-map-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-css-modules-contract-proofs', note: 'CSS Module generated class-name maps are proof-gated transform evidence and fail closed when absent' },
+  { id: 'css-modules/bundler-transform-identity-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-css-modules-contract-proofs', note: 'CSS Module bundler transform identity is proof-gated transform evidence and fail closed when absent' },
+  { id: 'css-modules/source-map-identity-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-css-modules-contract-proofs', note: 'CSS Module source-map identity is proof-gated transform evidence and fail closed when absent' },
   { id: 'html-css/browser-runtime-proof-bounded', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'HTML/CSS browser runtime proof remains explicit bounded evidence and is missing by default without a proof bundle' }
 ];
 assert.equal(matrixCells.every((cell) => cell.status === 'done'), true);
@@ -51,6 +56,7 @@ assertSurface(oracleHtmlCssProject, 'css-selector-target-evidence', 'bounded-evi
 assertSurface(oracleHtmlCssProject, 'html-structural-merge-admission', 'partial', 'html-structural-merge', 'passed');
 assertSurface(oracleHtmlCssProject, 'css-cascade-merge-admission', 'partial', 'css-cascade-merge', 'passed');
 assertSurface(oracleHtmlCssProject, 'css-dependency-graph-evidence', 'bounded-evidence', 'css-dependency-graph', 'absent');
+assertSurface(oracleHtmlCssProject, 'css-runtime-descriptor-evidence', 'bounded-evidence', 'css-runtime-descriptor-evidence', 'absent');
 const oracleBrowserSurface = assertSurface(oracleHtmlCssProject, 'html-css-browser-runtime-proof', 'bounded-evidence', 'browser-runtime-proof', 'missing');
 assert.equal(oracleBrowserSurface.missingRouteIds.includes('prove-html-css-browser-runtime'), true);
 const oracleBrowserMissingEvidence = oracleHtmlCssProject.confidence.missingEvidence.find((item) => item.code === 'html-css-browser-runtime-proof-not-available');
@@ -60,6 +66,43 @@ assert.match(oracleBrowserMissingEvidence.summary, /runFrontierPlaywrightAsserti
 assert.equal(oracleBrowserMissingEvidence.suggestedInput.playwrightAssertionRuntimeProof, true);
 assert.equal(oracleBrowserMissingEvidence.suggestedInput.proofBuilderInput, true);
 assert.equal(oracleHtmlCssProject.admission.semanticEquivalenceClaim, false);
+
+const cssModuleSourcePath = 'src/Button.module.css';
+const cssModuleSpecifier = './Button.module' + '.css';
+const cssModuleSourceText = '.root { color: red; }\n';
+const cssModuleButtonSourceText = [
+  `import styles from '${cssModuleSpecifier}';`,
+  'export function Button() { return <button className={styles.root} />; }',
+  ''
+].join('\n');
+const cssModuleBoundaryProject = safeMergeJsTsProject({
+  id: 'oracle_project_css_module_matrix_proof_boundaries',
+  includeOutputProjectSymbolGraph: true,
+  files: [
+    { language: 'css', sourcePath: cssModuleSourcePath, headSourceText: cssModuleSourceText },
+    {
+      language: 'tsx',
+      sourcePath: 'src/Button.tsx',
+      baseSourceText: cssModuleButtonSourceText,
+      workerSourceText: cssModuleButtonSourceText,
+      headSourceText: cssModuleButtonSourceText
+    }
+  ]
+});
+assert.equal(cssModuleBoundaryProject.status, 'blocked');
+assert.equal(cssModuleBoundaryProject.summary.projectGraphCssModuleUseSiteProofBlockers, 0);
+assert.equal(cssModuleBoundaryProject.summary.projectGraphCssModuleGeneratedClassNameMapBlockers, 1);
+assert.equal(cssModuleBoundaryProject.summary.projectGraphCssModuleBundlerTransformIdentityBlockers, 1);
+assert.equal(cssModuleBoundaryProject.summary.projectGraphCssModuleSourceMapIdentityBlockers, 1);
+const cssModuleUseSiteSurface = assertSurface(cssModuleBoundaryProject, 'css-modules-use-site-graph', 'partial', 'css-module-use-site-graph', 'passed');
+assert.equal(cssModuleUseSiteSurface.missingRouteIds.includes('prove-css-module-use-site-graph'), false);
+assert.equal(cssModuleUseSiteSurface.missingRouteIds.includes('prove-css-module-generated-class-name-map'), false);
+const generatedClassNameMapSurface = assertSurface(cssModuleBoundaryProject, 'css-modules-generated-class-name-map', 'bounded-evidence', 'css-module-generated-class-name-map', 'failed');
+const bundlerTransformIdentitySurface = assertSurface(cssModuleBoundaryProject, 'css-modules-bundler-transform-identity', 'bounded-evidence', 'css-module-bundler-transform-identity', 'failed');
+const sourceMapIdentitySurface = assertSurface(cssModuleBoundaryProject, 'css-modules-source-map-identity', 'bounded-evidence', 'css-module-source-map-identity', 'failed');
+assert.equal(generatedClassNameMapSurface.missingRouteIds.includes('prove-css-module-generated-class-name-map'), true);
+assert.equal(bundlerTransformIdentitySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), true);
+assert.equal(sourceMapIdentitySurface.missingRouteIds.includes('prove-css-module-source-map-identity'), true);
 
 function assertSurface(project, surface, status, proofLevel, proofStatus) {
   const record = projectMatrixSurface(project, surface);
