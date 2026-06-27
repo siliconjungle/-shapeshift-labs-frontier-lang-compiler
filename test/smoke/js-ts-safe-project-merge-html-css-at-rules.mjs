@@ -14,14 +14,14 @@ const preserved = safeMergeJsTsProject({
     sourcePath,
     baseSourceText: base,
     workerSourceText: head,
-    headSourceText: base.replace('.button {', '.button { background: white;')
+    headSourceText: base.replace('.button {', '.button { background-color: white;')
   }]
 });
 assert.equal(preserved.status, 'merged');
 assert.equal(preserved.summary.cssMergedFiles, 1);
 assert.match(preserved.outputFiles[0].sourceText, /@keyframes fade/);
 assert.match(preserved.outputFiles[0].sourceText, /color: blue/);
-assert.match(preserved.outputFiles[0].sourceText, /background: white/);
+assert.match(preserved.outputFiles[0].sourceText, /background-color: white/);
 
 const unproved = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_at_rule_unproved',

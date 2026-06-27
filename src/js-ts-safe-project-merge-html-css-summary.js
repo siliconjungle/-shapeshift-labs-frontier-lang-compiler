@@ -14,6 +14,7 @@ function htmlCssProjectSummary(files) {
     cssSelectorTargetRebasedFiles: cssFiles.filter(hasCssSelectorTargetRebase).length,
     cssScopedCascadeFiles: cssFiles.filter(hasCssScopedCascadeScope).length, cssScopedCascadeEvidenceFiles: cssFiles.filter(hasCssScopedCascadeEvidence).length, cssScopedCascadeBlockedFiles: cssFiles.filter(hasCssScopedCascadeMissingProof).length,
     cssDuplicateCascadeKeyBlockedFiles: cssFiles.filter(hasCssDuplicateCascadeKeyConflict).length,
+    cssShorthandExpansionEvidenceFiles: cssFiles.filter(hasCssShorthandExpansionEvidence).length, cssDeterministicShorthandExpansionFiles: cssFiles.filter(hasCssDeterministicShorthandExpansionEvidence).length, cssShorthandExpansionBlockedFiles: cssFiles.filter(hasCssShorthandExpansionBlockedConflict).length,
     cssDependencySurfaceFiles: cssFiles.filter(hasCssDependencySurface).length, cssDependencyGraphEvidenceFiles: cssFiles.filter((file) => hasCssDependencySurface(file) && hasCssDependencyGraphEvidence(file)).length, cssDependencyGraphMissingProofFiles: cssFiles.filter(hasCssDependencyGraphMissingProof).length, cssDependencyGraphBlockedFiles: cssFiles.filter(hasCssDependencyGraphBlockedConflict).length,
     htmlCssBrowserRuntimeProofs: htmlCssFiles.filter(hasBrowserRuntimeProof).length
   };
@@ -84,6 +85,16 @@ function hasFrameworkBoundaryConflict(file) {
 function hasCssSelectorTargetRebase(file) { return (file?.result?.selectorTargetEvidence?.rebasedChangeCount ?? 0) > 0; }
 function hasCssDuplicateCascadeKeyConflict(file) {
   return cssFileConflicts(file).some((conflict) => conflict.code === 'css-duplicate-cascade-key-blocked' || conflict?.details?.reasonCode === 'css-duplicate-cascade-key-order-unproved');
+}
+function hasCssShorthandExpansionEvidence(file) {
+  return (file?.result?.shorthandExpansionEvidence?.changedShorthandCount ?? 0) > 0;
+}
+function hasCssDeterministicShorthandExpansionEvidence(file) {
+  const evidence = file?.result?.shorthandExpansionEvidence;
+  return (evidence?.changedShorthandCount ?? 0) > 0 && evidence.expandedChangedShorthandCount === evidence.changedShorthandCount && evidence.deterministicExpansionClaim === true;
+}
+function hasCssShorthandExpansionBlockedConflict(file) {
+  return cssFileConflicts(file).some((conflict) => conflict?.details?.reasonCode === 'css-shorthand-expansion-unproved' || conflict?.details?.proofGap?.code === 'css-shorthand-expansion-unproved');
 }
 function hasCssScopedCascadeScope(file) {
   return cssScopedRuleCount(file) > 0 || hasCssScopedCascadeProofReason(file) || file?.result?.parserEvidence?.scopedCascadeGraphHashPresent === false;
