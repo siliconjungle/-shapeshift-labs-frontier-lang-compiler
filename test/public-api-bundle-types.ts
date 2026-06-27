@@ -67,6 +67,7 @@ typedProjectSafeMerge.summary.cssSelectorSpecificityEvidenceFiles satisfies numb
 typedProjectSafeMerge.summary.cssSelectorTargetMoveFiles satisfies number;
 typedProjectSafeMerge.summary.cssScopedCascadeFiles satisfies number;
 typedProjectSafeMerge.summary.cssScopedCascadeEvidenceFiles satisfies number;
+typedProjectSafeMerge.summary.cssScopedCascadeShapeEvidenceFiles satisfies number;
 typedProjectSafeMerge.summary.cssScopedCascadeBlockedFiles satisfies number;
 typedProjectSafeMerge.summary.cssDuplicateCascadeKeyBlockedFiles satisfies number;
 typedProjectSafeMerge.summary.cssShorthandExpansionEvidenceFiles satisfies number;

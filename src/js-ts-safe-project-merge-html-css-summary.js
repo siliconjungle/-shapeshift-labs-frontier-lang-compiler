@@ -12,7 +12,7 @@ function htmlCssProjectSummary(files) {
     htmlRuntimeBoundaryEvidenceFiles: htmlFiles.filter(hasHtmlRuntimeBoundaryEvidence).length, htmlFrameworkBoundaryEvidenceFiles: htmlFiles.filter(hasHtmlFrameworkBoundaryEvidence).length, htmlProofGapBlockedFiles: htmlFiles.filter(hasHtmlProofGapBlockedConflict).length,
     htmlIdentityEvidenceFailedFiles: htmlFiles.filter(hasHtmlIdentityEvidenceFailure).length, cssSelectorTargetConflictFiles: cssFiles.filter(hasCssSelectorTargetConflict).length, htmlCssStructuralTargetEvidenceFailedFiles: htmlCssFiles.filter((file) => hasHtmlIdentityEvidenceFailure(file) || hasCssSelectorTargetConflict(file)).length,
     cssSelectorTargetRebasedFiles: cssFiles.filter(hasCssSelectorTargetRebase).length,
-    cssScopedCascadeFiles: cssFiles.filter(hasCssScopedCascadeScope).length, cssScopedCascadeEvidenceFiles: cssFiles.filter(hasCssScopedCascadeEvidence).length, cssScopedCascadeBlockedFiles: cssFiles.filter(hasCssScopedCascadeMissingProof).length,
+    cssScopedCascadeFiles: cssFiles.filter(hasCssScopedCascadeScope).length, cssScopedCascadeEvidenceFiles: cssFiles.filter(hasCssScopedCascadeEvidence).length, cssScopedCascadeShapeEvidenceFiles: cssFiles.filter(hasCssScopedCascadeShapeEvidence).length, cssScopedCascadeBlockedFiles: cssFiles.filter(hasCssScopedCascadeMissingProof).length,
     cssDuplicateCascadeKeyBlockedFiles: cssFiles.filter(hasCssDuplicateCascadeKeyConflict).length,
     cssShorthandExpansionEvidenceFiles: cssFiles.filter(hasCssShorthandExpansionEvidence).length, cssDeterministicShorthandExpansionFiles: cssFiles.filter(hasCssDeterministicShorthandExpansionEvidence).length, cssShorthandExpansionBlockedFiles: cssFiles.filter(hasCssShorthandExpansionBlockedConflict).length,
     cssDependencySurfaceFiles: cssFiles.filter(hasCssDependencySurface).length, cssDependencyGraphEvidenceFiles: cssFiles.filter((file) => hasCssDependencySurface(file) && hasCssDependencyGraphEvidence(file)).length, cssDependencyGraphMissingProofFiles: cssFiles.filter(hasCssDependencyGraphMissingProof).length, cssDependencyGraphBlockedFiles: cssFiles.filter(hasCssDependencyGraphBlockedConflict).length,
@@ -111,6 +111,10 @@ function hasCssScopedCascadeProofReason(file) {
 function hasCssScopedCascadeProof(file) {
   return [...(file?.result?.scopedCascadeProofs ?? []), ...(file?.result?.admission?.cssScopedCascadeProofs ?? file?.admission?.cssScopedCascadeProofs ?? [])]
     .some((proof) => proof?.status === 'passed' && ScopedCascadeMissingProofReasonCodes.has(proof.reasonCode));
+}
+function hasCssScopedCascadeShapeEvidence(file) {
+  return [...(file?.result?.scopedCascadeProofs ?? []), ...(file?.result?.admission?.cssScopedCascadeProofs ?? file?.admission?.cssScopedCascadeProofs ?? [])]
+    .some((proof) => proof?.status === 'passed' && ScopedCascadeMissingProofReasonCodes.has(proof.reasonCode) && typeof proof.scopedCascadeGraphShapeKey === 'string');
 }
 function cssScopedRuleCount(file) {
   const sides = Object.values(file?.result?.selectorTargetEvidence?.sides ?? {});

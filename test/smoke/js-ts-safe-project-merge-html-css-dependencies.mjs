@@ -36,32 +36,47 @@ assert.equal(nestedScopedCssHashOnly.status, 'blocked');
 assert.equal(nestedScopedCssHashOnly.summary.cssScopedCascadeEvidenceFiles, 0);
 assert.equal(nestedScopedCssHashOnly.summary.cssScopedCascadeBlockedFiles, 1);
 const nestedScopedCssOutput = '@layer components {\n  @scope (.card) {\n    .button {\n      color: blue;\n      padding-left: 1rem;\n      background-color: white;\n    }\n  }\n}\n';
+const nestedScopedCssShapeKey = '@layer components::@scope (.card)';
+const nestedScopedCssShapeHash = 'hash_nested_scoped_cascade_shape';
 const nestedScopedCssWithProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_nested_layer_scope_with_proof',
-  cssMergeOptionsByPath: { 'src/nested.css': { scopedCascadeGraphHash: 'hash_nested_scoped_cascade', cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_nested_layer_scope', sourcePath: 'src/nested.css', graphHash: 'hash_nested_scoped_cascade', base: nestedScopedCssBase, worker: nestedScopedCssWorker, head: nestedScopedCssHead, output: nestedScopedCssOutput, scopes: ['@layer components', '@scope (.card)'], cascadeKeys: ['@layer components::@scope (.card)::.button::color', '@layer components::@scope (.card)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
+  cssMergeOptionsByPath: { 'src/nested.css': { scopedCascadeGraphHashesByShapeKey: { [nestedScopedCssShapeKey]: nestedScopedCssShapeHash }, cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_nested_layer_scope', sourcePath: 'src/nested.css', graphHash: nestedScopedCssShapeHash, shapeKey: nestedScopedCssShapeKey, base: nestedScopedCssBase, worker: nestedScopedCssWorker, head: nestedScopedCssHead, output: nestedScopedCssOutput, scopes: ['@layer components', '@scope (.card)'], cascadeKeys: ['@layer components::@scope (.card)::.button::color', '@layer components::@scope (.card)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
   files: [{ sourcePath: 'src/nested.css', baseSourceText: nestedScopedCssBase, workerSourceText: nestedScopedCssWorker, headSourceText: nestedScopedCssHead }]
 });
 assert.equal(nestedScopedCssWithProof.status, 'merged');
 assert.equal(nestedScopedCssWithProof.summary.cssScopedCascadeFiles, 1);
 assert.equal(nestedScopedCssWithProof.summary.cssScopedCascadeEvidenceFiles, 1);
+assert.equal(nestedScopedCssWithProof.summary.cssScopedCascadeShapeEvidenceFiles, 1);
 assert.equal(nestedScopedCssWithProof.summary.cssScopedCascadeBlockedFiles, 0);
 assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /@layer components/);
 assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /@scope \(\.card\)/);
 assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /color: blue/);
 assert.match(nestedScopedCssWithProof.outputFiles[0].sourceText, /background-color: white/);
 assert.equal(nestedScopedCssWithProof.files[0].result.scopedCascadeProofs.length, 2);
+assert.equal(nestedScopedCssWithProof.files[0].result.scopedCascadeProofs.every((proof) => proof.scopedCascadeGraphShapeKey === nestedScopedCssShapeKey), true);
 
 const containerScopedCssBase = '@container card (min-width: 300px) {\n  .button {\n    color: red;\n    padding-left: 1rem;\n  }\n}\n';
 const containerScopedCssWorker = containerScopedCssBase.replace('color: red', 'color: blue');
 const containerScopedCssHead = containerScopedCssBase.replace('padding-left: 1rem;', 'padding-left: 1rem;\n    background-color: white;');
 const containerScopedCssOutput = '@container card (min-width: 300px) {\n  .button {\n    color: blue;\n    padding-left: 1rem;\n    background-color: white;\n  }\n}\n';
+const containerScopedCssShapeKey = '@container card (min-width: 300px)';
+const containerScopedCssShapeHash = 'hash_container_scoped_cascade_shape';
+const containerScopedCssWrongShape = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_container_scope_wrong_shape',
+  cssMergeOptionsByPath: { 'src/card.css': { scopedCascadeGraphHashesByShapeKey: { [containerScopedCssShapeKey]: containerScopedCssShapeHash }, cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_container_wrong_shape', sourcePath: 'src/card.css', graphHash: containerScopedCssShapeHash, shapeKey: '@media (min-width: 300px)', base: containerScopedCssBase, worker: containerScopedCssWorker, head: containerScopedCssHead, output: containerScopedCssOutput, scopes: ['@container card (min-width: 300px)'], cascadeKeys: ['@container card (min-width: 300px)::.button::color', '@container card (min-width: 300px)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
+  files: [{ sourcePath: 'src/card.css', baseSourceText: containerScopedCssBase, workerSourceText: containerScopedCssWorker, headSourceText: containerScopedCssHead }]
+});
+assert.equal(containerScopedCssWrongShape.status, 'blocked');
+assert.equal(containerScopedCssWrongShape.summary.cssScopedCascadeShapeEvidenceFiles, 0);
+assert.equal(containerScopedCssWrongShape.conflicts.some((conflict) => conflict.code === 'css-scoped-cascade-proof-blocked'), true);
 const containerScopedCssWithProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_container_scope_with_proof',
-  cssMergeOptionsByPath: { 'src/card.css': { scopedCascadeGraphHash: 'hash_container_scoped_cascade', cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_container_scope', sourcePath: 'src/card.css', graphHash: 'hash_container_scoped_cascade', base: containerScopedCssBase, worker: containerScopedCssWorker, head: containerScopedCssHead, output: containerScopedCssOutput, scopes: ['@container card (min-width: 300px)'], cascadeKeys: ['@container card (min-width: 300px)::.button::color', '@container card (min-width: 300px)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
+  cssMergeOptionsByPath: { 'src/card.css': { scopedCascadeGraphHashesByShapeKey: { [containerScopedCssShapeKey]: containerScopedCssShapeHash }, cssScopedCascadeProofs: [scopedProof({ id: 'proof_css_container_scope', sourcePath: 'src/card.css', graphHash: containerScopedCssShapeHash, shapeKey: containerScopedCssShapeKey, base: containerScopedCssBase, worker: containerScopedCssWorker, head: containerScopedCssHead, output: containerScopedCssOutput, scopes: ['@container card (min-width: 300px)'], cascadeKeys: ['@container card (min-width: 300px)::.button::color', '@container card (min-width: 300px)::.button::background-color'], properties: ['color', 'background-color'], sides: ['worker', 'head'] })] } },
   files: [{ sourcePath: 'src/card.css', baseSourceText: containerScopedCssBase, workerSourceText: containerScopedCssWorker, headSourceText: containerScopedCssHead }]
 });
 assert.equal(containerScopedCssWithProof.status, 'merged');
 assert.equal(containerScopedCssWithProof.summary.cssScopedCascadeEvidenceFiles, 1);
+assert.equal(containerScopedCssWithProof.summary.cssScopedCascadeShapeEvidenceFiles, 1);
 assert.equal(containerScopedCssWithProof.outputFiles[0].sourceText, containerScopedCssOutput);
 
 const dependencyCssBase = [
@@ -271,4 +286,4 @@ function matrixSurface(result, surface) {
   assert.ok(record, `missing ${surface} matrix surface`);
   return record;
 }
-function scopedProof({ id, sourcePath, graphHash, base, worker, head, output, scopes, cascadeKeys, properties, sides }) { return { id, kind: 'css-source-bound-scoped-cascade-proof', status: 'passed', sourcePath, reasonCode: 'css-scoped-cascade-equivalence-unproved', sides, selectors: ['.button'], scopes, cascadeKeys, properties, scopedCascadeGraphHash: graphHash, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output) }; }
+function scopedProof({ id, sourcePath, graphHash, shapeKey, base, worker, head, output, scopes, cascadeKeys, properties, sides }) { return { id, kind: 'css-source-bound-scoped-cascade-proof', status: 'passed', sourcePath, reasonCode: 'css-scoped-cascade-equivalence-unproved', sides, selectors: ['.button'], scopes, cascadeKeys, properties, scopedCascadeGraphHash: graphHash, scopedCascadeGraphShapeKey: shapeKey, scopedCascadeGraphHashesByShapeKey: shapeKey ? { [shapeKey]: graphHash } : undefined, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output) }; }
