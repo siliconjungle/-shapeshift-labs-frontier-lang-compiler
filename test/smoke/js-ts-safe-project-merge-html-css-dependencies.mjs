@@ -95,6 +95,7 @@ const dependencyCssWorker = dependencyCssBase.replace('--motion-name: fade;', '-
 const dependencyCssHead = dependencyCssBase.replace('color: red;', 'color: blue;');
 const cssDependencyMissingProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_dependency_graph_missing',
+  disableProjectCssDependencyGraphProofSynthesis: true,
   files: [{ sourcePath: 'src/spinner.css', baseSourceText: dependencyCssBase, workerSourceText: dependencyCssWorker, headSourceText: dependencyCssHead }]
 });
 assert.equal(cssDependencyMissingProof.status, 'blocked');
@@ -121,6 +122,19 @@ const dependencyCssOutput = [
   '}',
   ''
 ].join('\n');
+const cssDependencyAutoProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_dependency_graph_auto_proven',
+  files: [{ sourcePath: 'src/spinner.css', baseSourceText: dependencyCssBase, workerSourceText: dependencyCssWorker, headSourceText: dependencyCssHead }]
+});
+assert.equal(cssDependencyAutoProof.status, 'merged');
+assert.equal(cssDependencyAutoProof.summary.cssDependencySurfaceFiles, 1);
+assert.equal(cssDependencyAutoProof.summary.cssDependencyGraphEvidenceFiles, 1);
+assert.equal(cssDependencyAutoProof.summary.cssDependencyGraphBlockedFiles, 0);
+assert.equal(cssDependencyAutoProof.files[0].result.dependencyGraphProofs.length, 1);
+assert.equal(cssDependencyAutoProof.files[0].result.dependencyGraphProofs[0].proofLevel, 'css-custom-property-dependency-graph-project-source-bound');
+assert.equal(cssDependencyAutoProof.files[0].result.dependencyGraphProofs[0].cascadeKey, ':root::--motion-name');
+assert.equal(cssDependencyAutoProof.outputFiles[0].sourceText, dependencyCssOutput);
+assert.equal(matrixSurface(cssDependencyAutoProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'passed');
 const dependencyGraphHash = (sourceText) => parseCssSemanticSheet(sourceText, { sourcePath: 'src/spinner.css' }).dependencyGraphEvidence.dependencyGraphHash;
 const cssDependencyWithProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_dependency_graph_proven',

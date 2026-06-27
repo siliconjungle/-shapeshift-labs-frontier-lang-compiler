@@ -110,6 +110,8 @@ export interface JsTsProjectSafeMergeInput {
   readonly globalAugmentationCompatibilityProofs?: readonly JsTsProjectGlobalAugmentationCompatibilityProof[]; readonly jsxRenderReturnBranchProof?: JsTsProjectJsxRenderReturnBranchProof; readonly jsxRenderReturnBranchProofs?: readonly JsTsProjectJsxRenderReturnBranchProof[]; readonly externalSemanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof; readonly semanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof;
   readonly htmlMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly markupMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly htmlMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>; readonly markupMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>;
   readonly cssMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly styleMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly cssMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>; readonly styleMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>;
+  readonly disableProjectCssDependencyGraphProofSynthesis?: boolean;
+  readonly disableProjectCssModuleProofSynthesis?: boolean;
   readonly moduleResolution?: NativeProjectModuleResolutionOptions;
   readonly tsconfig?: JsTsProjectTsconfigInput | NativeProjectModuleResolutionOptions;
   readonly projectReferences?: JsTsProjectReferencesInput;
