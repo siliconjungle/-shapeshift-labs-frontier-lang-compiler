@@ -48,7 +48,7 @@ const htmlEventHandlerBlockedSurface = matrixSurface(htmlEventHandlerBlockedProj
 assert.equal(htmlEventHandlerBlockedSurface.proofStatuses['html-structural-merge'], 'failed');
 assert.equal(htmlEventHandlerBlockedSurface.missingRouteIds.includes('admit-html-structural-merge'), true);
 const htmlEventHandlerBlockedMissingEvidence = htmlEventHandlerBlockedProject.confidence.missingEvidence.find((item) => item.code === 'html-structural-merge-proof-blocked');
-assert.equal(htmlEventHandlerBlockedMissingEvidence.routeNext, 'attach-source-bound-html-runtime-proof-or-fix-duplicate-identity');
+assert.equal(htmlEventHandlerBlockedMissingEvidence.routeNext, 'attach-runtime-evidence-bound-html-runtime-proof-or-fix-duplicate-identity');
 assert.equal(htmlEventHandlerBlockedMissingEvidence.suggestedInput.htmlRuntimeBoundaryProofsByPath, true);
 assert.match(htmlEventHandlerBlockedMissingEvidence.summary, /exact base\/worker\/head\/output/);
 const htmlEventHandlerBlockedConflict = htmlEventHandlerBlockedProject.conflicts.find((conflict) => conflict.details.reasonCode === 'event-handler-runtime-boundary');
@@ -96,6 +96,8 @@ const htmlEventHandlerSourceOnlyProofProject = safeMergeJsTsProject({
 });
 assert.equal(htmlEventHandlerSourceOnlyProofProject.status, 'blocked');
 assert.equal(htmlEventHandlerSourceOnlyProofProject.summary.htmlProofGapBlockedFiles, 1);
+assert.equal(htmlEventHandlerSourceOnlyProofProject.summary.htmlCssBrowserRuntimeProofs, 0);
+assert.equal(matrixSurface(htmlEventHandlerSourceOnlyProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
 
 const htmlEventHandlerProvenProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_html_event_handler_runtime_source_bound_proof',
@@ -126,6 +128,8 @@ assert.equal(htmlEventHandlerProvenProject.files[0].result.browserRuntimeEquival
 assert.equal(htmlEventHandlerProvenProject.files[0].admission.browserRuntimeEquivalenceClaim, true);
 assert.equal(htmlEventHandlerProvenProject.files[0].result.runtimeBoundaryProofs[0].sourcePath, 'src/view.html');
 assert.equal(htmlEventHandlerProvenProject.files[0].result.runtimeBoundaryProofs[0].runtimeEvidenceBound, true);
+assert.equal(htmlEventHandlerProvenProject.files[0].result.runtimeBoundaryProofs[0].proofLevel, 'html-runtime-boundary-evidence-bound');
+assert.equal(htmlEventHandlerProvenProject.files[0].result.admission.reasonCodes.includes('html-runtime-boundary-evidence-bound'), true);
 assert.equal(htmlEventHandlerProvenProject.files[0].result.runtimeBoundaryProofs[0].runtimeSignals.includes('html-event-handler-runtime'), true);
 assert.equal(matrixSurface(htmlEventHandlerProvenProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
 assert.equal(matrixSurface(htmlEventHandlerProvenProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');

@@ -38,6 +38,7 @@ function isHtmlRuntimeBoundaryProofForChange(proof, change, binding) {
     proof.boundary === change.boundary &&
     sameStringSet(proof.boundaryAttributes ?? proof.changedBoundaryAttributes, change.boundaryAttributes) &&
     htmlRuntimeBoundaryProofSourceBound(proof, binding) &&
+    !htmlRuntimeBoundaryProofMakesBroadClaims(proof) &&
     htmlRuntimeBoundaryProofEvidenceMetadata(proof, change) !== undefined;
 }
 
@@ -66,7 +67,7 @@ function htmlRuntimeBoundaryProofRecord(proof, change, binding) {
     id: proof.id,
     kind: proof.kind,
     status: 'passed',
-    proofLevel: proof.proofLevel ?? 'html-runtime-boundary-source-bound',
+    proofLevel: proof.proofLevel ?? 'html-runtime-boundary-evidence-bound',
     reasonCode: change.reasonCode,
     side: change.side,
     boundary: change.boundary,
@@ -182,9 +183,17 @@ function htmlRuntimeBoundaryProvenResult(result, runtimeBoundaryProofs) {
       ...(result.admission ?? {}),
       browserRuntimeEquivalenceClaim: true,
       htmlRuntimeBoundaryProofs: runtimeBoundaryProofs,
-      reasonCodes: uniqueStrings([...(result.admission?.reasonCodes ?? []), 'html-runtime-boundary-source-bound'])
+      reasonCodes: uniqueStrings([...(result.admission?.reasonCodes ?? []), 'html-runtime-boundary-evidence-bound'])
     })
   });
+}
+
+function htmlRuntimeBoundaryProofMakesBroadClaims(proof) {
+  return proof.browserRuntimeEquivalenceClaim === true ||
+    proof.browserRenderEquivalenceClaim === true ||
+    proof.browserCascadeEquivalenceClaim === true ||
+    proof.semanticEquivalenceClaim === true ||
+    proof.autoMergeClaim === true;
 }
 
 function htmlRuntimeBoundaryAttributeGroups(sourceText) {
