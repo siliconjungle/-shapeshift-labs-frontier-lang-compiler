@@ -46,7 +46,11 @@ const proven = safeMergeJsTsProject({
         baseSourceHash: hashSemanticValue(base),
         workerSourceHash: hashSemanticValue(worker),
         headSourceHash: hashSemanticValue(head),
-        outputSourceHash: hashSemanticValue(output)
+        outputSourceHash: hashSemanticValue(output),
+        runtimeCommand: 'playwright test css-project-keyframes-runtime.spec.ts',
+        runtimeProbeId: 'css-project-keyframes-fade-probe',
+        runtimeEvidenceHash: hashSemanticValue('src/anim.css keyframes project runtime evidence'),
+        runtimeSignals: ['css-keyframes-runtime']
       }]
     }
   },
@@ -55,6 +59,7 @@ const proven = safeMergeJsTsProject({
 assert.equal(proven.status, 'merged');
 assert.equal(proven.summary.cssMergedFiles, 1);
 assert.equal(proven.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(proven.files[0].result.cascadeRuntimeProofs[0].runtimeEvidenceBound, true);
 assert.equal(proven.outputFiles[0].sourceText, output);
 
 const propertyPath = 'src/props.css';
@@ -86,6 +91,7 @@ assert.equal(propertyProven.summary.cssRuntimeDescriptorFiles, 1);
 assert.equal(propertyProven.summary.cssRuntimeDescriptorEvidenceFiles, 1);
 assert.equal(propertyProven.summary.cssPropertyDescriptorEvidenceFiles, 1);
 assert.equal(propertyProven.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(propertyProven.files[0].result.cascadeRuntimeProofs[0].runtimeSignals.includes('css-property-registration-runtime'), true);
 assert.equal(propertyProven.outputFiles[0].sourceText, propertyOutput);
 
 const pagePath = 'src/print.css';
@@ -117,10 +123,12 @@ assert.equal(pageProven.summary.cssRuntimeDescriptorFiles, 1);
 assert.equal(pageProven.summary.cssRuntimeDescriptorEvidenceFiles, 1);
 assert.equal(pageProven.summary.cssPageDescriptorEvidenceFiles, 1);
 assert.equal(pageProven.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(pageProven.files[0].result.cascadeRuntimeProofs[0].runtimeSignals.includes('css-page-runtime'), true);
 assert.equal(pageProven.outputFiles[0].sourceText, pageOutput);
 
 function runtimeProof({ id, sourcePath, reasonCode, shapeKey, base, worker, head, output }) {
-  return { id, kind: 'css-source-bound-cascade-runtime-proof', status: 'passed', sourcePath, reasonCode, side: 'worker', shapeKey, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output) };
+  const runtimeSignal = reasonCode.includes('property') ? 'css-property-registration-runtime' : 'css-page-runtime';
+  return { id, kind: 'css-source-bound-cascade-runtime-proof', status: 'passed', sourcePath, reasonCode, side: 'worker', shapeKey, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output), runtimeCommand: 'playwright test css-project-runtime-at-rules.spec.ts', runtimeProbeId: `${shapeKey}:project-probe`, runtimeEvidenceHash: hashSemanticValue(`${sourcePath}:${reasonCode}:${shapeKey}:project-runtime`), runtimeSignals: [runtimeSignal] };
 }
 
 function matrixSurface(result, surface) {

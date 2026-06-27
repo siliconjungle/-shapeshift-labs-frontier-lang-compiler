@@ -17,7 +17,11 @@ const proof = {
   baseSourceHash: hashSemanticValue(base),
   workerSourceHash: hashSemanticValue(worker),
   headSourceHash: hashSemanticValue(base),
-  outputSourceHash: hashSemanticValue(output)
+  outputSourceHash: hashSemanticValue(output),
+  runtimeCommand: 'playwright test css-project-cascade-runtime.spec.ts',
+  runtimeProbeId: 'css-project-media-cascade-probe',
+  runtimeEvidenceHash: hashSemanticValue('src/button.css media project cascade runtime evidence'),
+  runtimeSignals: ['css-cascade-runtime']
 };
 
 const project = safeMergeJsTsProject({
@@ -37,6 +41,7 @@ assert.equal(project.summary.htmlCssBrowserRuntimeProofs, 1);
 assert.equal(project.files[0].result.browserCascadeEquivalenceClaim, true);
 assert.equal(project.files[0].result.admission.browserCascadeEquivalenceClaim, true);
 assert.equal(project.files[0].result.cascadeRuntimeProofs[0].reasonCode, 'css-atrule-new-scope-unsupported');
+assert.equal(project.files[0].result.cascadeRuntimeProofs[0].runtimeEvidenceBound, true);
 assert.equal(project.outputFiles[0].sourceText, output);
 assert.equal(matrixSurface(project, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'passed');
 assert.equal(matrixSurface(project, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
