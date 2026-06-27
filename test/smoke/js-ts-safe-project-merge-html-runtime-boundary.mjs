@@ -85,6 +85,42 @@ assert.equal(htmlEventHandlerProvenProject.files[0].result.runtimeBoundaryProofs
 assert.equal(matrixSurface(htmlEventHandlerProvenProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
 assert.equal(matrixSurface(htmlEventHandlerProvenProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
 
+const htmlInlineStyleBase = '<div data-frontier-key="card" style="color: red">Card</div>\n';
+const htmlInlineStyleWorker = '<div data-frontier-key="card" style="color: blue">Card</div>\n';
+const htmlInlineStyleBlockedProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_inline_style_runtime_block',
+  files: [{ sourcePath: 'src/view.html', baseSourceText: htmlInlineStyleBase, workerSourceText: htmlInlineStyleWorker, headSourceText: htmlInlineStyleBase }]
+});
+assert.equal(htmlInlineStyleBlockedProject.status, 'blocked');
+assert.equal(htmlInlineStyleBlockedProject.summary.htmlRuntimeBoundaryEvidenceFiles, 1);
+assert.equal(htmlInlineStyleBlockedProject.summary.htmlProofGapBlockedFiles, 1);
+assert.equal(htmlInlineStyleBlockedProject.conflicts.some((conflict) => conflict.details.reasonCode === 'inline-style-runtime-boundary'), true);
+const htmlInlineStyleBlockedConflict = htmlInlineStyleBlockedProject.conflicts.find((conflict) => conflict.details.reasonCode === 'inline-style-runtime-boundary');
+assert.match(htmlInlineStyleBlockedConflict.details.proofGap.nextProof, /html-inline-style-attribute/);
+
+const htmlInlineStyleProvenProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_inline_style_runtime_source_bound_proof',
+  htmlRuntimeBoundaryProofsByPath: {
+    'src/view.html': [{
+      id: 'html_inline_style_source_bound',
+      kind: 'html-source-bound-runtime-boundary-proof',
+      status: 'passed',
+      sourcePath: 'src/view.html',
+      reasonCode: 'inline-style-runtime-boundary',
+      side: 'worker',
+      boundary: 'html-inline-style-attribute',
+      boundaryAttributes: ['style'],
+      sourceTexts: { base: htmlInlineStyleBase, worker: htmlInlineStyleWorker, head: htmlInlineStyleBase, output: htmlInlineStyleWorker }
+    }]
+  },
+  files: [{ sourcePath: 'src/view.html', baseSourceText: htmlInlineStyleBase, workerSourceText: htmlInlineStyleWorker, headSourceText: htmlInlineStyleBase }]
+});
+assert.equal(htmlInlineStyleProvenProject.status, 'merged');
+assert.equal(htmlInlineStyleProvenProject.summary.htmlRuntimeBoundaryEvidenceFiles, 1);
+assert.equal(htmlInlineStyleProvenProject.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(htmlInlineStyleProvenProject.files[0].result.browserRuntimeEquivalenceClaim, true);
+assert.equal(htmlInlineStyleProvenProject.files[0].result.htmlRuntimeProofs[0].boundary, 'html-inline-style-attribute');
+
 function matrixSurface(result, surface) {
   const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);
   assert.ok(record, `missing ${surface} matrix surface`);

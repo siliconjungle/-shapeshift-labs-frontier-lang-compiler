@@ -75,7 +75,7 @@ function hasRuntimeBoundaryConflict(file) {
   return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => HtmlRuntimeBoundaryReasonCodes.has(conflict?.details?.reasonCode));
 }
 function hasHtmlRuntimeBoundaryProof(file) {
-  return [...(file?.result?.runtimeBoundaryProofs ?? []), ...(file?.result?.admission?.htmlRuntimeBoundaryProofs ?? file?.admission?.htmlRuntimeBoundaryProofs ?? [])].some((proof) => proof?.status === 'passed' && HtmlRuntimeBoundaryReasonCodes.has(proof.reasonCode));
+  return [...(file?.result?.runtimeBoundaryProofs ?? []), ...(file?.result?.htmlRuntimeProofs ?? []), ...(file?.result?.admission?.htmlRuntimeBoundaryProofs ?? file?.admission?.htmlRuntimeBoundaryProofs ?? []), ...(file?.result?.admission?.htmlBrowserRuntimeProofs ?? file?.admission?.htmlBrowserRuntimeProofs ?? [])].some((proof) => proof?.status === 'passed' && HtmlRuntimeBoundaryReasonCodes.has(proof.reasonCode));
 }
 function hasFrameworkBoundaryConflict(file) {
   return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => HtmlFrameworkBoundaryReasonCodes.has(conflict?.details?.reasonCode));
