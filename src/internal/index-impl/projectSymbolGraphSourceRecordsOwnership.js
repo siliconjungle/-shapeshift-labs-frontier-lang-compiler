@@ -67,6 +67,10 @@ function sourceSpanOwnershipAnchor(span, role, context, spans, index) {
     exactParserTrivia: parserTriviaExactness.exactParserTrivia,
     parserTriviaEvidenceId: parserTriviaExactness.evidenceId,
     parserTriviaAdapterId: parserTriviaExactness.adapterId,
+    parserSpanCoverageStatus: parserTriviaExactness.parserSpanCoverageStatus,
+    parserSpanCoverageEvidenceId: parserTriviaExactness.parserSpanCoverageEvidenceId,
+    parserSpanCoverageReasonCodes: parserTriviaExactness.parserSpanCoverageReasonCodes,
+    parserSpanCoverageBlockReasonCodes: parserTriviaExactness.parserSpanCoverageBlockReasonCodes,
     parserTriviaExactnessReasonCodes: parserTriviaExactness.reasonCodes,
     parserTriviaExactnessBlockReasonCodes: parserTriviaExactness.blockReasonCodes,
     ...parserTriviaOwnership
@@ -94,6 +98,7 @@ function parserTriviaExactnessForContext(context) {
       sourceHash: context.sourceHash,
       parserEvidence,
       parserTokenTriviaEvidence: parserEvidence,
+      parserSpanCoverageProof: context.preservation.metadata?.parserSpanCoverageProof,
       truncated: context.preservation.summary?.truncated === true
     });
   }
@@ -102,6 +107,7 @@ function parserTriviaExactnessForContext(context) {
     sourceHash: context.sourceHash,
     parserEvidence,
     parserTokenTriviaEvidence: parserEvidence,
+    parserSpanCoverageProof: context.preservation.metadata?.parserSpanCoverageProof,
     truncated: context.preservation.summary?.truncated === true
   });
 }

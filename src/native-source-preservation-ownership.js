@@ -207,6 +207,10 @@ function createPreservedSourceOwnershipAnchor(input = {}) {
     exactParserTrivia: parserTriviaExactness.exactParserTrivia,
     parserTriviaEvidenceId: parserTriviaExactness.evidenceId,
     parserTriviaAdapterId: parserTriviaExactness.adapterId,
+    parserSpanCoverageStatus: parserTriviaExactness.parserSpanCoverageStatus,
+    parserSpanCoverageEvidenceId: parserTriviaExactness.parserSpanCoverageEvidenceId,
+    parserSpanCoverageReasonCodes: parserTriviaExactness.parserSpanCoverageReasonCodes,
+    parserSpanCoverageBlockReasonCodes: parserTriviaExactness.parserSpanCoverageBlockReasonCodes,
     parserTriviaExactnessReasonCodes: parserTriviaExactness.reasonCodes,
     parserTriviaExactnessBlockReasonCodes: parserTriviaExactness.blockReasonCodes
   });

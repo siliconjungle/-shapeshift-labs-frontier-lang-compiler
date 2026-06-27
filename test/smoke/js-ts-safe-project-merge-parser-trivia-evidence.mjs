@@ -43,6 +43,9 @@ assert.equal(exactFile.parserTriviaExactnessStatus, 'exact');
 assert.equal(exactFile.exactParserTrivia, true);
 assert.equal(exactFile.losslessCst, true);
 assert.equal(exactFile.parserEvidence, 'estree-parser-token-comment-ranges');
+assert.equal(exactFile.parserSpanCoverageStatus, 'exact');
+assert.equal(exactFile.parserSpanCoverageEvidenceId.includes('parser-span-coverage'), true);
+assert.equal(exactFile.parserSpanCoverageReasonCodes.includes('parser-token-comment-span-coverage-exact'), true);
 const exactDirective = exactProject.outputProjectSymbolGraph.sourceSpanRecords
   .find((record) => record.role === 'directive' && record.kind === 'runtime-directive');
 const exactLeadingComment = exactProject.outputProjectSymbolGraph.sourceSpanRecords
@@ -52,11 +55,17 @@ const exactJsdocComment = exactProject.outputProjectSymbolGraph.sourceSpanRecord
 const exactBlockComment = exactProject.outputProjectSymbolGraph.sourceSpanRecords
   .find((record) => record.role === 'comment' && record.kind === 'block-comment');
 assert.equal(exactDirective.parserTriviaOwnershipStatus, 'exact');
+assert.equal(exactDirective.parserSpanCoverageStatus, 'exact');
+assert.equal(exactDirective.parserSpanCoverageEvidenceId, exactFile.parserSpanCoverageEvidenceId);
 assert.equal(exactDirective.parserTriviaOwnershipBlockReasonCodes.length, 0);
 assert.equal(exactLeadingComment.parserTriviaOwnershipStatus, 'exact');
+assert.equal(exactLeadingComment.parserSpanCoverageStatus, 'exact');
+assert.equal(exactLeadingComment.parserSpanCoverageEvidenceId, exactFile.parserSpanCoverageEvidenceId);
 assert.equal(exactLeadingComment.parserTriviaOwnershipBlockReasonCodes.length, 0);
 assert.equal(exactJsdocComment.parserTriviaOwnershipRelation, 'jsdoc-comment');
 assert.equal(exactJsdocComment.parserTriviaOwnershipStatus, 'exact');
+assert.equal(exactJsdocComment.ownershipAnchor.parserSpanCoverageStatus, 'exact');
+assert.equal(exactJsdocComment.ownershipAnchor.parserSpanCoverageEvidenceId, exactFile.parserSpanCoverageEvidenceId);
 assert.equal(exactJsdocComment.parserTriviaOwnershipReasonCodes.includes('jsdoc-comment-ownership'), true);
 assert.equal(exactBlockComment.parserTriviaOwnershipRelation, 'block-comment');
 assert.equal(exactBlockComment.parserTriviaOwnershipStatus, 'exact');
@@ -72,6 +81,7 @@ const stageProject = safeMergeJsTsProject({
 assert.equal(stageProject.status, 'merged');
 for (const stage of ['base', 'worker', 'head', 'output']) {
   assert.equal(stageProject.projectGraphDelta.stages[stage].projectSymbolGraph.sourceFileRecords[0].parserTriviaExactnessStatus, 'exact');
+  assert.equal(stageProject.projectGraphDelta.stages[stage].projectSymbolGraph.sourceFileRecords[0].parserSpanCoverageStatus, 'exact');
 }
 
 const metadataOnlyProject = safeMergeJsTsProject({

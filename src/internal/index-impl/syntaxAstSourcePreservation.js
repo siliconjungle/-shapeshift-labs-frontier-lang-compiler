@@ -6,20 +6,22 @@ import {
   preservedSourceSegmentRole
 } from '../../native-source-preservation-ownership.js';
 import { createNativeSourcePreservation } from './createNativeSourcePreservation.js';
+import { createSyntaxAstParserSpanCoverageEvidence } from './syntaxAstParserSpanCoverage.js';
 
 export function createSyntaxAstSourcePreservation(ast, input, options = {}) {
   if (!ast || typeof input.sourceText !== 'string') return undefined;
   const sourceText = input.sourceText;
   const sourceHash = hashSemanticValue(sourceText);
   const parserEvidence = `${options.parser ?? input.parser ?? 'syntax-ast'}-parser-token-comment-ranges`;
+  const adapterId = input.adapterId ?? options.adapterId ?? `${options.parser ?? input.parser ?? 'syntax'}-native-importer`;
   const tokensAndTrivia = syntaxAstTokensAndTrivia(ast, input, {
     ...options,
+    adapterId,
     parserEvidence,
     sourceHash,
     sourceText
   });
   if (!tokensAndTrivia?.exact) return undefined;
-  const adapterId = input.adapterId ?? options.adapterId ?? `${options.parser ?? input.parser ?? 'syntax'}-native-importer`;
   return createNativeSourcePreservation({
     language: input.language ?? options.language ?? 'javascript',
     sourcePath: input.sourcePath,
@@ -28,15 +30,8 @@ export function createSyntaxAstSourcePreservation(ast, input, options = {}) {
     tokensAndTrivia,
     includeTokens: options.includeTokens !== false,
     includeTrivia: options.includeTrivia !== false,
-    parserTriviaEvidence: {
-      status: 'exact',
-      exactParserTrivia: true,
-      losslessCst: true,
-      sourceHash,
-      adapterId,
-      evidenceId: `${adapterId}:parser-token-comment:${idFragment(input.sourcePath ?? sourceHash)}`,
-      parserEvidence
-    },
+    parserSpanCoverageProof: tokensAndTrivia.parserSpanCoverageProof,
+    parserTriviaEvidence: tokensAndTrivia.parserTriviaEvidence,
     metadata: {
       parserTokenTriviaEvidence: parserEvidence,
       parserTokenTriviaSource: options.astFormat ?? options.parser ?? 'syntax-ast'
@@ -56,14 +51,30 @@ function syntaxAstTokensAndTrivia(ast, input, options) {
   const whitespaceSegments = whitespaceTriviaSegments(parserSegments, input, options);
   const allTrivia = [...parserSegments.filter((segment) => segment.role === 'trivia'), ...whitespaceSegments]
     .sort((left, right) => left.span.start - right.span.start || left.span.end - right.span.end);
-  const tokens = limitRecords(parserSegments.filter((segment) => segment.role !== 'trivia'), options.maxTokens);
-  const trivia = limitRecords(allTrivia, options.maxTrivia);
+  const tokenLimit = limitRecords(parserSegments.filter((segment) => segment.role !== 'trivia'), options.maxTokens);
+  const triviaLimit = limitRecords(allTrivia, options.maxTrivia);
+  const truncated = tokenLimit.truncated || triviaLimit.truncated;
+  const coverage = createSyntaxAstParserSpanCoverageEvidence({
+    sourceText,
+    sourcePath: input.sourcePath,
+    language: input.language ?? options.language,
+    sourceHash: options.sourceHash,
+    segments: [...tokenLimit.records, ...triviaLimit.records],
+    tokenCount: tokenLimit.records.length,
+    triviaCount: triviaLimit.records.length,
+    commentCount: triviaLimit.records.filter((entry) => isCommentKind(entry.kind)).length,
+    parserEvidence: options.parserEvidence,
+    adapterId: options.adapterId,
+    truncated
+  });
   return {
     exact: true,
-    tokens: tokens.records,
-    trivia: trivia.records,
-    truncated: tokens.truncated || trivia.truncated,
-    parserEvidence: options.parserEvidence
+    tokens: tokenLimit.records.map((entry) => withParserTriviaEvidence(entry, coverage.parserTriviaEvidence)),
+    trivia: triviaLimit.records.map((entry) => withParserTriviaEvidence(entry, coverage.parserTriviaEvidence)),
+    truncated,
+    parserEvidence: options.parserEvidence,
+    parserSpanCoverageProof: coverage.parserSpanCoverageProof,
+    parserTriviaEvidence: coverage.parserTriviaEvidence
   };
 }
 
@@ -172,6 +183,29 @@ function preservedParserSegment(input) {
   };
 }
 
+function withParserTriviaEvidence(record, parserTriviaEvidence) {
+  const role = preservedSourceSegmentRole(record.kind);
+  return {
+    ...record,
+    ownershipAnchor: createPreservedSourceOwnershipAnchor({
+      kind: record.kind,
+      role,
+      text: record.text,
+      textHash: record.textHash,
+      sourcePath: record.span.path,
+      sourceHash: record.span.sourceId,
+      span: record.span,
+      anchorKind: preservedOwnershipAnchorKind(record.kind, role),
+      parserEvidence: parserTriviaEvidence.parserEvidence,
+      parserTriviaEvidence
+    }),
+    metadata: {
+      ...record.metadata,
+      parserSpanCoverageStatus: parserTriviaEvidence.parserSpanCoverageProof?.status
+    }
+  };
+}
+
 function parserSegmentsCoverSource(segments, sourceText) {
   let cursor = 0;
   for (const segment of segments) {
@@ -241,6 +275,10 @@ function preservedCommentKind(text) {
   if (value.startsWith('/**') && value[3] !== '/') return 'jsdoc-comment';
   if (value.startsWith('/*')) return 'block-comment';
   return 'comment';
+}
+
+function isCommentKind(kind) {
+  return kind === 'comment' || kind === 'jsdoc-comment' || kind === 'block-comment' || kind === 'source-map-comment';
 }
 
 function limitRecords(records, maxValue) {

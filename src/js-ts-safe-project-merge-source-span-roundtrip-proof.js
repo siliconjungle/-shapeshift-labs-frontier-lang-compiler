@@ -96,7 +96,11 @@ function parserTriviaExactnessForFile(file, artifacts) {
     {
       sourcePath: file.sourcePath,
       sourceHash: file.outputHash,
-      parserEvidence: artifacts?.metadata?.parserEvidence
+      parserEvidence: artifacts?.metadata?.parserEvidence,
+      parserSpanCoverageProof: file.parserSpanCoverageProof
+        ?? file.metadata?.parserSpanCoverageProof
+        ?? file.result?.metadata?.parserSpanCoverageProof
+        ?? artifacts?.metadata?.parserSpanCoverageProof
     }
   );
 }

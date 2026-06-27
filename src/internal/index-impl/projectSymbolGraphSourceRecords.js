@@ -70,6 +70,10 @@ function sourceFileRecord(context) {
     exactParserTrivia: parserTriviaExactness.exactParserTrivia,
     parserTriviaEvidenceId: parserTriviaExactness.evidenceId,
     parserTriviaAdapterId: parserTriviaExactness.adapterId,
+    parserSpanCoverageStatus: parserTriviaExactness.parserSpanCoverageStatus,
+    parserSpanCoverageEvidenceId: parserTriviaExactness.parserSpanCoverageEvidenceId,
+    parserSpanCoverageReasonCodes: parserTriviaExactness.parserSpanCoverageReasonCodes,
+    parserSpanCoverageBlockReasonCodes: parserTriviaExactness.parserSpanCoverageBlockReasonCodes,
     parserTriviaExactnessReasonCodes: parserTriviaExactness.reasonCodes,
     parserTriviaExactnessBlockReasonCodes: parserTriviaExactness.blockReasonCodes,
     sourceLedgerAvailable: ownership.sourceLedgerAvailable,
@@ -159,6 +163,10 @@ function sourceSpanRecord(span, index, context, identity) {
     exactParserTrivia: parserTriviaExactness.exactParserTrivia,
     parserTriviaEvidenceId: parserTriviaExactness.evidenceId,
     parserTriviaAdapterId: parserTriviaExactness.adapterId,
+    parserSpanCoverageStatus: parserTriviaExactness.parserSpanCoverageStatus,
+    parserSpanCoverageEvidenceId: parserTriviaExactness.parserSpanCoverageEvidenceId,
+    parserSpanCoverageReasonCodes: parserTriviaExactness.parserSpanCoverageReasonCodes,
+    parserSpanCoverageBlockReasonCodes: parserTriviaExactness.parserSpanCoverageBlockReasonCodes,
     parserTriviaExactnessReasonCodes: parserTriviaExactness.reasonCodes,
     parserTriviaExactnessBlockReasonCodes: parserTriviaExactness.blockReasonCodes,
     parserTriviaOwnershipStatus,
@@ -218,6 +226,7 @@ function parserTriviaExactnessForPreservation(preservation) {
       sourceHash: preservation?.sourceHash,
       parserEvidence: tokenTriviaParserEvidence,
       parserTokenTriviaEvidence: tokenTriviaParserEvidence,
+      parserSpanCoverageProof: preservation?.metadata?.parserSpanCoverageProof,
       truncated: preservation?.summary?.truncated === true
     });
   }
