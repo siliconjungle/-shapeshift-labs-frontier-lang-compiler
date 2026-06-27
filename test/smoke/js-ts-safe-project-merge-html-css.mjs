@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
 import { htmlCssProjectSummary } from '../../src/js-ts-safe-project-merge-html-css-summary.js';
 
@@ -159,13 +160,16 @@ const cssBlockedSurface = matrixSurface(cssBlockedProject, 'css-cascade-merge-ad
 assert.equal(cssBlockedSurface.proofStatuses['css-cascade-merge'], 'failed');
 assert.equal(cssBlockedSurface.missingRouteIds.includes('admit-css-cascade-merge'), true);
 
+const selectorMoveBase = '.button { color: red; }\n';
+const selectorMoveWorker = '.primary { color: red; }\n';
+const selectorMoveHead = '.button { color: red; background-color: white; }\n';
 const cssSelectorMoveProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_selector_move_conflict',
   files: [{
     sourcePath: 'src/button.css',
-    baseSourceText: '.button { color: red; }\n',
-    workerSourceText: '.primary { color: red; }\n',
-    headSourceText: '.button { color: red; background-color: white; }\n'
+    baseSourceText: selectorMoveBase,
+    workerSourceText: selectorMoveWorker,
+    headSourceText: selectorMoveHead
   }]
 });
 assert.equal(cssSelectorMoveProject.status, 'blocked');
@@ -181,18 +185,19 @@ const cssSelectorMoveRebasedProject = safeMergeJsTsProject({
   cssMergeOptionsByPath: {
     'src/button.css': {
       selectorTargetGraphHash: 'target-graph-v1',
-      selectorTargetEquivalences: [{ sourcePath: 'src/button.css', fromSelectors: ['.button'], toSelectors: ['.primary'], fromSpecificity: [[0, 1, 0]], toSpecificity: [[0, 1, 0]], graphHash: 'target-graph-v1' }]
+      cssSelectorTargetProofs: [selectorProof({ id: 'proof_project_selector_target_button_primary', graphHash: 'target-graph-v1', base: selectorMoveBase, worker: selectorMoveWorker, head: selectorMoveHead, fromSelectors: ['.button'], toSelectors: ['.primary'], specificity: [[0, 1, 0]] })]
     }
   },
   files: [{
     sourcePath: 'src/button.css',
-    baseSourceText: '.button { color: red; }\n',
-    workerSourceText: '.primary { color: red; }\n',
-    headSourceText: '.button { color: red; background-color: white; }\n'
+    baseSourceText: selectorMoveBase,
+    workerSourceText: selectorMoveWorker,
+    headSourceText: selectorMoveHead
   }]
 });
 assert.equal(cssSelectorMoveRebasedProject.status, 'merged');
 assert.equal(cssSelectorMoveRebasedProject.summary.cssSelectorTargetRebasedFiles, 1);
+assert.equal(cssSelectorMoveRebasedProject.files[0].result.selectorTargetEvidence.rebaseProofs[0].proofLevel, 'css-selector-target-source-bound');
 assert.match(cssSelectorMoveRebasedProject.outputFiles[0].sourceText, /\.primary \{/);
 assert.match(cssSelectorMoveRebasedProject.outputFiles[0].sourceText, /background-color: white/);
 assert.equal(matrixSurface(cssSelectorMoveRebasedProject, 'css-selector-target-evidence').proofStatuses['css-selector-target-evidence'], 'passed');
@@ -241,14 +246,7 @@ const cssSpecificSelectorListRebased = safeMergeJsTsProject({
   cssMergeOptionsByPath: {
     'src/button.css': {
       selectorTargetGraphHash: 'specific-target-graph-v1',
-      selectorTargetEquivalences: [{
-        sourcePath: 'src/button.css',
-        fromSelectors: ['.card > .button:hover', '.toolbar .button::before'],
-        toSelectors: ['.card > .primary:hover', '.toolbar .button::before'],
-        fromSpecificity: [[0, 3, 0], [0, 3, 0]],
-        toSpecificity: [[0, 3, 0], [0, 3, 0]],
-        graphHash: 'specific-target-graph-v1'
-      }]
+      cssSelectorTargetProofs: [selectorProof({ id: 'proof_project_specific_selector_list', graphHash: 'specific-target-graph-v1', base: cssSpecificSelectorListBase, worker: cssSpecificSelectorListWorker, head: cssSpecificSelectorListHead, fromSelectors: ['.card > .button:hover', '.toolbar .button::before'], toSelectors: ['.card > .primary:hover', '.toolbar .button::before'], specificity: [[0, 3, 0], [0, 3, 0]] })]
     }
   },
   files: [{
@@ -303,3 +301,4 @@ assert.equal(layerScopedReasonSummary.cssScopedCascadeEvidenceFiles, 0);
 assert.equal(layerScopedReasonSummary.cssScopedCascadeBlockedFiles, 1);
 
 function matrixSurface(result, surface) { const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface); assert.ok(record, `missing ${surface} matrix surface`); return record; }
+function selectorProof({ id, graphHash, base, worker, head, fromSelectors, toSelectors, specificity }) { return { id, kind: 'css-source-bound-selector-target-proof', status: 'passed', sourcePath: 'src/button.css', reasonCode: 'css-selector-target-rebase-unproved', moveSide: 'worker', rebasedSide: 'head', fromSelectors, toSelectors, fromSpecificity: specificity, toSpecificity: specificity, selectorTargetGraphHash: graphHash, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head) }; }
