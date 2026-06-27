@@ -13,5 +13,6 @@ typeRecord.callableSignatureEquivalenceProof?.callSignatureSetHash satisfies str
 typeRecord.callableSignatureEquivalenceProof?.constructSignatureSetHash satisfies string | undefined;
 typeRecord.typeEquivalenceProof?.callSignatureSetHash satisfies string | undefined;
 typeRecord.typeEquivalenceProof?.constructSignatureSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceProof?.sourceBoundPublicApi satisfies boolean | undefined;
 callableProof.autoMergeClaim satisfies false | undefined;
 callableProof.semanticEquivalenceClaim satisfies false | undefined;

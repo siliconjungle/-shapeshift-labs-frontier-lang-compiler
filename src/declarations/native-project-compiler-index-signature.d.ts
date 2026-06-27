@@ -5,3 +5,15 @@ export interface NativeProjectSymbolGraphCompilerIndexSignatureRecord {
   readonly readonly?: boolean;
   readonly declarationText?: string;
 }
+
+declare module './native-project-compiler-scope.js' {
+  interface NativeProjectSymbolGraphCompilerTypeEquivalenceProof {
+    readonly indexSignatureSetHash?: string;
+    readonly indexSignatureCount?: number;
+    readonly indexSignatureReadonlyCount?: number;
+  }
+
+  interface NativeProjectSymbolGraphCompilerTypeRecord {
+    readonly indexSignatureReadonlyCount?: number;
+  }
+}

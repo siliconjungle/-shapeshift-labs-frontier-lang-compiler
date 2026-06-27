@@ -18,6 +18,20 @@ typeRecord.typeEquivalenceUnionTypeSetHash satisfies string | undefined;
 typeRecord.typeEquivalenceIntersectionTypeSetHash satisfies string | undefined;
 typeRecord.typeEquivalenceTupleTypeSetHash satisfies string | undefined;
 typeRecord.typeEquivalenceProof?.unionTypeSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceProof?.intersectionTypeSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceProof?.tupleTypeSetHash satisfies string | undefined;
+typeRecord.typeEquivalenceProof?.unionTypeCount satisfies number | undefined;
+typeRecord.typeEquivalenceProof?.intersectionTypeCount satisfies number | undefined;
+typeRecord.typeEquivalenceProof?.tupleTypeCount satisfies number | undefined;
+typeRecord.advancedTypeProofRequirement satisfies
+  compilerApi.NativeProjectSymbolGraphCompilerAdvancedTypeProofRequirement | undefined;
+typeRecord.advancedTypeProofRequirement?.requiredSignals?.[0] satisfies string | undefined;
+typeRecord.advancedTypeProofRequirement?.sourceBound satisfies boolean | undefined;
+typeRecord.advancedTypeProofRequirement?.autoMergeClaim satisfies false | undefined;
+typeRecord.advancedTypeMissingProof satisfies
+  compilerApi.NativeProjectSymbolGraphCompilerAdvancedTypeMissingProof | undefined;
+typeRecord.advancedTypeMissingProof?.reasonCode satisfies string | undefined;
+typeRecord.advancedTypeMissingProof?.semanticEquivalenceClaim satisfies false | undefined;
 shapeRecord.templateHeadText satisfies string | undefined;
 shapeRecord.templateSpanCount satisfies number | undefined;
 shapeRecord.templateSpanTexts?.[0] satisfies string | undefined;

@@ -27,6 +27,7 @@
     "./public-api-js-ts-runtime-order-types.ts",
     "./public-api-js-ts-scope-record-types.ts",
     "./public-api-js-ts-semantic-equivalence-proof-types.ts",
+    "./public-api-js-ts-type-proof-surface-types.ts",
     "./public-api-parser-trivia-types.ts",
     "./public-api-semantic-slice-types.ts",
     "./public-api-semantic-edit-types.ts",
