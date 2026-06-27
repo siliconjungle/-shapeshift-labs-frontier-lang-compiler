@@ -262,6 +262,7 @@ function htmlProofGapSummary(reasonCode) {
   if (reasonCode === 'html-duplicate-explicit-identity') return 'Duplicate explicit HTML identity keys make structural target admission ambiguous.';
   if (reasonCode === 'event-handler-runtime-boundary') return 'HTML event handler attributes execute in the browser runtime and require source-bound host evidence.';
   if (reasonCode === 'inline-style-runtime-boundary') return 'HTML inline style attributes affect browser cascade and rendering and require source-bound host evidence.';
+  if (reasonCode === 'iframe-runtime-boundary' || reasonCode === 'iframe-srcdoc-runtime-boundary') return reasonCode === 'iframe-runtime-boundary' ? 'HTML iframe runtime attributes affect nested browsing-context execution and require source-bound host evidence.' : 'HTML iframe srcdoc attributes define nested browsing-context content and require source-bound host evidence.';
   return 'HTML proof gap requires source-bound evidence before structural merge admission.';
 }
 
@@ -269,6 +270,7 @@ function htmlProofGapNextProof(reasonCode) {
   if (reasonCode === 'html-duplicate-explicit-identity') return 'Rename duplicate explicit HTML identity keys or supply parser-backed identity evidence with unique explicitIdentityKeys on every side.';
   if (reasonCode === 'event-handler-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary, boundaryAttributes, and exact base/worker/head/output source text or hashes.';
   if (reasonCode === 'inline-style-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary "html-inline-style-attribute", boundaryAttributes ["style"], and exact base/worker/head/output source text or hashes.';
+  if (reasonCode === 'iframe-runtime-boundary' || reasonCode === 'iframe-srcdoc-runtime-boundary') return 'Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, boundary, boundaryAttributes, and exact base/worker/head/output source text or hashes.';
   return 'Attach source-bound HTML parser, identity, and runtime-boundary evidence for the changed file before structural admission.';
 }
 
