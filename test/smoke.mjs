@@ -121,6 +121,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-html-css.mjs',
   './smoke/js-ts-safe-project-merge-html-css-shorthand.mjs',
   './smoke/js-ts-safe-project-merge-html-css-cascade-proof.mjs',
+  './smoke/js-ts-safe-project-merge-html-css-at-rules.mjs',
   './smoke/js-ts-safe-project-merge-html-runtime-boundary.mjs',
   './smoke/js-ts-safe-project-merge-html-css-dependencies.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-use-sites.mjs',
