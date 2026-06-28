@@ -46,6 +46,9 @@ const smokeModules = [
   './smoke/js-ts-safe-merge-import-shapes.mjs',
   './smoke/js-ts-safe-merge-new-imports.mjs',
   './smoke/js-ts-safe-merge-composed.mjs',
+  './smoke/js-ts-safe-merge-binding-patterns.mjs',
+  './smoke/js-ts-safe-merge-class-element-invariants.mjs',
+  './smoke/js-ts-safe-merge-scope-use-def.mjs',
   './smoke/js-ts-safe-merge-semantic-edit-fallback.mjs',
   './smoke/js-ts-safe-merge-rename-move-fallback.mjs',
   './smoke/js-ts-safe-merge-independent-deletion-fallback.mjs',
@@ -84,6 +87,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-scope-use-def-closure-capture.mjs',
   './smoke/js-ts-safe-project-merge-scope-use-def-template-literal.mjs',
   './smoke/js-ts-safe-project-merge-scope-use-def-computed-namespace.mjs',
+  './smoke/js-ts-safe-project-merge-scope-use-def-default-reexport-alias.mjs',
   './smoke/js-ts-safe-project-merge-scope-use-def-receiver-members.mjs',
   './smoke/js-ts-safe-project-merge-scope-use-def-reference-conflicts.mjs',
   './smoke/js-ts-safe-project-merge-scope-use-def-ambiguous-evidence.mjs',
@@ -119,6 +123,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-jsx-hook-dependencies.mjs',
   './smoke/js-ts-safe-project-merge-jsx-hook-effects.mjs',
   './smoke/js-ts-safe-project-merge-jsx-event-handlers.mjs',
+  './smoke/js-ts-safe-project-merge-jsx-prop-values.mjs',
   './smoke/js-ts-safe-project-merge-html-css.mjs',
   './smoke/js-ts-safe-project-merge-html-css-selectors.mjs',
   './smoke/js-ts-safe-project-merge-html-css-scoped-basic.mjs',
@@ -152,7 +157,9 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-output-re-export-graph.mjs',
   './smoke/js-ts-safe-project-merge-new-import-graph.mjs',
   './smoke/js-ts-safe-project-merge-import-attributes-graph.mjs',
+  './smoke/js-ts-safe-project-merge-symbol-move-default-admission.mjs',
   './smoke/js-ts-safe-project-merge-graph-limits.mjs',
+  './smoke/js-ts-safe-project-merge-admission-proof-policy.mjs',
   './smoke/js-ts-conflict-sidecars.mjs',
   './smoke/js-ts-fixture-corpus.mjs',
   './smoke/js-ts-real-repo-corpus-local-checkout-proof.mjs',
@@ -168,6 +175,7 @@ const smokeModules = [
   './smoke/js-ts-semantic-merge-admission-matrix-runtime.mjs',
   './smoke/js-ts-semantic-merge-admission-matrix-module-host.mjs',
   './smoke/js-ts-semantic-merge-admission-matrix-jsx.mjs',
+  './smoke/js-ts-semantic-merge-admission-matrix-readme-real-repo.mjs',
   './smoke/js-ts-semantic-merge-import-dependency-oracles.mjs',
   './smoke/semantic-react-wrapper-names.mjs',
   './smoke/semantic-sidecar-scanned-fixture.mjs',
@@ -263,6 +271,7 @@ const smokeModules = [
   './smoke/scanned-languages.mjs',
   './smoke/matrices-final.mjs',
   './smoke/html-css-matrices.mjs',
+  './smoke/html-css-admission-matrix-fixtures.mjs',
   './smoke/matrices-universal-fixtures.mjs',
   './smoke/projection-readiness.mjs',
   './smoke/universal-conversion-plan.mjs',
@@ -281,9 +290,19 @@ const semanticAutoMergeSmokeModules = [
   './smoke/js-ts-safe-merge-staged-semantic-edit-fallback.mjs',
   './smoke/js-ts-safe-merge-staged-direct-semantic-fallback.mjs',
   './smoke/js-ts-safe-merge-top-level-sibling-semantic-edits.mjs',
+  './smoke/js-ts-safe-merge-binding-patterns.mjs',
+  './smoke/js-ts-safe-merge-class-element-invariants.mjs',
+  './smoke/js-ts-safe-merge-scope-use-def.mjs',
   './smoke/js-ts-safe-merge-variable-declarators.mjs',
   './smoke/js-ts-safe-merge-enum-members.mjs',
   './smoke/js-ts-safe-merge-member-semantic-edits.mjs',
+  './smoke/js-ts-safe-project-merge-admission-proof-policy.mjs',
+  './smoke/js-ts-safe-project-merge-jsx-prop-values.mjs',
+  './smoke/js-ts-safe-project-merge-scope-use-def-default-reexport-alias.mjs',
+  './smoke/js-ts-safe-project-merge-symbol-move-default-admission.mjs',
+  './smoke/js-ts-real-repo-corpus-local-checkout-proof.mjs',
+  './smoke/js-ts-real-repo-corpus-command-execution-proof.mjs',
+  './smoke/html-css-admission-matrix-fixtures.mjs',
   './smoke/semantic-edit-rename-move-source-replay.mjs',
   './smoke/semantic-edit-bundle-admission.mjs',
   './smoke/bidirectional-target-change-addition-line-endings.mjs',
@@ -292,17 +311,9 @@ const semanticAutoMergeSmokeModules = [
   './smoke/bidirectional-target-change-same-language-already-applied.mjs'
 ];
 
-for (const modulePath of semanticAutoMergeSmokeModules) {
-  if (!smokeModules.includes(modulePath)) {
-    throw new Error(`Default smoke gate is missing required semantic auto-merge proof: ${modulePath}`);
-  }
-}
+for (const modulePath of semanticAutoMergeSmokeModules) if (!smokeModules.includes(modulePath)) throw new Error(`Default smoke gate is missing required semantic auto-merge proof: ${modulePath}`);
 
 const explicitModules = process.argv.slice(2).filter((arg) => arg.endsWith('.mjs'));
-const modules = explicitModules.length > 0
-  ? explicitModules.map((arg) => pathToFileURL(resolve(arg)).href)
-  : smokeModules;
+const modules = explicitModules.length > 0 ? explicitModules.map((arg) => pathToFileURL(resolve(arg)).href) : smokeModules;
 
-for (const modulePath of modules) {
-  await import(modulePath);
-}
+for (const modulePath of modules) await import(modulePath);
