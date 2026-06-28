@@ -52,7 +52,7 @@ https://postcss.org/api/, https://github.com/css-modules/css-modules.
 | CSS Modules import/use-site graph | partial | Default/namespace/named imports, JSX className, helper calls, static bracket access, bounded dynamic access, ICSS/composition, generated map hashes, and contract blockers exist. | Add helper alias flow, string/template class name policy, preprocessor/query handling, and broader bundler cases. |
 | CSS Modules transform/source-map identity | partial | Generated-map, bundler-transform, structured source-map identity proof, original/generated span mapping validation, output source hash binding, generated class-map hash binding, and stale proof rejection are covered. | Run against real CSS Modules bundler/preprocessor source-map outputs and add query/loader variant fixtures. |
 | Real-repo corpus | partial | Manifest-only corpus has 5 repos, 14 oracle cases, 5 matrix rows, synthetic checkout proof, and synthetic command execution proof. | Add opt-in live checkout prepare/proof and opt-in build/test proof without vendoring third-party source. |
-| Source-backed completeness matrix | partial | Focused smoke now extracts this denominator and asserts every production row maps to source-anchor rows, evidence files, and remaining-work rows. | Add generated JSON status export and exact external source citations for every row. |
+| Source-backed completeness matrix | partial | Focused smoke now extracts this denominator and asserts every production row maps to source-anchor rows, evidence files, remaining-work rows, and generated JSON status rows with exact source-anchor URLs. | Publish the generated JSON status artifact in CI and expand row-level citations as the denominator grows. |
 
 ## Current Remaining Work Table
 
@@ -65,4 +65,4 @@ https://postcss.org/api/, https://github.com/css-modules/css-modules.
 | P2 | Keyframes/animation dependency proof | CSS dependency support is custom-property heavy. | Rename `@keyframes` plus `animation-name` fixture with stale-proof rejection. |
 | P2 | Hook dependency proof bridge | Static dependency-array edits are currently conservative. | Source-bound preservation proof for non-overlapping dependency additions. |
 | P2 | Event-handler proof bridge | Static handler additions can be safe but still route to review. | Proof for independent static handler declarations with runtime-equivalence claim false. |
-| P3 | Row-level source citations and CI extraction | Percent complete is not rigorous without a checked denominator. | Generate a JSON matrix from this file plus smoke/bench proof metadata and fail CI on unmapped rows. |
+| P3 | Row-level source citations and CI extraction | Percent complete is not rigorous without a checked denominator. | Publish `bench/semantic-merge-production-matrix-status.mjs` output as a CI artifact and keep source-anchor URL mappings exact as rows change. |
