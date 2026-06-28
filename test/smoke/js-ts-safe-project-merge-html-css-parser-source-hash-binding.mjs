@@ -29,7 +29,7 @@ const liveCssResult = safeMergeCssSource({
 });
 const liveAdapterSummary = htmlCssProjectSummary([
   { language: 'html', sourcePath: 'src/live.html', status: liveHtmlResult.status, result: liveHtmlResult, ...sourceHashesFor(liveHtmlBase, liveHtmlWorker, liveHtmlHead) },
-  { language: 'css', sourcePath: 'src/live.css', status: liveCssResult.status, result: liveCssResult, ...sourceHashesFor(liveCssBase, liveCssWorker, liveCssHead) }
+  { language: 'css', sourcePath: 'src/live.css', status: liveCssResult.status, result: liveCssResult, parserSourceHashes: liveCssResult.parserEvidence.sourceHashes, ...sourceHashesFor(liveCssBase, liveCssWorker, liveCssHead) }
 ]);
 assert.equal(liveAdapterSummary.htmlParserEvidenceFiles, 1);
 assert.equal(liveAdapterSummary.cssParserEvidenceFiles, 1);

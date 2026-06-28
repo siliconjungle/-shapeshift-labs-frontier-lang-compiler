@@ -10,11 +10,24 @@ function parserEvidenceSourceHashBindingValid(file, evidence) {
 }
 
 function requiredParserEvidenceSideHashes(file) {
+  const parserHashes = sideHashes(file?.parserSourceHashes ?? file?.parserEvidenceSourceHashes);
+  if (parserHashes) return parserHashes;
   const sourceHashes = file?.sourceHashes ?? file?.result?.sourceHashes ?? {};
+  const resultParserHashes = sideHashes(file?.result?.parserSourceHashes ?? file?.result?.parserEvidenceSourceHashes);
+  if (resultParserHashes) return resultParserHashes;
   const hashes = {
     base: firstString(file?.baseHash, file?.baseSourceHash, sourceHashes.baseHash, sourceHashes.base),
     worker: firstString(file?.workerHash, file?.workerSourceHash, sourceHashes.workerHash, sourceHashes.worker),
     head: firstString(file?.headHash, file?.headSourceHash, sourceHashes.headHash, sourceHashes.head)
+  };
+  return RequiredParserEvidenceSideNames.every((sideName) => typeof hashes[sideName] === 'string') ? hashes : undefined;
+}
+
+function sideHashes(sourceHashes = {}) {
+  const hashes = {
+    base: firstString(sourceHashes.base, sourceHashes.baseHash, sourceHashes.baseSourceHash),
+    worker: firstString(sourceHashes.worker, sourceHashes.workerHash, sourceHashes.workerSourceHash),
+    head: firstString(sourceHashes.head, sourceHashes.headHash, sourceHashes.headSourceHash)
   };
   return RequiredParserEvidenceSideNames.every((sideName) => typeof hashes[sideName] === 'string') ? hashes : undefined;
 }

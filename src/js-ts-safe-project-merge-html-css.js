@@ -1,3 +1,4 @@
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeCssSource } from '@shapeshift-labs/frontier-lang-css';
 import { safeMergeHtmlSource } from '@shapeshift-labs/frontier-lang-html';
 import { compactRecord } from './js-ts-safe-merge-context.js';
@@ -48,7 +49,8 @@ function maybeMergeHtmlCssProjectFile(options) {
   const admittedResult = language === 'html' && result.status === 'merged'
     ? blockHtmlProofGapChanges({ result, id: resultId, sourcePath: file.sourcePath, base, worker, head, runtimeBoundaryProofs }) ?? result
     : result;
-  return admittedResult.status === 'merged' ? mergedHtmlCssFile(file, context, admittedResult, language) : blockedHtmlCssFile(file, context, admittedResult);
+  const sourceBinding = { base, worker, head };
+  return admittedResult.status === 'merged' ? mergedHtmlCssFile(file, context, admittedResult, language, sourceBinding) : blockedHtmlCssFile(file, context, admittedResult, language, sourceBinding);
 }
 
 function inferLanguageFromPath(sourcePath) {
@@ -233,23 +235,34 @@ function blockedHtmlProofGapAdmission(admission = {}, conflicts = []) {
   };
 }
 
-function mergedHtmlCssFile(file, context, result, language) {
+function mergedHtmlCssFile(file, context, result, language, sourceBinding) {
   return compactRecord({
     kind: 'frontier.lang.jsTsProjectSafeMergeFile', version: 1, sourcePath: file.sourcePath, language: context.language, status: 'merged', operation: `merged-${language}-source`,
     outputSourceText: result.mergedSourceText, outputHash: hashText(result.mergedSourceText), baseHash: hashText(file.baseSourceText), workerHash: hashText(file.workerSourceText), headHash: hashText(file.headSourceText),
+    parserSourceHashes: parserSourceHashesForLanguage(language, sourceBinding),
     result, semanticArtifacts: result.semanticArtifacts, conflicts: [], admission: result.admission, summary: result.summary, conflictKeys: [`source#${file.sourcePath}`]
   });
 }
 
-function blockedHtmlCssFile(file, context, result) {
+function blockedHtmlCssFile(file, context, result, language, sourceBinding) {
   const conflicts = normalizeHtmlCssConflicts(result.conflicts ?? [], context.language);
   const admission = blockedHtmlCssAdmission(result.admission, context.language);
   const normalizedResult = compactRecord({ ...result, conflicts, admission });
   return compactRecord({
     kind: 'frontier.lang.jsTsProjectSafeMergeFile', version: 1, sourcePath: file.sourcePath, language: context.language, status: 'blocked', operation: 'blocked-merge',
     baseHash: hashText(file.baseSourceText), workerHash: hashText(file.workerSourceText), headHash: hashText(file.headSourceText),
+    parserSourceHashes: parserSourceHashesForLanguage(language, sourceBinding),
     result: normalizedResult, conflicts, admission, summary: result.summary, conflictKeys: [`source#${file.sourcePath}`]
   });
+}
+
+function parserSourceHashesForLanguage(language, binding) {
+  if (language !== 'css') return undefined;
+  return compactRecord({ base: cssSourceHash(binding.base), worker: cssSourceHash(binding.worker), head: cssSourceHash(binding.head) });
+}
+
+function cssSourceHash(sourceText) {
+  return typeof sourceText === 'string' ? hashSemanticValue({ kind: 'frontier.lang.css.source.v1', sourceText }) : undefined;
 }
 
 function blockedHtmlCssAdmission(admission = {}, language) {

@@ -102,6 +102,7 @@ function cssSelectorFunctionalPseudoSpecificityGaps(evidence) {
     const selectors = uniqueStrings([...(proof.fromSelectors ?? []), ...(proof.toSelectors ?? [])]);
     const functionalPseudoSelectors = selectors.filter(hasFunctionalPseudoSpecificityRisk);
     if (!functionalPseudoSelectors.length) return [];
+    if (hasExactSelectorsLevel4SpecificityProof(proof)) return [];
     return [compactRecord({
       index,
       proofId: proof.id,
@@ -165,7 +166,7 @@ function cssSelectorFunctionalPseudoSpecificityGapConflict(id, sourcePath, gap) 
         code: reasonCode,
         status: 'not-claimed',
         summary: 'CSS selector target rebase uses functional pseudo selectors whose specificity records are not exact parser-backed Selectors Level 4 evidence in the lower CSS package.',
-        nextProof: 'In @shapeshift-labs/frontier-lang-css, replace the regex selectorSpecificity routine in postcss parser evidence with exact selector-list specificity for :is(), :not(), :has(), :where(), and nth-child/nth-last-child of-selector arguments; then emit parser-backed specificity records before admitting this rebase.',
+        nextProof: 'Supply a source-bound selector target proof whose rebase proof carries parser-backed Selectors Level 4 specificity metadata, exact before/after specificity records, and matching base/worker/head source hashes.',
         failClosed: true,
         semanticEquivalenceClaim: false,
         browserCascadeEquivalenceClaim: false,
@@ -177,6 +178,20 @@ function cssSelectorFunctionalPseudoSpecificityGapConflict(id, sourcePath, gap) 
 
 function hasFunctionalPseudoSpecificityRisk(selector) {
   return /:(?:is|where|has|not|matches|nth-child|nth-last-child)\s*\(/i.test(String(selector ?? ''));
+}
+
+function hasExactSelectorsLevel4SpecificityProof(proof) {
+  const algorithm = proof?.specificityAlgorithm ?? proof?.selectorSpecificityAlgorithm;
+  return proof?.parserBackedSelectorSpecificity === true &&
+    proof?.selectorsLevel4Specificity === true &&
+    proof?.specificityExact !== false &&
+    algorithm === 'selectors-level-4' &&
+    selectorSpecificityRecordsExact(proof.beforeSelectorSpecificityRecords) &&
+    selectorSpecificityRecordsExact(proof.afterSelectorSpecificityRecords);
+}
+
+function selectorSpecificityRecordsExact(records) {
+  return Array.isArray(records) && records.length > 0 && records.every((record) => record?.parserBackedSelectorSpecificity === true && record?.selectorsLevel4Specificity === true && record?.specificityExact !== false && record?.algorithm === 'selectors-level-4');
 }
 
 function blockedCssProofGapAdmission(admission = {}, conflicts = []) {

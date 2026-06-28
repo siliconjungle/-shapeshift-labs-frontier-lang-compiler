@@ -59,7 +59,7 @@ const cssSpecificSelectorListRebased = safeMergeJsTsProject({
   cssMergeOptionsByPath: {
     'src/button.css': {
       selectorTargetGraphHash: 'specific-target-graph-v1',
-      cssSelectorTargetProofs: [selectorProof({ id: 'proof_project_specific_selector_list', graphHash: 'specific-target-graph-v1', base: cssSpecificSelectorListBase, worker: cssSpecificSelectorListWorker, head: cssSpecificSelectorListHead, fromSelectors: ['.card > .button:hover', '.toolbar .button::before'], toSelectors: ['.card > .primary:hover', '.toolbar .button::before'], specificity: [[0, 3, 0], [0, 3, 0]] })]
+      cssSelectorTargetProofs: [selectorProof({ id: 'proof_project_specific_selector_list', graphHash: 'specific-target-graph-v1', base: cssSpecificSelectorListBase, worker: cssSpecificSelectorListWorker, head: cssSpecificSelectorListHead, fromSelectors: ['.card > .button:hover', '.toolbar .button::before'], toSelectors: ['.card > .primary:hover', '.toolbar .button::before'], specificity: [[0, 3, 0], [0, 2, 1]] })]
     }
   },
   files: [{ sourcePath: 'src/button.css', baseSourceText: cssSpecificSelectorListBase, workerSourceText: cssSpecificSelectorListWorker, headSourceText: cssSpecificSelectorListHead }]
@@ -75,7 +75,7 @@ const cssModernPseudoSelectorWorker = '.card:is(.interactive):where(.ready) .pri
 const cssModernPseudoSelectorHead = '.card:is(.interactive):where(.ready) .button::before, .panel:has(.button):not(.disabled) > .button { color: red; background-color: white; }\n';
 const cssModernPseudoFromSelectors = ['.card:is(.interactive):where(.ready) .button::before', '.panel:has(.button):not(.disabled) > .button'];
 const cssModernPseudoToSelectors = ['.card:is(.interactive):where(.ready) .primary::before', '.panel:has(.primary):not(.disabled) > .primary'];
-const cssModernPseudoSpecificity = [[0, 5, 0], [0, 4, 0]];
+const cssModernPseudoSpecificity = [[0, 3, 1], [0, 4, 0]];
 const cssModernPseudoGraphHash = 'modern-pseudo-target-graph-v1';
 const cssModernPseudoProofWithoutGraph = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_modern_pseudo_selector_proof_without_graph',
@@ -95,7 +95,7 @@ assert.equal(cssModernPseudoProofWithoutGraphMove?.specificityInvariant, true);
 assert.equal(cssModernPseudoProofWithoutGraphMove?.selectorTargetGraphHashPresent, false);
 
 const cssModernPseudoSelectorBlocked = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_modern_pseudo_selector_specificity_blocked',
+  id: 'js_ts_safe_project_merge_css_modern_pseudo_selector_specificity_proof_missing',
   cssMergeOptionsByPath: {
     'src/button.css': {
       selectorTargetGraphHash: cssModernPseudoGraphHash,
@@ -108,14 +108,35 @@ assert.equal(cssModernPseudoSelectorBlocked.status, 'blocked');
 assert.equal(cssModernPseudoSelectorBlocked.summary.cssSelectorTargetConflictFiles, 1);
 assert.equal(cssModernPseudoSelectorBlocked.summary.cssSelectorTargetRebasedFiles, 0);
 assert.equal(cssModernPseudoSelectorBlocked.outputFiles.some((file) => file.sourcePath === 'src/button.css'), false);
-const cssModernPseudoSpecificityConflict = cssModernPseudoSelectorBlocked.conflicts.find((conflict) => conflict.details?.reasonCode === 'css-selector-functional-pseudo-specificity-unproved');
+const cssModernPseudoSpecificityConflict = cssModernPseudoSelectorBlocked.conflicts.find((conflict) => conflict.details?.reasonCode === 'css-selector-target-rebase-unproved');
 assert.ok(cssModernPseudoSpecificityConflict);
 assert.equal(cssModernPseudoSpecificityConflict.code, 'css-selector-target-conflict');
-assert.deepEqual(cssModernPseudoSpecificityConflict.details.functionalPseudoSelectors, cssModernPseudoFromSelectors.concat(cssModernPseudoToSelectors));
 assert.deepEqual(cssModernPseudoSpecificityConflict.details.selectorMove.beforeSpecificity, cssModernPseudoSpecificity);
-assert.equal(cssModernPseudoSpecificityConflict.details.proofGap.failClosed, true);
-assert.match(cssModernPseudoSpecificityConflict.details.proofGap.nextProof, /@shapeshift-labs\/frontier-lang-css/);
-assert.equal(cssModernPseudoSelectorBlocked.files[0].result.selectorTargetEvidence.functionalPseudoSpecificityProofBlocked, true);
+assert.equal(cssModernPseudoSpecificityConflict.details.selectorMove.parserBackedSelectorSpecificity, true);
+assert.equal(cssModernPseudoSpecificityConflict.details.selectorMove.selectorsLevel4Specificity, true);
+assert.equal(cssModernPseudoSpecificityConflict.details.selectorMove.functionalPseudoSpecificity, true);
 assert.equal(cssModernPseudoSelectorBlocked.files[0].result.selectorTargetEvidence.rebaseProofs.length, 0);
-assert.equal(cssModernPseudoSelectorBlocked.files[0].result.selectorTargetEvidence.blockedRebaseProofs[0].selectorTargetGraphHash, cssModernPseudoGraphHash);
 assert.equal(matrixSurface(cssModernPseudoSelectorBlocked, 'css-selector-target-evidence').proofStatuses['css-selector-target-evidence'], 'failed');
+
+const cssModernPseudoSelectorRebased = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_modern_pseudo_selector_specificity_proven',
+  cssMergeOptionsByPath: {
+    'src/button.css': {
+      selectorTargetGraphHash: cssModernPseudoGraphHash,
+      cssSelectorTargetProofs: [selectorProof({ id: 'proof_project_modern_pseudo_selector_target_exact', graphHash: cssModernPseudoGraphHash, base: cssModernPseudoSelectorBase, worker: cssModernPseudoSelectorWorker, head: cssModernPseudoSelectorHead, fromSelectors: cssModernPseudoFromSelectors, toSelectors: cssModernPseudoToSelectors, specificity: cssModernPseudoSpecificity, specificityProof: true })]
+    }
+  },
+  files: [{ sourcePath: 'src/button.css', baseSourceText: cssModernPseudoSelectorBase, workerSourceText: cssModernPseudoSelectorWorker, headSourceText: cssModernPseudoSelectorHead }]
+});
+assert.equal(cssModernPseudoSelectorRebased.status, 'merged');
+assert.equal(cssModernPseudoSelectorRebased.summary.cssSelectorTargetConflictFiles, 0);
+assert.equal(cssModernPseudoSelectorRebased.summary.cssSelectorTargetRebasedFiles, 1);
+const cssModernPseudoRebaseProof = cssModernPseudoSelectorRebased.files[0].result.selectorTargetEvidence.rebaseProofs[0];
+assert.equal(cssModernPseudoRebaseProof.parserBackedSelectorSpecificity, true);
+assert.equal(cssModernPseudoRebaseProof.selectorsLevel4Specificity, true);
+assert.equal(cssModernPseudoRebaseProof.functionalPseudoSpecificity, true);
+assert.equal(cssModernPseudoRebaseProof.specificityAlgorithm, 'selectors-level-4');
+assert.deepEqual(cssModernPseudoRebaseProof.beforeSpecificity, cssModernPseudoSpecificity);
+assert.match(cssModernPseudoSelectorRebased.outputFiles[0].sourceText, /\.primary/);
+assert.match(cssModernPseudoSelectorRebased.outputFiles[0].sourceText, /background-color: white/);
+assert.equal(matrixSurface(cssModernPseudoSelectorRebased, 'css-selector-target-evidence').proofStatuses['css-selector-target-evidence'], 'passed');

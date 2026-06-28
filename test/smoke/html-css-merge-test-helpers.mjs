@@ -7,7 +7,7 @@ function matrixSurface(result, surface) {
   return record;
 }
 
-function selectorProof({ id, graphHash, base, worker, head, fromSelectors, toSelectors, specificity }) {
+function selectorProof({ id, graphHash, base, worker, head, fromSelectors, toSelectors, specificity, specificityProof = false }) {
   return {
     id,
     kind: 'css-source-bound-selector-target-proof',
@@ -23,7 +23,13 @@ function selectorProof({ id, graphHash, base, worker, head, fromSelectors, toSel
     selectorTargetGraphHash: graphHash,
     baseSourceHash: hashSemanticValue(base),
     workerSourceHash: hashSemanticValue(worker),
-    headSourceHash: hashSemanticValue(head)
+    headSourceHash: hashSemanticValue(head),
+    ...(specificityProof ? {
+      parserBackedSelectorSpecificity: true,
+      selectorsLevel4Specificity: true,
+      specificityExact: true,
+      specificityAlgorithm: 'selectors-level-4'
+    } : {})
   };
 }
 
