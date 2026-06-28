@@ -70,7 +70,8 @@
     "@shapeshift-labs/frontier-lang-parser": "0.3.8",
     "@shapeshift-labs/frontier-lang-python": "0.2.9",
     "@shapeshift-labs/frontier-lang-rust": "0.2.9",
-    "@shapeshift-labs/frontier-lang-typescript": "0.3.9"
+    "@shapeshift-labs/frontier-lang-typescript": "0.3.9",
+    "@shapeshift-labs/frontier-runtime-proof": "0.1.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

@@ -1,6 +1,7 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { hashText, uniqueStrings } from './js-ts-safe-project-merge-core.js';
 import { changedHtmlRuntimeBoundaryAttributes, htmlRuntimeBoundaryGroups } from './js-ts-safe-project-merge-html-runtime-boundary-records.js';
+import { runtimeEvidenceMetadataFromProof } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
 
 function htmlRuntimeBoundaryChanges(base, worker, head) {
   const baseBoundaries = htmlRuntimeBoundaryGroups(base);
@@ -83,6 +84,18 @@ function htmlRuntimeBoundaryProofRecord(proof, change, binding) {
     runtimeEvidenceHash: runtimeEvidence?.evidenceHash,
     runtimeSignals: runtimeEvidence?.signals,
     requiredRuntimeSignals: runtimeEvidence?.requiredSignals,
+    runtimeProofCapsule: runtimeEvidence?.capsule,
+    runtimeProofMode: runtimeEvidence?.capsule?.mode,
+    runtimeProofCapsuleHash: runtimeEvidence?.capsule?.hash,
+    runtimeBrowserName: runtimeEvidence?.capsule?.browserName,
+    runtimeBrowserVersion: runtimeEvidence?.capsule?.browserVersion,
+    runtimeViewport: runtimeEvidence?.capsule?.viewport,
+    runtimeTelemetryHash: runtimeEvidence?.capsule?.telemetryHash,
+    runtimeDomSnapshotHash: runtimeEvidence?.capsule?.domSnapshotHash,
+    runtimeComputedStyleHash: runtimeEvidence?.capsule?.computedStyleHash,
+    runtimeLayoutSnapshotHash: runtimeEvidence?.capsule?.layoutSnapshotHash,
+    runtimeEventTraceHash: runtimeEvidence?.capsule?.eventTraceHash,
+    runtimeCumulativeLayoutShift: runtimeEvidence?.capsule?.cumulativeLayoutShift,
     runtimeEvidenceBound: runtimeEvidence !== undefined,
     browserRuntimeEquivalenceClaim: true,
     browserRenderEquivalenceClaim: false,
@@ -93,63 +106,7 @@ function htmlRuntimeBoundaryProofRecord(proof, change, binding) {
 
 function htmlRuntimeBoundaryProofEvidenceMetadata(proof, change) {
   const requiredSignals = requiredHtmlRuntimeBoundarySignals(change.reasonCode, change.boundary);
-  const signals = htmlRuntimeBoundaryProofSignals(proof);
-  const command = firstString(
-    proof.runtimeCommand,
-    proof.browserCommand,
-    proof.command,
-    proof.commandId,
-    proof.probeCommand,
-    proof.evidence?.command,
-    proof.runtimeEvidence?.command,
-    proof.browserEvidence?.command
-  );
-  const probeId = firstString(
-    proof.runtimeProbeId,
-    proof.browserProbeId,
-    proof.probeId,
-    proof.probe?.id,
-    proof.evidence?.probeId,
-    proof.runtimeEvidence?.probeId,
-    proof.browserEvidence?.probeId
-  );
-  const evidenceHash = firstString(
-    proof.runtimeEvidenceHash,
-    proof.browserEvidenceHash,
-    proof.evidenceHash,
-    proof.domEvidenceHash,
-    proof.renderEvidenceHash,
-    proof.hydrationEvidenceHash,
-    proof.resourceEvidenceHash,
-    proof.evidence?.hash,
-    proof.evidence?.evidenceHash,
-    proof.runtimeEvidence?.hash,
-    proof.runtimeEvidence?.evidenceHash,
-    proof.browserEvidence?.hash,
-    proof.browserEvidence?.evidenceHash
-  );
-  const hasRequiredSignal = requiredSignals.some((signal) => signals.includes(signal));
-  if (!command || !probeId || !evidenceHash || !hasRequiredSignal) return undefined;
-  return { command, probeId, evidenceHash, signals, requiredSignals };
-}
-
-function htmlRuntimeBoundaryProofSignals(proof) {
-  return uniqueStrings([
-    ...signalsFromValue(proof.runtimeSignals),
-    ...signalsFromValue(proof.browserSignals),
-    ...signalsFromValue(proof.evidenceSignals),
-    ...signalsFromValue(proof.probeSignals),
-    ...signalsFromValue(proof.evidence?.signals),
-    ...signalsFromValue(proof.runtimeEvidence?.signals),
-    ...signalsFromValue(proof.browserEvidence?.signals)
-  ]);
-}
-
-function signalsFromValue(value) {
-  if (typeof value === 'string' && value.length > 0) return [value];
-  if (Array.isArray(value)) return value.filter((item) => typeof item === 'string' && item.length > 0);
-  if (value && typeof value === 'object') return Object.keys(value).filter((key) => value[key] === true || value[key] === 'passed');
-  return [];
+  return runtimeEvidenceMetadataFromProof(proof, { requiredSignals });
 }
 
 function requiredHtmlRuntimeBoundarySignals(reasonCode, boundary) {
@@ -171,10 +128,6 @@ function requiredHtmlRuntimeBoundarySignals(reasonCode, boundary) {
   if (text.includes('custom-element')) return ['html-custom-element-runtime', 'custom-element-runtime'];
   if (text.includes('framework-directive')) return ['html-framework-directive-runtime', 'framework-directive-runtime'];
   return ['html-browser-runtime', 'browser-runtime'];
-}
-
-function firstString(...values) {
-  return values.find((value) => typeof value === 'string' && value.length > 0);
 }
 
 function htmlRuntimeBoundaryProvenResult(result, runtimeBoundaryProofs) {

@@ -213,3 +213,90 @@ assert.deepEqual(htmlFrameworkDirectiveProvenProject.files[0].result.runtimeBoun
 assert.equal(htmlFrameworkDirectiveProvenProject.files[0].result.runtimeBoundaryProofs[0].runtimeEvidenceBound, true);
 assert.equal(htmlFrameworkDirectiveProvenProject.files[0].result.runtimeBoundaryProofs[0].runtimeSignals.includes('html-framework-directive-runtime'), true);
 assert.match(htmlFrameworkDirectiveProvenProject.outputFiles[0].sourceText, /nextClass/);
+
+const htmlCapsuleBase = '<button data-frontier-key="save" onclick="save()">Save</button>\n';
+const htmlCapsuleWorker = '<button data-frontier-key="save" onclick="saveNow()">Save</button>\n';
+const htmlCapsuleProofProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_runtime_capsule_micro_slice',
+  htmlRuntimeBoundaryProofsByPath: {
+    'src/capsule.html': [{
+      id: 'html_runtime_capsule_micro_slice',
+      kind: 'html-source-bound-runtime-boundary-proof',
+      status: 'passed',
+      sourcePath: 'src/capsule.html',
+      reasonCode: 'event-handler-runtime-boundary',
+      side: 'worker',
+      boundary: 'html-event-handler-attribute',
+      boundaryAttributes: ['onclick'],
+      ...sourceHashBinding(htmlCapsuleBase, htmlCapsuleWorker, htmlCapsuleBase, htmlCapsuleWorker),
+      runtimeProofCapsule: {
+        mode: 'isolated-fixture',
+        status: 'passed',
+        command: 'playwright test runtime-proof-capsule.spec.ts',
+        probeId: 'html:event-handler-runtime-boundary:capsule',
+        evidenceHash: 'runtime-proof-capsule-evidence-hash',
+        signals: ['html-event-handler-runtime'],
+        browser: { name: 'chromium', version: 'stable' },
+        viewport: { width: 390, height: 844, deviceScaleFactor: 2 },
+        artifacts: { sourceHash: 'capsule-source-artifact', bundleHash: 'capsule-js-bundle' },
+        telemetry: {
+          hash: 'capsule-telemetry',
+          domSnapshotHash: 'capsule-dom',
+          computedStyleHash: 'capsule-style',
+          layoutSnapshotHash: 'capsule-layout',
+          eventTraceHash: 'capsule-events',
+          screenshotHash: 'capsule-screenshot',
+          cumulativeLayoutShift: 0
+        }
+      }
+    }]
+  },
+  files: [{ sourcePath: 'src/capsule.html', baseSourceText: htmlCapsuleBase, workerSourceText: htmlCapsuleWorker, headSourceText: htmlCapsuleBase }]
+});
+
+const htmlCapsuleRecord = htmlCapsuleProofProject.files[0].result.runtimeBoundaryProofs[0];
+assert.equal(htmlCapsuleProofProject.status, 'merged');
+assert.equal(htmlCapsuleProofProject.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(htmlCapsuleRecord.runtimeCommand, 'playwright test runtime-proof-capsule.spec.ts');
+assert.equal(htmlCapsuleRecord.runtimeProofMode, 'isolated-fixture');
+assert.equal(htmlCapsuleRecord.runtimeBrowserName, 'chromium');
+assert.equal(htmlCapsuleRecord.runtimeViewport.width, 390);
+assert.equal(htmlCapsuleRecord.runtimeTelemetryHash, 'capsule-telemetry');
+assert.equal(htmlCapsuleRecord.runtimeDomSnapshotHash, 'capsule-dom');
+assert.equal(htmlCapsuleRecord.runtimeComputedStyleHash, 'capsule-style');
+assert.equal(htmlCapsuleRecord.runtimeLayoutSnapshotHash, 'capsule-layout');
+assert.equal(htmlCapsuleRecord.runtimeEventTraceHash, 'capsule-events');
+assert.equal(htmlCapsuleRecord.runtimeCumulativeLayoutShift, 0);
+assert.equal(typeof htmlCapsuleRecord.runtimeProofCapsuleHash, 'string');
+assert.equal(matrixSurface(htmlCapsuleProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
+
+const htmlEnvironmentBlockedProofProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_runtime_capsule_environment_blocked',
+  htmlRuntimeBoundaryProofsByPath: {
+    'src/capsule.html': [{
+      id: 'html_runtime_capsule_environment_blocked',
+      kind: 'html-source-bound-runtime-boundary-proof',
+      status: 'passed',
+      sourcePath: 'src/capsule.html',
+      reasonCode: 'event-handler-runtime-boundary',
+      side: 'worker',
+      boundary: 'html-event-handler-attribute',
+      boundaryAttributes: ['onclick'],
+      ...sourceHashBinding(htmlCapsuleBase, htmlCapsuleWorker, htmlCapsuleBase, htmlCapsuleWorker),
+      runtimeProofCapsule: {
+        mode: 'environment-blocked',
+        status: 'blocked',
+        command: 'playwright test runtime-proof-capsule.spec.ts',
+        probeId: 'html:event-handler-runtime-boundary:capsule',
+        evidenceHash: 'runtime-proof-capsule-environment-blocked',
+        signals: ['html-event-handler-runtime']
+      }
+    }]
+  },
+  files: [{ sourcePath: 'src/capsule.html', baseSourceText: htmlCapsuleBase, workerSourceText: htmlCapsuleWorker, headSourceText: htmlCapsuleBase }]
+});
+
+assert.equal(htmlEnvironmentBlockedProofProject.status, 'blocked');
+assert.equal(htmlEnvironmentBlockedProofProject.summary.htmlCssBrowserRuntimeProofs, 0);
+assert.equal(htmlEnvironmentBlockedProofProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
+assert.equal(matrixSurface(htmlEnvironmentBlockedProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');

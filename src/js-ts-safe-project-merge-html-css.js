@@ -8,6 +8,7 @@ import { projectCssModuleMergeOptionsForFile, projectCssModuleProofOptionsForBlo
 import { cssModuleSourceMapIdentityMergeOptions } from './js-ts-safe-project-merge-css-module-source-map.js';
 import { blockCssScopedParserEvidenceGap, blockCssSelectorFunctionalPseudoSpecificityGap, normalizeHtmlCssParserEvidenceSides } from './js-ts-safe-project-merge-html-css-parser-gaps.js';
 import { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult } from './js-ts-safe-project-merge-html-runtime-boundaries.js';
+import { runtimeEvidenceMetadataFromProof } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
 
 function projectFileLanguage(file, input) {
   return file.language ?? inferLanguageFromPath(file.sourcePath) ?? input.language ?? 'typescript';
@@ -143,7 +144,19 @@ function htmlRuntimeBoundaryProofCandidates(input, sourcePath, mergeOptions) {
     mergeOptions.browserRuntimeProofs,
     mergeOptions.sourceBoundRuntimeProof,
     mergeOptions.sourceBoundRuntimeProofs
-  ].flatMap(asArray).filter(Boolean);
+  ].flatMap(asArray).filter(Boolean).map(htmlRuntimeBoundaryProofCandidateForRuntimePackage);
+}
+
+function htmlRuntimeBoundaryProofCandidateForRuntimePackage(proof) {
+  const metadata = runtimeEvidenceMetadataFromProof(proof);
+  if (!metadata) return proof;
+  return compactRecord({
+    ...proof,
+    runtimeCommand: proof.runtimeCommand ?? metadata.command,
+    runtimeProbeId: proof.runtimeProbeId ?? metadata.probeId,
+    runtimeEvidenceHash: proof.runtimeEvidenceHash ?? metadata.evidenceHash,
+    runtimeSignals: proof.runtimeSignals ?? metadata.signals
+  });
 }
 
 function duplicateHtmlExplicitIdentityKeys(identityEvidence) {
