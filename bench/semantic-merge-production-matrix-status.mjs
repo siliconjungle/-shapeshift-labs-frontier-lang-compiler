@@ -115,7 +115,7 @@ const rowProofs = new Map([
   ['CSS dependencies and runtime descriptors', {
     anchors: ['CSS syntax, selectors, cascade, and at-rules'],
     evidence: ['test/smoke/js-ts-safe-project-merge-html-css-dependencies.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-dependencies.mjs'],
-    remaining: ['Keyframes/animation dependency proof']
+    remaining: ['Font/url dependency auto-proofs']
   }],
   ['Nested/scoped CSS', {
     anchors: ['CSS syntax, selectors, cascade, and at-rules'],
