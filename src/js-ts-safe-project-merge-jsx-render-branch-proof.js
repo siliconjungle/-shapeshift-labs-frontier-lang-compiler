@@ -121,12 +121,26 @@ function logicalBranchReasonCodes(delta, proof) {
 }
 
 function jsxRenderReturnBranchProofFor(delta, options = {}) {
-  return [
+  const matches = [
     options.jsxRenderReturnBranchProof,
-    ...(Array.isArray(options.jsxRenderReturnBranchProofs) ? options.jsxRenderReturnBranchProofs : [])
-  ].filter(Boolean).find((proof) => proof.identityKey === delta.identityKey || (
-    proof.sourcePath === delta.sourcePath && proof.publicOwnerName === delta.publicOwnerName && proof.tagKey === delta.tagKey
+    ...(Array.isArray(options.jsxRenderReturnBranchProofs) ? options.jsxRenderReturnBranchProofs : []),
+    ...(Array.isArray(options.evidence) ? options.evidence : [])
+  ].filter(Boolean).filter((proof) => proof.identityKey === delta.identityKey || (
+    proof.sourcePath === delta.sourcePath
+      && proof.publicOwnerName === delta.publicOwnerName
+      && proof.tagKey === delta.tagKey
+      && proof.returnOrdinal === delta.returnOrdinal
+      && proof.branchControlKind === delta.branchControlKind
   ));
+  return matches.find((proof) => isRenderReturnBranchProofCandidate(proof)) ?? matches[0];
+}
+
+function isRenderReturnBranchProofCandidate(proof) {
+  return proof?.schema === 'frontier.lang.jsxRenderReturnBranchProof.v1'
+    || proof?.kind === 'frontier.lang.jsxRenderReturnBranchProof'
+    || proof?.claimScope === 'static-render-return-branch-arm-preservation-only'
+    || proof?.branchArmPreservationHash !== undefined
+    || proof?.branchArmPreservationClaim !== undefined;
 }
 
 function jsxRenderReturnBranchProofHash(delta) {

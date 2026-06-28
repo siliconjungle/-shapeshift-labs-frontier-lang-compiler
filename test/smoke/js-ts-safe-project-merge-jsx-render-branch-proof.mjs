@@ -22,6 +22,13 @@ const conditionalProof = branchProof(conditionalMissing[0].details.identityKey, 
 });
 const conditionalPassed = projectGraphDeltaConflicts(conditionalDelta, { jsxRenderReturnBranchProofs: [conditionalProof] });
 assert.equal(conditionalPassed.length, 0);
+const conditionalGenericEvidencePassed = projectGraphDeltaConflicts(conditionalDelta, {
+  evidence: [
+    { identityKey: conditionalProof.identityKey, sourcePath: conditionalProof.sourcePath, status: 'passed' },
+    conditionalProof
+  ]
+});
+assert.equal(conditionalGenericEvidencePassed.length, 0);
 
 const conditionalConditionRecords = {
   base: conditionalRisk('base', 'ready', '<Button tone="base" />', '<Empty tone="base" />'),
