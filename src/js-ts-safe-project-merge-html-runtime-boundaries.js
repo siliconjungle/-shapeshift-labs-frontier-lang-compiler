@@ -1,7 +1,7 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { hashText, uniqueStrings } from './js-ts-safe-project-merge-core.js';
 import { changedHtmlRuntimeBoundaryAttributes, htmlRuntimeBoundaryGroups } from './js-ts-safe-project-merge-html-runtime-boundary-records.js';
-import { FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND, runtimeEvidenceMetadataFromProof } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
+import { FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND, validateRuntimeProofAgainstProbe } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
 
 function htmlRuntimeBoundaryChanges(base, worker, head) {
   const baseBoundaries = htmlRuntimeBoundaryGroups(base);
@@ -109,23 +109,20 @@ function htmlRuntimeBoundaryProofRecord(proof, change, binding) {
 
 function htmlRuntimeBoundaryProofEvidenceMetadata(proof, change) {
   const requiredSignals = requiredHtmlRuntimeBoundarySignals(change.reasonCode, change.boundary);
-  return runtimeEvidenceMetadataFromProof(proof, {
+  const validation = validateRuntimeProofAgainstProbe(proof, {
+    id: `html-runtime-boundary-proof#${change.reasonCode ?? 'runtime'}#${change.boundary ?? 'boundary'}`,
     requiredSignals,
-    ...(requiresRuntimeProofCapsuleValidation(proof) ? {
-      requireRuntimeProofCapsule: true,
-      requireTelemetryHash: true,
-      maxCumulativeLayoutShift: typeof proof.maxCumulativeLayoutShift === 'number' ? proof.maxCumulativeLayoutShift : 0.01
-    } : {})
+    requireRuntimeProofCapsule: true,
+    requireTelemetryHash: true,
+    requireDomSnapshotHash: true,
+    requireComputedStyleHash: true,
+    requireLayoutSnapshotHash: true,
+    requireEventTraceHash: true,
+    requireLayoutShiftHash: true,
+    requireScreenshotHash: true,
+    maxCumulativeLayoutShift: typeof proof.maxCumulativeLayoutShift === 'number' ? proof.maxCumulativeLayoutShift : 0.01
   });
-}
-
-function requiresRuntimeProofCapsuleValidation(proof) {
-  return proof?.kind === FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND ||
-    proof?.runtimeProofCapsule !== undefined ||
-    proof?.proofCapsule !== undefined ||
-    proof?.fixtureCapsule !== undefined ||
-    proof?.runtimeEvidence?.capsule !== undefined ||
-    proof?.browserEvidence?.capsule !== undefined;
+  return validation.ok ? validation.metadata : undefined;
 }
 
 function requiredHtmlRuntimeBoundarySignals(reasonCode, boundary) {

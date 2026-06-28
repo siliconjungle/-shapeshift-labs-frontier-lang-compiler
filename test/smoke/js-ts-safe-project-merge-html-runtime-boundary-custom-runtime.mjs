@@ -1,13 +1,18 @@
 import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
-import { matrixSurface } from './html-css-merge-test-helpers.mjs';
+import { matrixSurface, runtimeProofCapsule } from './html-css-merge-test-helpers.mjs';
 
 function customRuntimeEvidence(label) {
+  const command = `node test/html-runtime/${label}.mjs`;
+  const probeId = 'html:custom-runtime-attribute-boundary:html-custom-runtime-attribute';
+  const evidenceHash = `html-runtime-evidence:custom-runtime-attribute-boundary:html-custom-runtime-attribute:${label}`;
+  const signals = ['html-custom-runtime-attribute-runtime'];
   return {
-    runtimeCommand: `node test/html-runtime/${label}.mjs`,
-    runtimeProbeId: 'html:custom-runtime-attribute-boundary:html-custom-runtime-attribute',
-    runtimeEvidenceHash: `html-runtime-evidence:custom-runtime-attribute-boundary:html-custom-runtime-attribute:${label}`,
-    runtimeSignals: ['html-custom-runtime-attribute-runtime']
+    runtimeCommand: command,
+    runtimeProbeId: probeId,
+    runtimeEvidenceHash: evidenceHash,
+    runtimeSignals: signals,
+    runtimeProofCapsule: runtimeProofCapsule({ command, probeId, evidenceHash, signals, label })
   };
 }
 

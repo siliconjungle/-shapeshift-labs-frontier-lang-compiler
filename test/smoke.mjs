@@ -139,6 +139,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-html-runtime-boundary-custom-runtime.mjs',
   './smoke/js-ts-safe-project-merge-html-runtime-boundary-framework.mjs',
   './smoke/js-ts-safe-project-merge-html-runtime-boundary-navigation-frame.mjs',
+  './smoke/js-ts-safe-project-merge-html-runtime-proof-admission-browser-alias.mjs',
   './smoke/js-ts-safe-project-merge-html-runtime-proof-admission.mjs',
   './smoke/js-ts-safe-project-merge-html-runtime-playwright-proof.mjs', './smoke/js-ts-safe-project-merge-html-css-runtime-proof-corpus.mjs',
   './smoke/js-ts-safe-project-merge-html-runtime-proof-admission-framework-navigation.mjs',
@@ -278,7 +279,6 @@ const smokeModules = [
   './smoke/universal-conversion-plan.mjs',
   './smoke/universal-conversion-compact-counts.mjs'
 ];
-
 const semanticAutoMergeSmokeModules = [
   './smoke/semantic-edit-insertions.mjs',
   './smoke/semantic-edit-rename-move.mjs',

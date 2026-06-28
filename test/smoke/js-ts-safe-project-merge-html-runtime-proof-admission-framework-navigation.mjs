@@ -1,6 +1,6 @@
 import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
-import { matrixSurface } from './html-css-merge-test-helpers.mjs';
+import { matrixSurface, runtimeProofCapsule } from './html-css-merge-test-helpers.mjs';
 
 const htmlAngularDirectiveBase = '<input data-frontier-key="name" [(ngModel)]="name">\n';
 const htmlAngularDirectiveWorker = '<input data-frontier-key="name" [(ngModel)]="draftName">\n';
@@ -104,7 +104,14 @@ const htmlAngularDirectiveProvenProject = safeMergeJsTsProject({
       runtimeCommand: 'node test/html-runtime/angular-framework-directive.mjs',
       runtimeProbeId: 'html:framework-directive-boundary:html-framework-directive',
       runtimeEvidenceHash: 'html-runtime-evidence:framework-directive-boundary:html-framework-directive:angular-framework-directive',
-      runtimeSignals: ['html-framework-directive-runtime']
+      runtimeSignals: ['html-framework-directive-runtime'],
+      runtimeProofCapsule: runtimeProofCapsule({
+        command: 'node test/html-runtime/angular-framework-directive.mjs',
+        probeId: 'html:framework-directive-boundary:html-framework-directive',
+        evidenceHash: 'html-runtime-evidence:framework-directive-boundary:html-framework-directive:angular-framework-directive',
+        signals: ['html-framework-directive-runtime'],
+        label: 'angular-framework-directive'
+      })
     }]
   },
   files: [{

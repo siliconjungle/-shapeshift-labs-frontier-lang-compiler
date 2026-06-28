@@ -1,13 +1,19 @@
 import { assert } from './helpers.mjs';
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
+import { runtimeProofCapsule } from './html-css-merge-test-helpers.mjs';
 
 function resourceRuntimeEvidence(label) {
+  const command = `node test/html-runtime/${label}.mjs`;
+  const probeId = `html:resource-loading-runtime-boundary:html-resource-loading-attribute`;
+  const evidenceHash = `html-runtime-evidence:resource-loading-runtime-boundary:html-resource-loading-attribute:${label}`;
+  const signals = ['html-resource-loading-runtime'];
   return {
-    runtimeCommand: `node test/html-runtime/${label}.mjs`,
-    runtimeProbeId: `html:resource-loading-runtime-boundary:html-resource-loading-attribute`,
-    runtimeEvidenceHash: `html-runtime-evidence:resource-loading-runtime-boundary:html-resource-loading-attribute:${label}`,
-    runtimeSignals: ['html-resource-loading-runtime']
+    runtimeCommand: command,
+    runtimeProbeId: probeId,
+    runtimeEvidenceHash: evidenceHash,
+    runtimeSignals: signals,
+    runtimeProofCapsule: runtimeProofCapsule({ command, probeId, evidenceHash, signals, label })
   };
 }
 

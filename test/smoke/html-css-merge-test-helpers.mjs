@@ -55,11 +55,37 @@ function scopedProof({ id, sourcePath, graphHash, base, worker, head, output, sc
 }
 
 function runtimeEvidence(reasonCode, boundary, label) {
+  const command = `node test/html-runtime/${label}.mjs`;
+  const probeId = `html:${reasonCode}:${boundary}`;
+  const evidenceHash = `html-runtime-evidence:${reasonCode}:${boundary}:${label}`;
+  const signals = runtimeSignals(reasonCode, boundary);
   return {
-    runtimeCommand: `node test/html-runtime/${label}.mjs`,
-    runtimeProbeId: `html:${reasonCode}:${boundary}`,
-    runtimeEvidenceHash: `html-runtime-evidence:${reasonCode}:${boundary}:${label}`,
-    runtimeSignals: runtimeSignals(reasonCode, boundary)
+    runtimeCommand: command,
+    runtimeProbeId: probeId,
+    runtimeEvidenceHash: evidenceHash,
+    runtimeSignals: signals,
+    runtimeProofCapsule: runtimeProofCapsule({ command, probeId, evidenceHash, signals, label })
+  };
+}
+
+function runtimeProofCapsule({ command, probeId, evidenceHash, signals, label }) {
+  return {
+    mode: 'isolated-fixture',
+    status: 'passed',
+    command,
+    probeId,
+    evidenceHash,
+    signals,
+    telemetry: {
+      hash: `telemetry:${label}`,
+      domSnapshotHash: `dom:${label}`,
+      computedStyleHash: `style:${label}`,
+      layoutSnapshotHash: `layout:${label}`,
+      eventTraceHash: `events:${label}`,
+      layoutShiftHash: `layout-shift:${label}`,
+      screenshotHash: `screenshot:${label}`,
+      cumulativeLayoutShift: 0
+    }
   };
 }
 
@@ -86,4 +112,4 @@ function sourceHashBinding(base, worker, head, output) {
   };
 }
 
-export { matrixSurface, runtimeEvidence, scopedProof, selectorProof, sourceHashBinding };
+export { matrixSurface, runtimeEvidence, runtimeProofCapsule, scopedProof, selectorProof, sourceHashBinding };

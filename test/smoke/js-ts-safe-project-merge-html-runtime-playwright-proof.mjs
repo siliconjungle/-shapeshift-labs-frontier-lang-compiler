@@ -20,6 +20,9 @@ const generatedRuntimeProof = await capturePlaywrightRuntimeProof({
       }
     };
   },
+  async screenshot() {
+    return new Uint8Array([1, 2, 3, 4]);
+  },
   async evaluate(_pageFunction, arg) {
     if (arg?.traceKind === 'frontier.runtime-proof.playwright.trace.v1') return undefined;
     assert.equal(arg.captureKind, 'frontier.runtime-proof.playwright.capture.v1');
@@ -44,6 +47,7 @@ const generatedRuntimeProof = await capturePlaywrightRuntimeProof({
   sourcePath: 'src/capsule.html',
   sourceHash: 'generated-capsule-source-artifact',
   selectors: ['[data-frontier-key="save"]'],
+  screenshot: true,
   maxCumulativeLayoutShift: 0.01
 });
 
@@ -81,4 +85,6 @@ assert.equal(record.runtimeDomSnapshotHash.startsWith('fnv1a32:'), true);
 assert.equal(record.runtimeComputedStyleHash.startsWith('fnv1a32:'), true);
 assert.equal(record.runtimeLayoutSnapshotHash.startsWith('fnv1a32:'), true);
 assert.equal(record.runtimeEventTraceHash.startsWith('fnv1a32:'), true);
+assert.equal(record.runtimeLayoutShiftHash.startsWith('fnv1a32:'), true);
+assert.equal(record.runtimeScreenshotHash.startsWith('fnv1a32:'), true);
 assert.equal(matrixSurface(project, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');

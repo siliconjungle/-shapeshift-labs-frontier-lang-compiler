@@ -264,7 +264,7 @@ function htmlProofGapNextProof(reasonCode) {
   return 'Attach source-bound HTML parser, identity, and runtime-boundary evidence for the changed file before structural admission.';
 }
 
-function htmlRuntimeBoundaryProofInstruction(boundaryClause) { return `Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, ${boundaryClause}, exact base/worker/head/output source text or hashes, runtime command, runtime probe id, runtime evidence hash, required runtime signals, and no broad browser/semantic/auto-merge self-claims.`; }
+function htmlRuntimeBoundaryProofInstruction(boundaryClause) { return `Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, ${boundaryClause}, exact base/worker/head/output source text or hashes, a runtimeProofCapsule with command, probe id, evidence hash, required runtime signals, telemetry/dom/computed-style/layout/event/layout-shift/screenshot hashes, acceptable cumulative layout shift, and no broad browser/semantic/auto-merge self-claims.`; }
 
 function blockedHtmlProofGapAdmission(admission = {}, conflicts = []) {
   return {

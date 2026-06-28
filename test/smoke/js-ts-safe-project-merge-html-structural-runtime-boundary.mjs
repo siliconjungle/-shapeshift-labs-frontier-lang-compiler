@@ -1,7 +1,12 @@
 import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
+import { runtimeProofCapsule } from './html-css-merge-test-helpers.mjs';
 
 function sourceBoundProof({ id, sourcePath, reasonCode, side = 'worker', boundary, boundaryAttributes, base, worker, head, output }) {
+  const command = `node test/html-runtime/${id}.mjs`;
+  const probeId = `html:${reasonCode}:${boundary}`;
+  const evidenceHash = `html-runtime-evidence:${reasonCode}:${boundary}:${id}`;
+  const signals = runtimeSignals(reasonCode, boundary);
   return {
     id,
     kind: 'html-source-bound-runtime-boundary-proof',
@@ -12,10 +17,11 @@ function sourceBoundProof({ id, sourcePath, reasonCode, side = 'worker', boundar
     boundary,
     boundaryAttributes,
     sourceTexts: { base, worker, head, output },
-    runtimeCommand: `node test/html-runtime/${id}.mjs`,
-    runtimeProbeId: `html:${reasonCode}:${boundary}`,
-    runtimeEvidenceHash: `html-runtime-evidence:${reasonCode}:${boundary}:${id}`,
-    runtimeSignals: runtimeSignals(reasonCode, boundary)
+    runtimeCommand: command,
+    runtimeProbeId: probeId,
+    runtimeEvidenceHash: evidenceHash,
+    runtimeSignals: signals,
+    runtimeProofCapsule: runtimeProofCapsule({ command, probeId, evidenceHash, signals, label: id })
   };
 }
 
