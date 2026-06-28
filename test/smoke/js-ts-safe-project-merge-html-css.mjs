@@ -105,11 +105,36 @@ const htmlClassTokenProject = safeMergeJsTsProject({
 assert.equal(htmlClassTokenProject.status, 'merged');
 assert.equal(htmlClassTokenProject.summary.htmlClassTokenMergeFiles, 1);
 assert.equal(htmlClassTokenProject.summary.htmlClassTokenMergeEvidenceRecords, 1);
+assert.equal(htmlClassTokenProject.summary.htmlTokenListMergeFiles, 1);
+assert.equal(htmlClassTokenProject.summary.htmlTokenListMergeEvidenceRecords, 1);
 assert.match(htmlClassTokenProject.outputFiles[0].sourceText, /class="card muted compact"/);
 assert.deepEqual(htmlClassTokenProject.files[0].result.htmlClassTokenMergeEvidence[0].workerRemovedTokens, ['selected']);
+assert.equal(htmlClassTokenProject.files[0].result.htmlTokenListMergeEvidence[0].attributeName, 'class');
 assert.deepEqual(htmlClassTokenProject.files[0].result.htmlClassTokenMergeEvidence[0].headAddedTokens, ['compact']);
 assert.equal(htmlClassTokenProject.files[0].result.htmlClassTokenMergeEvidence[0].browserRenderEquivalenceClaim, false);
 assert.equal(matrixSurface(htmlClassTokenProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
+
+const htmlPartTokenProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_part_tokens',
+  files: [{
+    sourcePath: 'src/panel.html',
+    baseSourceText: '<div data-frontier-key="panel" part="card">Panel</div>\n',
+    workerSourceText: '<div data-frontier-key="panel" part="card toolbar">Panel</div>\n',
+    headSourceText: '<div data-frontier-key="panel" part="card compact">Panel</div>\n'
+  }]
+});
+assert.equal(htmlPartTokenProject.status, 'merged');
+assert.equal(htmlPartTokenProject.summary.htmlClassTokenMergeFiles, 0);
+assert.equal(htmlPartTokenProject.summary.htmlClassTokenMergeEvidenceRecords, 0);
+assert.equal(htmlPartTokenProject.summary.htmlTokenListMergeFiles, 1);
+assert.equal(htmlPartTokenProject.summary.htmlTokenListMergeEvidenceRecords, 1);
+assert.match(htmlPartTokenProject.outputFiles[0].sourceText, /part="card compact toolbar"/);
+assert.equal(htmlPartTokenProject.files[0].result.htmlTokenListMergeEvidence[0].kind, 'frontier.lang.htmlTokenListMergeEvidence');
+assert.equal(htmlPartTokenProject.files[0].result.htmlTokenListMergeEvidence[0].attributeName, 'part');
+assert.deepEqual(htmlPartTokenProject.files[0].result.htmlTokenListMergeEvidence[0].workerAddedTokens, ['toolbar']);
+assert.deepEqual(htmlPartTokenProject.files[0].result.htmlTokenListMergeEvidence[0].headAddedTokens, ['compact']);
+assert.equal(htmlPartTokenProject.files[0].result.htmlTokenListMergeEvidence[0].browserRenderEquivalenceClaim, false);
+assert.equal(matrixSurface(htmlPartTokenProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
 
 const htmlDuplicateIdentityBase = [
   '<main id="app">',

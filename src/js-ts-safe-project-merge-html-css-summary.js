@@ -1,6 +1,6 @@
 import { CssDependencyAtRuleNames, CssDependencyCodeFragments, CssDependencyMissingProofReasonCodes, CssDependencySurfacePatterns, CssRuntimeDescriptorReasonCodes, CssRuntimeEquivalenceReasonCodes, HtmlFrameworkBoundaryReasonCodes, HtmlRuntimeBoundaryReasonCodes, RequiredParserEvidenceSideNames, ScopedCascadeMissingProofReasonCodes } from './js-ts-safe-project-merge-html-css-summary-constants.js';
 import { cssDescriptorEvidenceCount, cssFontFaceDescriptorEvidenceCount, cssPageDescriptorEvidenceCount, cssPropertyDescriptorEvidenceCount, hasSourceBoundPageDescriptorEvidence, hasSourceBoundPropertyDescriptorEvidence } from './js-ts-safe-project-merge-css-runtime-descriptor-evidence.js';
-import { hasHtmlClassTokenMergeEvidence, htmlClassTokenMergeEvidenceRecords } from './js-ts-safe-project-merge-html-class-token-evidence.js';
+import { hasHtmlClassTokenMergeEvidence, hasHtmlTokenListMergeEvidence, htmlClassTokenMergeEvidenceRecords, htmlTokenListMergeEvidenceRecords } from './js-ts-safe-project-merge-html-class-token-evidence.js';
 import { parserEvidenceSourceHashBindingValid } from './js-ts-safe-project-merge-html-css-parser-source-hash-binding.js';
 
 function htmlCssProjectSummary(files) {
@@ -16,6 +16,7 @@ function htmlCssProjectSummary(files) {
     htmlExplicitIdentityEvidenceFiles: htmlFiles.filter(hasHtmlExplicitIdentityEvidence).length, htmlPathOnlyIdentityResidualFiles: htmlFiles.filter(hasHtmlPathOnlyIdentityResidual).length, htmlDuplicateIdentityEvidenceFiles: htmlFiles.filter(hasHtmlDuplicateIdentityEvidence).length, htmlDuplicateIdentityKeys: htmlFiles.reduce((sum, file) => sum + htmlDuplicateIdentityKeyCount(file), 0),
     htmlRuntimeBoundaryEvidenceFiles: htmlFiles.filter(hasHtmlRuntimeBoundaryEvidence).length, htmlFrameworkBoundaryEvidenceFiles: htmlFiles.filter(hasHtmlFrameworkBoundaryEvidence).length, htmlProofGapBlockedFiles: htmlFiles.filter(hasHtmlProofGapBlockedConflict).length,
     htmlClassTokenMergeFiles: htmlFiles.filter(hasHtmlClassTokenMergeEvidence).length, htmlClassTokenMergeEvidenceRecords: htmlFiles.reduce((sum, file) => sum + htmlClassTokenMergeEvidenceRecords(file).length, 0),
+    htmlTokenListMergeFiles: htmlFiles.filter(hasHtmlTokenListMergeEvidence).length, htmlTokenListMergeEvidenceRecords: htmlFiles.reduce((sum, file) => sum + htmlTokenListMergeEvidenceRecords(file).length, 0),
     htmlIdentityEvidenceFailedFiles: htmlFiles.filter(hasHtmlIdentityEvidenceFailure).length, cssSelectorTargetConflictFiles: cssFiles.filter(hasCssSelectorTargetConflict).length, htmlCssStructuralTargetEvidenceFailedFiles: htmlCssFiles.filter((file) => hasHtmlIdentityEvidenceFailure(file) || hasCssSelectorTargetConflict(file)).length,
     cssSelectorTargetRebasedFiles: cssFiles.filter(hasCssSelectorTargetRebase).length,
     cssScopedCascadeFiles: cssFiles.filter(hasCssScopedCascadeScope).length, cssScopedCascadeEvidenceFiles: cssFiles.filter(hasCssScopedCascadeEvidence).length, cssScopedCascadeShapeEvidenceFiles: cssFiles.filter(hasCssScopedCascadeShapeEvidence).length, cssScopedCascadeBlockedFiles: cssFiles.filter(hasCssScopedCascadeMissingProof).length,
