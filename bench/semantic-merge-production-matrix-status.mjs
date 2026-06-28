@@ -120,7 +120,7 @@ const rowProofs = new Map([
   ['Nested/scoped CSS', {
     anchors: ['CSS syntax, selectors, cascade, and at-rules'],
     evidence: ['test/smoke/js-ts-safe-project-merge-html-css-scoped-basic.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-scoped-nested.mjs'],
-    remaining: ['Nested/scoped CSS parser-backed expansion']
+    remaining: []
   }],
   ['CSS Modules import/use-site graph', {
     anchors: cssModulesAnchors,

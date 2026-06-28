@@ -33,7 +33,7 @@ function selectorProof({ id, graphHash, base, worker, head, fromSelectors, toSel
   };
 }
 
-function scopedProof({ id, sourcePath, graphHash, base, worker, head, output, scope, scopes, shapeKey, cascadeKeys, properties, sides }) {
+function scopedProof({ id, sourcePath, graphHash, base, worker, head, output, scope, scopes, shapeKey, cascadeKeys, properties, sides, selectors = ['.button'] }) {
   return {
     id,
     kind: 'css-source-bound-scoped-cascade-proof',
@@ -41,7 +41,7 @@ function scopedProof({ id, sourcePath, graphHash, base, worker, head, output, sc
     sourcePath,
     reasonCode: 'css-scoped-cascade-equivalence-unproved',
     sides,
-    selectors: ['.button'],
+    selectors,
     scopes: scopes ?? [scope],
     cascadeKeys,
     properties,

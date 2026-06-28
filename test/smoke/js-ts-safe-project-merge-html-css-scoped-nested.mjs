@@ -138,15 +138,59 @@ const nestedRuleScopedCssBase = [
 ].join('\n');
 const nestedRuleScopedCssWorker = nestedRuleScopedCssBase.replace('color: red', 'color: blue');
 const nestedRuleScopedCssHead = nestedRuleScopedCssBase.replace('padding-left: 1rem;', 'padding-left: 1rem;\n          background-color: white;');
-const nestedRuleScopedCssBlocked = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_nested_rule_scope_blocked',
+const nestedRuleScopedCssOutput = '@media (min-width: 48rem) {\n  @layer components {\n    @scope (.card) {\n      .card .button {\n        color: blue;\n        padding-left: 1rem;\n        background-color: white;\n      }\n    }\n  }\n}\n';
+const nestedRuleScopedCssShapeKey = '@media (min-width: 48rem)::@layer components::@scope (.card)';
+const nestedRuleScopedCssShapeHash = 'hash_nested_rule_media_layer_scope_cascade_shape';
+const nestedRuleScopedCssMissingProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_nested_rule_scope_missing_proof',
+  cssMergeOptionsByPath: { 'src/nested-rule.css': { scopedCascadeGraphHashesByShapeKey: { [nestedRuleScopedCssShapeKey]: nestedRuleScopedCssShapeHash } } },
   files: [{ sourcePath: 'src/nested-rule.css', baseSourceText: nestedRuleScopedCssBase, workerSourceText: nestedRuleScopedCssWorker, headSourceText: nestedRuleScopedCssHead }]
 });
-assert.equal(nestedRuleScopedCssBlocked.status, 'blocked');
-assert.equal(nestedRuleScopedCssBlocked.summary.cssParserEvidenceFiles, 0);
-assert.equal(nestedRuleScopedCssBlocked.summary.cssParserEvidenceFailedFiles, 1);
-assert.equal(nestedRuleScopedCssBlocked.summary.cssScopedCascadeFiles, 1);
-assert.equal(nestedRuleScopedCssBlocked.summary.cssScopedCascadeBlockedFiles, 1);
-assert.equal(nestedRuleScopedCssBlocked.conflicts.some((conflict) => conflict.code === 'css-scoped-cascade-parser-proof-blocked' && conflict.details.reasonCode === 'css-scoped-cascade-nesting-unproved'), true);
-assert.equal(nestedRuleScopedCssBlocked.outputFiles.some((file) => file.sourcePath === 'src/nested-rule.css'), false);
-assert.equal(matrixSurface(nestedRuleScopedCssBlocked, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'failed');
+assert.equal(nestedRuleScopedCssMissingProof.status, 'blocked');
+assert.equal(nestedRuleScopedCssMissingProof.summary.cssParserEvidenceFiles, 1);
+assert.equal(nestedRuleScopedCssMissingProof.summary.cssParserEvidenceFailedFiles, 0);
+assert.equal(nestedRuleScopedCssMissingProof.summary.cssScopedCascadeFiles, 1);
+assert.equal(nestedRuleScopedCssMissingProof.summary.cssScopedCascadeBlockedFiles, 1);
+assert.equal(nestedRuleScopedCssMissingProof.conflicts.some((conflict) => conflict.code === 'css-scoped-cascade-proof-blocked' && conflict.details.reasonCode === 'css-scoped-cascade-equivalence-unproved'), true);
+assert.equal(nestedRuleScopedCssMissingProof.conflicts.some((conflict) => conflict.details.reasonCode === 'css-scoped-cascade-nesting-unproved'), false);
+assert.equal(nestedRuleScopedCssMissingProof.outputFiles.some((file) => file.sourcePath === 'src/nested-rule.css'), false);
+assert.equal(matrixSurface(nestedRuleScopedCssMissingProof, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'failed');
+
+const nestedRuleScopedCssProof = scopedProof({
+  id: 'proof_css_nested_rule_media_layer_scope',
+  sourcePath: 'src/nested-rule.css',
+  graphHash: nestedRuleScopedCssShapeHash,
+  shapeKey: nestedRuleScopedCssShapeKey,
+  base: nestedRuleScopedCssBase,
+  worker: nestedRuleScopedCssWorker,
+  head: nestedRuleScopedCssHead,
+  output: nestedRuleScopedCssOutput,
+  scopes: ['@media (min-width: 48rem)', '@layer components', '@scope (.card)'],
+  selectors: ['.card .button'],
+  cascadeKeys: [`${nestedRuleScopedCssShapeKey}::.card .button::color`, `${nestedRuleScopedCssShapeKey}::.card .button::background-color`],
+  properties: ['color', 'background-color'],
+  sides: ['worker', 'head']
+});
+const nestedRuleScopedCssStaleProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_nested_rule_scope_stale_proof',
+  cssMergeOptionsByPath: { 'src/nested-rule.css': { scopedCascadeGraphHashesByShapeKey: { [nestedRuleScopedCssShapeKey]: nestedRuleScopedCssShapeHash }, cssScopedCascadeProofs: [{ ...nestedRuleScopedCssProof, outputSourceHash: 'stale-output' }] } },
+  files: [{ sourcePath: 'src/nested-rule.css', baseSourceText: nestedRuleScopedCssBase, workerSourceText: nestedRuleScopedCssWorker, headSourceText: nestedRuleScopedCssHead }]
+});
+assert.equal(nestedRuleScopedCssStaleProof.status, 'blocked');
+assert.equal(nestedRuleScopedCssStaleProof.conflicts.some((conflict) => conflict.code === 'css-scoped-cascade-proof-blocked'), true);
+
+const nestedRuleScopedCssWithProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_nested_rule_scope_with_proof',
+  cssMergeOptionsByPath: { 'src/nested-rule.css': { scopedCascadeGraphHashesByShapeKey: { [nestedRuleScopedCssShapeKey]: nestedRuleScopedCssShapeHash }, cssScopedCascadeProofs: [nestedRuleScopedCssProof] } },
+  files: [{ sourcePath: 'src/nested-rule.css', baseSourceText: nestedRuleScopedCssBase, workerSourceText: nestedRuleScopedCssWorker, headSourceText: nestedRuleScopedCssHead }]
+});
+assert.equal(nestedRuleScopedCssWithProof.status, 'merged');
+assert.equal(nestedRuleScopedCssWithProof.summary.cssParserEvidenceFiles, 1);
+assert.equal(nestedRuleScopedCssWithProof.summary.cssScopedCascadeEvidenceFiles, 1);
+assert.equal(nestedRuleScopedCssWithProof.summary.cssScopedCascadeShapeEvidenceFiles, 1);
+assert.equal(nestedRuleScopedCssWithProof.summary.cssScopedCascadeBlockedFiles, 0);
+assert.equal(nestedRuleScopedCssWithProof.files[0].result.scopedCascadeProofs.length, 2);
+assert.equal(nestedRuleScopedCssWithProof.files[0].result.scopedCascadeProofs.every((proof) => proof.scopedCascadeGraphShapeKey === nestedRuleScopedCssShapeKey), true);
+assert.equal(nestedRuleScopedCssWithProof.files[0].result.browserCascadeEquivalenceClaim, false);
+assert.equal(nestedRuleScopedCssWithProof.outputFiles[0].sourceText, nestedRuleScopedCssOutput);
+assert.equal(matrixSurface(nestedRuleScopedCssWithProof, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'passed');
