@@ -7,6 +7,11 @@ import { collectExternalCheckoutProofs } from './real-repo-corpus-checkout-proof
 import { collectRealRepoCommandExecution } from './real-repo-corpus-command-execution.mjs';
 import { createCheckoutEvidenceRows } from './real-repo-corpus-evidence.mjs';
 import {
+  assertDefaultRealRepoLiveProjectProofMetrics,
+  collectRealRepoLiveProjectProofs,
+  realRepoCorpusLiveProjectProofMetrics
+} from './real-repo-corpus-live-project-proof.mjs';
+import {
   RealRepoCorpusOracleCoverage,
   assertRealRepoCorpusOracleCoverageMetrics
 } from './real-repo-corpus-oracle-coverage.mjs';
@@ -111,6 +116,7 @@ function measureRealRepoCorpus(options = {}) {
 
   const checkoutProof = collectExternalCheckoutProofs(manifest, entries);
   const commandExecution = collectRealRepoCommandExecution(manifest, checkoutProof, options.realRepoCommandExecution ?? {});
+  const liveProjectProof = collectRealRepoLiveProjectProofs(manifest, checkoutProof, options.realRepoLiveProjectProof ?? {});
   const checkoutEvidenceRows = createCheckoutEvidenceRows(manifest, checkoutProof, commandExecution);
   const metrics = {
     realRepoCorpusFixtureMode: fixture.mode,
@@ -222,6 +228,7 @@ function measureRealRepoCorpus(options = {}) {
     realRepoCorpusCommandRunSkippedPhases: commandExecution.commandRunSkippedPhases,
     realRepoCorpusCommandRunDefaultOffPhases: commandExecution.commandRunDefaultOffPhases,
     realRepoCorpusCommandRunOutputTruncatedPhases: commandExecution.commandRunOutputTruncatedPhases,
+    ...realRepoCorpusLiveProjectProofMetrics(liveProjectProof),
     realRepoCorpusDurationMs: Number((performance.now() - start).toFixed(2))
   };
   assertRealRepoCorpusOracleCoverageMetrics(metrics);
@@ -266,6 +273,7 @@ function measureRealRepoCorpus(options = {}) {
     assert.equal(metrics.realRepoCorpusCommandRunExecutedPhases, 0, 'default real-repo bench must not execute command-run phases');
     assert.equal(metrics.realRepoCorpusCommandRunDefaultOffRows, entries.length, 'default real-repo bench must keep command-run rows default-off');
   }
+  if (!liveProjectProof.enabled) assertDefaultRealRepoLiveProjectProofMetrics(metrics, entries, assert);
   return metrics;
 }
 

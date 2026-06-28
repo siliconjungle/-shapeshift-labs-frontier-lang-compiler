@@ -47,6 +47,15 @@
           "shell": false,
           "envPolicy": "allowlist-only",
           "outputEvidence": "sha256-hash-plus-capped-preview"
+        },
+        "liveProjectProof": {
+          "proofStatus": "explicit-opt-in-local-typechecker",
+          "phases": ["diagnostics", "declaration-output"],
+          "executionStatuses": ["not-run-default-source-free", "skipped-missing-checkout", "blocked-safety-invariant", "blocked-identity-mismatch", "blocked-compiler-unavailable", "blocked-source-read", "passed", "failed"],
+          "defaultExecution": "not-run-default-source-free",
+          "networkRequired": false,
+          "readsSourceText": true,
+          "sourceEvidence": "sha256-hash-plus-counts-no-vendored-text"
         }
       },
       "packageManagerMatrix": [

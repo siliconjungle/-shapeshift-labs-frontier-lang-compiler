@@ -24,12 +24,51 @@ function cssModuleSourceMapIdentityProof(mergeOptions = {}, context = {}) {
   const generatedSourceHash = firstString(proof.generatedSourceHash, proof.generatedHash, proof.outputGeneratedSourceHash, context.generatedSourceHash);
   const generatedClassNameMapHash = firstString(proof.generatedClassNameMapHash, context.generatedClassNameMapHash);
   const bundlerTransformHash = firstString(proof.bundlerTransformHash, context.bundlerTransformHash);
+  const loader = firstObject(proof.loader, proof.loaderMetadata, proof.cssLoader);
+  const sourceMap = firstObject(proof.sourceMap, proof.map, proof.sourceMapArtifact);
+  const loaderRequestHash = firstString(
+    proof.loaderRequestHash,
+    proof.cssModuleLoaderRequestHash,
+    loader?.requestHash,
+    loader?.loaderRequestHash,
+    proof.loaderRequest ? hashSemanticValue({ kind: 'frontier.lang.cssModuleLoaderRequest.v1', loaderRequest: proof.loaderRequest }) : undefined,
+    loader?.request ? hashSemanticValue({ kind: 'frontier.lang.cssModuleLoaderRequest.v1', loaderRequest: loader.request }) : undefined
+  );
+  const loaderQueryHash = firstString(
+    proof.loaderQueryHash,
+    proof.cssModuleLoaderQueryHash,
+    loader?.queryHash,
+    loader?.loaderQueryHash,
+    proof.loaderQuery !== undefined ? hashSemanticValue({ kind: 'frontier.lang.cssModuleLoaderQuery.v1', loaderQuery: proof.loaderQuery }) : undefined,
+    loader?.query !== undefined ? hashSemanticValue({ kind: 'frontier.lang.cssModuleLoaderQuery.v1', loaderQuery: loader.query }) : undefined
+  );
+  const sourceMapArtifactHash = firstString(
+    proof.sourceMapArtifactHash,
+    proof.cssModuleSourceMapArtifactHash,
+    proof.sourceMapHash,
+    proof.mapHash,
+    sourceMap?.artifactHash,
+    sourceMap?.sourceMapArtifactHash,
+    sourceMap ? hashSemanticValue({ kind: 'frontier.lang.cssModuleSourceMapArtifact.v1', sourceMap: normalizeSourceMapArtifact(sourceMap) }) : undefined
+  );
+  const sourcesContentHash = firstString(
+    proof.sourcesContentHash,
+    proof.sourceMapSourcesContentHash,
+    proof.cssModuleSourceMapSourcesContentHash,
+    sourceMap?.sourcesContentHash,
+    sourceMap?.sourceMapSourcesContentHash,
+    sourceMap?.sourcesContent ? hashSemanticValue({ kind: 'frontier.lang.cssModuleSourceMapSourcesContent.v1', sourcesContent: sourceMap.sourcesContent }) : undefined
+  );
   if (proof.sourcePath !== undefined && proof.sourcePath !== sourcePath) reasonCodes.push('css-module-source-map-proof-source-path-mismatch');
   if (proof.originalSourcePath !== undefined && proof.originalSourcePath !== sourcePath) reasonCodes.push('css-module-source-map-proof-source-path-mismatch');
   if (context.sourceHash && originalSourceHash !== context.sourceHash && originalSourceHash !== context.outputSourceHash) reasonCodes.push('css-module-source-map-proof-source-hash-mismatch');
   if (!generatedSourceHash) reasonCodes.push('css-module-source-map-proof-generated-source-hash-missing');
   if (context.generatedClassNameMapHash && generatedClassNameMapHash !== context.generatedClassNameMapHash) reasonCodes.push('css-module-source-map-proof-generated-class-map-hash-mismatch');
   if (context.bundlerTransformHash && bundlerTransformHash !== context.bundlerTransformHash) reasonCodes.push('css-module-source-map-proof-bundler-transform-hash-mismatch');
+  requireMatchingHash(reasonCodes, context.loaderRequestHash, loaderRequestHash, 'css-module-source-map-proof-loader-request-hash-missing', 'css-module-source-map-proof-loader-request-hash-mismatch');
+  requireMatchingHash(reasonCodes, context.loaderQueryHash, loaderQueryHash, 'css-module-source-map-proof-loader-query-hash-missing', 'css-module-source-map-proof-loader-query-hash-mismatch');
+  requireMatchingHash(reasonCodes, context.sourceMapArtifactHash, sourceMapArtifactHash, 'css-module-source-map-proof-artifact-hash-missing', 'css-module-source-map-proof-artifact-hash-mismatch');
+  requireMatchingHash(reasonCodes, context.sourcesContentHash, sourcesContentHash, 'css-module-source-map-proof-sources-content-hash-missing', 'css-module-source-map-proof-sources-content-hash-mismatch');
   const mappings = normalizeMappings(proof.mappings ?? mergeOptions.sourceMapMappings);
   if (!mappings.length) reasonCodes.push('css-module-source-map-proof-mappings-missing');
   for (const mapping of mappings) reasonCodes.push(...mappingReasonCodes(mapping, originalSourcePath, generatedSourcePath));
@@ -46,6 +85,10 @@ function cssModuleSourceMapIdentityProof(mergeOptions = {}, context = {}) {
     generatedSourceHash,
     generatedClassNameMapHash,
     bundlerTransformHash,
+    loaderRequestHash,
+    loaderQueryHash,
+    sourceMapArtifactHash,
+    sourcesContentHash,
     mappings
   });
   const computedSourceMapProofHash = hashSemanticValue(hashInput);
@@ -99,6 +142,24 @@ function mappingReasonCodes(mapping, originalSourcePath, generatedSourcePath) {
   if (Number.isFinite(mapping.originalStart) && Number.isFinite(mapping.originalEnd) && mapping.originalStart >= mapping.originalEnd) reasons.push('css-module-source-map-proof-mapping-span-invalid');
   if (Number.isFinite(mapping.generatedStart) && Number.isFinite(mapping.generatedEnd) && mapping.generatedStart >= mapping.generatedEnd) reasons.push('css-module-source-map-proof-mapping-span-invalid');
   return reasons;
+}
+
+function requireMatchingHash(reasonCodes, expected, actual, missingCode, mismatchCode) {
+  if (!expected) return;
+  if (!actual) reasonCodes.push(missingCode);
+  else if (actual !== expected) reasonCodes.push(mismatchCode);
+}
+
+function normalizeSourceMapArtifact(sourceMap) {
+  return compactRecord({
+    version: sourceMap.version,
+    file: firstString(sourceMap.file),
+    sources: Array.isArray(sourceMap.sources) ? sourceMap.sources : undefined,
+    sourcesContent: Array.isArray(sourceMap.sourcesContent) ? sourceMap.sourcesContent : undefined,
+    names: Array.isArray(sourceMap.names) ? sourceMap.names : undefined,
+    mappings: firstString(sourceMap.mappings),
+    sourceRoot: firstString(sourceMap.sourceRoot)
+  });
 }
 
 function firstObject(...values) { return values.find((value) => value && typeof value === 'object' && !Array.isArray(value)); }

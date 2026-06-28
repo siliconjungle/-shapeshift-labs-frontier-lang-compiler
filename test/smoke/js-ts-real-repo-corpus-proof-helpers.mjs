@@ -11,6 +11,8 @@ const COMMAND_DRY_RUN_PHASES = ['dependency-install', 'build', 'test'];
 const COMMAND_DRY_RUN_READINESS_STATUSES = ['skipped-missing-checkout', 'ready-local-checkout'];
 const COMMAND_DRY_RUN_EXECUTION_STATUSES = ['skipped-missing-checkout', 'opt-in-required'];
 const COMMAND_RUN_EXECUTION_STATUSES = ['skipped-missing-checkout', 'blocked-safety-invariant', 'blocked-opt-in-required', 'blocked-identity-mismatch', 'blocked-command-not-allowed', 'executed', 'failed', 'timed-out'];
+const LIVE_PROJECT_PROOF_PHASES = ['diagnostics', 'declaration-output'];
+const LIVE_PROJECT_PROOF_EXECUTION_STATUSES = ['not-run-default-source-free', 'skipped-missing-checkout', 'blocked-safety-invariant', 'blocked-identity-mismatch', 'blocked-compiler-unavailable', 'blocked-source-read', 'passed', 'failed'];
 
 function assertLocalCheckoutProof(manifest, assert) {
   const proof = manifest.localBehavior?.checkoutProof;
@@ -42,6 +44,13 @@ function assertLocalCheckoutProof(manifest, assert) {
   assert.equal(proof.commandExecution?.shell, false, 'real-repo command execution shell policy');
   assert.equal(proof.commandExecution?.envPolicy, 'allowlist-only', 'real-repo command execution env policy');
   assert.equal(proof.commandExecution?.outputEvidence, 'sha256-hash-plus-capped-preview', 'real-repo command execution output evidence');
+  assert.equal(proof.liveProjectProof?.proofStatus, 'explicit-opt-in-local-typechecker', 'real-repo live-project proof status');
+  assert.deepEqual(proof.liveProjectProof?.phases, LIVE_PROJECT_PROOF_PHASES, 'real-repo live-project proof phases');
+  assert.deepEqual(proof.liveProjectProof?.executionStatuses, LIVE_PROJECT_PROOF_EXECUTION_STATUSES, 'real-repo live-project proof execution statuses');
+  assert.equal(proof.liveProjectProof?.defaultExecution, 'not-run-default-source-free', 'real-repo live-project proof default execution');
+  assert.equal(proof.liveProjectProof?.networkRequired, false, 'real-repo live-project proof network-free');
+  assert.equal(proof.liveProjectProof?.readsSourceText, true, 'real-repo live-project proof source-text access is explicit opt-in');
+  assert.equal(proof.liveProjectProof?.sourceEvidence, 'sha256-hash-plus-counts-no-vendored-text', 'real-repo live-project source evidence');
 }
 
 function assertPackageManagerMatrix(manifest, assert) {
@@ -123,6 +132,8 @@ export {
   COMMAND_DRY_RUN_READINESS_STATUSES,
   COMMAND_RUN_EXECUTION_STATUSES,
   GIT_METADATA_KINDS,
+  LIVE_PROJECT_PROOF_EXECUTION_STATUSES,
+  LIVE_PROJECT_PROOF_PHASES,
   SKIPPED_CHECKOUT_PRESENCE_STATUSES,
   STRENGTHENED_CHECKOUT_EVIDENCE_FIELDS,
   assertBroadSuiteGaps,

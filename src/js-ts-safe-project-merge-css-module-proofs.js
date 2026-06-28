@@ -49,7 +49,8 @@ function projectCssModuleProofOptionsForBlockedMerge(input) {
     outputSourceHash: firstResult.candidateMergedSourceHash,
     generatedClassNameMapHash,
     bundlerTransformHash,
-    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash)
+    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash),
+    ...cssModuleSourceMapProofContext(mergeOptions)
   });
   const sourceMapConflict = sourceMapProofConflict(firstResult.id, sourcePath, sourceMapIdentityProof);
   if (sourceMapConflict) return cssModuleProofBlockedResult(firstResult, [sourceMapConflict]);
@@ -113,7 +114,8 @@ function missingTransformProofBlockedResult({ firstResult, sourcePath, mergeOpti
     sourcePath,
     generatedClassNameMapHash: generatedClassNameMapProof.generatedClassNameMapHash,
     bundlerTransformHash: firstString(mergeOptions.bundlerTransformHash, mergeOptions.cssModuleBundlerTransformHash),
-    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash)
+    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash),
+    ...cssModuleSourceMapProofContext(mergeOptions)
   });
   const sourceMapConflict = sourceMapProofConflict(firstResult.id, sourcePath, sourceMapIdentityProof);
   if (sourceMapConflict) conflicts.push(sourceMapConflict);
@@ -196,7 +198,8 @@ function cssModuleProofImport(input, file) {
     sourcePath: file.sourcePath,
     generatedClassNameMapHash: generatedClassNameMapProof.generatedClassNameMapHash,
     bundlerTransformHash,
-    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash)
+    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash),
+    ...cssModuleSourceMapProofContext(mergeOptions)
   });
   return importNativeSource({
     language: 'css',
@@ -228,7 +231,8 @@ function cssModuleOutputProjectImport(evidence, file, input) {
     outputSourceHash: file.outputHash,
     generatedClassNameMapHash: proof?.generatedClassNameMapHash ?? generatedClassNameMapProof.generatedClassNameMapHash,
     bundlerTransformHash,
-    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash)
+    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash),
+    ...cssModuleSourceMapProofContext(mergeOptions)
   });
   return importNativeSource({
     language: 'css',
@@ -264,6 +268,15 @@ function cssMergeOptionsForProjectFile(input, sourcePath) {
   return {
     ...(input.cssMergeOptions ?? input.styleMergeOptions),
     ...(byPath?.[sourcePath] ?? {})
+  };
+}
+
+function cssModuleSourceMapProofContext(mergeOptions) {
+  return {
+    loaderRequestHash: firstString(mergeOptions.loaderRequestHash, mergeOptions.cssModuleLoaderRequestHash),
+    loaderQueryHash: firstString(mergeOptions.loaderQueryHash, mergeOptions.cssModuleLoaderQueryHash),
+    sourceMapArtifactHash: firstString(mergeOptions.sourceMapArtifactHash, mergeOptions.cssModuleSourceMapArtifactHash, mergeOptions.cssModuleSourceMapHash),
+    sourcesContentHash: firstString(mergeOptions.sourcesContentHash, mergeOptions.sourceMapSourcesContentHash, mergeOptions.cssModuleSourceMapSourcesContentHash)
   };
 }
 

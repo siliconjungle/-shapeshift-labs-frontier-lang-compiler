@@ -72,6 +72,15 @@ function assertRealRepoCorpusMetrics(metrics, manifest, assert) {
   assert.equal(metrics.realRepoCorpusCommandDryRunExecutedPhases, 0, 'real-repo metrics command dry-run executed phases');
   assert.equal(metrics.realRepoCorpusCommandDryRunDefaultOffPhases, metrics.realRepoCorpusCommandDryRunPhaseRows, 'real-repo metrics command dry-run default-off phases');
   assertDefaultCommandRunMetrics(metrics, entries.length, assert);
+  assert.equal(metrics.realRepoCorpusLiveProjectProofRows, entries.length, 'real-repo metrics live-project proof rows');
+  assert.equal(metrics.realRepoCorpusLiveProjectProofEnabledRows, 0, 'real-repo metrics default live-project proof enabled rows');
+  assert.equal(metrics.realRepoCorpusLiveProjectProofDefaultOffRows, entries.length, 'real-repo metrics default live-project proof rows');
+  assert.equal(metrics.realRepoCorpusLiveProjectProofSourceTextReadRows, 0, 'real-repo metrics default live-project source text rows');
+  assert.equal(metrics.realRepoCorpusLiveProjectProofSourceFilesRead, 0, 'real-repo metrics default live-project source files');
+  assert.equal(metrics.realRepoCorpusLiveProjectProofSourceBytesRead, 0, 'real-repo metrics default live-project source bytes');
+  assert.equal(metrics.realRepoCorpusLiveProjectProofPassedRows, 0, 'real-repo metrics default live-project passed rows');
+  assert.equal(metrics.realRepoCorpusLiveProjectProofDiagnosticsPassedRows, 0, 'real-repo metrics default live-project diagnostics rows');
+  assert.equal(metrics.realRepoCorpusLiveProjectProofDeclarationPassedRows, 0, 'real-repo metrics default live-project declaration rows');
   assert.deepEqual(metrics.realRepoCorpusMergeSurfaceFailClosedSurfaceIds, RealRepoCorpusSurfaceAudit.failClosedSurfaces, 'real-repo metrics fail-closed surfaces');
   assert.deepEqual(metrics.realRepoCorpusMergeSurfaceFailClosedRouteIds, RealRepoCorpusSurfaceAudit.failClosedRouteIds, 'real-repo metrics fail-closed routes');
   assert.equal(metrics.realRepoCorpusMergeSurfaceUnroutedSurfaces, 0, 'real-repo metrics unrouted surfaces');

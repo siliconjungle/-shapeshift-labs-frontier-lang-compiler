@@ -24,7 +24,7 @@ function maybeMergeHtmlCssProjectFile(options) {
     ...htmlCssMergeOptionsForProjectFile(input, file.sourcePath, language),
     ...(language === 'css' ? projectCssModuleMergeOptionsForFile(projectCssModuleMergeEvidence, file.sourcePath) : {})
   };
-  const sourceMapMergeOptions = language === 'css' ? cssModuleSourceMapIdentityMergeOptions(mergeOptions, { sourcePath: file.sourcePath }) : {};
+  const sourceMapMergeOptions = language === 'css' ? cssModuleSourceMapIdentityMergeOptions(mergeOptions, cssModuleSourceMapProofContext(mergeOptions, file.sourcePath)) : {};
   const effectiveMergeOptions = { ...mergeOptions, ...sourceMapMergeOptions };
   const runtimeBoundaryProofs = language === 'html' ? htmlRuntimeBoundaryProofCandidates(input, file.sourcePath, mergeOptions) : [];
   const runtimeBoundaryMergeOptions = runtimeBoundaryProofs.length ? { htmlRuntimeBoundaryProofs: runtimeBoundaryProofs, htmlSourceBoundRuntimeBoundaryProofs: runtimeBoundaryProofs } : {};
@@ -65,6 +65,24 @@ function inferLanguageFromPath(sourcePath) {
   if (path.endsWith('.jsx')) return 'jsx';
   if (path.endsWith('.ts') || path.endsWith('.mts') || path.endsWith('.cts')) return 'typescript';
   if (path.endsWith('.js') || path.endsWith('.mjs') || path.endsWith('.cjs')) return 'javascript';
+  return undefined;
+}
+
+function cssModuleSourceMapProofContext(mergeOptions, sourcePath) {
+  return {
+    sourcePath,
+    generatedClassNameMapHash: firstString(mergeOptions.generatedClassNameMapHash, mergeOptions.cssModuleGeneratedClassNameMapHash),
+    bundlerTransformHash: firstString(mergeOptions.bundlerTransformHash, mergeOptions.cssModuleBundlerTransformHash),
+    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash),
+    loaderRequestHash: firstString(mergeOptions.loaderRequestHash, mergeOptions.cssModuleLoaderRequestHash),
+    loaderQueryHash: firstString(mergeOptions.loaderQueryHash, mergeOptions.cssModuleLoaderQueryHash),
+    sourceMapArtifactHash: firstString(mergeOptions.sourceMapArtifactHash, mergeOptions.cssModuleSourceMapArtifactHash, mergeOptions.cssModuleSourceMapHash),
+    sourcesContentHash: firstString(mergeOptions.sourcesContentHash, mergeOptions.sourceMapSourcesContentHash, mergeOptions.cssModuleSourceMapSourcesContentHash)
+  };
+}
+
+function firstString(...values) {
+  for (const value of values) if (value !== undefined && value !== null && String(value)) return String(value);
   return undefined;
 }
 
@@ -246,9 +264,7 @@ function htmlProofGapNextProof(reasonCode) {
   return 'Attach source-bound HTML parser, identity, and runtime-boundary evidence for the changed file before structural admission.';
 }
 
-function htmlRuntimeBoundaryProofInstruction(boundaryClause) {
-  return `Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, ${boundaryClause}, exact base/worker/head/output source text or hashes, runtime command, runtime probe id, runtime evidence hash, required runtime signals, and no broad browser/semantic/auto-merge self-claims.`;
-}
+function htmlRuntimeBoundaryProofInstruction(boundaryClause) { return `Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, ${boundaryClause}, exact base/worker/head/output source text or hashes, runtime command, runtime probe id, runtime evidence hash, required runtime signals, and no broad browser/semantic/auto-merge self-claims.`; }
 
 function blockedHtmlProofGapAdmission(admission = {}, conflicts = []) {
   return {
@@ -285,22 +301,14 @@ function blockedHtmlCssFile(file, context, result, language, sourceBinding) {
   });
 }
 
-function parserSourceHashesForLanguage(language, binding) {
-  if (language !== 'css') return undefined;
-  return compactRecord({ base: cssSourceHash(binding.base), worker: cssSourceHash(binding.worker), head: cssSourceHash(binding.head) });
-}
+function parserSourceHashesForLanguage(language, binding) { return language === 'css' ? compactRecord({ base: cssSourceHash(binding.base), worker: cssSourceHash(binding.worker), head: cssSourceHash(binding.head) }) : undefined; }
 
-function cssSourceHash(sourceText) {
-  return typeof sourceText === 'string' ? hashSemanticValue({ kind: 'frontier.lang.css.source.v1', sourceText }) : undefined;
-}
+function cssSourceHash(sourceText) { return typeof sourceText === 'string' ? hashSemanticValue({ kind: 'frontier.lang.css.source.v1', sourceText }) : undefined; }
 
-function blockedHtmlCssAdmission(admission = {}, language) {
-  return compactRecord({ ...admission, browserRuntimeEquivalenceClaim: language === 'html' ? false : admission.browserRuntimeEquivalenceClaim, browserCascadeEquivalenceClaim: language === 'css' ? false : admission.browserCascadeEquivalenceClaim, browserRenderEquivalenceClaim: language === 'css' ? false : admission.browserRenderEquivalenceClaim });
-}
+function blockedHtmlCssAdmission(admission = {}, language) { return compactRecord({ ...admission, browserRuntimeEquivalenceClaim: language === 'html' ? false : admission.browserRuntimeEquivalenceClaim, browserCascadeEquivalenceClaim: language === 'css' ? false : admission.browserCascadeEquivalenceClaim, browserRenderEquivalenceClaim: language === 'css' ? false : admission.browserRenderEquivalenceClaim }); }
 
 function normalizeHtmlCssConflicts(conflicts, language) {
-  if (language !== 'html') return conflicts;
-  return conflicts.map((conflict) => {
+  return language !== 'html' ? conflicts : conflicts.map((conflict) => {
     const reasonCode = conflict.details?.reasonCode;
     if (conflict.code !== 'html-proof-gap-blocked' || !reasonCode) return conflict;
     const proofGap = { ...(conflict.details?.proofGap ?? {}), summary: conflict.details?.proofGap?.summary ?? htmlProofGapSummary(reasonCode), nextProof: conflict.details?.proofGap?.nextProof ?? htmlProofGapNextProof(reasonCode) };

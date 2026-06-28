@@ -237,4 +237,10 @@ function assertRealRepoCorpusSmokeMetrics(realRepoCorpusMetrics) {
   assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandRunFailedPhases, 0, 'real-repo command-run failed phases');
   assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandRunTimedOutPhases, 0, 'real-repo command-run timed-out phases');
   assert.equal(realRepoCorpusMetrics.realRepoCorpusCommandRunOutputTruncatedPhases, 0, 'real-repo command-run truncated output phases');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusLiveProjectProofRows, realRepoCorpusMetrics.realRepoCorpusEntries, 'real-repo live-project proof rows');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusLiveProjectProofEnabledRows, 0, 'real-repo default live-project proof enabled rows');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusLiveProjectProofDefaultOffRows, realRepoCorpusMetrics.realRepoCorpusEntries, 'real-repo default live-project proof rows');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusLiveProjectProofSourceTextReadRows, 0, 'real-repo default live-project source text rows');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusLiveProjectProofSourceFilesRead, 0, 'real-repo default live-project source files');
+  assert.equal(realRepoCorpusMetrics.realRepoCorpusLiveProjectProofPassedRows, 0, 'real-repo default live-project passed rows');
 }

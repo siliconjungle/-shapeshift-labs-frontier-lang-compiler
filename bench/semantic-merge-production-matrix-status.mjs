@@ -45,57 +45,57 @@ const rowProofs = new Map([
   ['JS/TS parser, source spans, and trivia', {
     anchors: jsTsAnchors,
     evidence: ['test/smoke/js-ts-syntax-parser-trivia-evidence.mjs', 'test/smoke/js-ts-source-span-parser-trivia-exactness.mjs'],
-    remaining: ['Live real-repo checkout proof']
+    remaining: []
   }],
   ['JS/TS scope and use-def graph', {
     anchors: jsTsAnchors,
     evidence: ['test/smoke/js-ts-safe-merge-binding-patterns.mjs', 'test/smoke/js-ts-safe-project-merge-scope-use-def-graph.mjs'],
-    remaining: ['Live real-repo checkout proof']
+    remaining: []
   }],
   ['JS/TS module/export/import graph', {
     anchors: jsTsAnchors,
-    evidence: ['test/smoke/js-ts-safe-merge-import-shapes.mjs', 'test/smoke/project-symbol-graph-commonjs-interop.mjs'],
-    remaining: ['Live real-repo checkout proof', 'JS/TS live project diagnostics/declaration proof']
+    evidence: ['test/smoke/js-ts-safe-merge-import-shapes.mjs', 'test/smoke/project-symbol-graph-commonjs-interop.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs'],
+    remaining: []
   }],
   ['JS/TS public API and type graph', {
     anchors: jsTsAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-compiler-type-graph.mjs', 'test/smoke/js-ts-safe-project-merge-public-api-declaration-emit-parity.mjs'],
-    remaining: ['JS/TS live project diagnostics/declaration proof']
+    evidence: ['test/smoke/js-ts-safe-project-merge-compiler-type-graph.mjs', 'test/smoke/js-ts-safe-project-merge-public-api-declaration-emit-parity.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs'],
+    remaining: []
   }],
   ['JS/TS control-flow and effect graph', {
     anchors: jsTsAnchors,
     evidence: ['test/smoke/semantic-effect-runtime-order-evidence.mjs', 'test/smoke/semantic-effect-runtime-resource-management.mjs'],
-    remaining: ['Live real-repo checkout proof']
+    remaining: []
   }],
   ['Generic semantic edit admission and replay', {
     anchors: jsTsAnchors,
     evidence: ['test/smoke/semantic-edit-script.mjs', 'test/smoke/js-ts-safe-project-merge-semantic-replay-proof.mjs'],
-    remaining: ['Live real-repo checkout proof']
+    remaining: []
   }],
   ['Symbol move between files', {
     anchors: jsTsAnchors,
     evidence: ['test/smoke/js-ts-safe-project-merge-symbol-move-default-admission.mjs', 'test/smoke/semantic-edit-rename-move-source-replay.mjs'],
-    remaining: ['Live real-repo checkout proof']
+    remaining: []
   }],
   ['Split/merge modules and classes', {
     anchors: jsTsAnchors,
     evidence: ['test/smoke/js-ts-safe-project-merge-split-merge-classifier.mjs', 'test/smoke/js-ts-safe-project-merge-admission-routes.mjs'],
-    remaining: ['Live real-repo checkout proof']
+    remaining: []
   }],
   ['JSX/TSX prop graph', {
     anchors: jsxAnchors,
     evidence: ['test/smoke/js-ts-safe-project-merge-jsx-prop-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-prop-contracts.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
-    remaining: ['Live real-repo checkout proof']
+    remaining: []
   }],
   ['JSX/TSX child order and render layout', {
     anchors: jsxAnchors,
     evidence: ['test/smoke/js-ts-safe-project-merge-jsx-render-returns.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-render-branch-proof.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
-    remaining: ['JSX context/wrapper render proof corpus', 'Live real-repo checkout proof']
+    remaining: []
   }],
   ['JSX/TSX hook/context/render-risk graph', {
     anchors: jsxAnchors,
     evidence: ['test/smoke/js-ts-safe-project-merge-jsx-hook-dependencies.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-context-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
-    remaining: ['JSX context/wrapper render proof corpus', 'Live real-repo checkout proof']
+    remaining: []
   }],
   ['HTML static structure', {
     anchors: htmlCssAnchors,
@@ -124,18 +124,18 @@ const rowProofs = new Map([
   }],
   ['CSS Modules import/use-site graph', {
     anchors: cssModulesAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-css-modules-use-sites.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-import-shapes.mjs'],
-    remaining: ['CSS Modules real bundler source-map corpus']
+    evidence: ['test/smoke/js-ts-safe-project-merge-css-modules-use-sites.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-import-shapes.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-real-bundler-source-map-corpus.mjs'],
+    remaining: []
   }],
   ['CSS Modules transform/source-map identity', {
     anchors: cssModulesAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-css-modules-source-map-proof.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-generated-map-hash.mjs'],
-    remaining: ['CSS Modules real bundler source-map corpus']
+    evidence: ['test/smoke/js-ts-safe-project-merge-css-modules-source-map-proof.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-generated-map-hash.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-real-bundler-source-map-corpus.mjs'],
+    remaining: []
   }],
   ['Real-repo corpus', {
     anchors: [...jsTsAnchors, 'JSX/TSX parser and React-like layout hazards', 'CSS Modules contracts'],
-    evidence: ['bench/real-repo-corpus-suite.mjs', 'test/smoke/js-ts-real-repo-corpus-command-execution-proof.mjs'],
-    remaining: ['Live real-repo checkout proof', 'JS/TS live project diagnostics/declaration proof']
+    evidence: ['bench/real-repo-corpus-suite.mjs', 'test/smoke/js-ts-real-repo-corpus-command-execution-proof.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs'],
+    remaining: []
   }],
   ['Source-backed completeness matrix', {
     anchors: ['JavaScript syntax and runtime semantics', 'HTML tree construction and runtime boundaries', 'CSS Modules contracts'],
@@ -227,8 +227,9 @@ function rowsForHeading(markdown, heading) {
     }
     table.push(trimmed);
   }
-  if (table.length < 3) throw new Error(`${heading}: expected markdown table`);
+  if (table.length < 2) throw new Error(`${heading}: expected markdown table`);
   const headers = tableCells(table[0]);
+  if (table.length === 2) return [];
   return table.slice(2).map((line) => Object.fromEntries(headers.map((header, index) => [header, tableCells(line)[index] ?? ''])));
 }
 

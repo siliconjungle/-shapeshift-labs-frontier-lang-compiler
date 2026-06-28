@@ -1,6 +1,7 @@
 import { assert } from './helpers.mjs';
 import { projectGraphDeltaConflicts } from '../../src/js-ts-safe-project-merge-graph-delta-conflicts.js';
 import {
+  jsxContextConsumerRisk,
   jsxEventHandlerRisk,
   jsxHookDependencyRisk,
   jsxRenderRiskDelta
@@ -111,6 +112,55 @@ const eventHandlerModificationBlocked = projectGraphDeltaConflicts(eventHandlerM
 assert.equal(eventHandlerModificationBlocked.length, 1);
 assert.equal(eventHandlerModificationBlocked[0].details.reasonCodes.includes('jsx-render-event-handler-source-proof-existing-handler-modification'), true);
 
+const contextConsumerDelta = jsxRenderRiskDelta({
+  base: jsxContextConsumerRisk('base', ['ThemeContext']),
+  worker: jsxContextConsumerRisk('worker', ['ThemeContext', 'LocaleContext']),
+  head: jsxContextConsumerRisk('head', ['ThemeContext', 'FeatureFlagContext']),
+  output: jsxContextConsumerRisk('output', ['ThemeContext', 'LocaleContext', 'FeatureFlagContext'])
+});
+const contextConsumerMissing = projectGraphDeltaConflicts(contextConsumerDelta);
+assert.equal(contextConsumerMissing.length, 1);
+assert.equal(contextConsumerMissing[0].details.routeId, 'prove-jsx-context-wrapper-source-preservation');
+assert.equal(contextConsumerMissing[0].details.reasonCodes.includes('jsx-render-context-wrapper-source-proof-missing'), true);
+assert.equal(contextConsumerMissing[0].details.jsxContextWrapperSourceProof.contextWrapperSourcePreservationClaim, false);
+
+const contextConsumerExpected = contextConsumerMissing[0].details.jsxContextWrapperSourceProof.expected;
+const contextConsumerProof = contextWrapperProofFor(contextConsumerExpected);
+assert.equal(projectGraphDeltaConflicts(contextConsumerDelta, { jsxContextWrapperSourceProof: contextConsumerProof }).length, 0);
+
+const contextConsumerStale = projectGraphDeltaConflicts(contextConsumerDelta, {
+  jsxContextWrapperSourceProof: { ...contextConsumerProof, outputSourceHash: 'source:stale-output' }
+});
+assert.equal(contextConsumerStale.length, 1);
+assert.equal(contextConsumerStale[0].details.reasonCodes.includes('jsx-render-context-wrapper-source-proof-source-hash-mismatch'), true);
+
+const contextConsumerIdentityMismatch = projectGraphDeltaConflicts(contextConsumerDelta, {
+  jsxContextWrapperSourceProof: { ...contextConsumerProof, publicOwnerName: 'OtherView' }
+});
+assert.equal(contextConsumerIdentityMismatch.length, 1);
+assert.equal(contextConsumerIdentityMismatch[0].details.reasonCodes.includes('jsx-render-context-wrapper-source-proof-identity-mismatch'), true);
+
+const wrapperDelta = jsxRenderRiskDelta({
+  base: jsxRenderWrapperRisk('base', ['memo']),
+  worker: jsxRenderWrapperRisk('worker', ['memo', 'forwardRef']),
+  head: jsxRenderWrapperRisk('head', ['observer']),
+  output: jsxRenderWrapperRisk('output', ['observer', 'forwardRef'])
+});
+const wrapperMissing = projectGraphDeltaConflicts(wrapperDelta);
+assert.equal(wrapperMissing.length, 1);
+assert.equal(wrapperMissing[0].details.routeId, 'prove-jsx-context-wrapper-source-preservation');
+assert.equal(wrapperMissing[0].details.reasonCodes.includes('jsx-render-context-wrapper-source-proof-missing'), true);
+assert.equal(wrapperMissing[0].details.jsxContextWrapperSourceProof.expected.output.componentWrapperNames.includes('forwardRef'), true);
+
+const wrapperProof = contextWrapperProofFor(wrapperMissing[0].details.jsxContextWrapperSourceProof.expected);
+assert.equal(projectGraphDeltaConflicts(wrapperDelta, { evidence: [wrapperProof] }).length, 0);
+
+const wrapperBroadClaim = projectGraphDeltaConflicts(wrapperDelta, {
+  jsxContextWrapperSourceProofs: [{ ...wrapperProof, renderEquivalenceClaim: true }]
+});
+assert.equal(wrapperBroadClaim.length, 1);
+assert.equal(wrapperBroadClaim[0].details.reasonCodes.includes('jsx-render-context-wrapper-source-proof-claim-flags-missing'), true);
+
 function hookDependencyProofFor(delta) {
   const workerAddedDependencyTexts = delta.worker.dependencyTexts.filter((item) => !delta.base.dependencyTexts.includes(item));
   const headAddedDependencyTexts = delta.head.dependencyTexts.filter((item) => !delta.base.dependencyTexts.includes(item));
@@ -147,6 +197,34 @@ function hookDependencyProofFor(delta) {
   };
 }
 
+function contextWrapperProofFor(delta) {
+  return {
+    schema: 'frontier.lang.jsxContextWrapperSourceProof.v1',
+    kind: 'frontier.lang.jsxContextWrapperSourceProof',
+    status: 'passed',
+    sourcePath: delta.sourcePath,
+    identityKey: delta.identityKey,
+    publicOwnerName: delta.publicOwnerName,
+    tagName: delta.tagName,
+    tagKey: delta.tagKey,
+    baseSourceHash: delta.baseSourceHash,
+    workerSourceHash: delta.workerSourceHash,
+    headSourceHash: delta.headSourceHash,
+    outputSourceHash: delta.outputSourceHash,
+    baseContextWrapperSignatureHash: delta.base.contextWrapperSignatureHash,
+    workerContextWrapperSignatureHash: delta.worker.contextWrapperSignatureHash,
+    headContextWrapperSignatureHash: delta.head.contextWrapperSignatureHash,
+    outputContextWrapperSignatureHash: delta.output.contextWrapperSignatureHash,
+    contextWrapperSourcePreservationHash: delta.contextWrapperSourcePreservationHash,
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    runtimeEquivalenceClaim: false,
+    renderEquivalenceClaim: false,
+    contextWrapperSourcePreservationClaim: true,
+    claimScope: 'static-context-wrapper-source-preservation-only'
+  };
+}
+
 function eventHandlerProofFor(delta) {
   const baseNames = new Set(delta.base.eventHandlerPropNames);
   const workerAddedEventHandlerPropNames = delta.worker.eventHandlerPropNames.filter((name) => !baseNames.has(name));
@@ -178,5 +256,39 @@ function eventHandlerProofFor(delta) {
     renderEquivalenceClaim: false,
     eventHandlerSourcePreservationClaim: true,
     claimScope: 'static-event-handler-source-preservation-only'
+  };
+}
+
+function jsxRenderWrapperRisk(stage, wrapperNames) {
+  const records = wrapperNames.map((wrapperName, index) => ({
+    ordinal: index + 1,
+    proofStatus: 'static-component-wrapper-evidence',
+    reasonCode: 'jsx-render-component-wrapper-static-evidence',
+    wrapperName,
+    wrapperCalleeText: wrapperName,
+    wrapperArgumentKind: index === wrapperNames.length - 1 ? 'function-expression' : 'wrapper-call',
+    innerComponentName: 'ViewImpl',
+    ownerName: 'View',
+    renderEquivalenceClaim: false,
+    runtimeEquivalenceClaim: false,
+    signatureHash: `component-wrapper:${stage}:${index + 1}:${wrapperName}`
+  }));
+  return {
+    id: `jsx_wrapper_${stage}`,
+    sourcePath: 'src/view.tsx',
+    tagName: 'button',
+    tagKey: 'button#1',
+    publicContract: true,
+    publicOwnerName: 'View',
+    renderRiskKinds: ['component-wrapper-boundary'],
+    renderRiskReasonCodes: ['jsx-render-component-wrapper-static-evidence', 'jsx-render-component-wrapper-render-equivalence-unproved'],
+    componentWrapperNames: wrapperNames,
+    componentWrapperCalleeTexts: wrapperNames,
+    componentWrapperRecords: records,
+    componentWrapperCount: records.length,
+    componentWrapperRenderEquivalenceClaim: false,
+    componentWrapperSignatureHash: `component-wrappers:${stage}:${wrapperNames.join('|')}`,
+    renderRiskSignatureHash: `render-risk:component-wrappers:${stage}`,
+    sourceHash: `source:${stage}`
   };
 }

@@ -1,4 +1,5 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
+import { jsxContextWrapperSourceProofAssessment } from './js-ts-safe-project-merge-jsx-context-wrapper-proof.js';
 import { jsxEventHandlerSourceProofAssessment } from './js-ts-safe-project-merge-jsx-event-handler-proof.js';
 import { jsxHookDependencySourceProofAssessment } from './js-ts-safe-project-merge-jsx-hook-dependency-proof.js';
 import { jsxHookEffectSourceProofAssessment } from './js-ts-safe-project-merge-jsx-hook-effect-proof.js';
@@ -62,9 +63,11 @@ function projectJsxRenderRiskDeltaConflicts(projectGraphDelta, options = {}) {
     if (hookDependencyProof?.status === 'passed') return [];
     const eventHandlerProof = jsxEventHandlerSourceProofAssessment({ identityKey, baseRecord, workerRecord, headRecord, outputRecord }, options);
     if (eventHandlerProof?.status === 'passed') return [];
+    const contextWrapperProof = jsxContextWrapperSourceProofAssessment({ identityKey, baseRecord, workerRecord, headRecord, outputRecord }, options);
+    if (contextWrapperProof?.status === 'passed') return [];
     const collectionProof = jsxRenderReturnCollectionProofAssessment({ identityKey, baseRecord, workerRecord, headRecord, outputRecord }, options);
     if (collectionProof?.status === 'passed') return [];
-    return [projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, branchProof, hookEffectProof, hookDependencyProof, eventHandlerProof, collectionProof)];
+    return [projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, branchProof, hookEffectProof, hookDependencyProof, eventHandlerProof, contextWrapperProof, collectionProof)];
   });
 }
 function projectJsxChildOrderDeltaConflicts(projectGraphDelta) {
@@ -125,7 +128,7 @@ function projectJsxChildOrderDeltaConflict(identityKey, baseRecord, workerRecord
     })
   };
 }
-function projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, branchProof, hookEffectProof, hookDependencyProof, eventHandlerProof, collectionProof) {
+function projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, branchProof, hookEffectProof, hookDependencyProof, eventHandlerProof, contextWrapperProof, collectionProof) {
   const sourcePath = workerRecord?.sourcePath ?? headRecord?.sourcePath ?? baseRecord?.sourcePath;
   return {
     code: 'project-jsx-public-render-risk-delta-conflict',
@@ -140,14 +143,15 @@ function projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord
         ...(hookEffectProof?.reasonCodes ?? []),
         ...(hookDependencyProof?.reasonCodes ?? []),
         ...(eventHandlerProof?.reasonCodes ?? []),
+        ...(contextWrapperProof?.reasonCodes ?? []),
         ...(collectionProof?.reasonCodes ?? [])
       ]),
       conflictKey: `project-graph-delta#jsx-render-risk#${identityKey}`,
       identityKey,
       sourcePath,
-      routeId: branchProof?.routeId ?? hookEffectProof?.routeId ?? hookDependencyProof?.routeId ?? eventHandlerProof?.routeId ?? collectionProof?.routeId,
-      routeLane: branchProof?.routeLane ?? hookEffectProof?.routeLane ?? hookDependencyProof?.routeLane ?? eventHandlerProof?.routeLane ?? collectionProof?.routeLane,
-      routeNext: branchProof?.routeNext ?? hookEffectProof?.routeNext ?? hookDependencyProof?.routeNext ?? eventHandlerProof?.routeNext ?? collectionProof?.routeNext,
+      routeId: branchProof?.routeId ?? hookEffectProof?.routeId ?? hookDependencyProof?.routeId ?? eventHandlerProof?.routeId ?? contextWrapperProof?.routeId ?? collectionProof?.routeId,
+      routeLane: branchProof?.routeLane ?? hookEffectProof?.routeLane ?? hookDependencyProof?.routeLane ?? eventHandlerProof?.routeLane ?? contextWrapperProof?.routeLane ?? collectionProof?.routeLane,
+      routeNext: branchProof?.routeNext ?? hookEffectProof?.routeNext ?? hookDependencyProof?.routeNext ?? eventHandlerProof?.routeNext ?? contextWrapperProof?.routeNext ?? collectionProof?.routeNext,
       base: jsxRenderRiskDetails(baseRecord),
       worker: jsxRenderRiskDetails(workerRecord),
       head: jsxRenderRiskDetails(headRecord),
@@ -156,6 +160,7 @@ function projectJsxRenderRiskDeltaConflict(identityKey, baseRecord, workerRecord
       jsxHookEffectSourceProof: hookEffectProof?.record,
       jsxHookDependencySourceProof: hookDependencyProof?.record,
       jsxEventHandlerSourceProof: eventHandlerProof?.record,
+      jsxContextWrapperSourceProof: contextWrapperProof?.record,
       jsxRenderReturnCollectionProof: collectionProof?.record,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,

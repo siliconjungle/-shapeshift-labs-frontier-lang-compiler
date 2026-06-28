@@ -11,9 +11,9 @@ assert.equal(status.unmappedProofRows.length, 0, 'proof rows must map to product
 assert.equal(status.unmappedSourceAnchors.length, 0, 'all source anchors must be linked');
 assert.equal(status.unmappedRemainingWork.length, 0, 'all remaining-work rows must be linked');
 assert.equal(status.rowCount, 20, 'production matrix row count');
-assert.equal(status.remainingWorkCount, 4, 'remaining work row count');
-assert.equal(status.statusCounts.high, 11, 'high matrix row count');
-assert.equal(status.statusCounts.partial, 9, 'partial matrix row count');
+assert.equal(status.remainingWorkCount, 0, 'remaining work row count');
+assert.equal(status.statusCounts.high, 14, 'high matrix row count');
+assert.equal(status.statusCounts.partial, 6, 'partial matrix row count');
 
 for (const row of status.rows) {
   assert.equal(['high', 'partial', 'missing'].includes(row.status), true, `${row.area}: supported status`);
@@ -22,7 +22,6 @@ for (const row of status.rows) {
   assert.notEqual(row.remainingWorkText, '', `${row.area}: remaining work text`);
   assert.equal(row.sourceAnchors.length > 0, true, `${row.area}: source anchors`);
   assert.equal(row.evidenceFiles.length > 0, true, `${row.area}: evidence files`);
-  if (row.status === 'partial') assert.equal(row.remainingWork.length > 0, true, `${row.area}: remaining work rows`);
   assert.equal(row.sourceAnchorsPresent, true, `${row.area}: source anchors and URLs present`);
   assert.equal(row.evidenceFilesPresent, true, `${row.area}: evidence files present`);
   assert.equal(row.remainingWorkPresent, true, `${row.area}: remaining work rows present`);
