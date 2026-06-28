@@ -4,7 +4,7 @@ import { compactRecord } from './js-ts-safe-merge-context.js';
 import { hashText, safeId, uniqueStrings } from './js-ts-safe-project-merge-core.js';
 import { projectCssDependencyProofOptionsForBlockedMerge } from './js-ts-safe-project-merge-css-dependency-proofs.js';
 import { projectCssModuleMergeOptionsForFile, projectCssModuleProofOptionsForBlockedMerge } from './js-ts-safe-project-merge-css-module-proofs.js';
-import { blockCssScopedParserEvidenceGap, normalizeHtmlCssParserEvidenceSides } from './js-ts-safe-project-merge-html-css-parser-gaps.js';
+import { blockCssScopedParserEvidenceGap, blockCssSelectorFunctionalPseudoSpecificityGap, normalizeHtmlCssParserEvidenceSides } from './js-ts-safe-project-merge-html-css-parser-gaps.js';
 import { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult } from './js-ts-safe-project-merge-html-runtime-boundaries.js';
 
 function projectFileLanguage(file, input) {
@@ -43,6 +43,7 @@ function maybeMergeHtmlCssProjectFile(options) {
   result = normalizeHtmlCssParserEvidenceSides({ result, base, worker, head });
   if (language === 'css' && result.status === 'merged') {
     result = blockCssScopedParserEvidenceGap({ result, id: resultId, sourcePath: file.sourcePath }) ?? result;
+    if (result.status === 'merged') result = blockCssSelectorFunctionalPseudoSpecificityGap({ result, id: resultId, sourcePath: file.sourcePath }) ?? result;
   }
   const admittedResult = language === 'html' && result.status === 'merged'
     ? blockHtmlProofGapChanges({ result, id: resultId, sourcePath: file.sourcePath, base, worker, head, runtimeBoundaryProofs }) ?? result

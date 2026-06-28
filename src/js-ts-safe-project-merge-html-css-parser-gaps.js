@@ -40,6 +40,28 @@ function blockCssScopedParserEvidenceGap({ result, id, sourcePath }) {
   });
 }
 
+function blockCssSelectorFunctionalPseudoSpecificityGap({ result, id, sourcePath }) {
+  const gaps = cssSelectorFunctionalPseudoSpecificityGaps(result?.selectorTargetEvidence);
+  if (!gaps.length) return undefined;
+  const conflicts = [
+    ...(result.conflicts ?? []),
+    ...gaps.map((gap) => cssSelectorFunctionalPseudoSpecificityGapConflict(id, sourcePath, gap))
+  ];
+  const { mergedSourceText, mergedSourceHash, ...rest } = result;
+  return compactRecord({
+    ...rest,
+    selectorTargetEvidence: blockSelectorTargetEvidenceRebases(result.selectorTargetEvidence, gaps),
+    status: 'blocked',
+    operation: 'blocked',
+    conflicts,
+    admission: blockedCssProofGapAdmission(result.admission, conflicts),
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    browserCascadeEquivalenceClaim: false,
+    browserRenderEquivalenceClaim: false
+  });
+}
+
 function cssScopedParserEvidenceGapSides(evidence) {
   if (evidence?.kind !== 'frontier.lang.cssSafeMergeParserEvidence') return [];
   return Object.entries(evidence.sides ?? {})
@@ -74,6 +96,89 @@ function cssScopedParserEvidenceGapConflict(id, sourcePath, sides) {
   };
 }
 
+function cssSelectorFunctionalPseudoSpecificityGaps(evidence) {
+  if (!isPlainObject(evidence)) return [];
+  return (evidence.rebaseProofs ?? []).flatMap((proof, index) => {
+    const selectors = uniqueStrings([...(proof.fromSelectors ?? []), ...(proof.toSelectors ?? [])]);
+    const functionalPseudoSelectors = selectors.filter(hasFunctionalPseudoSpecificityRisk);
+    if (!functionalPseudoSelectors.length) return [];
+    return [compactRecord({
+      index,
+      proofId: proof.id,
+      property: proof.property,
+      cascadeKey: proof.cascadeKey,
+      fromRuleKey: proof.fromRuleKey,
+      toRuleKey: proof.toRuleKey,
+      fromSelectors: proof.fromSelectors,
+      toSelectors: proof.toSelectors,
+      beforeSpecificity: proof.beforeSpecificity,
+      afterSpecificity: proof.afterSpecificity,
+      selectorTargetGraphHash: proof.selectorTargetGraphHash,
+      beforeSelectorTargetGraphHash: proof.beforeSelectorTargetGraphHash,
+      afterSelectorTargetGraphHash: proof.afterSelectorTargetGraphHash,
+      functionalPseudoSelectors,
+      blockedRebaseProof: proof
+    })];
+  });
+}
+
+function blockSelectorTargetEvidenceRebases(evidence, gaps) {
+  if (!isPlainObject(evidence)) return evidence;
+  const blockedIndexes = new Set(gaps.map((gap) => gap.index));
+  const rebaseProofs = (evidence.rebaseProofs ?? []).filter((_, index) => !blockedIndexes.has(index));
+  const blockedRebaseProofs = (evidence.rebaseProofs ?? []).filter((_, index) => blockedIndexes.has(index));
+  return compactRecord({
+    ...evidence,
+    rebasedChangeCount: rebaseProofs.length,
+    rebaseProofs,
+    functionalPseudoSpecificityProofBlocked: true,
+    functionalPseudoSpecificityGapCount: gaps.length,
+    blockedRebaseProofs
+  });
+}
+
+function cssSelectorFunctionalPseudoSpecificityGapConflict(id, sourcePath, gap) {
+  const reasonCode = 'css-selector-functional-pseudo-specificity-unproved';
+  return {
+    code: 'css-selector-target-conflict',
+    gateId: 'css-semantic-merge',
+    sourcePath,
+    details: compactRecord({
+      reasonCode,
+      conflictKey: `css#${id}#${reasonCode}#${gap.cascadeKey ?? gap.proofId ?? sourcePath ?? 'source'}`,
+      selectorMove: compactRecord({
+        fromRuleKey: gap.fromRuleKey,
+        toRuleKey: gap.toRuleKey,
+        fromSelectors: gap.fromSelectors,
+        toSelectors: gap.toSelectors,
+        beforeSpecificity: gap.beforeSpecificity,
+        afterSpecificity: gap.afterSpecificity,
+        selectorTargetGraphHash: gap.selectorTargetGraphHash,
+        beforeSelectorTargetGraphHash: gap.beforeSelectorTargetGraphHash,
+        afterSelectorTargetGraphHash: gap.afterSelectorTargetGraphHash
+      }),
+      property: gap.property,
+      cascadeKey: gap.cascadeKey,
+      functionalPseudoSelectors: gap.functionalPseudoSelectors,
+      blockedRebaseProof: gap.blockedRebaseProof,
+      proofGap: {
+        code: reasonCode,
+        status: 'not-claimed',
+        summary: 'CSS selector target rebase uses functional pseudo selectors whose specificity records are not exact parser-backed Selectors Level 4 evidence in the lower CSS package.',
+        nextProof: 'In @shapeshift-labs/frontier-lang-css, replace the regex selectorSpecificity routine in postcss parser evidence with exact selector-list specificity for :is(), :not(), :has(), :where(), and nth-child/nth-last-child of-selector arguments; then emit parser-backed specificity records before admitting this rebase.',
+        failClosed: true,
+        semanticEquivalenceClaim: false,
+        browserCascadeEquivalenceClaim: false,
+        browserRenderEquivalenceClaim: false
+      }
+    })
+  };
+}
+
+function hasFunctionalPseudoSpecificityRisk(selector) {
+  return /:(?:is|where|has|not|matches|nth-child|nth-last-child)\s*\(/i.test(String(selector ?? ''));
+}
+
 function blockedCssProofGapAdmission(admission = {}, conflicts = []) {
   return compactRecord({
     ...admission,
@@ -91,4 +196,4 @@ function blockedCssProofGapAdmission(admission = {}, conflicts = []) {
 
 function isPlainObject(value) { return Boolean(value && typeof value === 'object' && !Array.isArray(value)); }
 
-export { blockCssScopedParserEvidenceGap, normalizeHtmlCssParserEvidenceSides };
+export { blockCssScopedParserEvidenceGap, blockCssSelectorFunctionalPseudoSpecificityGap, normalizeHtmlCssParserEvidenceSides };

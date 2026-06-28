@@ -94,8 +94,8 @@ assert.deepEqual(cssModernPseudoProofWithoutGraphMove?.beforeSpecificity, cssMod
 assert.equal(cssModernPseudoProofWithoutGraphMove?.specificityInvariant, true);
 assert.equal(cssModernPseudoProofWithoutGraphMove?.selectorTargetGraphHashPresent, false);
 
-const cssModernPseudoSelectorRebased = safeMergeJsTsProject({
-  id: 'js_ts_safe_project_merge_css_modern_pseudo_selector_rebased',
+const cssModernPseudoSelectorBlocked = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_modern_pseudo_selector_specificity_blocked',
   cssMergeOptionsByPath: {
     'src/button.css': {
       selectorTargetGraphHash: cssModernPseudoGraphHash,
@@ -104,11 +104,18 @@ const cssModernPseudoSelectorRebased = safeMergeJsTsProject({
   },
   files: [{ sourcePath: 'src/button.css', baseSourceText: cssModernPseudoSelectorBase, workerSourceText: cssModernPseudoSelectorWorker, headSourceText: cssModernPseudoSelectorHead }]
 });
-assert.equal(cssModernPseudoSelectorRebased.status, 'merged');
-const cssModernPseudoRebaseProof = cssModernPseudoSelectorRebased.files[0].result.selectorTargetEvidence.rebaseProofs[0];
-assert.equal(cssModernPseudoRebaseProof.proofLevel, 'css-selector-target-source-bound');
-assert.equal(cssModernPseudoRebaseProof.selectorTargetGraphHash, cssModernPseudoGraphHash);
-assert.deepEqual(cssModernPseudoRebaseProof.fromSelectors, cssModernPseudoFromSelectors);
-assert.deepEqual(cssModernPseudoRebaseProof.toSelectors, cssModernPseudoToSelectors);
-assert.equal(cssModernPseudoRebaseProof.cascadeKey, '.card:is(.interactive):where(.ready) .primary::before,.panel:has(.primary):not(.disabled) > .primary::background-color');
-assert.equal(matrixSurface(cssModernPseudoSelectorRebased, 'css-selector-target-evidence').proofStatuses['css-selector-target-evidence'], 'passed');
+assert.equal(cssModernPseudoSelectorBlocked.status, 'blocked');
+assert.equal(cssModernPseudoSelectorBlocked.summary.cssSelectorTargetConflictFiles, 1);
+assert.equal(cssModernPseudoSelectorBlocked.summary.cssSelectorTargetRebasedFiles, 0);
+assert.equal(cssModernPseudoSelectorBlocked.outputFiles.some((file) => file.sourcePath === 'src/button.css'), false);
+const cssModernPseudoSpecificityConflict = cssModernPseudoSelectorBlocked.conflicts.find((conflict) => conflict.details?.reasonCode === 'css-selector-functional-pseudo-specificity-unproved');
+assert.ok(cssModernPseudoSpecificityConflict);
+assert.equal(cssModernPseudoSpecificityConflict.code, 'css-selector-target-conflict');
+assert.deepEqual(cssModernPseudoSpecificityConflict.details.functionalPseudoSelectors, cssModernPseudoFromSelectors.concat(cssModernPseudoToSelectors));
+assert.deepEqual(cssModernPseudoSpecificityConflict.details.selectorMove.beforeSpecificity, cssModernPseudoSpecificity);
+assert.equal(cssModernPseudoSpecificityConflict.details.proofGap.failClosed, true);
+assert.match(cssModernPseudoSpecificityConflict.details.proofGap.nextProof, /@shapeshift-labs\/frontier-lang-css/);
+assert.equal(cssModernPseudoSelectorBlocked.files[0].result.selectorTargetEvidence.functionalPseudoSpecificityProofBlocked, true);
+assert.equal(cssModernPseudoSelectorBlocked.files[0].result.selectorTargetEvidence.rebaseProofs.length, 0);
+assert.equal(cssModernPseudoSelectorBlocked.files[0].result.selectorTargetEvidence.blockedRebaseProofs[0].selectorTargetGraphHash, cssModernPseudoGraphHash);
+assert.equal(matrixSurface(cssModernPseudoSelectorBlocked, 'css-selector-target-evidence').proofStatuses['css-selector-target-evidence'], 'failed');
