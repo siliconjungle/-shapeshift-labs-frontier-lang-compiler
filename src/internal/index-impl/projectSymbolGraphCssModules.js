@@ -34,11 +34,8 @@ function createProjectCssModuleGraphRecords(semanticIndex, imports, importEdges,
     .filter(isCssModuleBindingEdge)
     .map((edge, index) => cssModuleImportBindingRecord(edge, index, documentsById, cssSourcesWithDependencyGraphsByPath)));
   const bindingsByLocal = groupBindingsByLocal(importBindings);
-  const { useSites: lexicalUseSites, blockers: lexicalBlockers } = cssModuleLexicalUseSites(importBindings, sourceTextsByPath);
+  const { useSites: lexicalUseSites, blockers: lexicalBlockers } = cssModuleLexicalUseSites(importBindings, sourceTextsByPath, scopeReferenceRecords);
   const { useSites: jsxUseSites, blockers: jsxBlockers } = cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords, importEdges);
-  const namedImportBlockers = importBindings
-    .filter((binding) => binding.importKind === 'named')
-    .map((binding) => cssModuleNamedExportBlocker(binding));
   const cssModuleUseSites = uniqueRecords([...jsxUseSites, ...lexicalUseSites], cssModuleUseSiteKey);
   const usedImportBindings = importBindings
     .filter((binding) => hasUseSite(binding, cssModuleUseSites));
@@ -51,7 +48,6 @@ function createProjectCssModuleGraphRecords(semanticIndex, imports, importEdges,
   const cssModuleUseSiteBlockers = uniqueRecords([
     ...lexicalBlockers,
     ...jsxBlockers,
-    ...namedImportBlockers,
     ...missingExportBlockers,
     ...missingTransformBlockers,
     ...missingDependencyGraphBlockers
@@ -72,13 +68,6 @@ function groupBindingsByLocal(importBindings) {
     result.set(key, [...(result.get(key) ?? []), binding]);
   }
   return result;
-}
-
-function cssModuleNamedExportBlocker(binding) {
-  return cssModuleBindingBlocker(binding, {
-    reasonCode: 'css-module-named-export-transform-unproved',
-    expressionText: binding.localName
-  });
 }
 
 function cssModuleDependencyGraphBlockers(binding, cssSourcesByPath) {

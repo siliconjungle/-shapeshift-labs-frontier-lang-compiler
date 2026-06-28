@@ -23,21 +23,69 @@ import {
   cssModuleMemberWriteOperation
 } from './projectSymbolGraphCssModuleClassHelpers.js';
 
-function cssModuleLexicalUseSites(importBindings, sourceTextsByPath) {
+function cssModuleLexicalUseSites(importBindings, sourceTextsByPath, scopeReferenceRecords = []) {
   const useSites = [];
   const blockers = [];
   for (const binding of importBindings) {
     if (!binding.localName) continue;
-    if (binding.importKind !== 'default' && binding.importKind !== 'namespace') continue;
     const sourceText = sourceTextsByPath.get(binding.sourcePath);
     if (typeof sourceText !== 'string') {
       blockers.push(cssModuleAccessBlocker(binding, '', 0, 0, 'css-module-import-resolution-unproved'));
       continue;
     }
+    if (binding.importKind === 'named') {
+      useSites.push(...cssModuleNamedImportUseSites(binding, sourceText, scopeReferenceRecords, blockers));
+      continue;
+    }
+    if (binding.importKind !== 'default' && binding.importKind !== 'namespace') continue;
     useSites.push(...cssModuleDestructuringUseSites(binding, sourceText, blockers));
     useSites.push(...cssModuleMemberUseSites(binding, sourceText, blockers));
   }
   return { useSites, blockers };
+}
+
+function cssModuleNamedImportUseSites(binding, sourceText, scopeReferenceRecords, blockers) {
+  const references = scopeReferenceRecords.filter((reference) => cssModuleNamedImportReferenceMatches(reference, binding));
+  if (!references.length) {
+    blockers.push(cssModuleAccessBlocker(binding, sourceText, 0, 0, 'css-module-named-export-reference-unproved', binding.localName));
+    return [];
+  }
+  return references.flatMap((reference) => {
+    const span = sourceSpanForScopeReference(sourceText, binding, reference);
+    if (!span) return [];
+    return [cssModuleUseSiteRecord(binding, {
+      useSiteKind: 'named-import-reference',
+      accessKind: 'named-import',
+      exportName: binding.importedName ?? binding.localName,
+      localReferenceName: binding.localName,
+      expressionText: sourceText.slice(span.start, span.end),
+      sourcePath: binding.sourcePath,
+      sourceHash: binding.sourceHash,
+      sourceSpan: span,
+      scopeReferenceRecordId: reference.id
+    })];
+  });
+}
+
+function cssModuleNamedImportReferenceMatches(reference, binding) {
+  if (!reference || binding.importKind !== 'named') return false;
+  if (reference.sourcePath !== binding.sourcePath) return false;
+  if (reference.bindingKind !== 'import' || reference.importAlias !== true) return false;
+  if ((reference.bindingName ?? reference.name) !== binding.localName) return false;
+  if (reference.moduleSpecifier && reference.moduleSpecifier !== binding.moduleSpecifier) return false;
+  const referenceExportName = reference.importedName ?? reference.resolvedExportName ?? reference.originExportedName;
+  if (binding.importedName && referenceExportName && referenceExportName !== binding.importedName) return false;
+  const referenceSourcePath = reference.resolvedSourcePath ?? reference.originSourcePath;
+  if (binding.cssModuleSourcePath && referenceSourcePath && referenceSourcePath !== binding.cssModuleSourcePath) return false;
+  return true;
+}
+
+function sourceSpanForScopeReference(sourceText, binding, reference) {
+  if (reference.sourceSpan && Number.isInteger(reference.sourceSpan.start) && Number.isInteger(reference.sourceSpan.end)) return reference.sourceSpan;
+  if (Number.isInteger(reference.start) && Number.isInteger(reference.end)) {
+    return sourceSpanForRange(sourceText, binding.sourcePath, binding.sourceHash, reference.start, reference.end);
+  }
+  return undefined;
 }
 
 function cssModuleMemberUseSites(binding, sourceText, blockers) {

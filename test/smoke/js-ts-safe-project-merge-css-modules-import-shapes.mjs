@@ -99,18 +99,55 @@ const namedReadyCssModuleProject = safeMergeJsTsProject({
     { language: 'tsx', sourcePath: 'src/NamedReady.tsx', baseSourceText: namedReadyButtonSourceText, workerSourceText: namedReadyButtonSourceText, headSourceText: namedReadyButtonSourceText }
   ]
 });
-assert.equal(namedReadyCssModuleProject.status, 'blocked');
-assert.equal(namedReadyCssModuleProject.summary.projectGraphCssModuleUseSiteProofBlockers, 2);
+assert.equal(namedReadyCssModuleProject.status, 'merged');
+assert.equal(namedReadyCssModuleProject.summary.projectGraphCssModuleUseSiteProofBlockers, 0);
 assert.equal(namedReadyCssModuleProject.summary.projectGraphCssModuleTransformProofBlockers, 0);
 assert.deepEqual(namedReadyCssModuleProject.outputProjectSymbolGraph.cssModuleImportBindings.map((binding) => [binding.importKind, binding.importedName, binding.localName]), [
   ['named', 'root', 'rootClass'],
   ['named', 'label', 'label']
 ]);
-assert.equal(namedReadyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSites.length, 0);
-assert.equal(namedReadyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteBlockers.every((blocker) => blocker.reasonCode === 'css-module-named-export-transform-unproved'), true);
-assert.equal(namedReadyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].blockerCount, 2);
-assert.equal(matrixSurface(namedReadyCssModuleProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'failed');
+const namedUseSites = namedReadyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSites.filter((site) => site.useSiteKind === 'named-import-reference');
+assert.equal(namedUseSites.length >= 3, true);
+assert.equal(namedUseSites.every((site) => site.accessKind === 'named-import'), true);
+assert.equal(namedUseSites.every((site) => typeof site.scopeReferenceRecordId === 'string'), true);
+assert.equal(namedUseSites.some((site) => site.exportName === 'root' && site.localReferenceName === 'rootClass'), true);
+assert.equal(namedUseSites.filter((site) => site.exportName === 'label').length >= 2, true);
+assert.equal(namedReadyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteBlockers.length, 0);
+assert.equal(namedReadyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].status, 'ready');
+assert.equal(namedReadyCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].blockerCount, 0);
+assert.equal(matrixSurface(namedReadyCssModuleProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'passed');
 assert.equal(matrixSurface(namedReadyCssModuleProject, 'css-modules-generated-class-name-map').proofStatuses['css-module-generated-class-name-map'], 'passed');
+
+const namedMissingTransformImport = importNativeSource({
+  language: 'css',
+  sourcePath: 'src/Ready.module.css',
+  sourceText: readyCssModuleSourceText,
+  metadata: {
+    cssModuleEvidence: {
+      moduleHash: 'css-module:ready-no-transform',
+      generatedClassNameMap: { root: '_root_123', label: '_label_456' },
+      jsTsUseSiteGraphHash: 'css-module-use-sites:ready-no-transform'
+    }
+  }
+});
+const namedMissingTransformProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_named_css_module_import_missing_transform_shape',
+  includeOutputProjectSymbolGraph: true,
+  outputProjectImports: [namedMissingTransformImport],
+  files: [
+    { language: 'css', sourcePath: 'src/Ready.module.css', headSourceText: readyCssModuleSourceText },
+    { language: 'tsx', sourcePath: 'src/NamedReady.tsx', baseSourceText: namedReadyButtonSourceText, workerSourceText: namedReadyButtonSourceText, headSourceText: namedReadyButtonSourceText }
+  ]
+});
+assert.equal(namedMissingTransformProject.status, 'blocked');
+assert.equal(namedMissingTransformProject.summary.projectGraphCssModuleUseSiteProofBlockers, 0);
+assert.equal(namedMissingTransformProject.summary.projectGraphCssModuleTransformProofBlockers, 4);
+assert.equal(namedMissingTransformProject.outputProjectSymbolGraph.cssModuleUseSiteBlockers.some((blocker) => blocker.reasonCode === 'css-module-named-export-reference-unproved'), false);
+assert.equal(namedMissingTransformProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].status, 'blocked');
+assert.equal(matrixSurface(namedMissingTransformProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'passed');
+assert.equal(matrixSurface(namedMissingTransformProject, 'css-modules-generated-class-name-map').proofStatuses['css-module-generated-class-name-map'], 'passed');
+assert.equal(matrixSurface(namedMissingTransformProject, 'css-modules-bundler-transform-identity').proofStatuses['css-module-bundler-transform-identity'], 'failed');
+assert.equal(matrixSurface(namedMissingTransformProject, 'css-modules-source-map-identity').proofStatuses['css-module-source-map-identity'], 'failed');
 
 const unsafeHelperButtonSourceText = [
   `import readyStyles from '${readyCssModuleSpecifier}';`,
