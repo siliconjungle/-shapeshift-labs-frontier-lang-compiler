@@ -23,6 +23,26 @@ const conditionalProof = branchProof(conditionalMissing[0].details.identityKey, 
 const conditionalPassed = projectGraphDeltaConflicts(conditionalDelta, { jsxRenderReturnBranchProofs: [conditionalProof] });
 assert.equal(conditionalPassed.length, 0);
 
+const dynamicHandlerFactoryRecords = {
+  base: conditionalRecords.base,
+  worker: withDynamicEventHandlerFactoryRisk(conditionalRecords.worker, 'worker'),
+  head: conditionalRecords.head,
+  output: conditionalRecords.output
+};
+const dynamicHandlerFactoryProof = branchProof(conditionalMissing[0].details.identityKey, dynamicHandlerFactoryRecords, {
+  consequentOrigin: 'worker',
+  alternateOrigin: 'head'
+});
+const dynamicHandlerFactoryBlocked = projectGraphDeltaConflicts(jsxRenderRiskDelta(dynamicHandlerFactoryRecords), {
+  jsxRenderReturnBranchProof: dynamicHandlerFactoryProof
+});
+assert.equal(dynamicHandlerFactoryBlocked.length, 1);
+assert.equal(dynamicHandlerFactoryBlocked[0].details.reasonCodes.includes('jsx-render-return-branch-proof-non-render-risk-present'), true);
+assert.equal(dynamicHandlerFactoryBlocked[0].details.reasonCodes.includes('jsx-render-event-handler-prop-call-expression-unsupported'), true);
+assert.equal(dynamicHandlerFactoryBlocked[0].details.jsxRenderReturnBranchProof.branchArmPreservationClaim, false);
+assert.equal(dynamicHandlerFactoryBlocked[0].details.renderEquivalenceClaim, false);
+assert.equal(dynamicHandlerFactoryBlocked[0].details.runtimeEquivalenceClaim, false);
+
 const staleProofConflicts = projectGraphDeltaConflicts(conditionalDelta, {
   jsxRenderReturnBranchProof: { ...conditionalProof, outputSourceHash: 'stale-output' }
 });
@@ -172,5 +192,34 @@ function renderRisk(stage, branchControlKind, renderReturn) {
     renderReturnSignatureHash: `render-return:${stage}:${record.signatureHash}`,
     renderRiskSignatureHash: `render-risk:render-return:${stage}:${record.signatureHash}`,
     sourceHash: `source:${stage}`
+  };
+}
+
+function withDynamicEventHandlerFactoryRisk(record, stage) {
+  const propName = 'onClick';
+  const expressionText = '{makeHandler(theme)}';
+  return {
+    ...record,
+    renderRiskKinds: [...record.renderRiskKinds, 'event-handler-prop-boundary'],
+    renderRiskReasonCodes: [
+      ...record.renderRiskReasonCodes,
+      'jsx-render-event-handler-prop-unsupported',
+      'jsx-render-event-handler-prop-call-expression-unsupported'
+    ],
+    eventHandlerPropNames: [propName],
+    eventHandlerPropRecords: [{
+      propName,
+      ordinal: 1,
+      propKind: 'named',
+      proofStatus: 'dynamic-event-handler-unsupported',
+      dynamicExpressionText: expressionText,
+      dynamicExpressionKind: 'call-expression',
+      dynamicBlockerReasonCode: 'jsx-render-event-handler-prop-call-expression-unsupported',
+      expressionHash: `event-handler-expression:${stage}:${expressionText}`,
+      signatureHash: `event-handler:${stage}:${propName}:${expressionText}`
+    }],
+    eventHandlerPropCount: 1,
+    eventHandlerSignatureHash: `event-handlers:${stage}:${propName}:${expressionText}`,
+    renderRiskSignatureHash: `${record.renderRiskSignatureHash}:event-handler-factory`
   };
 }

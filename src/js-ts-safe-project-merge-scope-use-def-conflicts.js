@@ -1,4 +1,13 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
+import {
+  scopeDetails,
+  scopeFingerprint,
+  scopeReferenceDetails,
+  scopeReferenceFingerprint
+} from './js-ts-safe-project-merge-scope-use-def-details.js';
+
+const ScopeReferenceBlockedFallbackReason = 'project-public-scope-reference-blocked-evidence';
+const ScopeBindingBlockedFallbackReason = 'project-public-scope-use-def-blocked-evidence';
 
 function projectScopeUseDefDeltaConflicts(projectGraphDelta) {
   const baseGraph = projectGraphDelta?.stages?.base?.projectSymbolGraph;
@@ -55,15 +64,17 @@ function publicScopeBindings(records = []) {
 
 function projectScopeUseDefAmbiguousEvidenceConflicts(graph) {
   const bindingConflicts = [...publicScopeBindings(graph?.scopeBindingRecords).entries()]
-    .filter(([, record]) => record?.scopeUseDefStatus === 'blocked' && record.scopeUseDefReasonCodes?.length)
-    .map(([identityKey, record]) => projectScopeUseDefAmbiguousEvidenceConflict(identityKey, record));
+    .map(([identityKey, record]) => [identityKey, record, scopeBindingAmbiguousReasonCodes(record)])
+    .filter(([, , reasonCodes]) => reasonCodes.length)
+    .map(([identityKey, record, reasonCodes]) => projectScopeUseDefAmbiguousEvidenceConflict(identityKey, record, reasonCodes));
   const referenceConflicts = [...publicScopeReferences(graph?.scopeReferenceRecords).entries()]
-    .filter(([, record]) => (record.status === 'blocked' || record.status === 'unresolved') && record.reasonCodes?.length)
-    .map(([identityKey, record]) => projectScopeReferenceAmbiguousEvidenceConflict(identityKey, record));
+    .map(([identityKey, record]) => [identityKey, record, scopeReferenceAmbiguousReasonCodes(record)])
+    .filter(([, , reasonCodes]) => reasonCodes.length)
+    .map(([identityKey, record, reasonCodes]) => projectScopeReferenceAmbiguousEvidenceConflict(identityKey, record, reasonCodes));
   return [...bindingConflicts, ...referenceConflicts];
 }
 
-function projectScopeUseDefAmbiguousEvidenceConflict(identityKey, record) {
+function projectScopeUseDefAmbiguousEvidenceConflict(identityKey, record, reasonCodes) {
   return {
     code: 'project-public-scope-use-def-ambiguous-evidence',
     gateId: 'project-graph-delta',
@@ -74,10 +85,17 @@ function projectScopeUseDefAmbiguousEvidenceConflict(identityKey, record) {
       conflictKey: `project-graph-delta#scope-use-def-ambiguous#${identityKey}`,
       identityKey,
       sourcePath: record.sourcePath,
-      reasonCodes: record.scopeUseDefReasonCodes,
+      reasonCodes,
       output: scopeDetails(record)
     })
   };
+}
+
+function scopeBindingAmbiguousReasonCodes(record) {
+  return uniqueStrings([
+    ...statusReasonCodes(record?.scopeUseDefStatus, record?.scopeUseDefReasonCodes, ScopeBindingBlockedFallbackReason),
+    ...statusReasonCodes(record?.aliasResolutionStatus, record?.aliasResolutionReasonCodes, ScopeBindingBlockedFallbackReason)
+  ]);
 }
 
 function scopeIdentityKey(record) {
@@ -119,7 +137,7 @@ function projectScopeReferenceDeltaConflict(identityKey, baseRecord, workerRecor
   };
 }
 
-function projectScopeReferenceAmbiguousEvidenceConflict(identityKey, record) {
+function projectScopeReferenceAmbiguousEvidenceConflict(identityKey, record, reasonCodes) {
   return {
     code: 'project-public-scope-reference-ambiguous-evidence',
     gateId: 'project-graph-delta',
@@ -130,10 +148,23 @@ function projectScopeReferenceAmbiguousEvidenceConflict(identityKey, record) {
       conflictKey: `project-graph-delta#scope-reference-ambiguous#${identityKey}`,
       identityKey,
       sourcePath: record.sourcePath,
-      reasonCodes: record.reasonCodes,
+      reasonCodes,
       output: scopeReferenceDetails(record)
     })
   };
+}
+
+function scopeReferenceAmbiguousReasonCodes(record) {
+  return uniqueStrings([
+    ...statusReasonCodes(record?.status, record?.reasonCodes, ScopeReferenceBlockedFallbackReason),
+    ...statusReasonCodes(record?.aliasResolutionStatus, record?.aliasResolutionReasonCodes, ScopeReferenceBlockedFallbackReason),
+    ...statusReasonCodes(record?.compilerReferenceStatus, record?.compilerReferenceReasonCodes, ScopeReferenceBlockedFallbackReason)
+  ]);
+}
+
+function statusReasonCodes(status, reasonCodes, fallbackReasonCode) {
+  if (status !== 'blocked' && status !== 'unresolved') return [];
+  return reasonCodes?.length ? reasonCodes : [fallbackReasonCode];
 }
 
 function publicScopeReferences(records = []) {
@@ -148,166 +179,6 @@ function publicScopeReferences(records = []) {
 
 function scopeReferenceIdentityKey(record) {
   return stableKey(['scope-reference', record?.sourcePath, record?.publicOwnerName, record?.bindingName ?? record?.name, record?.namespace, record?.ordinal ?? record?.start]);
-}
-
-function scopeFingerprint(record) {
-  return record ? stableKey([
-    record.signatureHash,
-    record.useHash,
-    record.localUseHash,
-    record.resolvedUseHash,
-    record.publicOwnerUseHash,
-    record.closureUseHash,
-    record.aliasHash,
-    record.scopeUseDefStatus,
-    record.scopeUseDefReasonCodes?.join('|'),
-    record.referenceCount,
-    record.closureReferenceCount
-  ]) : undefined;
-}
-
-function scopeReferenceFingerprint(record) {
-  return record ? stableKey([
-    record.signatureHash,
-    record.resolvedUseHash,
-    record.resolvedBindingUseHash,
-    record.resolvedExportUseHash,
-    record.moduleSpecifier,
-    record.importedName,
-    record.resolvedSourcePath,
-    record.resolvedExportName,
-    record.closureCaptureHash,
-    record.templateExpressionHash,
-    record.templateLiteralKind,
-    record.taggedTemplate,
-    record.templateTagText,
-    record.templateTagRoot,
-    record.templateTagMemberName,
-    record.receiverKind,
-    record.memberName,
-    record.memberLiteralKind,
-    record.memberStaticTemplateLiteral,
-    record.memberComputed,
-    record.memberOptional,
-    record.writeOperation,
-    record.status,
-    record.reasonCodes?.join('|'),
-    record.aliasResolutionStatus,
-    record.aliasResolutionEvidenceKind,
-    record.originSourcePath,
-    record.originSourceHash,
-    record.originSourceSymbolId,
-    record.originSourceSymbolSignatureHash,
-    record.resolvedBindingName,
-    record.compilerReferenceStatus,
-    record.compilerReferenceReasonCodes?.join('|'),
-    record.compilerReferenceSymbolId,
-    record.compilerReferenceIdentityHash,
-    record.compilerReferenceProofHash
-  ]) : undefined;
-}
-
-function scopeDetails(record) {
-  if (!record) return undefined;
-  return compactRecord({
-    sourcePath: record.sourcePath,
-    name: record.name,
-    bindingKind: record.bindingKind,
-    publicOwnerName: record.publicOwnerName,
-    namespaces: record.namespaces,
-    ordinal: record.ordinal,
-    referenceCount: record.referenceCount,
-    closureReferenceCount: record.closureReferenceCount,
-    signatureHash: record.signatureHash,
-    useHash: record.useHash,
-    localUseHash: record.localUseHash,
-    resolvedUseHash: record.resolvedUseHash,
-    publicOwnerUseHash: record.publicOwnerUseHash,
-    closureUseHash: record.closureUseHash,
-    aliasHash: record.aliasHash,
-    scopeUseDefStatus: record.scopeUseDefStatus,
-    scopeUseDefReasonCodes: record.scopeUseDefReasonCodes,
-    importedName: record.importedName,
-    moduleSpecifier: record.moduleSpecifier,
-    resolvedSourcePath: record.resolvedSourcePath,
-    originSourcePath: record.originSourcePath,
-    originSourceHash: record.originSourceHash,
-    originSignatureHash: record.originSignatureHash,
-    originSourceSymbolId: record.originSourceSymbolId,
-    originSourceSymbolKind: record.originSourceSymbolKind,
-    originSourceSymbolSignatureHash: record.originSourceSymbolSignatureHash,
-    resolvedBindingName: record.resolvedBindingName,
-    resolvedBindingUseHash: record.resolvedBindingUseHash,
-    resolvedExportUseHash: record.resolvedExportUseHash,
-    aliasResolutionEvidenceKind: record.aliasResolutionEvidenceKind,
-    exportedNames: record.exportedNames,
-    reExportedNames: record.reExportedNames,
-    sourceHash: record.sourceHash
-  });
-}
-
-function scopeReferenceDetails(record) {
-  if (!record) return undefined;
-  return compactRecord({
-    sourcePath: record.sourcePath,
-    name: record.name,
-    namespace: record.namespace,
-    bindingName: record.bindingName,
-    bindingKind: record.bindingKind,
-    bindingOrdinal: record.bindingOrdinal,
-    publicOwnerName: record.publicOwnerName,
-    referenceKind: record.referenceKind,
-    receiverKind: record.receiverKind,
-    memberName: record.memberName,
-    memberStart: record.memberStart,
-    memberEnd: record.memberEnd,
-    memberLiteralKind: record.memberLiteralKind,
-    memberStaticTemplateLiteral: record.memberStaticTemplateLiteral,
-    memberComputed: record.memberComputed,
-    memberOptional: record.memberOptional,
-    writeOperation: record.writeOperation,
-    closure: record.closure,
-    closureDepthDelta: record.closureDepthDelta,
-    closureCaptureHash: record.closureCaptureHash,
-    templateExpressionHash: record.templateExpressionHash,
-    templateLiteralKind: record.templateLiteralKind,
-    taggedTemplate: record.taggedTemplate,
-    templateTagText: record.templateTagText,
-    templateTagRoot: record.templateTagRoot,
-    templateTagMemberName: record.templateTagMemberName,
-    signatureHash: record.signatureHash,
-    resolvedUseHash: record.resolvedUseHash,
-    importAlias: record.importAlias,
-    moduleSpecifier: record.moduleSpecifier,
-    importedName: record.importedName,
-    resolvedSourcePath: record.resolvedSourcePath,
-    resolvedExportName: record.resolvedExportName,
-    resolvedBindingId: record.resolvedBindingId,
-    resolvedBindingUseHash: record.resolvedBindingUseHash,
-    status: record.status,
-    reasonCodes: record.reasonCodes,
-    aliasResolutionStatus: record.aliasResolutionStatus,
-    aliasResolutionEvidenceKind: record.aliasResolutionEvidenceKind,
-    originSourcePath: record.originSourcePath,
-    originSourceHash: record.originSourceHash,
-    originSignatureHash: record.originSignatureHash,
-    originSourceSymbolId: record.originSourceSymbolId,
-    originSourceSymbolKind: record.originSourceSymbolKind,
-    originSourceSymbolSignatureHash: record.originSourceSymbolSignatureHash,
-    resolvedBindingName: record.resolvedBindingName,
-    resolvedExportUseHash: record.resolvedExportUseHash,
-    compilerReferenceStatus: record.compilerReferenceStatus,
-    compilerReferenceReasonCodes: record.compilerReferenceReasonCodes,
-    compilerReferenceSymbolId: record.compilerReferenceSymbolId,
-    compilerReferenceIdentityHash: record.compilerReferenceIdentityHash,
-    compilerReferenceFullyQualifiedName: record.compilerReferenceFullyQualifiedName,
-    compilerReferenceLocalName: record.compilerReferenceLocalName,
-    compilerReferenceTargetName: record.compilerReferenceTargetName,
-    compilerReferenceAliased: record.compilerReferenceAliased,
-    compilerReferenceProofHash: record.compilerReferenceProofHash,
-    compilerReferenceCandidates: record.compilerReferenceCandidates,
-    sourceHash: record.sourceHash
-  });
 }
 
 function stableKey(parts) {

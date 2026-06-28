@@ -103,7 +103,25 @@ assert.equal(missingRecord.typeEquivalencePrivateClassMemberSetHash, undefined);
 assert.equal(missingRecord.typeEquivalenceAccessorFieldSetHash, undefined);
 assert.equal(missingRecord.missingSignals.includes('compiler-private-class-member-shape-hash'), true);
 assert.equal(missingRecord.missingSignals.includes('compiler-accessor-field-shape-hash'), true);
-assert.equal(publicCompilerTypeDeltaConflicts(baseGraph, changedGraph, changedGraph, changedGraph).length, 0);
+
+const missingRuntimeProofConflicts = publicCompilerTypeDeltaConflicts(baseGraph, changedGraph, changedGraph, changedGraph);
+const missingRuntimeProofConflict = missingRuntimeProofConflicts.find((conflict) => (
+  conflict.details?.reasonCode === 'typescript-public-api-class-private-accessor-runtime-proof-missing'
+));
+assert.equal(missingRuntimeProofConflicts.length, 1);
+assert.equal(Boolean(missingRuntimeProofConflict), true);
+assert.equal(missingRuntimeProofConflict.details.classPrivateAccessorRuntimeEvidence.requiredEvidence, 'frontier.lang.typescript.classPrivateAccessorRuntimeProof');
+assert.equal(missingRuntimeProofConflict.details.classPrivateAccessorRuntimeEvidence.routeId, 'prove-class-private-accessor-runtime-equivalence');
+assert.equal(missingRuntimeProofConflict.details.classPrivateAccessorRuntimeEvidence.routeLane, 'class-private-accessor-runtime-boundaries');
+assert.equal(missingRuntimeProofConflict.details.classPrivateAccessorRuntimeEvidence.failClosed, true);
+assert.equal(missingRuntimeProofConflict.details.classPrivateAccessorRuntimeEvidence.semanticEquivalenceClaim, false);
+assert.equal(missingRuntimeProofConflict.details.classPrivateAccessorRuntimeEvidence.runtimeEquivalenceClaim, false);
+assert.equal(missingRuntimeProofConflict.details.classPrivateAccessorRuntimeEvidence.missingRecords[0].privateClassMemberCount, 4);
+assert.equal(missingRuntimeProofConflict.details.classPrivateAccessorRuntimeEvidence.missingRecords[0].accessorFieldCount, 1);
+assert.equal(missingRuntimeProofConflict.details.classPrivateAccessorRuntimeEvidence.missingRecords[0].missingSignals.includes('typescript-class-private-accessor-runtime-proof-missing'), true);
+assert.equal(missingRuntimeProofConflict.details.classPrivateAccessorRuntimeEvidence.missingRecords[0].runtimeEquivalenceGap.routeId, 'prove-class-private-accessor-runtime-equivalence');
+assert.equal(missingRuntimeProofConflict.details.worker.classPrivateAccessorRuntimeMissingSourceHash, changedGraph.compilerTypeRecords.find((record) => record.publicContract && record.fullyQualifiedName === '"src/service".Service')?.sourceHash);
+assert.equal(publicCompilerTypeDeltaConflicts(baseGraph, validRuntimeProofGraph, validRuntimeProofGraph, validRuntimeProofGraph).length, 0);
 
 function serviceSource(loadBody) {
   return [

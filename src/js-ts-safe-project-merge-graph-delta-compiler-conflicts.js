@@ -35,10 +35,11 @@ function changedIdentityConflicts(input) {
     if (workerFingerprint === headFingerprint) {
       const missingTypeEvidence = missingSharedCompilerTypeEquivalenceEvidence(workerRecord, headRecord);
       const missingInferenceSyntaxEvidence = missingSharedCompilerTypeInferenceSyntaxEvidence(workerRecord, headRecord);
+      const missingClassPrivateAccessorRuntimeEvidence = missingSharedClassPrivateAccessorRuntimeEvidence(baseRecord, workerRecord, headRecord);
       const missingDecoratorRuntimeEvidence = missingSharedDecoratorRuntimeExecutionEvidence(baseRecord, workerRecord, headRecord);
       const missingDeclarationEvidence = missingDeclarationEmitParityEvidence(input.declarationEmitParityProof, input);
-      if (!missingTypeEvidence && !missingInferenceSyntaxEvidence && !missingDecoratorRuntimeEvidence && !missingDeclarationEvidence) return [];
-      const missingEvidence = missingDeclarationEvidence ?? missingTypeEvidence ?? missingInferenceSyntaxEvidence ?? missingDecoratorRuntimeEvidence;
+      if (!missingTypeEvidence && !missingInferenceSyntaxEvidence && !missingClassPrivateAccessorRuntimeEvidence && !missingDecoratorRuntimeEvidence && !missingDeclarationEvidence) return [];
+      const missingEvidence = missingDeclarationEvidence ?? missingTypeEvidence ?? missingInferenceSyntaxEvidence ?? missingDecoratorRuntimeEvidence ?? missingClassPrivateAccessorRuntimeEvidence;
       return [projectGraphDeltaConflict({
         ...input,
         identityKey,
@@ -49,6 +50,7 @@ function changedIdentityConflicts(input) {
         reasonCode: missingEvidence.reasonCode,
         typeEquivalenceEvidence: missingTypeEvidence,
         typeInferenceSyntaxEvidence: missingInferenceSyntaxEvidence,
+        classPrivateAccessorRuntimeEvidence: missingClassPrivateAccessorRuntimeEvidence,
         decoratorRuntimeExecutionEvidence: missingDecoratorRuntimeEvidence,
         declarationEmitParityEvidence: missingDeclarationEvidence,
         message: `Worker and head both changed ${input.label} ${JSON.stringify(identityKey)} to the same compiler public API fingerprint, but required public API evidence is missing.`
@@ -78,6 +80,7 @@ function projectGraphDeltaConflict(input) {
       output: input.details(input.outputRecord),
       typeEquivalenceEvidence: input.typeEquivalenceEvidence,
       typeInferenceSyntaxEvidence: input.typeInferenceSyntaxEvidence,
+      classPrivateAccessorRuntimeEvidence: input.classPrivateAccessorRuntimeEvidence,
       decoratorRuntimeExecutionEvidence: input.decoratorRuntimeExecutionEvidence,
       declarationEmitParityEvidence: input.declarationEmitParityEvidence
     })
@@ -183,6 +186,70 @@ function hasMissingAdvancedTypeProof(record) {
   const status = record?.advancedTypeMissingProof?.status ?? record?.advancedTypeProofRequirement?.status;
   return status === 'missing-compiler-evidence' || status === 'requires-review';
 }
+function missingSharedClassPrivateAccessorRuntimeEvidence(baseRecord, workerRecord, headRecord) {
+  const requiringProof = [workerRecord, headRecord].filter((record) => requiresClassPrivateAccessorRuntimeProof(baseRecord, record));
+  if (!requiringProof.length) return undefined;
+  const missing = requiringProof.filter((record) => !hasPassedClassPrivateAccessorRuntimeProof(record));
+  if (!missing.length) return undefined;
+  return {
+    reasonCode: 'typescript-public-api-class-private-accessor-runtime-proof-missing',
+    requiredEvidence: 'frontier.lang.typescript.classPrivateAccessorRuntimeProof',
+    proofLevel: 'typescript-checker-public-api-class-private-accessor-source-bound-runtime',
+    routeId: 'prove-class-private-accessor-runtime-equivalence',
+    routeLane: 'class-private-accessor-runtime-boundaries',
+    routeNext: 'supply-class-private-accessor-runtime-proof',
+    failClosed: true,
+    semanticEquivalenceClaim: false,
+    runtimeEquivalenceClaim: false,
+    missingRecords: missing.map((record) => compactRecord({
+      sourcePath: record.sourcePath,
+      sourceHash: record.sourceHash,
+      symbolId: record.symbolId,
+      symbolName: record.symbolName,
+      fullyQualifiedName: record.fullyQualifiedName,
+      privateClassMemberCount: record.privateClassMemberCount,
+      accessorFieldCount: record.accessorFieldCount,
+      privateClassMemberShapeHash: record.privateClassMemberShapeHash,
+      accessorFieldShapeHash: record.accessorFieldShapeHash,
+      classPrivateAccessorRuntimeHash: record.classPrivateAccessorRuntimeHash,
+      classPrivateAccessorRuntimeProofStatus: record.classPrivateAccessorRuntimeProof?.status,
+      classPrivateAccessorRuntimeProofSourcePath: record.classPrivateAccessorRuntimeProof?.sourcePath,
+      classPrivateAccessorRuntimeProofSourceHash: record.classPrivateAccessorRuntimeProof?.sourceHash,
+      classPrivateAccessorRuntimeProofReasonCodes: record.classPrivateAccessorRuntimeProofReasonCodes,
+      missingSignals: classPrivateAccessorRuntimeMissingSignals(record),
+      runtimeEquivalenceGap: record.classMemberShapeProof?.runtimeEquivalenceGap,
+      conflictRouting: record.classMemberShapeProof?.conflictRouting,
+      semanticEquivalenceClaim: record.classPrivateAccessorRuntimeProof?.semanticEquivalenceClaim ?? false,
+      runtimeEquivalenceClaim: record.classPrivateAccessorRuntimeProof?.runtimeEquivalenceClaim ?? false,
+      privateMemberRuntimeEquivalenceClaim: record.classPrivateAccessorRuntimeProof?.privateMemberRuntimeEquivalenceClaim ?? false,
+      accessorRuntimeEquivalenceClaim: record.classPrivateAccessorRuntimeProof?.accessorRuntimeEquivalenceClaim ?? false
+    }))
+  };
+}
+function requiresClassPrivateAccessorRuntimeProof(baseRecord, record) {
+  if (!record || !(record.privateClassMemberCount > 0 || record.accessorFieldCount > 0)) return false;
+  if (!baseRecord) return true;
+  return baseRecord.sourceHash !== record.sourceHash
+    || baseRecord.privateClassMemberShapeHash !== record.privateClassMemberShapeHash
+    || baseRecord.accessorFieldShapeHash !== record.accessorFieldShapeHash
+    || baseRecord.classPrivateAccessorRuntimeHash !== record.classPrivateAccessorRuntimeHash;
+}
+function hasPassedClassPrivateAccessorRuntimeProof(record) {
+  const proof = record?.classPrivateAccessorRuntimeProof;
+  return Boolean(proof
+    && proof.status === 'passed'
+    && record.classPrivateAccessorRuntimeHash
+    && proof.classPrivateAccessorRuntimeHash === record.classPrivateAccessorRuntimeHash
+    && proof.sourcePath === record.sourcePath
+    && proof.sourceHash === record.sourceHash
+    && proof.autoMergeClaim === false
+    && proof.semanticEquivalenceClaim === false
+    && proof.runtimeEquivalenceClaim === false
+    && proof.privateMemberRuntimeEquivalenceClaim === false
+    && proof.accessorRuntimeEquivalenceClaim === false
+    && !(record.classPrivateAccessorRuntimeProofReasonCodes?.length));
+}
+function classPrivateAccessorRuntimeMissingSignals(record) { return uniqueStrings(record?.classPrivateAccessorRuntimeProofReasonCodes?.length ? record.classPrivateAccessorRuntimeProofReasonCodes : ['typescript-class-private-accessor-runtime-proof-missing']); }
 function missingSharedDecoratorRuntimeExecutionEvidence(baseRecord, workerRecord, headRecord) {
   const requiringProof = [workerRecord, headRecord].filter((record) => requiresDecoratorRuntimeExecutionProof(baseRecord, record));
   if (!requiringProof.length) return undefined;

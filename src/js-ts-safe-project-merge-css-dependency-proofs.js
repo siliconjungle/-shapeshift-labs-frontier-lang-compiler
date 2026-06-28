@@ -2,10 +2,13 @@ import { hashText, safeId } from './js-ts-safe-project-merge-core.js';
 
 const CssDependencyGraphProofGap = 'css-dependency-graph-proof-unproved';
 const CssDependencyGraphConflict = 'css-dependency-graph-proof-blocked';
+const SourceBoundDependencyRecordProofGap = 'css-source-bound-dependency-records-missing';
+const SourceBoundDependencyRecordConflict = 'css-source-bound-dependency-record-proof-blocked';
 const CustomPropertyProjectProofLevel = 'css-custom-property-dependency-graph-project-source-bound';
 const VarFallbackProjectProofLevel = 'css-var-fallback-dependency-graph-project-source-bound';
 const SourceBoundDependencyGraphProofKind = 'css-source-bound-dependency-graph-proof';
 const SynthesizableDependencyKinds = new Set(['custom-property-definition', 'custom-property-reference']);
+const DependencyRecordSetKeys = Object.freeze(['customPropertyDefinitions', 'customPropertyReferences']);
 
 function projectCssDependencyProofOptionsForBlockedMerge(input) {
   const { projectInput, sourcePath, firstResult, base, worker, head } = input;
@@ -19,9 +22,12 @@ function projectCssDependencyProofOptionsForBlockedMerge(input) {
     .map((conflict) => changesByKey.get(dependencyConflictKey(conflict)) ?? dependencyChangeFromConflict(conflict))
     .filter((change) => change?.reasonCode === CssDependencyGraphProofGap && canSynthesizeDependencyChange(change));
   if (!proofChanges.length) return undefined;
+  const sourceBoundChanges = proofChanges.map((change) => ({ change, sourceBoundDependencyRecords: sourceBoundDependencyRecordsForChange(evidence, change) }));
+  const unboundChanges = sourceBoundChanges.filter(({ change, sourceBoundDependencyRecords }) => !hasRequiredSourceBoundDependencyRecords(sourceBoundDependencyRecords, change));
+  if (unboundChanges.length) return { result: sourceBoundDependencyRecordBlockedResult({ firstResult, sourcePath, unboundChanges }) };
   return {
     mergeOptions: {
-      cssDependencyGraphProofs: proofChanges.map((change, index) => projectCssDependencyGraphProof({ sourcePath, evidence, change, firstResult, base, worker, head, index }))
+      cssDependencyGraphProofs: sourceBoundChanges.map(({ change, sourceBoundDependencyRecords }, index) => projectCssDependencyGraphProof({ sourcePath, evidence, change, sourceBoundDependencyRecords, firstResult, base, worker, head, index }))
     }
   };
 }
@@ -48,9 +54,10 @@ function canSynthesizeDependencyChange(change) {
   return kinds.length > 0 && kinds.every((kind) => SynthesizableDependencyKinds.has(kind));
 }
 
-function projectCssDependencyGraphProof({ sourcePath, evidence, change, firstResult, base, worker, head, index }) {
+function projectCssDependencyGraphProof({ sourcePath, evidence, change, sourceBoundDependencyRecords, firstResult, base, worker, head, index }) {
   const dependencyKinds = uniqueStrings([...(change.before?.dependencyKinds ?? []), ...(change.after?.dependencyKinds ?? [])]);
   const varFallbackReferenceHashes = varFallbackHashesForChange(evidence, change);
+  const sourceBoundDependencyRecordHashes = sourceBoundDependencyRecordHashesBySide(sourceBoundDependencyRecords);
   return {
     id: `project_css_dependency_graph_${safeId(sourcePath)}_${index}`,
     kind: SourceBoundDependencyGraphProofKind,
@@ -68,10 +75,144 @@ function projectCssDependencyGraphProof({ sourcePath, evidence, change, firstRes
     dependencyGraphHashes: dependencyGraphHashes(evidence),
     cssDependencyGraphHashes: cssDependencyGraphHashes(evidence),
     varFallbackReferenceHashes,
+    sourceBoundDependencyRecords,
+    sourceBoundDependencyRecordHashes,
     browserCascadeEquivalenceClaim: false,
     browserRenderEquivalenceClaim: false,
     semanticEquivalenceClaim: false
   };
+}
+
+function sourceBoundDependencyRecordsForChange(evidence, change) {
+  return compactRecord({
+    base: sourceBoundDependencyRecordsForSide(evidence.sides?.base, change.cascadeKey, change.before?.dependencyKinds),
+    [change.side]: sourceBoundDependencyRecordsForSide(evidence.sides?.[change.side], change.cascadeKey, change.after?.dependencyKinds)
+  });
+}
+
+function sourceBoundDependencyRecordsForSide(sideEvidence, cascadeKey, dependencyKinds = []) {
+  const kinds = new Set(dependencyKinds);
+  if (!kinds.size) return [];
+  return dependencyRecordsForCascadeKey(sideEvidence, cascadeKey)
+    .filter((record) => kinds.has(record.kind))
+    .filter(hasSourceBoundDependencyRecord)
+    .map(sourceBoundDependencyRecordSummary);
+}
+
+function dependencyRecordsForCascadeKey(sideEvidence, cascadeKey) {
+  return DependencyRecordSetKeys.flatMap((key) => sideEvidence?.records?.[key] ?? [])
+    .filter((record) => record?.cascadeKey === cascadeKey);
+}
+
+function hasRequiredSourceBoundDependencyRecords(recordsBySide, change) {
+  return sideDependencyRecordRequirementMet(recordsBySide.base, change.before) &&
+    sideDependencyRecordRequirementMet(recordsBySide[change.side], change.after);
+}
+
+function sideDependencyRecordRequirementMet(records = [], summary) {
+  const kinds = summary?.dependencyKinds ?? [];
+  return !kinds.length || records.length > 0;
+}
+
+function hasSourceBoundDependencyRecord(record) {
+  return typeof record?.sourceHash === 'string' &&
+    Number.isInteger(record?.sourceSpan?.startOffset) &&
+    Number.isInteger(record?.sourceSpan?.endOffset) &&
+    typeof record.declarationHash === 'string';
+}
+
+function sourceBoundDependencyRecordSummary(record) {
+  return compactRecord({
+    kind: record.kind,
+    cascadeKey: record.cascadeKey,
+    property: record.property,
+    name: record.name,
+    family: record.family,
+    url: record.url,
+    hasFallback: record.hasFallback,
+    fallbackHash: record.fallbackHash,
+    declarationHash: record.declarationHash,
+    ruleHash: record.ruleHash,
+    atRuleHash: record.atRuleHash,
+    selectors: record.selectors,
+    scopes: record.scopes,
+    sourceHash: record.sourceHash,
+    sourceSpan: record.sourceSpan
+  });
+}
+
+function sourceBoundDependencyRecordHashesBySide(recordsBySide) {
+  return Object.fromEntries(Object.entries(recordsBySide)
+    .map(([side, records]) => [side, uniqueStrings((records ?? []).map(sourceBoundDependencyRecordHash))])
+    .filter(([, hashes]) => hashes.length > 0));
+}
+
+function sourceBoundDependencyRecordHash(record) {
+  return hashText(JSON.stringify(record));
+}
+
+function sourceBoundDependencyRecordBlockedResult({ firstResult, sourcePath, unboundChanges }) {
+  const conflicts = [
+    ...(firstResult.conflicts ?? []),
+    ...unboundChanges.map(({ change, sourceBoundDependencyRecords }) => sourceBoundDependencyRecordConflict(firstResult.id, sourcePath, change, sourceBoundDependencyRecords))
+  ];
+  return compactRecord({
+    ...firstResult,
+    conflicts,
+    admission: blockedSourceBoundDependencyRecordAdmission(firstResult.admission, conflicts),
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    browserCascadeEquivalenceClaim: false,
+    browserRenderEquivalenceClaim: false
+  });
+}
+
+function sourceBoundDependencyRecordConflict(id, sourcePath, change, sourceBoundDependencyRecords) {
+  const missingSides = missingSourceBoundDependencyRecordSides(sourceBoundDependencyRecords, change);
+  return {
+    code: SourceBoundDependencyRecordConflict,
+    gateId: 'css-semantic-merge',
+    sourcePath,
+    details: compactRecord({
+      reasonCode: SourceBoundDependencyRecordProofGap,
+      conflictKey: `css#${id ?? safeId(sourcePath)}#${SourceBoundDependencyRecordProofGap}#${change.side ?? 'side'}#${change.cascadeKey ?? sourcePath ?? 'source'}`,
+      side: change.side,
+      cascadeKey: change.cascadeKey,
+      dependencyKinds: uniqueStrings([...(change.before?.dependencyKinds ?? []), ...(change.after?.dependencyKinds ?? [])]),
+      missingSourceBoundDependencyRecordSides: missingSides,
+      sourceBoundDependencyRecords,
+      proofGap: {
+        code: SourceBoundDependencyRecordProofGap,
+        status: 'not-claimed',
+        summary: 'Project-level CSS dependency proof synthesis requires parser-backed source spans and source hashes for changed custom-property or var() fallback dependency records.',
+        nextProof: 'Supply dependency graph evidence whose custom property definition/reference records include declaration hashes, source spans, and source hashes on every changed side before synthesizing the source-bound dependency proof.',
+        failClosed: true,
+        semanticEquivalenceClaim: false
+      }
+    })
+  };
+}
+
+function missingSourceBoundDependencyRecordSides(recordsBySide, change) {
+  return [
+    sideDependencyRecordRequirementMet(recordsBySide.base, change.before) ? undefined : 'base',
+    sideDependencyRecordRequirementMet(recordsBySide[change.side], change.after) ? undefined : change.side
+  ].filter(Boolean);
+}
+
+function blockedSourceBoundDependencyRecordAdmission(admission = {}, conflicts = []) {
+  return compactRecord({
+    ...admission,
+    status: 'blocked',
+    action: 'human-review',
+    reviewRequired: true,
+    autoApplyCandidate: false,
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    browserCascadeEquivalenceClaim: false,
+    browserRenderEquivalenceClaim: false,
+    reasonCodes: uniqueStrings([...(admission.reasonCodes ?? []), ...conflicts.map((conflict) => conflict.details?.reasonCode ?? conflict.code)])
+  });
 }
 
 function varFallbackHashesForChange(evidence, change) {

@@ -1,5 +1,6 @@
 import { assert } from './helpers.mjs';
-import { createSemanticEditScript, createSemanticImportSidecar, importNativeSource } from './compiler-api.mjs';
+import { createSemanticEditScript, createSemanticImportSidecar, importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
+import { projectRuntimeRegionDeltaConflicts } from '../../src/js-ts-safe-project-merge-runtime-region-conflicts.js';
 import { effectTargetProofFields } from './runtime-order-proof-helpers.mjs';
 
 const sourceText = [
@@ -148,6 +149,41 @@ const missingEffectTargetHashOperation = runtimeOperation(missingEffectTargetHas
 assert.equal(missingEffectTargetHashScript.admission.status, 'conflict');
 assert.equal(missingEffectTargetHashOperation.reasonCodes.includes('runtime-order-explicit-evidence-effect-target-order-hash-missing'), true);
 
+const dynamicTargetSourceText = [
+  'export function dispatch(api, target) {',
+  '  window[target](api);',
+  '}',
+  ''
+].join('\n');
+const dynamicTargetWorkerSourceText = dynamicTargetSourceText
+  .replace('window[target](api);', 'window[target](api, { trace: true });');
+const dynamicTargetHeadSourceText = dynamicTargetSourceText
+  .replace('window[target](api);', 'window[otherTarget](api);');
+const dynamicTargetBaseRecord = projectRuntimeRecordFromSource('base', dynamicTargetSourceText);
+const dynamicTargetWorkerRecord = projectRuntimeRecordFromSource('worker', dynamicTargetWorkerSourceText);
+const dynamicTargetHeadRecord = projectRuntimeRecordFromSource('head', dynamicTargetHeadSourceText);
+const dynamicTargetProof = projectRuntimeOrderProof(dynamicTargetWorkerRecord, {
+  baseRecord: dynamicTargetBaseRecord,
+  workerRecord: dynamicTargetWorkerRecord,
+  headRecord: dynamicTargetHeadRecord
+});
+assert.equal(projectRuntimeRegionDeltaConflicts(runtimeDelta({
+  base: dynamicTargetBaseRecord,
+  worker: dynamicTargetWorkerRecord,
+  head: dynamicTargetHeadRecord,
+  output: dynamicTargetWorkerRecord
+}), { runtimeOrderEvidence: dynamicTargetProof }).length, 0);
+
+const missingOutputRecordConflicts = projectRuntimeRegionDeltaConflicts(runtimeDelta({
+  base: dynamicTargetBaseRecord,
+  worker: dynamicTargetWorkerRecord,
+  head: dynamicTargetHeadRecord,
+  output: undefined
+}), { runtimeOrderEvidence: dynamicTargetProof });
+assert.equal(missingOutputRecordConflicts.length, 1);
+assert.equal(missingOutputRecordConflicts[0].details.reasonCodes.includes('runtime-order-explicit-evidence-output-runtime-region-missing'), true);
+assert.equal(missingOutputRecordConflicts[0].details.reasonCodes.includes('runtime-order-effect-target-merge-requires-dynamic-computed-key-evidence'), true);
+
 function runtimeOperation(script) {
   const operation = script.operations
     .find((candidate) => candidate.anchor.symbolName === 'routeWork:effect:network#1');
@@ -164,4 +200,63 @@ function runtimeRecordFromSource(sourceText, key) {
   const record = sidecar.ownershipRegions.find((candidate) => candidate.key === key);
   assert.ok(record, `expected runtime record for ${key}`);
   return record;
+}
+
+function projectRuntimeRecordFromSource(id, sourceText) {
+  const result = safeMergeJsTsProject({
+    id: `semantic_runtime_output_bound_effect_${id}`,
+    language: 'typescript',
+    includeOutputProjectSymbolGraph: true,
+    baseFiles: { 'src/runtime-output-bound-effect.ts': sourceText },
+    workerFiles: { 'src/runtime-output-bound-effect.ts': sourceText },
+    headFiles: { 'src/runtime-output-bound-effect.ts': sourceText }
+  });
+  assert.equal(result.status, 'merged');
+  const record = result.outputProjectSymbolGraph.runtimeRegionRecords.find((candidate) => candidate.publicContract
+    && candidate.symbolName === 'dispatch'
+    && candidate.regionKind === 'effect'
+    && candidate.runtimeKind === 'browser'
+    && candidate.ordinal === 1);
+  assert.ok(record);
+  return record;
+}
+
+function projectRuntimeOrderProof(record, stages) {
+  return {
+    id: 'runtime_order_output_bound_dynamic_effect_target_proof',
+    schema: 'frontier.lang.runtimeOrderProofEvidence.v1',
+    status: 'passed',
+    proofLevel: 'project-output-bound-effect-target-order',
+    sourcePath: record.sourcePath,
+    baseSourceHash: stages.baseRecord.sourceHash,
+    workerSourceHash: stages.workerRecord.sourceHash,
+    headSourceHash: stages.headRecord.sourceHash,
+    regionKey: record.key,
+    runtimeIdentityKey: runtimeIdentityKey(record),
+    regionKind: record.regionKind,
+    runtimeKind: record.runtimeKind,
+    runtimeKinds: record.runtimeKinds,
+    signatureHash: record.signatureHash,
+    command: 'fixture-output-bound-effect-target-proof',
+    traceHash: 'fixture-output-bound-effect-target-trace-root-hash',
+    evidenceHash: 'fixture-output-bound-effect-target-proof-hash',
+    ...effectTargetProofFields(record),
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    runtimeEquivalenceClaim: false
+  };
+}
+
+function runtimeIdentityKey(record) {
+  return ['runtime-region', record.sourcePath, record.symbolName, record.regionKind, record.runtimeKind, record.ordinal].join('#');
+}
+
+function runtimeDelta(stages) {
+  return {
+    stages: Object.fromEntries(Object.entries(stages).map(([stage, record]) => [stage, {
+      projectSymbolGraph: { runtimeRegionRecords: record ? [record] : [] },
+      summary: { runtimeRegionRecords: record ? 1 : 0 }
+    }])),
+    summary: { stages: Object.keys(stages).length }
+  };
 }

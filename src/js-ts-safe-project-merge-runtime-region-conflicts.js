@@ -16,11 +16,12 @@ function projectRuntimeRegionDeltaConflicts(projectGraphDelta, options = {}) {
     const baseRecord = base.get(identityKey);
     const workerRecord = worker.get(identityKey);
     const headRecord = head.get(identityKey);
+    const outputRecord = output.get(identityKey);
     const fingerprints = [runtimeFingerprint(baseRecord), runtimeFingerprint(workerRecord), runtimeFingerprint(headRecord)];
     if (fingerprints[0] === fingerprints[1] || fingerprints[0] === fingerprints[2] || fingerprints[1] === fingerprints[2]) return [];
-    const explicitEvidence = projectRuntimeOrderEvidenceBinding(identityKey, baseRecord, workerRecord, headRecord, output.get(identityKey), options);
+    const explicitEvidence = projectRuntimeOrderEvidenceBinding(identityKey, baseRecord, workerRecord, headRecord, outputRecord, options);
     if (explicitEvidence.passed) return [];
-    return [projectRuntimeRegionDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, output.get(identityKey), explicitEvidence)];
+    return [projectRuntimeRegionDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, explicitEvidence)];
   });
 }
 
@@ -47,6 +48,13 @@ function projectRuntimeRegionDeltaConflict(identityKey, baseRecord, workerRecord
 }
 
 function projectRuntimeOrderEvidenceBinding(identityKey, baseRecord, workerRecord, headRecord, outputRecord, options) {
+  if (!outputRecord) {
+    return {
+      passed: false,
+      evidenceIds: [],
+      reasonCodes: ['runtime-order-explicit-evidence-output-runtime-region-missing']
+    };
+  }
   return runtimeOrderEvidenceBinding({
     scriptInput: {
       runtimeOrderEvidence: runtimeOrderEvidenceCandidates(options),

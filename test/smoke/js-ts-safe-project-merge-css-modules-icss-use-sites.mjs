@@ -19,6 +19,14 @@ const icssModuleComponentSource = [
   '}',
   ''
 ].join('\n');
+const dynamicIcssModuleComponentSource = [
+  'import styles from ' + JSON.stringify('./Theme.module.css') + ';',
+  'export function ThemeButton({ tokenName }) {',
+  '  const accent = styles[tokenName];',
+  '  return <button className={styles.root} data-accent={accent} />;',
+  '}',
+  ''
+].join('\n');
 const provenIcssModuleImport = importNativeSource({
   language: 'css',
   sourcePath: 'src/Theme.module.css',
@@ -57,6 +65,27 @@ assert.equal(provenIcssModuleProject.summary.projectGraphCssModuleUseSiteConflic
 assert.equal(provenIcssModuleProject.summary.projectGraphCssModuleUseSiteBlockers, 0);
 assert.equal(provenIcssModuleProject.summary.projectGraphCssModuleUseSiteGraphs, 1);
 assert.equal(matrixSurface(provenIcssModuleProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'passed');
+
+const dynamicIcssModuleProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_icss_dynamic_use_site',
+  includeOutputProjectSymbolGraph: true,
+  outputProjectImports: [provenIcssModuleImport],
+  files: [
+    { language: 'css', sourcePath: 'src/Theme.module.css', headSourceText: icssModuleSource },
+    { language: 'tsx', sourcePath: 'src/ThemeButton.tsx', baseSourceText: dynamicIcssModuleComponentSource, workerSourceText: dynamicIcssModuleComponentSource, headSourceText: dynamicIcssModuleComponentSource }
+  ]
+});
+assert.equal(dynamicIcssModuleProject.status, 'blocked');
+const dynamicIcssConflict = dynamicIcssModuleProject.conflicts.find((conflict) => conflict.details.reasonCode === 'css-module-dynamic-member-access-unproved');
+assert.equal(dynamicIcssConflict?.details.requiredProof, 'css-module-source-bound-dynamic-use-site-proof');
+assert.equal(dynamicIcssConflict.details.proofGap.code, 'css-module-dynamic-member-access-unproved');
+assert.equal(dynamicIcssConflict.details.proofGap.proofBoundary, 'css-module-use-site-graph');
+assert.equal(dynamicIcssConflict.details.proofGap.failClosed, true);
+assert.equal(dynamicIcssConflict.details.semanticEquivalenceClaim, false);
+assert.equal(matrixSurface(dynamicIcssModuleProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'failed');
+assert.equal(matrixSurface(dynamicIcssModuleProject, 'css-modules-generated-class-name-map').proofStatuses['css-module-generated-class-name-map'], 'passed');
+assert.equal(matrixSurface(dynamicIcssModuleProject, 'css-modules-bundler-transform-identity').proofStatuses['css-module-bundler-transform-identity'], 'passed');
+assert.equal(matrixSurface(dynamicIcssModuleProject, 'css-modules-source-map-identity').proofStatuses['css-module-source-map-identity'], 'passed');
 
 const unprovedIcssModuleImport = importNativeSource({
   language: 'css',

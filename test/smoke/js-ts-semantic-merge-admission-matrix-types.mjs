@@ -60,7 +60,7 @@ const semanticMergeTypeMatrixCells = [
     id: 'compiler-type-graph/class-private-accessor-runtime-proof-bridge',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-compiler-class-private-accessor-shape',
-    note: 'private class member and accessor field runtime gaps route to a source- and required-signal-bound proof bridge with schema/kind, command, trace, evidence-hash, stale, missing-trace, and claim-bearing fail-closed checks'
+    note: 'private class member and accessor field runtime gaps route to a source- and required-signal-bound proof bridge with schema/kind, command, trace, evidence-hash, stale, missing-trace, and claim-bearing fail-closed checks; identical worker/head source deltas require the bound runtime proof'
   },
   {
     id: 'type-public-api-graph/assignability-oracle-proof',

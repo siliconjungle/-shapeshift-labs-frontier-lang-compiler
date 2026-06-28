@@ -1,3 +1,5 @@
+import { matrixRowsForOracleSurface, realRepoSurfaceOracleRoute } from '../../bench/real-repo-corpus-suite.mjs';
+
 function assertRealRepoSource(manifest, entry, assert) {
   assert.equal(entry.source?.type, 'git', `${entry.id}: source type`);
   assert.match(entry.source.url, /^https:\/\/github\.com\//, `${entry.id}: source url`);
@@ -28,12 +30,24 @@ function assertOracleCase(entry, oracleCase, fixtureIds, assert, fixturesById) {
     true,
     `${entry.id}: oracle expected admission status`
   );
+  const route = realRepoSurfaceOracleRoute(oracleCase.surface);
+  assert.ok(route, `${entry.id}: oracle surface route`);
+  assert.equal(route.matrixRows.length > 0 || route.failClosedRoutes.length > 0, true, `${entry.id}: oracle matrix or fail-closed route`);
 
   const fixture = fixturesById?.get(oracleCase.fixtureId);
   if (!fixture) return;
   assert.equal(fixture.language, oracleCase.language, `${entry.id}: oracle fixture language`);
   assert.equal(fixture.coverage.includes(oracleCase.surface), true, `${entry.id}: oracle fixture surface`);
   assert.equal(fixtureExpectedAdmissionStatus(fixture), oracleCase.expectedAdmissionStatus, `${entry.id}: oracle fixture admission status`);
+  for (const failClosedRoute of route.failClosedRoutes) {
+    assert.equal(oracleCase.expectedAdmissionStatus, failClosedRoute.expectedAdmissionStatus, `${entry.id}: fail-closed oracle status`);
+    assert.equal(fixture.id, failClosedRoute.fixtureId, `${entry.id}: fail-closed fixture id`);
+    assert.equal(
+      (fixture.expected?.reasonCodes ?? []).includes(failClosedRoute.fixtureReason),
+      true,
+      `${entry.id}: fail-closed fixture reason ${failClosedRoute.fixtureReason}`
+    );
+  }
 }
 
 function fixtureExpectedAdmissionStatus(fixture) {
@@ -41,29 +55,6 @@ function fixtureExpectedAdmissionStatus(fixture) {
   if (fixture.expected?.safeMergeStatus === 'merged') return 'auto-merge-candidate';
   if (fixture.expected?.safeMergeStatus === 'rejected') return 'blocked';
   return undefined;
-}
-
-function matrixRowsForOracleSurface(surface) {
-  if ([
-    'imports',
-    'type-only-imports',
-    'value-import-dependencies',
-    'import-specifier-order',
-    'import-shape-additions',
-    'new-import-declarations',
-    'exports'
-  ].includes(surface)) return ['module-export-import'];
-  if ([
-    'type-aliases',
-    'type-interface-members',
-    'overloads',
-    'exported-types',
-    'dependency-sensitive-edits'
-  ].includes(surface)) return ['type-public-api'];
-  if (surface.startsWith('tsx-jsx-') || surface === 'jsx-component-prop-contracts') return ['jsx-tsx-element-prop'];
-  if (surface === 'control-flow' || surface === 'async-components' || surface === 'import-meta-host-context') return ['control-flow-effect'];
-  if (surface === 'comments-trivia' || surface === 'generated-source-map-boundary') return ['parser-source-span-trivia'];
-  return [];
 }
 
 export { assertOracleCase, assertRealRepoSource, matrixRowsForOracleSurface };

@@ -1,4 +1,5 @@
 import { createParserTriviaExactnessRecord } from './native-source-preservation-ownership.js';
+import { parserSpanCoverageProofForFile } from './js-ts-safe-project-merge-parser-span-coverage-proof.js';
 
 function sourceSpanRoundtripEvidence(id, fileResults, level, legacyLevel) {
   const outputFiles = fileResults.filter((file) => typeof file.outputSourceText === 'string');
@@ -162,22 +163,28 @@ function sourceSpanRoundtripHashBinding(file, artifacts) {
 }
 
 function parserTriviaExactnessForFile(file, artifacts) {
+  const evidence = parserTriviaExactnessEvidenceForFile(file, artifacts);
+  const parserSpanCoverageProof = parserSpanCoverageProofForFile(file, artifacts, evidence);
+  const checkedEvidence = isPlainObject(evidence) && isPlainObject(evidence.parserSpanCoverageProof)
+    ? { ...evidence, parserSpanCoverageProof }
+    : evidence;
   return createParserTriviaExactnessRecord(
-    file.parserTriviaExactness
-      ?? file.parserTriviaEvidence
-      ?? file.metadata?.parserTriviaExactness
-      ?? file.result?.metadata?.parserTriviaExactness
-      ?? artifacts?.metadata?.parserTriviaExactness,
+    checkedEvidence,
     {
       sourcePath: file.sourcePath,
-      sourceHash: file.outputHash,
+      sourceHash: expectedOutputHashForFile(file),
       parserEvidence: artifacts?.metadata?.parserEvidence,
-      parserSpanCoverageProof: file.parserSpanCoverageProof
-        ?? file.metadata?.parserSpanCoverageProof
-        ?? file.result?.metadata?.parserSpanCoverageProof
-        ?? artifacts?.metadata?.parserSpanCoverageProof
+      parserSpanCoverageProof
     }
   );
+}
+
+function parserTriviaExactnessEvidenceForFile(file, artifacts) {
+  return file.parserTriviaExactness
+    ?? file.parserTriviaEvidence
+    ?? file.metadata?.parserTriviaExactness
+    ?? file.result?.metadata?.parserTriviaExactness
+    ?? artifacts?.metadata?.parserTriviaExactness;
 }
 
 function parserTriviaExactnessSummary(facts) {
@@ -230,6 +237,7 @@ function editHasSourceSpan(edit) {
     || Number.isFinite(edit?.start) && Number.isFinite(edit?.end);
 }
 function hashMatchesBase(file) { return Boolean(file.baseHash) && file.outputHash === file.baseHash; }
+function expectedOutputHashForFile(file) { return firstString(file.outputHash, file.result?.outputHash); }
 function sourceSpanRoundtripRequired(file) { return !preservesSingleChangedInput(file); }
 function preservesSingleChangedInput(file) {
   const workerChanged = file.workerHash !== file.baseHash;
@@ -248,5 +256,6 @@ function sumBy(values, valueFor) { return values.reduce((total, value) => total 
 function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
 function firstString(...values) { return values.find((value) => typeof value === 'string' && value.length > 0); }
 function uniqueStrings(values) { return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))]; }
+function isPlainObject(value) { return Boolean(value && typeof value === 'object' && !Array.isArray(value)); }
 
 export { sourceSpanRoundtripEvidence };

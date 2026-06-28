@@ -8,17 +8,26 @@ export function moduleImportAttributeMetadata(node) {
     ...importCallOptionEntries(node?.options),
     ...importCallOptionEntries(Array.isArray(node?.arguments) ? node.arguments[1] : undefined)
   ];
-  return importAttributeMetadataFromEntries(entries, hasImportAttributeSyntax(node));
+  return importAttributeMetadataFromEntries(entries, hasImportAttributeSyntax(node), importAttributeSyntaxSource(node));
 }
 
 export function importAttributeMetadataFromSource(source) {
   const scan = scanImportAttributeSource(source);
-  return importAttributeMetadataFromEntries(scan.entries, scan.syntaxPresent);
+  return importAttributeMetadataFromEntries(scan.entries, scan.syntaxPresent, source);
 }
 
-function importAttributeMetadataFromEntries(entries, syntaxPresent) {
+function importAttributeMetadataFromEntries(entries, syntaxPresent, syntaxSource) {
   const normalized = normalizeEntries(entries);
-  if (!normalized.length && syntaxPresent) return { hasImportAttributes: true };
+  if (!normalized.length && syntaxPresent) return {
+    hasImportAttributes: true,
+    importAttributeCount: 0,
+    importAttributeKeys: [],
+    importAttributeHash: hashSemanticValue({
+      kind: 'frontier.lang.importAttributeStaticEvidenceMissing.v1',
+      sourceText: importAttributeSourceText(syntaxSource)
+    }),
+    importAttributes: []
+  };
   if (!normalized.length) return {};
   const keys = [...new Set(normalized.map((entry) => entry.key))].sort();
   return {
@@ -215,6 +224,25 @@ function normalizeEntries(entries) {
       seen.add(id);
       return true;
     });
+}
+
+function importAttributeSourceText(source) {
+  return typeof source === 'string' && source.trim()
+    ? source.trim()
+    : '<import-attribute-syntax-present>';
+}
+
+function importAttributeSyntaxSource(node) {
+  if (!node) return undefined;
+  if (typeof node.getText === 'function') {
+    try {
+      const text = node.getText();
+      if (typeof text === 'string' && text.trim()) return text.trim();
+    } catch {}
+  }
+  if (typeof node.raw === 'string') return node.raw;
+  if (typeof node.sourceText === 'string') return node.sourceText;
+  return String(node.type ?? node.kindName ?? node.kind ?? '');
 }
 
 function hasImportAttributeSyntax(node) {

@@ -62,6 +62,20 @@ assert.equal(cssDependencyAutoProof.files[0].result.dependencyGraphProofs[0].cas
 assert.equal(cssDependencyAutoProof.outputFiles[0].sourceText, dependencyCssOutput);
 assert.equal(matrixSurface(cssDependencyAutoProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'passed');
 const dependencyGraphHash = (sourceText) => parseCssSemanticSheet(sourceText, { sourcePath: 'src/spinner.css' }).dependencyGraphEvidence.dependencyGraphHash;
+const cssDependencyAutoProofOptions = projectCssDependencyProofOptionsForBlockedMerge({
+  projectInput: {},
+  sourcePath: 'src/spinner.css',
+  firstResult: cssDependencyMissingProof.files[0].result,
+  base: dependencyCssBase,
+  worker: dependencyCssWorker,
+  head: dependencyCssHead
+});
+const cssCustomPropertySynthesizedProof = cssDependencyAutoProofOptions.mergeOptions.cssDependencyGraphProofs[0];
+assert.equal(cssCustomPropertySynthesizedProof.sourceBoundDependencyRecords.base[0].kind, 'custom-property-definition');
+assert.equal(cssCustomPropertySynthesizedProof.sourceBoundDependencyRecords.worker[0].kind, 'custom-property-definition');
+assert.equal(Number.isInteger(cssCustomPropertySynthesizedProof.sourceBoundDependencyRecords.base[0].sourceSpan.startOffset), true);
+assert.equal(cssCustomPropertySynthesizedProof.sourceBoundDependencyRecordHashes.base.length, 1);
+assert.equal(cssCustomPropertySynthesizedProof.sourceBoundDependencyRecordHashes.worker.length, 1);
 const cssDependencyWithProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_dependency_graph_proven',
   cssMergeOptionsByPath: {
@@ -138,6 +152,10 @@ assert.equal(cssVarFallbackSynthesizedProof.cascadeKey, '.button::color');
 assert.equal(cssVarFallbackSynthesizedProof.varFallbackReferenceHashes.base.length, 1);
 assert.equal(cssVarFallbackSynthesizedProof.varFallbackReferenceHashes.worker.length, 1);
 assert.notEqual(cssVarFallbackSynthesizedProof.varFallbackReferenceHashes.base[0], cssVarFallbackSynthesizedProof.varFallbackReferenceHashes.worker[0]);
+assert.equal(cssVarFallbackSynthesizedProof.sourceBoundDependencyRecords.base[0].kind, 'custom-property-reference');
+assert.equal(cssVarFallbackSynthesizedProof.sourceBoundDependencyRecords.worker[0].kind, 'custom-property-reference');
+assert.equal(cssVarFallbackSynthesizedProof.sourceBoundDependencyRecords.base[0].fallbackHash, cssVarFallbackSynthesizedProof.varFallbackReferenceHashes.base[0]);
+assert.equal(cssVarFallbackSynthesizedProof.sourceBoundDependencyRecordHashes.base.length, 1);
 
 const cssVarFallbackAutoProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_var_fallback_dependency_graph_auto_proven',
@@ -184,6 +202,22 @@ assert.equal(cssVarFallbackStaleProof.summary.cssDependencyGraphBlockedFiles, 1)
 assert.equal(cssVarFallbackStaleProof.conflicts.some((conflict) => conflict.code === 'css-dependency-graph-proof-blocked'), true);
 assert.equal(matrixSurface(cssVarFallbackStaleProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'failed');
 
+const cssVarFallbackMissingSourceBoundRecords = projectCssDependencyProofOptionsForBlockedMerge({
+  projectInput: {},
+  sourcePath: 'src/theme.css',
+  firstResult: stripSourceBoundDependencyRecords(cssVarFallbackMissingProof.files[0].result, '.button::color'),
+  base: fallbackDependencyCssBase,
+  worker: fallbackDependencyCssWorker,
+  head: fallbackDependencyCssHead
+});
+assert.equal(cssVarFallbackMissingSourceBoundRecords.mergeOptions, undefined);
+assert.equal(cssVarFallbackMissingSourceBoundRecords.result.status, 'blocked');
+assert.equal(cssVarFallbackMissingSourceBoundRecords.result.conflicts.some((conflict) => conflict.code === 'css-source-bound-dependency-record-proof-blocked'), true);
+const missingSourceRecordConflict = cssVarFallbackMissingSourceBoundRecords.result.conflicts.find((conflict) => conflict.code === 'css-source-bound-dependency-record-proof-blocked');
+assert.equal(missingSourceRecordConflict.details.reasonCode, 'css-source-bound-dependency-records-missing');
+assert.deepEqual(missingSourceRecordConflict.details.missingSourceBoundDependencyRecordSides, ['base', 'worker']);
+assert.equal(missingSourceRecordConflict.details.proofGap.semanticEquivalenceClaim, false);
+
 const keyframesCssBase = [
   '@keyframes fade { from { opacity: 0; } to { opacity: 1; } }',
   '.spinner {',
@@ -204,3 +238,18 @@ assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphEvidenceFil
 assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphMissingProofFiles, 0);
 assert.equal(cssKeyframesDependencyBlocked.summary.cssDependencyGraphBlockedFiles, 1);
 assert.equal(matrixSurface(cssKeyframesDependencyBlocked, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'failed');
+
+function stripSourceBoundDependencyRecords(result, cascadeKey) {
+  const copy = JSON.parse(JSON.stringify(result));
+  for (const side of Object.values(copy.dependencyGraphEvidence?.sides ?? {})) {
+    for (const key of ['customPropertyDefinitions', 'customPropertyReferences']) {
+      side.records[key] = (side.records[key] ?? []).map((record) => record.cascadeKey === cascadeKey ? stripSourceBoundDependencyRecord(record) : record);
+    }
+  }
+  return copy;
+}
+
+function stripSourceBoundDependencyRecord(record) {
+  const { declarationHash, sourceHash, sourceSpan, ...rest } = record;
+  return rest;
+}

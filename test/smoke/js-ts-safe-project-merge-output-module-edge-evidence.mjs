@@ -94,6 +94,19 @@ const conflicts = outputProjectGraphConflicts({
     importAttributeKeys: ['type'],
     importAttributeHash: 'hash:ts',
     importAttributes: [{ key: 'type', value: 'typescript' }]
+  }, {
+    id: 'edge-ambiguous-attribute',
+    sourcePath: 'packages/app/src/data.ts',
+    sourceHash: 'sha256:attribute-source',
+    moduleSpecifier: './data.json',
+    importKind: 'side-effect',
+    resolutionKind: 'relative-source',
+    resolvedModulePath: 'packages/app/src/data.json',
+    targetDocumentId: 'doc:data',
+    hasImportAttributes: true,
+    importAttributeCount: 0,
+    importAttributeHash: 'hash:attribute-syntax',
+    importAttributes: []
   }]
 });
 
@@ -153,6 +166,24 @@ assert.equal(missingSymbolConflict.details.moduleEdgeEvidence[0].resolvedTargetS
 assert.equal(missingSymbolConflict.details.autoMergeClaim, false);
 assert.equal(missingSymbolConflict.details.semanticEquivalenceClaim, false);
 assert.equal(missingSymbolConflict.details.runtimeEquivalenceClaim, false);
+
+const ambiguousAttributeConflict = conflicts.find((candidate) =>
+  candidate.code === 'project-output-import-attribute-unresolved'
+  && candidate.details.moduleSpecifier === './data.json'
+);
+assert.ok(ambiguousAttributeConflict, 'missing ambiguous import-attribute conflict');
+assert.equal(ambiguousAttributeConflict.details.sourceHash, 'sha256:attribute-source');
+assert.equal(ambiguousAttributeConflict.details.moduleEdgeFailureReasonCodes.includes('import-attribute-static-value-missing'), true);
+assert.equal(ambiguousAttributeConflict.details.requiredProof, 'import-attribute-static-proof');
+assert.equal(ambiguousAttributeConflict.details.routeId, 'prove-import-attribute-static-values');
+assert.equal(ambiguousAttributeConflict.details.routeLane, 'module-export-import-graph');
+assert.equal(ambiguousAttributeConflict.details.routeNext, 'supply-import-attribute-static-proof');
+assert.equal(ambiguousAttributeConflict.details.moduleEdgeEvidence[0].sourceHash, 'sha256:attribute-source');
+assert.equal(ambiguousAttributeConflict.details.moduleEdgeEvidence[0].importAttributeHash, 'hash:attribute-syntax');
+assert.deepEqual(ambiguousAttributeConflict.details.moduleEdgeEvidence[0].importAttributes, []);
+assert.equal(ambiguousAttributeConflict.details.autoMergeClaim, false);
+assert.equal(ambiguousAttributeConflict.details.semanticEquivalenceClaim, false);
+assert.equal(ambiguousAttributeConflict.details.runtimeEquivalenceClaim, false);
 
 function conflictFor(moduleSpecifier) {
   const conflict = conflicts.find((candidate) =>

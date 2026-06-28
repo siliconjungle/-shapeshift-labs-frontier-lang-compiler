@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { RealRepoCorpusOracleCoverage } from '../../bench/real-repo-corpus-suite.mjs';
+import { RealRepoCorpusOracleCoverage, RealRepoCorpusSurfaceAudit } from '../../bench/real-repo-corpus-suite.mjs';
 
 function assertReadmeRealRepoBenchmarkSuiteRow(assert) {
   const readmeRow = readReadmeMatrixRows().get('Real-repo benchmark suite');
@@ -13,11 +13,21 @@ function assertReadmeRealRepoBenchmarkSuiteRow(assert) {
   for (const rowId of RealRepoCorpusOracleCoverage.matrixRows) {
     assert.equal(readmeRow.evidence.includes(`\`${rowId}\``), true, `README real-repo matrix row ${rowId}`);
   }
+  for (const rowId of RealRepoCorpusOracleCoverage.productionMatrixRows) {
+    assert.equal(readmeRow.evidence.includes(`\`${rowId}\``), true, `README real-repo production matrix row ${rowId}`);
+  }
   assert.equal(readmeRow.evidence.includes('realRepoCorpusOracleCoverageRatio'), true, 'README real-repo coverage ratio metric');
   assert.equal(readmeRow.evidence.includes(RealRepoCorpusOracleCoverage.coverageRatioBasis), true, 'README real-repo coverage ratio basis');
   for (const surface of RealRepoCorpusOracleCoverage.unmappedSurfaces) {
     assert.equal(readmeRow.evidence.includes(`\`${surface}\``), true, `README real-repo known non-matrix surface ${surface}`);
   }
+  for (const surface of RealRepoCorpusSurfaceAudit.failClosedSurfaces) {
+    assert.equal(readmeRow.evidence.includes(`\`${surface}\``), true, `README real-repo fail-closed surface ${surface}`);
+  }
+  for (const routeId of RealRepoCorpusSurfaceAudit.failClosedRouteIds) {
+    assert.equal(readmeRow.evidence.includes(`\`${routeId}\``), true, `README real-repo fail-closed route ${routeId}`);
+  }
+  assert.equal(readmeRow.evidence.includes('realRepoCorpusMergeSurfaceUnroutedSurfaces'), true, 'README real-repo unrouted surface metric');
 }
 
 function readReadmeMatrixRows() {

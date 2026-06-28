@@ -170,6 +170,12 @@ const semanticMergeJsxMatrixCells = [
     note: 'single top-level conditional/logical render-return deltas accept source-bound branch-arm preservation proof while stale hashes, arm mismatches, and broad render equivalence claims fail closed'
   },
   {
+    id: 'jsx-tsx-element-prop-graph/branch-proof-dynamic-runtime-surface-blocker',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-jsx-render-branch-proof',
+    note: 'branch-arm preservation proof refuses to clear admission when any stage also carries non-branch dynamic runtime risk such as an event handler factory'
+  },
+  {
     id: 'jsx-tsx-element-prop-graph/array-render-return-collection-evidence',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-jsx-render-returns',

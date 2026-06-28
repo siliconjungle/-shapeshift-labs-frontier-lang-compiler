@@ -24,6 +24,7 @@ function compilerTypeFingerprint(record) {
     accessorFieldCount: record.accessorFieldCount,
     privateClassMemberShapeHash: record.privateClassMemberShapeHash,
     accessorFieldShapeHash: record.accessorFieldShapeHash,
+    classPrivateAccessorRuntimeMissingSourceHash: classPrivateAccessorRuntimeMissingSourceHash(record),
     classPrivateAccessorRuntimeHash: record.classPrivateAccessorRuntimeHash,
     classPrivateAccessorRuntimeProof: record.classPrivateAccessorRuntimeProof,
     classPrivateAccessorRuntimeProofReasonCodes: record.classPrivateAccessorRuntimeProofReasonCodes,
@@ -111,6 +112,10 @@ function compilerTypeDetails(record) {
     accessorFieldCount: record.accessorFieldCount,
     privateClassMemberShapeHash: record.privateClassMemberShapeHash,
     accessorFieldShapeHash: record.accessorFieldShapeHash,
+    classPrivateAccessorRuntimeMissingSourceHash: classPrivateAccessorRuntimeMissingSourceHash(record),
+    classPrivateAccessorRuntimeHash: record.classPrivateAccessorRuntimeHash,
+    classPrivateAccessorRuntimeProof: record.classPrivateAccessorRuntimeProof,
+    classPrivateAccessorRuntimeProofReasonCodes: record.classPrivateAccessorRuntimeProofReasonCodes,
     decoratorMetadataCount: record.decoratorMetadataCount,
     decoratorMetadataHash: record.decoratorMetadataHash,
     decoratorRuntimeExecutionHash: record.decoratorRuntimeExecutionHash,
@@ -181,6 +186,28 @@ function compilerTypeDetails(record) {
 }
 
 function compilerTypeIdentityKey(record) { return stableKey(['compiler-public-type', record?.fullyQualifiedName ?? record?.localName ?? record?.symbolName ?? record?.symbolId]); }
+function classPrivateAccessorRuntimeMissingSourceHash(record) {
+  if (!requiresClassPrivateAccessorRuntimeProof(record) || hasPassedClassPrivateAccessorRuntimeProof(record)) return undefined;
+  return record?.sourceHash;
+}
+function requiresClassPrivateAccessorRuntimeProof(record) {
+  return Boolean(record && (record.privateClassMemberCount > 0 || record.accessorFieldCount > 0));
+}
+function hasPassedClassPrivateAccessorRuntimeProof(record) {
+  const proof = record?.classPrivateAccessorRuntimeProof;
+  return Boolean(proof
+    && proof.status === 'passed'
+    && record.classPrivateAccessorRuntimeHash
+    && proof.classPrivateAccessorRuntimeHash === record.classPrivateAccessorRuntimeHash
+    && proof.sourcePath === record.sourcePath
+    && proof.sourceHash === record.sourceHash
+    && proof.autoMergeClaim === false
+    && proof.semanticEquivalenceClaim === false
+    && proof.runtimeEquivalenceClaim === false
+    && proof.privateMemberRuntimeEquivalenceClaim === false
+    && proof.accessorRuntimeEquivalenceClaim === false
+    && !(record.classPrivateAccessorRuntimeProofReasonCodes?.length));
+}
 function stableKey(parts) {
   const values = parts.map((part) => part === undefined || part === null ? '' : String(part));
   return values.some(Boolean) ? values.join('#') : undefined;

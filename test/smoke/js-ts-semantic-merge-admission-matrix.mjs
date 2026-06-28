@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import { assertPartialMatrixAuditRows } from './js-ts-semantic-merge-admission-matrix-audit-helpers.mjs';
 import { assertReadmeRealRepoBenchmarkSuiteRow } from './js-ts-semantic-merge-admission-matrix-readme-real-repo.mjs';
 import { JsTsSafeMergeConflictCodes } from '../../src/js-ts-safe-merge.js';
 import { safeMergeJsTsSource } from '../../src/js-ts-semantic-merge.js';
@@ -248,7 +249,6 @@ const oracleTsxAttributeSameRegionMerged = safeMergeJsTsSource({
 assert.equal(oracleTsxAttributeSameRegionMerged.status, 'merged');
 assert.equal(oracleTsxAttributeSameRegionMerged.mergedSourceText, 'export function View() {\n  return <Button tone="worker" size="l" />;\n}\n');
 assert.equal(oracleTsxAttributeSameRegionMerged.semanticArtifacts.status, 'verified');
-
 const oracleTsxExpressionBase = 'export function View({ a, b }) {\n  return <div>{a}<span data-id="x">x</span>{b}</div>;\n}\n';
 const oracleTsxExpressionWorker = oracleTsxExpressionBase.replace('{a}', '{a + 1}');
 const oracleTsxExpressionHead = oracleTsxExpressionBase.replace('{b}', '{b + 1}');
@@ -264,7 +264,6 @@ assert.equal(oracleTsxExpressionSafeMerge.status, 'merged');
 assert.equal(oracleTsxExpressionSafeMerge.mergedSourceText, 'export function View({ a, b }) {\n  return <div>{a + 1}<span data-id="x">x</span>{b + 1}</div>;\n}\n');
 assert.equal(oracleTsxExpressionSafeMerge.semanticArtifacts.status, 'verified');
 assert.equal(oracleTsxExpressionSafeMerge.summary.jsxChildExpressionEdits, 1);
-
 const oracleTsxExpressionConflict = safeMergeJsTsSource({
   id: 'oracle_safe_merge_tsx_expression_same_expression_blocked',
   language: 'tsx',
@@ -287,7 +286,6 @@ const oracleTsxChildAdditionSafeMerge = safeMergeJsTsSource({
 assert.equal(oracleTsxChildAdditionSafeMerge.status, 'merged');
 assert.equal(oracleTsxChildAdditionSafeMerge.mergedSourceText, 'export function View() {\n  return <div><span>B</span><span>A</span><span>C</span></div>;\n}\n');
 assert.equal(oracleTsxChildAdditionSafeMerge.summary.jsxChildAdditions, 1);
-
 const oracleImportRemovalProject = safeMergeJsTsProject({
   id: 'oracle_project_import_removal_diagnostics_admitted',
   language: 'typescript',
@@ -315,6 +313,7 @@ assert.equal(oracleImportRemovalProject.summary.confidenceDimensions.proof, 'par
 assert.equal(oracleImportRemovalProject.summary.confidenceDimensions.semanticEquivalence, 'unknown');
 assert.equal(oracleImportRemovalProject.summary.missingEvidenceMatrix.byRoute['produce-source-span-roundtrip-evidence'], undefined);
 
-assertReadmeRealRepoBenchmarkSuiteRow(assert);
+const matrixAudit = oracleImportRemovalProject.confidence.admissionMatrixAudit;
+assertPartialMatrixAuditRows(matrixAudit, assert);
 
-function projectMatrixSurface(project, surface) { const record = project.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface); assert.ok(record, `missing ${surface} matrix surface`); return record; }
+assertReadmeRealRepoBenchmarkSuiteRow(assert);

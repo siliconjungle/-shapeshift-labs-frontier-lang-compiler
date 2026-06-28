@@ -174,7 +174,7 @@ function referenceRecord(stage, memberName, signatureHash, fields = {}) {
   };
 }
 
-function aliasReferenceRecord(stage, resolvedBindingUseHash) {
+function aliasReferenceRecord(stage, resolvedBindingUseHash, fields = {}) {
   return referenceRecord(stage, undefined, 'ref:alias-target', {
     name: 'renderTodo',
     bindingName: 'renderTodo',
@@ -187,7 +187,8 @@ function aliasReferenceRecord(stage, resolvedBindingUseHash) {
     originSourcePath: 'src/dep.ts',
     resolvedBindingId: 'scope_binding_formatTodo',
     resolvedBindingName: 'formatTodo',
-    resolvedBindingUseHash
+    resolvedBindingUseHash,
+    ...fields
   });
 }
 

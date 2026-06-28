@@ -41,6 +41,32 @@ assert.ok(templateBlockedConflict);
 assert.equal(templateBlockedConflict.details.boundary, 'html-template-runtime');
 assert.match(templateBlockedConflict.details.proofGap.nextProof, /html-template-runtime/);
 
+const templateClaimingProofProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_template_runtime_claiming_proof',
+  htmlRuntimeBoundaryProofsByPath: {
+    'src/template.html': [{
+      ...sourceBoundProof({
+        id: 'html_template_runtime_claiming',
+        sourcePath: 'src/template.html',
+        reasonCode: 'template-runtime-boundary',
+        boundary: 'html-template-runtime',
+        base: templateBase,
+        worker: templateWorker,
+        head: templateBase,
+        output: templateWorker
+      }),
+      browserRuntimeEquivalenceClaim: true,
+      semanticEquivalenceClaim: true
+    }]
+  },
+  files: [{ sourcePath: 'src/template.html', baseSourceText: templateBase, workerSourceText: templateWorker, headSourceText: templateBase }]
+});
+assert.equal(templateClaimingProofProject.status, 'blocked');
+assert.equal(templateClaimingProofProject.summary.htmlProofGapBlockedFiles, 1);
+assert.equal(templateClaimingProofProject.summary.htmlCssBrowserRuntimeProofs, 0);
+assert.equal(templateClaimingProofProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
+assert.equal(templateClaimingProofProject.conflicts.some((conflict) => conflict.details.reasonCode === 'template-runtime-boundary'), true);
+
 const templateProvenProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_html_template_runtime_source_bound_proof',
   htmlRuntimeBoundaryProofsByPath: {

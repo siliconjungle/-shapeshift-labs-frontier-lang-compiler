@@ -122,6 +122,12 @@ const semanticMergeRuntimeMatrixCells = [
     note: 'explicit runtime-order proof records must bind source hashes, source path, runtime region identity, runtime kind, signature hash, and false equivalence claims before they can unblock an order-sensitive merge'
   },
   {
+    id: 'control-flow-effect-graph/output-bound-runtime-region-proof-admission',
+    status: 'done',
+    evidence: 'semantic-effect-runtime-executable-evidence',
+    note: 'project runtime-order proofs fail closed when the merged output graph lacks the public runtime-region identity, so evidence cannot fall back to worker or head records'
+  },
+  {
     id: 'control-flow-effect-graph/resource-management-disposal-proof-bridge',
     status: 'done',
     evidence: 'semantic-effect-runtime-resource-management',

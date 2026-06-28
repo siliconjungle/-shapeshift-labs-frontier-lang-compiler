@@ -195,6 +195,12 @@ assert.equal(cssModuleConflictReasonCodes.includes('css-module-string-literal-cl
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-generated-class-map-unproved'), true);
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-bundler-transform-identity-unproved'), true);
 assert.equal(cssModuleConflictReasonCodes.includes('css-module-source-map-proof-unproved'), true);
+const dynamicUseSiteConflict = cssModuleProofConflicts.find((conflict) => conflict.details.reasonCode === 'css-module-dynamic-member-access-unproved');
+assert.equal(dynamicUseSiteConflict?.details.requiredProof, 'css-module-source-bound-dynamic-use-site-proof');
+assert.equal(dynamicUseSiteConflict.details.proofGap.code, 'css-module-dynamic-member-access-unproved');
+assert.equal(dynamicUseSiteConflict.details.proofGap.proofBoundary, 'css-module-use-site-graph');
+assert.equal(dynamicUseSiteConflict.details.proofGap.failClosed, true);
+assert.equal(dynamicUseSiteConflict.details.semanticEquivalenceClaim, false);
 assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteConflicts >= 6, true);
 assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteBlockers >= 6, true);
 assert.equal(mergeProject.summary.projectGraphCssModuleUseSiteGraphs, 1);

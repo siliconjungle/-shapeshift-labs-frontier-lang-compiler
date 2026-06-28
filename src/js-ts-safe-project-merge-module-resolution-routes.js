@@ -11,6 +11,9 @@ function moduleEdgeResolutionRoute(reasonCodes, options = {}) {
   if (reasonCodes.includes('package-runtime-condition-host-resource-import-ambiguous-missing')) return proofRoute('prove-host-resource-package-runtime-resolution', 'supply-host-resource-package-runtime-proof');
   if (reasonCodes.includes('host-dependency-non-literal-missing')) return proofRoute('prove-host-dependency-runtime-resolution', 'supply-host-dependency-runtime-proof');
   if (reasonCodes.includes('dynamic-import-non-literal-missing')) return proofRoute('prove-dynamic-import-runtime-resolution', 'supply-dynamic-import-runtime-proof');
+  if (reasonCodes.includes('import-attribute-static-value-missing') || reasonCodes.includes('import-attribute-static-hash-missing') || reasonCodes.includes('import-attribute-static-records-missing')) {
+    return proofRoute('prove-import-attribute-static-values', 'supply-import-attribute-static-proof', 'import-attribute-static-proof');
+  }
   if (options.targetKind === 'symbol') return proofRoute('prove-output-module-export-resolution', 'supply-output-module-export-proof', 'static-export-graph-proof');
   return proofRoute('prove-output-module-resolution', 'supply-output-module-resolution-proof');
 }

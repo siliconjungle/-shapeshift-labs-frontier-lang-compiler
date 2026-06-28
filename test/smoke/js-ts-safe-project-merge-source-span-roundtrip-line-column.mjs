@@ -83,6 +83,68 @@ assert.equal(staleHashProof.metadata.sourceSpanRoundtripHashBindingReasonCodes.i
 assert.equal(staleHashProof.metadata.sourceSpanRoundtripHashBindingReasonCodes.includes('source-span-roundtrip-replay-output-hash-mismatch'), true);
 assert.equal(staleHashProof.metadata.sourceSpanRoundtripAdmissionBlockerSourcePaths.includes('src/probe.ts'), true);
 
+const staleParserCoverageArtifacts = structuredClone(project.files[0].result.semanticArtifacts);
+staleParserCoverageArtifacts.metadata = {
+  ...staleParserCoverageArtifacts.metadata,
+  parserEvidence: 'estree-parser-token-comment-ranges'
+};
+const staleParserCoverageFile = {
+  ...project.files[0],
+  parserTriviaEvidence: {
+    status: 'exact',
+    exactParserTrivia: true,
+    losslessCst: true,
+    sourceHash: project.files[0].outputHash,
+    parserEvidence: 'estree-parser-token-comment-ranges',
+    adapterId: 'fixture-stale-parser-span-coverage-adapter',
+    evidenceId: 'fixture-stale-parser-span-coverage-trivia'
+  },
+  parserSpanCoverageProof: {
+    schema: 'frontier.lang.parserSpanCoverageProof.v1',
+    version: 1,
+    status: 'exact',
+    exactParserSpans: true,
+    sourcePath: 'src/probe.ts',
+    sourceHash: project.files[0].workerHash,
+    sourceLength: project.files[0].outputSourceText.length,
+    coveredSourceLength: project.files[0].outputSourceText.length,
+    spanCount: 1,
+    parserEvidence: 'estree-parser-token-comment-ranges',
+    adapterId: 'fixture-stale-parser-span-coverage-adapter',
+    evidenceId: 'fixture-stale-parser-span-coverage-proof',
+    startsAtZero: true,
+    endsAtSourceLength: true,
+    nonOverlapping: true,
+    contiguous: true,
+    textMatchesSource: true,
+    reasonCodes: ['parser-token-comment-span-coverage-exact'],
+    blockReasonCodes: []
+  },
+  semanticArtifacts: staleParserCoverageArtifacts,
+  result: { ...project.files[0].result, semanticArtifacts: staleParserCoverageArtifacts }
+};
+const staleParserCoverageProof = sourceSpanRoundtripEvidence(
+  'js_ts_project_source_span_roundtrip_stale_parser_coverage_oracle',
+  [staleParserCoverageFile],
+  'source-span-roundtrip',
+  'parser-roundtrip'
+);
+assert.equal(staleParserCoverageProof.status, 'failed');
+assert.equal(staleParserCoverageProof.metadata.failedSourceResults, 1);
+assert.equal(staleParserCoverageProof.metadata.admissionBlockingFailedSourceResults, 1);
+assert.equal(staleParserCoverageProof.metadata.hashBindingFailedSourceResults, 0);
+assert.equal(staleParserCoverageProof.metadata.parserTriviaExactnessStatus, 'blocked');
+assert.equal(staleParserCoverageProof.metadata.blockedParserTriviaFiles, 1);
+assert.equal(
+  staleParserCoverageProof.metadata.parserTriviaExactnessBlockReasonCodes.includes('exact-parser-trivia-span-coverage-blocked'),
+  true
+);
+assert.equal(
+  staleParserCoverageProof.metadata.parserTriviaExactnessBlockReasonCodes.includes('parser-span-coverage-source-hash-mismatch'),
+  true
+);
+assert.equal(staleParserCoverageProof.metadata.sourceSpanRoundtripAdmissionBlockerSourcePaths.includes('src/probe.ts'), true);
+
 function proofRecord(projectResult, level) {
   const record = projectResult.proofEvidence.records.find((entry) => entry.level === level);
   assert.ok(record, `missing ${level} proof record`);

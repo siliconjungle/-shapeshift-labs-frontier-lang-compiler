@@ -24,6 +24,12 @@ const semanticMergeScopeMatrixCells = [
     status: 'done',
     evidence: 'js-ts-safe-project-merge-scope-use-def-receiver-members',
     note: 'receiver member reference delta conflicts preserve receiver kind and computed member literal kind so same-name string and static-template receiver reads remain review routed'
+  },
+  {
+    id: 'scope-use-def-graph/nested-alias-compiler-blocker-routing',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-scope-use-def-reference-conflicts',
+    note: 'nested import-alias and compiler reference-site blocker statuses route to public scope/use-def ambiguous evidence even when top-level status fields are not mirrored'
   }
 ];
 

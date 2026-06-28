@@ -28,6 +28,8 @@ function maybeMergeHtmlCssProjectFile(options) {
     const proofOptions = projectCssDependencyProofOptionsForBlockedMerge({ projectInput: input, sourcePath: file.sourcePath, firstResult: result, base, worker, head });
     if (proofOptions?.mergeOptions) {
       result = merge({ ...sourceInput, ...mergeOptions, ...proofOptions.mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: true });
+    } else if (proofOptions?.result) {
+      result = proofOptions.result;
     }
   }
   if (language === 'css' && result.status === 'blocked') {

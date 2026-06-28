@@ -123,6 +123,12 @@ const semanticMergeModuleHostMatrixCells = [
     note: 'static imports, re-exports, dynamic imports, graph deltas, and unresolved-edge evidence preserve normalized import attribute key/value records alongside hashes'
   },
   {
+    id: 'module-export-import-graph/import-attribute-static-value-blocker',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-output-module-edge-evidence',
+    note: 'import edges with attribute syntax but no static key/value records fail closed with source-bound edge hashes and route to an import-attribute static proof'
+  },
+  {
     id: 'module-export-import-graph/css-html-host-resource-import-evidence',
     status: 'done',
     evidence: 'project-symbol-graph-host-resource-import-evidence',

@@ -86,6 +86,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-scope-use-def-computed-namespace.mjs',
   './smoke/js-ts-safe-project-merge-scope-use-def-receiver-members.mjs',
   './smoke/js-ts-safe-project-merge-scope-use-def-reference-conflicts.mjs',
+  './smoke/js-ts-safe-project-merge-scope-use-def-ambiguous-evidence.mjs',
   './smoke/js-ts-safe-project-merge-jsx-graph.mjs',
   './smoke/js-ts-safe-project-merge-jsx-spread-props.mjs',
   './smoke/js-ts-safe-project-merge-jsx-render-returns.mjs',

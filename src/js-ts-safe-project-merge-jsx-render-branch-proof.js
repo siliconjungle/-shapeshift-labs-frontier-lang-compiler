@@ -78,7 +78,7 @@ function jsxRenderReturnBranchDelta({ identityKey, baseRecord, workerRecord, hea
     returnOrdinal: outputBranch?.ordinal,
     returnKind: outputBranch?.returnKind,
     branchControlKind,
-    nonRenderRiskPresent: nonRenderRiskPresent(outputRecord ?? workerRecord ?? headRecord ?? baseRecord) || undefined,
+    nonRenderRiskPresent: Object.values(records).some((record) => nonRenderRiskPresent(record)) || undefined,
     branchCountUnsupported: Object.values(branches).some((branch) => !branch) || undefined,
     base: branchSummary(branches.base),
     worker: branchSummary(branches.worker),
