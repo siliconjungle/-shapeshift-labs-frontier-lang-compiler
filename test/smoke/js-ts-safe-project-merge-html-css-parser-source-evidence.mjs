@@ -44,8 +44,24 @@ const validCssParserEvidence = {
   }
 };
 
+const validHtmlIdentityEvidence = {
+  kind: 'frontier.lang.htmlSafeMergeIdentityEvidence',
+  version: 1,
+  explicitIdentityAvailable: true,
+  parserBackedStructuralSpans: true,
+  structuralAddressability: true,
+  pathOnlyIdentityElements: 0,
+  duplicateExplicitIdentityElementCount: 0,
+  duplicateExplicitIdentityKeys: [],
+  sides: {
+    base: htmlIdentitySide(),
+    worker: htmlIdentitySide(),
+    head: htmlIdentitySide()
+  }
+};
+
 const passingSummary = htmlCssProjectSummary([
-  htmlFile(validHtmlParserEvidence),
+  htmlFile(validHtmlParserEvidence, { identityEvidence: validHtmlIdentityEvidence }),
   cssFile(validCssParserEvidence)
 ]);
 assert.equal(passingSummary.htmlParserEvidenceFiles, 1);
@@ -56,6 +72,8 @@ assert.equal(passingSummary.cssParserEvidenceFailedFiles, 0);
 assert.equal(passingSummary.htmlCssParserEvidenceFailedFiles, 0);
 assert.equal(htmlCssProjectMergeMatrixProofStatus('html-parser-source-evidence', passingSummary), 'passed');
 assert.equal(htmlCssProjectMergeMatrixProofStatus('css-parser-source-evidence', passingSummary), 'passed');
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-identity-evidence', passingSummary), 'passed');
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', passingSummary), 'passed');
 
 const liveHtmlBase = '<main id="app"><h1>Todo</h1><button data-frontier-key="save" type="button">Save</button></main>\n';
 const liveCssBase = '.button { color: red; padding: 1rem; }\n';
@@ -83,6 +101,8 @@ assert.equal(liveAdapterSummary.cssParserEvidenceFailedFiles, 0);
 assert.equal(liveAdapterSummary.htmlCssParserEvidenceFailedFiles, 0);
 assert.equal(htmlCssProjectMergeMatrixProofStatus('html-parser-source-evidence', liveAdapterSummary), 'passed');
 assert.equal(htmlCssProjectMergeMatrixProofStatus('css-parser-source-evidence', liveAdapterSummary), 'passed');
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', liveAdapterSummary), 'passed');
+assert.equal(htmlCssProjectMergeMatrixProofStatus('browser-runtime-proof', liveAdapterSummary), 'missing');
 
 const staleHtmlAttributeSummary = htmlCssProjectSummary([
   htmlFile({
@@ -94,6 +114,7 @@ const staleHtmlAttributeSummary = htmlCssProjectSummary([
 assert.equal(staleHtmlAttributeSummary.htmlParserEvidenceFiles, 0);
 assert.equal(staleHtmlAttributeSummary.htmlParserEvidenceFailedFiles, 1);
 assert.equal(htmlCssProjectMergeMatrixProofStatus('html-parser-source-evidence', staleHtmlAttributeSummary), 'failed');
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', staleHtmlAttributeSummary), 'failed');
 
 const metadataOnlyHtmlSummary = htmlCssProjectSummary([
   htmlFile({
@@ -195,13 +216,42 @@ const missingEvidenceSummary = htmlCssProjectSummary([htmlFile(undefined)]);
 assert.equal(missingEvidenceSummary.htmlParserEvidenceFiles, 0);
 assert.equal(missingEvidenceSummary.htmlParserEvidenceFailedFiles, 0);
 assert.equal(htmlCssProjectMergeMatrixProofStatus('html-parser-source-evidence', missingEvidenceSummary), 'missing');
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', missingEvidenceSummary), 'missing');
 
-function htmlFile(parserEvidence) {
+const missingIdentitySummary = htmlCssProjectSummary([
+  htmlFile(validHtmlParserEvidence)
+]);
+assert.equal(missingIdentitySummary.htmlParserEvidenceFiles, 1);
+assert.equal(missingIdentitySummary.htmlIdentityEvidenceFiles, 0);
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-identity-evidence', missingIdentitySummary), 'missing');
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', missingIdentitySummary), 'missing');
+
+const duplicateIdentitySummary = htmlCssProjectSummary([
+  htmlFile(validHtmlParserEvidence, {
+    identityEvidence: {
+      ...validHtmlIdentityEvidence,
+      sides: {
+        base: htmlIdentitySide({ explicitIdentityKeys: ['element#dup', 'element#dup'] }),
+        worker: htmlIdentitySide(),
+        head: htmlIdentitySide()
+      }
+    }
+  })
+]);
+assert.equal(duplicateIdentitySummary.htmlIdentityEvidenceFiles, 0);
+assert.equal(duplicateIdentitySummary.htmlIdentityEvidenceFailedFiles, 1);
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-identity-evidence', duplicateIdentitySummary), 'failed');
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', duplicateIdentitySummary), 'failed');
+
+function htmlFile(parserEvidence, result = {}) {
   return {
     language: 'html',
     sourcePath: 'src/view.html',
     status: 'merged',
-    result: parserEvidence ? { parserEvidence } : {}
+    result: {
+      ...(parserEvidence ? { parserEvidence } : {}),
+      ...result
+    }
   };
 }
 
@@ -230,6 +280,15 @@ function htmlParserSide(overrides = {}) {
     structuralSpanRecordCount: 5,
     structuralSpanMissingRecordCount: 0,
     leadingTriviaSpanRecordCount: 0,
+    ...overrides
+  };
+}
+
+function htmlIdentitySide(overrides = {}) {
+  return {
+    parserBackedStructuralSpans: true,
+    structuralAddressability: true,
+    explicitIdentityKeys: ['element#app'],
     ...overrides
   };
 }

@@ -86,12 +86,25 @@ export const htmlCssSummaryFieldOracles = [
     proofLevel: 'html-structural-merge',
     routeId: 'admit-html-structural-merge',
     routeLane: 'layout-markup-graph',
-    routeNext: 'attach-runtime-evidence-bound-html-runtime-proof-or-fix-duplicate-identity',
+    routeNext: 'prove-parser-identity-and-runtime-boundary-evidence-or-fix-duplicate-identity',
     signal: HtmlCssProjectMergeMissingSignals.htmlStructuralMerge,
-    fields: ['htmlFiles', 'htmlMergedFiles', 'htmlBlockedFiles'],
+    fields: ['htmlFiles', 'htmlMergedFiles', 'htmlBlockedFiles', 'htmlParserEvidenceFiles', 'htmlIdentityEvidenceFiles'],
     missingSummary: { htmlFiles: 1, htmlParserEvidenceFiles: 1, htmlIdentityEvidenceFiles: 1, htmlMergedFiles: 0, htmlBlockedFiles: 1 },
-    expectedProofStatus: (summary) => summary.htmlFiles ? (summary.htmlBlockedFiles ? 'failed' : summary.htmlMergedFiles ? 'passed' : 'missing') : 'absent',
-    expectedMissingRoute: (summary) => Boolean(summary.htmlBlockedFiles)
+    expectedProofStatus: (summary) => {
+      if (!summary.htmlFiles) return 'absent';
+      if (summary.htmlBlockedFiles || summary.htmlParserEvidenceFailedFiles || summary.htmlIdentityEvidenceFailedFiles) return 'failed';
+      if (summary.htmlMergedFiles !== summary.htmlFiles) return 'missing';
+      if (summary.htmlParserEvidenceFiles !== summary.htmlFiles || summary.htmlIdentityEvidenceFiles !== summary.htmlFiles) return 'missing';
+      return 'passed';
+    },
+    expectedMissingRoute: (summary) => Boolean(summary.htmlFiles && (
+      summary.htmlBlockedFiles ||
+      summary.htmlParserEvidenceFailedFiles ||
+      summary.htmlIdentityEvidenceFailedFiles ||
+      summary.htmlMergedFiles !== summary.htmlFiles ||
+      summary.htmlParserEvidenceFiles !== summary.htmlFiles ||
+      summary.htmlIdentityEvidenceFiles !== summary.htmlFiles
+    ))
   },
   {
     surface: 'css-cascade-merge-admission',

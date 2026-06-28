@@ -28,9 +28,9 @@ const htmlEventHandlerBlockedSurface = matrixSurface(htmlEventHandlerBlockedProj
 assert.equal(htmlEventHandlerBlockedSurface.proofStatuses['html-structural-merge'], 'failed');
 assert.equal(htmlEventHandlerBlockedSurface.missingRouteIds.includes('admit-html-structural-merge'), true);
 const htmlEventHandlerBlockedMissingEvidence = htmlEventHandlerBlockedProject.confidence.missingEvidence.find((item) => item.code === 'html-structural-merge-proof-blocked');
-assert.equal(htmlEventHandlerBlockedMissingEvidence.routeNext, 'attach-runtime-evidence-bound-html-runtime-proof-or-fix-duplicate-identity');
+assert.equal(htmlEventHandlerBlockedMissingEvidence.routeNext, 'prove-parser-identity-and-runtime-boundary-evidence-or-fix-duplicate-identity');
 assert.equal(htmlEventHandlerBlockedMissingEvidence.suggestedInput.htmlRuntimeBoundaryProofsByPath, true);
-assert.match(htmlEventHandlerBlockedMissingEvidence.summary, /exact base\/worker\/head\/output/);
+assert.match(htmlEventHandlerBlockedMissingEvidence.summary, /parser\/source evidence and stable identity evidence/);
 const htmlEventHandlerBlockedConflict = htmlEventHandlerBlockedProject.conflicts.find((conflict) => conflict.details.reasonCode === 'event-handler-runtime-boundary');
 assert.match(htmlEventHandlerBlockedConflict.details.proofGap.nextProof, /htmlRuntimeBoundaryProofsByPath/);
 

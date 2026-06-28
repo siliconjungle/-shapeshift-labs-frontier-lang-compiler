@@ -60,6 +60,38 @@ assert.equal(oracleBrowserMissingEvidence.suggestedInput.playwrightAssertionRunt
 assert.equal(oracleBrowserMissingEvidence.suggestedInput.proofBuilderInput, true);
 assert.equal(oracleHtmlCssProject.admission.semanticEquivalenceClaim, false);
 
+const htmlStructuralPrerequisiteGapSummary = {
+  htmlFiles: 1,
+  htmlMergedFiles: 1,
+  htmlBlockedFiles: 0,
+  htmlParserEvidenceFiles: 1,
+  htmlParserEvidenceFailedFiles: 0,
+  htmlIdentityEvidenceFiles: 0,
+  htmlIdentityEvidenceFailedFiles: 0
+};
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', htmlStructuralPrerequisiteGapSummary), 'missing');
+const htmlStructuralPrerequisiteGapItems = htmlCssProjectMergeMissingEvidenceItems(
+  htmlStructuralPrerequisiteGapSummary,
+  HtmlCssProjectMergeMissingSignals,
+  (input) => ({ ...input, route: htmlCssProjectMergeMissingEvidenceRoutes((id, lane, next) => ({ id, lane, next }), HtmlCssProjectMergeMissingSignals)[input.code] })
+);
+const htmlStructuralPrerequisiteGapItem = htmlStructuralPrerequisiteGapItems.find((item) => item.code === HtmlCssProjectMergeMissingSignals.htmlStructuralMerge);
+assert.ok(htmlStructuralPrerequisiteGapItem);
+assert.equal(htmlStructuralPrerequisiteGapItem.proofLevel, 'html-structural-merge');
+assert.match(htmlStructuralPrerequisiteGapItem.summary, /parser\/source evidence and stable identity evidence/);
+assert.match(htmlStructuralPrerequisiteGapItem.summary, /Runtime\/browser proof remains a separate row/);
+
+const htmlStructuralPartialMergedSummary = {
+  htmlFiles: 2,
+  htmlMergedFiles: 1,
+  htmlBlockedFiles: 0,
+  htmlParserEvidenceFiles: 2,
+  htmlParserEvidenceFailedFiles: 0,
+  htmlIdentityEvidenceFiles: 2,
+  htmlIdentityEvidenceFailedFiles: 0
+};
+assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', htmlStructuralPartialMergedSummary), 'missing');
+
 const cssModuleSourcePath = 'src/Button.module.css';
 const cssModuleSpecifier = './Button.module' + '.css';
 const cssModuleSourceText = '.root { color: red; }\n';
