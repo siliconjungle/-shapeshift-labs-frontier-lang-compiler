@@ -46,6 +46,89 @@ assert.equal(project.outputFiles[0].sourceText, output);
 assert.equal(matrixSurface(project, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'passed');
 assert.equal(matrixSurface(project, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
 
+const capsuleProof = {
+  id: 'proof_css_project_source_shape_media_capsule',
+  kind: 'css-source-bound-cascade-runtime-proof',
+  status: 'passed',
+  sourcePath,
+  reasonCode: 'css-atrule-new-scope-unsupported',
+  side: 'worker',
+  shapeKey: 'at-rule:media::(min-width: 700px)',
+  baseSourceHash: hashSemanticValue(base),
+  workerSourceHash: hashSemanticValue(worker),
+  headSourceHash: hashSemanticValue(base),
+  outputSourceHash: hashSemanticValue(output),
+  runtimeProofCapsule: {
+    mode: 'isolated-fixture',
+    status: 'passed',
+    command: 'playwright test css-project-cascade-runtime-capsule.spec.ts',
+    probeId: 'css-project-media-cascade-capsule-probe',
+    evidenceHash: hashSemanticValue('src/button.css media project cascade runtime capsule evidence'),
+    signals: ['css-cascade-runtime'],
+    browser: { name: 'chromium', version: 'stable' },
+    viewport: { width: 1280, height: 720, deviceScaleFactor: 1 },
+    telemetry: {
+      hash: 'css-project-capsule-telemetry',
+      domSnapshotHash: 'css-project-capsule-dom',
+      computedStyleHash: 'css-project-capsule-style',
+      layoutSnapshotHash: 'css-project-capsule-layout',
+      eventTraceHash: 'css-project-capsule-events',
+      cumulativeLayoutShift: 0
+    }
+  }
+};
+
+const capsuleProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_cascade_runtime_capsule_proof',
+  cssMergeOptionsByPath: {
+    [sourcePath]: {
+      scopedCascadeGraphHash: 'hash_scoped_cascade',
+      cssCascadeRuntimeProofs: [capsuleProof]
+    }
+  },
+  files: [{ sourcePath, baseSourceText: base, workerSourceText: worker, headSourceText: base }]
+});
+
+assert.equal(capsuleProject.status, 'merged');
+assert.equal(capsuleProject.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeCommand, 'playwright test css-project-cascade-runtime-capsule.spec.ts');
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeProofMode, 'isolated-fixture');
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeBrowserName, 'chromium');
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeViewport.width, 1280);
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeTelemetryHash, 'css-project-capsule-telemetry');
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeDomSnapshotHash, 'css-project-capsule-dom');
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeComputedStyleHash, 'css-project-capsule-style');
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeLayoutSnapshotHash, 'css-project-capsule-layout');
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeCumulativeLayoutShift, 0);
+assert.equal(matrixSurface(capsuleProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
+
+const blockedCapsuleProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_cascade_runtime_capsule_blocked',
+  cssMergeOptionsByPath: {
+    [sourcePath]: {
+      scopedCascadeGraphHash: 'hash_scoped_cascade',
+      cssCascadeRuntimeProofs: [{
+        ...capsuleProof,
+        id: 'proof_css_project_source_shape_media_capsule_blocked',
+        runtimeProofCapsule: {
+          mode: 'environment-blocked',
+          status: 'blocked',
+          command: 'playwright test css-project-cascade-runtime-capsule.spec.ts',
+          probeId: 'css-project-media-cascade-capsule-probe',
+          evidenceHash: hashSemanticValue('src/button.css media project cascade runtime capsule blocked'),
+          signals: ['css-cascade-runtime']
+        }
+      }]
+    }
+  },
+  files: [{ sourcePath, baseSourceText: base, workerSourceText: worker, headSourceText: base }]
+});
+
+assert.equal(blockedCapsuleProject.status, 'blocked');
+assert.equal(blockedCapsuleProject.summary.htmlCssBrowserRuntimeProofs, 0);
+assert.equal(blockedCapsuleProject.conflicts.some((conflict) => conflict.details.reasonCode === 'css-atrule-new-scope-unsupported'), true);
+assert.equal(matrixSurface(blockedCapsuleProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
+
 function matrixSurface(result, surface) {
   const record = result.confidence.admissionMatrixAudit.surfaces.find((entry) => entry.surface === surface);
   assert.ok(record, `missing ${surface} matrix surface`);
