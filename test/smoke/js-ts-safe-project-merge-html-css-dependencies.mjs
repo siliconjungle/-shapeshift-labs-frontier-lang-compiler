@@ -248,6 +248,40 @@ assert.equal(cssKeyframesDependencyAutoProof.files[0].result.browserCascadeEquiv
 assert.equal(cssKeyframesDependencyAutoProof.outputFiles[0].sourceText, '@keyframes slide { from { opacity: 0; } to { opacity: 1; } }\n\n.spinner {\n  animation-name: slide;\n  color: blue;\n}\n');
 assert.equal(matrixSurface(cssKeyframesDependencyAutoProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'passed');
 
+const fontFaceCssBase = '@font-face { font-family: Inter; src: url("./inter.woff2"); font-weight: 400; }\n.copy { font-family: Inter, sans-serif; color: red; }\n';
+const fontFaceCssWorker = fontFaceCssBase.replace('font-family: Inter; src', 'font-family: InterNext; src').replace('font-family: Inter, sans-serif', 'font-family: InterNext, sans-serif');
+const fontFaceCssHead = fontFaceCssBase.replace('color: red', 'color: blue');
+const cssFontFaceDependencyAutoProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_font_face_dependency_auto_proven',
+  files: [{ sourcePath: 'src/fonts.css', baseSourceText: fontFaceCssBase, workerSourceText: fontFaceCssWorker, headSourceText: fontFaceCssHead }]
+});
+assert.equal(cssFontFaceDependencyAutoProof.status, 'merged');
+assert.equal(cssFontFaceDependencyAutoProof.summary.cssDependencyGraphBlockedFiles, 0);
+assert.equal(cssFontFaceDependencyAutoProof.files[0].result.dependencyGraphProofs.length, 1);
+assert.equal(cssFontFaceDependencyAutoProof.files[0].result.dependencyGraphProofs[0].proofLevel, 'css-font-face-family-source-bound');
+assert.equal(cssFontFaceDependencyAutoProof.files[0].result.dependencyGraphProofs[0].fontFaceRename.from, 'Inter');
+assert.equal(cssFontFaceDependencyAutoProof.files[0].result.dependencyGraphProofs[0].fontFaceRename.to, 'InterNext');
+assert.equal(cssFontFaceDependencyAutoProof.files[0].result.dependencyGraphProofs[0].coveredSourceShapeChanges.length, 1);
+assert.equal(cssFontFaceDependencyAutoProof.outputFiles[0].sourceText, '@font-face { font-family: InterNext; src: url("./inter.woff2"); font-weight: 400; }\n\n.copy {\n  font-family: InterNext, sans-serif;\n  color: blue;\n}\n');
+assert.equal(matrixSurface(cssFontFaceDependencyAutoProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'passed');
+
+const urlAssetCssBase = '.hero {\n  background-image: url("./hero.png");\n  color: red;\n}\n';
+const urlAssetCssWorker = urlAssetCssBase.replace('./hero.png', './hero@2x.png');
+const urlAssetCssHead = urlAssetCssBase.replace('color: red', 'color: blue');
+const cssUrlAssetDependencyAutoProof = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_url_asset_dependency_auto_proven',
+  files: [{ sourcePath: 'src/hero.css', baseSourceText: urlAssetCssBase, workerSourceText: urlAssetCssWorker, headSourceText: urlAssetCssHead }]
+});
+assert.equal(cssUrlAssetDependencyAutoProof.status, 'merged');
+assert.equal(cssUrlAssetDependencyAutoProof.summary.cssDependencyGraphBlockedFiles, 0);
+assert.equal(cssUrlAssetDependencyAutoProof.files[0].result.dependencyGraphProofs.length, 1);
+assert.equal(cssUrlAssetDependencyAutoProof.files[0].result.dependencyGraphProofs[0].proofLevel, 'css-url-asset-source-bound');
+assert.equal(cssUrlAssetDependencyAutoProof.files[0].result.dependencyGraphProofs[0].urlAssetRename.from, './hero.png');
+assert.equal(cssUrlAssetDependencyAutoProof.files[0].result.dependencyGraphProofs[0].urlAssetRename.to, './hero@2x.png');
+assert.equal(cssUrlAssetDependencyAutoProof.files[0].result.browserCascadeEquivalenceClaim, false);
+assert.equal(cssUrlAssetDependencyAutoProof.outputFiles[0].sourceText, '.hero {\n  background-image: url("./hero@2x.png");\n  color: blue;\n}\n');
+assert.equal(matrixSurface(cssUrlAssetDependencyAutoProof, 'css-dependency-graph-evidence').proofStatuses['css-dependency-graph'], 'passed');
+
 function stripSourceBoundDependencyRecords(result, cascadeKey) {
   const copy = JSON.parse(JSON.stringify(result));
   for (const side of Object.values(copy.dependencyGraphEvidence?.sides ?? {})) {
