@@ -1,4 +1,5 @@
 import { assert } from './helpers.mjs';
+import './semantic-merge-production-matrix-denominator.mjs';
 import {
   createNativeImportCoverageMatrix,
   createNativeParserAstFormatMatrix,

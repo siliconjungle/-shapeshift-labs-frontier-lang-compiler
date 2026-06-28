@@ -52,7 +52,7 @@ https://postcss.org/api/, https://github.com/css-modules/css-modules.
 | CSS Modules import/use-site graph | partial | Default/namespace/named imports, JSX className, helper calls, static bracket access, bounded dynamic access, ICSS/composition, generated map hashes, and contract blockers exist. | Add helper alias flow, string/template class name policy, preprocessor/query handling, and broader bundler cases. |
 | CSS Modules transform/source-map identity | partial | Generated-map, bundler-transform, structured source-map identity proof, original/generated span mapping validation, output source hash binding, generated class-map hash binding, and stale proof rejection are covered. | Run against real CSS Modules bundler/preprocessor source-map outputs and add query/loader variant fixtures. |
 | Real-repo corpus | partial | Manifest-only corpus has 5 repos, 14 oracle cases, 5 matrix rows, synthetic checkout proof, and synthetic command execution proof. | Add opt-in live checkout prepare/proof and opt-in build/test proof without vendoring third-party source. |
-| Source-backed completeness matrix | partial | This file names the denominator and links evidence areas to sources. | Add row-level citations, generated status extraction, and CI assertion that every source row maps to proof files and remaining work. |
+| Source-backed completeness matrix | partial | Focused smoke now extracts this denominator and asserts every production row maps to source-anchor rows, evidence files, and remaining-work rows. | Add generated JSON status export and exact external source citations for every row. |
 
 ## Current Remaining Work Table
 
