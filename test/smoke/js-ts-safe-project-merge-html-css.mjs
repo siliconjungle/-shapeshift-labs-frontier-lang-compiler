@@ -93,6 +93,24 @@ const browserSurface = matrixSurface(mixedProject, 'html-css-browser-runtime-pro
 assert.equal(browserSurface.proofStatuses['browser-runtime-proof'], 'missing');
 assert.equal(browserSurface.missingRouteIds.includes('prove-html-css-browser-runtime'), true);
 
+const htmlClassTokenProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_class_tokens',
+  files: [{
+    sourcePath: 'src/panel.html',
+    baseSourceText: '<div data-frontier-key="panel" class="card selected muted">Panel</div>\n',
+    workerSourceText: '<div data-frontier-key="panel" class="card muted">Panel</div>\n',
+    headSourceText: '<div data-frontier-key="panel" class="card selected muted compact">Panel</div>\n'
+  }]
+});
+assert.equal(htmlClassTokenProject.status, 'merged');
+assert.equal(htmlClassTokenProject.summary.htmlClassTokenMergeFiles, 1);
+assert.equal(htmlClassTokenProject.summary.htmlClassTokenMergeEvidenceRecords, 1);
+assert.match(htmlClassTokenProject.outputFiles[0].sourceText, /class="card muted compact"/);
+assert.deepEqual(htmlClassTokenProject.files[0].result.htmlClassTokenMergeEvidence[0].workerRemovedTokens, ['selected']);
+assert.deepEqual(htmlClassTokenProject.files[0].result.htmlClassTokenMergeEvidence[0].headAddedTokens, ['compact']);
+assert.equal(htmlClassTokenProject.files[0].result.htmlClassTokenMergeEvidence[0].browserRenderEquivalenceClaim, false);
+assert.equal(matrixSurface(htmlClassTokenProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
+
 const htmlDuplicateIdentityBase = [
   '<main id="app">',
   '  <button data-frontier-key="dup">A</button>',
