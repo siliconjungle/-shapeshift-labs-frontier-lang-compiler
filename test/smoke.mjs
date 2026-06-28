@@ -142,6 +142,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-css-modules-icss-use-sites.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-dependencies.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-contract-proofs.mjs',
+  './smoke/js-ts-safe-project-merge-css-modules-source-map-proof.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-generated-map-hash.mjs',
   './smoke/js-ts-safe-project-merge-public-contract-output-graph.mjs',
   './smoke/js-ts-safe-project-merge-lightweight-public-contracts.mjs',

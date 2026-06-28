@@ -13,7 +13,7 @@ export const matrixCells = [
   { id: 'css-modules/use-site-graph-proof', status: 'done', support: 'partial', evidence: 'js-ts-safe-project-merge-css-modules-use-sites', note: 'CSS Module use-site graph proof is a distinct project graph row and does not absorb transform proof gaps' },
   { id: 'css-modules/generated-class-name-map-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-css-modules-contract-proofs', note: 'CSS Module generated class-name maps are proof-gated transform evidence and fail closed when absent' },
   { id: 'css-modules/bundler-transform-identity-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-css-modules-contract-proofs', note: 'CSS Module bundler transform identity is proof-gated transform evidence and fail closed when absent' },
-  { id: 'css-modules/source-map-identity-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-css-modules-contract-proofs', note: 'CSS Module source-map identity is proof-gated transform evidence and fail closed when absent' },
+  { id: 'css-modules/source-map-identity-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-css-modules-source-map-proof', note: 'CSS Module source-map identity is a distinct proof-gated transform boundary and fails closed when absent' },
   { id: 'html-css/browser-runtime-proof-bounded', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'HTML/CSS browser runtime proof remains explicit bounded evidence and is missing by default without a proof bundle' }
 ];
 
