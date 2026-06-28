@@ -1,6 +1,6 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { publicCompilerTypeDeltaConflicts } from './js-ts-safe-project-merge-graph-delta-compiler-conflicts.js';
-import { projectJsxPropDeltaConflicts, projectJsxRenderRiskDeltaConflicts } from './js-ts-safe-project-merge-jsx-graph-conflicts.js';
+import { projectJsxChildOrderDeltaConflicts, projectJsxPropDeltaConflicts, projectJsxRenderRiskDeltaConflicts } from './js-ts-safe-project-merge-jsx-graph-conflicts.js';
 import { projectRuntimeRegionDeltaConflicts } from './js-ts-safe-project-merge-runtime-region-conflicts.js';
 import { projectScopeUseDefDeltaConflicts } from './js-ts-safe-project-merge-scope-use-def-conflicts.js';
 import { projectSourceSpanDeltaConflicts } from './js-ts-safe-project-merge-source-span-conflicts.js';
@@ -23,6 +23,7 @@ function projectGraphDeltaConflicts(projectGraphDelta, options = {}) {
     ...projectRuntimeRegionDeltaConflicts(projectGraphDelta, options),
     ...projectScopeUseDefDeltaConflicts(projectGraphDelta),
     ...projectJsxPropDeltaConflicts(projectGraphDelta),
+    ...projectJsxChildOrderDeltaConflicts(projectGraphDelta),
     ...projectJsxRenderRiskDeltaConflicts(projectGraphDelta, options),
     ...projectReExportIdentityDeltaConflicts(baseGraph, workerGraph, headGraph, outputGraph),
     ...projectModuleDeclarationDeltaConflicts(projectGraphDelta, options),
@@ -44,6 +45,7 @@ function addProjectGraphDeltaConflictSummary(projectGraphDelta, conflicts) {
       runtimeRegionConflicts: conflicts.filter((conflict) => conflict.code === 'project-public-runtime-region-delta-conflict').length,
       scopeUseDefConflicts: conflicts.filter(isScopeUseDefConflict).length,
       jsxPropConflicts: conflicts.filter((conflict) => conflict.code === 'project-jsx-public-prop-delta-conflict').length,
+      jsxChildOrderConflicts: conflicts.filter((conflict) => conflict.code === 'project-jsx-public-child-order-delta-conflict').length,
       jsxRenderRiskConflicts: conflicts.filter((conflict) => conflict.code === 'project-jsx-public-render-risk-delta-conflict').length,
       reExportIdentityConflicts: conflicts.filter((conflict) => conflict.code === 'project-re-export-identity-delta-conflict').length,
       moduleDeclarationShapeConflicts: conflicts.filter((conflict) => conflict.code === 'project-module-declaration-shape-delta-conflict').length, exportAssignmentShapeConflicts: conflicts.filter((conflict) => conflict.code === 'project-export-assignment-shape-delta-conflict').length,

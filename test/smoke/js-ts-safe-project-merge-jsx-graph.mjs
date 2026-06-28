@@ -308,6 +308,9 @@ assert.equal(childOrderConflicts.length, 1);
 assert.equal(childOrderConflicts[0].code, 'project-jsx-public-child-order-delta-conflict');
 assert.equal(childOrderConflicts[0].details.identityKey, 'jsx-child-order#src/view.tsx#View#primary');
 assert.equal(childOrderConflicts[0].details.worker.ordinal, 2);
+const aggregateChildOrderConflicts = projectGraphDeltaConflicts(childOrderDelta);
+assert.equal(aggregateChildOrderConflicts.length, 1);
+assert.equal(aggregateChildOrderConflicts[0].code, 'project-jsx-public-child-order-delta-conflict');
 
 const unchangedChildOrderDelta = jsxElementDelta({
   base: jsxKeyedChild('base', 1, 'child-order:base'),
