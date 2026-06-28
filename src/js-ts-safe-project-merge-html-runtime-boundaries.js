@@ -36,8 +36,8 @@ function isHtmlRuntimeBoundaryProofForChange(proof, change, binding) {
     proof.sourcePath === binding.sourcePath &&
     htmlProofCoversValue(proof.reasonCode, proof.reasonCodes, change.reasonCode) &&
     htmlProofCoversValue(proof.side, proof.sides, change.side) &&
-    proof.boundary === change.boundary &&
-    sameStringSet(proof.boundaryAttributes ?? proof.changedBoundaryAttributes, change.boundaryAttributes) &&
+    htmlProofCoversValue(proof.boundary, proof.boundaries, change.boundary) &&
+    sameStringSet(htmlProofBoundaryAttributes(proof), change.boundaryAttributes) &&
     htmlRuntimeBoundaryProofSourceBound(proof, binding) &&
     !htmlRuntimeBoundaryProofMakesBroadClaims(proof) &&
     htmlRuntimeBoundaryProofEvidenceMetadata(proof, change) !== undefined;
@@ -200,6 +200,14 @@ function htmlRuntimeBoundaryProofMakesBroadClaims(proof) {
 
 function htmlProofCoversValue(value, values, expected) {
   return value === expected || (Array.isArray(values) && values.includes(expected));
+}
+
+function htmlProofBoundaryAttributes(proof) {
+  return proof.boundaryAttributes ??
+    proof.changedBoundaryAttributes ??
+    proof.attributeNames ??
+    proof.changedAttributeNames ??
+    proof.attributeName;
 }
 
 function sameStringSet(actual, expected) {
