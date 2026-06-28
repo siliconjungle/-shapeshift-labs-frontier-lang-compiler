@@ -46,6 +46,46 @@ assert.equal(htmlEventHandlerClaimingProofProject.files[0].admission.browserRunt
 assert.equal(htmlEventHandlerClaimingProofProject.files[0].result.admission.browserRuntimeEquivalenceClaim, false);
 assert.equal(matrixSurface(htmlEventHandlerClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
 
+const htmlEventHandlerBrowserProofProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_event_handler_browser_runtime_proof_alias',
+  htmlBrowserRuntimeProofsByPath: {
+    'src/view.html': [{
+      id: 'html_event_handler_browser_runtime_alias',
+      kind: 'html-source-bound-browser-runtime-proof',
+      status: 'passed',
+      sourcePath: 'src/view.html',
+      reasonCode: 'event-handler-runtime-boundary',
+      side: 'worker',
+      boundary: 'html-event-handler-attribute',
+      boundaryAttributes: ['onclick'],
+      ...sourceHashBinding(htmlEventHandlerBase, htmlEventHandlerWorker, htmlEventHandlerBase, htmlEventHandlerWorker),
+      runtimeCommand: 'node test/html-runtime/event-handler-browser-proof.mjs',
+      runtimeProbeId: 'html:event-handler-runtime-boundary:html-event-handler-attribute',
+      runtimeEvidenceHash: 'html-runtime-evidence:event-handler-runtime-boundary:html-event-handler-attribute:browser-proof',
+      runtimeSignals: ['html-event-handler-runtime'],
+      browserRuntimeEquivalenceClaim: false,
+      browserRenderEquivalenceClaim: false,
+      semanticEquivalenceClaim: false,
+      autoMergeClaim: false
+    }]
+  },
+  files: [{
+    sourcePath: 'src/view.html',
+    baseSourceText: htmlEventHandlerBase,
+    workerSourceText: htmlEventHandlerWorker,
+    headSourceText: htmlEventHandlerBase
+  }]
+});
+
+assert.equal(htmlEventHandlerBrowserProofProject.status, 'merged');
+assert.equal(htmlEventHandlerBrowserProofProject.summary.htmlProofGapBlockedFiles, 0);
+assert.equal(htmlEventHandlerBrowserProofProject.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(htmlEventHandlerBrowserProofProject.files[0].result.runtimeBoundaryProofs[0].kind, 'html-source-bound-browser-runtime-proof');
+assert.equal(htmlEventHandlerBrowserProofProject.files[0].result.runtimeBoundaryProofs[0].runtimeEvidenceBound, true);
+assert.equal(htmlEventHandlerBrowserProofProject.files[0].result.runtimeBoundaryProofs[0].browserRenderEquivalenceClaim, false);
+assert.equal(htmlEventHandlerBrowserProofProject.files[0].result.runtimeBoundaryProofs[0].semanticEquivalenceClaim, false);
+assert.equal(matrixSurface(htmlEventHandlerBrowserProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
+
 const htmlResourceSrcsetBase = '<img data-frontier-key="hero" src="/hero.jpg" srcset="/hero-600.jpg 600w" sizes="100vw">\n';
 const htmlResourceSrcsetWorker = '<img data-frontier-key="hero" src="/hero.jpg" srcset="/hero-900.jpg 900w" sizes="100vw">\n';
 

@@ -105,18 +105,38 @@ function htmlDuplicateIdentityConflict(result, sourcePath) {
 
 function htmlRuntimeBoundaryProofCandidates(input, sourcePath, mergeOptions) {
   return [
+    input.htmlBrowserRuntimeProof,
+    input.htmlBrowserRuntimeProofs,
+    input.htmlBrowserRuntimeProofsByPath?.[sourcePath],
+    input.htmlSourceBoundRuntimeProof,
+    input.htmlSourceBoundRuntimeProofs,
+    input.htmlSourceBoundRuntimeProofsByPath?.[sourcePath],
     input.htmlRuntimeBoundaryProof,
     input.htmlRuntimeBoundaryProofs,
     input.htmlRuntimeBoundaryProofsByPath?.[sourcePath],
     input.htmlSourceBoundRuntimeBoundaryProof,
     input.htmlSourceBoundRuntimeBoundaryProofs,
     input.htmlSourceBoundRuntimeBoundaryProofsByPath?.[sourcePath],
+    input.browserRuntimeProof,
+    input.browserRuntimeProofs,
+    input.browserRuntimeProofsByPath?.[sourcePath],
+    input.sourceBoundRuntimeProof,
+    input.sourceBoundRuntimeProofs,
+    input.sourceBoundRuntimeProofsByPath?.[sourcePath],
+    mergeOptions.htmlBrowserRuntimeProof,
+    mergeOptions.htmlBrowserRuntimeProofs,
+    mergeOptions.htmlSourceBoundRuntimeProof,
+    mergeOptions.htmlSourceBoundRuntimeProofs,
     mergeOptions.htmlRuntimeBoundaryProof,
     mergeOptions.htmlRuntimeBoundaryProofs,
     mergeOptions.sourceBoundRuntimeBoundaryProof,
     mergeOptions.sourceBoundRuntimeBoundaryProofs,
     mergeOptions.runtimeBoundaryProof,
-    mergeOptions.runtimeBoundaryProofs
+    mergeOptions.runtimeBoundaryProofs,
+    mergeOptions.browserRuntimeProof,
+    mergeOptions.browserRuntimeProofs,
+    mergeOptions.sourceBoundRuntimeProof,
+    mergeOptions.sourceBoundRuntimeProofs
   ].flatMap(asArray).filter(Boolean);
 }
 

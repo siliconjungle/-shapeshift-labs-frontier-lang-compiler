@@ -212,6 +212,12 @@ function asArray(value) {
   return Array.isArray(value) ? value : value === undefined ? [] : [value];
 }
 
-const HtmlRuntimeBoundaryProofKinds = new Set(['html-runtime-boundary-proof', 'html-source-bound-runtime-boundary-proof']);
+const HtmlRuntimeBoundaryProofKinds = new Set([
+  'html-browser-runtime-proof',
+  'html-source-bound-browser-runtime-proof',
+  'html-source-bound-runtime-proof',
+  'html-runtime-boundary-proof',
+  'html-source-bound-runtime-boundary-proof'
+]);
 
 export { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult };
