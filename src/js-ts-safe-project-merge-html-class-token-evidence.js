@@ -38,6 +38,39 @@ function htmlTokenListMergeEvidenceRecords(file) {
   return records.length ? records : htmlClassTokenMergeEvidenceRecords(file);
 }
 
+function htmlStructuralMergeEvidenceSummary(htmlFiles) {
+  return {
+    htmlClassTokenMergeFiles: htmlFiles.filter(hasHtmlClassTokenMergeEvidence).length,
+    htmlClassTokenMergeEvidenceRecords: htmlFiles.reduce((sum, file) => sum + htmlClassTokenMergeEvidenceRecords(file).length, 0),
+    htmlTokenListMergeFiles: htmlFiles.filter(hasHtmlTokenListMergeEvidence).length,
+    htmlTokenListMergeEvidenceRecords: htmlFiles.reduce((sum, file) => sum + htmlTokenListMergeEvidenceRecords(file).length, 0),
+    htmlUnkeyedStructuralAddFiles: htmlFiles.filter(hasHtmlUnkeyedStructuralAddEvidence).length,
+    htmlUnkeyedStructuralAddEvidenceRecords: htmlFiles.reduce((sum, file) => sum + htmlUnkeyedStructuralAddEvidenceRecords(file).length, 0)
+  };
+}
+
+function hasHtmlUnkeyedStructuralAddEvidence(file) {
+  return htmlUnkeyedStructuralAddEvidenceRecords(file).length > 0;
+}
+
+function htmlUnkeyedStructuralAddEvidenceRecords(file) {
+  return uniqueEvidence([
+    ...(Array.isArray(file?.result?.htmlUnkeyedStructuralAddEvidence) ? file.result.htmlUnkeyedStructuralAddEvidence : []),
+    ...(Array.isArray(file?.result?.admission?.htmlUnkeyedStructuralAddEvidence) ? file.result.admission.htmlUnkeyedStructuralAddEvidence : []),
+    ...(Array.isArray(file?.admission?.htmlUnkeyedStructuralAddEvidence) ? file.admission.htmlUnkeyedStructuralAddEvidence : [])
+  ].filter((record) => record?.kind === 'frontier.lang.htmlUnkeyedStructuralAddEvidence' && record.parentExplicitIdentity === true && record.addOnly === true && record.autoMergeClaim === false && record.semanticEquivalenceClaim === false && typeof record.evidenceHash === 'string'));
+}
+
+function uniqueEvidence(records) {
+  const seen = new Set();
+  return records.filter((record) => {
+    const key = record.evidenceHash ?? `${record.sourcePath ?? ''}#${record.recordKey ?? ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 const HtmlTokenListEvidenceKinds = new Set([
   'frontier.lang.htmlClassTokenMergeEvidence',
   'frontier.lang.htmlTokenListMergeEvidence'
@@ -45,4 +78,4 @@ const HtmlTokenListEvidenceKinds = new Set([
 
 const HtmlTokenListAttributes = new Set(['class', 'part', 'itemprop']);
 
-export { hasHtmlClassTokenMergeEvidence, hasHtmlTokenListMergeEvidence, htmlClassTokenMergeEvidenceRecords, htmlTokenListMergeEvidenceRecords };
+export { hasHtmlClassTokenMergeEvidence, hasHtmlTokenListMergeEvidence, htmlClassTokenMergeEvidenceRecords, htmlStructuralMergeEvidenceSummary, htmlTokenListMergeEvidenceRecords, htmlUnkeyedStructuralAddEvidenceRecords };

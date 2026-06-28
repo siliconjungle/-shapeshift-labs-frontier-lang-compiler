@@ -136,6 +136,35 @@ assert.deepEqual(htmlPartTokenProject.files[0].result.htmlTokenListMergeEvidence
 assert.equal(htmlPartTokenProject.files[0].result.htmlTokenListMergeEvidence[0].browserRenderEquivalenceClaim, false);
 assert.equal(matrixSurface(htmlPartTokenProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
 
+const htmlUnkeyedAddBase = [
+  '<section data-frontier-key="todo-root">',
+  '  <ul id="todos">',
+  '    <li>A</li>',
+  '  </ul>',
+  '</section>',
+  ''
+].join('\n');
+const htmlUnkeyedAddProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_unkeyed_structural_add',
+  files: [{
+    sourcePath: 'src/todos.html',
+    baseSourceText: htmlUnkeyedAddBase,
+    workerSourceText: htmlUnkeyedAddBase.replace('    <li>A</li>\n', '    <li>A</li>\n    <li>B</li>\n'),
+    headSourceText: htmlUnkeyedAddBase.replace('<ul id="todos">', '<ul id="todos" class="todo-list">')
+  }]
+});
+assert.equal(htmlUnkeyedAddProject.status, 'merged');
+assert.equal(htmlUnkeyedAddProject.summary.htmlUnkeyedStructuralAddFiles, 1);
+assert.equal(htmlUnkeyedAddProject.summary.htmlUnkeyedStructuralAddEvidenceRecords, 1);
+assert.match(htmlUnkeyedAddProject.outputFiles[0].sourceText, /<ul id="todos" class="todo-list">/);
+assert.match(htmlUnkeyedAddProject.outputFiles[0].sourceText, /<li>B<\/li>/);
+assert.equal(htmlUnkeyedAddProject.files[0].result.htmlUnkeyedStructuralAddEvidence[0].kind, 'frontier.lang.htmlUnkeyedStructuralAddEvidence');
+assert.equal(htmlUnkeyedAddProject.files[0].result.htmlUnkeyedStructuralAddEvidence[0].parentExplicitIdentity, true);
+assert.equal(htmlUnkeyedAddProject.files[0].result.htmlUnkeyedStructuralAddEvidence[0].addOnly, true);
+assert.equal(htmlUnkeyedAddProject.files[0].result.htmlUnkeyedStructuralAddEvidence[0].autoMergeClaim, false);
+assert.equal(htmlUnkeyedAddProject.files[0].result.htmlUnkeyedStructuralAddEvidence[0].semanticEquivalenceClaim, false);
+assert.equal(matrixSurface(htmlUnkeyedAddProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
+
 const htmlDuplicateIdentityBase = [
   '<main id="app">',
   '  <button data-frontier-key="dup">A</button>',
