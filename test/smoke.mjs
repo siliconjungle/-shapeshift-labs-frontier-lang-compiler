@@ -140,6 +140,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-html-structural-runtime-boundary.mjs',
   './smoke/js-ts-safe-project-merge-html-css-dependencies.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-use-sites.mjs',
+  './smoke/js-ts-safe-project-merge-css-modules-bounded-dynamic.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-import-shapes.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-icss-use-sites.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-dependencies.mjs',

@@ -1,6 +1,6 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { assert } from './helpers.mjs';
-import { safeMergeJsTsProject } from './compiler-api.mjs';
+import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
 
 const sourcePath = 'src/Button.module.css';
 const buttonCssModuleSpecifier = './Button.module' + '.css';
@@ -74,6 +74,36 @@ assert.equal(matrixSurface(staleGeneratedClassNameMapOutputGraphProject, 'css-mo
 assert.equal(matrixSurface(staleGeneratedClassNameMapOutputGraphProject, 'css-modules-generated-class-name-map').proofStatuses['css-module-generated-class-name-map'], 'failed');
 assert.equal(matrixSurface(staleGeneratedClassNameMapOutputGraphProject, 'css-modules-bundler-transform-identity').proofStatuses['css-module-bundler-transform-identity'], 'passed');
 assert.equal(matrixSurface(staleGeneratedClassNameMapOutputGraphProject, 'css-modules-source-map-identity').proofStatuses['css-module-source-map-identity'], 'passed');
+
+const canonicalGeneratedClassNameMapGraphProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_canonical_generated_map_graph_hash',
+  includeOutputProjectSymbolGraph: true,
+  outputProjectImports: [
+    importNativeSource({
+      language: 'css',
+      sourcePath,
+      sourceText: baseSourceText,
+      metadata: {
+        generatedClassNameMap,
+        bundlerTransformHash: 'bundler-transform:button-module',
+        sourceMapProofHash: 'source-map-proof:button-module'
+      }
+    })
+  ],
+  files: [
+    { language: 'css', sourcePath, headSourceText: baseSourceText },
+    {
+      language: 'tsx',
+      sourcePath: 'src/Button.tsx',
+      baseSourceText: staticButtonSourceText(),
+      workerSourceText: staticButtonSourceText(),
+      headSourceText: staticButtonSourceText()
+    }
+  ]
+});
+assert.equal(canonicalGeneratedClassNameMapGraphProject.status, 'merged');
+assert.equal(canonicalGeneratedClassNameMapGraphProject.outputProjectSymbolGraph.cssModuleImportBindings[0].generatedClassNameMapHash, generatedClassNameMapHash);
+assert.equal(canonicalGeneratedClassNameMapGraphProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].generatedClassNameMapHash, generatedClassNameMapHash);
 
 function projectSynthesizedProofInputFiles() {
   const buttonTsx = staticButtonSourceText();

@@ -72,6 +72,10 @@ function cssModuleUseSiteRecord(binding, input) {
     accessKind: input.accessKind,
     exportName: input.exportName,
     expressionText: input.expressionText,
+    dynamicKeyExpressionText: input.dynamicKeyExpressionText,
+    dynamicKeyDomain: input.dynamicKeyDomain,
+    dynamicKeyProofLevel: input.dynamicKeyProofLevel,
+    dynamicKeyProofSource: input.dynamicKeyProofSource,
     sourceSpan: semanticSpanForHash(input.sourceSpan),
     helperCallProofLevel: input.helperCallProofLevel,
     helperCallGraphHash: input.helperCallGraphHash,
@@ -99,6 +103,16 @@ function cssModuleUseSiteRecord(binding, input) {
     jsxPropRecordId: input.jsxPropRecordId,
     scopeReferenceRecordId: input.scopeReferenceRecordId,
     conditionalRuntimePresence: input.conditionalRuntimePresence,
+    dynamicKeyExpressionText: input.dynamicKeyExpressionText,
+    dynamicKeyDomain: input.dynamicKeyDomain,
+    dynamicKeyDomainHash: input.dynamicKeyDomain?.length ? hashSemanticValue({
+      kind: 'frontier.lang.cssModuleDynamicKeyDomain.v1',
+      cssModuleHash: binding.cssModuleHash,
+      expressionText: input.dynamicKeyExpressionText,
+      domain: input.dynamicKeyDomain
+    }) : undefined,
+    dynamicKeyProofLevel: input.dynamicKeyProofLevel,
+    dynamicKeyProofSource: input.dynamicKeyProofSource,
     helperCallProofLevel: input.helperCallProofLevel,
     helperCallGraphHash: input.helperCallGraphHash,
     helperCalleeName: input.helperCalleeName,
@@ -259,7 +273,7 @@ function cssModuleExportRecordNames(value) {
 
 function cssModuleGeneratedClassNameMapHash(evidence) {
   const map = objectValue(evidence?.generatedClassNameMap) ?? objectValue(evidence?.classMap) ?? objectValue(evidence?.exports);
-  return map ? hashSemanticValue({ kind: 'frontier.lang.cssModuleGeneratedClassNameMap.v1', map }) : undefined;
+  return map ? hashSemanticValue({ kind: 'frontier.lang.css.modules.generatedClassNameMap.v1', generatedClassNameMap: map }) : undefined;
 }
 
 function cssModuleProofBoundaryForReason(reasonCode) {

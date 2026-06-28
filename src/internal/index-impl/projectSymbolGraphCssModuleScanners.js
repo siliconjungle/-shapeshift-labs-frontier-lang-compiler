@@ -91,21 +91,19 @@ function sourceSpanForScopeReference(sourceText, binding, reference) {
 function cssModuleMemberUseSites(binding, sourceText, blockers) {
   const useSites = [];
   for (const occurrence of identifierOccurrences(sourceText, binding.localName)) {
-    const access = cssModuleMemberAccess(sourceText, occurrence.end);
+    const access = cssModuleMemberAccess(sourceText, occurrence.end, { contextSourceText: sourceText, contextExpressionStart: 0 });
     if (!access) continue;
+    const writeOperation = cssModuleMemberWriteOperation(sourceText, occurrence.start, access.end ?? occurrence.end);
+    if (writeOperation) {
+      blockers.push(cssModuleAccessBlocker(binding, sourceText, occurrence.start, access.end ?? occurrence.end, 'css-module-member-write-unsupported', sourceText.slice(occurrence.start, access.end ?? occurrence.end), { writeOperation }));
+      continue;
+    }
     if (access.status === 'blocked') {
       blockers.push(cssModuleAccessBlocker(binding, sourceText, occurrence.start, access.end ?? occurrence.end, access.reasonCode, access.expressionText));
       continue;
     }
-    const writeOperation = cssModuleMemberWriteOperation(sourceText, occurrence.start, access.end);
-    if (writeOperation) {
-      blockers.push(cssModuleAccessBlocker(binding, sourceText, occurrence.start, access.end, 'css-module-member-write-unsupported', sourceText.slice(occurrence.start, access.end), { writeOperation }));
-      continue;
-    }
-    useSites.push(cssModuleUseSiteRecord(binding, {
+    useSites.push(...cssModuleUseSiteRecordsForAccess(binding, access, {
       useSiteKind: 'scope-member-read',
-      accessKind: access.accessKind,
-      exportName: access.memberName,
       receiverLocalName: binding.localName,
       expressionText: sourceText.slice(occurrence.start, access.end),
       sourcePath: binding.sourcePath,
@@ -147,7 +145,7 @@ function cssModuleDestructuringUseSites(binding, sourceText, blockers) {
   return useSites;
 }
 
-function cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords, importEdges = []) {
+function cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords, importEdges = [], sourceTextsByPath = new Map()) {
   const useSites = [];
   const blockers = [];
   const helperCalleeEvidence = cssModuleClassHelperCalleeEvidence(importEdges);
@@ -158,8 +156,8 @@ function cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords, importEdges = [])
     const classNameBindings = bindingsForSourcePath(bindingsByLocal, prop.sourcePath);
     if (prop.propName !== 'className' || !classNameBindings.length) continue;
     useSites.push(...cssModuleJsxStaticComputedUseSites(classNameBindings, prop));
-    useSites.push(...cssModuleJsxHelperUseSites(classNameBindings, prop, helperCalleeEvidence));
-    blockers.push(...cssModuleJsxBlockers(classNameBindings, prop, helperCalleeEvidence));
+    useSites.push(...cssModuleJsxHelperUseSites(classNameBindings, prop, helperCalleeEvidence, sourceTextsByPath));
+    blockers.push(...cssModuleJsxBlockers(classNameBindings, prop, helperCalleeEvidence, sourceTextsByPath));
   }
   return { useSites, blockers };
 }
@@ -203,20 +201,19 @@ function cssModuleJsxStaticComputedUseSites(classNameBindings, prop) {
   });
 }
 
-function cssModuleJsxHelperUseSites(classNameBindings, prop, helperCalleeEvidence) {
+function cssModuleJsxHelperUseSites(classNameBindings, prop, helperCalleeEvidence, sourceTextsByPath = new Map()) {
   const expressionText = prop.propValueExpressionText ?? prop.propValueDynamicText ?? '';
   if (!cssModuleExpressionHasCall(expressionText)) return [];
   const useSites = [];
+  const context = jsxExpressionContext(prop, sourceTextsByPath);
   for (const binding of classNameBindings) {
     const helperProof = cssModuleClassHelperCallProof(expressionText, binding, prop, helperCalleeEvidence);
     for (const occurrence of identifierOccurrences(expressionText, binding.localName)) {
-      const access = cssModuleMemberAccess(expressionText, occurrence.end);
+      const access = cssModuleMemberAccess(expressionText, occurrence.end, context);
       if (!access || access.status === 'blocked') continue;
       if (cssModuleMemberWriteOperation(expressionText, occurrence.start, access.end)) continue;
-      useSites.push(cssModuleUseSiteRecord(binding, {
+      useSites.push(...cssModuleUseSiteRecordsForAccess(binding, access, {
         useSiteKind: 'jsx-className-helper',
-        accessKind: access.accessKind,
-        exportName: access.memberName,
         receiverLocalName: binding.localName,
         expressionText: expressionText.slice(occurrence.start, access.end),
         sourcePath: prop.sourcePath,
@@ -237,18 +234,19 @@ function cssModuleJsxHelperUseSites(classNameBindings, prop, helperCalleeEvidenc
   return useSites;
 }
 
-function cssModuleJsxBlockers(classNameBindings, prop, helperCalleeEvidence) {
+function cssModuleJsxBlockers(classNameBindings, prop, helperCalleeEvidence, sourceTextsByPath = new Map()) {
   if (prop.propValueKind === 'string') {
     return classNameBindings.map((binding) => cssModulePropBlocker(binding, prop, 'css-module-string-literal-classname-unproved'));
   }
   const expressionText = prop.propValueExpressionText ?? prop.propValueDynamicText ?? '';
   if (!expressionText) return [];
+  const context = jsxExpressionContext(prop, sourceTextsByPath);
   return classNameBindings.flatMap((binding) => {
     if (!expressionText.includes(binding.localName)) return [];
     const reasonCodes = [];
     const helperProof = cssModuleClassHelperCallProof(expressionText, binding, prop, helperCalleeEvidence);
     if (cssModuleExpressionHasCall(expressionText) && !helperProof) reasonCodes.push('css-module-helper-call-unproved');
-    if (cssModuleExpressionHasBlockedAccess(expressionText, binding.localName)) reasonCodes.push('css-module-dynamic-member-access-unproved');
+    if (cssModuleExpressionHasBlockedAccess(expressionText, binding.localName, context)) reasonCodes.push('css-module-dynamic-member-access-unproved');
     if (!reasonCodes.length && cssModuleStaticExpressionAccess(expressionText, binding.localName)) return [];
     if (!reasonCodes.length && prop.propValueDynamicBlockerReasonCode) {
       const dynamicReason = jsxDynamicReason(prop.propValueDynamicBlockerReasonCode);
@@ -256,6 +254,26 @@ function cssModuleJsxBlockers(classNameBindings, prop, helperCalleeEvidence) {
     }
     return [...new Set(reasonCodes)].map((reasonCode) => cssModulePropBlocker(binding, prop, reasonCode));
   });
+}
+
+function cssModuleUseSiteRecordsForAccess(binding, access, input) {
+  const exportNames = access.memberNames ?? [access.memberName];
+  return exportNames.filter(Boolean).map((exportName) => cssModuleUseSiteRecord(binding, {
+    ...input,
+    accessKind: access.accessKind,
+    exportName,
+    dynamicKeyExpressionText: access.dynamicKeyExpressionText,
+    dynamicKeyDomain: access.dynamicKeyDomain,
+    dynamicKeyProofLevel: access.dynamicKeyProofLevel,
+    dynamicKeyProofSource: access.dynamicKeyProofSource
+  }));
+}
+
+function jsxExpressionContext(prop, sourceTextsByPath) {
+  return {
+    contextSourceText: sourceTextsByPath.get(prop.sourcePath),
+    contextExpressionStart: prop.sourceSpan?.start
+  };
 }
 
 function destructuringProperty(text) {

@@ -35,7 +35,8 @@ function createProjectCssModuleGraphRecords(semanticIndex, imports, importEdges,
     .map((edge, index) => cssModuleImportBindingRecord(edge, index, documentsById, cssSourcesWithDependencyGraphsByPath)));
   const bindingsByLocal = groupBindingsByLocal(importBindings);
   const { useSites: lexicalUseSites, blockers: lexicalBlockers } = cssModuleLexicalUseSites(importBindings, sourceTextsByPath, scopeReferenceRecords);
-  const { useSites: jsxUseSites, blockers: jsxBlockers } = cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords, importEdges);
+  const { useSites: jsxUseSites, blockers: rawJsxBlockers } = cssModuleJsxUseSites(bindingsByLocal, jsxPropRecords, importEdges, sourceTextsByPath);
+  const jsxBlockers = rawJsxBlockers.filter((blocker) => !boundedDynamicUseSiteCoversBlocker(lexicalUseSites, blocker));
   const cssModuleUseSites = uniqueRecords([...jsxUseSites, ...lexicalUseSites], cssModuleUseSiteKey);
   const usedImportBindings = importBindings
     .filter((binding) => hasUseSite(binding, cssModuleUseSites));
@@ -112,6 +113,17 @@ function hasRecords(value) {
 
 function hasUseSite(binding, useSites) {
   return useSites.some((site) => site.cssModuleImportBindingId === binding.id);
+}
+
+function boundedDynamicUseSiteCoversBlocker(useSites, blocker) {
+  if (blocker.reasonCode !== 'css-module-dynamic-member-access-unproved') return false;
+  return useSites.some((site) => (
+    site.cssModuleImportBindingId === blocker.cssModuleImportBindingId &&
+    site.accessKind === 'bounded-dynamic-bracket' &&
+    site.jsSourcePath === blocker.sourcePath &&
+    site.expressionText === blocker.expressionText &&
+    site.dynamicKeyProofLevel === 'css-module-source-bound-finite-dynamic-key-domain'
+  ));
 }
 
 export { createProjectCssModuleGraphRecords };
