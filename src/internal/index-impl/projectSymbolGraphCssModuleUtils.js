@@ -1,5 +1,6 @@
 import { lineColumnForOffset } from './lineColumnForOffset.js';
 import { parseCssSemanticSheet } from '@shapeshift-labs/frontier-lang-css';
+import { cssModuleSourceMapIdentityProof } from '../../js-ts-safe-project-merge-css-module-source-map.js';
 
 const CssModulePathPattern = /\.module\.css(?:[?#].*)?$/i;
 
@@ -20,13 +21,23 @@ function cssModuleSourceRecord(imported) {
   const sourceText = nativeImportSourceText(imported);
   const inferredEvidence = suppliedEvidence ? undefined : inferCssModuleEvidence(sourceText, sourcePath, metadata, nativeMetadata, astMetadata);
   const cssModuleEvidence = normalizeCssModuleEvidence(suppliedEvidence ?? inferredEvidence);
+  const bundlerTransformHash = firstString(metadata.bundlerTransformHash, nativeMetadata.bundlerTransformHash, astMetadata.bundlerTransformHash);
+  const sourceMapIdentityProof = cssModuleSourceMapIdentityProof(metadata, {
+    sourcePath,
+    sourceHash: imported?.nativeSource?.sourceHash ?? imported?.metadata?.sourceHash,
+    generatedClassNameMapHash: cssModuleEvidence?.generatedClassNameMapHash ?? cssModuleEvidence?.moduleOptions?.generatedClassNameMapHash,
+    bundlerTransformHash,
+    generatedSourceHash: firstString(metadata.generatedSourceHash, metadata.cssModuleGeneratedSourceHash, nativeMetadata.generatedSourceHash, astMetadata.generatedSourceHash)
+  });
   return compactRecord({
     sourcePath,
     sourceHash: imported?.nativeSource?.sourceHash ?? imported?.metadata?.sourceHash,
     cssModuleEvidence,
     cssModuleEvidenceSource: suppliedEvidence ? 'supplied' : inferredEvidence ? 'inferred-source' : undefined,
-    bundlerTransformHash: firstString(metadata.bundlerTransformHash, nativeMetadata.bundlerTransformHash, astMetadata.bundlerTransformHash),
-    sourceMapProofHash: firstString(metadata.sourceMapProofHash, nativeMetadata.sourceMapProofHash, astMetadata.sourceMapProofHash)
+    bundlerTransformHash,
+    sourceMapProofHash: sourceMapIdentityProof.sourceMapProofHash,
+    sourceMapIdentityProofStatus: sourceMapIdentityProof.status,
+    sourceMapIdentityProofReasonCodes: sourceMapIdentityProof.reasonCodes
   });
 }
 

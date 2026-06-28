@@ -28,6 +28,8 @@ export interface NativeProjectSymbolGraphCssModuleImportBindingRecord {
   readonly icssGraphSource?: 'supplied' | 'source-export-only' | 'project-source' | string;
   readonly bundlerTransformHash?: string;
   readonly sourceMapProofHash?: string;
+  readonly sourceMapIdentityProofStatus?: 'passed' | 'failed' | 'hash-only' | 'missing' | string;
+  readonly sourceMapIdentityProofReasonCodes?: readonly string[];
   readonly signatureHash?: string;
 }
 
@@ -79,6 +81,9 @@ export interface NativeProjectSymbolGraphCssModuleUseSiteBlockerRecord {
   readonly expressionText?: string;
   readonly reasonCode?: string;
   readonly proofBoundary?: 'css-module-generated-class-name-map' | 'css-module-bundler-transform-identity' | 'css-module-source-map-identity' | 'css-module-use-site-graph' | string;
+  readonly sourceMapIdentityProofStatus?: 'passed' | 'failed' | 'hash-only' | 'missing' | string;
+  readonly sourceMapIdentityProofReasonCodes?: readonly string[];
+  readonly computedSourceMapProofHash?: string;
   readonly writeOperation?: string;
   readonly jsxPropRecordId?: string;
   readonly failClosed: true;

@@ -22,7 +22,7 @@ function cssModuleProofBoundary(blocker) {
   if (blocker?.reasonCode === 'css-module-generated-class-map-hash-mismatch') return 'css-module-generated-class-name-map';
   if (blocker?.reasonCode === 'css-module-generated-class-map-unproved') return 'css-module-generated-class-name-map';
   if (blocker?.reasonCode === 'css-module-bundler-transform-identity-unproved') return 'css-module-bundler-transform-identity';
-  if (blocker?.reasonCode === 'css-module-source-map-proof-unproved') return 'css-module-source-map-identity';
+  if (blocker?.reasonCode === 'css-module-source-map-proof-unproved' || blocker?.reasonCode === 'css-module-source-map-proof-hash-mismatch') return 'css-module-source-map-identity';
   return 'css-module-use-site-graph';
 }
 

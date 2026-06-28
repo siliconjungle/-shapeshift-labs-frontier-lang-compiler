@@ -9,7 +9,8 @@ function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false
   for (const file of files) byOperation[file.operation] = (byOperation[file.operation] ?? 0) + 1;
   const limitConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-limit');
   const deltaConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-graph-delta' || (hasProjectGraphDelta && conflict.gateId === 'project-graph-limit'));
-  const outputConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-symbol-graph' || (!hasProjectGraphDelta && conflict.gateId === 'project-graph-limit')), cssModuleConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-css-module-use-site-graph');
+  const outputConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-symbol-graph' || (!hasProjectGraphDelta && conflict.gateId === 'project-graph-limit')), cssModuleGraphConflicts = graphConflicts.filter((conflict) => conflict.gateId === 'project-css-module-use-site-graph');
+  const cssModuleProofConflicts = [...cssModuleGraphConflicts, ...files.flatMap((file) => file.conflicts ?? []).filter(isCssModuleProofConflict)];
   const proofLevelStatuses = proofEvidence?.summary?.levelStatuses ?? {};
   return {
     files: files.length,
@@ -17,9 +18,9 @@ function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false
     ...htmlCssProjectSummary(files),
     projectGraphConflicts: graphConflicts.length,
     projectGraphDeltaEvidenceIncluded: hasProjectGraphDelta ? 1 : 0, projectGraphEvidenceIncluded: projectSymbolGraph || hasProjectGraphDelta ? 1 : 0,
-    outputProjectGraphConflicts: outputConflicts.length, projectGraphCssModuleUseSiteConflicts: cssModuleConflicts.length,
+    outputProjectGraphConflicts: outputConflicts.length, projectGraphCssModuleUseSiteConflicts: cssModuleGraphConflicts.length,
     projectGraphDeltaConflicts: deltaConflicts.length,
-    ...cssModuleProjectSummaryFields(projectSymbolGraph, cssModuleConflicts),
+    ...cssModuleProjectSummaryFields(projectSymbolGraph, cssModuleProofConflicts),
     projectGraphLimitConflicts: limitConflicts.length, projectGraphCssModuleUseSiteGraphs: projectSymbolGraph?.cssModuleUseSiteGraphs?.length ?? 0, projectGraphCssModuleUseSites: projectSymbolGraph?.cssModuleUseSites?.length ?? 0, projectGraphCssModuleImportBindings: projectSymbolGraph?.cssModuleImportBindings?.length ?? 0,
     projectGraphPublicContractConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-public-contract-delta-conflict').length,
     projectGraphSourceSpanConflicts: deltaConflicts.filter((conflict) => conflict.code === 'project-source-span-delta-conflict').length,
@@ -306,15 +307,13 @@ function compactConfidenceDimensions(status, summary, context, routingCalibratio
     proof: summary.proofEvidenceFailed ? 'failed' : summary.proofEvidenceMissing ? 'partial' : 'complete', semanticEquivalence: summary.semanticEquivalenceLevel === 'semantic-equivalence-unknown' ? 'unknown' : 'claimed', semanticEquivalenceProof: semanticEquivalenceProofDimension(summary), routeLane: routingCalibration.nextRouteLane, routeId: routingCalibration.nextRouteId, focusedProofGapRoute: routingCalibration.nextFocusedProofGapRouteId
   });
 }
-
 function gateConfidenceDimension(gate) { return !gate ? 'missing' : gate.status === 'passed' ? 'passed' : gate.status === 'skipped' ? 'missing' : 'failed'; }
 function semanticEquivalenceProofDimension(summary) { return summary.proofSemanticEquivalenceStatus === 'failed' ? 'failed' : summary.semanticEquivalenceLevel === 'semantic-equivalence-unknown' ? 'missing' : 'passed'; }
 
 function uniqueRecords(records) { const seen = new Set(); return records.filter((record) => !record?.id || seen.has(record.id) ? false : (seen.add(record.id), true)); }
-
 function uniqueStrings(values) { return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))]; }
 function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
 function clampScore(value) { return Math.max(0, Math.min(100, Math.round(value))); }
 function isScopeUseDefConflict(conflict) { return conflict.code === 'project-public-scope-use-def-delta-conflict' || conflict.code === 'project-public-scope-reference-delta-conflict'; }
-
+function isCssModuleProofConflict(conflict) { return conflict?.gateId === 'css-semantic-merge' && String(conflict?.details?.proofBoundary ?? '').startsWith('css-module-'); }
 export { projectConfidence, projectEvidence, projectSummary, projectSummaryWithConfidenceEvidence };

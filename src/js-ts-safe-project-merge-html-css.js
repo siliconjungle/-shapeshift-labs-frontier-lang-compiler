@@ -5,6 +5,7 @@ import { compactRecord } from './js-ts-safe-merge-context.js';
 import { hashText, safeId, uniqueStrings } from './js-ts-safe-project-merge-core.js';
 import { projectCssDependencyProofOptionsForBlockedMerge } from './js-ts-safe-project-merge-css-dependency-proofs.js';
 import { projectCssModuleMergeOptionsForFile, projectCssModuleProofOptionsForBlockedMerge } from './js-ts-safe-project-merge-css-module-proofs.js';
+import { cssModuleSourceMapIdentityMergeOptions } from './js-ts-safe-project-merge-css-module-source-map.js';
 import { blockCssScopedParserEvidenceGap, blockCssSelectorFunctionalPseudoSpecificityGap, normalizeHtmlCssParserEvidenceSides } from './js-ts-safe-project-merge-html-css-parser-gaps.js';
 import { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult } from './js-ts-safe-project-merge-html-runtime-boundaries.js';
 
@@ -22,21 +23,23 @@ function maybeMergeHtmlCssProjectFile(options) {
     ...htmlCssMergeOptionsForProjectFile(input, file.sourcePath, language),
     ...(language === 'css' ? projectCssModuleMergeOptionsForFile(projectCssModuleMergeEvidence, file.sourcePath) : {})
   };
+  const sourceMapMergeOptions = language === 'css' ? cssModuleSourceMapIdentityMergeOptions(mergeOptions, { sourcePath: file.sourcePath }) : {};
+  const effectiveMergeOptions = { ...mergeOptions, ...sourceMapMergeOptions };
   const runtimeBoundaryProofs = language === 'html' ? htmlRuntimeBoundaryProofCandidates(input, file.sourcePath, mergeOptions) : [];
   const runtimeBoundaryMergeOptions = runtimeBoundaryProofs.length ? { htmlRuntimeBoundaryProofs: runtimeBoundaryProofs, htmlSourceBoundRuntimeBoundaryProofs: runtimeBoundaryProofs } : {};
-  let result = merge({ ...sourceInput, ...mergeOptions, ...context, ...runtimeBoundaryMergeOptions, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: language === 'css' || sourceInput.includeBlockedMergeCandidate === true });
+  let result = merge({ ...sourceInput, ...effectiveMergeOptions, ...context, ...runtimeBoundaryMergeOptions, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: language === 'css' || sourceInput.includeBlockedMergeCandidate === true });
   if (language === 'css' && result.status === 'blocked') {
     const proofOptions = projectCssDependencyProofOptionsForBlockedMerge({ projectInput: input, sourcePath: file.sourcePath, firstResult: result, base, worker, head });
     if (proofOptions?.mergeOptions) {
-      result = merge({ ...sourceInput, ...mergeOptions, ...proofOptions.mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: true });
+      result = merge({ ...sourceInput, ...effectiveMergeOptions, ...proofOptions.mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: true });
     } else if (proofOptions?.result) {
       result = proofOptions.result;
     }
   }
   if (language === 'css' && result.status === 'blocked') {
-    const proofOptions = projectCssModuleProofOptionsForBlockedMerge({ evidence: projectCssModuleMergeEvidence, sourcePath: file.sourcePath, mergeOptions, firstResult: result, base, worker, head });
+    const proofOptions = projectCssModuleProofOptionsForBlockedMerge({ evidence: projectCssModuleMergeEvidence, sourcePath: file.sourcePath, mergeOptions: effectiveMergeOptions, firstResult: result, base, worker, head });
     if (proofOptions?.mergeOptions) {
-      result = merge({ ...sourceInput, ...mergeOptions, ...proofOptions.mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: true });
+      result = merge({ ...sourceInput, ...effectiveMergeOptions, ...proofOptions.mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: true });
     } else if (proofOptions?.result) {
       result = proofOptions.result;
     }

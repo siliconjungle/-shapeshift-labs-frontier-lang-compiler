@@ -60,6 +60,8 @@ function cssModuleImportBindingRecord(edge, index, documentsById, cssSourcesByPa
     icssGraphSource: cssModuleEvidence?.icssGraphSource,
     bundlerTransformHash: cssSource?.bundlerTransformHash,
     sourceMapProofHash: cssSource?.sourceMapProofHash,
+    sourceMapIdentityProofStatus: cssSource?.sourceMapIdentityProofStatus,
+    sourceMapIdentityProofReasonCodes: cssSource?.sourceMapIdentityProofReasonCodes,
     signatureHash
   });
 }
@@ -171,6 +173,9 @@ function cssModuleBindingBlocker(binding, input = {}) {
     expressionText,
     reasonCode,
     proofBoundary,
+    sourceMapIdentityProofStatus: input.sourceMapIdentityProofStatus,
+    sourceMapIdentityProofReasonCodes: input.sourceMapIdentityProofReasonCodes,
+    computedSourceMapProofHash: input.computedSourceMapProofHash,
     writeOperation: input.writeOperation,
     jsxPropRecordId: input.jsxPropRecordId,
     failClosed: true,
@@ -184,7 +189,12 @@ function cssModuleTransformBlockers(binding) {
   if (binding.cssModuleEvidenceStatus !== 'supplied') blockers.push(cssModuleBindingBlocker(binding, { reasonCode: 'css-module-import-resolution-unproved' }));
   if (!binding.generatedClassNameMapHash) blockers.push(cssModuleBindingBlocker(binding, { reasonCode: 'css-module-generated-class-map-unproved' }));
   if (!binding.bundlerTransformHash) blockers.push(cssModuleBindingBlocker(binding, { reasonCode: 'css-module-bundler-transform-identity-unproved' }));
-  if (!binding.sourceMapProofHash) blockers.push(cssModuleBindingBlocker(binding, { reasonCode: 'css-module-source-map-proof-unproved' }));
+  if (binding.sourceMapIdentityProofStatus === 'failed') blockers.push(cssModuleBindingBlocker(binding, {
+    reasonCode: 'css-module-source-map-proof-hash-mismatch',
+    sourceMapIdentityProofStatus: binding.sourceMapIdentityProofStatus,
+    sourceMapIdentityProofReasonCodes: binding.sourceMapIdentityProofReasonCodes
+  }));
+  else if (!binding.sourceMapProofHash) blockers.push(cssModuleBindingBlocker(binding, { reasonCode: 'css-module-source-map-proof-unproved' }));
   return blockers;
 }
 
@@ -279,7 +289,7 @@ function cssModuleGeneratedClassNameMapHash(evidence) {
 function cssModuleProofBoundaryForReason(reasonCode) {
   if (reasonCode === 'css-module-generated-class-map-unproved') return 'css-module-generated-class-name-map';
   if (reasonCode === 'css-module-bundler-transform-identity-unproved') return 'css-module-bundler-transform-identity';
-  if (reasonCode === 'css-module-source-map-proof-unproved') return 'css-module-source-map-identity';
+  if (reasonCode === 'css-module-source-map-proof-unproved' || reasonCode === 'css-module-source-map-proof-hash-mismatch') return 'css-module-source-map-identity';
   return 'css-module-use-site-graph';
 }
 

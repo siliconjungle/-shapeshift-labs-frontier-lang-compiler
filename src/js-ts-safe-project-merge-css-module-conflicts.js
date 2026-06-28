@@ -77,7 +77,7 @@ function cssModuleUseSiteProofGap(blocker, reasonCode, proofBoundary, requiredPr
 function cssModuleProofBoundaryForReason(reasonCode) {
   if (reasonCode === 'css-module-generated-class-map-hash-mismatch' || reasonCode === 'css-module-generated-class-map-unproved') return 'css-module-generated-class-name-map';
   if (reasonCode === 'css-module-bundler-transform-identity-unproved') return 'css-module-bundler-transform-identity';
-  if (reasonCode === 'css-module-source-map-proof-unproved') return 'css-module-source-map-identity';
+  if (reasonCode === 'css-module-source-map-proof-unproved' || reasonCode === 'css-module-source-map-proof-hash-mismatch') return 'css-module-source-map-identity';
   return 'css-module-use-site-graph';
 }
 
@@ -101,6 +101,7 @@ function cssModuleProofGapSummary(reasonCode) {
   if (reasonCode === 'css-module-generated-class-map-unproved' || reasonCode === 'css-module-generated-class-map-hash-mismatch') return 'CSS Module generated class-name map identity is required before admission.';
   if (reasonCode === 'css-module-bundler-transform-identity-unproved') return 'CSS Module bundler transform identity is required before admission.';
   if (reasonCode === 'css-module-source-map-proof-unproved') return 'CSS Module source-map identity is required before admission.';
+  if (reasonCode === 'css-module-source-map-proof-hash-mismatch') return 'CSS Module source-map identity proof is stale or does not match source, generated output, generated class-name map, bundler transform, or mappings.';
   if (reasonCode === 'css-module-icss-graph-unproved') return 'ICSS import/export graph identity is required before CSS Module use-site admission.';
   if (reasonCode === 'css-module-composition-resolution-unproved') return 'CSS Module composition graph identity is required before use-site admission.';
   return 'CSS Module use-site graph evidence is required before admission.';

@@ -1,3 +1,4 @@
+import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { assert } from './helpers.mjs';
 import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
 
@@ -7,6 +8,11 @@ const generatedClassNameMap = { root: 'Button_root__hash', label: 'Button_label_
 const baseSourceText = '.root {\n  color: red;\n}\n';
 const workerSourceText = '.root {\n  color: red;\n}\n.label {\n  font-weight: 600;\n}\n';
 const headSourceText = '.root {\n  color: blue;\n}\n';
+const outputSourceText = '.root {\n  color: blue;\n}\n\n.label {\n  font-weight: 600;\n}\n';
+const generatedClassNameMapHash = hashSemanticValue({
+  kind: 'frontier.lang.css.modules.generatedClassNameMap.v1',
+  generatedClassNameMap
+});
 
 const projectMissingSourceMapProof = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_module_contract_project_synthesis_missing_source_map_proof',
@@ -68,6 +74,44 @@ assert.equal(sourceMapOnlySurface.proofStatuses['css-module-source-map-identity'
 assert.equal(sourceMapOnlySurface.missingRouteIds.includes('prove-css-module-source-map-identity'), true);
 assert.equal(sourceMapOnlySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), false);
 
+const structuredSourceMapProofProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_structured_source_map_identity_proof',
+  includeOutputProjectSymbolGraph: true,
+  cssMergeOptionsByPath: {
+    [sourcePath]: {
+      generatedClassNameMap,
+      bundlerTransformHash: 'bundler-transform:button-module',
+      cssModuleGeneratedSourceHash: 'generated-css:button-module',
+      sourceMapIdentityProof: sourceMapIdentityProof(outputSourceText, 'generated-css:button-module')
+    }
+  },
+  files: projectSynthesizedProofInputFiles()
+});
+assert.equal(structuredSourceMapProofProject.status, 'merged');
+const structuredProofFile = structuredSourceMapProofProject.files.find((file) => file.sourcePath === sourcePath);
+assert.equal(structuredProofFile.result.cssModuleContractProofs.every((proof) => proof.sourceMapProofHash?.startsWith('fnv1a32:')), true);
+assert.equal(structuredSourceMapProofProject.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].sourceMapProofHash.startsWith('fnv1a32:'), true);
+assert.equal(matrixSurface(structuredSourceMapProofProject, 'css-modules-source-map-identity').proofStatuses['css-module-source-map-identity'], 'passed');
+
+const staleStructuredSourceMapProofProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_stale_structured_source_map_identity_proof',
+  includeOutputProjectSymbolGraph: true,
+  cssMergeOptionsByPath: {
+    [sourcePath]: {
+      generatedClassNameMap,
+      bundlerTransformHash: 'bundler-transform:button-module',
+      cssModuleGeneratedSourceHash: 'generated-css:button-module',
+      sourceMapIdentityProof: { ...sourceMapIdentityProof(outputSourceText, 'generated-css:button-module'), originalSourceHash: hashSemanticValue(baseSourceText) }
+    }
+  },
+  files: projectSynthesizedProofInputFiles()
+});
+assert.equal(staleStructuredSourceMapProofProject.status, 'blocked');
+const staleSourceMapConflict = staleStructuredSourceMapProofProject.conflicts.find((conflict) => conflict.details.reasonCode === 'css-module-source-map-proof-hash-mismatch');
+assert.equal(staleSourceMapConflict?.details.proofBoundary, 'css-module-source-map-identity');
+assert.equal(staleSourceMapConflict.details.sourceMapIdentityProofReasonCodes.includes('css-module-source-map-proof-source-hash-mismatch'), true);
+assert.equal(matrixSurface(staleStructuredSourceMapProofProject, 'css-modules-source-map-identity').proofStatuses['css-module-source-map-identity'], 'failed');
+
 function projectSynthesizedProofInputFiles() {
   const buttonTsx = staticButtonSourceText();
   return [
@@ -82,6 +126,29 @@ function staticButtonSourceText() {
     'export function Button() { return <button className={styles.root} />; }',
     ''
   ].join('\n');
+}
+
+function sourceMapIdentityProof(originalSourceText, generatedSourceHash) {
+  return {
+    schema: 'frontier.lang.cssModuleSourceMapIdentityProof.v1',
+    kind: 'frontier.lang.cssModuleSourceMapIdentityProof',
+    status: 'passed',
+    sourcePath,
+    originalSourceHash: hashSemanticValue(originalSourceText),
+    generatedSourcePath: 'dist/Button.module.css',
+    generatedSourceHash,
+    generatedClassNameMapHash,
+    bundlerTransformHash: 'bundler-transform:button-module',
+    mappings: [
+      { originalSourcePath: sourcePath, generatedSourcePath: 'dist/Button.module.css', originalStart: 0, originalEnd: 5, generatedStart: 0, generatedEnd: 19, originalName: 'root', generatedName: 'Button_root__hash' },
+      { originalSourcePath: sourcePath, generatedSourcePath: 'dist/Button.module.css', originalStart: outputSourceText.indexOf('.label'), originalEnd: outputSourceText.indexOf('.label') + 6, generatedStart: 20, generatedEnd: 40, originalName: 'label', generatedName: 'Button_label__hash' }
+    ],
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false,
+    runtimeEquivalenceClaim: false,
+    sourceMapIdentityClaim: true,
+    claimScope: 'css-module-source-map-generated-class-identity-only'
+  };
 }
 
 function matrixSurface(result, surface) {
