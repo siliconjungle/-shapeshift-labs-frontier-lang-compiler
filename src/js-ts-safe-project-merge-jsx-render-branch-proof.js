@@ -96,7 +96,9 @@ function branchReasonCodes(delta, proof) {
 
 function conditionalBranchReasonCodes(delta, proof) {
   const reasons = [];
-  if (proof.conditionHash !== delta.base?.conditionHash || proof.outputConditionHash !== delta.output?.conditionHash) reasons.push('jsx-render-return-branch-proof-condition-hash-mismatch');
+  const conditionOrigin = proof.conditionOrigin ?? 'base';
+  const conditionHash = armHash(delta, conditionOrigin, 'conditionHash');
+  if (proof.conditionHash !== conditionHash || proof.outputConditionHash !== delta.output?.conditionHash || delta.output?.conditionHash !== conditionHash) reasons.push('jsx-render-return-branch-proof-condition-hash-mismatch');
   if (proof.consequentOrigin === undefined || proof.alternateOrigin === undefined) reasons.push('jsx-render-return-branch-proof-output-arm-origin-missing');
   if (proof.outputConsequentHash !== delta.output?.consequentHash || proof.outputAlternateHash !== delta.output?.alternateHash) reasons.push('jsx-render-return-branch-proof-arm-hash-mismatch');
   if (proof.consequentHash !== armHash(delta, proof.consequentOrigin, 'consequentHash')) reasons.push('jsx-render-return-branch-proof-arm-hash-mismatch');

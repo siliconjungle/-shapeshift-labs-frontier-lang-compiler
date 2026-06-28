@@ -170,6 +170,12 @@ const semanticMergeJsxMatrixCells = [
     note: 'single top-level conditional/logical render-return deltas accept source-bound branch-arm preservation proof while stale hashes, arm mismatches, and broad render equivalence claims fail closed'
   },
   {
+    id: 'jsx-tsx-element-prop-graph/static-render-return-conditional-condition-proof-bridge',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-jsx-render-branch-proof',
+    note: 'single top-level conditional render-return deltas accept source-bound condition-origin plus branch-arm preservation proof while mismatched condition hashes and broad render equivalence claims fail closed'
+  },
+  {
     id: 'jsx-tsx-element-prop-graph/branch-proof-dynamic-runtime-surface-blocker',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-jsx-render-branch-proof',
@@ -216,3 +222,10 @@ assert.equal(staticObjectSpreadPropPrecedenceCell.evidence, 'js-ts-safe-project-
 assert.match(staticObjectSpreadPropPrecedenceCell.note, /same-file const object/);
 assert.match(staticObjectSpreadPropPrecedenceCell.note, /explicit prop precedence/);
 assert.match(staticObjectSpreadPropPrecedenceCell.note, /fail closed/);
+
+const conditionalConditionProofCell = semanticMergeJsxMatrixCells.find((cell) => cell.id === 'jsx-tsx-element-prop-graph/static-render-return-conditional-condition-proof-bridge');
+assert.equal(conditionalConditionProofCell.status, 'done');
+assert.equal(conditionalConditionProofCell.evidence, 'js-ts-safe-project-merge-jsx-render-branch-proof');
+assert.match(conditionalConditionProofCell.note, /condition-origin/);
+assert.match(conditionalConditionProofCell.note, /mismatched condition hashes/);
+assert.match(conditionalConditionProofCell.note, /broad render equivalence claims fail closed/);

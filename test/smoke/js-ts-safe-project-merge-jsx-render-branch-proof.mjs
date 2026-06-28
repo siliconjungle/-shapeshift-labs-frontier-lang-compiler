@@ -23,6 +23,37 @@ const conditionalProof = branchProof(conditionalMissing[0].details.identityKey, 
 const conditionalPassed = projectGraphDeltaConflicts(conditionalDelta, { jsxRenderReturnBranchProofs: [conditionalProof] });
 assert.equal(conditionalPassed.length, 0);
 
+const conditionalConditionRecords = {
+  base: conditionalRisk('base', 'ready', '<Button tone="base" />', '<Empty tone="base" />'),
+  worker: conditionalRisk('worker', 'ready', '<Button tone="worker" />', '<Empty tone="base" />'),
+  head: conditionalRisk('head', 'enabled', '<Button tone="base" />', '<Empty tone="base" />'),
+  output: conditionalRisk('output', 'enabled', '<Button tone="worker" />', '<Empty tone="base" />')
+};
+const conditionalConditionDelta = jsxRenderRiskDelta(conditionalConditionRecords);
+const conditionalConditionMissing = projectGraphDeltaConflicts(conditionalConditionDelta);
+assert.equal(conditionalConditionMissing.length, 1);
+assert.equal(conditionalConditionMissing[0].details.reasonCodes.includes('jsx-render-return-branch-proof-missing'), true);
+const conditionalConditionProof = branchProof(conditionalConditionMissing[0].details.identityKey, conditionalConditionRecords, {
+  conditionOrigin: 'head',
+  consequentOrigin: 'worker',
+  alternateOrigin: 'base'
+});
+const conditionalConditionPassed = projectGraphDeltaConflicts(conditionalConditionDelta, { jsxRenderReturnBranchProof: conditionalConditionProof });
+assert.equal(conditionalConditionPassed.length, 0);
+const mismatchedConditionConflicts = projectGraphDeltaConflicts(conditionalConditionDelta, {
+  jsxRenderReturnBranchProof: { ...conditionalConditionProof, conditionHash: 'wrong-condition' }
+});
+assert.equal(mismatchedConditionConflicts.length, 1);
+assert.equal(mismatchedConditionConflicts[0].details.reasonCodes.includes('jsx-render-return-branch-proof-condition-hash-mismatch'), true);
+assert.equal(mismatchedConditionConflicts[0].details.renderEquivalenceClaim, false);
+assert.equal(mismatchedConditionConflicts[0].details.runtimeEquivalenceClaim, false);
+const broadConditionalConditionClaimConflicts = projectGraphDeltaConflicts(conditionalConditionDelta, {
+  jsxRenderReturnBranchProof: { ...conditionalConditionProof, renderEquivalenceClaim: true }
+});
+assert.equal(broadConditionalConditionClaimConflicts.length, 1);
+assert.equal(broadConditionalConditionClaimConflicts[0].details.reasonCodes.includes('jsx-render-return-branch-proof-claim-flags-missing'), true);
+assert.equal(broadConditionalConditionClaimConflicts[0].details.renderEquivalenceClaim, false);
+
 const dynamicHandlerFactoryRecords = {
   base: conditionalRecords.base,
   worker: withDynamicEventHandlerFactoryRisk(conditionalRecords.worker, 'worker'),
@@ -111,9 +142,11 @@ function branchProof(identityKey, records, origins) {
     claimScope: 'static-render-return-branch-arm-preservation-only'
   };
   if (expected.branchControlKind === 'conditional-expression') {
+    const conditionOrigin = origins.conditionOrigin ?? 'base';
     return {
       ...proof,
-      conditionHash: expected.base.conditionHash,
+      ...(origins.conditionOrigin ? { conditionOrigin: origins.conditionOrigin } : {}),
+      conditionHash: expected[conditionOrigin].conditionHash,
       outputConditionHash: expected.output.conditionHash,
       consequentOrigin: origins.consequentOrigin,
       consequentHash: expected[origins.consequentOrigin].consequentHash,
