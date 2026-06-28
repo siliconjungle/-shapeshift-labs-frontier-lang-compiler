@@ -158,13 +158,29 @@ function scopeReferenceAmbiguousReasonCodes(record) {
   return uniqueStrings([
     ...statusReasonCodes(record?.status, record?.reasonCodes, ScopeReferenceBlockedFallbackReason),
     ...statusReasonCodes(record?.aliasResolutionStatus, record?.aliasResolutionReasonCodes, ScopeReferenceBlockedFallbackReason),
-    ...statusReasonCodes(record?.compilerReferenceStatus, record?.compilerReferenceReasonCodes, ScopeReferenceBlockedFallbackReason)
+    ...statusReasonCodes(record?.compilerReferenceStatus, record?.compilerReferenceReasonCodes, ScopeReferenceBlockedFallbackReason),
+    ...compilerReferencePassedProofReasonCodes(record)
   ]);
 }
 
 function statusReasonCodes(status, reasonCodes, fallbackReasonCode) {
   if (status !== 'blocked' && status !== 'unresolved') return [];
   return reasonCodes?.length ? reasonCodes : [fallbackReasonCode];
+}
+
+function compilerReferencePassedProofReasonCodes(record) {
+  if (record?.compilerReferenceStatus !== 'passed') return [];
+  return [
+    requiredStringReason(record.sourcePath, 'typescript-compiler-reference-source-path-missing'),
+    requiredStringReason(record.sourceHash, 'typescript-compiler-reference-source-hash-missing'),
+    requiredStringReason(record.compilerReferenceSymbolId, 'typescript-compiler-reference-symbol-id-missing'),
+    requiredStringReason(record.compilerReferenceIdentityHash, 'typescript-compiler-reference-identity-hash-missing'),
+    requiredStringReason(record.compilerReferenceProofHash, 'typescript-compiler-reference-proof-hash-missing')
+  ].filter(Boolean);
+}
+
+function requiredStringReason(value, reasonCode) {
+  return typeof value === 'string' && value.length > 0 ? undefined : reasonCode;
 }
 
 function publicScopeReferences(records = []) {

@@ -30,6 +30,12 @@ const semanticMergeScopeMatrixCells = [
     status: 'done',
     evidence: 'js-ts-safe-project-merge-scope-use-def-reference-conflicts',
     note: 'nested import-alias and compiler reference-site blocker statuses route to public scope/use-def ambiguous evidence even when top-level status fields are not mirrored'
+  },
+  {
+    id: 'scope-use-def-graph/source-bound-compiler-reference-proof-evidence',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-scope-use-def-ambiguous-evidence',
+    note: 'passed compiler reference-site evidence for public scope references fails closed unless it is bound to source path/hash, compiler identity, and proof hash'
   }
 ];
 

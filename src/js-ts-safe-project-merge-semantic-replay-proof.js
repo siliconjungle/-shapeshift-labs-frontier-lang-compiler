@@ -1,21 +1,39 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import {
-  semanticReplayCurrentHeadCommutationProofRoute,
+  boundedCurrentHeadAggregateRoute,
+  boundedCurrentHeadRouteForFact,
+  replayAppliedOperations
+} from './js-ts-safe-project-merge-semantic-replay-proof-routes.js';
+import {
   semanticReplayMissingSignal,
   semanticReplayNextAction,
   semanticReplayNextMissingEvidence
 } from './js-ts-safe-project-merge-semantic-replay-routes.js';
 
 function semanticEditReplayCleanEvidence(id, fileResults, level) {
-  const facts = fileResults
+  const rawFacts = fileResults
     .map(semanticReplayFact)
     .filter((fact) => fact.semanticArtifacts && fact.changedOrBlocked);
+  const facts = rawFacts.map((fact) => {
+    const boundedAdmissionRoute = boundedCurrentHeadRouteForFact(fact, level);
+    return fact.status === 'passed' && !boundedAdmissionRoute
+      ? {
+          ...fact,
+          status: 'missing',
+          reasonCodes: uniqueStrings([
+            ...fact.reasonCodes,
+            'semantic-edit-replay-current-head-proof-missing'
+          ]),
+          boundedAdmissionRoute
+        }
+      : { ...fact, boundedAdmissionRoute };
+  });
   const failed = facts.filter((fact) => fact.status === 'failed');
   const missing = facts.filter((fact) => fact.status === 'missing');
   const stale = facts.filter((fact) => fact.sourceBindingStatus === 'stale');
   const status = failed.length ? 'failed' : missing.length ? 'skipped' : facts.length ? 'passed' : 'skipped';
   const boundedAdmissionRoutes = facts
-    .map((fact) => boundedCurrentHeadRouteForFact(fact, level))
+    .map((fact) => fact.boundedAdmissionRoute)
     .filter(Boolean);
   const boundedAdmissionRoute = status === 'passed' && boundedAdmissionRoutes.length === facts.length
     ? boundedCurrentHeadAggregateRoute(boundedAdmissionRoutes, level)
@@ -44,6 +62,7 @@ function semanticEditReplayCleanEvidence(id, fileResults, level) {
       reasonCodes: uniqueStrings(facts.flatMap((fact) => fact.reasonCodes)),
       conflictKeys: uniqueStrings(facts.map((fact) => fact.conflictKey)),
       sourcePaths: uniqueStrings(facts.map((fact) => fact.sourcePath)),
+      appliedOperationIds: uniqueStrings(facts.flatMap((fact) => fact.appliedOperations)),
       outputBindingStatuses: uniqueStrings(facts.map((fact) => fact.outputBindingStatus)),
       expectedOutputHashes: uniqueStrings(facts.map((fact) => fact.expectedOutputHash)),
       projectionOutputHashes: uniqueStrings(facts.map((fact) => fact.projectionOutputHash)),
@@ -80,6 +99,7 @@ function semanticReplayFact(file) {
   const outputBinding = semanticReplayOutputBinding(file, artifacts, replay);
   const sourceBinding = semanticReplaySourceBinding(file, artifacts, replay);
   const proofRoute = replay?.admission?.proofRoute ?? replay?.metadata?.proofRoute;
+  const appliedOperations = replayAppliedOperations(replay);
   const reasonCodes = uniqueStrings([
     ...(artifacts?.admission?.reasonCodes ?? []),
     ...(replay?.admission?.reasonCodes ?? []),
@@ -117,6 +137,7 @@ function semanticReplayFact(file) {
     expectedCurrentHash: sourceBinding.expectedCurrentHash,
     replayCurrentHash: sourceBinding.replayCurrentHash,
     replaySourcePath: sourceBinding.replaySourcePath,
+    appliedOperations,
     rerunRouteId: sourceBinding.rerunRouteId,
     proofRouteId: proofRoute?.routeId,
     conflictKey: file.conflictKeys?.[0]
@@ -265,43 +286,6 @@ function semanticReplaySourceBinding(file, artifacts, replay) {
     replaySourcePath,
     rerunRouteId: hashMismatch ? 'rerun-semantic-edit-replay-current-head' : undefined
   });
-}
-
-function boundedCurrentHeadRouteForFact(fact, level) {
-  return semanticReplayCurrentHeadCommutationProofRoute({
-    status: fact.replayStatus,
-    proofLevel: level,
-    sourcePath: fact.sourcePath,
-    replayId: fact.replayId,
-    outputBindingStatus: fact.outputBindingStatus,
-    expectedCurrentHash: fact.expectedCurrentHash,
-    replayCurrentHash: fact.replayCurrentHash,
-    expectedOutputHash: fact.expectedOutputHash,
-    projectionOutputHash: fact.projectionOutputHash,
-    replayOutputHash: fact.replayOutputHash
-  });
-}
-
-function boundedCurrentHeadAggregateRoute(routes, level) {
-  return {
-    routeId: 'admit-independent-semantic-edit-current-head-commutation',
-    routeLane: 'source-files',
-    routeNext: 'apply-source-bound-semantic-edit-replay',
-    action: 'apply',
-    proofKind: 'bounded-current-head-commutation',
-    status: 'passed',
-    proofLevel: level,
-    reasonCodes: ['semantic-edit-current-head-commutation-bound'],
-    sourcePaths: uniqueStrings(routes.map((route) => route.sourcePath)),
-    replayIds: uniqueStrings(routes.map((route) => route.replayId)),
-    expectedCurrentHashes: uniqueStrings(routes.map((route) => route.expectedCurrentHash)),
-    replayCurrentHashes: uniqueStrings(routes.map((route) => route.replayCurrentHash)),
-    expectedOutputHashes: uniqueStrings(routes.map((route) => route.expectedOutputHash)),
-    projectionOutputHashes: uniqueStrings(routes.map((route) => route.projectionOutputHash)),
-    replayOutputHashes: uniqueStrings(routes.map((route) => route.replayOutputHash)),
-    autoMergeClaim: false,
-    semanticEquivalenceClaim: false
-  };
 }
 
 function firstString(...values) {

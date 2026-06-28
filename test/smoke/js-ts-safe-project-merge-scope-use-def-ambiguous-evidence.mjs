@@ -23,6 +23,49 @@ assert.equal(nestedCompilerReferenceConflicts.length, 1);
 assert.equal(nestedCompilerReferenceConflict?.details.reasonCodes.includes('typescript-compiler-reference-site-ambiguous'), true);
 assert.equal(nestedCompilerReferenceConflict.details.output.compilerReferenceStatus, 'blocked');
 
+const unboundPassedCompilerReferenceConflicts = projectScopeUseDefDeltaConflicts({
+  stages: {
+    output: {
+      projectSymbolGraph: {
+        scopeBindingRecords: [],
+        scopeReferenceRecords: [referenceRecord('output', undefined, 'ref:compiler-passed-unbound', {
+          sourceHash: undefined,
+          compilerReferenceStatus: 'passed',
+          compilerReferenceSymbolId: 'symbol:typescript:compiler:api'
+        })]
+      },
+      summary: { scopeReferenceRecords: 1 }
+    }
+  },
+  summary: { stages: 1 }
+});
+const unboundPassedCompilerReferenceConflict = unboundPassedCompilerReferenceConflicts
+  .find((conflict) => conflict.code === 'project-public-scope-reference-ambiguous-evidence');
+assert.equal(unboundPassedCompilerReferenceConflicts.length, 1);
+assert.equal(unboundPassedCompilerReferenceConflict?.details.reasonCodes.includes('typescript-compiler-reference-source-hash-missing'), true);
+assert.equal(unboundPassedCompilerReferenceConflict?.details.reasonCodes.includes('typescript-compiler-reference-identity-hash-missing'), true);
+assert.equal(unboundPassedCompilerReferenceConflict?.details.reasonCodes.includes('typescript-compiler-reference-proof-hash-missing'), true);
+assert.equal(unboundPassedCompilerReferenceConflict.details.output.compilerReferenceStatus, 'passed');
+
+const sourceBoundPassedCompilerReferenceConflicts = projectScopeUseDefDeltaConflicts({
+  stages: {
+    output: {
+      projectSymbolGraph: {
+        scopeBindingRecords: [],
+        scopeReferenceRecords: [referenceRecord('output', undefined, 'ref:compiler-passed-bound', {
+          compilerReferenceStatus: 'passed',
+          compilerReferenceSymbolId: 'symbol:typescript:compiler:api',
+          compilerReferenceIdentityHash: 'compiler-identity:api',
+          compilerReferenceProofHash: 'compiler-proof:api'
+        })]
+      },
+      summary: { scopeReferenceRecords: 1 }
+    }
+  },
+  summary: { stages: 1 }
+});
+assert.equal(sourceBoundPassedCompilerReferenceConflicts.length, 0);
+
 const nestedAliasBindingConflicts = projectScopeUseDefDeltaConflicts({
   stages: {
     output: {

@@ -189,6 +189,9 @@ assert.equal(boundedReplay.admission.proofRoute.autoMergeClaim, false);
 assert.equal(boundedReplay.admission.proofRoute.semanticEquivalenceClaim, false);
 assert.equal(boundedReplay.admission.autoMergeClaim, false);
 assert.equal(boundedReplay.admission.semanticEquivalenceClaim, false);
+assert.equal(boundedReplay.admission.proofRoute.replayId, boundedReplay.id);
+assert.equal(boundedReplay.admission.proofRoute.sourcePath, boundedReplay.sourcePath);
+assert.deepEqual(boundedReplay.admission.proofRoute.appliedOperations, boundedReplay.appliedOperations);
 
 const mismatchedProjectionHash = hashSemanticValue(renameExpected.replace('keep = 1', 'keep = 8'));
 const projectionHashMismatchedReplay = replaySemanticEditProjection({
@@ -295,6 +298,7 @@ function replayProofReplay(input, outputSourceText) {
     currentHash: input.includeCurrentBinding === false
       ? undefined
       : hashSemanticValue(input.replayCurrentSourceText ?? input.headSourceText),
+    appliedOperations: input.includeAppliedOperations === false ? undefined : [`operation_${input.fixtureId}`],
     outputSourceText,
     outputHash: hashSemanticValue(outputSourceText),
     admission: replayProofAdmission(),

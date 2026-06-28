@@ -24,6 +24,7 @@ export function replaySemanticEditProjection(input = {}) {
   const currentSourceText = input.currentSourceText ?? input.headSourceText;
   const sourcePath = input.currentSourcePath ?? input.headSourcePath ?? projection.sourcePath;
   const language = normalizeNativeLanguageId(input.language ?? projection.language);
+  const replayId = input.id ?? `semantic_edit_replay_${idFragment(projection.id ?? sourcePath ?? language ?? 'projection')}`;
   const baseReasons = baseReasonCodes(projection, currentSourceText);
   const currentHash = typeof currentSourceText === 'string' ? hashSemanticValue(currentSourceText) : undefined;
   if (input.currentSourceHash && currentHash !== input.currentSourceHash) baseReasons.push('current-source-hash-mismatch');
@@ -49,7 +50,7 @@ export function replaySemanticEditProjection(input = {}) {
   const rerunRoute = replayRerunRoute(status, reasonCodes, input, currentHash);
   const proofRoute = semanticReplayProofRoute(status, reasonCodes, rerunRoute, {
     sourcePath,
-    replayId: input.id,
+    replayId,
     currentSourceHash: input.currentSourceHash,
     currentHash,
     outputHash,
@@ -72,7 +73,7 @@ export function replaySemanticEditProjection(input = {}) {
     kind: 'frontier.lang.semanticEditReplay',
     version: 1,
     schema: 'frontier.lang.semanticEditReplay.v1',
-    id: input.id ?? `semantic_edit_replay_${idFragment(projection.id ?? sourcePath ?? language ?? 'projection')}`,
+    id: replayId,
     projectionId: projection.id,
     scriptId: projection.scriptId,
     sourcePath,

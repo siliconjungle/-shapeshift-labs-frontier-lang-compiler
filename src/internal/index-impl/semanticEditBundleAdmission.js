@@ -65,6 +65,7 @@ function summarizeSemanticEditBundle(scripts, projections, replays, evidence, in
     portableProjections: projections.filter((projection) => projection.status === 'projected' && projection.admission?.status === 'auto-merge-candidate').length,
     acceptedClean: replays.filter((replay) => replay.status === 'accepted-clean').length,
     boundedCurrentHeadReplays: replays.filter(isBoundedCurrentHeadReplay).length,
+    incompleteCurrentHeadProofReplays: replays.filter(hasIncompleteCurrentHeadReplayProof).length,
     unboundAcceptedCleanReplays: replays.filter((replay) => replay.status === 'accepted-clean' && !isBoundedCurrentHeadReplay(replay)).length,
     alreadyApplied: replays.filter((replay) => replay.status === 'already-applied').length,
     conflicts: countStatuses(scriptStatusEntries, replayStatusEntries, ['conflict']),
@@ -118,6 +119,7 @@ function derivedReasonCodes(summary, status) {
     summary.scripts && summary.portableScripts !== summary.scripts ? 'semantic-edit-script-not-portable' : undefined,
     summary.projections && summary.portableProjections !== summary.projections ? 'semantic-edit-projection-not-portable' : undefined,
     summary.unboundAcceptedCleanReplays ? 'semantic-edit-replay-current-head-proof-missing' : undefined,
+    summary.incompleteCurrentHeadProofReplays ? 'semantic-edit-replay-current-head-proof-metadata-missing' : undefined,
     summary.acceptedClean && !summary.passedTestEvidence ? 'semantic-edit-tests-passed-evidence-missing' : undefined,
     summary.failedTestEvidence ? 'semantic-edit-tests-failed' : undefined,
     summary.conflictEvidence ? 'semantic-edit-conflict-evidence' : undefined,
@@ -148,14 +150,45 @@ function hasPositiveAutoMergeProof(summary) {
 function isBoundedCurrentHeadReplay(replay) {
   if (replay?.status !== 'accepted-clean') return false;
   const route = replayProofRoute(replay);
-  return route?.routeId === 'admit-independent-semantic-edit-current-head-commutation' &&
-    route?.proofKind === 'bounded-current-head-commutation' &&
+  const appliedOperations = strings(replay.appliedOperations);
+  return isCurrentHeadCommutationProofRoute(route) &&
     route?.status === 'passed' &&
+    route?.action === 'apply' &&
+    route?.routeNext === 'apply-source-bound-semantic-edit-replay' &&
+    route?.autoMergeClaim === false &&
+    route?.semanticEquivalenceClaim === false &&
+    route?.sourcePath === replay.sourcePath &&
+    route?.replayId === replay.id &&
+    typeof replay.sourcePath === 'string' &&
+    typeof replay.id === 'string' &&
+    appliedOperations.length > 0 &&
+    sameStringList(strings(route.appliedOperations), appliedOperations) &&
     route?.outputBindingStatus === 'bound' &&
+    replay?.metadata?.currentSourceBindingStatus === 'bound' &&
+    replay?.metadata?.outputBindingStatus === 'bound' &&
     typeof route.expectedCurrentHash === 'string' &&
     route.expectedCurrentHash === route.replayCurrentHash &&
+    route.replayCurrentHash === replay.currentHash &&
+    route.expectedCurrentHash === replay?.metadata?.expectedCurrentHash &&
+    route.replayCurrentHash === replay?.metadata?.observedCurrentHash &&
     typeof route.expectedOutputHash === 'string' &&
-    route.expectedOutputHash === route.replayOutputHash;
+    typeof route.projectionOutputHash === 'string' &&
+    route.expectedOutputHash === route.projectionOutputHash &&
+    route.expectedOutputHash === route.replayOutputHash &&
+    route.replayOutputHash === replay.outputHash &&
+    route.expectedOutputHash === replay?.metadata?.expectedOutputHash &&
+    route.replayOutputHash === replay?.metadata?.replayedOutputHash;
+}
+
+function hasIncompleteCurrentHeadReplayProof(replay) {
+  return replay?.status === 'accepted-clean' &&
+    isCurrentHeadCommutationProofRoute(replayProofRoute(replay)) &&
+    !isBoundedCurrentHeadReplay(replay);
+}
+
+function isCurrentHeadCommutationProofRoute(route) {
+  return route?.routeId === 'admit-independent-semantic-edit-current-head-commutation' &&
+    route?.proofKind === 'bounded-current-head-commutation';
 }
 
 function replayProofRoute(replay) {
@@ -245,4 +278,5 @@ function evidenceStatus(record, statuses) {
 
 function array(value) { if (value === undefined || value === null) return []; return Array.isArray(value) ? value : [value]; }
 function strings(value) { return array(value).map((entry) => String(entry ?? '')).filter(Boolean); }
+function sameStringList(left, right) { return left.length === right.length && left.every((entry, index) => entry === right[index]); }
 function compactRecord(value) { return Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined && (!Array.isArray(entry) || entry.length > 0))); }

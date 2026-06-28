@@ -237,6 +237,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge.mjs',
   './smoke/js-ts-safe-project-merge-output-graph.mjs',
   './smoke/js-ts-safe-project-merge-semantic-replay-proof.mjs',
+  './smoke/js-ts-safe-project-merge-semantic-replay-proof-metadata.mjs',
   './smoke/semantic-edit-bundle-admission.mjs',
   './smoke/semantic-edit-bundle-admission-statuses.mjs',
   './smoke/semantic-edit-bundle-admission-replay-required.mjs',
