@@ -4,5 +4,6 @@ export {
   normalizeRuntimeProofCapsule,
   runtimeEvidenceMetadataFromProof,
   runtimeProofSignals,
+  validateRuntimeProofAgainstProbe,
   validateSourceBoundRuntimeProof
 } from '@shapeshift-labs/frontier-runtime-proof';

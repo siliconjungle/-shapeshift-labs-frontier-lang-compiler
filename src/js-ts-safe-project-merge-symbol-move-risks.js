@@ -1,4 +1,5 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
+import { generatedProjectSourcePath } from './js-ts-safe-project-merge-split-merge-shapes.js';
 
 const symbolMoveRequiredEvidence = [
   'symbol-lineage-evidence',
@@ -22,8 +23,48 @@ function classifySymbolMoveRisks(graphDelta, branch, exportedSymbolMoves) {
       && !modulePathMatches(edge.resolvedModulePath, toPath)
     ));
     if (staleEdges.length) classifications.push(staleImportedSymbolMoveClassification(graphDelta, branch, move, staleEdges));
+    if (generatedProjectSourcePath(fromPath) || generatedProjectSourcePath(toPath)) {
+      classifications.push(generatedOutputSymbolMoveClassification(graphDelta, branch, move));
+    }
   }
   return classifications;
+}
+
+function generatedOutputSymbolMoveClassification(graphDelta, branch, exportedMove) {
+  const symbolName = exportedMove.details?.symbolName;
+  const fromPath = exportedMove.details?.fromSourcePath;
+  const toPath = exportedMove.details?.toSourcePath;
+  const generatedSourcePaths = uniqueStrings([fromPath, toPath].filter(generatedProjectSourcePath));
+  const code = `project-${branch}-exported-symbol-move-generated-output-boundary-blocked`;
+  const sourcePaths = uniqueStrings([fromPath, toPath]);
+  return {
+    kind: 'generated-output-symbol-move',
+    branch,
+    code,
+    operation: `blocked-${branch}-exported-symbol-move`,
+    sourcePaths,
+    pathRoles: pathRoles(sourcePaths, {
+      [fromPath]: 'base-generated-export-source',
+      [toPath]: 'branch-generated-export-source'
+    }),
+    details: compactRecord({
+      reasonCode: code,
+      conflictKey: stableKey(['project-exported-symbol-move-generated-output-boundary', branch, fromPath, toPath, symbolName]),
+      branch,
+      movementKind: 'symbol-move-between-files',
+      symbolMoveKind: 'exported',
+      ambiguityKind: 'generated-output-boundary',
+      symbolName,
+      exportedName: symbolName,
+      fromSourcePath: fromPath,
+      toSourcePath: toPath,
+      generatedOutputBoundary: true,
+      generatedSourcePaths,
+      baseSymbolMoveConflictKey: exportedMove.details?.conflictKey,
+      requiredEvidence: symbolMoveRequiredEvidence,
+      graphEvidence: generatedOutputGraphEvidence(graphDelta, branch, exportedMove)
+    })
+  };
 }
 
 function duplicateExportedSymbolMoveClassification(graphDelta, branch, baseSymbol, branchSymbols) {
@@ -125,6 +166,19 @@ function staleImportGraphEvidence(graphDelta, branch, exportedMove, staleEdges) 
       source: sourceEvidence(graphDelta, branch, exportedMove.details?.toSourcePath),
       staleImporters: uniqueStrings(staleEdges.map((edge) => edge.sourcePath)).map((sourcePath) => sourceEvidence(graphDelta, branch, sourcePath)),
       staleImports: staleEdges.map(importEdgeEvidence)
+    }
+  });
+}
+
+function generatedOutputGraphEvidence(graphDelta, branch, exportedMove) {
+  return compactRecord({
+    stageSummaries: stageSummaries(graphDelta),
+    base: {
+      source: sourceEvidence(graphDelta, 'base', exportedMove.details?.fromSourcePath),
+      symbolMove: exportedMove.details
+    },
+    [branch]: {
+      source: sourceEvidence(graphDelta, branch, exportedMove.details?.toSourcePath)
     }
   });
 }

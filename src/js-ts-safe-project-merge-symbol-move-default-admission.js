@@ -1,12 +1,23 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
+import { generatedProjectSourcePath } from './js-ts-safe-project-merge-split-merge-shapes.js';
 
 function projectSymbolMoveDefaultAdmissionProofs(graphDelta, branch, exportedSymbolMoves, importedSymbolMoves, requiredEvidence = []) {
   const proofs = new Map();
-  if (exportedSymbolMoves.length !== 1) return proofs;
-  const exportMove = exportedSymbolMoves[0];
-  const proof = projectSymbolMoveDefaultAdmissionProof(graphDelta, branch, exportMove, importedSymbolMoves, requiredEvidence);
-  const proofKey = symbolMoveProofKey(exportMove.details);
-  if (proof && proofKey) proofs.set(proofKey, proof);
+  if (!exportedSymbolMoves.length) return proofs;
+  const coveredImportMoveConflictKeys = new Set();
+  for (const exportMove of exportedSymbolMoves) {
+    const proof = projectSymbolMoveDefaultAdmissionProof(graphDelta, branch, exportMove, importedSymbolMoves, requiredEvidence);
+    const proofKey = symbolMoveProofKey(exportMove.details);
+    if (!proof || !proofKey || proofs.has(proofKey)) return new Map();
+    proofs.set(proofKey, proof);
+    for (const conflictKey of proof.importMoveConflictKeys ?? []) {
+      if (coveredImportMoveConflictKeys.has(conflictKey)) return new Map();
+      coveredImportMoveConflictKeys.add(conflictKey);
+    }
+  }
+  const importedConflictKeys = importedSymbolMoves.map((move) => move.details?.conflictKey);
+  if (!hasCompleteUniqueStringSet(importedConflictKeys)) return new Map();
+  if (!sameStringSet(importedConflictKeys, [...coveredImportMoveConflictKeys])) return new Map();
   return proofs;
 }
 
@@ -16,8 +27,9 @@ function projectSymbolMoveDefaultAdmissionProof(graphDelta, branch, exportMove, 
   const fromPath = details.fromSourcePath;
   const toPath = details.toSourcePath;
   if (!symbolName || !fromPath || !toPath) return undefined;
+  if (generatedProjectSourcePath(fromPath) || generatedProjectSourcePath(toPath)) return undefined;
   const matchingImportMoves = importedSymbolMoves.filter((move) => importedMoveMatchesExportMove(move, details));
-  if (!matchingImportMoves.length || matchingImportMoves.length !== importedSymbolMoves.length) return undefined;
+  if (!matchingImportMoves.length) return undefined;
   const baseOldReferences = projectSymbolImportReferences(graphDelta, 'base', fromPath, symbolName);
   const branchNewReferences = projectSymbolImportReferences(graphDelta, branch, toPath, symbolName);
   const branchOldReferences = projectSymbolImportReferences(graphDelta, branch, fromPath, symbolName);

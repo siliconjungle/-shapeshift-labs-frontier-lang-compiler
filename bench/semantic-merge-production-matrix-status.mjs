@@ -64,7 +64,7 @@ const rowProofs = new Map([
   }],
   ['JS/TS control-flow and effect graph', {
     anchors: jsTsAnchors,
-    evidence: ['test/smoke/semantic-effect-runtime-order-evidence.mjs', 'test/smoke/semantic-effect-runtime-resource-management.mjs'],
+    evidence: ['test/smoke/semantic-effect-runtime-order-evidence.mjs', 'test/smoke/semantic-effect-runtime-resource-management.mjs', 'test/smoke/semantic-effect-control-flow-denominator.mjs'],
     remaining: []
   }],
   ['Generic semantic edit admission and replay', {
@@ -79,7 +79,7 @@ const rowProofs = new Map([
   }],
   ['Split/merge modules and classes', {
     anchors: jsTsAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-split-merge-classifier.mjs', 'test/smoke/js-ts-safe-project-merge-admission-routes.mjs'],
+    evidence: ['test/smoke/js-ts-safe-project-merge-split-merge-classifier.mjs', 'test/smoke/js-ts-safe-project-merge-split-merge-multifile.mjs', 'test/smoke/js-ts-safe-project-merge-admission-routes.mjs'],
     remaining: []
   }],
   ['JSX/TSX prop graph', {
@@ -89,12 +89,12 @@ const rowProofs = new Map([
   }],
   ['JSX/TSX child order and render layout', {
     anchors: jsxAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-render-returns.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-render-branch-proof.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
+    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-render-returns.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-render-branch-proof.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-runtime-proof-bridge.mjs'],
     remaining: []
   }],
   ['JSX/TSX hook/context/render-risk graph', {
     anchors: jsxAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-hook-dependencies.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-context-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
+    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-hook-dependencies.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-context-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-runtime-proof-bridge.mjs'],
     remaining: []
   }],
   ['HTML static structure', {

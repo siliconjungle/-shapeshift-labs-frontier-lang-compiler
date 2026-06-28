@@ -62,8 +62,8 @@ assert.equal(workerSymbolMoveWithoutGraphStillBlocked.evidence.some((record) => 
 const alsoMovedExport = 'export const alsoMoved = 2;\n';
 const useAlsoMovedFromC = [importMovedLine('./c').replace('moved', 'alsoMoved'), 'export const other = alsoMoved;', ''].join('\n');
 const useAlsoMovedFromD = [importMovedLine('./d').replace('moved', 'alsoMoved'), 'export const other = alsoMoved;', ''].join('\n');
-const workerMultipleSymbolMovesDefaultBlocked = safeMergeJsTsProject({
-  id: 'js_ts_project_worker_multiple_symbol_moves_default_blocked',
+const workerMultipleSymbolMovesDefaultAdmitted = safeMergeJsTsProject({
+  id: 'js_ts_project_worker_multiple_symbol_moves_default_admitted',
   language: 'typescript',
   includeProjectGraphDelta: true,
   requireOutputDiagnostics: true,
@@ -76,9 +76,70 @@ const workerMultipleSymbolMovesDefaultBlocked = safeMergeJsTsProject({
     { sourcePath: 'src/also-use.ts', baseSourceText: useAlsoMovedFromC, workerSourceText: useAlsoMovedFromD, headSourceText: useAlsoMovedFromC }
   ]
 });
-assert.equal(workerMultipleSymbolMovesDefaultBlocked.status, 'blocked');
-assert.equal(workerMultipleSymbolMovesDefaultBlocked.summary.projectExportedSymbolMoveClassifications, 2);
-assert.equal(workerMultipleSymbolMovesDefaultBlocked.summary.projectImportedSymbolMoveClassifications, 2);
-assert.equal(workerMultipleSymbolMovesDefaultBlocked.summary.projectSymbolMoveAdmissions, 0);
-assert.equal(workerMultipleSymbolMovesDefaultBlocked.admission.reasonCodes.includes('project-worker-exported-symbol-move-blocked'), true);
-assert.equal(workerMultipleSymbolMovesDefaultBlocked.evidence.some((record) => record.kind === 'js-ts-project-symbol-move-admission'), false);
+assert.equal(workerMultipleSymbolMovesDefaultAdmitted.status, 'merged');
+assert.equal(workerMultipleSymbolMovesDefaultAdmitted.summary.projectExportedSymbolMoveClassifications, 2);
+assert.equal(workerMultipleSymbolMovesDefaultAdmitted.summary.projectImportedSymbolMoveClassifications, 2);
+assert.equal(workerMultipleSymbolMovesDefaultAdmitted.summary.projectSymbolMoveAdmissions, 4);
+assert.equal(workerMultipleSymbolMovesDefaultAdmitted.summary.projectExportedSymbolMoveAdmissions, 2);
+assert.equal(workerMultipleSymbolMovesDefaultAdmitted.summary.projectImportedSymbolMoveAdmissions, 2);
+assert.equal(new Set(workerMultipleSymbolMovesDefaultAdmitted.evidence.filter((record) => (
+  record.kind === 'js-ts-project-symbol-move-admission'
+  && record.defaultAdmission === true
+  && record.details.defaultAdmissionProof.route === 'default-exact-exported-symbol-move'
+)).map((record) => record.details.conflictKey)).size, 4);
+
+const workerDuplicateExportDefaultBlocked = safeMergeJsTsProject({
+  id: 'js_ts_project_worker_duplicate_export_default_blocked',
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  requireOutputDiagnostics: true,
+  requireDeclarationOutput: true,
+  typescript,
+  files: [
+    { sourcePath: 'src/a.ts', baseSourceText: movedExport, workerSourceText: movedExport, headSourceText: movedExport },
+    { sourcePath: 'src/b.ts', workerSourceText: movedExport },
+    { sourcePath: 'src/use.ts', baseSourceText: useMovedFromA, workerSourceText: useMovedFromA, headSourceText: useMovedFromA }
+  ]
+});
+assert.equal(workerDuplicateExportDefaultBlocked.status, 'blocked');
+assert.equal(workerDuplicateExportDefaultBlocked.admission.reasonCodes.includes('project-worker-exported-symbol-move-duplicate-export-blocked'), true);
+assert.equal(workerDuplicateExportDefaultBlocked.summary.projectSymbolMoveAdmissions, 0);
+assert.equal(workerDuplicateExportDefaultBlocked.evidence.some((record) => record.kind === 'js-ts-project-symbol-move-admission'), false);
+
+const workerStaleImportDefaultBlocked = safeMergeJsTsProject({
+  id: 'js_ts_project_worker_stale_import_default_blocked',
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  requireOutputDiagnostics: true,
+  requireDeclarationOutput: true,
+  typescript,
+  files: [
+    { sourcePath: 'src/a.ts', baseSourceText: movedExport, workerSourceText: '', headSourceText: movedExport },
+    { sourcePath: 'src/b.ts', workerSourceText: movedExport },
+    { sourcePath: 'src/use.ts', baseSourceText: useMovedFromA, workerSourceText: useMovedFromA, headSourceText: useMovedFromA }
+  ]
+});
+assert.equal(workerStaleImportDefaultBlocked.status, 'blocked');
+assert.equal(workerStaleImportDefaultBlocked.admission.reasonCodes.includes('project-worker-imported-symbol-move-stale-import-blocked'), true);
+assert.equal(workerStaleImportDefaultBlocked.summary.projectSymbolMoveAdmissions, 0);
+assert.equal(workerStaleImportDefaultBlocked.evidence.some((record) => record.kind === 'js-ts-project-symbol-move-admission'), false);
+
+const generatedUseFromA = [importMovedLine('./a.generated'), 'export const value = moved;', ''].join('\n');
+const generatedUseFromB = [importMovedLine('./b.generated'), 'export const value = moved;', ''].join('\n');
+const workerGeneratedOutputMoveDefaultBlocked = safeMergeJsTsProject({
+  id: 'js_ts_project_worker_generated_output_move_default_blocked',
+  language: 'typescript',
+  includeProjectGraphDelta: true,
+  requireOutputDiagnostics: true,
+  requireDeclarationOutput: true,
+  typescript,
+  files: [
+    { sourcePath: 'dist/a.generated.ts', baseSourceText: movedExport, workerSourceText: '', headSourceText: movedExport },
+    { sourcePath: 'dist/b.generated.ts', workerSourceText: movedExport },
+    { sourcePath: 'dist/use.generated.ts', baseSourceText: generatedUseFromA, workerSourceText: generatedUseFromB, headSourceText: generatedUseFromA }
+  ]
+});
+assert.equal(workerGeneratedOutputMoveDefaultBlocked.status, 'blocked');
+assert.equal(workerGeneratedOutputMoveDefaultBlocked.admission.reasonCodes.includes('project-worker-exported-symbol-move-generated-output-boundary-blocked'), true);
+assert.equal(workerGeneratedOutputMoveDefaultBlocked.summary.projectSymbolMoveAdmissions, 0);
+assert.equal(workerGeneratedOutputMoveDefaultBlocked.evidence.some((record) => record.kind === 'js-ts-project-symbol-move-admission'), false);
