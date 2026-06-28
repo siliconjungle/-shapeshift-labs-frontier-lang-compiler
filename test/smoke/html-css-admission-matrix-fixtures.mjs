@@ -6,7 +6,7 @@ export const matrixCells = [
   { id: 'html-css/css-parser-source-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS parser/source evidence is PostCSS/source-span bounded and does not imply cascade or browser equivalence' },
   { id: 'html-css/html-identity-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'HTML identity evidence records explicit/path identity and duplicate identity blockers before structural admission' },
   { id: 'html-css/css-selector-target-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS selector target evidence records target/specificity/rebase proof status before cascade admission' },
-  { id: 'html-css/html-structural-merge-admission', status: 'done', support: 'partial', evidence: 'js-ts-safe-project-merge-html-css', note: 'HTML structural merges require parser-backed identity evidence, carry token-list and add-only unkeyed structural evidence, and keep runtime/browser proof as a separate row' },
+  { id: 'html-css/html-structural-merge-admission', status: 'done', support: 'partial', evidence: 'js-ts-safe-project-merge-html-css', note: 'HTML structural merges require parser-backed identity evidence, carry token-list and add/delete-only unkeyed structural evidence, and keep runtime/browser proof as a separate row' },
   { id: 'html-css/css-cascade-merge-admission', status: 'done', support: 'partial', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS cascade merges require selector target, specificity, scoped cascade, and dependency evidence before admission' },
   { id: 'html-css/css-dependency-graph-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS dependency graph evidence is absent until custom property, animation, font, and asset dependency surfaces require it' },
   { id: 'html-css/css-runtime-descriptor-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS runtime descriptor evidence for property and page at-rules is parser/source bounded and separate from browser proof' },
@@ -88,8 +88,8 @@ export const htmlCssSummaryFieldOracles = [
     routeLane: 'layout-markup-graph',
     routeNext: 'prove-parser-identity-and-runtime-boundary-evidence-or-fix-duplicate-identity',
     signal: HtmlCssProjectMergeMissingSignals.htmlStructuralMerge,
-    fields: ['htmlFiles', 'htmlMergedFiles', 'htmlBlockedFiles', 'htmlParserEvidenceFiles', 'htmlIdentityEvidenceFiles', 'htmlUnkeyedStructuralAddFiles', 'htmlUnkeyedStructuralAddEvidenceRecords'],
-    missingSummary: { htmlFiles: 1, htmlParserEvidenceFiles: 1, htmlIdentityEvidenceFiles: 1, htmlMergedFiles: 0, htmlBlockedFiles: 1, htmlUnkeyedStructuralAddFiles: 0, htmlUnkeyedStructuralAddEvidenceRecords: 0 },
+    fields: ['htmlFiles', 'htmlMergedFiles', 'htmlBlockedFiles', 'htmlParserEvidenceFiles', 'htmlIdentityEvidenceFiles', 'htmlUnkeyedStructuralAddFiles', 'htmlUnkeyedStructuralAddEvidenceRecords', 'htmlUnkeyedStructuralDeleteFiles', 'htmlUnkeyedStructuralDeleteEvidenceRecords'],
+    missingSummary: { htmlFiles: 1, htmlParserEvidenceFiles: 1, htmlIdentityEvidenceFiles: 1, htmlMergedFiles: 0, htmlBlockedFiles: 1, htmlUnkeyedStructuralAddFiles: 0, htmlUnkeyedStructuralAddEvidenceRecords: 0, htmlUnkeyedStructuralDeleteFiles: 0, htmlUnkeyedStructuralDeleteEvidenceRecords: 0 },
     expectedProofStatus: (summary) => {
       if (!summary.htmlFiles) return 'absent';
       if (summary.htmlBlockedFiles || summary.htmlParserEvidenceFailedFiles || summary.htmlIdentityEvidenceFailedFiles) return 'failed';

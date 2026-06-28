@@ -45,7 +45,9 @@ function htmlStructuralMergeEvidenceSummary(htmlFiles) {
     htmlTokenListMergeFiles: htmlFiles.filter(hasHtmlTokenListMergeEvidence).length,
     htmlTokenListMergeEvidenceRecords: htmlFiles.reduce((sum, file) => sum + htmlTokenListMergeEvidenceRecords(file).length, 0),
     htmlUnkeyedStructuralAddFiles: htmlFiles.filter(hasHtmlUnkeyedStructuralAddEvidence).length,
-    htmlUnkeyedStructuralAddEvidenceRecords: htmlFiles.reduce((sum, file) => sum + htmlUnkeyedStructuralAddEvidenceRecords(file).length, 0)
+    htmlUnkeyedStructuralAddEvidenceRecords: htmlFiles.reduce((sum, file) => sum + htmlUnkeyedStructuralAddEvidenceRecords(file).length, 0),
+    htmlUnkeyedStructuralDeleteFiles: htmlFiles.filter(hasHtmlUnkeyedStructuralDeleteEvidence).length,
+    htmlUnkeyedStructuralDeleteEvidenceRecords: htmlFiles.reduce((sum, file) => sum + htmlUnkeyedStructuralDeleteEvidenceRecords(file).length, 0)
   };
 }
 
@@ -59,6 +61,18 @@ function htmlUnkeyedStructuralAddEvidenceRecords(file) {
     ...(Array.isArray(file?.result?.admission?.htmlUnkeyedStructuralAddEvidence) ? file.result.admission.htmlUnkeyedStructuralAddEvidence : []),
     ...(Array.isArray(file?.admission?.htmlUnkeyedStructuralAddEvidence) ? file.admission.htmlUnkeyedStructuralAddEvidence : [])
   ].filter((record) => record?.kind === 'frontier.lang.htmlUnkeyedStructuralAddEvidence' && record.parentExplicitIdentity === true && record.addOnly === true && record.autoMergeClaim === false && record.semanticEquivalenceClaim === false && typeof record.evidenceHash === 'string'));
+}
+
+function hasHtmlUnkeyedStructuralDeleteEvidence(file) {
+  return htmlUnkeyedStructuralDeleteEvidenceRecords(file).length > 0;
+}
+
+function htmlUnkeyedStructuralDeleteEvidenceRecords(file) {
+  return uniqueEvidence([
+    ...(Array.isArray(file?.result?.htmlUnkeyedStructuralDeleteEvidence) ? file.result.htmlUnkeyedStructuralDeleteEvidence : []),
+    ...(Array.isArray(file?.result?.admission?.htmlUnkeyedStructuralDeleteEvidence) ? file.result.admission.htmlUnkeyedStructuralDeleteEvidence : []),
+    ...(Array.isArray(file?.admission?.htmlUnkeyedStructuralDeleteEvidence) ? file.admission.htmlUnkeyedStructuralDeleteEvidence : [])
+  ].filter((record) => record?.kind === 'frontier.lang.htmlUnkeyedStructuralDeleteEvidence' && record.parentExplicitIdentity === true && record.deleteOnly === true && record.autoMergeClaim === false && record.semanticEquivalenceClaim === false && typeof record.evidenceHash === 'string'));
 }
 
 function uniqueEvidence(records) {
@@ -78,4 +92,4 @@ const HtmlTokenListEvidenceKinds = new Set([
 
 const HtmlTokenListAttributes = new Set(['class', 'part', 'itemprop']);
 
-export { hasHtmlClassTokenMergeEvidence, hasHtmlTokenListMergeEvidence, htmlClassTokenMergeEvidenceRecords, htmlStructuralMergeEvidenceSummary, htmlTokenListMergeEvidenceRecords, htmlUnkeyedStructuralAddEvidenceRecords };
+export { hasHtmlClassTokenMergeEvidence, hasHtmlTokenListMergeEvidence, htmlClassTokenMergeEvidenceRecords, htmlStructuralMergeEvidenceSummary, htmlTokenListMergeEvidenceRecords, htmlUnkeyedStructuralAddEvidenceRecords, htmlUnkeyedStructuralDeleteEvidenceRecords };

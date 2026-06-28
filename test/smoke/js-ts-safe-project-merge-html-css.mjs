@@ -165,6 +165,36 @@ assert.equal(htmlUnkeyedAddProject.files[0].result.htmlUnkeyedStructuralAddEvide
 assert.equal(htmlUnkeyedAddProject.files[0].result.htmlUnkeyedStructuralAddEvidence[0].semanticEquivalenceClaim, false);
 assert.equal(matrixSurface(htmlUnkeyedAddProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
 
+const htmlUnkeyedDeleteBase = [
+  '<section data-frontier-key="todo-root">',
+  '  <ul id="todos">',
+  '    <li>A</li>',
+  '    <li>B</li>',
+  '  </ul>',
+  '</section>',
+  ''
+].join('\n');
+const htmlUnkeyedDeleteProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_unkeyed_structural_delete',
+  files: [{
+    sourcePath: 'src/todos.html',
+    baseSourceText: htmlUnkeyedDeleteBase,
+    workerSourceText: htmlUnkeyedDeleteBase.replace('    <li>B</li>\n', ''),
+    headSourceText: htmlUnkeyedDeleteBase.replace('<ul id="todos">', '<ul id="todos" class="todo-list">')
+  }]
+});
+assert.equal(htmlUnkeyedDeleteProject.status, 'merged');
+assert.equal(htmlUnkeyedDeleteProject.summary.htmlUnkeyedStructuralDeleteFiles, 1);
+assert.equal(htmlUnkeyedDeleteProject.summary.htmlUnkeyedStructuralDeleteEvidenceRecords, 1);
+assert.match(htmlUnkeyedDeleteProject.outputFiles[0].sourceText, /<ul id="todos" class="todo-list">/);
+assert.doesNotMatch(htmlUnkeyedDeleteProject.outputFiles[0].sourceText, /<li>B<\/li>/);
+assert.equal(htmlUnkeyedDeleteProject.files[0].result.htmlUnkeyedStructuralDeleteEvidence[0].kind, 'frontier.lang.htmlUnkeyedStructuralDeleteEvidence');
+assert.equal(htmlUnkeyedDeleteProject.files[0].result.htmlUnkeyedStructuralDeleteEvidence[0].parentExplicitIdentity, true);
+assert.equal(htmlUnkeyedDeleteProject.files[0].result.htmlUnkeyedStructuralDeleteEvidence[0].deleteOnly, true);
+assert.equal(htmlUnkeyedDeleteProject.files[0].result.htmlUnkeyedStructuralDeleteEvidence[0].autoMergeClaim, false);
+assert.equal(htmlUnkeyedDeleteProject.files[0].result.htmlUnkeyedStructuralDeleteEvidence[0].semanticEquivalenceClaim, false);
+assert.equal(matrixSurface(htmlUnkeyedDeleteProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
+
 const htmlDuplicateIdentityBase = [
   '<main id="app">',
   '  <button data-frontier-key="dup">A</button>',
