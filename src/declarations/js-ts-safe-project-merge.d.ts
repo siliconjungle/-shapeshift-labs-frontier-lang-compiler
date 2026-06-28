@@ -14,7 +14,11 @@ import type { JsTsProjectSafeMergeAdmissionRoute, JsTsProjectSafeMergeAdmissionR
 import type { JsTsProjectSafeMergeConfidenceSummary, JsTsProjectSafeMergeMissingEvidenceTelemetry } from './js-ts-project-merge-confidence.js';
 import type { JsTsProjectSafeMergeSummary } from './js-ts-project-merge-summary.js';
 import type { JsTsProjectCommonJsRuntimeInteropProof } from './js-ts-project-merge-commonjs-interop.js';
-import type { JsTsProjectGlobalAugmentationCompatibilityProof } from './js-ts-project-merge-global-augmentation.js'; import type { JsTsProjectJsxRenderReturnBranchProof } from './js-ts-project-merge-jsx-render-branch.js'; import type { JsTsProjectSemanticEquivalenceProof } from './js-ts-project-merge-semantic-equivalence-proof.js';
+import type { JsTsProjectGlobalAugmentationCompatibilityProof } from './js-ts-project-merge-global-augmentation.js';
+import type { JsTsProjectJsxEventHandlerSourceProof } from './js-ts-project-merge-jsx-event-handler.js';
+import type { JsTsProjectJsxHookDependencySourceProof } from './js-ts-project-merge-jsx-hook-dependency.js';
+import type { JsTsProjectJsxRenderReturnBranchProof } from './js-ts-project-merge-jsx-render-branch.js';
+import type { JsTsProjectSemanticEquivalenceProof } from './js-ts-project-merge-semantic-equivalence-proof.js';
 import type { ParserTriviaEvidenceInput } from './source-preservation.js';
 
 export type { JsTsProjectMergeQualityGate, JsTsProjectMergeQualityGateDecision, JsTsProjectMergeQualityGateEvidence, JsTsProjectMergeQualityGateInput, JsTsProjectMergeQualityGateMissingEvidence, JsTsProjectMergeQualityGateRecord } from './js-ts-project-merge-quality-gates.js';
@@ -23,7 +27,10 @@ export type { JsTsProjectSafeMergeAdmissionRoute, JsTsProjectSafeMergeAdmissionR
 export type { JsTsProjectSafeMergeConfidenceSummary, JsTsProjectSafeMergeMissingEvidence, JsTsProjectSafeMergeMissingEvidenceRoute, JsTsProjectSafeMergeMissingEvidenceTelemetry, JsTsProjectSafeMergeRecommendedAction } from './js-ts-project-merge-confidence.js';
 export type { JsTsProjectMergeSummaryProofStatus, JsTsProjectSafeMergeSummary, JsTsProjectSourceTextMergeCandidateStatus } from './js-ts-project-merge-summary.js';
 export type { JsTsProjectCommonJsRuntimeInteropProof } from './js-ts-project-merge-commonjs-interop.js';
-export type { JsTsProjectGlobalAugmentationCompatibilityProof } from './js-ts-project-merge-global-augmentation.js'; export type { JsTsProjectJsxRenderReturnBranchArmOrigin, JsTsProjectJsxRenderReturnBranchControlKind, JsTsProjectJsxRenderReturnBranchProof } from './js-ts-project-merge-jsx-render-branch.js';
+export type { JsTsProjectGlobalAugmentationCompatibilityProof } from './js-ts-project-merge-global-augmentation.js';
+export type { JsTsProjectJsxEventHandlerSourceProof } from './js-ts-project-merge-jsx-event-handler.js';
+export type { JsTsProjectJsxHookDependencySourceProof } from './js-ts-project-merge-jsx-hook-dependency.js';
+export type { JsTsProjectJsxRenderReturnBranchArmOrigin, JsTsProjectJsxRenderReturnBranchControlKind, JsTsProjectJsxRenderReturnBranchProof } from './js-ts-project-merge-jsx-render-branch.js';
 
 export type JsTsProjectSafeMergeStatus = 'merged' | 'blocked';
 export type JsTsProjectSafeMergeFileStatus = 'merged' | 'blocked';
@@ -107,7 +114,15 @@ export interface JsTsProjectSafeMergeInput {
   readonly commonJsRuntimeInteropProof?: JsTsProjectCommonJsRuntimeInteropProof;
   readonly commonJsRuntimeInteropProofs?: readonly JsTsProjectCommonJsRuntimeInteropProof[];
   readonly globalAugmentationCompatibilityProof?: JsTsProjectGlobalAugmentationCompatibilityProof;
-  readonly globalAugmentationCompatibilityProofs?: readonly JsTsProjectGlobalAugmentationCompatibilityProof[]; readonly jsxRenderReturnBranchProof?: JsTsProjectJsxRenderReturnBranchProof; readonly jsxRenderReturnBranchProofs?: readonly JsTsProjectJsxRenderReturnBranchProof[]; readonly externalSemanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof; readonly semanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof;
+  readonly globalAugmentationCompatibilityProofs?: readonly JsTsProjectGlobalAugmentationCompatibilityProof[];
+  readonly jsxRenderReturnBranchProof?: JsTsProjectJsxRenderReturnBranchProof;
+  readonly jsxRenderReturnBranchProofs?: readonly JsTsProjectJsxRenderReturnBranchProof[];
+  readonly jsxHookDependencySourceProof?: JsTsProjectJsxHookDependencySourceProof;
+  readonly jsxHookDependencySourceProofs?: readonly JsTsProjectJsxHookDependencySourceProof[];
+  readonly jsxEventHandlerSourceProof?: JsTsProjectJsxEventHandlerSourceProof;
+  readonly jsxEventHandlerSourceProofs?: readonly JsTsProjectJsxEventHandlerSourceProof[];
+  readonly externalSemanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof;
+  readonly semanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof;
   readonly htmlMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly markupMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly htmlMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>; readonly markupMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>;
   readonly cssMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly styleMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly cssMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>; readonly styleMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>;
   readonly disableProjectCssDependencyGraphProofSynthesis?: boolean;

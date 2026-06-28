@@ -221,10 +221,10 @@ function jsxEventHandlerRisk(stage, eventHandlers) {
       proofStatus: 'static-event-handler-reference-evidence',
       handlerReferenceText: handler.handlerReferenceText ?? handler.propName,
       expressionHash: handler.expressionHash,
-      signatureHash: `event-handler:${stage}:${handler.propName}:${handler.expressionHash}`
+      signatureHash: handler.signatureHash ?? `event-handler:${stage}:${handler.propName}:${handler.expressionHash}`
     })),
     eventHandlerPropCount: eventHandlers.length,
-    eventHandlerSignatureHash: `event-handlers:${stage}:${eventHandlers.map((handler) => `${handler.propName}:${handler.expressionHash}`).join('|')}`,
+    eventHandlerSignatureHash: eventHandlers.map((handler) => handler.signatureHash ?? `event-handler:${stage}:${handler.propName}:${handler.expressionHash}`).join('|'),
     renderRiskSignatureHash: `render-risk:event-handlers:${stage}`,
     sourceHash: `source:${stage}`
   };

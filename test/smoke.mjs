@@ -95,7 +95,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-jsx-spread-props.mjs',
   './smoke/js-ts-safe-project-merge-jsx-render-returns.mjs',
   './smoke/js-ts-safe-project-merge-jsx-render-return-collections.mjs',
-  './smoke/js-ts-safe-project-merge-jsx-render-branch-proof.mjs',
+  './smoke/js-ts-safe-project-merge-jsx-render-branch-proof.mjs', './smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs',
   './smoke/js-ts-safe-project-merge-source-span-graph.mjs',
   './smoke/js-ts-safe-project-merge-source-span-roundtrip-line-column.mjs',
   './smoke/js-ts-safe-project-merge-source-map-generated-boundary.mjs',

@@ -1,0 +1,33 @@
+export interface JsTsProjectJsxEventHandlerSourceProof {
+  readonly id?: string;
+  readonly kind?: 'frontier.lang.jsxEventHandlerSourceProof' | string;
+  readonly schema?: 'frontier.lang.jsxEventHandlerSourceProof.v1' | string;
+  readonly version?: 1;
+  readonly status: 'passed' | 'verified' | 'failed' | 'missing' | 'stale' | string;
+  readonly evidenceId?: string;
+  readonly evidenceIds?: readonly string[];
+  readonly sourcePath: string;
+  readonly identityKey?: string;
+  readonly baseSourceHash: string;
+  readonly workerSourceHash: string;
+  readonly headSourceHash: string;
+  readonly outputSourceHash: string;
+  readonly publicOwnerName?: string;
+  readonly tagName?: string;
+  readonly tagKey?: string;
+  readonly baseEventHandlerSignatureHash?: string;
+  readonly workerEventHandlerSignatureHash?: string;
+  readonly headEventHandlerSignatureHash?: string;
+  readonly outputEventHandlerSignatureHash?: string;
+  readonly outputEventHandlerPropNames?: readonly string[];
+  readonly workerAddedEventHandlerPropNames?: readonly string[];
+  readonly headAddedEventHandlerPropNames?: readonly string[];
+  readonly eventHandlerSourcePreservationHash: string;
+  readonly proofHash?: string;
+  readonly autoMergeClaim: false;
+  readonly semanticEquivalenceClaim: false;
+  readonly runtimeEquivalenceClaim: false;
+  readonly renderEquivalenceClaim: false;
+  readonly eventHandlerSourcePreservationClaim: true;
+  readonly claimScope: 'static-event-handler-source-preservation-only';
+}

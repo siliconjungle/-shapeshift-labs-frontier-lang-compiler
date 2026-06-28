@@ -84,18 +84,18 @@ const rowProofs = new Map([
   }],
   ['JSX/TSX prop graph', {
     anchors: jsxAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-prop-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-prop-contracts.mjs'],
-    remaining: ['Live real-repo checkout proof', 'Event-handler proof bridge']
+    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-prop-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-prop-contracts.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
+    remaining: ['Live real-repo checkout proof']
   }],
   ['JSX/TSX child order and render layout', {
     anchors: jsxAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-render-returns.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-render-branch-proof.mjs'],
-    remaining: ['Hook dependency proof bridge', 'Event-handler proof bridge']
+    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-render-returns.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-render-branch-proof.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
+    remaining: ['JSX context/wrapper render proof corpus', 'Live real-repo checkout proof']
   }],
   ['JSX/TSX hook/context/render-risk graph', {
     anchors: jsxAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-hook-dependencies.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-context-values.mjs'],
-    remaining: ['Hook dependency proof bridge', 'Live real-repo checkout proof']
+    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-hook-dependencies.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-context-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
+    remaining: ['JSX context/wrapper render proof corpus', 'Live real-repo checkout proof']
   }],
   ['HTML static structure', {
     anchors: htmlCssAnchors,

@@ -22,6 +22,7 @@
     "./public-api-js-ts-inference-syntax-types.ts",
     "./public-api-js-ts-jsx-render-branch-types.ts",
     "./public-api-js-ts-jsx-graph-types.ts",
+    "./public-api-js-ts-jsx-proof-bridge-types.ts",
     "./public-api-js-ts-module-declaration-shape-types.ts",
     "./public-api-js-ts-project-types.ts",
     "./public-api-js-ts-runtime-order-types.ts",

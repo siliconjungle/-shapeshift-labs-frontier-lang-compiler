@@ -38,6 +38,8 @@ export * from './declarations/js-ts-project-merge-declaration-emit-parity.js';
 export * from './declarations/js-ts-project-merge-declarations.js';
 export * from './declarations/js-ts-project-merge-diagnostics.js';
 export * from './declarations/js-ts-project-merge-tsconfig.js';
+export * from './declarations/js-ts-project-merge-jsx-event-handler.js';
+export * from './declarations/js-ts-project-merge-jsx-hook-dependency.js';
 export * from './declarations/js-ts-project-merge-jsx-render-branch.js';
 export * from './declarations/js-ts-project-merge-semantic-equivalence-proof.js';
 export * from './declarations/native-diff.js';
