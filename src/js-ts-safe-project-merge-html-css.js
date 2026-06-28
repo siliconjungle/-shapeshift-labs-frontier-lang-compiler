@@ -182,6 +182,7 @@ function htmlProofGapSummary(reasonCode) {
   if (reasonCode === 'style-runtime-boundary') return 'HTML style blocks affect browser cascade and rendering and require source-bound runtime evidence.';
   if (reasonCode === 'template-runtime-boundary') return 'HTML template content can be cloned, stamped, or consumed by host code and requires source-bound runtime evidence.';
   if (reasonCode === 'slot-runtime-boundary') return 'HTML slots participate in shadow-DOM distribution and require source-bound runtime evidence.';
+  if (reasonCode === 'custom-runtime-attribute-boundary') return 'Custom HTML runtime attributes are interpreted by client runtimes and require source-bound runtime evidence.';
   if (reasonCode === 'custom-element-runtime-boundary') return 'Custom element upgrade, lifecycle, attributes, and shadow behavior require source-bound runtime evidence.';
   if (reasonCode === 'framework-directive-boundary') return 'Framework directive attributes are interpreted by framework runtimes and require source-bound runtime evidence.';
   if (reasonCode === 'event-handler-runtime-boundary') return 'HTML event handler attributes execute in the browser runtime and require source-bound runtime evidence.';
@@ -203,6 +204,7 @@ function htmlProofGapNextProof(reasonCode) {
   if (reasonCode === 'style-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-style-runtime"');
   if (reasonCode === 'template-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-template-runtime"');
   if (reasonCode === 'slot-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-slot-runtime"');
+  if (reasonCode === 'custom-runtime-attribute-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-custom-runtime-attribute" and boundaryAttributes for the changed custom runtime attributes');
   if (reasonCode === 'custom-element-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-custom-element-runtime"');
   if (reasonCode === 'framework-directive-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-framework-directive" and boundaryAttributes for the changed directive attributes');
   if (reasonCode === 'event-handler-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary and boundaryAttributes');
@@ -243,7 +245,11 @@ function blockedHtmlCssFile(file, context, result) {
   const conflicts = normalizeHtmlCssConflicts(result.conflicts ?? [], context.language);
   const admission = blockedHtmlCssAdmission(result.admission, context.language);
   const normalizedResult = compactRecord({ ...result, conflicts, admission });
-  return compactRecord({ kind: 'frontier.lang.jsTsProjectSafeMergeFile', version: 1, sourcePath: file.sourcePath, language: context.language, status: 'blocked', operation: 'blocked-merge', result: normalizedResult, conflicts, admission, summary: result.summary, conflictKeys: [`source#${file.sourcePath}`] });
+  return compactRecord({
+    kind: 'frontier.lang.jsTsProjectSafeMergeFile', version: 1, sourcePath: file.sourcePath, language: context.language, status: 'blocked', operation: 'blocked-merge',
+    baseHash: hashText(file.baseSourceText), workerHash: hashText(file.workerSourceText), headHash: hashText(file.headSourceText),
+    result: normalizedResult, conflicts, admission, summary: result.summary, conflictKeys: [`source#${file.sourcePath}`]
+  });
 }
 
 function blockedHtmlCssAdmission(admission = {}, language) {

@@ -194,6 +194,12 @@ const semanticMergeJsxMatrixCells = [
     note: 'expression-bodied JSX maps over local const array literals emit source-item and static key identity evidence while dynamic maps and render equivalence remain unsupported'
   },
   {
+    id: 'jsx-tsx-element-prop-graph/static-render-return-collection-item-proof-bridge',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-jsx-render-return-collections',
+    note: 'single static array/fragment/map render-return deltas accept source-bound item/key preservation proof while stale hashes, item mismatches, mixed runtime risks, and broad render/runtime equivalence claims fail closed'
+  },
+  {
     id: 'jsx-tsx-element-prop-graph/fragment-render-return-collection-evidence',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-jsx-render-returns',
@@ -229,3 +235,9 @@ assert.equal(conditionalConditionProofCell.evidence, 'js-ts-safe-project-merge-j
 assert.match(conditionalConditionProofCell.note, /condition-origin/);
 assert.match(conditionalConditionProofCell.note, /mismatched condition hashes/);
 assert.match(conditionalConditionProofCell.note, /broad render equivalence claims fail closed/);
+
+const collectionItemProofCell = semanticMergeJsxMatrixCells.find((cell) => cell.id === 'jsx-tsx-element-prop-graph/static-render-return-collection-item-proof-bridge');
+assert.equal(collectionItemProofCell.status, 'done');
+assert.equal(collectionItemProofCell.evidence, 'js-ts-safe-project-merge-jsx-render-return-collections');
+assert.match(collectionItemProofCell.note, /source-bound item\/key preservation proof/);
+assert.match(collectionItemProofCell.note, /broad render\/runtime equivalence claims fail closed/);

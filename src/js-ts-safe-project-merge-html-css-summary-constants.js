@@ -13,6 +13,7 @@ const HtmlRuntimeBoundaryReasonCodes = new Set([
   'style-runtime-boundary',
   'template-runtime-boundary',
   'slot-runtime-boundary',
+  'custom-runtime-attribute-boundary',
   'custom-element-runtime-boundary',
   'event-handler-runtime-boundary',
   'inline-style-runtime-boundary',

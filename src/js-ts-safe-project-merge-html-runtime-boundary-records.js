@@ -55,6 +55,7 @@ function htmlRuntimeBoundaryRecords(sourceText) {
 
 function htmlRuntimeAttributeSpec(name, tagName) {
   if (isHtmlFrameworkDirectiveAttribute(name)) return { boundary: 'html-framework-directive', reasonCode: 'framework-directive-boundary' };
+  if (isHtmlCustomRuntimeAttribute(name)) return { boundary: 'html-custom-runtime-attribute', reasonCode: 'custom-runtime-attribute-boundary' };
   if (/^on[\w:.-]+$/i.test(name)) return { boundary: 'html-event-handler-attribute', reasonCode: 'event-handler-runtime-boundary' };
   if (name === 'style') return { boundary: 'html-inline-style-attribute', reasonCode: 'inline-style-runtime-boundary' };
   if (tagName === 'iframe' && name === 'srcdoc') return { boundary: 'html-iframe-srcdoc-attribute', reasonCode: 'iframe-srcdoc-runtime-boundary' };
@@ -101,6 +102,10 @@ function isHtmlFrameworkDirectiveAttribute(name) {
     /^(?:on|bind|class|use|transition|in|out|animate|let):/.test(name) ||
     /^ng-/.test(name) ||
     /^data-ng-/.test(name);
+}
+
+function isHtmlCustomRuntimeAttribute(name) {
+  return name.startsWith('hx-') || name.startsWith('data-hx-');
 }
 
 function isAngularFrameworkDirectiveAttribute(name) {

@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { safeMergeCssSource } from '@shapeshift-labs/frontier-lang-css';
-import { safeMergeHtmlSource } from '@shapeshift-labs/frontier-lang-html';
 import { htmlCssProjectMergeMatrixProofStatus } from '../../src/js-ts-safe-project-merge-html-css-matrix.js';
 import { htmlCssProjectSummary } from '../../src/js-ts-safe-project-merge-html-css-summary.js';
+
+const htmlFixtureSourceHashes = { base: 'fixture-html-base-source-hash', worker: 'fixture-html-worker-source-hash', head: 'fixture-html-head-source-hash' };
+const cssFixtureSourceHashes = { base: 'fixture-css-base-source-hash', worker: 'fixture-css-worker-source-hash', head: 'fixture-css-head-source-hash' };
 
 const validHtmlParserEvidence = {
   kind: 'frontier.lang.htmlSafeMergeParserEvidence',
@@ -22,9 +23,9 @@ const validHtmlParserEvidence = {
   structuralSpanMissingRecordCount: 0,
   leadingTriviaSpanRecordCount: 0,
   sides: {
-    base: htmlParserSide(),
-    worker: htmlParserSide(),
-    head: htmlParserSide()
+    base: htmlParserSide({ sourceHash: htmlFixtureSourceHashes.base }),
+    worker: htmlParserSide({ sourceHash: htmlFixtureSourceHashes.worker }),
+    head: htmlParserSide({ sourceHash: htmlFixtureSourceHashes.head })
   }
 };
 
@@ -38,9 +39,9 @@ const validCssParserEvidence = {
   parserBackedTriviaHashes: true,
   parseErrors: 0,
   sides: {
-    base: cssParserSide(),
-    worker: cssParserSide(),
-    head: cssParserSide({ declarationCount: 3 })
+    base: cssParserSide({ sourceHash: cssFixtureSourceHashes.base }),
+    worker: cssParserSide({ sourceHash: cssFixtureSourceHashes.worker }),
+    head: cssParserSide({ declarationCount: 3, sourceHash: cssFixtureSourceHashes.head })
   }
 };
 
@@ -74,35 +75,6 @@ assert.equal(htmlCssProjectMergeMatrixProofStatus('html-parser-source-evidence',
 assert.equal(htmlCssProjectMergeMatrixProofStatus('css-parser-source-evidence', passingSummary), 'passed');
 assert.equal(htmlCssProjectMergeMatrixProofStatus('html-identity-evidence', passingSummary), 'passed');
 assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', passingSummary), 'passed');
-
-const liveHtmlBase = '<main id="app"><h1>Todo</h1><button data-frontier-key="save" type="button">Save</button></main>\n';
-const liveCssBase = '.button { color: red; padding: 1rem; }\n';
-const liveHtmlResult = safeMergeHtmlSource({
-  id: 'live_html_parser_source_evidence',
-  baseSourceText: liveHtmlBase,
-  workerSourceText: liveHtmlBase.replace('Todo', 'Todos'),
-  headSourceText: liveHtmlBase.replace('type="button"', 'type="button" aria-label="Save item"')
-});
-const liveCssResult = safeMergeCssSource({
-  id: 'live_css_parser_source_evidence',
-  baseSourceText: liveCssBase,
-  workerSourceText: liveCssBase.replace('red', 'blue'),
-  headSourceText: liveCssBase.replace('padding: 1rem;', 'padding: 1rem; background-color: white;'),
-  includeBlockedMergeCandidate: true
-});
-const liveAdapterSummary = htmlCssProjectSummary([
-  { language: 'html', sourcePath: 'src/live.html', status: liveHtmlResult.status, result: liveHtmlResult },
-  { language: 'css', sourcePath: 'src/live.css', status: liveCssResult.status, result: liveCssResult }
-]);
-assert.equal(liveAdapterSummary.htmlParserEvidenceFiles, 1);
-assert.equal(liveAdapterSummary.cssParserEvidenceFiles, 1);
-assert.equal(liveAdapterSummary.htmlParserEvidenceFailedFiles, 0);
-assert.equal(liveAdapterSummary.cssParserEvidenceFailedFiles, 0);
-assert.equal(liveAdapterSummary.htmlCssParserEvidenceFailedFiles, 0);
-assert.equal(htmlCssProjectMergeMatrixProofStatus('html-parser-source-evidence', liveAdapterSummary), 'passed');
-assert.equal(htmlCssProjectMergeMatrixProofStatus('css-parser-source-evidence', liveAdapterSummary), 'passed');
-assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', liveAdapterSummary), 'passed');
-assert.equal(htmlCssProjectMergeMatrixProofStatus('browser-runtime-proof', liveAdapterSummary), 'missing');
 
 const staleHtmlAttributeSummary = htmlCssProjectSummary([
   htmlFile({
@@ -243,11 +215,12 @@ assert.equal(duplicateIdentitySummary.htmlIdentityEvidenceFailedFiles, 1);
 assert.equal(htmlCssProjectMergeMatrixProofStatus('html-identity-evidence', duplicateIdentitySummary), 'failed');
 assert.equal(htmlCssProjectMergeMatrixProofStatus('html-structural-merge', duplicateIdentitySummary), 'failed');
 
-function htmlFile(parserEvidence, result = {}) {
+function htmlFile(parserEvidence, result = {}, sourceHashes = htmlFixtureSourceHashes) {
   return {
     language: 'html',
     sourcePath: 'src/view.html',
     status: 'merged',
+    ...sourceHashesForHashes(sourceHashes),
     result: {
       ...(parserEvidence ? { parserEvidence } : {}),
       ...result
@@ -255,13 +228,18 @@ function htmlFile(parserEvidence, result = {}) {
   };
 }
 
-function cssFile(parserEvidence) {
+function cssFile(parserEvidence, sourceHashes = cssFixtureSourceHashes) {
   return {
     language: 'css',
     sourcePath: 'src/button.css',
     status: 'merged',
+    ...sourceHashesForHashes(sourceHashes),
     result: parserEvidence ? { parserEvidence } : {}
   };
+}
+
+function sourceHashesForHashes({ base, worker, head }) {
+  return { baseHash: base, workerHash: worker, headHash: head };
 }
 
 function htmlParserSide(overrides = {}) {

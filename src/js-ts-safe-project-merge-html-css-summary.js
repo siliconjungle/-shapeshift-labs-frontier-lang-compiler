@@ -1,5 +1,6 @@
 import { CssDependencyAtRuleNames, CssDependencyCodeFragments, CssDependencyMissingProofReasonCodes, CssDependencySurfacePatterns, CssRuntimeDescriptorReasonCodes, CssRuntimeEquivalenceReasonCodes, HtmlFrameworkBoundaryReasonCodes, HtmlRuntimeBoundaryReasonCodes, RequiredParserEvidenceSideNames, ScopedCascadeMissingProofReasonCodes } from './js-ts-safe-project-merge-html-css-summary-constants.js';
 import { cssDescriptorEvidenceCount, cssFontFaceDescriptorEvidenceCount, cssPageDescriptorEvidenceCount, cssPropertyDescriptorEvidenceCount, hasSourceBoundPageDescriptorEvidence, hasSourceBoundPropertyDescriptorEvidence } from './js-ts-safe-project-merge-css-runtime-descriptor-evidence.js';
+import { parserEvidenceSourceHashBindingValid } from './js-ts-safe-project-merge-html-css-parser-source-hash-binding.js';
 
 function htmlCssProjectSummary(files) {
   const htmlFiles = files.filter(isHtmlProjectFile), cssFiles = files.filter(isCssProjectFile), htmlCssFiles = [...htmlFiles, ...cssFiles];
@@ -40,6 +41,7 @@ function hasHtmlParserEvidence(file) {
     evidence.parserNames.includes('parse5') &&
     hasHtmlParserSpanCounts(evidence) &&
     htmlParserSideEvidenceValid(evidence) &&
+    parserEvidenceSourceHashBindingValid(file, evidence) &&
     sides.length > 0 &&
     sides.every((side) => side.parserName === 'parse5' && hasHtmlParserSpanCounts(side) && htmlParserSideEvidenceValid(side));
 }
@@ -51,6 +53,7 @@ function hasCssParserEvidence(file) {
     Array.isArray(evidence.parserNames) &&
     evidence.parserNames.includes('postcss') &&
     cssParserEvidenceValid(evidence) &&
+    parserEvidenceSourceHashBindingValid(file, evidence) &&
     sides.length > 0 &&
     sides.every((side) => side.parserName === 'postcss' && cssParserSideEvidenceValid(side));
 }

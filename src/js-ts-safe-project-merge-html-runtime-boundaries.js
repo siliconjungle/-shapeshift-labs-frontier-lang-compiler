@@ -167,6 +167,7 @@ function requiredHtmlRuntimeBoundarySignals(reasonCode, boundary) {
   if (text.includes('resource-loading')) return ['html-resource-loading-runtime', 'resource-loading-runtime'];
   if (text.includes('template')) return ['html-template-runtime', 'template-runtime'];
   if (text.includes('slot')) return ['html-slot-runtime', 'slot-runtime'];
+  if (text.includes('custom-runtime-attribute')) return ['html-custom-runtime-attribute-runtime', 'custom-runtime-attribute-runtime'];
   if (text.includes('custom-element')) return ['html-custom-element-runtime', 'custom-element-runtime'];
   if (text.includes('framework-directive')) return ['html-framework-directive-runtime', 'framework-directive-runtime'];
   return ['html-browser-runtime', 'browser-runtime'];
