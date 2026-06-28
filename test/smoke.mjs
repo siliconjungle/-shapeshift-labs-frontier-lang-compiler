@@ -140,7 +140,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-html-runtime-boundary-framework.mjs',
   './smoke/js-ts-safe-project-merge-html-runtime-boundary-navigation-frame.mjs',
   './smoke/js-ts-safe-project-merge-html-runtime-proof-admission.mjs',
-  './smoke/js-ts-safe-project-merge-html-runtime-playwright-proof.mjs',
+  './smoke/js-ts-safe-project-merge-html-runtime-playwright-proof.mjs', './smoke/js-ts-safe-project-merge-html-css-runtime-proof-corpus.mjs',
   './smoke/js-ts-safe-project-merge-html-runtime-proof-admission-framework-navigation.mjs',
   './smoke/js-ts-safe-project-merge-html-resource-runtime-boundary.mjs',
   './smoke/js-ts-safe-project-merge-html-structural-runtime-boundary.mjs',

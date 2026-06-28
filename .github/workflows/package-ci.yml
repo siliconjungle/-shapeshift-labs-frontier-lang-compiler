@@ -72,6 +72,17 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Semantic merge matrix status
+        run: |
+          mkdir -p artifacts
+          node bench/semantic-merge-production-matrix-status.mjs --pretty > artifacts/semantic-merge-production-matrix-status.json
+
+      - name: Upload semantic merge matrix status
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-merge-production-matrix-status
+          path: artifacts/semantic-merge-production-matrix-status.json
+
       - name: Fuzz
         run: npm run fuzz -- --cases 200
 

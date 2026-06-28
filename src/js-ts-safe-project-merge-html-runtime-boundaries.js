@@ -1,7 +1,7 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { hashText, uniqueStrings } from './js-ts-safe-project-merge-core.js';
 import { changedHtmlRuntimeBoundaryAttributes, htmlRuntimeBoundaryGroups } from './js-ts-safe-project-merge-html-runtime-boundary-records.js';
-import { runtimeEvidenceMetadataFromProof } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
+import { FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND, runtimeEvidenceMetadataFromProof } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
 
 function htmlRuntimeBoundaryChanges(base, worker, head) {
   const baseBoundaries = htmlRuntimeBoundaryGroups(base);
@@ -37,7 +37,7 @@ function isHtmlRuntimeBoundaryProofForChange(proof, change, binding) {
     proof.sourcePath === binding.sourcePath &&
     htmlProofCoversValue(proof.reasonCode, proof.reasonCodes, change.reasonCode) &&
     htmlProofCoversValue(proof.side, proof.sides, change.side) &&
-    htmlProofCoversValue(proof.boundary, proof.boundaries, change.boundary) &&
+    htmlProofCoversValue(proofBoundaryValue(proof), proofBoundaryValues(proof), change.boundary) &&
     sameStringSet(htmlProofBoundaryAttributes(proof), change.boundaryAttributes) &&
     htmlRuntimeBoundaryProofSourceBound(proof, binding) &&
     !htmlRuntimeBoundaryProofMakesBroadClaims(proof) &&
@@ -67,7 +67,8 @@ function htmlRuntimeBoundaryProofRecord(proof, change, binding) {
   const runtimeEvidence = htmlRuntimeBoundaryProofEvidenceMetadata(proof, change);
   return compactRecord({
     id: proof.id,
-    kind: proof.kind,
+    kind: proof.sourceBoundRuntimeProofKind ?? proof.kind,
+    adapterProofKind: proof.sourceBoundRuntimeProofKind ? proof.kind : undefined,
     status: 'passed',
     proofLevel: proof.proofLevel ?? 'html-runtime-boundary-evidence-bound',
     reasonCode: change.reasonCode,
@@ -95,6 +96,8 @@ function htmlRuntimeBoundaryProofRecord(proof, change, binding) {
     runtimeComputedStyleHash: runtimeEvidence?.capsule?.computedStyleHash,
     runtimeLayoutSnapshotHash: runtimeEvidence?.capsule?.layoutSnapshotHash,
     runtimeEventTraceHash: runtimeEvidence?.capsule?.eventTraceHash,
+    runtimeLayoutShiftHash: runtimeEvidence?.capsule?.layoutShiftHash,
+    runtimeScreenshotHash: runtimeEvidence?.capsule?.screenshotHash,
     runtimeCumulativeLayoutShift: runtimeEvidence?.capsule?.cumulativeLayoutShift,
     runtimeEvidenceBound: runtimeEvidence !== undefined,
     browserRuntimeEquivalenceClaim: true,
@@ -106,7 +109,23 @@ function htmlRuntimeBoundaryProofRecord(proof, change, binding) {
 
 function htmlRuntimeBoundaryProofEvidenceMetadata(proof, change) {
   const requiredSignals = requiredHtmlRuntimeBoundarySignals(change.reasonCode, change.boundary);
-  return runtimeEvidenceMetadataFromProof(proof, { requiredSignals });
+  return runtimeEvidenceMetadataFromProof(proof, {
+    requiredSignals,
+    ...(requiresRuntimeProofCapsuleValidation(proof) ? {
+      requireRuntimeProofCapsule: true,
+      requireTelemetryHash: true,
+      maxCumulativeLayoutShift: typeof proof.maxCumulativeLayoutShift === 'number' ? proof.maxCumulativeLayoutShift : 0.01
+    } : {})
+  });
+}
+
+function requiresRuntimeProofCapsuleValidation(proof) {
+  return proof?.kind === FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND ||
+    proof?.runtimeProofCapsule !== undefined ||
+    proof?.proofCapsule !== undefined ||
+    proof?.fixtureCapsule !== undefined ||
+    proof?.runtimeEvidence?.capsule !== undefined ||
+    proof?.browserEvidence?.capsule !== undefined;
 }
 
 function requiredHtmlRuntimeBoundarySignals(reasonCode, boundary) {
@@ -156,6 +175,18 @@ function htmlProofCoversValue(value, values, expected) {
   return value === expected || (Array.isArray(values) && values.includes(expected));
 }
 
+function proofBoundaryValue(proof) {
+  return proof.boundary ?? proof.boundaryKey ?? proof.recordKey;
+}
+
+function proofBoundaryValues(proof) {
+  return [
+    ...asArray(proof.boundaries),
+    ...asArray(proof.boundaryKeys),
+    ...asArray(proof.recordKeys)
+  ];
+}
+
 function htmlProofBoundaryAttributes(proof) {
   return proof.boundaryAttributes ??
     proof.changedBoundaryAttributes ??
@@ -175,6 +206,7 @@ function asArray(value) {
 }
 
 const HtmlRuntimeBoundaryProofKinds = new Set([
+  FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND,
   'html-browser-runtime-proof',
   'html-source-bound-browser-runtime-proof',
   'html-source-bound-runtime-proof',

@@ -45,12 +45,12 @@ const rowProofs = new Map([
   ['JS/TS parser, source spans, and trivia', {
     anchors: jsTsAnchors,
     evidence: ['test/smoke/js-ts-syntax-parser-trivia-evidence.mjs', 'test/smoke/js-ts-source-span-parser-trivia-exactness.mjs'],
-    remaining: ['Live real-repo checkout proof', 'Row-level source citations and CI extraction']
+    remaining: ['Live real-repo checkout proof']
   }],
   ['JS/TS scope and use-def graph', {
     anchors: jsTsAnchors,
     evidence: ['test/smoke/js-ts-safe-merge-binding-patterns.mjs', 'test/smoke/js-ts-safe-project-merge-scope-use-def-graph.mjs'],
-    remaining: ['Live real-repo checkout proof', 'Row-level source citations and CI extraction']
+    remaining: ['Live real-repo checkout proof']
   }],
   ['JS/TS module/export/import graph', {
     anchors: jsTsAnchors,
@@ -65,7 +65,7 @@ const rowProofs = new Map([
   ['JS/TS control-flow and effect graph', {
     anchors: jsTsAnchors,
     evidence: ['test/smoke/semantic-effect-runtime-order-evidence.mjs', 'test/smoke/semantic-effect-runtime-resource-management.mjs'],
-    remaining: ['Live real-repo checkout proof', 'Row-level source citations and CI extraction']
+    remaining: ['Live real-repo checkout proof']
   }],
   ['Generic semantic edit admission and replay', {
     anchors: jsTsAnchors,
@@ -99,28 +99,28 @@ const rowProofs = new Map([
   }],
   ['HTML static structure', {
     anchors: htmlCssAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-html-css.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-parser-source-evidence.mjs'],
-    remaining: ['HTML/CSS browser runtime proof', 'Row-level source citations and CI extraction']
+    evidence: ['test/smoke/js-ts-safe-project-merge-html-css.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-parser-source-evidence.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-runtime-proof-corpus.mjs'],
+    remaining: []
   }],
   ['HTML runtime/browser boundaries', {
     anchors: ['HTML tree construction and runtime boundaries'],
-    evidence: ['test/smoke/js-ts-safe-project-merge-html-runtime-boundary.mjs', 'test/smoke/js-ts-safe-project-merge-html-runtime-proof-admission.mjs'],
-    remaining: ['HTML/CSS browser runtime proof']
+    evidence: ['test/smoke/js-ts-safe-project-merge-html-runtime-boundary.mjs', 'test/smoke/js-ts-safe-project-merge-html-runtime-proof-admission.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-runtime-proof-corpus.mjs'],
+    remaining: []
   }],
   ['CSS selectors, cascade, and static declarations', {
     anchors: htmlCssAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-html-css-selectors.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-cascade-proof.mjs'],
-    remaining: ['HTML/CSS browser runtime proof', 'Row-level source citations and CI extraction']
+    evidence: ['test/smoke/js-ts-safe-project-merge-html-css-selectors.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-cascade-proof.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-runtime-proof-corpus.mjs'],
+    remaining: []
   }],
   ['CSS dependencies and runtime descriptors', {
     anchors: ['CSS syntax, selectors, cascade, and at-rules'],
-    evidence: ['test/smoke/js-ts-safe-project-merge-html-css-dependencies.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-at-rules.mjs'],
-    remaining: ['HTML/CSS browser runtime proof']
+    evidence: ['test/smoke/js-ts-safe-project-merge-html-css-dependencies.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-at-rules.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-runtime-proof-corpus.mjs'],
+    remaining: []
   }],
   ['Nested/scoped CSS', {
     anchors: ['CSS syntax, selectors, cascade, and at-rules'],
     evidence: ['test/smoke/js-ts-safe-project-merge-html-css-scoped-basic.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-scoped-nested.mjs'],
-    remaining: ['HTML/CSS browser runtime proof', 'Row-level source citations and CI extraction']
+    remaining: ['Nested/scoped CSS parser-backed expansion']
   }],
   ['CSS Modules import/use-site graph', {
     anchors: cssModulesAnchors,
@@ -140,7 +140,7 @@ const rowProofs = new Map([
   ['Source-backed completeness matrix', {
     anchors: ['JavaScript syntax and runtime semantics', 'HTML tree construction and runtime boundaries', 'CSS Modules contracts'],
     evidence: ['research/semantic-merge-production-matrix.md', 'test/smoke/semantic-merge-production-matrix-denominator.mjs'],
-    remaining: ['Row-level source citations and CI extraction']
+    remaining: []
   }]
 ]);
 

@@ -8,7 +8,7 @@ import { projectCssModuleMergeOptionsForFile, projectCssModuleProofOptionsForBlo
 import { cssModuleSourceMapIdentityMergeOptions } from './js-ts-safe-project-merge-css-module-source-map.js';
 import { blockCssScopedParserEvidenceGap, blockCssSelectorFunctionalPseudoSpecificityGap, normalizeHtmlCssParserEvidenceSides } from './js-ts-safe-project-merge-html-css-parser-gaps.js';
 import { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult } from './js-ts-safe-project-merge-html-runtime-boundaries.js';
-import { runtimeEvidenceMetadataFromProof } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
+import { FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND, runtimeEvidenceMetadataFromProof } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
 
 function projectFileLanguage(file, input) {
   return file.language ?? inferLanguageFromPath(file.sourcePath) ?? input.language ?? 'typescript';
@@ -150,8 +150,16 @@ function htmlRuntimeBoundaryProofCandidates(input, sourcePath, mergeOptions) {
 function htmlRuntimeBoundaryProofCandidateForRuntimePackage(proof) {
   const metadata = runtimeEvidenceMetadataFromProof(proof);
   if (!metadata) return proof;
+  const canonicalRuntimeProof = proof.kind === FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND;
   return compactRecord({
     ...proof,
+    kind: canonicalRuntimeProof ? 'html-source-bound-runtime-boundary-proof' : proof.kind,
+    sourceBoundRuntimeProofKind: canonicalRuntimeProof ? proof.kind : proof.sourceBoundRuntimeProofKind,
+    boundary: proof.boundary ?? proof.boundaryKey ?? proof.recordKey,
+    boundaries: proof.boundaries ?? proof.boundaryKeys ?? proof.recordKeys,
+    attributeName: proof.attributeName ?? singleString(proof.boundaryAttributes ?? proof.changedBoundaryAttributes ?? proof.attributeNames ?? proof.changedAttributeNames),
+    attributeNames: proof.attributeNames ?? proof.boundaryAttributes ?? proof.changedBoundaryAttributes ?? proof.changedAttributeNames,
+    changedBoundaryAttributes: proof.changedBoundaryAttributes ?? proof.boundaryAttributes ?? proof.attributeNames ?? proof.changedAttributeNames,
     runtimeCommand: proof.runtimeCommand ?? metadata.command,
     runtimeProbeId: proof.runtimeProbeId ?? metadata.probeId,
     runtimeEvidenceHash: proof.runtimeEvidenceHash ?? metadata.evidenceHash,
@@ -171,6 +179,11 @@ function duplicateHtmlExplicitIdentityKeys(identityEvidence) {
 
 function asArray(value) {
   return Array.isArray(value) ? value : value === undefined ? [] : [value];
+}
+
+function singleString(value) {
+  const values = asArray(value).filter((item) => typeof item === 'string' && item.length > 0);
+  return values.length === 1 ? values[0] : undefined;
 }
 
 function htmlProofGapConflict(id, sourcePath, reasonCode, details = {}, code = 'html-proof-gap-blocked') {
