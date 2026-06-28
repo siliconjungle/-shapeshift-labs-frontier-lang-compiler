@@ -11,8 +11,8 @@ assert.equal(status.unmappedProofRows.length, 0, 'proof rows must map to product
 assert.equal(status.unmappedSourceAnchors.length, 0, 'all source anchors must be linked');
 assert.equal(status.unmappedRemainingWork.length, 0, 'all remaining-work rows must be linked');
 assert.equal(status.rowCount, 20, 'production matrix row count');
-assert.equal(status.statusCounts.high, 7, 'high matrix row count');
-assert.equal(status.statusCounts.partial, 13, 'partial matrix row count');
+assert.equal(status.statusCounts.high, 8, 'high matrix row count');
+assert.equal(status.statusCounts.partial, 12, 'partial matrix row count');
 
 for (const row of status.rows) {
   assert.equal(['high', 'partial', 'missing'].includes(row.status), true, `${row.area}: supported status`);

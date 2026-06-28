@@ -1,4 +1,5 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
+import { parseCssSemanticSheet } from '@shapeshift-labs/frontier-lang-css';
 import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
 import { htmlCssProjectSummary } from '../../src/js-ts-safe-project-merge-html-css-summary.js';
@@ -93,6 +94,9 @@ assert.equal(propertyProven.summary.cssRuntimeDescriptorFiles, 1);
 assert.equal(propertyProven.summary.cssRuntimeDescriptorEvidenceFiles, 1);
 assert.equal(propertyProven.summary.cssPropertyDescriptorEvidenceFiles, 1);
 assert.equal(propertyProven.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(propertyProven.files[0].result.cascadeRuntimeProofs[0].runtimeDescriptorGraphBound, true);
+assert.equal(propertyProven.files[0].result.cascadeRuntimeProofs[0].baseDependencyGraphHash, graphHash(propertyBase, propertyPath));
+assert.equal(propertyProven.files[0].result.cascadeRuntimeProofs[0].outputDependencyGraphHash, graphHash(propertyOutput, propertyPath));
 assert.equal(propertyProven.files[0].result.cascadeRuntimeProofs[0].runtimeSignals.includes('css-property-registration-runtime'), true);
 assert.equal(propertyProven.outputFiles[0].sourceText, propertyOutput);
 
@@ -130,6 +134,9 @@ assert.equal(pageProven.summary.cssRuntimeDescriptorEvidenceFiles, 1);
 assert.equal(pageProven.summary.cssPageDescriptorEvidenceFiles, 1);
 assert.equal(pageProven.summary.htmlCssBrowserRuntimeProofs, 1);
 assert.equal(pageProven.files[0].result.dependencyGraphEvidence.pageMarginDescriptors, 1);
+assert.equal(pageProven.files[0].result.cascadeRuntimeProofs[0].runtimeDescriptorGraphBound, true);
+assert.equal(pageProven.files[0].result.cascadeRuntimeProofs[0].baseDependencyGraphHash, graphHash(pageBase, pagePath));
+assert.equal(pageProven.files[0].result.cascadeRuntimeProofs[0].outputDependencyGraphHash, graphHash(pageOutput, pagePath));
 assert.equal(pageProven.files[0].result.cascadeRuntimeProofs[0].runtimeSignals.includes('css-page-runtime'), true);
 assert.equal(pageProven.outputFiles[0].sourceText, pageOutput);
 
@@ -219,7 +226,34 @@ assert.equal(htmlCssProjectMergeMatrixProofStatus('css-runtime-descriptor-eviden
 
 function runtimeProof({ id, sourcePath, reasonCode, shapeKey, base, worker, head, output }) {
   const runtimeSignal = runtimeSignalForReason(reasonCode);
-  return { id, kind: 'css-source-bound-cascade-runtime-proof', status: 'passed', sourcePath, reasonCode, side: 'worker', shapeKey, baseSourceHash: hashSemanticValue(base), workerSourceHash: hashSemanticValue(worker), headSourceHash: hashSemanticValue(head), outputSourceHash: hashSemanticValue(output), runtimeCommand: 'playwright test css-project-runtime-at-rules.spec.ts', runtimeProbeId: `${shapeKey}:project-probe`, runtimeEvidenceHash: hashSemanticValue(`${sourcePath}:${reasonCode}:${shapeKey}:project-runtime`), runtimeSignals: [runtimeSignal] };
+  return {
+    id,
+    kind: 'css-source-bound-cascade-runtime-proof',
+    status: 'passed',
+    proofLevel: reasonCode.includes('property') || reasonCode.includes('page') ? 'css-runtime-descriptor-source-bound' : undefined,
+    sourcePath,
+    reasonCode,
+    side: 'worker',
+    shapeKey,
+    baseSourceHash: hashSemanticValue(base),
+    workerSourceHash: hashSemanticValue(worker),
+    headSourceHash: hashSemanticValue(head),
+    outputSourceHash: hashSemanticValue(output),
+    dependencyGraphHashes: {
+      base: graphHash(base, sourcePath),
+      worker: graphHash(worker, sourcePath),
+      head: graphHash(head, sourcePath),
+      output: graphHash(output, sourcePath)
+    },
+    runtimeCommand: 'playwright test css-project-runtime-at-rules.spec.ts',
+    runtimeProbeId: `${shapeKey}:project-probe`,
+    runtimeEvidenceHash: hashSemanticValue(`${sourcePath}:${reasonCode}:${shapeKey}:project-runtime`),
+    runtimeSignals: [runtimeSignal]
+  };
+}
+
+function graphHash(sourceText, sourcePath) {
+  return parseCssSemanticSheet(sourceText, { sourcePath }).dependencyGraphEvidence.dependencyGraphHash;
 }
 
 function runtimeSignalForReason(reasonCode) {
