@@ -101,7 +101,7 @@ type ExpectedPublicRuntimeExport =
   | 'createJsTsSemanticConflictSidecars'
   | 'createJsTsSemanticMergeConflictExplanation'
   | 'createJsTsSemanticMergeGateResult'
-  | 'createJsTsProjectMergeDeclarationEmitParityProof' | 'createJsTsProjectMergeDeclarationGate' | 'createJsTsProjectMergeDiagnosticsGate'
+  | 'createJsTsProjectMergeDeclarationEmitParityProof' | 'createJsTsProjectMergeDeclarationGate' | 'createJsTsProjectMergeDiagnosticsGate' | 'createJsTsProjectReferenceCompositeProof'
   | 'createSemanticImportSidecar'
   | 'createSemanticSlice'
   | 'createSemanticSliceAdmissionRecord'

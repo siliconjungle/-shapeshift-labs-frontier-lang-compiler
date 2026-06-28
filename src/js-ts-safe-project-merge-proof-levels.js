@@ -5,7 +5,7 @@ import { semanticEditReplayCleanEvidence } from './js-ts-safe-project-merge-sema
 import { ExternalSemanticEquivalenceLevel, semanticEquivalenceExternalEvidence } from './js-ts-safe-project-merge-semantic-equivalence-proof.js';
 import { sourceSpanRoundtripEvidence } from './js-ts-safe-project-merge-source-span-roundtrip-proof.js';
 import { unsupportedJsTsSurfaceEvidence } from './js-ts-safe-project-merge-unsupported-surfaces.js';
-
+import { projectReferenceCompositeEvidence } from './js-ts-safe-project-merge-project-reference-proof-evidence.js';
 const JsTsProjectMergeProofLevels = Object.freeze({
   syntaxIdentity: 'syntax-identity',
   sourceSpanRoundtrip: 'source-span-roundtrip',
@@ -13,12 +13,12 @@ const JsTsProjectMergeProofLevels = Object.freeze({
   parserRoundtrip: 'parser-roundtrip',
   diagnosticsClean: 'diagnostics-clean',
   declarationOutputStable: 'declaration-output-stable',
+  projectReferenceComposite: 'project-reference-composite-boundary',
   focusedTestPassed: 'focused-test-passed',
   unsupportedJsTsSurfaceReview: 'unsupported-js-ts-surface-review',
   semanticEquivalenceExternal: ExternalSemanticEquivalenceLevel,
   semanticEquivalenceUnknown: 'semantic-equivalence-unknown'
 });
-
 function createJsTsProjectMergeProofEvidence(input = {}) {
   const id = String(input.id ?? 'js_ts_project_safe_merge');
   const records = [
@@ -27,6 +27,7 @@ function createJsTsProjectMergeProofEvidence(input = {}) {
     semanticEditReplayCleanEvidence(id, input.fileResults ?? [], JsTsProjectMergeProofLevels.semanticEditReplayClean),
     diagnosticsCleanEvidence(id, input.outputDiagnosticsGate),
     declarationOutputStableEvidence(id, input.outputDeclarationGate),
+    projectReferenceCompositeEvidence(id, input.projectReferenceCompositeProof, JsTsProjectMergeProofLevels.projectReferenceComposite),
     focusedTestPassedEvidence(id, input.outputQualityGate),
     unsupportedJsTsSurfaceEvidence(id, input.files ?? [], input.fileResults ?? []),
     semanticEquivalenceExternalEvidence(id, input),
@@ -58,7 +59,6 @@ function createJsTsProjectMergeProofEvidence(input = {}) {
   };
   return { ...core, hash: hashSemanticValue(core) };
 }
-
 function syntaxIdentityEvidence(id, fileResults) {
   const outputFiles = fileResults.filter((file) => typeof file.outputSourceText === 'string');
   const changedFiles = outputFiles.filter((file) => !hashMatchesAnyInput(file));

@@ -37,6 +37,7 @@ export * from './declarations/js-ts-semantic-merge.js';
 export * from './declarations/js-ts-project-merge-declaration-emit-parity.js';
 export * from './declarations/js-ts-project-merge-declarations.js';
 export * from './declarations/js-ts-project-merge-diagnostics.js';
+export * from './declarations/js-ts-project-merge-project-reference-proof.js';
 export * from './declarations/js-ts-project-merge-tsconfig.js';
 export * from './declarations/js-ts-project-merge-jsx-event-handler.js';
 export * from './declarations/js-ts-project-merge-jsx-hook-dependency.js';

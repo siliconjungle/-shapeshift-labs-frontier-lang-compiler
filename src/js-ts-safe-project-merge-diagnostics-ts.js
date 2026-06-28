@@ -11,6 +11,11 @@ import {
   normalizeTypeScriptDiagnostic,
   sourceMapMatch
 } from './js-ts-safe-project-merge-ts-program.js';
+import {
+  applyProjectReferenceCompositeProofToDiagnostics,
+  createJsTsProjectReferenceCompositeProof,
+  projectReferenceProofMetadata
+} from './js-ts-safe-project-merge-project-reference-proof.js';
 
 export function collectTypeScriptDiagnostics(input, outputFiles) {
   const created = createJsTsVirtualTypeScriptProgram(input, outputFiles);
@@ -18,11 +23,16 @@ export function collectTypeScriptDiagnostics(input, outputFiles) {
   const { ts, sourceMap, program, compilerOptionDiagnostics = [], compilerMetadata = {}, rootNames = [] } = created;
   const projectRoot = normalizePath(input.projectRoot ?? '');
   const options = input.diagnosticOptions ?? input.typescriptDiagnosticOptions ?? {};
+  const projectReferenceCompositeProof = createJsTsProjectReferenceCompositeProof(input, outputFiles, input.id);
   const diagnostics = [...compilerOptionDiagnostics];
   if (!program) {
+    const filtered = applyProjectReferenceCompositeProofToDiagnostics(uniqueDiagnostics(diagnostics), projectReferenceCompositeProof);
     return {
-      diagnostics: uniqueDiagnostics(diagnostics),
-      metadata: diagnosticsMetadata(compilerMetadata, rootNames, sourceMap, 'typescript-compiler-api')
+      diagnostics: uniqueDiagnostics(filtered.diagnostics),
+      metadata: {
+        ...diagnosticsMetadata(compilerMetadata, rootNames, sourceMap, 'typescript-compiler-api'),
+        projectReferenceCompositeProof: projectReferenceProofMetadata(projectReferenceCompositeProof, filtered.suppressedDiagnostics)
+      }
     };
   }
   if (options.options !== false && program.getOptionsDiagnostics) {
@@ -45,13 +55,18 @@ export function collectTypeScriptDiagnostics(input, outputFiles) {
       })));
     }
   }
-  return {
-    diagnostics: uniqueDiagnostics(diagnostics.map((entry) => (
+  const normalizedDiagnostics = uniqueDiagnostics(diagnostics.map((entry) => (
       entry?.diagnostic
         ? withDiagnosticPhase(normalizeTypeScriptDiagnostic(ts, entry.diagnostic), entry.phase)
         : withDiagnosticPhase(entry, entry.phase)
-    )).filter((diagnostic) => keepDiagnostic(diagnostic, sourceMap, projectRoot))),
-    metadata: diagnosticsMetadata(compilerMetadata, rootNames, sourceMap, 'typescript-compiler-api')
+    )).filter((diagnostic) => keepDiagnostic(diagnostic, sourceMap, projectRoot)));
+  const filtered = applyProjectReferenceCompositeProofToDiagnostics(normalizedDiagnostics, projectReferenceCompositeProof);
+  return {
+    diagnostics: uniqueDiagnostics(filtered.diagnostics),
+    metadata: {
+      ...diagnosticsMetadata(compilerMetadata, rootNames, sourceMap, 'typescript-compiler-api'),
+      projectReferenceCompositeProof: projectReferenceProofMetadata(projectReferenceCompositeProof, filtered.suppressedDiagnostics)
+    }
   };
 }
 

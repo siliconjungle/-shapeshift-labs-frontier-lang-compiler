@@ -46,6 +46,7 @@ export {
   createJsTsProjectMergeDeclarationEmitParityProof,
   createJsTsProjectMergeDeclarationGate,
   createJsTsProjectMergeDiagnosticsGate,
+  createJsTsProjectReferenceCompositeProof,
   createSemanticImportSidecar,
   createSemanticSlice,
   createSemanticSliceAdmissionRecord,

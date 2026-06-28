@@ -56,6 +56,7 @@ for (const requiredExport of [
   'createJsTsProjectMergeDeclarationEmitParityProof',
   'createJsTsProjectMergeDeclarationGate',
   'createJsTsProjectMergeDiagnosticsGate',
+  'createJsTsProjectReferenceCompositeProof',
   'createSwiftSyntaxNativeImporterAdapter',
   'createPythonAstNativeImporterAdapter',
 	  'createRustSynNativeImporterAdapter',

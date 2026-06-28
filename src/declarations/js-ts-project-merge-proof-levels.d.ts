@@ -5,6 +5,7 @@ export type JsTsProjectMergeProofLevel =
   | 'parser-roundtrip'
   | 'diagnostics-clean'
   | 'declaration-output-stable'
+  | 'project-reference-composite-boundary'
   | 'focused-test-passed'
   | 'manifest-metadata-validated'
   | 'local-checkout-metadata-proof'

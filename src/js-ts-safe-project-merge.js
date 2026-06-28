@@ -21,7 +21,7 @@ import { applyProjectSplitMergeClassifications, classifyProjectSplitMerges } fro
 import { projectConfidence, projectEvidence, projectSummary, projectSummaryWithConfidenceEvidence } from './js-ts-safe-project-merge-summary.js';
 import { maybeMergeHtmlCssProjectFile, projectFileLanguage } from './js-ts-safe-project-merge-html-css.js';
 import { createProjectCssModuleMergeEvidence, mergeOutputProjectImports, projectCssModuleOutputProjectImports } from './js-ts-safe-project-merge-css-module-proofs.js';
-
+import { createJsTsProjectReferenceCompositeProof } from './js-ts-safe-project-merge-project-reference-proof.js';
 function safeMergeJsTsProject(input = {}) {
   const id = String(input.id ?? 'js_ts_project_safe_merge');
   const files = normalizeProjectFiles(input);
@@ -66,11 +66,13 @@ function safeMergeJsTsProject(input = {}) {
       operation: file.operation
     }));
   const graphInput = mergeOutputProjectImports(input, projectCssModuleOutputProjectImports(projectCssModuleMergeEvidence, fileResults, input));
+  const projectReferenceCompositeProof = blockedFiles.length === 0 ? createJsTsProjectReferenceCompositeProof(input, outputFiles, id) : undefined;
+  const proofInput = projectReferenceCompositeProof ? { ...input, projectReferenceCompositeProof } : input;
   const outputDeclarationGate = blockedFiles.length === 0
-    ? createJsTsProjectMergeDeclarationGate(input, outputFiles, id)
+    ? createJsTsProjectMergeDeclarationGate(proofInput, outputFiles, id)
     : undefined;
   const declarationEmitParityProof = blockedFiles.length === 0
-    ? createJsTsProjectMergeDeclarationEmitParityProof(input, files, outputFiles, id)
+    ? createJsTsProjectMergeDeclarationEmitParityProof(proofInput, files, outputFiles, id)
     : undefined;
   const projectGraphDelta = blockedFiles.length === 0 && input.includeProjectGraphDelta
     ? createJsTsProjectSafeMergeGraphDelta(graphInput, files, outputFiles, id)
@@ -79,7 +81,7 @@ function safeMergeJsTsProject(input = {}) {
     ? createJsTsProjectSafeMergeGraphArtifacts(graphInput, outputFiles, id)
     : undefined);
   const outputDiagnosticsGate = blockedFiles.length === 0
-    ? createJsTsProjectMergeDiagnosticsGate(input, outputFiles, id, { fileResults })
+    ? createJsTsProjectMergeDiagnosticsGate(proofInput, outputFiles, id, { fileResults })
     : undefined;
   const outputQualityGate = blockedFiles.length === 0 ? createJsTsProjectMergeQualityGate(input, id) : undefined;
   const proofEvidence = createJsTsProjectMergeProofEvidence({
@@ -88,7 +90,7 @@ function safeMergeJsTsProject(input = {}) {
     fileResults,
     outputDiagnosticsGate,
     outputDeclarationGate,
-    outputQualityGate, externalSemanticEquivalenceProof: input.externalSemanticEquivalenceProof ?? input.semanticEquivalenceProof, semanticEquivalenceProof: input.semanticEquivalenceProof, language: input.language
+    outputQualityGate, projectReferenceCompositeProof, externalSemanticEquivalenceProof: input.externalSemanticEquivalenceProof ?? input.semanticEquivalenceProof, semanticEquivalenceProof: input.semanticEquivalenceProof, language: input.language
   });
   const outputGraphConflicts = outputProjectGraphConflicts(projectGraphDelta ? graphArtifacts?.projectSymbolGraph : graphArtifacts);
   const deltaGraphConflicts = projectGraphDeltaConflicts(projectGraphDelta, { declarationEmitParityProof, outputDiagnosticsGate, outputDeclarationGate, runtimeOrderEvidence: input.runtimeOrderEvidence, projectRuntimeOrderEvidence: input.projectRuntimeOrderEvidence, evidence: input.evidence, commonJsRuntimeInteropProof: input.commonJsRuntimeInteropProof, commonJsRuntimeInteropProofs: input.commonJsRuntimeInteropProofs, globalAugmentationCompatibilityProof: input.globalAugmentationCompatibilityProof, globalAugmentationCompatibilityProofs: input.globalAugmentationCompatibilityProofs, jsxRenderReturnBranchProof: input.jsxRenderReturnBranchProof, jsxRenderReturnBranchProofs: input.jsxRenderReturnBranchProofs, jsxHookDependencySourceProof: input.jsxHookDependencySourceProof, jsxHookDependencySourceProofs: input.jsxHookDependencySourceProofs, jsxEventHandlerSourceProof: input.jsxEventHandlerSourceProof, jsxEventHandlerSourceProofs: input.jsxEventHandlerSourceProofs });
@@ -133,6 +135,7 @@ function safeMergeJsTsProject(input = {}) {
     outputProjectImport: graphArtifacts?.projectImport,
     outputProjectSymbolGraph: graphArtifacts?.projectSymbolGraph,
     projectGraphDelta: projectGraphDeltaWithConflicts,
+    projectReferenceCompositeProof,
     outputDiagnosticsGate,
     outputDeclarationGate,
     declarationEmitParityProof,
@@ -184,6 +187,7 @@ function safeMergeJsTsProject(input = {}) {
       outputCompilerOptionSources: outputDiagnosticsGate?.metadata?.compilerOptionSources,
       outputProjectReferences: outputDiagnosticsGate?.metadata?.projectReferences,
       outputProjectReferenceCount: outputDiagnosticsGate?.metadata?.projectReferenceCount,
+      projectReferenceCompositeProofStatus: projectReferenceCompositeProof?.status, projectReferenceCompositeProofHash: projectReferenceCompositeProof?.hash, projectReferenceCompositeProofReasonCodes: projectReferenceCompositeProof?.reasonCodes,
       outputDeclarations: outputDeclarationGate?.summary?.declarationFiles || undefined,
       outputDeclarationConflicts: declarationConflicts.length || undefined,
       declarationEmitParityProofStatus: declarationEmitParityProof?.status,
@@ -214,7 +218,6 @@ function outputParserTriviaEvidence(file, resultFile) {
     ? file.workerParserTriviaEvidence ?? file.parserTriviaEvidence
     : undefined;
 }
-
 function mergeProjectFile(file, input, projectId, projectSymbolRenames, projectCssModuleMergeEvidence) {
   const base = file.baseSourceText;
   const worker = file.workerDeleted ? undefined : file.workerSourceText ?? base;
@@ -293,7 +296,6 @@ function allowsProjectSymbolRenameForFile(input, projectSymbolRenames, sourcePat
   return (input.allowProjectSymbolRenames === true || input.allowCrossFileSymbolRenames === true)
     && projectSymbolRenames?.byPath?.has(sourcePath);
 }
-
 function sourceMergeInputForProjectFile(input) {
   const { outputDiagnostics, outputSyntaxDiagnostics, mergedOutputSyntaxDiagnostics, syntaxDiagnostics, requireOutputSyntaxDiagnostics, requireOutputSyntaxGate, requireMergedOutputSyntaxDiagnostics, requireSyntaxGate, ...sourceInput } = input;
   return sourceInput;

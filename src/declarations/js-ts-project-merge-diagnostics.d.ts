@@ -1,5 +1,7 @@
 import type { EvidenceRecord, FrontierSourceLanguage } from '@shapeshift-labs/frontier-lang-kernel';
 import type { JsTsSafeMergeConflict } from './js-ts-safe-merge.js';
+import type { JsTsProjectReferenceCompositeProof } from './js-ts-project-merge-project-reference-proof.js';
+import type { JsTsProjectCompilerMetadata } from './js-ts-project-merge-tsconfig.js';
 
 export type JsTsProjectMergeDiagnosticsGateStatus = 'passed' | 'blocked' | string;
 export type JsTsProjectMergeDiagnosticSeverity = 'error' | 'warning' | 'suggestion' | 'message' | string;
@@ -50,6 +52,10 @@ export interface JsTsProjectMergeDiagnosticsGateInput {
   readonly requireMergedOutputSyntaxDiagnostics?: boolean;
   readonly requireSyntaxGate?: boolean;
   readonly outputDiagnostics?: readonly JsTsProjectMergeDiagnostic[] | JsTsProjectMergeDiagnostic;
+  readonly projectReferenceCompositeProof?: JsTsProjectReferenceCompositeProof;
+  readonly typescriptProjectReferenceCompositeProof?: JsTsProjectReferenceCompositeProof;
+  readonly projectReferenceProof?: JsTsProjectReferenceCompositeProof;
+  readonly typescriptProjectReferenceProof?: JsTsProjectReferenceCompositeProof;
   readonly outputSyntaxDiagnostics?: readonly JsTsProjectMergeDiagnostic[] | JsTsProjectMergeDiagnostic;
   readonly mergedOutputSyntaxDiagnostics?: readonly JsTsProjectMergeDiagnostic[] | JsTsProjectMergeDiagnostic;
   readonly syntaxDiagnostics?: {
@@ -86,6 +92,9 @@ export interface JsTsProjectMergeDiagnosticsGate {
     readonly bySeverity: Readonly<Record<string, number>>;
     readonly bySource: Readonly<Record<string, number>>;
     readonly byPhase: Readonly<Record<string, number>>;
+  };
+  readonly metadata?: JsTsProjectCompilerMetadata & {
+    readonly projectReferenceCompositeProof?: Record<string, unknown>;
   };
   readonly evidence: readonly EvidenceRecord[];
 }

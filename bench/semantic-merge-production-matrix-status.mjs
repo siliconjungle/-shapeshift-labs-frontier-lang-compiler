@@ -59,7 +59,7 @@ const rowProofs = new Map([
   }],
   ['JS/TS public API and type graph', {
     anchors: jsTsAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-compiler-type-graph.mjs', 'test/smoke/js-ts-safe-project-merge-public-api-declaration-emit-parity.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs'],
+    evidence: ['test/smoke/js-ts-safe-project-merge-compiler-type-graph.mjs', 'test/smoke/js-ts-safe-project-merge-public-api-declaration-emit-parity.mjs', 'test/smoke/js-ts-safe-project-merge-tsconfig-diagnostics.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs'],
     remaining: []
   }],
   ['JS/TS control-flow and effect graph', {

@@ -1,6 +1,6 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { assert } from './helpers.mjs';
-import { safeMergeJsTsProject } from './compiler-api.mjs';
+import { createJsTsProjectReferenceCompositeProof, safeMergeJsTsProject } from './compiler-api.mjs';
 
 const tsModule = await import('typescript');
 const typescript = tsModule.default ?? tsModule;
@@ -161,3 +161,98 @@ assert.equal(unresolvedProjectReferenceBlockedProject.outputDiagnosticsGate.diag
 assert.equal(unresolvedProjectReferenceBlockedProject.outputDiagnosticsGate.metadata.projectReferenceCount, 1);
 assert.equal(unresolvedProjectReferenceBlockedProject.outputDiagnosticsGate.metadata.projectReferences[0].path, '../pkg-a');
 assert.equal(unresolvedProjectReferenceBlockedProject.metadata.outputProjectReferenceCount, 1);
+
+const referencedProject = {
+  path: '../pkg-a',
+  tsconfigPath: '../pkg-a/tsconfig.json',
+  compilerOptions: {
+    composite: true,
+    declaration: true
+  },
+  sourceFiles: {
+    '../pkg-a/src/index.ts': 'export interface Token { id: string }\n'
+  },
+  declarationFiles: {
+    '../pkg-a/dist/index.d.ts': 'export interface Token { id: string }\n'
+  }
+};
+const projectReferenceProof = createJsTsProjectReferenceCompositeProof({
+  id: 'project_reference_composite_positive',
+  tsconfig: {
+    references: [{ path: '../pkg-a' }]
+  },
+  referencedProjects: [referencedProject]
+});
+assert.equal(projectReferenceProof.status, 'passed');
+assert.equal(projectReferenceProof.sourceFileCount, 1);
+assert.equal(projectReferenceProof.declarationFileCount, 1);
+assert.equal(projectReferenceProof.autoMergeClaim, false);
+assert.equal(projectReferenceProof.semanticEquivalenceClaim, false);
+assert.equal(projectReferenceProof.buildModeEquivalenceClaim, false);
+
+const provedProjectReferenceProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_output_diagnostics_project_reference_proof_admitted',
+  language: 'typescript',
+  requireOutputDiagnostics: true,
+  typescript,
+  tsconfig: {
+    references: [{ path: '../pkg-a' }],
+    compilerOptions: {
+      module: 'esnext'
+    }
+  },
+  referencedProjects: [referencedProject],
+  baseFiles: {
+    'src/value.ts': 'export const value = 1;\n'
+  },
+  workerFiles: {
+    'src/value.ts': 'export const value = 1;\nexport const workerValue = value + 1;\n'
+  },
+  headFiles: {
+    'src/value.ts': 'export const value = 1;\n'
+  }
+});
+assert.equal(provedProjectReferenceProject.status, 'merged');
+assert.equal(provedProjectReferenceProject.projectReferenceCompositeProof.status, 'passed');
+assert.equal(provedProjectReferenceProject.outputDiagnosticsGate.status, 'passed');
+assert.equal(provedProjectReferenceProject.outputDiagnosticsGate.diagnostics.some((diagnostic) => diagnostic.code === 'TS6053'), false);
+assert.equal(provedProjectReferenceProject.outputDiagnosticsGate.metadata.projectReferenceCompositeProof.status, 'passed');
+assert.equal(provedProjectReferenceProject.outputDiagnosticsGate.metadata.projectReferenceCompositeProof.suppressedDiagnostics >= 1, true);
+assert.equal(provedProjectReferenceProject.proofEvidence.summary.passedLevels.includes('project-reference-composite-boundary'), true);
+assert.equal(provedProjectReferenceProject.metadata.projectReferenceCompositeProofStatus, 'passed');
+
+const staleReferencedProject = {
+  ...referencedProject,
+  sourceFiles: {
+    '../pkg-a/src/index.ts': 'export interface Token { id: number }\n'
+  }
+};
+const staleProjectReferenceProject = safeMergeJsTsProject({
+  id: 'js_ts_project_safe_merge_output_diagnostics_project_reference_stale_proof_blocked',
+  language: 'typescript',
+  requireOutputDiagnostics: true,
+  typescript,
+  tsconfig: {
+    references: [{ path: '../pkg-a' }],
+    compilerOptions: {
+      module: 'esnext'
+    }
+  },
+  projectReferenceCompositeProof: projectReferenceProof,
+  referencedProjects: [staleReferencedProject],
+  baseFiles: {
+    'src/value.ts': 'export const value = 1;\n'
+  },
+  workerFiles: {
+    'src/value.ts': 'export const value = 1;\nexport const workerValue = value + 1;\n'
+  },
+  headFiles: {
+    'src/value.ts': 'export const value = 1;\n'
+  }
+});
+assert.equal(staleProjectReferenceProject.status, 'blocked');
+assert.equal(staleProjectReferenceProject.projectReferenceCompositeProof.status, 'failed');
+assert.equal(staleProjectReferenceProject.projectReferenceCompositeProof.reasonCodes.includes('typescript-project-reference-boundary-hash-mismatch'), true);
+assert.equal(staleProjectReferenceProject.outputDiagnosticsGate.diagnostics.some((diagnostic) => (
+  diagnostic.code === 'TSFRP001' && diagnostic.source === 'typescript-project-reference-composite-proof'
+)), true);

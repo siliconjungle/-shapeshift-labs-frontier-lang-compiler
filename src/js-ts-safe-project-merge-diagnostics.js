@@ -14,6 +14,10 @@ import {
   describeJsTsProjectCompilerInputs,
   normalizeSuppliedDiagnostics
 } from './js-ts-safe-project-merge-ts-program.js';
+import {
+  createJsTsProjectReferenceCompositeProof,
+  projectReferenceProofMetadata
+} from './js-ts-safe-project-merge-project-reference-proof.js';
 
 const projectOutputDiagnosticCode = 'project-output-diagnostic';
 const projectOutputSyntaxDiagnosticCode = 'project-output-syntax-diagnostic';
@@ -76,6 +80,7 @@ function createJsTsProjectMergeDiagnosticsGate(input = {}, outputFiles = [], id 
         compilerOptionSources: metadata.compilerOptionSources,
         projectReferences: metadata.projectReferences,
         projectReferenceCount: metadata.projectReferenceCount,
+        projectReferenceCompositeProof: metadata.projectReferenceCompositeProof,
         jsxComponentPropContractCandidates: jsxComponentPropContracts.length || undefined,
         syntaxOnly,
         autoMergeClaim: false,
@@ -87,10 +92,12 @@ function createJsTsProjectMergeDiagnosticsGate(input = {}, outputFiles = [], id 
 }
 
 function suppliedDiagnosticsResult(input, diagnostics) {
+  const projectReferenceCompositeProof = createJsTsProjectReferenceCompositeProof(input, [], input.id);
   return {
     diagnostics,
     metadata: {
       ...describeJsTsProjectCompilerInputs(input),
+      projectReferenceCompositeProof: projectReferenceProofMetadata(projectReferenceCompositeProof),
       diagnosticSource: diagnosticSource(input),
       hasTypescriptCompilerApi: Boolean(input.typescript ?? input.ts ?? input.typescriptModule)
     }
@@ -145,6 +152,7 @@ function unavailableGate(input, id, syntaxOnly = false, metadata = {}, outputFil
         compilerOptionSources: metadata.compilerOptionSources,
         projectReferences: metadata.projectReferences,
         projectReferenceCount: metadata.projectReferenceCount,
+        projectReferenceCompositeProof: metadata.projectReferenceCompositeProof,
         jsxComponentPropContractCandidates: jsxComponentPropContracts.length || undefined,
         syntaxOnly
       }
