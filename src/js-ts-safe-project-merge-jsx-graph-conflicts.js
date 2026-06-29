@@ -6,6 +6,7 @@ import { jsxHookEffectSourceProofAssessment } from './js-ts-safe-project-merge-j
 import { jsxRenderReturnBranchProofAssessment } from './js-ts-safe-project-merge-jsx-render-branch-proof.js';
 import { jsxRenderReturnCollectionProofAssessment } from './js-ts-safe-project-merge-jsx-render-collection-proof.js';
 import { jsxRenderRuntimeProofAssessment } from './js-ts-safe-project-merge-jsx-runtime-proof.js';
+import { jsxSpreadEffectivePropMergeProofAssessment } from './js-ts-safe-project-merge-jsx-spread-effective-prop-proof.js';
 import {
   hasRenderRisk,
   jsxChildOrderDetails,
@@ -36,7 +37,10 @@ function projectJsxPropDeltaConflicts(projectGraphDelta) {
     const headRecord = head.get(identityKey);
     const fingerprints = [jsxPropFingerprint(baseRecord), jsxPropFingerprint(workerRecord), jsxPropFingerprint(headRecord)];
     if (fingerprints[0] === fingerprints[1] || fingerprints[0] === fingerprints[2] || fingerprints[1] === fingerprints[2]) return [];
-    return [projectJsxPropDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, output.get(identityKey))];
+    const outputRecord = output.get(identityKey);
+    const spreadEffectivePropProof = jsxSpreadEffectivePropMergeProofAssessment({ identityKey, baseRecord, workerRecord, headRecord, outputRecord });
+    if (spreadEffectivePropProof?.status === 'passed') return [];
+    return [projectJsxPropDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, spreadEffectivePropProof)];
   });
 }
 function projectJsxRenderRiskDeltaConflicts(projectGraphDelta, options = {}) {
@@ -92,7 +96,7 @@ function projectJsxChildOrderDeltaConflicts(projectGraphDelta) {
     return [projectJsxChildOrderDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, output.get(identityKey))];
   });
 }
-function projectJsxPropDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord) {
+function projectJsxPropDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, spreadEffectivePropProof) {
   const sourcePath = workerRecord?.sourcePath ?? headRecord?.sourcePath ?? baseRecord?.sourcePath;
   const label = jsxPropLabel(workerRecord ?? headRecord ?? baseRecord);
   return {
@@ -102,13 +106,22 @@ function projectJsxPropDeltaConflict(identityKey, baseRecord, workerRecord, head
     sourcePath,
     details: compactRecord({
       reasonCode: 'project-jsx-public-prop-delta-conflict',
+      reasonCodes: uniqueStrings(['project-jsx-public-prop-delta-conflict', ...(spreadEffectivePropProof?.reasonCodes ?? [])]),
       conflictKey: `project-graph-delta#jsx-prop#${identityKey}`,
       identityKey,
       sourcePath,
+      routeId: spreadEffectivePropProof?.routeId,
+      routeLane: spreadEffectivePropProof?.routeLane,
+      routeNext: spreadEffectivePropProof?.routeNext,
       base: jsxPropDetails(baseRecord),
       worker: jsxPropDetails(workerRecord),
       head: jsxPropDetails(headRecord),
-      output: jsxPropDetails(outputRecord)
+      output: jsxPropDetails(outputRecord),
+      jsxSpreadEffectivePropMergeProof: spreadEffectivePropProof?.record,
+      autoMergeClaim: false,
+      semanticEquivalenceClaim: false,
+      runtimeEquivalenceClaim: false,
+      renderEquivalenceClaim: false
     })
   };
 }
@@ -204,4 +217,4 @@ function publicJsxChildOrders(records = []) {
 
 function uniqueStrings(values) { return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))]; }
 
-export { projectJsxChildOrderDeltaConflicts, projectJsxPropDeltaConflicts, projectJsxRenderRiskDeltaConflicts };
+export { jsxSpreadEffectivePropMergeProofAssessment, projectJsxChildOrderDeltaConflicts, projectJsxPropDeltaConflicts, projectJsxRenderRiskDeltaConflicts };

@@ -50,6 +50,32 @@ function jsxSpreadProp(stage, signatureHash) {
   };
 }
 
+function jsxStaticSpreadProp(stage, effectivePropEntries, signatureHash = `jsx:spread:${stage}`) {
+  return {
+    ...jsxSpreadProp(stage, signatureHash),
+    propValueProofStatus: 'static-object-spread-jsx-prop-value-evidence',
+    propValueReasonCode: 'jsx-render-prop-spread-static-object-evidence',
+    propValueStaticSpreadSourceKind: 'same-file-const-object',
+    propValueStaticSpreadSourceName: `props${stage}`,
+    propValueStaticSpreadEffectivePropEntries: effectivePropEntries,
+    propValueStaticSpreadEffectivePropNames: effectivePropEntries.map((entry) => entry.propName),
+    propValueStaticSpreadDuplicatePropNames: [],
+    propValueStaticSpreadPrecedenceStatus: 'static-spread-props-preserved',
+    propValueExpressionHash: `spread-expression:${stage}`,
+    propValueSignatureHash: signatureHash
+  };
+}
+
+function jsxStaticSpreadEntry(propName, valueText, valueKind = 'string') {
+  return {
+    propName,
+    keyText: propName,
+    valueKind,
+    valueText,
+    entryHash: `static-spread-entry:${propName}:${valueKind}:${valueText}`
+  };
+}
+
 function jsxRenderRisk(stage, signatureHash, renderRiskKinds, hookNames) {
   return {
     id: `jsx_render_risk_${stage}`,
@@ -281,5 +307,7 @@ export {
   jsxRenderReturnRisk,
   jsxRenderRisk,
   jsxRenderRiskDelta,
-  jsxSpreadProp
+  jsxSpreadProp,
+  jsxStaticSpreadEntry,
+  jsxStaticSpreadProp
 };

@@ -44,6 +44,12 @@ const semanticMergeJsxMatrixCells = [
     note: 'same-file const object and inline object JSX spreads emit bounded prop-entry evidence with explicit prop precedence while call, getter, and computed spreads fail closed'
   },
   {
+    id: 'jsx-tsx-element-prop-graph/static-spread-effective-prop-commutation',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-jsx-spread-props',
+    note: 'static object JSX spread deltas admit disjoint effective-prop changes only when output contains the exact union; overlapping prop changes and output mismatches fail closed without render equivalence claims'
+  },
+  {
     id: 'jsx-tsx-element-prop-graph/static-class-style-prop-value-evidence',
     status: 'done',
     evidence: 'js-ts-semantic-merge-admission-matrix-jsx',
@@ -228,6 +234,13 @@ assert.equal(staticObjectSpreadPropPrecedenceCell.evidence, 'js-ts-safe-project-
 assert.match(staticObjectSpreadPropPrecedenceCell.note, /same-file const object/);
 assert.match(staticObjectSpreadPropPrecedenceCell.note, /explicit prop precedence/);
 assert.match(staticObjectSpreadPropPrecedenceCell.note, /fail closed/);
+
+const staticSpreadEffectivePropCell = semanticMergeJsxMatrixCells.find((cell) => cell.id === 'jsx-tsx-element-prop-graph/static-spread-effective-prop-commutation');
+assert.equal(staticSpreadEffectivePropCell.status, 'done');
+assert.equal(staticSpreadEffectivePropCell.evidence, 'js-ts-safe-project-merge-jsx-spread-props');
+assert.match(staticSpreadEffectivePropCell.note, /disjoint effective-prop changes/);
+assert.match(staticSpreadEffectivePropCell.note, /output contains the exact union/);
+assert.match(staticSpreadEffectivePropCell.note, /without render equivalence claims/);
 
 const conditionalConditionProofCell = semanticMergeJsxMatrixCells.find((cell) => cell.id === 'jsx-tsx-element-prop-graph/static-render-return-conditional-condition-proof-bridge');
 assert.equal(conditionalConditionProofCell.status, 'done');

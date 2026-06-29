@@ -84,7 +84,7 @@ const rowProofs = new Map([
   }],
   ['JSX/TSX prop graph', {
     anchors: jsxAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-prop-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-prop-contracts.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
+    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-prop-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-spread-props.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-prop-contracts.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
     remaining: []
   }],
   ['JSX/TSX child order and render layout', {

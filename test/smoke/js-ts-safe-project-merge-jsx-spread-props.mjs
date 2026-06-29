@@ -1,5 +1,7 @@
 import { assert } from './helpers.mjs';
 import { safeMergeJsTsProject } from './compiler-api.mjs';
+import { jsxSpreadEffectivePropMergeProofAssessment, projectJsxPropDeltaConflicts } from '../../src/js-ts-safe-project-merge-jsx-graph-conflicts.js';
+import { jsxDelta, jsxStaticSpreadEntry, jsxStaticSpreadProp } from './js-ts-safe-project-merge-jsx-graph-helpers.mjs';
 
 const spreadPrecedenceSource = [
   'type ButtonProps = { tone?: string; size?: string; disabled?: boolean };',
@@ -47,6 +49,55 @@ assert.equal(getterSpread.propValueDynamicBlockerReasonCode, 'jsx-render-prop-sp
 const computedSpread = spreadPrecedenceProps.find((record) => record.propValueExpressionText === 'computedProps');
 assert.equal(computedSpread.propValueProofStatus, 'dynamic-jsx-prop-spread-unsupported');
 assert.equal(computedSpread.propValueDynamicBlockerReasonCode, 'jsx-render-prop-spread-computed-key-unsupported');
+
+const baseTone = jsxStaticSpreadEntry('tone', '"neutral"');
+const baseSize = jsxStaticSpreadEntry('size', '"m"');
+const workerTone = jsxStaticSpreadEntry('tone', '"accent"');
+const headSize = jsxStaticSpreadEntry('size', '"l"');
+const spreadEffectiveDelta = jsxDelta({
+  base: jsxStaticSpreadProp('base', [baseTone, baseSize]),
+  worker: jsxStaticSpreadProp('worker', [workerTone, baseSize]),
+  head: jsxStaticSpreadProp('head', [baseTone, headSize]),
+  output: jsxStaticSpreadProp('output', [workerTone, headSize])
+});
+assert.equal(projectJsxPropDeltaConflicts(spreadEffectiveDelta).length, 0);
+const spreadEffectiveProof = jsxSpreadEffectivePropMergeProofAssessment({
+  identityKey: 'jsx-prop#src/view.tsx#View#Button#1#Button#...spread#1',
+  baseRecord: spreadEffectiveDelta.stages.base.projectSymbolGraph.jsxPropRecords[0],
+  workerRecord: spreadEffectiveDelta.stages.worker.projectSymbolGraph.jsxPropRecords[0],
+  headRecord: spreadEffectiveDelta.stages.head.projectSymbolGraph.jsxPropRecords[0],
+  outputRecord: spreadEffectiveDelta.stages.output.projectSymbolGraph.jsxPropRecords[0]
+});
+assert.equal(spreadEffectiveProof.status, 'passed');
+assert.deepEqual(spreadEffectiveProof.record.delta.branchMerge.workerChangedPropNames, ['tone']);
+assert.deepEqual(spreadEffectiveProof.record.delta.branchMerge.headChangedPropNames, ['size']);
+assert.deepEqual(spreadEffectiveProof.record.delta.branchMerge.expectedOutputEffectivePropEntries.map((entry) => entry.propName), ['size', 'tone']);
+assert.equal(spreadEffectiveProof.record.effectivePropCommutationClaim, true);
+assert.equal(spreadEffectiveProof.record.renderEquivalenceClaim, false);
+assert.equal(spreadEffectiveProof.record.autoMergeClaim, false);
+
+const overlapSpreadDelta = jsxDelta({
+  base: jsxStaticSpreadProp('base', [baseTone, baseSize]),
+  worker: jsxStaticSpreadProp('worker', [workerTone, baseSize]),
+  head: jsxStaticSpreadProp('head', [jsxStaticSpreadEntry('tone', '"danger"'), baseSize]),
+  output: jsxStaticSpreadProp('output', [workerTone, baseSize])
+});
+const overlapSpreadConflicts = projectJsxPropDeltaConflicts(overlapSpreadDelta);
+assert.equal(overlapSpreadConflicts.length, 1);
+assert.equal(overlapSpreadConflicts[0].details.reasonCodes.includes('jsx-spread-effective-prop-overlapping-branch-change'), true);
+assert.equal(overlapSpreadConflicts[0].details.routeId, 'admit-jsx-spread-effective-prop-commutation');
+assert.equal(overlapSpreadConflicts[0].details.jsxSpreadEffectivePropMergeProof.status, 'failed');
+assert.equal(overlapSpreadConflicts[0].details.jsxSpreadEffectivePropMergeProof.renderEquivalenceClaim, false);
+
+const mismatchSpreadDelta = jsxDelta({
+  base: jsxStaticSpreadProp('base', [baseTone, baseSize]),
+  worker: jsxStaticSpreadProp('worker', [workerTone, baseSize]),
+  head: jsxStaticSpreadProp('head', [baseTone, headSize]),
+  output: jsxStaticSpreadProp('output', [workerTone, baseSize])
+});
+const mismatchSpreadConflicts = projectJsxPropDeltaConflicts(mismatchSpreadDelta);
+assert.equal(mismatchSpreadConflicts.length, 1);
+assert.equal(mismatchSpreadConflicts[0].details.reasonCodes.includes('jsx-spread-effective-prop-output-effective-props-mismatch'), true);
 
 const literalContextSource = 'const ThemeContext = React.createContext("light");\nexport function LiteralView() {\n  return <ThemeContext.Provider value="dark"><button /></ThemeContext.Provider>;\n}\n';
 const literalContextFiles = { 'src/literal.tsx': literalContextSource };
