@@ -2,6 +2,7 @@ import { compactMissingEvidenceTelemetry, confidenceRecommendedAction, createPro
 import { failedEvidenceMissingItems, fileAdmissionEvidenceRecords } from './js-ts-safe-project-merge-evidence-routing.js'; import { compactProjectMergeRoutingCalibration } from './js-ts-safe-project-merge-routing-calibration.js';
 import { cssModuleProjectSummaryFields } from './js-ts-safe-project-merge-css-module-summary.js';
 import { htmlCssProjectSummary } from './js-ts-safe-project-merge-html-css-summary.js';
+import { packageCanvasProjectSummary } from './js-ts-safe-project-merge-package-canvas-summary.js';
 import { sourceTextMergeCandidateEvidenceRecord, sourceTextMergeSummary } from './js-ts-safe-project-merge-source-text-candidate.js';
 
 function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false, outputDiagnosticsGate = undefined, outputDeclarationGate = undefined, outputQualityGate = undefined, moveRenameSummary = undefined, proofEvidence = undefined, symbolRenameSummary = undefined, splitMergeSummary = undefined, projectSymbolGraph = undefined) {
@@ -16,6 +17,7 @@ function projectSummary(files, graphConflicts = [], hasProjectGraphDelta = false
     files: files.length,
     ...sourceTextMergeSummary(files),
     ...htmlCssProjectSummary(files),
+    ...packageCanvasProjectSummary(files),
     projectGraphConflicts: graphConflicts.length,
     projectGraphDeltaEvidenceIncluded: hasProjectGraphDelta ? 1 : 0, projectGraphEvidenceIncluded: projectSymbolGraph || hasProjectGraphDelta ? 1 : 0,
     outputProjectGraphConflicts: outputConflicts.length, projectGraphCssModuleUseSiteConflicts: cssModuleGraphConflicts.length,
@@ -315,5 +317,4 @@ function uniqueStrings(values) { return [...new Set(values.filter((value) => typ
 function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
 function clampScore(value) { return Math.max(0, Math.min(100, Math.round(value))); }
 function isScopeUseDefConflict(conflict) { return conflict.code === 'project-public-scope-use-def-delta-conflict' || conflict.code === 'project-public-scope-reference-delta-conflict'; }
-function isCssModuleProofConflict(conflict) { return conflict?.gateId === 'css-semantic-merge' && String(conflict?.details?.proofBoundary ?? '').startsWith('css-module-'); }
-export { projectConfidence, projectEvidence, projectSummary, projectSummaryWithConfidenceEvidence };
+function isCssModuleProofConflict(conflict) { return conflict?.gateId === 'css-semantic-merge' && String(conflict?.details?.proofBoundary ?? '').startsWith('css-module-'); } export { projectConfidence, projectEvidence, projectSummary, projectSummaryWithConfidenceEvidence };

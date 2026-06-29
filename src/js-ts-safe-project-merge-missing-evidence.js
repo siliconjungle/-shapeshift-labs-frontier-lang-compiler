@@ -1,5 +1,6 @@
 import { HtmlCssProjectMergeMissingSignals, htmlCssProjectMergeAdmissionMatrixRows, htmlCssProjectMergeMatrixProofStatus, htmlCssProjectMergeMissingEvidenceItems, htmlCssProjectMergeMissingEvidenceRoutes } from './js-ts-safe-project-merge-html-css-matrix.js';
 import { CssModuleProjectMergeMissingSignals, cssModuleProjectMergeAdmissionMatrixRows, cssModuleProjectMergeMatrixProofStatus, cssModuleProjectMergeMissingEvidenceItems, cssModuleProjectMergeMissingEvidenceRoutes } from './js-ts-safe-project-merge-css-module-matrix.js';
+import { PackageCanvasProjectMergeMissingSignals, packageCanvasProjectMergeAdmissionMatrixRows, packageCanvasProjectMergeMatrixProofStatus, packageCanvasProjectMergeMissingEvidenceItems, packageCanvasProjectMergeMissingEvidenceRoutes } from './js-ts-safe-project-merge-package-canvas-matrix.js';
 import { sourceTextMergeMatrixProofStatus, sourceTextMergeMissingEvidenceItem } from './js-ts-safe-project-merge-source-text-candidate.js';
 const ProjectMergeMissingSignals = Object.freeze({
   sourceTextMergeCandidate: 'source-text-merge-candidate-not-produced',
@@ -16,6 +17,7 @@ const ProjectMergeMissingSignals = Object.freeze({
   unsupportedJsTsSurface: 'unsupported-js-ts-surface-proof-not-available',
   ...HtmlCssProjectMergeMissingSignals,
   ...CssModuleProjectMergeMissingSignals,
+  ...PackageCanvasProjectMergeMissingSignals,
   semanticEquivalenceProof: 'semantic-equivalence-proof-not-available',
   semanticEquivalenceProofFailed: 'semantic-equivalence-proof-failed'
 });
@@ -35,6 +37,7 @@ const ProjectMergeMissingEvidenceRoutes = Object.freeze({
   [ProjectMergeMissingSignals.unsupportedJsTsSurface]: route('prove-unsupported-js-ts-surface', 'semantic-proof', 'supply-unsupported-surface-evidence'),
   ...htmlCssProjectMergeMissingEvidenceRoutes(route, ProjectMergeMissingSignals),
   ...cssModuleProjectMergeMissingEvidenceRoutes(route, ProjectMergeMissingSignals),
+  ...packageCanvasProjectMergeMissingEvidenceRoutes(route, ProjectMergeMissingSignals),
   [ProjectMergeMissingSignals.semanticEquivalenceProof]: route('external-semantic-equivalence-proof', 'semantic-proof', 'attach-external-equivalence-proof'),
   [ProjectMergeMissingSignals.semanticEquivalenceProofFailed]: route('reject-semantic-equivalence-proof', 'semantic-proof', 'inspect-external-equivalence-proof-binding')
 });
@@ -51,6 +54,7 @@ const ProjectMergeAdmissionMatrixRows = Object.freeze([
   matrixRow('unsupported-js-ts-surface-coverage', 'partial', ['unsupported-js-ts-surface-review'], [ProjectMergeMissingSignals.unsupportedJsTsSurface]),
   ...htmlCssProjectMergeAdmissionMatrixRows(matrixRow, ProjectMergeMissingSignals),
   ...cssModuleProjectMergeAdmissionMatrixRows(matrixRow, ProjectMergeMissingSignals),
+  ...packageCanvasProjectMergeAdmissionMatrixRows(matrixRow, ProjectMergeMissingSignals),
   matrixRow('semantic-equivalence-proof', 'bounded-evidence', ['semantic-equivalence-external', 'semantic-equivalence-unknown'], [ProjectMergeMissingSignals.semanticEquivalenceProof, ProjectMergeMissingSignals.semanticEquivalenceProofFailed]),
   matrixRow('cross-file-symbol-rename', 'partial', ['diagnostics-clean', 'declaration-output-stable', 'project-graph-delta'], [ProjectMergeMissingSignals.outputDiagnosticsGate, ProjectMergeMissingSignals.declarationGate, ProjectMergeMissingSignals.projectGraphEvidence, ProjectMergeMissingSignals.projectGraphDeltaEvidence]),
   matrixRow('symbol-move-between-files', 'partial', ['diagnostics-clean', 'declaration-output-stable', 'project-graph-delta'], [ProjectMergeMissingSignals.outputDiagnosticsGate, ProjectMergeMissingSignals.declarationGate, ProjectMergeMissingSignals.projectGraphEvidence, ProjectMergeMissingSignals.projectGraphDeltaEvidence]),
@@ -143,6 +147,7 @@ function missingEvidenceItems(summary, context = {}) {
   }));
   items.push(...cssModuleProjectMergeMissingEvidenceItems(summary, ProjectMergeMissingSignals, missingEvidenceItem));
   items.push(...htmlCssProjectMergeMissingEvidenceItems(summary, ProjectMergeMissingSignals, missingEvidenceItem));
+  items.push(...packageCanvasProjectMergeMissingEvidenceItems(summary, ProjectMergeMissingSignals, missingEvidenceItem));
   return items;
 }
 
@@ -258,6 +263,8 @@ function matrixProofStatus(level, summary, proofEvidence) {
   if (levelStatuses[level]) return levelStatuses[level];
   const htmlCssStatus = htmlCssProjectMergeMatrixProofStatus(level, summary);
   if (htmlCssStatus) return htmlCssStatus;
+  const packageCanvasStatus = packageCanvasProjectMergeMatrixProofStatus(level, summary);
+  if (packageCanvasStatus) return packageCanvasStatus;
   const sourceTextStatus = sourceTextMergeMatrixProofStatus(level, summary);
   if (sourceTextStatus) return sourceTextStatus;
   if (level === 'project-graph-delta') return summary.projectGraphDeltaEvidenceIncluded ? (summary.projectGraphDeltaConflicts ? 'failed' : 'passed') : 'missing';
@@ -304,13 +311,7 @@ function countRoute(items, field = 'id') {
 function countRouteItem(counts, item, field) { const key = field === 'lane' ? item?.routeLane ?? item?.route?.lane : item?.routeId ?? item?.route?.id; if (key) counts[key] = (counts[key] ?? 0) + 1; }
 
 function route(id, lane, next) { return Object.freeze({ id, lane, next }); }
-function shouldRecommendRerun(missingEvidence = [], options = {}) {
-  const rerunReasonCodes = new Set((options.rerunReasonCodes ?? []).filter(Boolean));
-  if (!rerunReasonCodes.size) return false;
-  const reasonCodes = (options.reasonCodes ?? []).filter(Boolean);
-  if (reasonCodes.length) return reasonCodes.every((code) => rerunReasonCodes.has(code));
-  return missingEvidence[0]?.action === 'rerun-gate' && missingEvidence[0]?.kind === 'quality-gate';
-}
+function shouldRecommendRerun(missingEvidence = [], options = {}) { const rerunReasonCodes = new Set((options.rerunReasonCodes ?? []).filter(Boolean)); if (!rerunReasonCodes.size) return false; const reasonCodes = (options.reasonCodes ?? []).filter(Boolean); return reasonCodes.length ? reasonCodes.every((code) => rerunReasonCodes.has(code)) : missingEvidence[0]?.action === 'rerun-gate' && missingEvidence[0]?.kind === 'quality-gate'; }
 function isSemanticEquivalenceMissing(item) { return item?.proofLevel === 'semantic-equivalence-unknown' || item?.code === ProjectMergeMissingSignals.semanticEquivalenceProof; }
 function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
 

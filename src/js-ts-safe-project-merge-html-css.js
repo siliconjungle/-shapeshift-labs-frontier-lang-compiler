@@ -10,6 +10,7 @@ import { cssModuleSourceMapIdentityMergeOptions } from './js-ts-safe-project-mer
 import { blockCssScopedParserEvidenceGap, blockCssSelectorFunctionalPseudoSpecificityGap, normalizeHtmlCssParserEvidenceSides } from './js-ts-safe-project-merge-html-css-parser-gaps.js';
 import { htmlProofGapNextProof, htmlProofGapSummary } from './js-ts-safe-project-merge-html-proof-gap-text.js';
 import { htmlRuntimeBoundaryBroadClaimProofForChange, htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult } from './js-ts-safe-project-merge-html-runtime-boundaries.js';
+import { packageManagementLanguageForPath } from './js-ts-safe-project-merge-package-management.js';
 import { FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND, runtimeEvidenceMetadataFromProof, runtimeProofBroadClaimFields } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
 import { attachSvgMergeEvidence } from './js-ts-safe-project-merge-svg-runtime-proof.js';
 
@@ -70,6 +71,8 @@ function maybeMergeHtmlCssProjectFile(options) {
 
 function inferLanguageFromPath(sourcePath) {
   const path = String(sourcePath ?? '').toLowerCase().replace(/[?#].*$/, '');
+  const packageLanguage = packageManagementLanguageForPath(path);
+  if (packageLanguage) return packageLanguage;
   if (path.endsWith('.html') || path.endsWith('.htm')) return 'html';
   if (path.endsWith('.svg')) return 'svg';
   if (path.endsWith('.css')) return 'css';

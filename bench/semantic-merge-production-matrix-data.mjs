@@ -31,6 +31,16 @@ const sourceAnchorUrls = Object.freeze({
   'CSS Modules contracts': [
     'https://github.com/css-modules/css-modules',
     'https://github.com/webpack-contrib/css-loader'
+  ],
+  'Package manifests, lockfiles, and workspace installs': [
+    'https://docs.npmjs.com/cli/v8/configuring-npm/package-lock-json/',
+    'https://pnpm.io/cli/install',
+    'https://classic.yarnpkg.com/lang/en/docs/yarn-lock/'
+  ],
+  'Canvas and OffscreenCanvas runtime semantics': [
+    'https://html.spec.whatwg.org/multipage/canvas.html',
+    'https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas',
+    'https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen'
   ]
 });
 
@@ -39,6 +49,8 @@ const jsxAnchors = ['JSX/TSX parser and React-like layout hazards', ...jsTsAncho
 const htmlCssAnchors = ['HTML tree construction and runtime boundaries', 'CSS syntax, selectors, cascade, and at-rules'];
 const svgAnchors = ['SVG XML graphics structure and browser paint/layout boundaries', 'HTML tree construction and runtime boundaries'];
 const cssModulesAnchors = ['CSS Modules contracts', 'CSS syntax, selectors, cascade, and at-rules', 'JSX/TSX parser and React-like layout hazards'];
+const packageAnchors = ['Package manifests, lockfiles, and workspace installs', 'JavaScript syntax and runtime semantics'];
+const canvasAnchors = ['Canvas and OffscreenCanvas runtime semantics', 'HTML tree construction and runtime boundaries', 'JavaScript syntax and runtime semantics'];
 
 const rowProofs = new Map([
   ['JS/TS parser, source spans, and trivia', {
@@ -146,13 +158,23 @@ const rowProofs = new Map([
     evidence: ['test/smoke/js-ts-safe-project-merge-css-modules-source-map-proof.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-generated-map-hash.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-real-bundler-source-map-corpus.mjs'],
     remaining: []
   }],
+  ['Package management intent and lockfile proof', {
+    anchors: packageAnchors,
+    evidence: ['test/smoke/js-ts-safe-project-merge-package-canvas.mjs'],
+    remaining: ['Package manager execution proof corpus']
+  }],
+  ['Canvas static element and runtime proof', {
+    anchors: canvasAnchors,
+    evidence: ['test/smoke/js-ts-safe-project-merge-package-canvas.mjs'],
+    remaining: ['Canvas browser probe corpus']
+  }],
   ['Real-repo corpus', {
     anchors: [...jsTsAnchors, 'JSX/TSX parser and React-like layout hazards', 'CSS Modules contracts'],
     evidence: ['bench/real-repo-corpus-suite.mjs', 'bench/real-repo-corpus-upstream-proof.mjs', 'research/real-repo-corpus-upstream-proof.json', 'test/smoke/js-ts-real-repo-corpus-command-execution-proof.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs', 'test/smoke/js-ts-real-repo-corpus-upstream-proof-artifact.mjs'],
     remaining: []
   }],
   ['Source-backed completeness matrix', {
-    anchors: ['JavaScript syntax and runtime semantics', 'HTML tree construction and runtime boundaries', 'CSS Modules contracts'],
+    anchors: ['JavaScript syntax and runtime semantics', 'HTML tree construction and runtime boundaries', 'CSS Modules contracts', 'Package manifests, lockfiles, and workspace installs', 'Canvas and OffscreenCanvas runtime semantics'],
     evidence: ['research/semantic-merge-production-matrix.md', 'test/smoke/semantic-merge-production-matrix-denominator.mjs'],
     remaining: []
   }]

@@ -20,6 +20,8 @@ import { applyProjectSymbolRenameClassifications, classifyProjectSymbolRenames }
 import { applyProjectSplitMergeClassifications, classifyProjectSplitMerges } from './js-ts-safe-project-merge-split-merge.js';
 import { projectConfidence, projectEvidence, projectSummary, projectSummaryWithConfidenceEvidence } from './js-ts-safe-project-merge-summary.js';
 import { maybeMergeHtmlCssProjectFile, projectFileLanguage } from './js-ts-safe-project-merge-html-css.js';
+import { guardCanvasProjectFileMerge } from './js-ts-safe-project-merge-canvas.js';
+import { maybeMergePackageManagementProjectFile } from './js-ts-safe-project-merge-package-management.js';
 import { createProjectCssModuleMergeEvidence, mergeOutputProjectImports, projectCssModuleOutputProjectImports } from './js-ts-safe-project-merge-css-module-proofs.js';
 import { createJsTsProjectReferenceCompositeProof } from './js-ts-safe-project-merge-project-reference-proof.js';
 function safeMergeJsTsProject(input = {}) {
@@ -249,6 +251,8 @@ function mergeProjectFile(file, input, projectId, projectSymbolRenames, projectC
       ? syntheticFile(file, context, undefined, 'head-deleted-worker-unchanged')
       : blockedFile(file, context, 'head-file-delete-conflict');
   }
+  const packageManagementMerge = maybeMergePackageManagementProjectFile({ file, input, projectId, context, base, worker, head });
+  if (packageManagementMerge) return packageManagementMerge;
   const nonJsTsMerge = maybeMergeHtmlCssProjectFile({ file, input, projectId, context, base, worker, head, sourceInput: sourceMergeInputForProjectFile(input), projectCssModuleMergeEvidence });
   if (nonJsTsMerge) return nonJsTsMerge;
   const result = safeMergeJsTsSource({
@@ -264,12 +268,15 @@ function mergeProjectFile(file, input, projectId, projectSymbolRenames, projectC
     sourceLedgers: sourceLedgersForFile(input, file.sourcePath),
     policy: file.policy ?? file.mergePolicy ?? policyForFile(input, file.sourcePath)
   });
-  if (result.status !== 'merged') {
+  const canvasGuardedResult = result.status === 'merged' ? guardCanvasProjectFileMerge({ file, input, context, result, base, worker, head }) : undefined;
+  if (canvasGuardedResult?.status === 'blocked') return mergeBlockedFile(file, context, canvasGuardedResult);
+  const admittedResult = canvasGuardedResult ?? result;
+  if (admittedResult.status !== 'merged') {
     if (base === worker && base === head) {
       return syntheticFile(file, context, base, 'unchanged-identical');
     }
-    return maybeMergeImportSpecifierRemovalFile(file, context, result, input)
-      ?? mergeBlockedFile(file, context, result);
+    return maybeMergeImportSpecifierRemovalFile(file, context, admittedResult, input)
+      ?? mergeBlockedFile(file, context, admittedResult);
   }
   return compactRecord({
     kind: 'frontier.lang.jsTsProjectSafeMergeFile',
@@ -277,17 +284,17 @@ function mergeProjectFile(file, input, projectId, projectSymbolRenames, projectC
     sourcePath: file.sourcePath,
     language: context.language,
     status: 'merged',
-    operation: result.summary.memberAdditions ? 'merged-source-and-members' : 'merged-source',
-    outputSourceText: result.mergedSourceText,
-    outputHash: hashText(result.mergedSourceText),
+    operation: admittedResult.summary.memberAdditions ? 'merged-source-and-members' : 'merged-source',
+    outputSourceText: admittedResult.mergedSourceText,
+    outputHash: hashText(admittedResult.mergedSourceText),
     baseHash: hashText(base),
     workerHash: hashText(worker),
     headHash: hashText(head),
-    result,
-    semanticArtifacts: result.semanticArtifacts,
+    result: admittedResult,
+    semanticArtifacts: admittedResult.semanticArtifacts,
     conflicts: [],
-    admission: result.admission,
-    summary: result.summary,
+    admission: admittedResult.admission,
+    summary: admittedResult.summary,
     conflictKeys: [`source#${file.sourcePath}`]
   });
 }
@@ -303,17 +310,8 @@ function sourceMergeInputForProjectFile(input) {
 
 function mergeBlockedFile(file, context, result) {
   return compactRecord({
-    kind: 'frontier.lang.jsTsProjectSafeMergeFile',
-    version: 1,
-    sourcePath: file.sourcePath,
-    language: context.language,
-    status: 'blocked',
-    operation: 'blocked-merge',
-    result,
-    conflicts: result.conflicts ?? [],
-    admission: result.admission,
-    summary: result.summary,
-    conflictKeys: [`source#${file.sourcePath}`]
+    kind: 'frontier.lang.jsTsProjectSafeMergeFile', version: 1, sourcePath: file.sourcePath, language: context.language,
+    status: 'blocked', operation: 'blocked-merge', result, conflicts: result.conflicts ?? [], admission: result.admission, summary: result.summary, conflictKeys: [`source#${file.sourcePath}`]
   });
 }
 

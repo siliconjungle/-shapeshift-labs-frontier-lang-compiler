@@ -25,10 +25,10 @@ assert.equal(status.unmappedMatrixRows.length, 0, 'production matrix rows must m
 assert.equal(status.unmappedProofRows.length, 0, 'proof rows must map to production matrix rows');
 assert.equal(status.unmappedSourceAnchors.length, 0, 'all source anchors must be linked');
 assert.equal(status.unmappedRemainingWork.length, 0, 'all remaining-work rows must be linked');
-assert.equal(status.rowCount, 22, 'production matrix row count');
-assert.equal(status.remainingWorkCount, 0, 'remaining work row count');
+assert.equal(status.rowCount, 24, 'production matrix row count');
+assert.equal(status.remainingWorkCount, 2, 'remaining work row count');
 assert.equal(status.statusCounts.high, 22, 'high matrix row count');
-assert.equal(status.statusCounts.partial ?? 0, 0, 'partial matrix row count');
+assert.equal(status.statusCounts.partial, 2, 'partial matrix row count');
 assert.deepEqual(status.highRowsWithoutExecutableEvidence, [], 'high rows must map to executable evidence');
 assert.deepEqual(status.runtimeEquivalenceOverclaimRows, [], 'runtime/browser/render rows must stay bounded or fail-closed');
 assert.equal(
@@ -82,13 +82,27 @@ assert.equal(Boolean(completenessRow), true, 'source-backed completeness matrix 
 assert.doesNotMatch(completenessRow.currentExecutableEvidence, /\bCI publishes\b/, 'source-backed completeness row must not claim missing CI publication evidence');
 assert.match(completenessRow.currentExecutableEvidence, /executable evidence files/, 'source-backed completeness row names executable evidence mapping');
 assert.match(completenessRow.currentExecutableEvidence, /exact source-anchor URLs/, 'source-backed completeness row names exact source-anchor URL checks');
-assert.match(completenessRow.currentExecutableEvidence, /remaining-work table intentionally empty/, 'source-backed completeness row names empty remaining-work denominator');
+assert.match(completenessRow.currentExecutableEvidence, /remaining-work rows mapped/, 'source-backed completeness row names mapped remaining-work rows');
 assert.match(completenessRow.currentExecutableEvidence, /runtime-equivalence caveats/, 'source-backed completeness row names runtime-equivalence caveats');
+
+const packageManagementRow = status.rows.find((row) => row.area === 'Package management intent and lockfile proof');
+assert.equal(Boolean(packageManagementRow), true, 'package-management matrix row exists');
+assert.equal(packageManagementRow.status, 'partial', 'package-management row stays partial until package-manager execution corpus exists');
+assert.match(packageManagementRow.currentExecutableEvidence, /does not text-merge lockfiles/, 'package-management row names lockfile no-text-merge rule');
+assert.equal(packageManagementRow.remainingWork.some((item) => item.workItem === 'Package manager execution proof corpus' && item.present), true, 'package-manager execution proof work is tracked');
+assert.equal(packageManagementRow.evidenceFiles.some((file) => file.path === 'test/smoke/js-ts-safe-project-merge-package-canvas.mjs' && file.present), true, 'package-management focused smoke evidence');
+
+const canvasRow = status.rows.find((row) => row.area === 'Canvas static element and runtime proof');
+assert.equal(Boolean(canvasRow), true, 'canvas matrix row exists');
+assert.equal(canvasRow.status, 'partial', 'canvas row stays partial until browser probe corpus exists');
+assert.match(canvasRow.currentExecutableEvidence, /OffscreenCanvas worker fail-closed/, 'canvas row names OffscreenCanvas fail-closed behavior');
+assert.equal(canvasRow.remainingWork.some((item) => item.workItem === 'Canvas browser probe corpus' && item.present), true, 'canvas browser probe work is tracked');
+assert.equal(canvasRow.evidenceFiles.some((file) => file.path === 'test/smoke/js-ts-safe-project-merge-package-canvas.mjs' && file.present), true, 'canvas focused smoke evidence');
 
 const readmeMatrix = status.readmeSemanticMergeMatrix;
 assert.equal(Boolean(readmeMatrix), true, 'README semantic merge matrix audit exists');
 assert.equal(readmeMatrix.matrixPath, 'README.md', 'README semantic merge matrix path');
-assert.equal(readmeMatrix.rowCount, 33, 'README semantic merge row count');
+assert.equal(readmeMatrix.rowCount, 35, 'README semantic merge row count');
 assert.equal(readmeMatrix.statusCounts.high, 1, 'README semantic merge high row count');
 assert.deepEqual(readmeMatrix.unmappedHighRows, [], 'README high rows must map to proof rows');
 assert.deepEqual(readmeMatrix.highRowsWithoutSourceAnchors, [], 'README high rows must map to source anchors');

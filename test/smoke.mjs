@@ -145,6 +145,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-html-runtime-proof-admission-framework-navigation.mjs',
   './smoke/js-ts-safe-project-merge-html-resource-runtime-boundary.mjs',
   './smoke/js-ts-safe-project-merge-html-structural-runtime-boundary.mjs',
+  './smoke/js-ts-safe-project-merge-package-canvas.mjs',
   './smoke/js-ts-safe-project-merge-html-css-dependencies.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-use-sites.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-bounded-dynamic.mjs',
@@ -316,5 +317,4 @@ for (const modulePath of semanticAutoMergeSmokeModules) if (!smokeModules.includ
 
 const explicitModules = process.argv.slice(2).filter((arg) => arg.endsWith('.mjs'));
 const modules = explicitModules.length > 0 ? explicitModules.map((arg) => pathToFileURL(resolve(arg)).href) : smokeModules;
-
 for (const modulePath of modules) await import(modulePath);

@@ -37,7 +37,7 @@ export type { JsTsProjectJsxRenderReturnBranchArmOrigin, JsTsProjectJsxRenderRet
 export type JsTsProjectSafeMergeStatus = 'merged' | 'blocked';
 export type JsTsProjectSafeMergeFileStatus = 'merged' | 'blocked';
 export type JsTsProjectSafeMergeFileOperation = 'merged-source' | 'merged-source-and-members' | 'worker-added' | 'head-only' | 'both-added-identical' | 'worker-deleted' | 'head-deleted-worker-unchanged' | 'blocked-merge' | 'blocked-file-presence' | string;
-type U=Record<string,unknown>; type RO<T>=Readonly<Record<string,T>>; type H='htmlBrowserRuntime'|'htmlSourceBoundRuntime'|'htmlRuntimeBoundary'|'htmlSourceBoundRuntimeBoundary'|'sourceBoundRuntimeBoundary'|'browserRuntime'|'sourceBoundRuntime';
+type U=Record<string,unknown>; type RO<T>=Readonly<Record<string,T>>; type H='htmlBrowserRuntime'|'htmlSourceBoundRuntime'|'htmlRuntimeBoundary'|'htmlSourceBoundRuntimeBoundary'|'sourceBoundRuntimeBoundary'|'browserRuntime'|'sourceBoundRuntime'; type P='packageManagement'|'packageLockfileRegeneration'|'packageLockfile'|'packagePublicSurface'|'packagePeerDependency'|'packagePeerResolution'|'packageManagerMigration'|'packageWorkspace'|'packageInstallScript'|'canvasRuntime'|'canvasDrawingRuntime'|'canvasOffscreenWorker';
 type C='cssCascadeRuntime'|'cssSourceBoundCascade'|'cascadeRuntime'|'sourceBoundCascade'; type S=H|'runtimeBoundary'|'svgRuntime'|'svgBrowserRuntime'|C; type RP<T extends string=S>=Readonly<Partial<Record<`${T}Proof`,unknown>> & Partial<Record<`${T}Proofs`,readonly unknown[]>> & Partial<Record<`${T}ProofsByPath`,Readonly<U>>>>;
 export type JsTsProjectHtmlCssMergeOptions=Readonly<U> & RP;
 export interface JsTsProjectSafeMergeEvidenceRecord { readonly id: string; readonly kind: string; readonly status: 'passed' | 'failed' | 'skipped' | 'unknown' | string; readonly level?: string; readonly scope?: string; readonly summary?: string; readonly metadata?: U; }
@@ -93,7 +93,7 @@ export type JsTsProjectSafeMergeProjectGraphImportsByStage = Readonly<{
   output?: JsTsProjectSafeMergeOutputProjectImports;
 } & Record<string, JsTsProjectSafeMergeOutputProjectImports | undefined>>;
 
-export interface JsTsProjectSafeMergeInput extends RP<H> {
+export interface JsTsProjectSafeMergeInput extends RP<S|P> {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage | string;
   readonly projectRoot?: string;
@@ -126,7 +126,7 @@ export interface JsTsProjectSafeMergeInput extends RP<H> {
   readonly externalSemanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof;
   readonly semanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof;
   readonly htmlMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly markupMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly htmlMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>; readonly markupMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>;
-  readonly svgMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly svgMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>; readonly svgRuntimeProof?: unknown; readonly svgRuntimeProofs?: readonly unknown[]; readonly svgRuntimeProofsByPath?: Readonly<U>; readonly svgBrowserRuntimeProof?: unknown; readonly svgBrowserRuntimeProofs?: readonly unknown[]; readonly svgBrowserRuntimeProofsByPath?: Readonly<U>;
+  readonly svgMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly svgMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>;
   readonly cssMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly styleMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly cssMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>; readonly styleMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>;
   readonly disableProjectCssDependencyGraphProofSynthesis?: boolean;
   readonly disableProjectCssModuleProofSynthesis?: boolean;
