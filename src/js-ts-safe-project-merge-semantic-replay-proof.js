@@ -2,6 +2,7 @@ import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import {
   boundedCurrentHeadAggregateRoute,
   boundedCurrentHeadRouteForFact,
+  boundedCurrentHeadRouteReasonCodes,
   replayAppliedOperations
 } from './js-ts-safe-project-merge-semantic-replay-proof-routes.js';
 import {
@@ -15,18 +16,24 @@ function semanticEditReplayCleanEvidence(id, fileResults, level) {
     .map(semanticReplayFact)
     .filter((fact) => fact.semanticArtifacts && fact.changedOrBlocked);
   const facts = rawFacts.map((fact) => {
-    const boundedAdmissionRoute = boundedCurrentHeadRouteForFact(fact, level);
-    return fact.status === 'passed' && !boundedAdmissionRoute
+    const boundedRouteReasonCodes = fact.status === 'passed'
+      ? boundedCurrentHeadRouteReasonCodes(fact, level)
+      : [];
+    const checkedFact = boundedRouteReasonCodes.length
+      ? { ...fact, reasonCodes: uniqueStrings([...fact.reasonCodes, ...boundedRouteReasonCodes]) }
+      : fact;
+    const boundedAdmissionRoute = boundedCurrentHeadRouteForFact(checkedFact, level);
+    return checkedFact.status === 'passed' && !boundedAdmissionRoute
       ? {
-          ...fact,
+          ...checkedFact,
           status: 'missing',
           reasonCodes: uniqueStrings([
-            ...fact.reasonCodes,
+            ...checkedFact.reasonCodes,
             'semantic-edit-replay-current-head-proof-missing'
           ]),
           boundedAdmissionRoute
         }
-      : { ...fact, boundedAdmissionRoute };
+      : { ...checkedFact, boundedAdmissionRoute };
   });
   const failed = facts.filter((fact) => fact.status === 'failed');
   const missing = facts.filter((fact) => fact.status === 'missing');
@@ -139,6 +146,7 @@ function semanticReplayFact(file) {
     replaySourcePath: sourceBinding.replaySourcePath,
     appliedOperations,
     rerunRouteId: sourceBinding.rerunRouteId,
+    proofRoute,
     proofRouteId: proofRoute?.routeId,
     conflictKey: file.conflictKeys?.[0]
   };

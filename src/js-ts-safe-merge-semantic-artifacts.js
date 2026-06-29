@@ -59,7 +59,7 @@ function createJsTsSafeMergeSemanticArtifacts(input = {}, merge = {}) {
     id: `js_ts_safe_merge_replay_${idFragment(id)}`,
     projection,
     currentSourceText: headSourceText,
-    currentSourceHash: headReplaySourceHash(input),
+    currentSourceHash: headReplaySourceHash(input, headSourceText),
     currentSourcePath: sourcePath,
     expectedOutputSourceText: mergedSourceText,
     expectedOutputHash: projection.projectedHash,
@@ -269,8 +269,10 @@ function countBy(values, keyFor) {
   return result;
 }
 
-function headReplaySourceHash(input) {
-  return nativeSemanticHash(input.currentSourceHash) ?? nativeSemanticHash(input.headHash);
+function headReplaySourceHash(input, headSourceText) {
+  return nativeSemanticHash(input.currentSourceHash)
+    ?? nativeSemanticHash(input.headHash)
+    ?? (typeof headSourceText === 'string' ? hashSemanticValue(headSourceText) : undefined);
 }
 
 function nativeSemanticHash(value) {

@@ -2,6 +2,7 @@ import { assert } from './helpers.mjs';
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { createSemanticEditBundleAdmission, createSemanticEditScript, projectSemanticEditScriptToSource, replaySemanticEditProjection, safeMergeJsTsProject } from '../../src/index.js';
 import { semanticEditReplayCleanEvidence } from '../../src/js-ts-safe-project-merge-semantic-replay-proof.js';
+import { semanticReplayCurrentHeadCommutationProofRoute } from '../../src/js-ts-safe-project-merge-semantic-replay-routes.js';
 
 const sameLineReplayConflict = safeMergeJsTsProject({
   id: 'project_semantic_replay_conflict_proof',
@@ -291,28 +292,23 @@ function replayProofFile(input) {
 }
 
 function replayProofReplay(input, outputSourceText) {
+  const currentHash = input.includeCurrentBinding === false ? undefined : hashSemanticValue(input.replayCurrentSourceText ?? input.headSourceText);
+  const appliedOperations = input.includeAppliedOperations === false ? undefined : [`operation_${input.fixtureId}`];
+  const proofRoute = input.includeProofRoute === false ? undefined : semanticReplayCurrentHeadCommutationProofRoute({
+    status: 'accepted-clean', sourcePath: input.includeReplaySourcePath === false ? undefined : input.sourcePath, replayId: `replay_${input.fixtureId}`,
+    appliedOperations, outputBindingStatus: 'bound', expectedCurrentHash: input.includeCurrentBinding === false ? undefined : hashSemanticValue(input.headSourceText),
+    replayCurrentHash: currentHash, expectedOutputHash: hashSemanticValue(input.outputSourceText),
+    projectionOutputHash: hashSemanticValue(input.projectionSourceText ?? input.outputSourceText), replayOutputHash: hashSemanticValue(outputSourceText)
+  });
   return compactRecord({
-    id: `replay_${input.fixtureId}`,
-    sourcePath: input.includeReplaySourcePath === false ? undefined : input.sourcePath,
-    status: 'accepted-clean',
-    currentHash: input.includeCurrentBinding === false
-      ? undefined
-      : hashSemanticValue(input.replayCurrentSourceText ?? input.headSourceText),
-    appliedOperations: input.includeAppliedOperations === false ? undefined : [`operation_${input.fixtureId}`],
-    outputSourceText,
-    outputHash: hashSemanticValue(outputSourceText),
-    admission: replayProofAdmission(),
-    summary: { reasonCodes: [] },
-    diagnostics: []
+    id: `replay_${input.fixtureId}`, sourcePath: input.includeReplaySourcePath === false ? undefined : input.sourcePath,
+    status: 'accepted-clean', currentHash, appliedOperations, outputSourceText, outputHash: hashSemanticValue(outputSourceText),
+    admission: replayProofAdmission(proofRoute), summary: { reasonCodes: [] }, diagnostics: []
   });
 }
 
-function replayProofAdmission() {
-  return {
-    reasonCodes: [],
-    autoMergeClaim: false,
-    semanticEquivalenceClaim: false
-  };
+function replayProofAdmission(proofRoute) {
+  return compactRecord({ reasonCodes: [], autoMergeClaim: false, semanticEquivalenceClaim: false, proofRoute });
 }
 
 function compactRecord(record) {

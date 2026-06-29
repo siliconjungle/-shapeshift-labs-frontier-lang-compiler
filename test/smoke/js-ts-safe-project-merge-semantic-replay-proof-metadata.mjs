@@ -112,6 +112,46 @@ assert.equal(hashOnlyRouteAdmission.reasonCodes.includes('semantic-edit-replay-c
 assert.equal(hashOnlyRouteAdmission.reasonCodes.includes('semantic-edit-replay-current-head-proof-metadata-missing'), true);
 assert.equal(hashOnlyRouteAdmission.reasonCodes.includes('semantic-edit-positive-auto-merge-proof'), false);
 
+const proofRouteOutputMismatchReplay = {
+  ...identifiedBoundedReplay,
+  admission: {
+    ...identifiedBoundedReplay.admission,
+    proofRoute: {
+      ...identifiedBoundedReplay.admission.proofRoute,
+      expectedOutputHash: hashSemanticValue(renameExpected.replace('keep = 1', 'keep = 9'))
+    }
+  }
+};
+const proofRouteOutputMismatchEvidence = semanticEditReplayCleanEvidence('project_output_mismatched_replay_proof_route', [{
+  sourcePath: 'src/replay-output.ts',
+  status: 'merged',
+  baseHash: hashSemanticValue(renameBase),
+  headSourceText: renameHead,
+  headHash: hashSemanticValue(renameHead),
+  outputSourceText: renameExpected,
+  outputHash: hashSemanticValue(renameExpected),
+  semanticArtifacts: {
+    status: 'verified',
+    projection: {
+      id: renameProjection.id,
+      sourcePath: 'src/replay-output.ts',
+      sourceText: renameExpected,
+      projectedHash: hashSemanticValue(renameExpected)
+    },
+    replay: proofRouteOutputMismatchReplay,
+    alreadyAppliedReplay: { id: 'replay_output_mismatch_already_applied', status: 'already-applied' },
+    admission: replayProofAdmission()
+  }
+}], 'semantic-edit-replay-clean');
+assert.equal(proofRouteOutputMismatchEvidence.status, 'skipped');
+assert.equal(proofRouteOutputMismatchEvidence.autoMergeClaim, false);
+assert.equal(proofRouteOutputMismatchEvidence.semanticEquivalenceClaim, false);
+assert.equal(proofRouteOutputMismatchEvidence.metadata?.missingSignal, 'semantic-edit-replay-proof-not-produced');
+assert.equal(proofRouteOutputMismatchEvidence.metadata?.currentHeadCommutationProofs, 0);
+assert.equal(proofRouteOutputMismatchEvidence.metadata?.boundedAdmissionRoute, undefined);
+assert.equal(proofRouteOutputMismatchEvidence.metadata?.reasonCodes.includes('semantic-edit-replay-current-head-proof-output-hash-mismatch'), true);
+assert.equal(proofRouteOutputMismatchEvidence.metadata?.reasonCodes.includes('semantic-edit-replay-current-head-proof-missing'), true);
+
 function replayProofFile(input) {
   const outputSourceText = input.outputSourceText;
   return compactRecord({

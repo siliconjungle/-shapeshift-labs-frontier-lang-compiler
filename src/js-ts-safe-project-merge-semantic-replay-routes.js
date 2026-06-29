@@ -79,8 +79,8 @@ function semanticReplayCurrentHeadCommutationProofRoute(input = {}) {
     input.outputBinding?.replayOutputHash
   );
   if (!expectedOutputHash || expectedOutputHash !== replayOutputHash) return undefined;
-  if (projectionOutputHash && projectionOutputHash !== expectedOutputHash) return undefined;
-  if (projectionOutputHash && projectionOutputHash !== replayOutputHash) return undefined;
+  if (!projectionOutputHash || projectionOutputHash !== expectedOutputHash) return undefined;
+  if (projectionOutputHash !== replayOutputHash) return undefined;
   return compactRecord({
     routeId: 'admit-independent-semantic-edit-current-head-commutation',
     routeLane: 'source-files',
