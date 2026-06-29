@@ -23,6 +23,14 @@ assert.equal(realRepoRow.evidenceFiles.some((file) => file.path === 'bench/real-
 assert.equal(realRepoRow.evidenceFiles.some((file) => file.path === 'research/real-repo-corpus-upstream-proof.json' && file.present), true, 'real-repo upstream proof artifact evidence');
 assert.equal(realRepoRow.evidenceFiles.some((file) => file.path === 'test/smoke/js-ts-real-repo-corpus-upstream-proof-artifact.mjs' && file.present), true, 'real-repo upstream proof artifact smoke evidence');
 
+const genericReplayRow = status.rows.find((row) => row.area === 'Generic semantic edit admission and replay');
+assert.equal(Boolean(genericReplayRow), true, 'generic replay matrix row exists');
+assert.equal(genericReplayRow.status, 'high', 'generic replay high after source-bound bundle composition proof');
+assert.match(genericReplayRow.currentExecutableEvidence, /source-bound same-file bundle composition replay/, 'generic replay row names source-bound bundle composition proof');
+assert.match(genericReplayRow.currentExecutableEvidence, /current\/output hash binding/, 'generic replay row names current/output binding');
+assert.equal(genericReplayRow.evidenceFiles.some((file) => file.path === 'test/smoke/semantic-edit-bundle-auto-merge.mjs' && file.present), true, 'generic replay source edit dedupe evidence');
+assert.equal(genericReplayRow.evidenceFiles.some((file) => file.path === 'test/smoke/semantic-patch-bundle-overlaps-same-file.mjs' && file.present), true, 'generic replay source-bound bundle composition evidence');
+
 for (const row of status.rows) {
   assert.equal(['high', 'partial', 'missing'].includes(row.status), true, `${row.area}: supported status`);
   assert.equal(row.mapped, true, `${row.area}: proof mapping`);

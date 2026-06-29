@@ -2,6 +2,7 @@ import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { parseCssSemanticSheet } from '@shapeshift-labs/frontier-lang-css';
 import { assert } from './helpers.mjs';
 import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
+import { cssModuleSourceMapIdentityFixture } from './js-ts-safe-project-merge-css-modules-test-helpers.mjs';
 
 const sourcePath = 'src/Button.module.css';
 const buttonCssModuleSpecifier = './Button.module' + '.css';
@@ -63,6 +64,12 @@ const generatedClassNameMapHash = hashSemanticValue({
   kind: 'frontier.lang.css.modules.generatedClassNameMap.v1',
   generatedClassNameMap
 });
+const synthesizedTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath,
+  sourceText: outputSourceText,
+  generatedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:button-module'
+});
 const provenProject = mergeButtonModuleProject('js_ts_safe_project_merge_css_module_contract_source_bound_proof', {
   generatedClassNameMap,
   jsTsUseSiteGraphHash,
@@ -99,7 +106,8 @@ const projectSynthesizedProof = safeMergeJsTsProject({
     [sourcePath]: {
       generatedClassNameMap,
       bundlerTransformHash: 'bundler-transform:button-module',
-      sourceMapProofHash: 'source-map-proof:button-module'
+      cssModuleGeneratedSourceHash: synthesizedTransformProof.cssModuleGeneratedSourceHash,
+      sourceMapIdentityProof: synthesizedTransformProof.sourceMapIdentityProof
     }
   },
   files: [
@@ -131,7 +139,7 @@ assert.equal(synthesizedCssFile.result.cssModuleContractProofs.length >= 1, true
 assert.equal(synthesizedCssFile.result.cssModuleContractProofs.some((proof) => proof.proofLevel === 'css-module-contract-project-source-bound'), true);
 assert.equal(synthesizedCssFile.result.cssModuleContractProofs.every((proof) => proof.jsTsUseSiteGraphHash?.startsWith('fnv1a32:')), true);
 assert.equal(synthesizedCssFile.result.cssModuleContractProofs.every((proof) => proof.bundlerTransformHash === 'bundler-transform:button-module'), true);
-assert.equal(synthesizedCssFile.result.cssModuleContractProofs.every((proof) => proof.sourceMapProofHash === 'source-map-proof:button-module'), true);
+assert.equal(synthesizedCssFile.result.cssModuleContractProofs.every((proof) => proof.sourceMapProofHash?.startsWith('fnv1a32:')), true);
 assert.equal(projectSynthesizedProof.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].status, 'ready');
 assert.equal(typeof projectSynthesizedProof.outputProjectSymbolGraph.cssModuleUseSiteGraphs[0].jsTsUseSiteGraphHash, 'string');
 const projectSynthesizedSurface = matrixSurface(projectSynthesizedProof, 'css-modules-use-site-graph');
@@ -193,6 +201,12 @@ assert.equal(transformGeneratedClassNameMapSurface.missingRouteIds.includes('pro
 assert.equal(transformBundlerIdentitySurface.missingRouteIds.includes('prove-css-module-bundler-transform-identity'), true);
 assert.equal(transformSourceMapIdentitySurface.missingRouteIds.includes('prove-css-module-source-map-identity'), true);
 
+const useSiteOnlyTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath,
+  sourceText: baseSourceText,
+  generatedClassNameMap: { root: 'Button_root__hash' },
+  bundlerTransformHash: 'bundler-transform:button-module'
+});
 const useSiteOnlyProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_module_use_site_only_boundary',
   includeOutputProjectSymbolGraph: true,
@@ -203,7 +217,8 @@ const useSiteOnlyProject = safeMergeJsTsProject({
     metadata: {
       generatedClassNameMap: { root: 'Button_root__hash' },
       bundlerTransformHash: 'bundler-transform:button-module',
-      sourceMapProofHash: 'source-map-proof:button-module'
+      cssModuleGeneratedSourceHash: useSiteOnlyTransformProof.cssModuleGeneratedSourceHash,
+      sourceMapIdentityProof: useSiteOnlyTransformProof.sourceMapIdentityProof
     }
   })],
   files: [

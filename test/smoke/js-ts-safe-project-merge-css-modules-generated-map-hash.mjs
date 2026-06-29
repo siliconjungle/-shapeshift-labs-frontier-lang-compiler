@@ -1,6 +1,7 @@
 import { hashSemanticValue } from '@shapeshift-labs/frontier-lang-kernel';
 import { assert } from './helpers.mjs';
 import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
+import { cssModuleSourceMapIdentityFixture } from './js-ts-safe-project-merge-css-modules-test-helpers.mjs';
 
 const sourcePath = 'src/Button.module.css';
 const buttonCssModuleSpecifier = './Button.module' + '.css';
@@ -8,6 +9,7 @@ const generatedClassNameMap = { root: 'Button_root__hash', label: 'Button_label_
 const baseSourceText = '.root {\n  color: red;\n}\n';
 const workerSourceText = '.root {\n  color: red;\n}\n.label {\n  font-weight: 600;\n}\n';
 const headSourceText = '.root {\n  color: blue;\n}\n';
+const outputSourceText = '.root {\n  color: blue;\n}\n\n.label {\n  font-weight: 600;\n}\n';
 const generatedClassNameMapHash = hashSemanticValue({
   kind: 'frontier.lang.css.modules.generatedClassNameMap.v1',
   generatedClassNameMap
@@ -15,6 +17,18 @@ const generatedClassNameMapHash = hashSemanticValue({
 const staleGeneratedClassNameMapHash = hashSemanticValue({
   kind: 'frontier.lang.css.modules.generatedClassNameMap.v1',
   generatedClassNameMap: { root: 'Button_root__stale', label: 'Button_label__hash' }
+});
+const mergedSourceTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath,
+  sourceText: outputSourceText,
+  generatedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:button-module'
+});
+const baseSourceTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath,
+  sourceText: baseSourceText,
+  generatedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:button-module'
 });
 
 const projectStaleGeneratedClassNameMapHash = safeMergeJsTsProject({
@@ -25,7 +39,8 @@ const projectStaleGeneratedClassNameMapHash = safeMergeJsTsProject({
       generatedClassNameMap,
       generatedClassNameMapHash: staleGeneratedClassNameMapHash,
       bundlerTransformHash: 'bundler-transform:button-module',
-      sourceMapProofHash: 'source-map-proof:button-module'
+      cssModuleGeneratedSourceHash: mergedSourceTransformProof.cssModuleGeneratedSourceHash,
+      sourceMapIdentityProof: mergedSourceTransformProof.sourceMapIdentityProof
     }
   },
   files: projectSynthesizedProofInputFiles()
@@ -46,7 +61,8 @@ const staleGeneratedClassNameMapOutputGraphProject = safeMergeJsTsProject({
       generatedClassNameMap,
       generatedClassNameMapHash: staleGeneratedClassNameMapHash,
       bundlerTransformHash: 'bundler-transform:button-module',
-      sourceMapProofHash: 'source-map-proof:button-module'
+      cssModuleGeneratedSourceHash: baseSourceTransformProof.cssModuleGeneratedSourceHash,
+      sourceMapIdentityProof: baseSourceTransformProof.sourceMapIdentityProof
     }
   },
   files: [
@@ -86,7 +102,8 @@ const canonicalGeneratedClassNameMapGraphProject = safeMergeJsTsProject({
       metadata: {
         generatedClassNameMap,
         bundlerTransformHash: 'bundler-transform:button-module',
-        sourceMapProofHash: 'source-map-proof:button-module'
+        cssModuleGeneratedSourceHash: baseSourceTransformProof.cssModuleGeneratedSourceHash,
+        sourceMapIdentityProof: baseSourceTransformProof.sourceMapIdentityProof
       }
     })
   ],

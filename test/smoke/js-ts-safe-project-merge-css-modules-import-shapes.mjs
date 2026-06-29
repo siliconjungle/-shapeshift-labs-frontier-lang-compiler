@@ -1,9 +1,17 @@
 import { assert } from './helpers.mjs';
 import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
 import { matrixSurface } from './html-css-merge-test-helpers.mjs';
+import { cssModuleSourceMapIdentityFixture } from './js-ts-safe-project-merge-css-modules-test-helpers.mjs';
 
 const readyCssModuleSpecifier = './Ready.module.css';
 const readyCssModuleSourceText = '.root { color: red; }\n.label { display: block; }\n';
+const readyGeneratedClassNameMap = { root: '_root_123', label: '_label_456' };
+const readyTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath: 'src/Ready.module.css',
+  sourceText: readyCssModuleSourceText,
+  generatedClassNameMap: readyGeneratedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:ready'
+});
 const readyCssModuleImport = importNativeSource({
   language: 'css',
   sourcePath: 'src/Ready.module.css',
@@ -11,13 +19,15 @@ const readyCssModuleImport = importNativeSource({
   metadata: {
     cssModuleEvidence: {
       moduleHash: 'css-module:ready',
-      generatedClassNameMap: { root: '_root_123', label: '_label_456' },
+      generatedClassNameMap: readyGeneratedClassNameMap,
+      generatedClassNameMapHash: readyTransformProof.generatedClassNameMapHash,
       jsTsUseSiteGraphHash: 'css-module-use-sites:ready',
       cssModuleCompositionGraphHash: 'css-module-composition:ready',
       icssGraphHash: 'icss:ready'
     },
     bundlerTransformHash: 'bundler-transform:ready',
-    sourceMapProofHash: 'source-map-proof:ready'
+    cssModuleGeneratedSourceHash: readyTransformProof.cssModuleGeneratedSourceHash,
+    sourceMapIdentityProof: readyTransformProof.sourceMapIdentityProof
   }
 });
 
@@ -35,6 +45,13 @@ const readyNamespaceButtonSourceText = [
   ''
 ].join('\n');
 const readyNamespaceCssModuleSourceText = '.root { color: red; }\n.label { display: block; }\n.active { color: blue; }\n';
+const readyNamespaceGeneratedClassNameMap = { root: '_root_ns_123', label: '_label_ns_456', active: '_active_ns_789' };
+const readyNamespaceTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath: 'src/ReadyNamespace.module.css',
+  sourceText: readyNamespaceCssModuleSourceText,
+  generatedClassNameMap: readyNamespaceGeneratedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:ready-namespace'
+});
 const readyNamespaceCssModuleImport = importNativeSource({
   language: 'css',
   sourcePath: 'src/ReadyNamespace.module.css',
@@ -42,13 +59,15 @@ const readyNamespaceCssModuleImport = importNativeSource({
   metadata: {
     cssModuleEvidence: {
       moduleHash: 'css-module:ready-namespace',
-      generatedClassNameMap: { root: '_root_ns_123', label: '_label_ns_456', active: '_active_ns_789' },
+      generatedClassNameMap: readyNamespaceGeneratedClassNameMap,
+      generatedClassNameMapHash: readyNamespaceTransformProof.generatedClassNameMapHash,
       jsTsUseSiteGraphHash: 'css-module-use-sites:ready-namespace',
       cssModuleCompositionGraphHash: 'css-module-composition:ready-namespace',
       icssGraphHash: 'icss:ready-namespace'
     },
     bundlerTransformHash: 'bundler-transform:ready-namespace',
-    sourceMapProofHash: 'source-map-proof:ready-namespace'
+    cssModuleGeneratedSourceHash: readyNamespaceTransformProof.cssModuleGeneratedSourceHash,
+    sourceMapIdentityProof: readyNamespaceTransformProof.sourceMapIdentityProof
   }
 });
 
@@ -72,7 +91,7 @@ assert.equal(readyNamespaceGraph.importBindingCount, 1);
 assert.equal(readyNamespaceGraph.useSiteCount >= 6, true);
 assert.equal(readyNamespaceGraph.blockerCount, 0);
 assert.equal(readyNamespaceGraph.bundlerTransformHash, 'bundler-transform:ready-namespace');
-assert.equal(readyNamespaceGraph.sourceMapProofHash, 'source-map-proof:ready-namespace');
+assert.equal(readyNamespaceGraph.sourceMapProofHash.startsWith('fnv1a32:'), true);
 const namespaceHelperRoot = readyNamespaceCssModuleProject.outputProjectSymbolGraph.cssModuleUseSites.find((site) => site.useSiteKind === 'jsx-className-helper' && site.exportName === 'root');
 assert.equal(namespaceHelperRoot?.receiverLocalName, 'readyStyles');
 assert.equal(namespaceHelperRoot.helperCallProofLevel, 'css-module-class-helper-source-bounded-token-graph');

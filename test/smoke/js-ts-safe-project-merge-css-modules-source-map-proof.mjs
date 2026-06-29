@@ -33,6 +33,40 @@ assert.equal(sourceMapOnlyContractConflict?.details.proofBoundary, 'css-module-s
 assert.equal(sourceMapOnlyContractConflict.details.proofGap.failClosed, true);
 assert.equal(sourceMapOnlyContractConflict.details.proofGap.semanticEquivalenceClaim, false);
 
+const sourceMapHashOnlyBoundaryProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_source_map_hash_only_boundary',
+  includeOutputProjectSymbolGraph: true,
+  outputProjectImports: [importNativeSource({
+    language: 'css',
+    sourcePath,
+    sourceText: baseSourceText,
+    metadata: {
+      generatedClassNameMap: { root: 'Button_root__hash' },
+      bundlerTransformHash: 'bundler-transform:button-module',
+      sourceMapProofHash: 'source-map-proof:hash-only'
+    }
+  })],
+  files: [
+    { language: 'css', sourcePath, headSourceText: baseSourceText },
+    {
+      language: 'tsx',
+      sourcePath: 'src/Button.tsx',
+      baseSourceText: staticButtonSourceText(),
+      workerSourceText: staticButtonSourceText(),
+      headSourceText: staticButtonSourceText()
+    }
+  ]
+});
+assert.equal(sourceMapHashOnlyBoundaryProject.status, 'blocked');
+assert.equal(sourceMapHashOnlyBoundaryProject.summary.projectGraphCssModuleUseSiteProofBlockers, 0);
+assert.equal(sourceMapHashOnlyBoundaryProject.summary.projectGraphCssModuleGeneratedClassNameMapBlockers, 0);
+assert.equal(sourceMapHashOnlyBoundaryProject.summary.projectGraphCssModuleBundlerTransformIdentityBlockers, 0);
+assert.equal(sourceMapHashOnlyBoundaryProject.summary.projectGraphCssModuleSourceMapIdentityBlockers, 1);
+const sourceMapHashOnlyConflict = sourceMapHashOnlyBoundaryProject.conflicts.find((conflict) => conflict.details.reasonCode === 'css-module-source-map-proof-unproved');
+assert.equal(sourceMapHashOnlyConflict?.details.proofBoundary, 'css-module-source-map-identity');
+assert.equal(matrixSurface(sourceMapHashOnlyBoundaryProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'passed');
+assert.equal(matrixSurface(sourceMapHashOnlyBoundaryProject, 'css-modules-source-map-identity').proofStatuses['css-module-source-map-identity'], 'failed');
+
 const sourceMapOnlyBoundaryProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_css_module_source_map_boundary_only',
   includeOutputProjectSymbolGraph: true,

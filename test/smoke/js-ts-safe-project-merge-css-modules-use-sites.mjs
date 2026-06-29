@@ -1,6 +1,7 @@
 import { assert } from './helpers.mjs';
 import { importNativeProject, importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
 import { matrixSurface } from './html-css-merge-test-helpers.mjs';
+import { cssModuleSourceMapIdentityFixture } from './js-ts-safe-project-merge-css-modules-test-helpers.mjs';
 
 const cssModuleSpecifier = './Button.module.css';
 const buttonSourceText = [
@@ -47,6 +48,13 @@ const readyCssModuleSourceText = [
   '.label { display: block; }',
   ''
 ].join('\n');
+const readyGeneratedClassNameMap = { root: '_root_123', label: '_label_456' };
+const readyTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath: 'src/Ready.module.css',
+  sourceText: readyCssModuleSourceText,
+  generatedClassNameMap: readyGeneratedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:ready'
+});
 const project = await importNativeProject({
   language: 'mixed',
   sources: [
@@ -235,13 +243,15 @@ const readyCssModuleImport = importNativeSource({
   metadata: {
     cssModuleEvidence: {
       moduleHash: 'css-module:ready',
-      generatedClassNameMap: { root: '_root_123', label: '_label_456' },
+      generatedClassNameMap: readyGeneratedClassNameMap,
+      generatedClassNameMapHash: readyTransformProof.generatedClassNameMapHash,
       jsTsUseSiteGraphHash: 'css-module-use-sites:ready',
       cssModuleCompositionGraphHash: 'css-module-composition:ready',
       icssGraphHash: 'icss:ready'
     },
     bundlerTransformHash: 'bundler-transform:ready',
-    sourceMapProofHash: 'source-map-proof:ready'
+    cssModuleGeneratedSourceHash: readyTransformProof.cssModuleGeneratedSourceHash,
+    sourceMapIdentityProof: readyTransformProof.sourceMapIdentityProof
   }
 });
 const readyCssModuleProject = safeMergeJsTsProject({

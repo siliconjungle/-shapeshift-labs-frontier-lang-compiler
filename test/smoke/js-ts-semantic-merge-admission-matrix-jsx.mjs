@@ -152,6 +152,12 @@ const semanticMergeJsxMatrixCells = [
     note: 'memo/forwardRef/observer wrapper calls on public components emit static wrapper records and render-risk hashes while render/runtime equivalence remains explicitly unproved'
   },
   {
+    id: 'jsx-tsx-element-prop-graph/jsx-render-runtime-proof-bridge',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-jsx-runtime-proof-bridge',
+    note: 'dynamic hook, context, wrapper, and branch render-risk deltas stay blocked until a source-bound runtime proof capsule carries matching base/worker/head/output source hashes, required JSX runtime signals, DOM/style/layout/accessibility/focus telemetry, event traces for interactive runtime surfaces, and no top-level or nested broad equivalence claims'
+  },
+  {
     id: 'jsx-tsx-element-prop-graph/lazy-component-wrapper-render-risk-evidence',
     status: 'done',
     evidence: 'js-ts-safe-project-merge-jsx-render-returns',
@@ -267,3 +273,9 @@ assert.equal(collectionItemProofCell.status, 'done');
 assert.equal(collectionItemProofCell.evidence, 'js-ts-safe-project-merge-jsx-render-return-collections');
 assert.match(collectionItemProofCell.note, /source-bound item\/key preservation proof/);
 assert.match(collectionItemProofCell.note, /broad render\/runtime equivalence claims fail closed/);
+
+const jsxRuntimeProofCell = semanticMergeJsxMatrixCells.find((cell) => cell.id === 'jsx-tsx-element-prop-graph/jsx-render-runtime-proof-bridge');
+assert.equal(jsxRuntimeProofCell.status, 'done');
+assert.equal(jsxRuntimeProofCell.evidence, 'js-ts-safe-project-merge-jsx-runtime-proof-bridge');
+assert.match(jsxRuntimeProofCell.note, /source-bound runtime proof capsule/);
+assert.match(jsxRuntimeProofCell.note, /nested broad equivalence claims/);

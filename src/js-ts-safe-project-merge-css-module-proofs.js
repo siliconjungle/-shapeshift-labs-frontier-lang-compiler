@@ -1,10 +1,10 @@
 import { parseCssSemanticSheet } from '@shapeshift-labs/frontier-lang-css';
 import { cssModuleGeneratedClassNameMapHash, cssModuleGeneratedClassNameMapProof } from './js-ts-safe-project-merge-css-module-generated-map.js';
+import { cssModuleOutputProjectImport, cssModuleProofImport, cssModuleSourceMapProofContext, normalizeProjectImports } from './js-ts-safe-project-merge-css-module-proof-imports.js';
 import { isCssModulePath, projectCssModuleProofFiles, projectJsTsSourcesStable } from './js-ts-safe-project-merge-css-module-project-files.js';
 import { cssModuleSourceMapIdentityProof } from './js-ts-safe-project-merge-css-module-source-map.js';
 import { createJsTsProjectSafeMergeGraphArtifacts } from './js-ts-safe-project-merge-graph.js';
 import { hashText, safeId } from './js-ts-safe-project-merge-core.js';
-import { importNativeSource } from './internal/index-impl/importNativeSource.js';
 
 const CssModuleContractProofGap = 'css-module-contract-source-proof-unproved';
 
@@ -39,7 +39,7 @@ function projectCssModuleProofOptionsForBlockedMerge(input) {
   const graph = evidence?.graphsByPath?.get(sourcePath);
   const transformConflictResult = missingTransformProofBlockedResult(input);
   if (transformConflictResult) return transformConflictResult;
-  if (graph?.status !== 'ready' || !graph.jsTsUseSiteGraphHash) return undefined;
+  if (!cssModuleUseSiteSafetyReady(evidence, graph, sourcePath)) return undefined;
   const generatedClassNameMapHash = cssModuleGeneratedClassNameMapHash(mergeOptions);
   if (!generatedClassNameMapHash) return undefined;
   const bundlerTransformHash = firstString(mergeOptions.bundlerTransformHash, mergeOptions.cssModuleBundlerTransformHash);
@@ -176,6 +176,29 @@ function cssModuleContractProofHashes(input) {
   return [...hashes.values()];
 }
 
+function cssModuleUseSiteSafetyReady(evidence, graph, sourcePath) {
+  if (!graph?.jsTsUseSiteGraphHash) return false;
+  if (graph.status === 'ready') return true;
+  const blockers = cssModuleGraphBlockers(evidence, graph, sourcePath);
+  return blockers.length > 0 && blockers.every(cssModuleTransformProofBlocker);
+}
+
+function cssModuleGraphBlockers(evidence, graph, sourcePath) {
+  const blockerIds = new Set(graph?.blockerIds ?? []);
+  const blockers = evidence?.graphArtifacts?.projectSymbolGraph?.cssModuleUseSiteBlockers ?? [];
+  return blockers.filter((blocker) => {
+    if (blockerIds.size && blockerIds.has(blocker.id)) return true;
+    return !blockerIds.size && blocker.cssModuleSourcePath === sourcePath;
+  });
+}
+
+function cssModuleTransformProofBlocker(blocker) {
+  const boundary = blocker?.proofBoundary ?? cssModuleProofBoundaryForReason(blocker?.reasonCode);
+  return boundary === 'css-module-generated-class-name-map'
+    || boundary === 'css-module-bundler-transform-identity'
+    || boundary === 'css-module-source-map-identity';
+}
+
 function parseCssModuleSheet(sourceText, options) {
   if (typeof sourceText !== 'string') return undefined;
   try {
@@ -188,96 +211,6 @@ function parseCssModuleSheet(sourceText, options) {
 function hasOnlyCssModuleContractProofGap(result) {
   const conflicts = result?.conflicts ?? [];
   return conflicts.length > 0 && conflicts.every((conflict) => conflict.details?.reasonCode === CssModuleContractProofGap);
-}
-
-function cssModuleProofImport(input, file) {
-  const mergeOptions = cssMergeOptionsForProjectFile(input, file.sourcePath);
-  const generatedClassNameMapProof = cssModuleGeneratedClassNameMapProof(mergeOptions);
-  const bundlerTransformHash = firstString(mergeOptions.bundlerTransformHash, mergeOptions.cssModuleBundlerTransformHash);
-  const sourceMapIdentityProof = cssModuleSourceMapIdentityProof(mergeOptions, {
-    sourcePath: file.sourcePath,
-    generatedClassNameMapHash: generatedClassNameMapProof.generatedClassNameMapHash,
-    bundlerTransformHash,
-    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash),
-    ...cssModuleSourceMapProofContext(mergeOptions)
-  });
-  return importNativeSource({
-    language: 'css',
-    sourcePath: file.sourcePath,
-    sourceText: file.sourceText,
-    sourceHash: file.sourceHash,
-    metadata: {
-      generatedClassNameMap: generatedClassNameMapProof.generatedClassNameMap,
-      generatedClassNameMapHash: generatedClassNameMapProof.generatedClassNameMapHash,
-      cssModuleCompositionGraphHash: mergeOptions.cssModuleCompositionGraphHash,
-      icssGraphHash: mergeOptions.icssGraphHash,
-      bundlerTransformHash,
-      sourceMapProofHash: sourceMapIdentityProof.sourceMapProofHash,
-      sourceMapIdentityProofStatus: sourceMapIdentityProof.status,
-      sourceMapIdentityProofReasonCodes: sourceMapIdentityProof.reasonCodes
-    }
-  });
-}
-
-function cssModuleOutputProjectImport(evidence, file, input) {
-  const mergeOptions = cssMergeOptionsForProjectFile(input, file.sourcePath);
-  const graph = evidence.graphsByPath?.get(file.sourcePath);
-  const proof = file.result?.cssModuleContractProofs?.[0] ?? file.result?.admission?.cssModuleContractProofs?.[0];
-  const generatedClassNameMapProof = cssModuleGeneratedClassNameMapProof(mergeOptions);
-  const bundlerTransformHash = firstString(mergeOptions.bundlerTransformHash, mergeOptions.cssModuleBundlerTransformHash);
-  const sourceMapIdentityProof = cssModuleSourceMapIdentityProof(mergeOptions, {
-    sourcePath: file.sourcePath,
-    sourceHash: file.outputHash,
-    outputSourceHash: file.outputHash,
-    generatedClassNameMapHash: proof?.generatedClassNameMapHash ?? generatedClassNameMapProof.generatedClassNameMapHash,
-    bundlerTransformHash,
-    generatedSourceHash: firstString(mergeOptions.generatedSourceHash, mergeOptions.cssModuleGeneratedSourceHash),
-    ...cssModuleSourceMapProofContext(mergeOptions)
-  });
-  return importNativeSource({
-    language: 'css',
-    sourcePath: file.sourcePath,
-    sourceText: file.outputSourceText,
-    sourceHash: file.outputHash,
-    metadata: {
-      generatedClassNameMap: generatedClassNameMapProof.generatedClassNameMap,
-      generatedClassNameMapHash: generatedClassNameMapProof.status === 'hash-mismatch'
-        ? undefined
-        : proof?.generatedClassNameMapHash ?? generatedClassNameMapProof.generatedClassNameMapHash,
-      jsTsUseSiteGraphHash: proof?.jsTsUseSiteGraphHash ?? graph?.jsTsUseSiteGraphHash,
-      cssModuleCompositionGraphHash: proof?.cssModuleCompositionGraphHash ?? mergeOptions.cssModuleCompositionGraphHash,
-      icssGraphHash: proof?.icssGraphHash ?? mergeOptions.icssGraphHash,
-      bundlerTransformHash,
-      sourceMapProofHash: sourceMapIdentityProof.sourceMapProofHash,
-      sourceMapIdentityProofStatus: sourceMapIdentityProof.status,
-      sourceMapIdentityProofReasonCodes: sourceMapIdentityProof.reasonCodes
-    }
-  });
-}
-
-function normalizeProjectImports(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.filter(Boolean);
-  if (value instanceof Map) return [...value.values()].filter(Boolean);
-  if (typeof value === 'object') return Object.values(value).filter(Boolean);
-  return [];
-}
-
-function cssMergeOptionsForProjectFile(input, sourcePath) {
-  const byPath = input.cssMergeOptionsByPath ?? input.styleMergeOptionsByPath;
-  return {
-    ...(input.cssMergeOptions ?? input.styleMergeOptions),
-    ...(byPath?.[sourcePath] ?? {})
-  };
-}
-
-function cssModuleSourceMapProofContext(mergeOptions) {
-  return {
-    loaderRequestHash: firstString(mergeOptions.loaderRequestHash, mergeOptions.cssModuleLoaderRequestHash),
-    loaderQueryHash: firstString(mergeOptions.loaderQueryHash, mergeOptions.cssModuleLoaderQueryHash),
-    sourceMapArtifactHash: firstString(mergeOptions.sourceMapArtifactHash, mergeOptions.cssModuleSourceMapArtifactHash, mergeOptions.cssModuleSourceMapHash),
-    sourcesContentHash: firstString(mergeOptions.sourcesContentHash, mergeOptions.sourceMapSourcesContentHash, mergeOptions.cssModuleSourceMapSourcesContentHash)
-  };
 }
 
 function cssModuleProofConflict(id, sourcePath, reasonCode, details = {}) {

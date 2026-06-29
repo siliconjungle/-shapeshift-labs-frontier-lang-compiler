@@ -75,7 +75,36 @@ assert.equal(sameFileComposition.outputSourceText, [
   ''
 ].join('\n'));
 assert.equal(sameFileComposition.summary.appliedEdits, 2);
+assert.equal(sameFileComposition.summary.boundedCurrentHeadReplays, 2);
+assert.equal(sameFileComposition.summary.sourceBoundVerificationReplays, 2);
+assert.equal(sameFileComposition.replays.every((replay) => replay.metadata.currentSourceBindingStatus === 'bound'), true);
+assert.equal(sameFileComposition.replays.every((replay) => replay.metadata.outputBindingStatus === 'bound'), true);
+assert.equal(sameFileComposition.replays.every((replay) => replay.admission.proofRoute.routeId === 'admit-independent-semantic-edit-current-head-commutation'), true);
 assert.equal(sameFileComposition.verificationReplays.every((replay) => replay.status === 'already-applied'), true);
+assert.equal(sameFileComposition.verificationReplays.every((replay) => replay.metadata.currentSourceBindingStatus === 'bound'), true);
+assert.equal(sameFileComposition.verificationReplays.every((replay) => replay.metadata.expectedOutputHash === sameFileComposition.outputHash), true);
+
+const staleCurrentComposition = composeSemanticPatchBundleProjections({
+  id: 'same_file_stale_current_composition',
+  sourcePath: 'src/same-file-disjoint.js',
+  language: 'javascript',
+  currentSourceText: sameFileDisjointBaseSource.replace('value + 1', 'value + 9'),
+  bundles: [sameFileScore.bundle, sameFileTotal.bundle],
+  projections: [sameFileScore.projection, sameFileTotal.projection]
+});
+assert.equal(staleCurrentComposition.status, 'blocked');
+assert.equal(staleCurrentComposition.admission.reasonCodes.includes('current-source-hash-mismatch'), true);
+assert.equal(staleCurrentComposition.admission.autoApplyCandidate, false);
+
+const unboundCurrentComposition = composeSemanticPatchBundleProjections({
+  id: 'same_file_unbound_current_composition',
+  sourcePath: 'src/same-file-disjoint.js',
+  language: 'javascript',
+  currentSourceText: sameFileDisjointBaseSource,
+  projections: [{ ...sameFileScore.projection, headHash: undefined, metadata: {} }]
+});
+assert.equal(unboundCurrentComposition.status, 'blocked');
+assert.equal(unboundCurrentComposition.admission.reasonCodes.includes('projection-current-source-hash-missing:1'), true);
 
 const duplicateComposition = composeSemanticPatchBundleProjections({
   id: 'same_file_duplicate_composition',

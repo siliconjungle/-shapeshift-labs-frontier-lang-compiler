@@ -11,6 +11,8 @@ export interface ComposeSemanticPatchBundleProjectionsInput {
   readonly language?: FrontierSourceLanguage | string;
   readonly currentSourceText?: string;
   readonly headSourceText?: string;
+  readonly currentSourceHash?: string;
+  readonly headHash?: string;
   readonly bundles?: readonly SemanticPatchBundleRecord[] | SemanticPatchBundleRecord;
   readonly semanticPatchBundles?: readonly SemanticPatchBundleRecord[] | SemanticPatchBundleRecord;
   readonly projections?: readonly SemanticEditProjection[] | SemanticEditProjection;
@@ -53,6 +55,8 @@ export interface SemanticPatchBundleComposition {
     readonly appliedEdits: number;
     readonly overlapRecords: number;
     readonly blockedOverlaps: number;
+    readonly boundedCurrentHeadReplays: number;
+    readonly sourceBoundVerificationReplays: number;
   };
   readonly evidence: readonly EvidenceRecord[];
 }

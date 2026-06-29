@@ -46,6 +46,56 @@ assert.equal(project.outputFiles[0].sourceText, output);
 assert.equal(matrixSurface(project, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'passed');
 assert.equal(matrixSurface(project, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
 
+const explicitFalseClaimProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_cascade_runtime_explicit_false_claims',
+  cssMergeOptionsByPath: {
+    [sourcePath]: {
+      scopedCascadeGraphHash: 'hash_scoped_cascade',
+      cssCascadeRuntimeProofs: [{
+        ...proof,
+        id: 'proof_css_project_source_shape_media_explicit_false_claims',
+        browserRuntimeEquivalenceClaim: false,
+        browserCascadeEquivalenceClaim: false,
+        browserRenderEquivalenceClaim: false,
+        semanticEquivalenceClaim: false,
+        autoMergeClaim: false
+      }]
+    }
+  },
+  files: [{ sourcePath, baseSourceText: base, workerSourceText: worker, headSourceText: base }]
+});
+
+assert.equal(explicitFalseClaimProject.status, 'merged');
+assert.equal(explicitFalseClaimProject.summary.htmlCssBrowserRuntimeProofs, 1);
+assert.equal(explicitFalseClaimProject.files[0].result.cascadeRuntimeProofs[0].runtimeEvidenceBound, true);
+assert.equal(explicitFalseClaimProject.files[0].result.cascadeRuntimeProofs[0].browserRenderEquivalenceClaim, false);
+assert.equal(explicitFalseClaimProject.files[0].result.cascadeRuntimeProofs[0].semanticEquivalenceClaim, false);
+assert.equal(matrixSurface(explicitFalseClaimProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
+
+const broadClaimProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_cascade_runtime_broad_claim_blocked',
+  cssMergeOptionsByPath: {
+    [sourcePath]: {
+      scopedCascadeGraphHash: 'hash_scoped_cascade',
+      cssCascadeRuntimeProofs: [{
+        ...proof,
+        id: 'proof_css_project_source_shape_media_broad_claim',
+        browserRenderEquivalenceClaim: true
+      }]
+    }
+  },
+  files: [{ sourcePath, baseSourceText: base, workerSourceText: worker, headSourceText: base }]
+});
+
+assert.equal(broadClaimProject.status, 'blocked');
+assert.equal(broadClaimProject.summary.htmlCssBrowserRuntimeProofs, 0);
+assert.equal(broadClaimProject.files[0].result.browserCascadeEquivalenceClaim, false);
+assert.equal(broadClaimProject.files[0].result.admission.browserCascadeEquivalenceClaim, false);
+assert.equal(broadClaimProject.conflicts.some((conflict) => conflict.code === 'css-cascade-runtime-proof-blocked' && conflict.details.reasonCode === 'css-cascade-runtime-proof-broad-claim'), true);
+assert.equal(broadClaimProject.conflicts.some((conflict) => conflict.details.invalidRuntimeProofIds?.includes('proof_css_project_source_shape_media_broad_claim')), true);
+assert.equal(matrixSurface(broadClaimProject, 'css-cascade-merge-admission').proofStatuses['css-cascade-merge'], 'failed');
+assert.equal(matrixSurface(broadClaimProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
+
 const capsuleProof = {
   id: 'proof_css_project_source_shape_media_capsule',
   kind: 'css-source-bound-cascade-runtime-proof',

@@ -1,6 +1,7 @@
 import { assert } from './helpers.mjs';
 import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
 import { matrixSurface } from './html-css-merge-test-helpers.mjs';
+import { cssModuleSourceMapIdentityFixture } from './js-ts-safe-project-merge-css-modules-test-helpers.mjs';
 
 const icssModuleSource = [
   ':export {',
@@ -27,6 +28,13 @@ const dynamicIcssModuleComponentSource = [
   '}',
   ''
 ].join('\n');
+const themeGeneratedClassNameMap = { root: '_theme_root_123' };
+const themeTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath: 'src/Theme.module.css',
+  sourceText: icssModuleSource,
+  generatedClassNameMap: themeGeneratedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:theme'
+});
 const provenIcssModuleImport = importNativeSource({
   language: 'css',
   sourcePath: 'src/Theme.module.css',
@@ -36,12 +44,14 @@ const provenIcssModuleImport = importNativeSource({
       moduleHash: 'css-module:theme',
       exports: [{ name: 'root' }],
       icssExports: [{ name: 'accentColor', value: 'var(--accent)' }],
-      generatedClassNameMapHash: 'css-module-generated-map:theme',
+      generatedClassNameMap: themeGeneratedClassNameMap,
+      generatedClassNameMapHash: themeTransformProof.generatedClassNameMapHash,
       jsTsUseSiteGraphHash: 'css-module-use-sites:theme',
       icssGraphHash: 'icss-graph:theme'
     },
     bundlerTransformHash: 'bundler-transform:theme',
-    sourceMapProofHash: 'source-map-proof:theme'
+    cssModuleGeneratedSourceHash: themeTransformProof.cssModuleGeneratedSourceHash,
+    sourceMapIdentityProof: themeTransformProof.sourceMapIdentityProof
   }
 });
 const provenIcssModuleProject = safeMergeJsTsProject({
@@ -96,11 +106,13 @@ const unprovedIcssModuleImport = importNativeSource({
       moduleHash: 'css-module:theme',
       exports: [{ name: 'root' }],
       icssExports: [{ name: 'accentColor', value: 'var(--accent)' }],
-      generatedClassNameMapHash: 'css-module-generated-map:theme',
+      generatedClassNameMap: themeGeneratedClassNameMap,
+      generatedClassNameMapHash: themeTransformProof.generatedClassNameMapHash,
       jsTsUseSiteGraphHash: 'css-module-use-sites:theme'
     },
     bundlerTransformHash: 'bundler-transform:theme',
-    sourceMapProofHash: 'source-map-proof:theme'
+    cssModuleGeneratedSourceHash: themeTransformProof.cssModuleGeneratedSourceHash,
+    sourceMapIdentityProof: themeTransformProof.sourceMapIdentityProof
   }
 });
 const unprovedIcssModuleProject = safeMergeJsTsProject({

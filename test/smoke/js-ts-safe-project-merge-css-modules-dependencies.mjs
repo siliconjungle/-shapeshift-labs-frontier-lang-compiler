@@ -1,5 +1,6 @@
 import { assert } from './helpers.mjs';
 import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
+import { cssModuleSourceMapIdentityFixture } from './js-ts-safe-project-merge-css-modules-test-helpers.mjs';
 
 const readyCssModuleSpecifier = './Ready.module.css';
 const readyCssModuleSourceText = [
@@ -63,6 +64,27 @@ const localDependencyCssModuleSourceText = [
   '}',
   ''
 ].join('\n');
+const unresolvedDependencyGeneratedClassNameMap = { root: '_root_333' };
+const unresolvedDependencyTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath: 'src/Composed.module.css',
+  sourceText: dependencyCssModuleSourceText,
+  generatedClassNameMap: unresolvedDependencyGeneratedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:composed'
+});
+const localDependencyGeneratedClassNameMap = { base: '_base_111', root: '_root_222' };
+const localDependencyTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath: 'src/LocalComposed.module.css',
+  sourceText: localDependencyCssModuleSourceText,
+  generatedClassNameMap: localDependencyGeneratedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:local-composed'
+});
+const readyGeneratedClassNameMap = { root: '_root_123', label: '_label_456' };
+const readyTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath: 'src/Ready.module.css',
+  sourceText: readyCssModuleSourceText,
+  generatedClassNameMap: readyGeneratedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:ready'
+});
 
 const unresolvedDependencyCssModuleImport = importNativeSource({
   language: 'css',
@@ -74,11 +96,13 @@ const unresolvedDependencyCssModuleImport = importNativeSource({
       exports: [{ name: 'root' }],
       compositions: [{ localName: 'root', names: ['base'], source: './base.module.css', sourceKind: 'file' }],
       icssImports: [{ source: './tokens.module.css', importedName: 'color', localName: 'importedColor' }],
-      generatedClassNameMapHash: 'css-module-generated-map:composed',
+      generatedClassNameMap: unresolvedDependencyGeneratedClassNameMap,
+      generatedClassNameMapHash: unresolvedDependencyTransformProof.generatedClassNameMapHash,
       jsTsUseSiteGraphHash: 'css-module-use-sites:composed'
     },
     bundlerTransformHash: 'bundler-transform:composed',
-    sourceMapProofHash: 'source-map-proof:composed'
+    cssModuleGeneratedSourceHash: unresolvedDependencyTransformProof.cssModuleGeneratedSourceHash,
+    sourceMapIdentityProof: unresolvedDependencyTransformProof.sourceMapIdentityProof
   }
 });
 const unresolvedDependencyCssModuleProject = safeMergeJsTsProject({
@@ -105,10 +129,11 @@ const localDependencyCssModuleImport = importNativeSource({
   sourcePath: 'src/LocalComposed.module.css',
   sourceText: localDependencyCssModuleSourceText,
   metadata: {
-    generatedClassNameMap: { base: '_base_111', root: '_root_222' },
+    generatedClassNameMap: localDependencyGeneratedClassNameMap,
     jsTsUseSiteGraphHash: 'css-module-use-sites:local-composed',
     bundlerTransformHash: 'bundler-transform:local-composed',
-    sourceMapProofHash: 'source-map-proof:local-composed'
+    cssModuleGeneratedSourceHash: localDependencyTransformProof.cssModuleGeneratedSourceHash,
+    sourceMapIdentityProof: localDependencyTransformProof.sourceMapIdentityProof
   }
 });
 const localDependencyCssModuleProject = safeMergeJsTsProject({
@@ -141,9 +166,10 @@ const projectDependencyCssModuleProject = safeMergeJsTsProject({
       sourcePath: 'src/Composed.module.css',
       sourceText: dependencyCssModuleSourceText,
       metadata: {
-        generatedClassNameMap: { root: '_root_333' },
+        generatedClassNameMap: unresolvedDependencyGeneratedClassNameMap,
         bundlerTransformHash: 'bundler-transform:composed',
-        sourceMapProofHash: 'source-map-proof:composed'
+        cssModuleGeneratedSourceHash: unresolvedDependencyTransformProof.cssModuleGeneratedSourceHash,
+        sourceMapIdentityProof: unresolvedDependencyTransformProof.sourceMapIdentityProof
       }
     }),
     importNativeSource({
@@ -191,13 +217,15 @@ const readyCssModuleImport = importNativeSource({
   metadata: {
     cssModuleEvidence: {
       moduleHash: 'css-module:ready',
-      generatedClassNameMap: { root: '_root_123', label: '_label_456' },
+      generatedClassNameMap: readyGeneratedClassNameMap,
+      generatedClassNameMapHash: readyTransformProof.generatedClassNameMapHash,
       jsTsUseSiteGraphHash: 'css-module-use-sites:ready',
       cssModuleCompositionGraphHash: 'css-module-composition:ready',
       icssGraphHash: 'icss:ready'
     },
     bundlerTransformHash: 'bundler-transform:ready',
-    sourceMapProofHash: 'source-map-proof:ready'
+    cssModuleGeneratedSourceHash: readyTransformProof.cssModuleGeneratedSourceHash,
+    sourceMapIdentityProof: readyTransformProof.sourceMapIdentityProof
   }
 });
 const missingExportProject = safeMergeJsTsProject({

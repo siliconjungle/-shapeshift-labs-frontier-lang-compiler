@@ -69,7 +69,12 @@ const rowProofs = new Map([
   }],
   ['Generic semantic edit admission and replay', {
     anchors: jsTsAnchors,
-    evidence: ['test/smoke/semantic-edit-script.mjs', 'test/smoke/js-ts-safe-project-merge-semantic-replay-proof.mjs'],
+    evidence: [
+      'test/smoke/semantic-edit-script.mjs',
+      'test/smoke/js-ts-safe-project-merge-semantic-replay-proof.mjs',
+      'test/smoke/semantic-edit-bundle-auto-merge.mjs',
+      'test/smoke/semantic-patch-bundle-overlaps-same-file.mjs'
+    ],
     remaining: []
   }],
   ['Symbol move between files', {

@@ -58,7 +58,7 @@ function jsxRenderRuntimeProofDelta({ identityKey, baseRecord, workerRecord, hea
 }
 
 function jsxRenderRuntimeProofValidation(delta, proof) {
-  return validateRuntimeProofAgainstProbe(proof, {
+  const validation = validateRuntimeProofAgainstProbe(proof, {
     id: stableKey(['jsx-render-runtime-proof', delta.identityKey]) ?? 'jsx-render-runtime-proof',
     sourcePath: delta.sourcePath,
     reasonCode: delta.reasonCodes,
@@ -84,6 +84,13 @@ function jsxRenderRuntimeProofValidation(delta, proof) {
     requireFocusSnapshotHash: true,
     maxCumulativeLayoutShift: typeof proof?.maxCumulativeLayoutShift === 'number' ? proof.maxCumulativeLayoutShift : 0.01
   });
+  const localReasonCodes = jsxRuntimeNestedBroadClaimReasonCodes(proof);
+  if (localReasonCodes.length === 0) return validation;
+  return {
+    ...validation,
+    ok: false,
+    reasonCodes: uniqueStrings([...(validation.reasonCodes ?? []), ...localReasonCodes])
+  };
 }
 
 function jsxRenderRuntimeProofResult(delta, proof, validation, reasonCodes) {
@@ -157,6 +164,32 @@ function jsxRenderRuntimeProofCandidates(options = {}) {
 
 function isJsxRuntimeProofCandidate(proof) {
   return proof?.kind === FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND || proof?.runtimeProofCapsule !== undefined;
+}
+
+function jsxRuntimeNestedBroadClaimReasonCodes(proof) {
+  const records = [
+    proof?.runtimeProofCapsule,
+    proof?.proofCapsule,
+    proof?.fixtureCapsule,
+    proof?.evidence,
+    proof?.runtimeEvidence,
+    proof?.browserEvidence,
+    proof?.runtimeEvidence?.capsule,
+    proof?.browserEvidence?.capsule,
+    proof?.evidence?.capsule
+  ].filter((record) => record && typeof record === 'object' && !Array.isArray(record));
+  return records.some((record) => hasBroadEquivalenceClaim(record))
+    ? ['jsx-render-runtime-proof-nested-broad-claim-present']
+    : [];
+}
+
+function hasBroadEquivalenceClaim(record) {
+  return record.autoMergeClaim === true
+    || record.semanticEquivalenceClaim === true
+    || record.runtimeEquivalenceClaim === true
+    || record.renderEquivalenceClaim === true
+    || record.browserRuntimeEquivalenceClaim === true
+    || record.browserRenderEquivalenceClaim === true;
 }
 
 function firstString(...values) { return values.find((value) => typeof value === 'string' && value.length > 0); }

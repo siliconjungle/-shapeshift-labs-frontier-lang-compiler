@@ -11,8 +11,8 @@ function cssModuleSourceMapIdentityProof(mergeOptions = {}, context = {}) {
   const declaredHash = firstString(mergeOptions.sourceMapProofHash, mergeOptions.cssModuleSourceMapProofHash);
   if (!proof) return {
     status: declaredHash ? 'hash-only' : 'missing',
-    sourceMapProofHash: declaredHash,
-    reasonCodes: declaredHash ? [] : ['css-module-source-map-proof-missing']
+    declaredSourceMapProofHash: declaredHash,
+    reasonCodes: declaredHash ? ['css-module-source-map-proof-structured-record-missing'] : ['css-module-source-map-proof-missing']
   };
   const reasonCodes = [];
   if (proof.status !== 'passed' && proof.status !== 'verified') reasonCodes.push('css-module-source-map-proof-status-not-passed');

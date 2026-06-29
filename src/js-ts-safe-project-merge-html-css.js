@@ -3,10 +3,12 @@ import { safeMergeCssSource } from '@shapeshift-labs/frontier-lang-css';
 import { safeMergeHtmlSource } from '@shapeshift-labs/frontier-lang-html';
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { hashText, safeId, uniqueStrings } from './js-ts-safe-project-merge-core.js';
+import { blockCssCascadeRuntimeProofBroadClaims, cssCascadeRuntimeProofGuardedMergeOptions } from './js-ts-safe-project-merge-css-cascade-runtime-proof-guard.js';
 import { projectCssDependencyProofOptionsForBlockedMerge } from './js-ts-safe-project-merge-css-dependency-proofs.js';
 import { projectCssModuleMergeOptionsForFile, projectCssModuleProofOptionsForBlockedMerge } from './js-ts-safe-project-merge-css-module-proofs.js';
 import { cssModuleSourceMapIdentityMergeOptions } from './js-ts-safe-project-merge-css-module-source-map.js';
 import { blockCssScopedParserEvidenceGap, blockCssSelectorFunctionalPseudoSpecificityGap, normalizeHtmlCssParserEvidenceSides } from './js-ts-safe-project-merge-html-css-parser-gaps.js';
+import { htmlProofGapNextProof, htmlProofGapSummary } from './js-ts-safe-project-merge-html-proof-gap-text.js';
 import { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult } from './js-ts-safe-project-merge-html-runtime-boundaries.js';
 import { FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND, runtimeEvidenceMetadataFromProof } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
 
@@ -26,24 +28,29 @@ function maybeMergeHtmlCssProjectFile(options) {
   };
   const sourceMapMergeOptions = language === 'css' ? cssModuleSourceMapIdentityMergeOptions(mergeOptions, cssModuleSourceMapProofContext(mergeOptions, file.sourcePath)) : {};
   const effectiveMergeOptions = { ...mergeOptions, ...sourceMapMergeOptions };
+  const cssRuntimeProofGuard = language === 'css' ? cssCascadeRuntimeProofGuardedMergeOptions(effectiveMergeOptions, file.sourcePath) : undefined;
+  const guardedMergeOptions = cssRuntimeProofGuard?.mergeOptions ?? effectiveMergeOptions;
   const runtimeBoundaryProofs = language === 'html' ? htmlRuntimeBoundaryProofCandidates(input, file.sourcePath, mergeOptions) : [];
   const runtimeBoundaryMergeOptions = runtimeBoundaryProofs.length ? { htmlRuntimeBoundaryProofs: runtimeBoundaryProofs, htmlSourceBoundRuntimeBoundaryProofs: runtimeBoundaryProofs } : {};
-  let result = merge({ ...sourceInput, ...effectiveMergeOptions, ...context, ...runtimeBoundaryMergeOptions, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: language === 'css' || sourceInput.includeBlockedMergeCandidate === true });
+  let result = merge({ ...sourceInput, ...guardedMergeOptions, ...context, ...runtimeBoundaryMergeOptions, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: language === 'css' || sourceInput.includeBlockedMergeCandidate === true });
   if (language === 'css' && result.status === 'blocked') {
     const proofOptions = projectCssDependencyProofOptionsForBlockedMerge({ projectInput: input, sourcePath: file.sourcePath, firstResult: result, base, worker, head });
     if (proofOptions?.mergeOptions) {
-      result = merge({ ...sourceInput, ...effectiveMergeOptions, ...proofOptions.mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: true });
+      result = merge({ ...sourceInput, ...guardedMergeOptions, ...proofOptions.mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: true });
     } else if (proofOptions?.result) {
       result = proofOptions.result;
     }
   }
   if (language === 'css' && result.status === 'blocked') {
-    const proofOptions = projectCssModuleProofOptionsForBlockedMerge({ evidence: projectCssModuleMergeEvidence, sourcePath: file.sourcePath, mergeOptions: effectiveMergeOptions, firstResult: result, base, worker, head });
+    const proofOptions = projectCssModuleProofOptionsForBlockedMerge({ evidence: projectCssModuleMergeEvidence, sourcePath: file.sourcePath, mergeOptions: guardedMergeOptions, firstResult: result, base, worker, head });
     if (proofOptions?.mergeOptions) {
-      result = merge({ ...sourceInput, ...effectiveMergeOptions, ...proofOptions.mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: true });
+      result = merge({ ...sourceInput, ...guardedMergeOptions, ...proofOptions.mergeOptions, ...context, id: resultId, baseSourceText: base, workerSourceText: worker, headSourceText: head, includeBlockedMergeCandidate: true });
     } else if (proofOptions?.result) {
       result = proofOptions.result;
     }
+  }
+  if (language === 'css' && result.status === 'blocked') {
+    result = blockCssCascadeRuntimeProofBroadClaims({ result, id: resultId, sourcePath: file.sourcePath, invalidProofs: cssRuntimeProofGuard?.invalidProofs }) ?? result;
   }
   result = normalizeHtmlCssParserEvidenceSides({ result, base, worker, head });
   if (language === 'css' && result.status === 'merged') {
@@ -224,47 +231,6 @@ function htmlProofGapConflict(id, sourcePath, reasonCode, details = {}, code = '
     })
   };
 }
-
-function htmlProofGapSummary(reasonCode) {
-  if (reasonCode === 'html-duplicate-explicit-identity') return 'Duplicate explicit HTML identity keys make structural target admission ambiguous.';
-  if (reasonCode === 'script-runtime-boundary') return 'HTML script execution can mutate document, module, network, and global runtime behavior and requires source-bound runtime evidence.';
-  if (reasonCode === 'style-runtime-boundary') return 'HTML style blocks affect browser cascade and rendering and require source-bound runtime evidence.';
-  if (reasonCode === 'template-runtime-boundary') return 'HTML template content can be cloned, stamped, or consumed by host code and requires source-bound runtime evidence.';
-  if (reasonCode === 'slot-runtime-boundary') return 'HTML slots participate in shadow-DOM distribution and require source-bound runtime evidence.';
-  if (reasonCode === 'custom-runtime-attribute-boundary') return 'Custom HTML runtime attributes are interpreted by client runtimes and require source-bound runtime evidence.';
-  if (reasonCode === 'custom-element-runtime-boundary') return 'Custom element upgrade, lifecycle, attributes, and shadow behavior require source-bound runtime evidence.';
-  if (reasonCode === 'framework-directive-boundary') return 'Framework directive attributes are interpreted by framework runtimes and require source-bound runtime evidence.';
-  if (reasonCode === 'event-handler-runtime-boundary') return 'HTML event handler attributes execute in the browser runtime and require source-bound runtime evidence.';
-  if (reasonCode === 'inline-style-runtime-boundary') return 'HTML inline style attributes affect browser cascade and rendering and require source-bound runtime evidence.';
-  if (reasonCode === 'iframe-runtime-boundary' || reasonCode === 'iframe-srcdoc-runtime-boundary') return reasonCode === 'iframe-runtime-boundary' ? 'HTML iframe runtime attributes affect nested browsing-context execution and require source-bound runtime evidence.' : 'HTML iframe srcdoc attributes define nested browsing-context content and require source-bound runtime evidence.';
-  if (reasonCode === 'form-runtime-boundary') return 'HTML form runtime attributes affect submission, navigation, encoding, or validation and require source-bound runtime evidence.';
-  if (reasonCode === 'form-submitter-runtime-boundary') return 'HTML submitter attributes affect form submission behavior and require source-bound runtime evidence.';
-  if (reasonCode === 'form-control-runtime-boundary') return 'HTML form-control attributes affect user input, validation, state, or submission data and require source-bound runtime evidence.';
-  if (reasonCode === 'navigation-runtime-boundary') return 'HTML navigation attributes affect browser navigation, downloads, pings, or referrer policy and require source-bound runtime evidence.';
-  if (reasonCode === 'document-base-runtime-boundary') return 'HTML base attributes affect URL resolution or navigation targets and require source-bound runtime evidence.';
-  if (reasonCode === 'document-metadata-runtime-boundary') return 'HTML metadata attributes can affect document loading, policy, refresh, viewport, or discovery behavior and require source-bound runtime evidence.';
-  if (reasonCode === 'resource-loading-runtime-boundary') return 'HTML resource-loading attributes affect fetched resources, selection, privacy, media behavior, or layout and require source-bound runtime evidence.';
-  return 'HTML proof gap requires source-bound runtime evidence before structural merge admission.';
-}
-
-function htmlProofGapNextProof(reasonCode) {
-  if (reasonCode === 'html-duplicate-explicit-identity') return 'Rename duplicate explicit HTML identity keys or supply parser-backed identity evidence with unique explicitIdentityKeys on every side.';
-  if (reasonCode === 'script-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-script-runtime"');
-  if (reasonCode === 'style-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-style-runtime"');
-  if (reasonCode === 'template-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-template-runtime"');
-  if (reasonCode === 'slot-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-slot-runtime"');
-  if (reasonCode === 'custom-runtime-attribute-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-custom-runtime-attribute" and boundaryAttributes for the changed custom runtime attributes');
-  if (reasonCode === 'custom-element-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-custom-element-runtime"');
-  if (reasonCode === 'framework-directive-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-framework-directive" and boundaryAttributes for the changed directive attributes');
-  if (reasonCode === 'event-handler-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary and boundaryAttributes');
-  if (reasonCode === 'inline-style-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary "html-inline-style-attribute" and boundaryAttributes ["style"]');
-  if (reasonCode === 'iframe-runtime-boundary' || reasonCode === 'iframe-srcdoc-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary and boundaryAttributes');
-  if (reasonCode === 'form-runtime-boundary' || reasonCode === 'form-submitter-runtime-boundary' || reasonCode === 'form-control-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary and boundaryAttributes');
-  if (reasonCode === 'navigation-runtime-boundary' || reasonCode === 'document-base-runtime-boundary' || reasonCode === 'document-metadata-runtime-boundary' || reasonCode === 'resource-loading-runtime-boundary') return htmlRuntimeBoundaryProofInstruction('boundary and boundaryAttributes');
-  return 'Attach source-bound HTML parser, identity, and runtime-boundary evidence for the changed file before structural admission.';
-}
-
-function htmlRuntimeBoundaryProofInstruction(boundaryClause) { return `Attach htmlRuntimeBoundaryProofsByPath[sourcePath] with kind html-source-bound-runtime-boundary-proof, status passed, sourcePath, reasonCode, side, ${boundaryClause}, exact base/worker/head/output source text or hashes, a runtimeProofCapsule with command, probe id, evidence hash, required runtime signals, telemetry/dom/computed-style/layout/event/layout-shift/screenshot hashes, acceptable cumulative layout shift, and no broad browser/semantic/auto-merge self-claims.`; }
 
 function blockedHtmlProofGapAdmission(admission = {}, conflicts = []) {
   return {

@@ -58,11 +58,40 @@ const missingAccessibilityConflicts = projectGraphDeltaConflicts(hookDelta, { js
 assert.equal(missingAccessibilityConflicts.length, 1);
 assert.equal(missingAccessibilityConflicts[0].details.reasonCodes.includes('runtime-proof-accessibility-snapshot-hash-missing'), true);
 
+const missingEventTraceProof = {
+  ...hookRuntimeProof,
+  runtimeProofCapsule: {
+    ...hookRuntimeProof.runtimeProofCapsule,
+    eventTraceHash: undefined,
+    telemetry: {
+      ...hookRuntimeProof.runtimeProofCapsule.telemetry,
+      eventTraceHash: undefined
+    }
+  }
+};
+const missingEventTraceConflicts = projectGraphDeltaConflicts(hookDelta, { jsxRenderRuntimeProof: missingEventTraceProof });
+assert.equal(missingEventTraceConflicts.length, 1);
+assert.equal(missingEventTraceConflicts[0].details.reasonCodes.includes('runtime-proof-event-trace-hash-missing'), true);
+
 const broadClaimConflicts = projectGraphDeltaConflicts(hookDelta, {
   jsxRenderRuntimeProof: { ...hookRuntimeProof, renderEquivalenceClaim: true }
 });
 assert.equal(broadClaimConflicts.length, 1);
 assert.equal(broadClaimConflicts[0].details.reasonCodes.includes('source-bound-runtime-proof-broad-claim-present'), true);
+
+const nestedBroadClaimConflicts = projectGraphDeltaConflicts(hookDelta, {
+  jsxRenderRuntimeProof: {
+    ...hookRuntimeProof,
+    runtimeProofCapsule: {
+      ...hookRuntimeProof.runtimeProofCapsule,
+      renderEquivalenceClaim: true
+    }
+  }
+});
+assert.equal(nestedBroadClaimConflicts.length, 1);
+assert.equal(nestedBroadClaimConflicts[0].details.reasonCodes.includes('jsx-render-runtime-proof-nested-broad-claim-present'), true);
+assert.equal(nestedBroadClaimConflicts[0].details.jsxRenderRuntimeProof.runtimeEvidenceBound, false);
+assert.equal(nestedBroadClaimConflicts[0].details.renderEquivalenceClaim, false);
 
 const contextDelta = jsxRenderRiskDelta({
   base: jsxContextConsumerRisk('base', ['ThemeContext']),

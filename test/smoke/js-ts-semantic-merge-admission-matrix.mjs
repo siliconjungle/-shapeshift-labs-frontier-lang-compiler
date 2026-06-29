@@ -124,7 +124,8 @@ const semanticMergeMatrixCells = [
   { id: 'source-span/source-url-generated-boundary-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-source-span-graph', note: 'JS/TS source ledger classifies sourceURL boundaries and shebang file-entrypoint directives with deterministic ownership evidence' },
   { id: 'semantic-replay/applied-already-applied-overlap-blocked', status: 'done', evidence: 'semantic-edit-bundle-auto-merge', note: 'replay blocks overlaps between already-applied ranges and edits that would still write source' },
   { id: 'semantic-replay/output-binding-spoof-blocked', status: 'done', evidence: 'js-ts-safe-project-merge-semantic-replay-proof', note: 'replay output source/hash binding blocks spoofed expected outputs before admission' },
-  { id: 'semantic-replay/projection-output-hash-mismatch-blocked', status: 'done', evidence: 'js-ts-safe-project-merge-semantic-replay-proof', note: 'bounded current-head replay proof rejects projection output hashes that disagree with expected and replayed output hashes' }
+  { id: 'semantic-replay/projection-output-hash-mismatch-blocked', status: 'done', evidence: 'js-ts-safe-project-merge-semantic-replay-proof', note: 'bounded current-head replay proof rejects projection output hashes that disagree with expected and replayed output hashes' },
+  { id: 'semantic-replay/source-bound-bundle-composition-proof', status: 'done', evidence: 'semantic-patch-bundle-overlaps-same-file', note: 'same-file bundle composition admits only source-bound current-head commutation replays with bound output hashes while stale current source, unbound current source, and duplicate bundle overlaps fail closed' }
 ];
 assert.equal(semanticMergeMatrixCells.every((cell) => cell.status === 'done'), true);
 const supportStatuses = ['baseline', 'bounded-evidence', 'partial', 'blocked', 'absent'];
@@ -316,5 +317,4 @@ assert.equal(oracleImportRemovalProject.summary.confidenceDimensions.semanticEqu
 assert.equal(oracleImportRemovalProject.summary.missingEvidenceMatrix.byRoute['produce-source-span-roundtrip-evidence'], undefined);
 const matrixAudit = oracleImportRemovalProject.confidence.admissionMatrixAudit;
 assertPartialMatrixAuditRows(matrixAudit, assert);
-
 assertReadmeRealRepoBenchmarkSuiteRow(assert);

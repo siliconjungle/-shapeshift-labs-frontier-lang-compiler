@@ -1,6 +1,7 @@
 import { assert } from './helpers.mjs';
 import { importNativeSource, safeMergeJsTsProject } from './compiler-api.mjs';
 import { matrixSurface } from './html-css-merge-test-helpers.mjs';
+import { cssModuleSourceMapIdentityFixture } from './js-ts-safe-project-merge-css-modules-test-helpers.mjs';
 
 const boundedCssModuleSpecifier = './Bounded.module.css';
 const boundedButtonSourceText = [
@@ -19,14 +20,22 @@ const boundedCssModuleSourceText = [
   '.active { color: blue; }',
   ''
 ].join('\n');
+const boundedGeneratedClassNameMap = { root: '_root_123', active: '_active_456' };
+const boundedTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath: 'src/Bounded.module.css',
+  sourceText: boundedCssModuleSourceText,
+  generatedClassNameMap: boundedGeneratedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:bounded'
+});
 const boundedCssModuleImport = importNativeSource({
   language: 'css',
   sourcePath: 'src/Bounded.module.css',
   sourceText: boundedCssModuleSourceText,
   metadata: {
-    generatedClassNameMap: { root: '_root_123', active: '_active_456' },
+    generatedClassNameMap: boundedGeneratedClassNameMap,
     bundlerTransformHash: 'bundler-transform:bounded',
-    sourceMapProofHash: 'source-map-proof:bounded'
+    cssModuleGeneratedSourceHash: boundedTransformProof.cssModuleGeneratedSourceHash,
+    sourceMapIdentityProof: boundedTransformProof.sourceMapIdentityProof
   }
 });
 
@@ -52,6 +61,14 @@ assert.equal(boundedCssModuleProject.outputProjectSymbolGraph.cssModuleUseSiteBl
 assert.equal(boundedCssModuleProject.summary.projectGraphCssModuleUseSiteConflicts, 0);
 assert.equal(matrixSurface(boundedCssModuleProject, 'css-modules-use-site-graph').proofStatuses['css-module-use-site-graph'], 'passed');
 
+const boundedMissingSourceText = '.root { color: red; }\n';
+const boundedMissingGeneratedClassNameMap = { root: '_root_123' };
+const boundedMissingTransformProof = cssModuleSourceMapIdentityFixture({
+  sourcePath: 'src/BoundedMissing.module.css',
+  sourceText: boundedMissingSourceText,
+  generatedClassNameMap: boundedMissingGeneratedClassNameMap,
+  bundlerTransformHash: 'bundler-transform:bounded-missing'
+});
 const missingBoundedExportProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_bounded_dynamic_css_module_missing_export',
   includeOutputProjectSymbolGraph: true,
@@ -59,16 +76,17 @@ const missingBoundedExportProject = safeMergeJsTsProject({
     importNativeSource({
       language: 'css',
       sourcePath: 'src/BoundedMissing.module.css',
-      sourceText: '.root { color: red; }\n',
+      sourceText: boundedMissingSourceText,
       metadata: {
-        generatedClassNameMap: { root: '_root_123' },
+        generatedClassNameMap: boundedMissingGeneratedClassNameMap,
         bundlerTransformHash: 'bundler-transform:bounded-missing',
-        sourceMapProofHash: 'source-map-proof:bounded-missing'
+        cssModuleGeneratedSourceHash: boundedMissingTransformProof.cssModuleGeneratedSourceHash,
+        sourceMapIdentityProof: boundedMissingTransformProof.sourceMapIdentityProof
       }
     })
   ],
   files: [
-    { language: 'css', sourcePath: 'src/BoundedMissing.module.css', headSourceText: '.root { color: red; }\n' },
+    { language: 'css', sourcePath: 'src/BoundedMissing.module.css', headSourceText: boundedMissingSourceText },
     {
       language: 'tsx',
       sourcePath: 'src/BoundedMissing.tsx',
