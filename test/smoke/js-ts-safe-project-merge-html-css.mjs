@@ -195,6 +195,37 @@ assert.equal(htmlUnkeyedDeleteProject.files[0].result.htmlUnkeyedStructuralDelet
 assert.equal(htmlUnkeyedDeleteProject.files[0].result.htmlUnkeyedStructuralDeleteEvidence[0].semanticEquivalenceClaim, false);
 assert.equal(matrixSurface(htmlUnkeyedDeleteProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
 
+const htmlUnkeyedMoveBase = [
+  '<section data-frontier-key="todo-root">',
+  '  <ul id="todos">',
+  '    <li data-frontier-key="a">A</li>',
+  '    <li>Loose</li>',
+  '    <li data-frontier-key="b">B</li>',
+  '  </ul>',
+  '</section>',
+  ''
+].join('\n');
+const htmlUnkeyedMoveProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_html_unkeyed_structural_move',
+  files: [{
+    sourcePath: 'src/todos.html',
+    baseSourceText: htmlUnkeyedMoveBase,
+    workerSourceText: htmlUnkeyedMoveBase.replace('    <li>Loose</li>\n    <li data-frontier-key="b">B</li>', '    <li data-frontier-key="b">B</li>\n    <li>Loose</li>'),
+    headSourceText: htmlUnkeyedMoveBase.replace('<ul id="todos">', '<ul id="todos" class="todo-list">')
+  }]
+});
+assert.equal(htmlUnkeyedMoveProject.status, 'merged');
+assert.equal(htmlUnkeyedMoveProject.summary.htmlUnkeyedStructuralMoveFiles, 1);
+assert.equal(htmlUnkeyedMoveProject.summary.htmlUnkeyedStructuralMoveEvidenceRecords, 1);
+assert.match(htmlUnkeyedMoveProject.outputFiles[0].sourceText, /<ul id="todos" class="todo-list">/);
+assert.match(htmlUnkeyedMoveProject.outputFiles[0].sourceText, /data-frontier-key="b">B<\/li>\n    <li>Loose<\/li>/);
+assert.equal(htmlUnkeyedMoveProject.files[0].result.htmlUnkeyedStructuralMoveEvidence[0].kind, 'frontier.lang.htmlUnkeyedStructuralMoveEvidence');
+assert.equal(htmlUnkeyedMoveProject.files[0].result.htmlUnkeyedStructuralMoveEvidence[0].parentExplicitIdentity, true);
+assert.equal(htmlUnkeyedMoveProject.files[0].result.htmlUnkeyedStructuralMoveEvidence[0].moveOnly, true);
+assert.equal(htmlUnkeyedMoveProject.files[0].result.htmlUnkeyedStructuralMoveEvidence[0].keyedSiblingAnchor, true);
+assert.equal(htmlUnkeyedMoveProject.files[0].result.htmlUnkeyedStructuralMoveEvidence[0].semanticEquivalenceClaim, false);
+assert.equal(matrixSurface(htmlUnkeyedMoveProject, 'html-structural-merge-admission').proofStatuses['html-structural-merge'], 'passed');
+
 const htmlDuplicateIdentityBase = [
   '<main id="app">',
   '  <button data-frontier-key="dup">A</button>',
