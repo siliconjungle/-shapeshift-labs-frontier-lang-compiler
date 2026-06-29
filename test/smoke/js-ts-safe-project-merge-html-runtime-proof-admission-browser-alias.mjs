@@ -34,6 +34,7 @@ assert.equal(htmlEventHandlerClaimingProofProject.summary.htmlProofGapBlockedFil
 assert.equal(htmlEventHandlerClaimingProofProject.summary.htmlCssBrowserRuntimeProofs, 0);
 assert.equal(htmlEventHandlerClaimingProofProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
 assert.equal(htmlEventHandlerClaimingProofProject.files[0].result.admission.browserRuntimeEquivalenceClaim, false);
+assert.equal(htmlEventHandlerClaimingProofProject.files[0].result.conflicts.some((conflict) => conflict.code === 'html-runtime-proof-broad-claim'), true);
 assert.equal(matrixSurface(htmlEventHandlerClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
 
 const htmlEventHandlerLegacyAliasProofProject = safeMergeJsTsProject({

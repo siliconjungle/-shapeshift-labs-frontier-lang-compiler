@@ -1,7 +1,7 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { hashText, uniqueStrings } from './js-ts-safe-project-merge-core.js';
 import { changedHtmlRuntimeBoundaryAttributes, htmlRuntimeBoundaryGroups } from './js-ts-safe-project-merge-html-runtime-boundary-records.js';
-import { FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND, validateRuntimeProofAgainstProbe } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
+import { FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND, runtimeProofBroadClaimFields, validateRuntimeProofAgainstProbe } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
 
 function htmlRuntimeBoundaryChanges(base, worker, head) {
   const baseBoundaries = htmlRuntimeBoundaryGroups(base);
@@ -30,7 +30,11 @@ function htmlRuntimeBoundaryProofForChange(proofs, change, binding) {
   return proofs.find((proof) => isHtmlRuntimeBoundaryProofForChange(proof, change, binding));
 }
 
-function isHtmlRuntimeBoundaryProofForChange(proof, change, binding) {
+function htmlRuntimeBoundaryBroadClaimProofForChange(proofs, change, binding) {
+  return proofs.find((proof) => runtimeProofBroadClaimFields(proof).length && isHtmlRuntimeBoundaryProofForChange(proof, change, binding, { rejectBroadClaims: false }));
+}
+
+function isHtmlRuntimeBoundaryProofForChange(proof, change, binding, options = {}) {
   return Boolean(proof && typeof proof === 'object') &&
     HtmlRuntimeBoundaryProofKinds.has(proof.kind) &&
     proof.status === 'passed' &&
@@ -40,7 +44,7 @@ function isHtmlRuntimeBoundaryProofForChange(proof, change, binding) {
     htmlProofCoversValue(proofBoundaryValue(proof), proofBoundaryValues(proof), change.boundary) &&
     sameStringSet(htmlProofBoundaryAttributes(proof), change.boundaryAttributes) &&
     htmlRuntimeBoundaryProofSourceBound(proof, binding) &&
-    !htmlRuntimeBoundaryProofMakesBroadClaims(proof) &&
+    (options.rejectBroadClaims === false || !htmlRuntimeBoundaryProofMakesBroadClaims(proof)) &&
     htmlRuntimeBoundaryProofEvidenceMetadata(proof, change) !== undefined;
 }
 
@@ -165,11 +169,7 @@ function htmlRuntimeBoundaryProvenResult(result, runtimeBoundaryProofs) {
 }
 
 function htmlRuntimeBoundaryProofMakesBroadClaims(proof) {
-  return proof.browserRuntimeEquivalenceClaim === true ||
-    proof.browserRenderEquivalenceClaim === true ||
-    proof.browserCascadeEquivalenceClaim === true ||
-    proof.semanticEquivalenceClaim === true ||
-    proof.autoMergeClaim === true;
+  return runtimeProofBroadClaimFields(proof).length > 0;
 }
 
 function htmlProofCoversValue(value, values, expected) {
@@ -215,4 +215,4 @@ const HtmlRuntimeBoundaryProofKinds = new Set([
   'html-source-bound-runtime-boundary-proof'
 ]);
 
-export { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult };
+export { htmlRuntimeBoundaryBroadClaimProofForChange, htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult };

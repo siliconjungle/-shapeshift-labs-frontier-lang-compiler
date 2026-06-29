@@ -27,6 +27,13 @@ const htmlAngularDirectiveClaimingProofProject = safeMergeJsTsProject({
       runtimeProbeId: 'html:framework-directive-boundary:html-framework-directive',
       runtimeEvidenceHash: 'html-runtime-evidence:framework-directive-boundary:html-framework-directive:angular-framework-directive-claiming',
       runtimeSignals: ['html-framework-directive-runtime'],
+      runtimeProofCapsule: runtimeProofCapsule({
+        command: 'node test/html-runtime/angular-framework-directive-claiming.mjs',
+        probeId: 'html:framework-directive-boundary:html-framework-directive',
+        evidenceHash: 'html-runtime-evidence:framework-directive-boundary:html-framework-directive:angular-framework-directive-claiming',
+        signals: ['html-framework-directive-runtime'],
+        label: 'angular-framework-directive-claiming'
+      }),
       browserRuntimeEquivalenceClaim: true
     }]
   },
@@ -42,8 +49,10 @@ assert.equal(htmlAngularDirectiveClaimingProofProject.status, 'blocked');
 assert.equal(htmlAngularDirectiveClaimingProofProject.summary.htmlProofGapBlockedFiles, 1);
 assert.equal(htmlAngularDirectiveClaimingProofProject.summary.htmlCssBrowserRuntimeProofs, 0);
 assert.equal(htmlAngularDirectiveClaimingProofProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
-assert.equal(htmlAngularDirectiveClaimingProofProject.conflicts.some((conflict) => conflict.details.reasonCode === 'framework-directive-boundary'), true);
-assert.deepEqual(htmlAngularDirectiveClaimingProofProject.conflicts.find((conflict) => conflict.details.reasonCode === 'framework-directive-boundary').details.boundaryAttributes, ['[(ngmodel)]']);
+assert.equal(htmlAngularDirectiveClaimingProofProject.conflicts.some((conflict) => conflict.code === 'html-runtime-proof-broad-claim'), true);
+const htmlAngularDirectiveClaimingConflict = htmlAngularDirectiveClaimingProofProject.conflicts.find((conflict) => conflict.code === 'html-runtime-proof-broad-claim');
+assert.equal(htmlAngularDirectiveClaimingConflict.details.proofGapCode, 'framework-directive-boundary');
+assert.deepEqual(htmlAngularDirectiveClaimingConflict.details.boundaryAttributes, ['[(ngmodel)]']);
 
 const htmlAngularDirectiveWrongOutputProofProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_html_angular_framework_directive_runtime_wrong_output_proof',
@@ -155,6 +164,13 @@ const htmlAnchorClaimingProofProject = safeMergeJsTsProject({
       runtimeProbeId: 'html:navigation-runtime-boundary:html-anchor-navigation-runtime-attribute',
       runtimeEvidenceHash: 'html-runtime-evidence:navigation-runtime-boundary:html-anchor-navigation-runtime-attribute:anchor-navigation-claiming',
       runtimeSignals: ['html-navigation-runtime'],
+      runtimeProofCapsule: runtimeProofCapsule({
+        command: 'node test/html-runtime/anchor-navigation-claiming.mjs',
+        probeId: 'html:navigation-runtime-boundary:html-anchor-navigation-runtime-attribute',
+        evidenceHash: 'html-runtime-evidence:navigation-runtime-boundary:html-anchor-navigation-runtime-attribute:anchor-navigation-claiming',
+        signals: ['html-navigation-runtime'],
+        label: 'anchor-navigation-claiming'
+      }),
       browserRuntimeEquivalenceClaim: true
     }]
   },
@@ -171,8 +187,9 @@ assert.equal(htmlAnchorClaimingProofProject.summary.htmlProofGapBlockedFiles, 1)
 assert.equal(htmlAnchorClaimingProofProject.summary.htmlCssBrowserRuntimeProofs, 0);
 assert.equal(htmlAnchorClaimingProofProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
 assert.equal(htmlAnchorClaimingProofProject.files[0].result.admission.browserRuntimeEquivalenceClaim, false);
-assert.equal(htmlAnchorClaimingProofProject.conflicts.some((conflict) => conflict.details.reasonCode === 'navigation-runtime-boundary'), true);
-const htmlAnchorClaimingConflict = htmlAnchorClaimingProofProject.conflicts.find((conflict) => conflict.details.reasonCode === 'navigation-runtime-boundary');
+assert.equal(htmlAnchorClaimingProofProject.conflicts.some((conflict) => conflict.code === 'html-runtime-proof-broad-claim'), true);
+const htmlAnchorClaimingConflict = htmlAnchorClaimingProofProject.conflicts.find((conflict) => conflict.code === 'html-runtime-proof-broad-claim');
+assert.equal(htmlAnchorClaimingConflict.details.proofGapCode, 'navigation-runtime-boundary');
 assert.equal(htmlAnchorClaimingConflict.details.boundary, 'html-anchor-navigation-runtime-attribute');
 assert.deepEqual(htmlAnchorClaimingConflict.details.boundaryAttributes, ['href']);
 assert.equal(matrixSurface(htmlAnchorClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');

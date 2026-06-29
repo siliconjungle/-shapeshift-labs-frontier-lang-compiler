@@ -9,8 +9,8 @@ import { projectCssModuleMergeOptionsForFile, projectCssModuleProofOptionsForBlo
 import { cssModuleSourceMapIdentityMergeOptions } from './js-ts-safe-project-merge-css-module-source-map.js';
 import { blockCssScopedParserEvidenceGap, blockCssSelectorFunctionalPseudoSpecificityGap, normalizeHtmlCssParserEvidenceSides } from './js-ts-safe-project-merge-html-css-parser-gaps.js';
 import { htmlProofGapNextProof, htmlProofGapSummary } from './js-ts-safe-project-merge-html-proof-gap-text.js';
-import { htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult } from './js-ts-safe-project-merge-html-runtime-boundaries.js';
-import { FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND, runtimeEvidenceMetadataFromProof } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
+import { htmlRuntimeBoundaryBroadClaimProofForChange, htmlRuntimeBoundaryChanges, htmlRuntimeBoundaryProofForChange, htmlRuntimeBoundaryProofRecord, htmlRuntimeBoundaryProvenResult } from './js-ts-safe-project-merge-html-runtime-boundaries.js';
+import { FRONTIER_SOURCE_BOUND_RUNTIME_PROOF_KIND, runtimeEvidenceMetadataFromProof, runtimeProofBroadClaimFields } from './js-ts-safe-project-merge-runtime-proof-capsule.js';
 
 function projectFileLanguage(file, input) {
   return file.language ?? inferLanguageFromPath(file.sourcePath) ?? input.language ?? 'typescript';
@@ -105,7 +105,10 @@ function blockHtmlProofGapChanges({ result, id, sourcePath, base, worker, head, 
   for (const change of htmlRuntimeBoundaryChanges(base, worker, head)) {
     const proof = htmlRuntimeBoundaryProofForChange(runtimeBoundaryProofs, change, binding);
     if (proof) runtimeBoundaryProofRecords.push(htmlRuntimeBoundaryProofRecord(proof, change, binding));
-    else runtimeBoundaryConflicts.push(htmlProofGapConflict(id, sourcePath, change.reasonCode, change));
+    else {
+      const broadClaimProof = htmlRuntimeBoundaryBroadClaimProofForChange(runtimeBoundaryProofs, change, binding);
+      runtimeBoundaryConflicts.push(broadClaimProof ? htmlRuntimeBoundaryBroadClaimConflict(id, sourcePath, broadClaimProof, change) : htmlProofGapConflict(id, sourcePath, change.reasonCode, change));
+    }
   }
   const conflicts = [
     htmlDuplicateIdentityConflict(result, sourcePath),
@@ -230,6 +233,16 @@ function htmlProofGapConflict(id, sourcePath, reasonCode, details = {}, code = '
       ...details
     })
   };
+}
+
+function htmlRuntimeBoundaryBroadClaimConflict(id, sourcePath, proof, change) {
+  return htmlProofGapConflict(id, sourcePath, 'html-runtime-proof-broad-claim', {
+    ...change,
+    proofId: proof.id,
+    proofGapCode: change.reasonCode,
+    broadClaimFields: runtimeProofBroadClaimFields(proof),
+    summary: 'HTML runtime proofs cannot self-assert broad browser, render, semantic, or auto-merge equivalence claims.'
+  }, 'html-runtime-proof-broad-claim');
 }
 
 function blockedHtmlProofGapAdmission(admission = {}, conflicts = []) {

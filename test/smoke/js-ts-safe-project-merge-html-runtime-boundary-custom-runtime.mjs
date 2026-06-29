@@ -78,6 +78,8 @@ const htmlCustomRuntimeClaimingProofProject = safeMergeJsTsProject({
 assert.equal(htmlCustomRuntimeClaimingProofProject.status, 'blocked');
 assert.equal(htmlCustomRuntimeClaimingProofProject.summary.htmlProofGapBlockedFiles, 1);
 assert.equal(htmlCustomRuntimeClaimingProofProject.summary.htmlCssBrowserRuntimeProofs, 0);
+assert.equal(htmlCustomRuntimeClaimingProofProject.conflicts.some((conflict) => conflict.code === 'html-runtime-proof-broad-claim'), true);
+assert.equal(htmlCustomRuntimeClaimingProofProject.conflicts.find((conflict) => conflict.code === 'html-runtime-proof-broad-claim').details.proofGapCode, 'custom-runtime-attribute-boundary');
 assert.equal(matrixSurface(htmlCustomRuntimeClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
 
 const htmlCustomRuntimeProvenProject = safeMergeJsTsProject({

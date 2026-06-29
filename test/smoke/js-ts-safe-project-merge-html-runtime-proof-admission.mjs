@@ -89,8 +89,9 @@ assert.equal(htmlFrameworkDirectiveClaimingProofProject.summary.htmlProofGapBloc
 assert.equal(htmlFrameworkDirectiveClaimingProofProject.summary.htmlCssBrowserRuntimeProofs, 0);
 assert.equal(htmlFrameworkDirectiveClaimingProofProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
 assert.equal(htmlFrameworkDirectiveClaimingProofProject.files[0].result.admission.browserRuntimeEquivalenceClaim, false);
-assert.equal(htmlFrameworkDirectiveClaimingProofProject.conflicts.some((conflict) => conflict.details.reasonCode === 'framework-directive-boundary'), true);
-const htmlFrameworkDirectiveClaimingConflict = htmlFrameworkDirectiveClaimingProofProject.conflicts.find((conflict) => conflict.details.reasonCode === 'framework-directive-boundary');
+assert.equal(htmlFrameworkDirectiveClaimingProofProject.conflicts.some((conflict) => conflict.code === 'html-runtime-proof-broad-claim'), true);
+const htmlFrameworkDirectiveClaimingConflict = htmlFrameworkDirectiveClaimingProofProject.conflicts.find((conflict) => conflict.code === 'html-runtime-proof-broad-claim');
+assert.equal(htmlFrameworkDirectiveClaimingConflict.details.proofGapCode, 'framework-directive-boundary');
 assert.equal(htmlFrameworkDirectiveClaimingConflict.details.boundary, 'html-framework-directive');
 assert.deepEqual(htmlFrameworkDirectiveClaimingConflict.details.boundaryAttributes, [':class']);
 assert.equal(matrixSurface(htmlFrameworkDirectiveClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');

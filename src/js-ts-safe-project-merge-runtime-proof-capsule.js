@@ -3,6 +3,7 @@ export {
   createSourceBoundRuntimeProof,
   normalizeRuntimeProofCapsule,
   runtimeEvidenceMetadataFromProof,
+  runtimeProofBroadClaimFields,
   runtimeProofSignals,
   validateRuntimeProofAgainstProbe,
   validateSourceBoundRuntimeProof

@@ -71,7 +71,8 @@ assert.equal(templateClaimingProofProject.status, 'blocked');
 assert.equal(templateClaimingProofProject.summary.htmlProofGapBlockedFiles, 1);
 assert.equal(templateClaimingProofProject.summary.htmlCssBrowserRuntimeProofs, 0);
 assert.equal(templateClaimingProofProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
-assert.equal(templateClaimingProofProject.conflicts.some((conflict) => conflict.details.reasonCode === 'template-runtime-boundary'), true);
+assert.equal(templateClaimingProofProject.conflicts.some((conflict) => conflict.code === 'html-runtime-proof-broad-claim'), true);
+assert.equal(templateClaimingProofProject.conflicts.find((conflict) => conflict.code === 'html-runtime-proof-broad-claim').details.proofGapCode, 'template-runtime-boundary');
 
 const templateProvenProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_html_template_runtime_source_bound_proof',

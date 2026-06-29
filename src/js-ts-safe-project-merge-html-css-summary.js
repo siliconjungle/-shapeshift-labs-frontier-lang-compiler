@@ -139,7 +139,8 @@ function hasCssSelectorTargetConflict(file) {
   return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => conflict.code === 'css-selector-target-conflict');
 }
 function hasHtmlProofGapBlockedConflict(file) {
-  return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => conflict.code === 'html-proof-gap-blocked');
+  return (file?.result?.conflicts ?? file?.conflicts ?? [])
+    .some((conflict) => conflict.code === 'html-proof-gap-blocked' || conflict.code === 'html-runtime-proof-broad-claim');
 }
 function hasRuntimeBoundaryConflict(file) {
   return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => HtmlRuntimeBoundaryReasonCodes.has(conflict?.details?.reasonCode));
