@@ -94,6 +94,7 @@ const semanticMergeMatrixCells = [
   { id: 'tsx-jsx-children/keyed-fragment-additions-admitted', status: 'done', evidence: 'semantic-edit-tsx-jsx-attributes', note: 'keyed named Fragment additions merge as opaque keyed children while duplicate keys, spreads, same-gap conflicts, data-key, and shorthand fragments stay blocked' },
   { id: 'jsx-tsx-element-prop-graph/event-handler-local-declaration-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-jsx-event-handlers', note: 'static JSX event-handler props carry same-owner local declaration hashes when a local function or handler variable is available' },
   { id: 'jsx-tsx-element-prop-graph/static-spread-effective-prop-commutation', status: 'done', evidence: 'js-ts-safe-project-merge-jsx-spread-props', note: 'static object JSX spread deltas admit disjoint effective-prop changes only when output carries the exact union and overlap or output mismatch fails closed' },
+  { id: 'jsx-tsx-element-prop-graph/static-style-object-property-commutation', status: 'done', evidence: 'js-ts-safe-project-merge-jsx-style-object-props', note: 'static JSX style object deltas admit disjoint property changes only when output carries the exact union and duplicates, overlaps, dynamic values, or mismatches fail closed' },
   { id: 'jsx-tsx-element-prop-graph/render-return-branch-evidence', status: 'done', evidence: 'js-ts-safe-project-merge-jsx-graph', note: 'public JSX component return expressions carry static render-return records and branch-control blockers for conditional returns' },
   { id: 'scope-use-def-graph/public-reference-delta-conflict', status: 'done', evidence: 'js-ts-safe-project-merge-scope-use-def-reference-conflicts', note: 'public scope reference sites now emit explicit delta and ambiguous-evidence conflicts instead of relying only on binding aggregation' },
   { id: 'scope-use-def-graph/compiler-receiver-member-reference-proof', status: 'done', evidence: 'js-ts-safe-project-merge-scope-use-def-receiver-members', note: 'TypeScript checker reference proof attaches to this/super receiver member references, including private identifiers, through full receiver-access spans' },
@@ -313,7 +314,6 @@ assert.equal(oracleImportRemovalProject.summary.nextMissingEvidenceRouteId, 'emi
 assert.equal(oracleImportRemovalProject.summary.confidenceDimensions.proof, 'partial');
 assert.equal(oracleImportRemovalProject.summary.confidenceDimensions.semanticEquivalence, 'unknown');
 assert.equal(oracleImportRemovalProject.summary.missingEvidenceMatrix.byRoute['produce-source-span-roundtrip-evidence'], undefined);
-
 const matrixAudit = oracleImportRemovalProject.confidence.admissionMatrixAudit;
 assertPartialMatrixAuditRows(matrixAudit, assert);
 

@@ -7,6 +7,7 @@ import { jsxRenderReturnBranchProofAssessment } from './js-ts-safe-project-merge
 import { jsxRenderReturnCollectionProofAssessment } from './js-ts-safe-project-merge-jsx-render-collection-proof.js';
 import { jsxRenderRuntimeProofAssessment } from './js-ts-safe-project-merge-jsx-runtime-proof.js';
 import { jsxSpreadEffectivePropMergeProofAssessment } from './js-ts-safe-project-merge-jsx-spread-effective-prop-proof.js';
+import { jsxStyleObjectMergeProofAssessment } from './js-ts-safe-project-merge-jsx-style-object-proof.js';
 import {
   hasRenderRisk,
   jsxChildOrderDetails,
@@ -40,7 +41,9 @@ function projectJsxPropDeltaConflicts(projectGraphDelta) {
     const outputRecord = output.get(identityKey);
     const spreadEffectivePropProof = jsxSpreadEffectivePropMergeProofAssessment({ identityKey, baseRecord, workerRecord, headRecord, outputRecord });
     if (spreadEffectivePropProof?.status === 'passed') return [];
-    return [projectJsxPropDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, spreadEffectivePropProof)];
+    const styleObjectProof = jsxStyleObjectMergeProofAssessment({ identityKey, baseRecord, workerRecord, headRecord, outputRecord });
+    if (styleObjectProof?.status === 'passed') return [];
+    return [projectJsxPropDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, spreadEffectivePropProof, styleObjectProof)];
   });
 }
 function projectJsxRenderRiskDeltaConflicts(projectGraphDelta, options = {}) {
@@ -96,7 +99,7 @@ function projectJsxChildOrderDeltaConflicts(projectGraphDelta) {
     return [projectJsxChildOrderDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, output.get(identityKey))];
   });
 }
-function projectJsxPropDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, spreadEffectivePropProof) {
+function projectJsxPropDeltaConflict(identityKey, baseRecord, workerRecord, headRecord, outputRecord, spreadEffectivePropProof, styleObjectProof) {
   const sourcePath = workerRecord?.sourcePath ?? headRecord?.sourcePath ?? baseRecord?.sourcePath;
   const label = jsxPropLabel(workerRecord ?? headRecord ?? baseRecord);
   return {
@@ -106,18 +109,19 @@ function projectJsxPropDeltaConflict(identityKey, baseRecord, workerRecord, head
     sourcePath,
     details: compactRecord({
       reasonCode: 'project-jsx-public-prop-delta-conflict',
-      reasonCodes: uniqueStrings(['project-jsx-public-prop-delta-conflict', ...(spreadEffectivePropProof?.reasonCodes ?? [])]),
+      reasonCodes: uniqueStrings(['project-jsx-public-prop-delta-conflict', ...(spreadEffectivePropProof?.reasonCodes ?? []), ...(styleObjectProof?.reasonCodes ?? [])]),
       conflictKey: `project-graph-delta#jsx-prop#${identityKey}`,
       identityKey,
       sourcePath,
-      routeId: spreadEffectivePropProof?.routeId,
-      routeLane: spreadEffectivePropProof?.routeLane,
-      routeNext: spreadEffectivePropProof?.routeNext,
+      routeId: spreadEffectivePropProof?.routeId ?? styleObjectProof?.routeId,
+      routeLane: spreadEffectivePropProof?.routeLane ?? styleObjectProof?.routeLane,
+      routeNext: spreadEffectivePropProof?.routeNext ?? styleObjectProof?.routeNext,
       base: jsxPropDetails(baseRecord),
       worker: jsxPropDetails(workerRecord),
       head: jsxPropDetails(headRecord),
       output: jsxPropDetails(outputRecord),
       jsxSpreadEffectivePropMergeProof: spreadEffectivePropProof?.record,
+      jsxStyleObjectMergeProof: styleObjectProof?.record,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
       runtimeEquivalenceClaim: false,
@@ -217,4 +221,4 @@ function publicJsxChildOrders(records = []) {
 
 function uniqueStrings(values) { return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))]; }
 
-export { jsxSpreadEffectivePropMergeProofAssessment, projectJsxChildOrderDeltaConflicts, projectJsxPropDeltaConflicts, projectJsxRenderRiskDeltaConflicts };
+export { jsxSpreadEffectivePropMergeProofAssessment, jsxStyleObjectMergeProofAssessment, projectJsxChildOrderDeltaConflicts, projectJsxPropDeltaConflicts, projectJsxRenderRiskDeltaConflicts };

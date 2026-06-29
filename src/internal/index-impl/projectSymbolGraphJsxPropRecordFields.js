@@ -25,6 +25,13 @@ function jsxPropValueRecordFields(valueEvidence) {
     propValueStaticSpreadOverridesExplicitPropNames: valueEvidence?.staticSpreadOverridesExplicitPropNames,
     propValueStaticSpreadDuplicatePropNames: valueEvidence?.staticSpreadDuplicatePropNames,
     propValueStaticSpreadPrecedenceStatus: valueEvidence?.staticSpreadPrecedenceStatus,
+    propValueStaticStyleObjectProofStatus: valueEvidence?.styleObjectProofStatus,
+    propValueStaticStyleObjectEntries: valueEvidence?.styleObjectEntries,
+    propValueStaticStyleObjectPropertyNames: valueEvidence?.styleObjectPropertyNames,
+    propValueStaticStyleObjectPropertyCount: valueEvidence?.styleObjectPropertyCount,
+    propValueStaticStyleObjectDuplicatePropertyNames: valueEvidence?.styleObjectDuplicatePropertyNames,
+    propValueStaticStyleObjectClaimScope: valueEvidence?.styleObjectClaimScope,
+    propValueStaticStyleObjectRenderEquivalenceClaim: valueEvidence?.styleObjectRenderEquivalenceClaim,
     propValueDynamicBlockerReasonCode: valueEvidence?.dynamicBlockerReasonCode,
     propValueExpressionHash: valueEvidence?.expressionHash,
     propValueSignatureHash: valueEvidence?.signatureHash

@@ -47,6 +47,13 @@ function jsxPropValueEvidence(tag, attribute, context = {}) {
       staticSpreadOverridesExplicitPropNames: evidence.staticSpreadOverridesExplicitPropNames,
       staticSpreadDuplicatePropNames: evidence.staticSpreadDuplicatePropNames,
       staticSpreadPrecedenceStatus: evidence.staticSpreadPrecedenceStatus,
+      styleObjectProofStatus: evidence.styleObjectProofStatus,
+      styleObjectEntries: evidence.styleObjectEntries,
+      styleObjectPropertyNames: evidence.styleObjectPropertyNames,
+      styleObjectPropertyCount: evidence.styleObjectPropertyCount,
+      styleObjectDuplicatePropertyNames: evidence.styleObjectDuplicatePropertyNames,
+      styleObjectClaimScope: evidence.styleObjectClaimScope,
+      styleObjectRenderEquivalenceClaim: evidence.styleObjectRenderEquivalenceClaim,
       dynamicText: evidence.dynamicText,
       dynamicBlockerReasonCode: evidence.dynamicBlockerReasonCode
     })
@@ -57,7 +64,7 @@ function jsxNonSpreadPropValueEvidence(attribute) {
   const assignedValueText = jsxAssignedPropValueText(attribute);
   return assignedValueText === undefined
     ? staticPropValueEvidence('boolean-shorthand', 'true', 'true')
-    : jsxAssignedPropValueEvidence(assignedValueText);
+    : jsxAssignedPropValueEvidence(attribute.name, assignedValueText);
 }
 
 function jsxAssignedPropValueText(attribute) {
@@ -65,13 +72,13 @@ function jsxAssignedPropValueText(attribute) {
   return match ? normalizedText(match[1]) : undefined;
 }
 
-function jsxAssignedPropValueEvidence(valueText) {
+function jsxAssignedPropValueEvidence(propName, valueText) {
   const text = normalizedText(valueText);
   if (quotedLiteralText(text)) return staticPropValueEvidence('string', text, text);
   const expressionText = bracedExpressionText(text);
   if (expressionText === undefined) return staticPropValueEvidence('unquoted-literal', text, text);
-  const literalKind = staticLiteralKind(expressionText);
-  if (literalKind) return staticPropValueEvidence(literalKind, expressionText, expressionText);
+  const staticLiteral = staticLiteralEvidence(propName, expressionText);
+  if (staticLiteral) return staticLiteral;
   const reference = staticPropReference(expressionText);
   if (reference) return staticReferencePropValueEvidence(reference, expressionText);
   const optionalReference = staticOptionalMemberReference(expressionText);
@@ -85,13 +92,14 @@ function jsxAssignedPropValueEvidence(valueText) {
   };
 }
 
-function staticPropValueEvidence(valueKind, valueText, expressionText) {
+function staticPropValueEvidence(valueKind, valueText, expressionText, extra = {}) {
   return {
     proofStatus: 'static-literal-jsx-prop-value-evidence',
     reasonCode: 'jsx-render-prop-value-literal-evidence',
     valueKind,
     valueText,
-    expressionText
+    expressionText,
+    ...extra
   };
 }
 
@@ -132,21 +140,65 @@ function quotedLiteralText(text) {
   return /^"(?:[^"\\]|\\.)*"$/.test(text) || /^'(?:[^'\\]|\\.)*'$/.test(text);
 }
 
-function staticLiteralKind(text) {
+function staticLiteralEvidence(propName, text) {
   const value = normalizedText(text);
+  const parsed = parseStaticLiteralExpression(text);
+  const primitiveKind = primitiveLiteralKind(value);
+  const valueKind = primitiveKind ?? (parsed && ['object-literal', 'array-literal', 'template-string'].includes(parsed.kind) ? parsed.kind : undefined);
+  if (!valueKind) return undefined;
+  return staticPropValueEvidence(valueKind, value, value, propName === 'style' && parsed?.kind === 'object-literal'
+    ? staticStyleObjectEvidence(parsed.entries)
+    : {});
+}
+
+function primitiveLiteralKind(value) {
   if (/^(?:true|false)$/.test(value)) return 'boolean';
   if (value === 'null') return 'null';
   if (value === 'undefined') return 'undefined';
   if (/^[-]?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)) return 'number';
   if (quotedLiteralText(value)) return 'string';
-  return staticStructuredLiteralKind(value);
+  return undefined;
 }
 
-function staticStructuredLiteralKind(text) {
-  const parsed = parseStaticLiteralExpression(text);
-  return parsed && ['object-literal', 'array-literal', 'template-string'].includes(parsed.kind)
-    ? parsed.kind
-    : undefined;
+function staticStyleObjectEvidence(entries = []) {
+  const styleEntries = entries.map((entry) => staticStyleObjectEntry(entry));
+  const propertyNames = styleEntries.map((entry) => entry.stylePropertyName);
+  return {
+    styleObjectProofStatus: 'static-style-object-jsx-prop-value-evidence',
+    styleObjectEntries: styleEntries,
+    styleObjectPropertyNames: propertyNames,
+    styleObjectPropertyCount: styleEntries.length,
+    styleObjectDuplicatePropertyNames: duplicateNames(propertyNames),
+    styleObjectClaimScope: 'static-jsx-style-object-properties-only',
+    styleObjectRenderEquivalenceClaim: false
+  };
+}
+
+function staticStyleObjectEntry(entry) {
+  return {
+    stylePropertyName: entry.propName,
+    keyText: entry.keyText,
+    valueKind: entry.valueKind,
+    valueText: entry.valueText,
+    ordinal: entry.ordinal,
+    entryHash: hashSemanticValue({
+      kind: 'frontier.lang.projectJsxStaticStyleObjectEntry.v1',
+      stylePropertyName: entry.propName,
+      keyText: entry.keyText,
+      valueKind: entry.valueKind,
+      valueText: entry.valueText,
+      ordinal: entry.ordinal
+    })
+  };
+}
+
+function duplicateNames(names = []) {
+  const seen = new Set(), duplicates = new Set();
+  for (const name of names) {
+    if (seen.has(name)) duplicates.add(name);
+    seen.add(name);
+  }
+  return [...duplicates].sort();
 }
 
 function staticPropReference(text) {
@@ -161,6 +213,7 @@ function jsxPropValueDynamicBlockerReasonCode(text) {
   const value = normalizedText(text);
   if (/\[[\s\S]*\]/.test(value)) return 'jsx-render-prop-value-computed-reference-unsupported';
   if (/^`[\s\S]*\$\{[\s\S]*`$/.test(value)) return 'jsx-render-prop-value-template-interpolation-unsupported';
+  if (/^\{[\s\S]*\.\.\.[\s\S]*\}$/.test(value)) return 'jsx-render-prop-value-object-spread-unsupported';
   if (/\?\.\s*\(/.test(value) || /\b[A-Za-z_$][\w$]*(?:\s*(?:\.|\?\.)\s*[A-Za-z_$][\w$]*)*\s*\(/.test(value)) return 'jsx-render-prop-value-call-expression-unsupported';
   if (/\?\./.test(value)) return 'jsx-render-prop-value-optional-reference-unsupported';
   return 'jsx-render-prop-value-expression-unsupported';

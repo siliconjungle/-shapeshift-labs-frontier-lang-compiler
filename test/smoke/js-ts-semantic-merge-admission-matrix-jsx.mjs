@@ -52,8 +52,14 @@ const semanticMergeJsxMatrixCells = [
   {
     id: 'jsx-tsx-element-prop-graph/static-class-style-prop-value-evidence',
     status: 'done',
-    evidence: 'js-ts-semantic-merge-admission-matrix-jsx',
-    note: 'static className template strings and static style object/array literals emit static literal prop-value evidence while computed keys, calls, spreads, references, and template interpolation remain unsupported'
+    evidence: 'js-ts-safe-project-merge-jsx-style-object-props',
+    note: 'static className template strings and static style object/array literals emit static literal prop-value evidence while computed keys, calls, object spreads, references, and template interpolation remain unsupported'
+  },
+  {
+    id: 'jsx-tsx-element-prop-graph/static-style-object-property-commutation',
+    status: 'done',
+    evidence: 'js-ts-safe-project-merge-jsx-style-object-props',
+    note: 'static JSX style object deltas admit disjoint property changes only when output contains the exact union; duplicate keys, overlaps, dynamic style values, and output mismatches fail closed without render equivalence claims'
   },
   {
     id: 'jsx-tsx-element-prop-graph/static-inline-event-handler-evidence',
@@ -223,10 +229,17 @@ for (const cell of semanticMergeJsxMatrixCells) {
 
 const staticClassStylePropValueCell = semanticMergeJsxMatrixCells.find((cell) => cell.id === 'jsx-tsx-element-prop-graph/static-class-style-prop-value-evidence');
 assert.equal(staticClassStylePropValueCell.status, 'done');
-assert.equal(staticClassStylePropValueCell.evidence, 'js-ts-semantic-merge-admission-matrix-jsx');
+assert.equal(staticClassStylePropValueCell.evidence, 'js-ts-safe-project-merge-jsx-style-object-props');
 assert.match(staticClassStylePropValueCell.note, /static className template strings/);
 assert.match(staticClassStylePropValueCell.note, /static style object\/array literals/);
 assert.match(staticClassStylePropValueCell.note, /template interpolation remain unsupported/);
+
+const staticStyleObjectPropertyCell = semanticMergeJsxMatrixCells.find((cell) => cell.id === 'jsx-tsx-element-prop-graph/static-style-object-property-commutation');
+assert.equal(staticStyleObjectPropertyCell.status, 'done');
+assert.equal(staticStyleObjectPropertyCell.evidence, 'js-ts-safe-project-merge-jsx-style-object-props');
+assert.match(staticStyleObjectPropertyCell.note, /disjoint property changes/);
+assert.match(staticStyleObjectPropertyCell.note, /exact union/);
+assert.match(staticStyleObjectPropertyCell.note, /without render equivalence claims/);
 
 const staticObjectSpreadPropPrecedenceCell = semanticMergeJsxMatrixCells.find((cell) => cell.id === 'jsx-tsx-element-prop-graph/static-object-spread-prop-precedence-evidence');
 assert.equal(staticObjectSpreadPropPrecedenceCell.status, 'done');
