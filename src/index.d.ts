@@ -73,6 +73,19 @@ export type {
   SvgSemanticTree,
   SvgSemanticMergeEvidence
 } from '@shapeshift-labs/frontier-lang-svg';
+export {
+  createPackageManifestSemanticMergeEvidence,
+  parsePackageManifestSemanticTree,
+  queryPackageDependencyRecords,
+  summarizePackageManifestSemanticTree
+} from '@shapeshift-labs/frontier-lang-package';
+export type {
+  SourceSpan as PackageManifestSourceSpan,
+  PackageManifestProofGap,
+  PackageManifestSemanticRecord,
+  PackageManifestSemanticTree,
+  PackageManifestSemanticMergeEvidence
+} from '@shapeshift-labs/frontier-lang-package';
 export * from './declarations/native-diff.js';
 export * from './declarations/semantic-slice.js';
 export * from './declarations/semantic-slice-admission.js';

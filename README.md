@@ -1,6 +1,6 @@
 # @shapeshift-labs/frontier-lang-compiler
 
-Compiler facade for Frontier Lang. It composes the parser, checker, semantic kernel, projection adapters, and runtime-neutral merge-evidence adapters for TypeScript, JavaScript, JSX, TSX, SVG, HTML, CSS, Rust, Python, and C.
+Compiler facade for Frontier Lang. It composes the parser, checker, semantic kernel, projection adapters, and runtime-neutral merge-evidence adapters for TypeScript, JavaScript, JSX, TSX, SVG, HTML, CSS, package manifests, Rust, Python, and C.
 
 ## Benchmarks
 
@@ -29,18 +29,20 @@ const result = compileFrontierSource(source, { target: 'typescript' });
 if (result.ok) console.log(result.output);
 ```
 
-Build source-bound JSX/SVG evidence through the same facade when a coordinator needs language-specific merge records without taking a dependency on the project-level admission engine:
+Build source-bound JSX/SVG/package-manifest evidence through the same facade when a coordinator needs merge records without taking a dependency on the project-level admission engine:
 
 ```js
 import {
   createJsxSemanticMergeEvidence,
+  createPackageManifestSemanticMergeEvidence,
   createSvgSemanticMergeEvidence
 } from '@shapeshift-labs/frontier-lang-compiler';
 
 const jsxEvidence = createJsxSemanticMergeEvidence('<button onClick={save}>Save</button>');
 const svgEvidence = createSvgSemanticMergeEvidence('<svg><use href="#icon" /></svg>');
+const packageEvidence = createPackageManifestSemanticMergeEvidence('{"dependencies":{"react":"^19.0.0"}}');
 
-console.log(jsxEvidence.status, svgEvidence.referenceGraph.missingReferences.length);
+console.log(jsxEvidence.status, svgEvidence.referenceGraph.missingReferences.length, packageEvidence.summary.dependencies);
 ```
 
 Run a small end-to-end demo after installing or building the package:
