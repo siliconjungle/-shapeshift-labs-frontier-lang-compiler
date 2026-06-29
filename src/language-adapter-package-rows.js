@@ -1,7 +1,7 @@
 const packageRows = [
   row('@shapeshift-labs/frontier-lang-typescript', '0.3.9', 'typescript', 'typescript-compiler-api', { target: 'typescript' }),
   row('@shapeshift-labs/frontier-lang-javascript', '0.2.9', 'javascript', 'estree', { target: 'javascript', formats: ['estree', 'babel'] }),
-  row('@shapeshift-labs/frontier-lang-rust', '0.2.9', 'rust', 'rust-syn', { target: 'rust', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'macroExpansionEvidence'] }),
+  row('@shapeshift-labs/frontier-lang-rust', '0.2.10', 'rust', 'rust-syn', { target: 'rust', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'macroExpansionEvidence'] }),
   row('@shapeshift-labs/frontier-lang-python', '0.2.9', 'python', 'python-ast', { target: 'python', formats: ['python-ast', 'libcst'] }),
   row('@shapeshift-labs/frontier-lang-c', '0.2.9', 'c', 'clang-ast-json', { target: 'c', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'compileCommandsHash', 'preprocessorRecordsHash'] }),
   platform('@shapeshift-labs/frontier-lang-java', '0.1.8', 'java', 'java-ast', ['semanticdb', 'lsp']),

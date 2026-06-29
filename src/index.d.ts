@@ -86,6 +86,20 @@ export type {
   PackageManifestSemanticTree,
   PackageManifestSemanticMergeEvidence
 } from '@shapeshift-labs/frontier-lang-package';
+export {
+  createRustSemanticMergeEvidence,
+  parseRustSemanticTree,
+  queryRustItemRecords,
+  summarizeRustSemanticTree
+} from '@shapeshift-labs/frontier-lang-rust';
+export type {
+  RustSemanticMergeEvidence,
+  RustSemanticProofGap,
+  RustSemanticRecord,
+  RustSemanticTree,
+  RustSemanticTreeSummary,
+  RustSourceSpan
+} from '@shapeshift-labs/frontier-lang-rust';
 export * from './declarations/native-diff.js';
 export * from './declarations/semantic-slice.js';
 export * from './declarations/semantic-slice-admission.js';

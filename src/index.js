@@ -34,6 +34,7 @@ export { createJsTsProjectReferenceCompositeProof } from './js-ts-safe-project-m
 export { createJsxSemanticMergeEvidence, parseJsxSemanticTree, queryJsxElementRecords, summarizeJsxSemanticTree } from '@shapeshift-labs/frontier-lang-jsx';
 export { createSvgSemanticMergeEvidence, parseSvgSemanticTree, querySvgReferenceGraph, summarizeSvgSemanticTree } from '@shapeshift-labs/frontier-lang-svg';
 export { createPackageManifestSemanticMergeEvidence, parsePackageManifestSemanticTree, queryPackageDependencyRecords, summarizePackageManifestSemanticTree } from '@shapeshift-labs/frontier-lang-package';
+export { createRustSemanticMergeEvidence, parseRustSemanticTree, queryRustItemRecords, summarizeRustSemanticTree } from '@shapeshift-labs/frontier-lang-rust';
 export { createSemanticSlice } from './internal/index-impl/createSemanticSlice.js';
 export { createSemanticSliceAdmissionRecord } from './internal/index-impl/createSemanticSliceAdmissionRecord.js';
 export { createSwiftSyntaxNativeImporterAdapter } from './internal/index-impl/createSwiftSyntaxNativeImporterAdapter.js';
