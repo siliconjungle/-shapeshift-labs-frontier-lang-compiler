@@ -110,8 +110,11 @@ function hasRequiredSourceBoundDependencyRecords(recordsBySide, change) {
 }
 
 function sideDependencyRecordRequirementMet(records = [], summary) {
-  const kinds = summary?.dependencyKinds ?? [];
-  return !kinds.length || records.length > 0;
+  const kinds = uniqueStrings(summary?.dependencyKinds ?? []);
+  if (!kinds.length) return true;
+  if (!records.length) return false;
+  const recordKinds = new Set(records.map((record) => record?.kind).filter(Boolean));
+  return kinds.every((kind) => recordKinds.has(kind));
 }
 
 function hasSourceBoundDependencyRecord(record) {

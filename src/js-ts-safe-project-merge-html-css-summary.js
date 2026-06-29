@@ -3,21 +3,24 @@ import { cssOrderedCascadeOccurrenceEvidenceRecords, hasCssOrderedCascadeOccurre
 import { cssDescriptorEvidenceCount, cssFontFaceDescriptorEvidenceCount, cssPageDescriptorEvidenceCount, cssPropertyDescriptorEvidenceCount, hasSourceBoundPageDescriptorEvidence, hasSourceBoundPropertyDescriptorEvidence } from './js-ts-safe-project-merge-css-runtime-descriptor-evidence.js';
 import { htmlStructuralMergeEvidenceSummary } from './js-ts-safe-project-merge-html-class-token-evidence.js';
 import { parserEvidenceSourceHashBindingValid } from './js-ts-safe-project-merge-html-css-parser-source-hash-binding.js';
+import { hasBlockedBrowserRuntimeProof, hasBrowserRuntimeProof, hasHtmlRuntimeBoundaryProof } from './js-ts-safe-project-merge-html-css-runtime-summary.js';
+import { hasSvgIdentityEvidence, hasSvgIdentityEvidenceFailure, hasSvgParserEvidence, hasSvgParserEvidenceFailure, isSvgProjectFile, svgProjectEvidenceSummary } from './js-ts-safe-project-merge-svg-summary-helpers.js';
 
 function htmlCssProjectSummary(files) {
-  const htmlFiles = files.filter(isHtmlProjectFile), cssFiles = files.filter(isCssProjectFile), htmlCssFiles = [...htmlFiles, ...cssFiles];
+  const htmlFiles = files.filter(isHtmlProjectFile), cssFiles = files.filter(isCssProjectFile), svgFiles = files.filter(isSvgProjectFile), htmlCssFiles = [...htmlFiles, ...cssFiles, ...svgFiles];
   return {
-    htmlFiles: htmlFiles.length, cssFiles: cssFiles.length, htmlCssFiles: htmlCssFiles.length,
+    htmlFiles: htmlFiles.length, cssFiles: cssFiles.length, svgFiles: svgFiles.length, htmlCssFiles: htmlCssFiles.length,
     htmlMergedFiles: htmlFiles.filter(isMerged).length, cssMergedFiles: cssFiles.filter(isMerged).length, htmlCssMergedFiles: htmlCssFiles.filter(isMerged).length,
     htmlBlockedFiles: htmlFiles.filter(isBlocked).length, cssBlockedFiles: cssFiles.filter(isBlocked).length, htmlCssBlockedFiles: htmlCssFiles.filter(isBlocked).length,
-    htmlParserEvidenceFiles: htmlFiles.filter(hasHtmlParserEvidence).length, cssParserEvidenceFiles: cssFiles.filter(hasCssParserEvidence).length, htmlCssParserEvidenceFiles: htmlCssFiles.filter((file) => hasHtmlParserEvidence(file) || hasCssParserEvidence(file)).length,
-    htmlParserEvidenceFailedFiles: htmlFiles.filter(hasHtmlParserEvidenceFailure).length, cssParserEvidenceFailedFiles: cssFiles.filter(hasCssParserEvidenceFailure).length, htmlCssParserEvidenceFailedFiles: htmlCssFiles.filter((file) => hasHtmlParserEvidenceFailure(file) || hasCssParserEvidenceFailure(file)).length,
-    htmlIdentityEvidenceFiles: htmlFiles.filter(hasHtmlIdentityEvidence).length, cssSelectorTargetEvidenceFiles: cssFiles.filter(hasCssSelectorTargetEvidence).length, htmlCssStructuralTargetEvidenceFiles: htmlCssFiles.filter((file) => hasHtmlIdentityEvidence(file) || hasCssSelectorTargetEvidence(file)).length,
+    htmlParserEvidenceFiles: htmlFiles.filter(hasHtmlParserEvidence).length, cssParserEvidenceFiles: cssFiles.filter(hasCssParserEvidence).length, htmlCssParserEvidenceFiles: htmlCssFiles.filter((file) => hasHtmlParserEvidence(file) || hasCssParserEvidence(file) || hasSvgParserEvidence(file)).length,
+    htmlParserEvidenceFailedFiles: htmlFiles.filter(hasHtmlParserEvidenceFailure).length, cssParserEvidenceFailedFiles: cssFiles.filter(hasCssParserEvidenceFailure).length, htmlCssParserEvidenceFailedFiles: htmlCssFiles.filter((file) => hasHtmlParserEvidenceFailure(file) || hasCssParserEvidenceFailure(file) || hasSvgParserEvidenceFailure(file)).length,
+    htmlIdentityEvidenceFiles: htmlFiles.filter(hasHtmlIdentityEvidence).length, cssSelectorTargetEvidenceFiles: cssFiles.filter(hasCssSelectorTargetEvidence).length, htmlCssStructuralTargetEvidenceFiles: htmlCssFiles.filter((file) => hasHtmlIdentityEvidence(file) || hasCssSelectorTargetEvidence(file) || hasSvgIdentityEvidence(file)).length,
     cssSelectorTargetGraphEvidenceFiles: cssFiles.filter(hasCssSelectorTargetGraphEvidence).length, cssSelectorSpecificityEvidenceFiles: cssFiles.filter(hasCssSelectorSpecificityEvidence).length, cssSelectorTargetMoveFiles: cssFiles.filter(hasCssSelectorTargetMove).length,
     htmlExplicitIdentityEvidenceFiles: htmlFiles.filter(hasHtmlExplicitIdentityEvidence).length, htmlPathOnlyIdentityResidualFiles: htmlFiles.filter(hasHtmlPathOnlyIdentityResidual).length, htmlDuplicateIdentityEvidenceFiles: htmlFiles.filter(hasHtmlDuplicateIdentityEvidence).length, htmlDuplicateIdentityKeys: htmlFiles.reduce((sum, file) => sum + htmlDuplicateIdentityKeyCount(file), 0),
     htmlRuntimeBoundaryEvidenceFiles: htmlFiles.filter(hasHtmlRuntimeBoundaryEvidence).length, htmlFrameworkBoundaryEvidenceFiles: htmlFiles.filter(hasHtmlFrameworkBoundaryEvidence).length, htmlProofGapBlockedFiles: htmlFiles.filter(hasHtmlProofGapBlockedConflict).length,
     ...htmlStructuralMergeEvidenceSummary(htmlFiles),
-    htmlIdentityEvidenceFailedFiles: htmlFiles.filter(hasHtmlIdentityEvidenceFailure).length, cssSelectorTargetConflictFiles: cssFiles.filter(hasCssSelectorTargetConflict).length, htmlCssStructuralTargetEvidenceFailedFiles: htmlCssFiles.filter((file) => hasHtmlIdentityEvidenceFailure(file) || hasCssSelectorTargetConflict(file)).length,
+    htmlIdentityEvidenceFailedFiles: htmlFiles.filter(hasHtmlIdentityEvidenceFailure).length, cssSelectorTargetConflictFiles: cssFiles.filter(hasCssSelectorTargetConflict).length, htmlCssStructuralTargetEvidenceFailedFiles: htmlCssFiles.filter((file) => hasHtmlIdentityEvidenceFailure(file) || hasCssSelectorTargetConflict(file) || hasSvgIdentityEvidenceFailure(file)).length,
+    ...svgProjectEvidenceSummary(svgFiles),
     cssSelectorTargetRebasedFiles: cssFiles.filter(hasCssSelectorTargetRebase).length,
     cssScopedCascadeFiles: cssFiles.filter(hasCssScopedCascadeScope).length, cssScopedCascadeEvidenceFiles: cssFiles.filter(hasCssScopedCascadeEvidence).length, cssScopedCascadeShapeEvidenceFiles: cssFiles.filter(hasCssScopedCascadeShapeEvidence).length, cssScopedCascadeBlockedFiles: cssFiles.filter(hasCssScopedCascadeMissingProof).length,
     cssDuplicateCascadeKeyBlockedFiles: cssFiles.filter(hasCssDuplicateCascadeKeyConflict).length, cssOrderedCascadeOccurrenceEvidenceFiles: cssFiles.filter(hasCssOrderedCascadeOccurrenceEvidence).length, cssOrderedCascadeOccurrenceEvidenceRecords: cssFiles.reduce((sum, file) => sum + cssOrderedCascadeOccurrenceEvidenceRecords(file).length, 0),
@@ -26,7 +29,9 @@ function htmlCssProjectSummary(files) {
     cssRuntimeDescriptorFiles: cssFiles.filter(hasCssRuntimeDescriptorSurface).length, cssRuntimeDescriptorEvidenceFiles: cssFiles.filter((file) => hasCssRuntimeDescriptorSurface(file) && hasCssRuntimeDescriptorEvidence(file)).length, cssRuntimeDescriptorBlockedFiles: cssFiles.filter(hasCssRuntimeDescriptorBlockedConflict).length,
     cssPropertyDescriptorFiles: cssFiles.filter(hasCssPropertyDescriptorSurface).length, cssPropertyDescriptorEvidenceFiles: cssFiles.filter((file) => hasCssPropertyDescriptorSurface(file) && hasCssPropertyDescriptorEvidence(file)).length,
     cssPageDescriptorFiles: cssFiles.filter(hasCssPageDescriptorSurface).length, cssPageDescriptorEvidenceFiles: cssFiles.filter((file) => hasCssPageDescriptorSurface(file) && hasCssPageDescriptorEvidence(file)).length,
-    htmlCssBrowserRuntimeProofs: htmlCssFiles.filter(hasBrowserRuntimeProof).length
+    htmlCssBrowserRuntimeProofs: htmlCssFiles.filter(hasBrowserRuntimeProof).length,
+    htmlCssBrowserRuntimeProofAdmittedFiles: htmlCssFiles.filter(hasBrowserRuntimeProof).length,
+    htmlCssBrowserRuntimeProofBlockedFiles: htmlCssFiles.filter(hasBlockedBrowserRuntimeProof).length
   };
 }
 
@@ -145,10 +150,6 @@ function hasHtmlProofGapBlockedConflict(file) {
 function hasRuntimeBoundaryConflict(file) {
   return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => HtmlRuntimeBoundaryReasonCodes.has(conflict?.details?.reasonCode));
 }
-function hasHtmlRuntimeBoundaryProof(file) {
-  return hasAdmittedBrowserRuntimeProof(file) &&
-    htmlRuntimeProofRecords(file).some((proof) => isRuntimeEvidenceBoundProof(proof) && HtmlRuntimeBoundaryReasonCodes.has(proof.reasonCode));
-}
 function hasFrameworkBoundaryConflict(file) {
   return (file?.result?.conflicts ?? file?.conflicts ?? []).some((conflict) => HtmlFrameworkBoundaryReasonCodes.has(conflict?.details?.reasonCode));
 }
@@ -253,43 +254,6 @@ function isCssDependencyAtRule(shape) { return CssDependencyAtRuleNames.has(Stri
 function isCssRuntimeEquivalenceConflict(conflict) {
   const details = conflict?.details ?? {};
   return CssRuntimeEquivalenceReasonCodes.has(String(details.reasonCode ?? '')) || CssRuntimeEquivalenceReasonCodes.has(String(details.proofGap?.code ?? ''));
-}
-function hasBrowserRuntimeProof(file) {
-  return hasAdmittedBrowserRuntimeProof(file) && browserRuntimeProofRecords(file).some(isRuntimeEvidenceBoundProof);
-}
-
-function hasAdmittedBrowserRuntimeProof(file) {
-  const admission = file?.result?.admission ?? file?.admission ?? {};
-  return admission.browserRuntimeEquivalenceClaim === true ||
-    admission.browserCascadeEquivalenceClaim === true ||
-    admission.browserRenderEquivalenceClaim === true;
-}
-
-function htmlRuntimeProofRecords(file) {
-  return [
-    ...(file?.result?.runtimeBoundaryProofs ?? []),
-    ...(file?.result?.htmlRuntimeProofs ?? []),
-    ...(file?.result?.admission?.htmlRuntimeBoundaryProofs ?? file?.admission?.htmlRuntimeBoundaryProofs ?? []),
-    ...(file?.result?.admission?.htmlBrowserRuntimeProofs ?? file?.admission?.htmlBrowserRuntimeProofs ?? [])
-  ];
-}
-
-function browserRuntimeProofRecords(file) {
-  return [
-    ...htmlRuntimeProofRecords(file),
-    ...(file?.result?.cascadeRuntimeProofs ?? []),
-    ...(file?.result?.admission?.cssCascadeRuntimeProofs ?? file?.admission?.cssCascadeRuntimeProofs ?? [])
-  ];
-}
-
-function isRuntimeEvidenceBoundProof(proof) {
-  return proof?.status === 'passed' &&
-    proof.runtimeEvidenceBound === true &&
-    typeof proof.runtimeCommand === 'string' &&
-    typeof proof.runtimeProbeId === 'string' &&
-    typeof proof.runtimeEvidenceHash === 'string' &&
-    Array.isArray(proof.runtimeSignals) &&
-    proof.runtimeSignals.length > 0;
 }
 function hasHtmlDuplicateIdentityEvidence(file) { return hasDuplicateExplicitIdentityKeys(file?.result?.identityEvidence); }
 function htmlDuplicateIdentityKeyCount(file) {

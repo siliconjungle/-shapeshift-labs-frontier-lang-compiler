@@ -43,6 +43,23 @@ const missingLayoutConflicts = projectGraphDeltaConflicts(hookDelta, { jsxRender
 assert.equal(missingLayoutConflicts.length, 1);
 assert.equal(missingLayoutConflicts[0].details.reasonCodes.includes('runtime-proof-layout-snapshot-hash-missing'), true);
 
+const missingTelemetryProof = {
+  ...hookRuntimeProof,
+  runtimeProofCapsule: {
+    ...hookRuntimeProof.runtimeProofCapsule,
+    telemetryHash: undefined,
+    telemetry: {
+      ...hookRuntimeProof.runtimeProofCapsule.telemetry,
+      hash: undefined
+    }
+  }
+};
+const missingTelemetryConflicts = projectGraphDeltaConflicts(hookDelta, { jsxRenderRuntimeProof: missingTelemetryProof });
+assert.equal(missingTelemetryConflicts.length, 1);
+assert.equal(missingTelemetryConflicts[0].details.reasonCodes.includes('runtime-proof-telemetry-hash-missing'), true);
+assert.equal(missingTelemetryConflicts[0].details.jsxRenderRuntimeProof.runtimeEvidenceBound, false);
+assert.equal(missingTelemetryConflicts[0].details.jsxRenderRuntimeProof.browserRuntimeEquivalenceClaim, false);
+
 const missingAccessibilityProof = {
   ...hookRuntimeProof,
   runtimeProofCapsule: {
@@ -78,6 +95,17 @@ const broadClaimConflicts = projectGraphDeltaConflicts(hookDelta, {
 });
 assert.equal(broadClaimConflicts.length, 1);
 assert.equal(broadClaimConflicts[0].details.reasonCodes.includes('source-bound-runtime-proof-broad-claim-present'), true);
+
+const capsuleOnlyProof = {
+  ...hookRuntimeProof,
+  kind: 'frontier.runtime-proof.capsule'
+};
+const capsuleOnlyConflicts = projectGraphDeltaConflicts(hookDelta, { jsxRenderRuntimeProof: capsuleOnlyProof });
+assert.equal(capsuleOnlyConflicts.length, 1);
+assert.equal(capsuleOnlyConflicts[0].details.reasonCodes.includes('runtime-proof-source-bound-proof-required'), true);
+assert.equal(capsuleOnlyConflicts[0].details.reasonCodes.includes('source-bound-runtime-proof-kind-invalid'), true);
+assert.equal(capsuleOnlyConflicts[0].details.jsxRenderRuntimeProof.runtimeEvidenceBound, false);
+assert.equal(capsuleOnlyConflicts[0].details.jsxRenderRuntimeProof.browserRuntimeEquivalenceClaim, false);
 
 const nestedBroadClaimConflicts = projectGraphDeltaConflicts(hookDelta, {
   jsxRenderRuntimeProof: {

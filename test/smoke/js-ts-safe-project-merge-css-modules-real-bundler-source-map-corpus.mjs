@@ -112,6 +112,24 @@ assert.equal(matrixSurface(realBundlerProofProject, 'css-modules-generated-class
 assert.equal(matrixSurface(realBundlerProofProject, 'css-modules-bundler-transform-identity').proofStatuses['css-module-bundler-transform-identity'], 'passed');
 assert.equal(matrixSurface(realBundlerProofProject, 'css-modules-source-map-identity').proofStatuses['css-module-source-map-identity'], 'passed');
 
+const generatedClassNameHashOnlyProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_css_module_generated_class_map_hash_only_blocked',
+  includeOutputProjectSymbolGraph: true,
+  cssMergeOptionsByPath: {
+    [sourcePath]: realBundlerMergeOptions({
+      generatedClassNameMap: undefined,
+      cssModuleGeneratedClassNameMap: undefined,
+      classMap: undefined,
+      generatedClassNameMapHash
+    })
+  },
+  files: projectInputFiles()
+});
+assert.equal(generatedClassNameHashOnlyProject.status, 'blocked');
+assert.equal(generatedClassNameHashOnlyProject.conflicts.some((conflict) => conflict.details.reasonCode === 'css-module-generated-class-map-unproved'), true);
+assert.equal(generatedClassNameHashOnlyProject.summary.projectGraphCssModuleGeneratedClassNameMapBlockers, 1);
+assert.equal(matrixSurface(generatedClassNameHashOnlyProject, 'css-modules-generated-class-name-map').proofStatuses['css-module-generated-class-name-map'], 'failed');
+
 const staleLoaderQueryProof = cssModuleSourceMapIdentityProof({
   sourceMapIdentityProof: realBundlerSourceMapIdentityProof({
     loaderQueryHash: hashSemanticValue({

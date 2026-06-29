@@ -94,7 +94,7 @@ const htmlFrameworkDirectiveClaimingConflict = htmlFrameworkDirectiveClaimingPro
 assert.equal(htmlFrameworkDirectiveClaimingConflict.details.proofGapCode, 'framework-directive-boundary');
 assert.equal(htmlFrameworkDirectiveClaimingConflict.details.boundary, 'html-framework-directive');
 assert.deepEqual(htmlFrameworkDirectiveClaimingConflict.details.boundaryAttributes, [':class']);
-assert.equal(matrixSurface(htmlFrameworkDirectiveClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
+assert.equal(matrixSurface(htmlFrameworkDirectiveClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'failed');
 
 const htmlFrameworkDirectiveProvenProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_html_framework_directive_runtime_source_bound_proof',

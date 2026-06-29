@@ -38,6 +38,7 @@ function jsxRenderReturnCollectionProofAssessment(input, options = {}) {
     if (delta.collectionKindUnsupported) reasonCodes.push('jsx-render-return-collection-proof-collection-kind-unsupported');
     if (delta.itemCountUnsupported) reasonCodes.push('jsx-render-return-collection-proof-item-count-unsupported');
     if (delta.dynamicCollectionPresent) reasonCodes.push('jsx-render-return-collection-proof-dynamic-collection-unsupported');
+    reasonCodes.push(...collectionUnsupportedReasonCodes(delta));
     reasonCodes.push(...collectionItemReasonCodes(delta, proof));
     if (proof.collectionItemPreservationHash !== delta.collectionItemPreservationHash) reasonCodes.push('jsx-render-return-collection-proof-output-signature-mismatch');
     if (proof.autoMergeClaim !== false || proof.semanticEquivalenceClaim !== false || proof.runtimeEquivalenceClaim !== false
@@ -108,6 +109,15 @@ function jsxRenderReturnCollectionDelta({ identityKey, baseRecord, workerRecord,
     output: collectionSummary(returns.output)
   });
   return { ...delta, collectionItemPreservationHash: jsxRenderReturnCollectionProofHash(delta) };
+}
+
+function collectionUnsupportedReasonCodes(delta) {
+  return uniqueStrings(['base', 'worker', 'head', 'output'].map((stage) => {
+    const summary = delta?.[stage];
+    return summary?.keyedListProofStatus && summary.keyedListProofStatus !== 'static-render-return-keyed-list-evidence'
+      ? summary.keyedListReasonCode
+      : undefined;
+  }));
 }
 
 function collectionItemReasonCodes(delta, proof) {
@@ -210,7 +220,13 @@ function collectionSummary(record) {
     itemCount: collection.itemCount,
     itemHashes: collectionItemHashes(collection),
     keyedListHash: collection.keyedListRecord?.signatureHash,
+    keyedListProofStatus: collection.keyedListRecord?.proofStatus,
+    keyedListReasonCode: collection.keyedListRecord?.reasonCode,
     keyValues: collection.keyedListRecord?.keyValues,
+    missingKeyOrdinals: collection.keyedListRecord?.missingKeyOrdinals,
+    ambiguousKeyOrdinals: collection.keyedListRecord?.ambiguousKeyOrdinals,
+    duplicateKeyValues: collection.keyedListRecord?.duplicateKeyValues,
+    duplicateKeyOrdinals: collection.keyedListRecord?.duplicateKeyOrdinals,
     collectionSignatureHash: collection.signatureHash
   });
 }
@@ -224,6 +240,7 @@ function dynamicCollectionPresent(collection) {
   if (!['static-render-return-array-evidence', 'static-render-return-fragment-evidence', 'static-render-return-map-evidence'].includes(collection.proofStatus)) return true;
   return collection.renderEquivalenceClaim === true
     || collection.runtimeEquivalenceClaim === true
+    || (collection.keyedListRecord && collection.keyedListRecord.proofStatus !== 'static-render-return-keyed-list-evidence')
     || collection.keyedListRecord?.renderEquivalenceClaim === true
     || collection.keyedListRecord?.runtimeEquivalenceClaim === true;
 }

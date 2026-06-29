@@ -23,7 +23,9 @@ function jsxRenderReturnRiskEvidence(owner) {
   const hasArrayCollectionEvidence = records.some((record) => record.collectionRecord?.collectionKind === 'array-literal');
   const hasFragmentCollectionEvidence = records.some((record) => String(record.collectionRecord?.collectionKind ?? '').startsWith('fragment-'));
   const hasMapCollectionEvidence = records.some((record) => record.collectionRecord?.collectionKind === 'static-const-array-map');
-  const hasKeyedListEvidence = records.some((record) => record.collectionRecord?.keyedListRecord);
+  const keyedListReasonCodes = uniqueStrings(records.map((record) => record.collectionRecord?.keyedListRecord?.reasonCode));
+  const hasKeyedListEvidence = keyedListReasonCodes.includes('jsx-render-return-keyed-list-static-evidence');
+  const unsupportedKeyedListReasonCodes = keyedListReasonCodes.filter((reasonCode) => reasonCode !== 'jsx-render-return-keyed-list-static-evidence');
   const renderRiskKinds = ['render-return-boundary', branched ? 'render-return-branch-control-flow' : undefined].filter(Boolean);
   const hasImplicitArrow = records.some((record) => record.returnKind === 'implicit-arrow-expression');
   const renderRiskReasonCodes = [
@@ -35,6 +37,7 @@ function jsxRenderReturnRiskEvidence(owner) {
     hasFragmentCollectionEvidence ? 'jsx-render-return-fragment-static-evidence' : undefined,
     hasMapCollectionEvidence ? 'jsx-render-return-static-const-array-map-evidence' : undefined,
     hasKeyedListEvidence ? 'jsx-render-return-keyed-list-static-evidence' : undefined,
+    ...unsupportedKeyedListReasonCodes,
     branched ? 'jsx-render-return-branch-unsupported' : undefined
   ].filter(Boolean);
   const record = compactRecord({
@@ -276,6 +279,7 @@ function normalizedReturnExpression(text) {
   return wrapped ? normalizedText(wrapped[1]) : value;
 }
 function compactRecord(record) { return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)); }
+function uniqueStrings(values) { return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))]; }
 function skipWhitespace(text, start) { let index = start; while (/\s/.test(String(text ?? '')[index] ?? '')) index += 1; return index; }
 function braceDepthBefore(text, offset) {
   const value = String(text ?? '').slice(0, offset);

@@ -4,9 +4,13 @@ export const matrixCells = [
   { id: 'source-text-merge/baseline-candidate-recorded', status: 'done', support: 'baseline', evidence: 'js-ts-project-source-text-merge-candidate', note: 'project admission records the conservative concrete source merge candidate as the baseline reviewed by semantic proof surfaces' },
   { id: 'html-css/html-parser-source-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'HTML parser/source evidence is parse5/source-span bounded and does not imply browser DOM or render equivalence' },
   { id: 'html-css/css-parser-source-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS parser/source evidence is PostCSS/source-span bounded and does not imply cascade or browser equivalence' },
+  { id: 'html-css/svg-parser-source-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'SVG parser/source evidence is XML-shaped source-span and attribute-span bounded and does not imply paint, layout, or interaction equivalence' },
+  { id: 'html-css/svg-reference-graph-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'SVG reference graph evidence records local id definitions, href references, and url(#id) paint/resource references without implying browser paint or layout equivalence' },
   { id: 'html-css/html-identity-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'HTML identity evidence records explicit/path identity and duplicate identity blockers before structural admission' },
+  { id: 'html-css/svg-identity-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'SVG identity evidence records explicit id/data-frontier-key identity and duplicate identity blockers before structural admission' },
   { id: 'html-css/css-selector-target-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS selector target evidence records target/specificity/rebase proof status before cascade admission' },
   { id: 'html-css/html-structural-merge-admission', status: 'done', support: 'partial', evidence: 'js-ts-safe-project-merge-html-css', note: 'HTML structural merges require parser-backed identity evidence, carry token-list plus bounded add/delete/move unkeyed structural evidence, and keep runtime/browser proof as a separate row' },
+  { id: 'html-css/svg-structural-merge-admission', status: 'done', support: 'partial', evidence: 'js-ts-safe-project-merge-html-css', note: 'SVG structural merges require SVG parser-backed identity evidence and keep paint, layout, focus, accessibility, and event proof as separate runtime rows' },
   { id: 'html-css/css-cascade-merge-admission', status: 'done', support: 'partial', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS cascade merges require selector target, specificity, scoped cascade, and dependency evidence before admission' },
   { id: 'html-css/css-dependency-graph-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS dependency graph evidence is absent until custom property, animation, font, and asset dependency surfaces require it' },
   { id: 'html-css/css-runtime-descriptor-evidence', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'CSS runtime descriptor evidence for property and page at-rules is parser/source bounded and separate from browser proof' },
@@ -14,6 +18,7 @@ export const matrixCells = [
   { id: 'css-modules/generated-class-name-map-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-css-modules-contract-proofs', note: 'CSS Module generated class-name maps are proof-gated transform evidence and fail closed when absent' },
   { id: 'css-modules/bundler-transform-identity-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-css-modules-contract-proofs', note: 'CSS Module bundler transform identity is proof-gated transform evidence and fail closed when absent' },
   { id: 'css-modules/source-map-identity-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-css-modules-source-map-proof', note: 'CSS Module source-map identity is a distinct proof-gated transform boundary and fails closed when absent' },
+  { id: 'html-css/svg-browser-runtime-proof', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'SVG browser runtime proof is explicit bounded evidence for DOM/style/layout/accessibility/paint behavior and is missing by default without a proof bundle' },
   { id: 'html-css/browser-runtime-proof-bounded', status: 'done', support: 'bounded-evidence', evidence: 'js-ts-safe-project-merge-html-css', note: 'HTML/CSS browser runtime proof remains explicit bounded evidence and is missing by default without a proof bundle' }
 ];
 
@@ -49,6 +54,36 @@ export const htmlCssSummaryFieldOracles = [
     expectedMissingRoute: (summary) => Boolean(summary.cssFiles && summary.cssParserEvidenceFiles !== summary.cssFiles)
   },
   {
+    surface: 'svg-parser-source-evidence',
+    readmeLabel: 'SVG parser/source evidence',
+    cellId: 'svg-parser-source-evidence',
+    support: 'bounded-evidence',
+    proofLevel: 'svg-parser-source-evidence',
+    routeId: 'prove-svg-parser-source-evidence',
+    routeLane: 'layout-svg-parser',
+    routeNext: 'supply-svg-source-span-attribute-span-and-trivia-evidence',
+    signal: HtmlCssProjectMergeMissingSignals.svgParserEvidence,
+    fields: ['svgFiles', 'svgParserEvidenceFiles', 'svgParserEvidenceFailedFiles'],
+    missingSummary: { svgFiles: 1, svgParserEvidenceFiles: 0, svgParserEvidenceFailedFiles: 0, svgIdentityEvidenceFiles: 1 },
+    expectedProofStatus: (summary) => summary.svgFiles ? (summary.svgParserEvidenceFailedFiles ? 'failed' : summary.svgParserEvidenceFiles === summary.svgFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.svgFiles && summary.svgParserEvidenceFiles !== summary.svgFiles)
+  },
+  {
+    surface: 'svg-reference-graph-evidence',
+    readmeLabel: 'SVG reference graph evidence',
+    cellId: 'svg-reference-graph-evidence',
+    support: 'bounded-evidence',
+    proofLevel: 'svg-reference-graph',
+    routeId: 'prove-svg-reference-graph-evidence',
+    routeLane: 'layout-svg-graph',
+    routeNext: 'supply-svg-id-href-and-url-reference-graph-evidence',
+    signal: HtmlCssProjectMergeMissingSignals.svgReferenceGraphEvidence,
+    fields: ['svgFiles', 'svgReferenceGraphEvidenceFiles', 'svgReferenceGraphEvidenceFailedFiles', 'svgReferenceGraphMissingReferenceRecords'],
+    missingSummary: { svgFiles: 1, svgParserEvidenceFiles: 1, svgReferenceGraphEvidenceFiles: 0, svgReferenceGraphEvidenceFailedFiles: 0, svgIdentityEvidenceFiles: 1 },
+    expectedProofStatus: (summary) => summary.svgFiles ? (summary.svgReferenceGraphEvidenceFailedFiles ? 'failed' : summary.svgReferenceGraphEvidenceFiles === summary.svgFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.svgFiles && summary.svgReferenceGraphEvidenceFiles !== summary.svgFiles)
+  },
+  {
     surface: 'html-identity-evidence',
     readmeLabel: 'HTML identity evidence',
     cellId: 'html-identity-evidence',
@@ -62,6 +97,21 @@ export const htmlCssSummaryFieldOracles = [
     missingSummary: { htmlFiles: 1, htmlParserEvidenceFiles: 1, htmlIdentityEvidenceFiles: 0, htmlIdentityEvidenceFailedFiles: 0 },
     expectedProofStatus: (summary) => summary.htmlFiles ? (summary.htmlIdentityEvidenceFailedFiles ? 'failed' : summary.htmlIdentityEvidenceFiles === summary.htmlFiles ? 'passed' : 'missing') : 'absent',
     expectedMissingRoute: (summary) => Boolean(summary.htmlFiles && summary.htmlIdentityEvidenceFiles !== summary.htmlFiles)
+  },
+  {
+    surface: 'svg-identity-evidence',
+    readmeLabel: 'SVG identity evidence',
+    cellId: 'svg-identity-evidence',
+    support: 'bounded-evidence',
+    proofLevel: 'svg-identity-evidence',
+    routeId: 'prove-svg-identity-evidence',
+    routeLane: 'layout-svg-identity',
+    routeNext: 'supply-stable-svg-id-reference-and-structural-addressability-evidence',
+    signal: HtmlCssProjectMergeMissingSignals.svgIdentityEvidence,
+    fields: ['svgFiles', 'svgIdentityEvidenceFiles', 'svgIdentityEvidenceFailedFiles'],
+    missingSummary: { svgFiles: 1, svgParserEvidenceFiles: 1, svgIdentityEvidenceFiles: 0, svgIdentityEvidenceFailedFiles: 0 },
+    expectedProofStatus: (summary) => summary.svgFiles ? (summary.svgIdentityEvidenceFailedFiles ? 'failed' : summary.svgIdentityEvidenceFiles === summary.svgFiles ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.svgFiles && summary.svgIdentityEvidenceFiles !== summary.svgFiles)
   },
   {
     surface: 'css-selector-target-evidence',
@@ -104,6 +154,36 @@ export const htmlCssSummaryFieldOracles = [
       summary.htmlMergedFiles !== summary.htmlFiles ||
       summary.htmlParserEvidenceFiles !== summary.htmlFiles ||
       summary.htmlIdentityEvidenceFiles !== summary.htmlFiles
+    ))
+  },
+  {
+    surface: 'svg-structural-merge-admission',
+    readmeLabel: 'SVG structural merge admission',
+    cellId: 'svg-structural-merge-admission',
+    support: 'partial',
+    proofLevel: 'svg-structural-merge',
+    routeId: 'admit-svg-structural-merge',
+    routeLane: 'layout-svg-graph',
+    routeNext: 'prove-svg-parser-identity-reference-and-runtime-boundary-evidence-or-fix-duplicate-identity',
+    signal: HtmlCssProjectMergeMissingSignals.svgStructuralMerge,
+    fields: ['svgFiles', 'svgMergedFiles', 'svgBlockedFiles', 'svgParserEvidenceFiles', 'svgReferenceGraphEvidenceFiles', 'svgIdentityEvidenceFiles', 'svgStructuralAddFiles', 'svgStructuralDeleteFiles', 'svgStructuralMoveFiles'],
+    missingSummary: { svgFiles: 1, svgParserEvidenceFiles: 1, svgReferenceGraphEvidenceFiles: 1, svgIdentityEvidenceFiles: 1, svgMergedFiles: 0, svgBlockedFiles: 1, svgStructuralAddFiles: 0, svgStructuralDeleteFiles: 0, svgStructuralMoveFiles: 0 },
+    expectedProofStatus: (summary) => {
+      if (!summary.svgFiles) return 'absent';
+      if (summary.svgBlockedFiles || summary.svgParserEvidenceFailedFiles || summary.svgReferenceGraphEvidenceFailedFiles || summary.svgIdentityEvidenceFailedFiles) return 'failed';
+      if (summary.svgMergedFiles !== summary.svgFiles) return 'missing';
+      if (summary.svgParserEvidenceFiles !== summary.svgFiles || summary.svgReferenceGraphEvidenceFiles !== summary.svgFiles || summary.svgIdentityEvidenceFiles !== summary.svgFiles) return 'missing';
+      return 'passed';
+    },
+    expectedMissingRoute: (summary) => Boolean(summary.svgFiles && (
+      summary.svgBlockedFiles ||
+      summary.svgParserEvidenceFailedFiles ||
+      summary.svgReferenceGraphEvidenceFailedFiles ||
+      summary.svgIdentityEvidenceFailedFiles ||
+      summary.svgMergedFiles !== summary.svgFiles ||
+      summary.svgParserEvidenceFiles !== summary.svgFiles ||
+      summary.svgReferenceGraphEvidenceFiles !== summary.svgFiles ||
+      summary.svgIdentityEvidenceFiles !== summary.svgFiles
     ))
   },
   {
@@ -161,9 +241,24 @@ export const htmlCssSummaryFieldOracles = [
     routeLane: 'browser-proof',
     routeNext: 'produce-playwright-assertion-runtime-proof-bundle',
     signal: HtmlCssProjectMergeMissingSignals.htmlCssBrowserRuntimeProof,
-    fields: ['htmlCssFiles', 'htmlCssMergedFiles', 'htmlCssBrowserRuntimeProofs'],
-    missingSummary: { htmlCssFiles: 2, htmlCssMergedFiles: 2, htmlCssBrowserRuntimeProofs: 0 },
-    expectedProofStatus: (summary) => summary.htmlCssFiles ? (summary.htmlCssBrowserRuntimeProofs ? 'passed' : 'missing') : 'absent',
+    fields: ['htmlCssFiles', 'htmlCssMergedFiles', 'htmlCssBrowserRuntimeProofs', 'htmlCssBrowserRuntimeProofBlockedFiles'],
+    missingSummary: { htmlCssFiles: 2, htmlCssMergedFiles: 2, htmlCssBrowserRuntimeProofs: 0, htmlCssBrowserRuntimeProofBlockedFiles: 0 },
+    expectedProofStatus: (summary) => summary.htmlCssFiles ? (summary.htmlCssBrowserRuntimeProofBlockedFiles ? 'failed' : summary.htmlCssBrowserRuntimeProofs ? 'passed' : 'missing') : 'absent',
     expectedMissingRoute: (summary) => Boolean(summary.htmlCssMergedFiles && !summary.htmlCssBrowserRuntimeProofs)
+  },
+  {
+    surface: 'svg-browser-runtime-proof',
+    readmeLabel: 'SVG browser runtime proof',
+    cellId: 'svg-browser-runtime-proof',
+    support: 'bounded-evidence',
+    proofLevel: 'svg-browser-runtime-proof',
+    routeId: 'prove-svg-browser-runtime',
+    routeLane: 'browser-proof',
+    routeNext: 'produce-svg-dom-style-layout-accessibility-and-paint-proof-bundle',
+    signal: HtmlCssProjectMergeMissingSignals.svgBrowserRuntimeProof,
+    fields: ['svgFiles', 'svgMergedFiles', 'svgBrowserRuntimeProofs', 'svgBrowserRuntimeProofBlockedFiles'],
+    missingSummary: { svgFiles: 1, svgMergedFiles: 1, svgBrowserRuntimeProofs: 0, svgBrowserRuntimeProofBlockedFiles: 0 },
+    expectedProofStatus: (summary) => summary.svgFiles ? (summary.svgBrowserRuntimeProofBlockedFiles ? 'failed' : summary.svgBrowserRuntimeProofs ? 'passed' : 'missing') : 'absent',
+    expectedMissingRoute: (summary) => Boolean(summary.svgMergedFiles && !summary.svgBrowserRuntimeProofs)
   }
 ];

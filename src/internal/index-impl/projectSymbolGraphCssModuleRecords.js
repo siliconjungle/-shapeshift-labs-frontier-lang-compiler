@@ -53,6 +53,7 @@ function cssModuleImportBindingRecord(edge, index, documentsById, cssSourcesByPa
     cssModuleExportNames: cssModuleExportNames.length ? cssModuleExportNames : undefined,
     cssModuleExportNamesHash: cssModuleExportNames.length ? hashSemanticValue(cssModuleExportNames) : undefined,
     generatedClassNameMapHash: cssModuleEvidence?.generatedClassNameMapHash ?? cssModuleGeneratedClassNameMapHash(cssModuleEvidence),
+    generatedClassNameMapSourceBound: hasCssModuleGeneratedClassNameMap(cssModuleEvidence),
     jsTsUseSiteGraphHash: cssModuleEvidence?.jsTsUseSiteGraphHash,
     cssModuleCompositionGraphHash: cssModuleEvidence?.cssModuleCompositionGraphHash,
     cssModuleCompositionGraphSource: cssModuleEvidence?.cssModuleCompositionGraphSource,
@@ -187,7 +188,7 @@ function cssModuleBindingBlocker(binding, input = {}) {
 function cssModuleTransformBlockers(binding) {
   const blockers = [];
   if (binding.cssModuleEvidenceStatus !== 'supplied') blockers.push(cssModuleBindingBlocker(binding, { reasonCode: 'css-module-import-resolution-unproved' }));
-  if (!binding.generatedClassNameMapHash) blockers.push(cssModuleBindingBlocker(binding, { reasonCode: 'css-module-generated-class-map-unproved' }));
+  if (!binding.generatedClassNameMapSourceBound) blockers.push(cssModuleBindingBlocker(binding, { reasonCode: 'css-module-generated-class-map-unproved' }));
   if (!binding.bundlerTransformHash) blockers.push(cssModuleBindingBlocker(binding, { reasonCode: 'css-module-bundler-transform-identity-unproved' }));
   if (binding.sourceMapIdentityProofStatus === 'failed') blockers.push(cssModuleBindingBlocker(binding, {
     reasonCode: 'css-module-source-map-proof-hash-mismatch',
@@ -275,15 +276,18 @@ function cssModuleEvidenceExportNames(evidence) {
   ]);
 }
 
-function cssModuleExportRecordNames(value) {
-  return Array.isArray(value)
-    ? value.map((entry) => entry?.name ?? entry?.localName).filter(Boolean)
-    : [];
-}
+function cssModuleExportRecordNames(value) { return Array.isArray(value) ? value.map((entry) => entry?.name ?? entry?.localName).filter(Boolean) : []; }
 
 function cssModuleGeneratedClassNameMapHash(evidence) {
   const map = objectValue(evidence?.generatedClassNameMap) ?? objectValue(evidence?.classMap) ?? objectValue(evidence?.exports);
   return map ? hashSemanticValue({ kind: 'frontier.lang.css.modules.generatedClassNameMap.v1', generatedClassNameMap: map }) : undefined;
+}
+
+function hasCssModuleGeneratedClassNameMap(evidence) {
+  const map = objectValue(evidence?.generatedClassNameMap) ?? objectValue(evidence?.classMap) ?? objectValue(evidence?.exports);
+  if (map && Object.keys(map).length) return true;
+  const exports = Array.isArray(evidence?.exports) ? evidence.exports : [];
+  return exports.length > 0 && exports.every((record) => typeof (record?.name ?? record?.localName) === 'string' && typeof record?.generatedName === 'string' && record.generatedName.length > 0);
 }
 
 function cssModuleProofBoundaryForReason(reasonCode) {

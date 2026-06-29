@@ -1,165 +1,33 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { readmeHighRowProofs, rowProofs, sourceAnchorUrls } from './semantic-merge-production-matrix-data.mjs';
 
 const matrixUrl = new URL('../research/semantic-merge-production-matrix.md', import.meta.url);
+const readmeUrl = new URL('../README.md', import.meta.url);
 const rootUrl = new URL('../', import.meta.url);
-
-const sourceAnchorUrls = Object.freeze({
-  'JavaScript syntax and runtime semantics': [
-    'https://tc39.es/ecma262/',
-    'https://github.com/estree/estree',
-    'https://babeljs.io/docs/babel-parser',
-    'https://github.com/acornjs/acorn'
-  ],
-  'TypeScript symbols, types, and diagnostics': [
-    'https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API',
-    'https://github.com/microsoft/TypeScript'
-  ],
-  'JSX/TSX parser and React-like layout hazards': [
-    'https://babeljs.io/docs/babel-parser',
-    'https://github.com/microsoft/TypeScript',
-    'https://react.dev/reference/react'
-  ],
-  'HTML tree construction and runtime boundaries': [
-    'https://html.spec.whatwg.org/multipage/parsing.html',
-    'https://parse5.js.org/'
-  ],
-  'CSS syntax, selectors, cascade, and at-rules': [
-    'https://www.w3.org/TR/css-syntax-3/',
-    'https://www.w3.org/TR/selectors-4/',
-    'https://www.w3.org/TR/css-cascade-5/',
-    'https://postcss.org/api/'
-  ],
-  'CSS Modules contracts': [
-    'https://github.com/css-modules/css-modules',
-    'https://github.com/webpack-contrib/css-loader'
-  ]
-});
-
-const jsTsAnchors = ['JavaScript syntax and runtime semantics', 'TypeScript symbols, types, and diagnostics'];
-const jsxAnchors = ['JSX/TSX parser and React-like layout hazards', ...jsTsAnchors];
-const htmlCssAnchors = ['HTML tree construction and runtime boundaries', 'CSS syntax, selectors, cascade, and at-rules'];
-const cssModulesAnchors = ['CSS Modules contracts', 'CSS syntax, selectors, cascade, and at-rules', 'JSX/TSX parser and React-like layout hazards'];
-
-const rowProofs = new Map([
-  ['JS/TS parser, source spans, and trivia', {
-    anchors: jsTsAnchors,
-    evidence: ['test/smoke/js-ts-syntax-parser-trivia-evidence.mjs', 'test/smoke/js-ts-source-span-parser-trivia-exactness.mjs'],
-    remaining: []
-  }],
-  ['JS/TS scope and use-def graph', {
-    anchors: jsTsAnchors,
-    evidence: ['test/smoke/js-ts-safe-merge-binding-patterns.mjs', 'test/smoke/js-ts-safe-project-merge-scope-use-def-graph.mjs'],
-    remaining: []
-  }],
-  ['JS/TS module/export/import graph', {
-    anchors: jsTsAnchors,
-    evidence: ['test/smoke/js-ts-safe-merge-import-shapes.mjs', 'test/smoke/project-symbol-graph-commonjs-interop.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs'],
-    remaining: []
-  }],
-  ['JS/TS public API and type graph', {
-    anchors: jsTsAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-compiler-type-graph.mjs', 'test/smoke/js-ts-safe-project-merge-public-api-declaration-emit-parity.mjs', 'test/smoke/js-ts-safe-project-merge-tsconfig-diagnostics.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs'],
-    remaining: []
-  }],
-  ['JS/TS control-flow and effect graph', {
-    anchors: jsTsAnchors,
-    evidence: ['test/smoke/semantic-effect-runtime-order-evidence.mjs', 'test/smoke/semantic-effect-runtime-resource-management.mjs', 'test/smoke/semantic-effect-control-flow-denominator.mjs'],
-    remaining: []
-  }],
-  ['Generic semantic edit admission and replay', {
-    anchors: jsTsAnchors,
-    evidence: [
-      'test/smoke/semantic-edit-script.mjs',
-      'test/smoke/js-ts-safe-project-merge-semantic-replay-proof.mjs',
-      'test/smoke/semantic-edit-bundle-auto-merge.mjs',
-      'test/smoke/semantic-patch-bundle-overlaps-same-file.mjs'
-    ],
-    remaining: []
-  }],
-  ['Symbol move between files', {
-    anchors: jsTsAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-symbol-move-default-admission.mjs', 'test/smoke/semantic-edit-rename-move-source-replay.mjs'],
-    remaining: []
-  }],
-  ['Split/merge modules and classes', {
-    anchors: jsTsAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-split-merge-classifier.mjs', 'test/smoke/js-ts-safe-project-merge-split-merge-multifile.mjs', 'test/smoke/js-ts-safe-project-merge-admission-routes.mjs'],
-    remaining: []
-  }],
-  ['JSX/TSX prop graph', {
-    anchors: jsxAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-prop-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-spread-props.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-style-object-props.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-prop-contracts.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs'],
-    remaining: []
-  }],
-  ['JSX/TSX child order and render layout', {
-    anchors: jsxAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-render-returns.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-render-branch-proof.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-runtime-proof-bridge.mjs'],
-    remaining: []
-  }],
-  ['JSX/TSX hook/context/render-risk graph', {
-    anchors: jsxAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-jsx-hook-dependencies.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-context-values.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-proof-bridges.mjs', 'test/smoke/js-ts-safe-project-merge-jsx-runtime-proof-bridge.mjs'],
-    remaining: []
-  }],
-  ['HTML static structure', {
-    anchors: htmlCssAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-html-css.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-parser-source-evidence.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-runtime-proof-corpus.mjs'],
-    remaining: []
-  }],
-  ['HTML runtime/browser boundaries', {
-    anchors: ['HTML tree construction and runtime boundaries'],
-    evidence: ['test/smoke/js-ts-safe-project-merge-html-runtime-boundary.mjs', 'test/smoke/js-ts-safe-project-merge-html-runtime-proof-admission.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-runtime-proof-corpus.mjs'],
-    remaining: []
-  }],
-  ['CSS selectors, cascade, and static declarations', {
-    anchors: htmlCssAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-html-css-selectors.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-cascade-proof.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-runtime-proof-corpus.mjs'],
-    remaining: []
-  }],
-  ['CSS dependencies and runtime descriptors', {
-    anchors: ['CSS syntax, selectors, cascade, and at-rules'],
-    evidence: ['test/smoke/js-ts-safe-project-merge-html-css-dependencies.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-at-rules.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-runtime-proof-corpus.mjs'],
-    remaining: []
-  }],
-  ['Nested/scoped CSS', {
-    anchors: ['CSS syntax, selectors, cascade, and at-rules'],
-    evidence: ['test/smoke/js-ts-safe-project-merge-html-css-scoped-basic.mjs', 'test/smoke/js-ts-safe-project-merge-html-css-scoped-nested.mjs'],
-    remaining: []
-  }],
-  ['CSS Modules import/use-site graph', {
-    anchors: cssModulesAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-css-modules-use-sites.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-import-shapes.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-real-bundler-source-map-corpus.mjs'],
-    remaining: []
-  }],
-  ['CSS Modules transform/source-map identity', {
-    anchors: cssModulesAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-css-modules-source-map-proof.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-generated-map-hash.mjs', 'test/smoke/js-ts-safe-project-merge-css-modules-real-bundler-source-map-corpus.mjs'],
-    remaining: []
-  }],
-  ['Real-repo corpus', {
-    anchors: [...jsTsAnchors, 'JSX/TSX parser and React-like layout hazards', 'CSS Modules contracts'],
-    evidence: ['bench/real-repo-corpus-suite.mjs', 'bench/real-repo-corpus-upstream-proof.mjs', 'research/real-repo-corpus-upstream-proof.json', 'test/smoke/js-ts-real-repo-corpus-command-execution-proof.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs', 'test/smoke/js-ts-real-repo-corpus-upstream-proof-artifact.mjs'],
-    remaining: []
-  }],
-  ['Source-backed completeness matrix', {
-    anchors: ['JavaScript syntax and runtime semantics', 'HTML tree construction and runtime boundaries', 'CSS Modules contracts'],
-    evidence: ['research/semantic-merge-production-matrix.md', 'test/smoke/semantic-merge-production-matrix-denominator.mjs'],
-    remaining: []
-  }]
-]);
 
 function createSemanticMergeProductionMatrixStatus(options = {}) {
   const markdown = readFileSync(options.matrixUrl ?? matrixUrl, 'utf8');
+  const readmeMarkdown = readFileSync(options.readmeUrl ?? readmeUrl, 'utf8');
   const sourceRows = rowsForHeading(markdown, 'Source Anchors');
   const matrixRows = rowsForHeading(markdown, 'Current Matrix');
   const remainingRows = rowsForHeading(markdown, 'Current Remaining Work Table');
+  const readmeMatrixRows = rowsForReadmeSemanticMergeMatrix(readmeMarkdown);
   const sourceAnchors = new Map(sourceRows.map((row) => [row.Surface, row]));
   const remainingWork = new Map(remainingRows.map((row) => [row['Work item'], row]));
   const matrixAreas = matrixRows.map((row) => row.Area);
   const duplicateAreas = duplicates(matrixAreas);
   const rows = matrixRows.map((row) => matrixStatusRow(row, sourceAnchors, remainingWork));
+  const readmeRows = readmeMatrixRows.map((row) => readmeStatusRow(row, sourceAnchors));
   const statusCounts = countBy(rows, (row) => row.status);
+  const readmeStatusCounts = countBy(readmeRows, (row) => normalizeStatus(row.status));
+  const readmeHighRows = readmeRows.filter((row) => normalizeStatus(row.status) === 'high');
+  const highRowsWithoutExecutableEvidence = rows
+    .filter((row) => row.status === 'high' && !row.executableEvidenceFilesPresent)
+    .map((row) => row.area);
+  const runtimeEquivalenceOverclaimRows = rows
+    .filter((row) => row.runtimeEquivalenceGuard.forbiddenClaim || !row.runtimeEquivalenceGuard.caveatPresent)
+    .map((row) => row.area);
   const unmappedSourceAnchors = [...sourceAnchors.keys()].filter((anchor) =>
     !rows.some((row) => row.sourceAnchors.some((source) => source.anchor === anchor))
   );
@@ -177,8 +45,22 @@ function createSemanticMergeProductionMatrixStatus(options = {}) {
     duplicateAreas,
     unmappedMatrixRows: matrixAreas.filter((area) => !rowProofs.has(area)),
     unmappedProofRows: [...rowProofs.keys()].filter((area) => !matrixAreas.includes(area)),
+    highRowsWithoutExecutableEvidence,
+    runtimeEquivalenceOverclaimRows,
     unmappedSourceAnchors,
     unmappedRemainingWork,
+    readmeSemanticMergeMatrix: {
+      matrixPath: relativeRootPath(options.readmeUrl ?? readmeUrl),
+      rowCount: readmeRows.length,
+      statusCounts: readmeStatusCounts,
+      unmappedHighRows: readmeHighRows.filter((row) => !row.mapped).map((row) => row.surface),
+      highRowsWithoutSourceAnchors: readmeHighRows.filter((row) => !row.sourceAnchorsPresent).map((row) => row.surface),
+      highRowsWithoutExecutableEvidence: readmeHighRows.filter((row) => !row.executableEvidenceFilesPresent).map((row) => row.surface),
+      runtimeEquivalenceOverclaimRows: readmeRows
+        .filter((row) => row.runtimeEquivalenceGuard.forbiddenClaim || !row.runtimeEquivalenceGuard.caveatPresent)
+        .map((row) => row.surface),
+      rows: readmeRows
+    },
     rows
   };
 }
@@ -195,6 +77,7 @@ function matrixStatusRow(row, sourceAnchors, remainingWork) {
     path,
     present: existsSync(new URL(path, rootUrl))
   }));
+  const executableEvidenceFiles = evidenceFiles.filter((file) => isExecutableEvidencePath(file.path));
   const remaining = (proof?.remaining ?? []).map((workItem) => ({
     workItem,
     present: remainingWork.has(workItem),
@@ -209,19 +92,76 @@ function matrixStatusRow(row, sourceAnchors, remainingWork) {
     mapped: Boolean(proof),
     sourceAnchors: sourceAnchorRecords,
     evidenceFiles,
+    executableEvidenceFiles,
     remainingWork: remaining,
     sourceAnchorsPresent: sourceAnchorRecords.every((anchor) => anchor.present && anchor.urls.length > 0),
     evidenceFilesPresent: evidenceFiles.every((file) => file.present),
+    executableEvidenceFilesPresent: executableEvidenceFiles.length > 0 && executableEvidenceFiles.every((file) => file.present),
     remainingWorkPresent: remaining.every((item) => item.present),
+    runtimeEquivalenceGuard: runtimeEquivalenceGuardForText(`${row.Area} ${row['Current executable evidence']} ${row['Remaining work']}`),
     partialRowOverstatesCompletion: row.Status === 'partial' &&
       /\bproduction[- ]complete\b|\bfully covered\b/i.test(row['Current executable evidence'])
   };
+}
+
+function readmeStatusRow(row, sourceAnchors) {
+  const proof = readmeHighRowProofs.get(row.Surface);
+  const sourceAnchorRecords = (proof?.anchors ?? []).map((anchor) => ({
+    anchor,
+    present: sourceAnchors.has(anchor),
+    requirementSources: sourceAnchors.get(anchor)?.['Requirement sources'] ?? null,
+    urls: sourceAnchorUrls[anchor] ?? []
+  }));
+  const evidenceFiles = (proof?.evidence ?? []).map((path) => ({
+    path,
+    present: existsSync(new URL(path, rootUrl))
+  }));
+  const executableEvidenceFiles = evidenceFiles.filter((file) => isExecutableEvidencePath(file.path));
+  return {
+    surface: row.Surface,
+    status: row.Status,
+    currentEvidence: row['Current evidence'],
+    mapped: Boolean(proof),
+    sourceAnchors: sourceAnchorRecords,
+    evidenceFiles,
+    executableEvidenceFiles,
+    sourceAnchorsPresent: sourceAnchorRecords.every((anchor) => anchor.present && anchor.urls.length > 0),
+    evidenceFilesPresent: evidenceFiles.every((file) => file.present),
+    executableEvidenceFilesPresent: executableEvidenceFiles.length > 0 && executableEvidenceFiles.every((file) => file.present),
+    runtimeEquivalenceGuard: runtimeEquivalenceGuardForText(`${row.Surface} ${row['Current evidence']}`)
+  };
+}
+
+function isExecutableEvidencePath(path) {
+  return /\.(?:mjs|cjs|js|ts)$/.test(path);
+}
+
+function runtimeEquivalenceGuardForText(text) {
+  const relevant = /\b(?:browser|render|layout|paint|cascade|runtime[-/ ]equivalence|semantic[-/ ]equivalence|host[-/ ]equivalence|runtime[-/ ]proof|host[-/ ]proof|runtime\/browser|browser\/runtime|host[-/ ]environment|host[-/ ]behavior|host[-/ ]evidence|runtime-sensitive)\b/i.test(text);
+  const forbiddenClaim = /\b(?:full|complete|unbounded|guaranteed|automatic)\s+(?:browser|render|layout|paint|cascade|runtime|semantic|host)[-/ ]equivalence\b/i.test(text);
+  const caveatPresent = !relevant || /\b(?:bounded|source-bound|fail(?:s|ed)?[- ]closed|broad-claim rejection|without [^.]*proof|not inferred|does not claim|not (?:a |an )?[^.]*claim|not proved|unproved|false unless|separate [^.]*row|add new rows|dynamic blockers|missing-[a-z-]+ rejection|stale-proof rejection|review\/blocking evidence|stay(?:s)? (?:review|blocked|blocking|fail[- ]closed)|remain(?:s)? (?:review|blocked|blocking|fail[- ]closed|default-off)|default-off|unknown equivalence|exact project binding)\b/i.test(text);
+  return { relevant, caveatPresent, forbiddenClaim };
+}
+
+function runtimeEquivalenceGuard(row) {
+  return runtimeEquivalenceGuardForText(`${row.Area} ${row['Current executable evidence']} ${row['Remaining work']}`);
+}
+
+function rowsForReadmeSemanticMergeMatrix(markdown) {
+  const lines = markdown.split('\n');
+  const start = lines.findIndex((line) => line.trim() === 'Current JS/TS semantic-merge status matrix:');
+  if (start < 0) throw new Error('missing README semantic merge matrix heading');
+  return rowsForTableAfterLine(lines, start, 'README semantic merge matrix');
 }
 
 function rowsForHeading(markdown, heading) {
   const lines = markdown.split('\n');
   const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
   if (start < 0) throw new Error(`missing ${heading} heading`);
+  return rowsForTableAfterLine(lines, start, heading);
+}
+
+function rowsForTableAfterLine(lines, start, label) {
   const table = [];
   for (const line of lines.slice(start + 1)) {
     const trimmed = line.trim();
@@ -232,7 +172,7 @@ function rowsForHeading(markdown, heading) {
     }
     table.push(trimmed);
   }
-  if (table.length < 2) throw new Error(`${heading}: expected markdown table`);
+  if (table.length < 2) throw new Error(`${label}: expected markdown table`);
   const headers = tableCells(table[0]);
   if (table.length === 2) return [];
   return table.slice(2).map((line) => Object.fromEntries(headers.map((header, index) => [header, tableCells(line)[index] ?? ''])));
@@ -261,7 +201,15 @@ function duplicates(values) {
   return [...duplicate].sort();
 }
 
+function normalizeStatus(status) {
+  return status.toLowerCase().replace(/\s+/g, '-');
+}
+
 function relativeMatrixPath(url) {
+  return relativeRootPath(url);
+}
+
+function relativeRootPath(url) {
   const path = fileURLToPath(url);
   const root = fileURLToPath(rootUrl);
   return path.startsWith(root) ? path.slice(root.length) : path;
@@ -274,6 +222,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
 
 export {
   createSemanticMergeProductionMatrixStatus,
+  runtimeEquivalenceGuard,
+  runtimeEquivalenceGuardForText,
+  readmeHighRowProofs,
   rowProofs,
   sourceAnchorUrls
 };

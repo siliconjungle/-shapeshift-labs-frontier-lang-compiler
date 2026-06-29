@@ -1,32 +1,32 @@
-import type { FrontierSourceLanguage } from '@shapeshift-labs/frontier-lang-kernel';
-import type { JsTsSafeMergeAdmission, JsTsSafeMergeConflict, JsTsSafeMergeResult, JsTsSafeMergeSemanticArtifacts, JsTsSafeMergeSummary } from './js-ts-safe-merge.js';
-import type { JsTsSafeMemberMergePolicy, JsTsSafeMemberMergePolicyRegion } from './js-ts-safe-member-merge.js';
-import type { NativeSourceImportResult } from './import-adapter-core.js';
-import type { NativeProjectImportResult, NativeProjectSymbolGraphSummary } from './native-project.js';
-import type { NativeProjectModuleResolutionOptions } from './native-project-module-resolution.js';
-import type { JsTsProjectMergeDeclarationEmitParityProof as DeclEmitParityProof } from './js-ts-project-merge-declaration-emit-parity.js';
-import type { JsTsProjectMergeDeclarationFiles as DeclFiles, JsTsProjectMergeDeclarationGate as DeclGate } from './js-ts-project-merge-declarations.js';
-import type { JsTsProjectMergeDiagnostic as Diag, JsTsProjectMergeDiagnosticsGate } from './js-ts-project-merge-diagnostics.js';
-import type { JsTsProjectReferencedProjectInput, JsTsProjectReferenceCompositeProof } from './js-ts-project-merge-project-reference-proof.js';
-import type { JsTsProjectCompilerOptionMetadata, JsTsProjectCompilerOptionSourceMetadata, JsTsProjectReferenceMetadata, JsTsProjectReferencesInput, JsTsProjectTsconfigInput } from './js-ts-project-merge-tsconfig.js';
-import type { JsTsProjectMergeQualityGate as QualityGate, JsTsProjectMergeQualityGateInput as QualityGateInput } from './js-ts-project-merge-quality-gates.js';
-import type { JsTsProjectMergeProofEvidence, JsTsProjectMergeProofEvidenceStatus, JsTsProjectMergeProofLevel } from './js-ts-project-merge-proof-levels.js';
-import type { JsTsProjectSafeMergeAdmissionRoute, JsTsProjectSafeMergeAdmissionRouteSummary } from './js-ts-project-merge-admission-routes.js';
-import type { JsTsProjectSafeMergeConfidenceSummary, JsTsProjectSafeMergeMissingEvidenceTelemetry } from './js-ts-project-merge-confidence.js';
-import type { JsTsProjectSafeMergeSummary } from './js-ts-project-merge-summary.js';
-import type { JsTsProjectCommonJsRuntimeInteropProof } from './js-ts-project-merge-commonjs-interop.js';
-import type { JsTsProjectGlobalAugmentationCompatibilityProof } from './js-ts-project-merge-global-augmentation.js';
-import type { JsTsProjectJsxEventHandlerSourceProof } from './js-ts-project-merge-jsx-event-handler.js';
-import type { JsTsProjectJsxHookDependencySourceProof } from './js-ts-project-merge-jsx-hook-dependency.js';
-import type { JsTsProjectJsxRenderReturnBranchProof } from './js-ts-project-merge-jsx-render-branch.js';
-import type { JsTsProjectSemanticEquivalenceProof } from './js-ts-project-merge-semantic-equivalence-proof.js';
-import type { ParserTriviaEvidenceInput } from './source-preservation.js';
+import type{FrontierSourceLanguage}from '@shapeshift-labs/frontier-lang-kernel';
+import type{JsTsSafeMergeAdmission,JsTsSafeMergeConflict,JsTsSafeMergeResult,JsTsSafeMergeSemanticArtifacts,JsTsSafeMergeSummary}from './js-ts-safe-merge.js';
+import type{JsTsSafeMemberMergePolicy,JsTsSafeMemberMergePolicyRegion}from './js-ts-safe-member-merge.js';
+import type{NativeSourceImportResult}from './import-adapter-core.js';
+import type{NativeProjectImportResult,NativeProjectSymbolGraphSummary}from './native-project.js';
+import type{NativeProjectModuleResolutionOptions}from './native-project-module-resolution.js';
+import type{JsTsProjectMergeDeclarationEmitParityProof as DeclEmitParityProof}from './js-ts-project-merge-declaration-emit-parity.js';
+import type{JsTsProjectMergeDeclarationFiles as DeclFiles,JsTsProjectMergeDeclarationGate as DeclGate}from './js-ts-project-merge-declarations.js';
+import type{JsTsProjectMergeDiagnostic as Diag,JsTsProjectMergeDiagnosticsGate}from './js-ts-project-merge-diagnostics.js';
+import type{JsTsProjectReferencedProjectInput,JsTsProjectReferenceCompositeProof}from './js-ts-project-merge-project-reference-proof.js';
+import type{JsTsProjectCompilerOptionMetadata,JsTsProjectCompilerOptionSourceMetadata,JsTsProjectReferenceMetadata,JsTsProjectReferencesInput,JsTsProjectTsconfigInput}from './js-ts-project-merge-tsconfig.js';
+import type{JsTsProjectMergeQualityGate as QualityGate,JsTsProjectMergeQualityGateInput as QualityGateInput}from './js-ts-project-merge-quality-gates.js';
+import type{JsTsProjectMergeProofEvidence,JsTsProjectMergeProofEvidenceStatus,JsTsProjectMergeProofLevel}from './js-ts-project-merge-proof-levels.js';
+import type{JsTsProjectSafeMergeAdmissionRoute,JsTsProjectSafeMergeAdmissionRouteSummary}from './js-ts-project-merge-admission-routes.js';
+import type{JsTsProjectSafeMergeConfidenceSummary,JsTsProjectSafeMergeMissingEvidenceTelemetry}from './js-ts-project-merge-confidence.js';
+import type{JsTsProjectSafeMergeSummary}from './js-ts-project-merge-summary.js';
+import type{JsTsProjectCommonJsRuntimeInteropProof}from './js-ts-project-merge-commonjs-interop.js';
+import type{JsTsProjectGlobalAugmentationCompatibilityProof}from './js-ts-project-merge-global-augmentation.js';
+import type{JsTsProjectJsxEventHandlerSourceProof}from './js-ts-project-merge-jsx-event-handler.js';
+import type{JsTsProjectJsxHookDependencySourceProof}from './js-ts-project-merge-jsx-hook-dependency.js';
+import type{JsTsProjectJsxRenderReturnBranchProof}from './js-ts-project-merge-jsx-render-branch.js';
+import type{JsTsProjectSemanticEquivalenceProof}from './js-ts-project-merge-semantic-equivalence-proof.js';
+import type{ParserTriviaEvidenceInput}from './source-preservation.js';
 
-export type { JsTsProjectMergeQualityGate, JsTsProjectMergeQualityGateDecision, JsTsProjectMergeQualityGateEvidence, JsTsProjectMergeQualityGateInput, JsTsProjectMergeQualityGateMissingEvidence, JsTsProjectMergeQualityGateRecord } from './js-ts-project-merge-quality-gates.js';
-export type { JsTsProjectMergeProofEvidence, JsTsProjectMergeProofEvidenceRecord, JsTsProjectMergeProofEvidenceRecordStatus, JsTsProjectMergeProofEvidenceStatus, JsTsProjectMergeProofEvidenceSummary, JsTsProjectMergeProofLevel, JsTsProjectMergeProofMissingEvidence } from './js-ts-project-merge-proof-levels.js';
-export type { JsTsProjectSafeMergeAdmissionRoute, JsTsProjectSafeMergeAdmissionRouteSummary } from './js-ts-project-merge-admission-routes.js';
-export type { JsTsProjectSafeMergeConfidenceSummary, JsTsProjectSafeMergeMissingEvidence, JsTsProjectSafeMergeMissingEvidenceRoute, JsTsProjectSafeMergeMissingEvidenceTelemetry, JsTsProjectSafeMergeRecommendedAction } from './js-ts-project-merge-confidence.js';
-export type { JsTsProjectMergeSummaryProofStatus, JsTsProjectSafeMergeSummary, JsTsProjectSourceTextMergeCandidateStatus } from './js-ts-project-merge-summary.js';
+export type{JsTsProjectMergeQualityGate,JsTsProjectMergeQualityGateDecision,JsTsProjectMergeQualityGateEvidence,JsTsProjectMergeQualityGateInput,JsTsProjectMergeQualityGateMissingEvidence,JsTsProjectMergeQualityGateRecord}from './js-ts-project-merge-quality-gates.js';
+export type{JsTsProjectMergeProofEvidence,JsTsProjectMergeProofEvidenceRecord,JsTsProjectMergeProofEvidenceRecordStatus,JsTsProjectMergeProofEvidenceStatus,JsTsProjectMergeProofEvidenceSummary,JsTsProjectMergeProofLevel,JsTsProjectMergeProofMissingEvidence}from './js-ts-project-merge-proof-levels.js';
+export type{JsTsProjectSafeMergeAdmissionRoute,JsTsProjectSafeMergeAdmissionRouteSummary}from './js-ts-project-merge-admission-routes.js';
+export type{JsTsProjectSafeMergeConfidenceSummary,JsTsProjectSafeMergeMissingEvidence,JsTsProjectSafeMergeMissingEvidenceRoute,JsTsProjectSafeMergeMissingEvidenceTelemetry,JsTsProjectSafeMergeRecommendedAction}from './js-ts-project-merge-confidence.js';
+export type{JsTsProjectMergeSummaryProofStatus,JsTsProjectSafeMergeSummary,JsTsProjectSourceTextMergeCandidateStatus}from './js-ts-project-merge-summary.js';
 export type { JsTsProjectCommonJsRuntimeInteropProof } from './js-ts-project-merge-commonjs-interop.js';
 export type { JsTsProjectReferencedProjectInput, JsTsProjectReferenceCompositeProof } from './js-ts-project-merge-project-reference-proof.js';
 export type { JsTsProjectGlobalAugmentationCompatibilityProof } from './js-ts-project-merge-global-augmentation.js';
@@ -37,10 +37,10 @@ export type { JsTsProjectJsxRenderReturnBranchArmOrigin, JsTsProjectJsxRenderRet
 export type JsTsProjectSafeMergeStatus = 'merged' | 'blocked';
 export type JsTsProjectSafeMergeFileStatus = 'merged' | 'blocked';
 export type JsTsProjectSafeMergeFileOperation = 'merged-source' | 'merged-source-and-members' | 'worker-added' | 'head-only' | 'both-added-identical' | 'worker-deleted' | 'head-deleted-worker-unchanged' | 'blocked-merge' | 'blocked-file-presence' | string;
-export type JsTsProjectHtmlCssMergeOptions = Readonly<Record<string, unknown>>;
-
-export interface JsTsProjectSafeMergeEvidenceRecord { readonly id: string; readonly kind: string; readonly status: 'passed' | 'failed' | 'skipped' | 'unknown' | string; readonly level?: string; readonly scope?: string; readonly summary?: string; readonly metadata?: Record<string, unknown>; }
-
+type U=Record<string,unknown>; type RO<T>=Readonly<Record<string,T>>; type H='htmlBrowserRuntime'|'htmlSourceBoundRuntime'|'htmlRuntimeBoundary'|'htmlSourceBoundRuntimeBoundary'|'sourceBoundRuntimeBoundary'|'browserRuntime'|'sourceBoundRuntime';
+type C='cssCascadeRuntime'|'cssSourceBoundCascade'|'cascadeRuntime'|'sourceBoundCascade'; type S=H|'runtimeBoundary'|'svgRuntime'|'svgBrowserRuntime'|C; type RP<T extends string=S>=Readonly<Partial<Record<`${T}Proof`,unknown>> & Partial<Record<`${T}Proofs`,readonly unknown[]>> & Partial<Record<`${T}ProofsByPath`,Readonly<U>>>>;
+export type JsTsProjectHtmlCssMergeOptions=Readonly<U> & RP;
+export interface JsTsProjectSafeMergeEvidenceRecord { readonly id: string; readonly kind: string; readonly status: 'passed' | 'failed' | 'skipped' | 'unknown' | string; readonly level?: string; readonly scope?: string; readonly summary?: string; readonly metadata?: U; }
 export interface JsTsProjectSafeMergeFileInput {
   readonly sourcePath?: string;
   readonly path?: string;
@@ -63,14 +63,14 @@ export interface JsTsProjectSafeMergeFileInput {
 }
 
 export type JsTsProjectSafeMergeFileMap =
-  | Readonly<Record<string,string | { readonly sourceText?: string; readonly text?: string; readonly parserTriviaEvidence?: ParserTriviaEvidenceInput }>>
+  | RO<string | { readonly sourceText?: string; readonly text?: string; readonly parserTriviaEvidence?: ParserTriviaEvidenceInput }>
   | ReadonlyMap<string, string | { readonly sourceText?: string; readonly text?: string; readonly parserTriviaEvidence?: ParserTriviaEvidenceInput }>
   | readonly { readonly sourcePath?: string; readonly path?: string; readonly sourceText?: string; readonly text?: string; readonly parserTriviaEvidence?: ParserTriviaEvidenceInput }[];
 
 export type JsTsProjectSafeMergeOutputProjectImports =
   | readonly NativeSourceImportResult[]
   | ReadonlyMap<string, NativeSourceImportResult>
-  | Readonly<Record<string,NativeSourceImportResult>>;
+  | RO<NativeSourceImportResult>;
 
 export type JsTsProjectGraphStageName = 'base' | 'worker' | 'head' | 'output' | string;
 
@@ -93,7 +93,7 @@ export type JsTsProjectSafeMergeProjectGraphImportsByStage = Readonly<{
   output?: JsTsProjectSafeMergeOutputProjectImports;
 } & Record<string, JsTsProjectSafeMergeOutputProjectImports | undefined>>;
 
-export interface JsTsProjectSafeMergeInput {
+export interface JsTsProjectSafeMergeInput extends RP<H> {
   readonly id?: string;
   readonly language?: FrontierSourceLanguage | string;
   readonly projectRoot?: string;
@@ -125,8 +125,9 @@ export interface JsTsProjectSafeMergeInput {
   readonly jsxEventHandlerSourceProofs?: readonly JsTsProjectJsxEventHandlerSourceProof[];
   readonly externalSemanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof;
   readonly semanticEquivalenceProof?: JsTsProjectSemanticEquivalenceProof;
-  readonly htmlMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly markupMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly htmlMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>; readonly markupMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>;
-  readonly cssMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly styleMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly cssMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>; readonly styleMergeOptionsByPath?: Readonly<Record<string,JsTsProjectHtmlCssMergeOptions>>;
+  readonly htmlMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly markupMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly htmlMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>; readonly markupMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>;
+  readonly svgMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly svgMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>; readonly svgRuntimeProof?: unknown; readonly svgRuntimeProofs?: readonly unknown[]; readonly svgRuntimeProofsByPath?: Readonly<U>; readonly svgBrowserRuntimeProof?: unknown; readonly svgBrowserRuntimeProofs?: readonly unknown[]; readonly svgBrowserRuntimeProofsByPath?: Readonly<U>;
+  readonly cssMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly styleMergeOptions?: JsTsProjectHtmlCssMergeOptions; readonly cssMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>; readonly styleMergeOptionsByPath?: RO<JsTsProjectHtmlCssMergeOptions>;
   readonly disableProjectCssDependencyGraphProofSynthesis?: boolean;
   readonly disableProjectCssModuleProofSynthesis?: boolean;
   readonly moduleResolution?: NativeProjectModuleResolutionOptions;
@@ -134,7 +135,7 @@ export interface JsTsProjectSafeMergeInput {
   readonly projectReferences?: JsTsProjectReferencesInput;
   readonly typescriptProjectReferences?: JsTsProjectReferencesInput;
   readonly tsconfigProjectReferences?: JsTsProjectReferencesInput;
-  readonly referencedProjects?: readonly JsTsProjectReferencedProjectInput[] | Readonly<Record<string, JsTsProjectReferencedProjectInput>>; readonly typescriptReferencedProjects?: readonly JsTsProjectReferencedProjectInput[] | Readonly<Record<string, JsTsProjectReferencedProjectInput>>; readonly projectReferenceProjects?: readonly JsTsProjectReferencedProjectInput[] | Readonly<Record<string, JsTsProjectReferencedProjectInput>>; readonly projectReferenceCompositeProjects?: readonly JsTsProjectReferencedProjectInput[] | Readonly<Record<string, JsTsProjectReferencedProjectInput>>;
+  readonly referencedProjects?: readonly JsTsProjectReferencedProjectInput[] | RO<JsTsProjectReferencedProjectInput>; readonly typescriptReferencedProjects?: readonly JsTsProjectReferencedProjectInput[] | RO<JsTsProjectReferencedProjectInput>; readonly projectReferenceProjects?: readonly JsTsProjectReferencedProjectInput[] | RO<JsTsProjectReferencedProjectInput>; readonly projectReferenceCompositeProjects?: readonly JsTsProjectReferencedProjectInput[] | RO<JsTsProjectReferencedProjectInput>;
   readonly projectReferenceCompositeProof?: JsTsProjectReferenceCompositeProof; readonly typescriptProjectReferenceCompositeProof?: JsTsProjectReferenceCompositeProof; readonly projectReferenceProof?: JsTsProjectReferenceCompositeProof; readonly typescriptProjectReferenceProof?: JsTsProjectReferenceCompositeProof;
   readonly includeProjectReferenceCompositeProof?: boolean; readonly requireProjectReferenceCompositeProof?: boolean;
   readonly requireOutputDiagnostics?: boolean;
@@ -147,13 +148,13 @@ export interface JsTsProjectSafeMergeInput {
   readonly declarationEmitParityProof?: DeclEmitParityProof;
   readonly outputDeclarationEmitParityProof?: DeclEmitParityProof;
   readonly declarationOutDir?: string;
-  readonly declarationCompilerOptions?: Record<string, unknown>;
-  readonly typescriptDeclarationCompilerOptions?: Record<string, unknown>;
+  readonly declarationCompilerOptions?: U;
+  readonly typescriptDeclarationCompilerOptions?: U;
   readonly typescript?: unknown;
   readonly ts?: unknown;
   readonly typescriptModule?: unknown;
-  readonly compilerOptions?: Record<string, unknown>;
-  readonly typescriptCompilerOptions?: Record<string, unknown>;
+  readonly compilerOptions?: U;
+  readonly typescriptCompilerOptions?: U;
   readonly diagnosticOptions?: { readonly options?: boolean; readonly syntactic?: boolean; readonly semantic?: boolean; };
   readonly typescriptDiagnosticOptions?: { readonly options?: boolean; readonly syntactic?: boolean; readonly semantic?: boolean; };
   readonly workerChangeSetId?: string;
@@ -163,8 +164,8 @@ export interface JsTsProjectSafeMergeInput {
   readonly policyByPath?: Readonly<Record<string,JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[]>>;
   readonly mergePolicyByPath?: Readonly<Record<string,JsTsSafeMemberMergePolicy | readonly JsTsSafeMemberMergePolicyRegion[]>>;
   readonly requireSourceLedgerSpans?: boolean;
-  readonly sourceLedgers?: Record<string, unknown>;
-  readonly sourceLedgersByPath?: Record<string, Record<string, unknown>>;
+  readonly sourceLedgers?: U;
+  readonly sourceLedgersByPath?: Record<string, U>;
   readonly requireOutputSyntaxDiagnostics?: boolean;
   readonly requireOutputSyntaxGate?: boolean;
   readonly requireMergedOutputSyntaxDiagnostics?: boolean;
@@ -196,11 +197,11 @@ export interface JsTsProjectSafeMergeFileResult {
   readonly baseHash?: string;
   readonly workerHash?: string;
   readonly headHash?: string;
-  readonly result?: JsTsSafeMergeResult | Record<string, unknown>;
+  readonly result?: JsTsSafeMergeResult | U;
   readonly semanticArtifacts?: JsTsSafeMergeSemanticArtifacts;
   readonly conflicts: readonly JsTsSafeMergeConflict[];
   readonly admission: JsTsSafeMergeAdmission;
-  readonly summary?: JsTsSafeMergeSummary | Record<string, unknown>;
+  readonly summary?: JsTsSafeMergeSummary | U;
   readonly conflictKeys: readonly string[];
 }
 
@@ -300,7 +301,7 @@ export interface JsTsProjectSafeMergeResult {
   readonly conflicts: readonly JsTsSafeMergeConflict[];
   readonly admission: JsTsProjectSafeMergeAdmission; readonly proofEvidence: JsTsProjectMergeProofEvidence; readonly confidence: JsTsProjectSafeMergeConfidenceSummary; readonly evidence: readonly JsTsProjectSafeMergeEvidenceRecord[];
   readonly summary: JsTsProjectSafeMergeSummary;
-  readonly metadata?: Record<string, unknown> & {
+  readonly metadata?: U & {
     readonly projectMoveRenameClassifications?: {
       readonly classifications: number;
       readonly fileMoveRenames: number;
@@ -311,7 +312,7 @@ export interface JsTsProjectSafeMergeResult {
     readonly outputCompilerOptionSources?: readonly JsTsProjectCompilerOptionSourceMetadata[];
     readonly outputProjectReferences?: readonly JsTsProjectReferenceMetadata[];
     readonly outputProjectReferenceCount?: number; readonly projectReferenceCompositeProofStatus?: string; readonly projectReferenceCompositeProofHash?: string; readonly projectReferenceCompositeProofReasonCodes?: readonly string[];
-    readonly proofEvidence?: JsTsProjectMergeProofEvidence['summary']; readonly semanticEquivalenceLevel?: 'semantic-equivalence-unknown' | string; readonly confidenceScore?: number; readonly confidenceLevel?: string; readonly evidenceRecords?: number; readonly failedEvidenceRecords?: number; readonly projectSymbolRenameClassifications?: Record<string, unknown>; readonly projectSplitMergeClassifications?: Record<string, unknown>;
+    readonly proofEvidence?: JsTsProjectMergeProofEvidence['summary']; readonly semanticEquivalenceLevel?: 'semantic-equivalence-unknown' | string; readonly confidenceScore?: number; readonly confidenceLevel?: string; readonly evidenceRecords?: number; readonly failedEvidenceRecords?: number; readonly projectSymbolRenameClassifications?: U; readonly projectSplitMergeClassifications?: U;
   };
 }
 

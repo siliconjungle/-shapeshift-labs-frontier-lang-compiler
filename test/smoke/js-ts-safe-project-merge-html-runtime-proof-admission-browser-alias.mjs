@@ -35,7 +35,7 @@ assert.equal(htmlEventHandlerClaimingProofProject.summary.htmlCssBrowserRuntimeP
 assert.equal(htmlEventHandlerClaimingProofProject.files[0].admission.browserRuntimeEquivalenceClaim, false);
 assert.equal(htmlEventHandlerClaimingProofProject.files[0].result.admission.browserRuntimeEquivalenceClaim, false);
 assert.equal(htmlEventHandlerClaimingProofProject.files[0].result.conflicts.some((conflict) => conflict.code === 'html-runtime-proof-broad-claim'), true);
-assert.equal(matrixSurface(htmlEventHandlerClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
+assert.equal(matrixSurface(htmlEventHandlerClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'failed');
 
 const htmlEventHandlerLegacyAliasProofProject = safeMergeJsTsProject({
   id: 'js_ts_safe_project_merge_html_event_handler_browser_runtime_proof_legacy_alias',

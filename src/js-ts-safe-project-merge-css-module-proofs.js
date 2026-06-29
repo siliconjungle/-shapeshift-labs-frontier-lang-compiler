@@ -1,5 +1,5 @@
 import { parseCssSemanticSheet } from '@shapeshift-labs/frontier-lang-css';
-import { cssModuleGeneratedClassNameMapHash, cssModuleGeneratedClassNameMapProof } from './js-ts-safe-project-merge-css-module-generated-map.js';
+import { cssModuleGeneratedClassNameMapProof } from './js-ts-safe-project-merge-css-module-generated-map.js';
 import { cssModuleOutputProjectImport, cssModuleProofImport, cssModuleSourceMapProofContext, normalizeProjectImports } from './js-ts-safe-project-merge-css-module-proof-imports.js';
 import { isCssModulePath, projectCssModuleProofFiles, projectJsTsSourcesStable } from './js-ts-safe-project-merge-css-module-project-files.js';
 import { cssModuleSourceMapIdentityProof } from './js-ts-safe-project-merge-css-module-source-map.js';
@@ -40,8 +40,15 @@ function projectCssModuleProofOptionsForBlockedMerge(input) {
   const transformConflictResult = missingTransformProofBlockedResult(input);
   if (transformConflictResult) return transformConflictResult;
   if (!cssModuleUseSiteSafetyReady(evidence, graph, sourcePath)) return undefined;
-  const generatedClassNameMapHash = cssModuleGeneratedClassNameMapHash(mergeOptions);
-  if (!generatedClassNameMapHash) return undefined;
+  const generatedClassNameMapProof = cssModuleGeneratedClassNameMapProof(mergeOptions);
+  if (generatedClassNameMapProof.status !== 'ready' || !generatedClassNameMapProof.generatedClassNameMap || !generatedClassNameMapProof.generatedClassNameMapHash) return cssModuleProofBlockedResult(firstResult, [
+    cssModuleProofConflict(firstResult.id, sourcePath, 'css-module-generated-class-map-unproved', {
+      proofBoundary: 'css-module-generated-class-name-map',
+      declaredGeneratedClassNameMapHash: generatedClassNameMapProof.declaredGeneratedClassNameMapHash,
+      computedGeneratedClassNameMapHash: generatedClassNameMapProof.computedGeneratedClassNameMapHash
+    })
+  ]);
+  const generatedClassNameMapHash = generatedClassNameMapProof.generatedClassNameMapHash;
   const bundlerTransformHash = firstString(mergeOptions.bundlerTransformHash, mergeOptions.cssModuleBundlerTransformHash);
   const sourceMapIdentityProof = cssModuleSourceMapIdentityProof(mergeOptions, {
     sourcePath,

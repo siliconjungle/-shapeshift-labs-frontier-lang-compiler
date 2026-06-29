@@ -1,9 +1,9 @@
 # Semantic Merge Production Matrix
 
-Date: 2026-06-28
+Date: 2026-06-29
 
 This matrix is the current production-readiness denominator for JS, TS, JSX, TSX,
-HTML, CSS, and CSS Modules semantic merging. It distinguishes executable proof
+HTML, CSS, SVG, and CSS Modules semantic merging. It distinguishes executable proof
 from language completeness. A row is `high` when the merge route has positive
 fixtures, negative/fail-closed fixtures, and default smoke coverage. A row is
 `partial` when the route exists but needs broader proof, live corpus evidence, or
@@ -18,6 +18,7 @@ when the current package has no first-class proof route.
 | TypeScript symbols, types, and diagnostics | TypeScript compiler API and TypeScript source behavior |
 | JSX/TSX parser and React-like layout hazards | Babel parser, TypeScript JSX/TSX AST behavior, React component/runtime conventions |
 | HTML tree construction and runtime boundaries | WHATWG HTML parsing and tree-construction rules, parse5 behavior |
+| SVG XML graphics structure and browser paint/layout boundaries | SVG element/attribute/reference semantics, XML-shaped standalone SVG parsing, browser DOM/style/layout/accessibility/paint behavior |
 | CSS syntax, selectors, cascade, and at-rules | W3C CSS Syntax, Selectors, Cascade, CSSOM, PostCSS/css-tree-style parser behavior |
 | CSS Modules contracts | CSS Modules local scope/composition rules, PostCSS/bundler transform behavior |
 
@@ -25,7 +26,8 @@ Primary external links: https://tc39.es/ecma262/,
 https://github.com/estree/estree, https://babeljs.io/docs/babel-parser,
 https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API,
 https://html.spec.whatwg.org/multipage/parsing.html,
-https://parse5.js.org/, https://www.w3.org/TR/css-syntax-3/,
+https://parse5.js.org/, https://www.w3.org/TR/SVG2/,
+https://developer.mozilla.org/en-US/docs/Web/SVG, https://www.w3.org/TR/css-syntax-3/,
 https://www.w3.org/TR/selectors-4/, https://www.w3.org/TR/css-cascade-5/,
 https://postcss.org/api/, https://github.com/css-modules/css-modules.
 
@@ -46,13 +48,15 @@ https://postcss.org/api/, https://github.com/css-modules/css-modules.
 | JSX/TSX hook/context/render-risk graph | high | Hooks, dependency arrays, effects, context providers/consumers, render returns, wrapper blockers, source proof bridges, and canonical source-bound runtime proof bridges have fixtures with fail-closed stale-proof and telemetry-negative cases. | None for the current bounded hook/context/runtime-proof denominator; add new rows when dynamic hook order, framework context, or live React runtime families are admitted. |
 | HTML static structure | high | HTML structural identity, class tokens, token lists, duplicate identity blockers, parser source evidence, runtime boundary scanning, and source-bound browser proof corpus coverage exist. | None for the current bounded structural/runtime denominator; add new rows when new HTML parser or browser boundary families are introduced. |
 | HTML runtime/browser boundaries | high | Runtime boundary proof records are source-bound, fail closed without evidence, accept canonical `frontier-runtime-proof` source-bound capsules through the compiler bridge, and have DOM/style/layout/event/screenshot/CLS/stale-proof corpus coverage. | None for the current bounded source-bound browser/runtime proof corpus; add new rows when new runtime boundary families are introduced. |
+| SVG parser, identity, structural, and runtime proof | high | Standalone `.svg` files infer to the SVG merge lane, route through structural markup admission, attach SVG parser/source/attribute evidence, expose SVG parser/identity/structural/browser matrix rows, admit canonical source-bound SVG runtime proof capsules, reject missing-capsule runtime proofs, reject malformed XML-shaped SVG, fail closed on duplicate explicit SVG identity, and fail closed on changed runtime-sensitive SVG animation, `foreignObject`, pointer/focus, event, style, script, and external `href` boundaries unless source-bound SVG browser proof is attached. | None for the current bounded standalone SVG denominator; reference graph evidence is tracked in its own row, and broader SVG paint/layout/runtime equivalence remains fail-closed without browser proof. |
+| SVG reference graph and paint-server dependencies | high | Standalone `.svg` files attach source-bound reference graph evidence for local `id` definitions, `href` / `xlink:href` references, and `url(#id)` paint/resource references. The SVG admission matrix exposes `svg-reference-graph-evidence`, positive gradient/use references pass, missing local paint-server targets fail closed, and SVG structural admission now requires reference graph evidence alongside parser and identity evidence. | None for the current bounded local-reference denominator; add new rows when cross-document references, SMIL animation timing, or broader paint/layout equivalence claims are admitted. |
 | CSS selectors, cascade, and static declarations | high | Selector target rebases, specificity gates, shorthands, duplicate cascade keys, scoped at-rules, parser evidence, and CSS cascade runtime capsule corpus coverage are covered. | None for the current static cascade/browser-runtime denominator; add new rows when new cascade semantics are admitted. |
 | CSS dependencies and runtime descriptors | high | Custom-property, keyframes plus animation-name, font-face plus font-family, URL asset auto-proofs, graph-bound @property/@page runtime descriptor proof bundles, and shared browser runtime proof corpus coverage exist with stale-proof rejection. | None for the current bounded descriptor/runtime denominator; add new rows when new CSS runtime descriptor shapes are admitted. |
 | Nested/scoped CSS | high | Scoped cascade blocks are represented, parser-backed nested selectors expand to source-bound semantic records, nested declaration spans are checked, stale expansion proofs are rejected, and nested scoped merges require source-bound scoped-cascade proof before admission. | None for the current bounded nested/scoped CSS denominator; add new rows when nested at-rules, broader nesting grammar, or browser-equivalence claims are admitted. |
 | CSS Modules import/use-site graph | high | Default/namespace/named imports, JSX className, helper calls, static bracket access, bounded dynamic access, string-literal blockers, ICSS/composition, generated map hashes, contract blockers, and css-loader/PostCSS-shaped bundler source-map corpus coverage exist. | None for the current bounded CSS Modules denominator; add new rows when new helper alias, framework class helper, or transform families are admitted. |
 | CSS Modules transform/source-map identity | high | Generated-map, bundler-transform, structured source-map identity proof, original/generated span mapping validation, output source hash binding, generated class-map hash binding, loader request/query hash binding, source-map artifact/source-content hash binding, and stale proof rejection are covered. | None for the current bounded transform/source-map denominator; add new rows when real bundler execution, Sass/Less preprocessors, or new loader contracts are admitted. |
 | Real-repo corpus | high | Manifest-only corpus has 6 repos, 16 oracle cases, 5 matrix rows, synthetic checkout proof, bounded license/cache provenance proof, synthetic command execution proof, prepared real-git checkout proof, opt-in live TypeScript diagnostics/declaration proof, and a public upstream proof artifact for `frontier-merge-metrics-public-api` with git identity, license/cache retention, npm install/build/test command hashes, source-set hashes, diagnostics, and declaration evidence without vendored third-party source text. Default runs still do not clone upstream repositories, install dependencies, execute repository build/test commands, or read real upstream source text. | Keep broadening upstream samples as new language/framework surfaces enter the denominator; none for the current bounded production denominator. |
-| Source-backed completeness matrix | high | Focused smoke extracts this denominator, asserts every production row maps to source-anchor rows, evidence files, remaining-work rows, and generated JSON status rows with exact source-anchor URLs, and CI publishes the generated JSON status artifact. | None for the current denominator; add new source-anchor rows as the denominator grows. |
+| Source-backed completeness matrix | high | Focused smoke extracts this denominator, asserts every production row maps to source-anchor rows and executable evidence files, checks that generated status rows expose exact source-anchor URLs, keeps the remaining-work table intentionally empty, and verifies runtime-equivalence caveats stay source-bound, bounded, or fail-closed. | None for the current denominator; add new source-anchor rows as the denominator grows. |
 
 ## Current Remaining Work Table
 

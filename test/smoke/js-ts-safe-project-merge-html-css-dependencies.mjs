@@ -218,6 +218,19 @@ assert.equal(missingSourceRecordConflict.details.reasonCode, 'css-source-bound-d
 assert.deepEqual(missingSourceRecordConflict.details.missingSourceBoundDependencyRecordSides, ['base', 'worker']);
 assert.equal(missingSourceRecordConflict.details.proofGap.semanticEquivalenceClaim, false);
 
+const cssVarFallbackPartialKindRecords = projectCssDependencyProofOptionsForBlockedMerge({
+  projectInput: {}, sourcePath: 'src/theme.css',
+  firstResult: addSyntheticDependencyKindRequirement(cssVarFallbackMissingProof.files[0].result, '.button::color', 'custom-property-definition'),
+  base: fallbackDependencyCssBase, worker: fallbackDependencyCssWorker, head: fallbackDependencyCssHead
+});
+assert.equal(cssVarFallbackPartialKindRecords.mergeOptions, undefined);
+assert.equal(cssVarFallbackPartialKindRecords.result.status, 'blocked');
+const partialKindConflict = cssVarFallbackPartialKindRecords.result.conflicts.find((conflict) => conflict.code === 'css-source-bound-dependency-record-proof-blocked');
+assert.equal(partialKindConflict.details.reasonCode, 'css-source-bound-dependency-records-missing');
+assert.deepEqual(partialKindConflict.details.missingSourceBoundDependencyRecordSides, ['base', 'worker']);
+assert.equal(partialKindConflict.details.dependencyKinds.includes('custom-property-definition'), true);
+assert.equal(partialKindConflict.details.sourceBoundDependencyRecords.base.every((record) => record.kind !== 'custom-property-definition'), true);
+
 const keyframesCssBase = [
   '@keyframes fade { from { opacity: 0; } to { opacity: 1; } }',
   '.spinner {',
@@ -295,4 +308,13 @@ function stripSourceBoundDependencyRecords(result, cascadeKey) {
 function stripSourceBoundDependencyRecord(record) {
   const { declarationHash, sourceHash, sourceSpan, ...rest } = record;
   return rest;
+}
+
+function addSyntheticDependencyKindRequirement(result, cascadeKey, dependencyKind) {
+  const copy = JSON.parse(JSON.stringify(result));
+  for (const change of copy.dependencyGraphEvidence?.changedDependencySurfaces ?? []) {
+    if (change.cascadeKey !== cascadeKey) continue;
+    for (const summary of [change.before, change.after]) if (summary?.dependencyKinds) summary.dependencyKinds = [...new Set([...summary.dependencyKinds, dependencyKind])];
+  }
+  return copy;
 }

@@ -192,4 +192,4 @@ const htmlAnchorClaimingConflict = htmlAnchorClaimingProofProject.conflicts.find
 assert.equal(htmlAnchorClaimingConflict.details.proofGapCode, 'navigation-runtime-boundary');
 assert.equal(htmlAnchorClaimingConflict.details.boundary, 'html-anchor-navigation-runtime-attribute');
 assert.deepEqual(htmlAnchorClaimingConflict.details.boundaryAttributes, ['href']);
-assert.equal(matrixSurface(htmlAnchorClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'missing');
+assert.equal(matrixSurface(htmlAnchorClaimingProofProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'failed');

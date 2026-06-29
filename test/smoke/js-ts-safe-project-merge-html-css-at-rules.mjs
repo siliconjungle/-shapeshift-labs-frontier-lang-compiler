@@ -53,7 +53,13 @@ const proven = safeMergeJsTsProject({
         runtimeCommand: 'playwright test css-project-keyframes-runtime.spec.ts',
         runtimeProbeId: 'css-project-keyframes-fade-probe',
         runtimeEvidenceHash: hashSemanticValue('src/anim.css keyframes project runtime evidence'),
-        runtimeSignals: ['css-keyframes-runtime']
+        runtimeSignals: ['css-keyframes-runtime'],
+        runtimeProofCapsule: runtimeProofCapsule({
+          command: 'playwright test css-project-keyframes-runtime.spec.ts',
+          probeId: 'css-project-keyframes-fade-probe',
+          evidenceHash: hashSemanticValue('src/anim.css keyframes project runtime evidence'),
+          signals: ['css-keyframes-runtime']
+        })
       }]
     }
   },
@@ -248,7 +254,13 @@ function runtimeProof({ id, sourcePath, reasonCode, shapeKey, base, worker, head
     runtimeCommand: 'playwright test css-project-runtime-at-rules.spec.ts',
     runtimeProbeId: `${shapeKey}:project-probe`,
     runtimeEvidenceHash: hashSemanticValue(`${sourcePath}:${reasonCode}:${shapeKey}:project-runtime`),
-    runtimeSignals: [runtimeSignal]
+    runtimeSignals: [runtimeSignal],
+    runtimeProofCapsule: runtimeProofCapsule({
+      command: 'playwright test css-project-runtime-at-rules.spec.ts',
+      probeId: `${shapeKey}:project-probe`,
+      evidenceHash: hashSemanticValue(`${sourcePath}:${reasonCode}:${shapeKey}:project-runtime`),
+      signals: [runtimeSignal]
+    })
   };
 }
 
@@ -257,9 +269,34 @@ function graphHash(sourceText, sourcePath) {
 }
 
 function runtimeSignalForReason(reasonCode) {
+  if (reasonCode.includes('keyframes')) return 'css-keyframes-runtime';
   if (reasonCode.includes('font-face')) return 'css-font-face-runtime';
   if (reasonCode.includes('property')) return 'css-property-registration-runtime';
   return 'css-page-runtime';
+}
+
+function runtimeProofCapsule({ command, probeId, evidenceHash, signals }) {
+  return {
+    mode: 'isolated-fixture',
+    status: 'passed',
+    command,
+    probeId,
+    evidenceHash,
+    signals,
+    browser: { name: 'chromium', version: 'stable' },
+    viewport: { width: 1280, height: 720, deviceScaleFactor: 1 },
+    telemetry: {
+      hash: `${probeId}:telemetry`,
+      domSnapshotHash: `${probeId}:dom`,
+      computedStyleHash: `${probeId}:computed-style`,
+      layoutSnapshotHash: `${probeId}:layout`,
+      eventTraceHash: `${probeId}:event-trace`,
+      accessibilitySnapshotHash: `${probeId}:accessibility`,
+      focusSnapshotHash: `${probeId}:focus`,
+      layoutShiftHash: `${probeId}:layout-shift`,
+      cumulativeLayoutShift: 0
+    }
+  };
 }
 
 function matrixSurface(result, surface) {

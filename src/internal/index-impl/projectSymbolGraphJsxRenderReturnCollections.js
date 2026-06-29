@@ -35,7 +35,9 @@ function arrayLiteralCollectionRecord(expressionText) {
 
 function fragmentCollectionRecord(expressionText) {
   if (expressionText.startsWith('<>') && expressionText.endsWith('</>')) {
-    const itemExpressionTexts = directJsxChildren(expressionText.slice(2, -3));
+    const fragmentBody = expressionText.slice(2, -3);
+    if (hasNestedShorthandFragment(fragmentBody)) return undefined;
+    const itemExpressionTexts = directJsxChildren(fragmentBody);
     if (!itemExpressionTexts.length) return undefined;
     return jsxCollectionRecord({
       proofStatus: 'static-render-return-fragment-evidence',
@@ -47,6 +49,7 @@ function fragmentCollectionRecord(expressionText) {
   }
   const named = /^<((?:React\.)?Fragment)\b[^>]*>([\s\S]*)<\/\1>$/.exec(expressionText);
   if (!named) return undefined;
+  if (hasNestedShorthandFragment(named[2])) return undefined;
   const itemExpressionTexts = directJsxChildren(named[2]);
   if (!itemExpressionTexts.length) return undefined;
   const collectionKind = named[1] === 'React.Fragment' ? 'fragment-react' : 'fragment-named';
@@ -57,6 +60,10 @@ function fragmentCollectionRecord(expressionText) {
     itemExpressionTexts,
     itemRecords: collectionItemRecords(collectionKind, itemExpressionTexts)
   });
+}
+
+function hasNestedShorthandFragment(text) {
+  return /<>\s*[\s\S]*?<\/>/.test(String(text ?? ''));
 }
 
 function staticConstArrayMapCollectionRecord(expressionText, sourceText) {
@@ -178,7 +185,7 @@ function collectionItemRecords(collectionKind, itemExpressionTexts) {
 }
 
 function keyedListRecordFor(collectionKind, itemRecords) {
-  if (!itemRecords.length || itemRecords.some((record) => record.keyStatic === false || (!record.keyPropText && !record.keyExpressionText && record.keyValue === undefined))) return undefined;
+  if (!itemRecords.length) return undefined;
   const keyRecords = itemRecords.map((record) => compactRecord({
     ordinal: record.ordinal,
     keyPropText: record.keyPropText,
@@ -187,24 +194,84 @@ function keyedListRecordFor(collectionKind, itemRecords) {
     keySourcePropName: record.keySourcePropName,
     keyStatic: record.keyStatic
   }));
+  const missingKeyOrdinals = missingReactKeyOrdinals(keyRecords);
+  const ambiguousKeyOrdinals = ambiguousReactKeyOrdinals(keyRecords);
+  const duplicateKeyValues = duplicateReactKeyValues(keyRecords);
+  const proofStatus = keyedListProofStatus(missingKeyOrdinals, ambiguousKeyOrdinals, duplicateKeyValues);
+  const reasonCode = keyedListReasonCode(missingKeyOrdinals, ambiguousKeyOrdinals, duplicateKeyValues);
   return compactRecord({
-    proofStatus: 'static-render-return-keyed-list-evidence',
-    reasonCode: 'jsx-render-return-keyed-list-static-evidence',
+    proofStatus,
+    reasonCode,
     claimScope: 'static-list-key-identity-only',
     renderEquivalenceClaim: false,
     runtimeEquivalenceClaim: false,
     keyCount: keyRecords.length,
     keyRecords,
     keyValues: keyRecords.every((record) => record.keyValue !== undefined) ? keyRecords.map((record) => record.keyValue) : undefined,
+    missingKeyOrdinals: missingKeyOrdinals.length ? missingKeyOrdinals : undefined,
+    ambiguousKeyOrdinals: ambiguousKeyOrdinals.length ? ambiguousKeyOrdinals : undefined,
+    duplicateKeyValues: duplicateKeyValues.length ? duplicateKeyValues : undefined,
+    duplicateKeyOrdinals: duplicateKeyValues.length ? duplicateKeyOrdinals(keyRecords, duplicateKeyValues) : undefined,
     signatureHash: hashSemanticValue({
       kind: 'frontier.lang.projectJsxRenderReturnKeyedList',
       collectionKind,
+      proofStatus,
+      reasonCode,
       keyRecords,
+      missingKeyOrdinals,
+      ambiguousKeyOrdinals,
+      duplicateKeyValues,
       claimScope: 'static-list-key-identity-only',
       renderEquivalenceClaim: false,
       runtimeEquivalenceClaim: false
     })
   });
+}
+
+function keyedListProofStatus(missingKeyOrdinals, ambiguousKeyOrdinals, duplicateKeyValues) {
+  if (missingKeyOrdinals.length) return 'static-render-return-keyed-list-missing-key-unsupported';
+  if (ambiguousKeyOrdinals.length) return 'static-render-return-keyed-list-ambiguous-key-unsupported';
+  if (duplicateKeyValues.length) return 'static-render-return-keyed-list-duplicate-key-unsupported';
+  return 'static-render-return-keyed-list-evidence';
+}
+
+function keyedListReasonCode(missingKeyOrdinals, ambiguousKeyOrdinals, duplicateKeyValues) {
+  if (missingKeyOrdinals.length) return 'jsx-render-return-keyed-list-missing-keys-unsupported';
+  if (ambiguousKeyOrdinals.length) return 'jsx-render-return-keyed-list-ambiguous-keys-unsupported';
+  if (duplicateKeyValues.length) return 'jsx-render-return-keyed-list-duplicate-keys-unsupported';
+  return 'jsx-render-return-keyed-list-static-evidence';
+}
+
+function missingReactKeyOrdinals(keyRecords) {
+  return keyRecords
+    .filter((record) => !record.keyPropText && !record.keyExpressionText && record.keyValue === undefined)
+    .map((record) => record.ordinal)
+    .filter((ordinal) => Number.isFinite(ordinal));
+}
+
+function ambiguousReactKeyOrdinals(keyRecords) {
+  return keyRecords
+    .filter((record) => (record.keyPropText || record.keyExpressionText) && (record.keyStatic !== true || record.keyValue === undefined))
+    .map((record) => record.ordinal)
+    .filter((ordinal) => Number.isFinite(ordinal));
+}
+
+function duplicateReactKeyValues(keyRecords) {
+  const counts = new Map();
+  for (const record of keyRecords) {
+    if (record.keyValue === undefined) continue;
+    const key = String(record.keyValue);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key);
+}
+
+function duplicateKeyOrdinals(keyRecords, duplicateKeyValues) {
+  const duplicateSet = new Set(duplicateKeyValues.map(String));
+  return keyRecords
+    .filter((record) => record.keyValue !== undefined && duplicateSet.has(String(record.keyValue)))
+    .map((record) => record.ordinal)
+    .filter((ordinal) => Number.isFinite(ordinal));
 }
 
 export { jsxRenderReturnCollectionRecord };

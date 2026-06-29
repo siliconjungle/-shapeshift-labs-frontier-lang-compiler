@@ -11,6 +11,7 @@
   },
   "include": [
     "../src/**/*.d.ts",
+    "./public-api-bundle-types.ts",
     "./public-api-types.ts",
     "./public-api-js-ts-advanced-type-shape-types.ts",
     "./public-api-js-ts-callable-signature-types.ts",
