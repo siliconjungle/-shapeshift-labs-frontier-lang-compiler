@@ -17,11 +17,13 @@ try {
   mkdirSync(join(tempRoot, 'vite', 'packages/vite/src/node'), { recursive: true });
   writeFileSync(join(tempRoot, 'vite', 'packages/vite/src/node/config.ts'), 'export const syntheticConfig = true;\n');
   writeFileSync(join(tempRoot, 'vite', 'pnpm-lock.yaml'), 'lockfileVersion: 9\n');
+  writeFileSync(join(tempRoot, 'vite', 'LICENSE'), 'MIT License\n\nPermission is hereby granted, free of charge, to any person obtaining a copy.\n');
   mkdirSync(join(tempRoot, 'vite', '.git'), { recursive: true });
   writeFileSync(join(tempRoot, 'vite', '.git/HEAD'), `ref: refs/heads/${viteEntry.source.ref}\n`);
   writeFileSync(join(tempRoot, 'vite', '.git/config'), `[remote "origin"]\n\turl = ${viteEntry.source.url}\n`);
   mkdirSync(join(tempRoot, 'react'), { recursive: true });
   writeFileSync(join(tempRoot, 'react', '.git'), 'gitdir: ../react.git\n');
+  writeFileSync(join(tempRoot, 'react', 'LICENSE'), 'Apache License\nVersion 2.0\n');
 
   process.env[envName] = tempRoot;
   const metrics = measureRealRepoCorpus();
@@ -50,9 +52,24 @@ try {
   assert.equal(metrics.realRepoCorpusRepositoryCommandsRun, 0, 'synthetic checkout repository commands remain disabled');
   assert.equal(metrics.realRepoCorpusDependencyInstallsRun, 0, 'synthetic checkout dependency installs remain disabled');
   assert.equal(metrics.realRepoCorpusCheckoutLockfileMetadataRows, 1, 'synthetic checkout lockfile metadata rows');
+  assert.equal(metrics.realRepoCorpusLicenseProofExecutedRows, 2, 'synthetic license proof executed rows');
+  assert.equal(metrics.realRepoCorpusLicenseProofSkippedRows, (manifest.entries ?? []).length - 2, 'synthetic license proof skipped rows');
+  assert.equal(metrics.realRepoCorpusLicenseProofPassedRows, 1, 'synthetic license proof passed rows');
+  assert.equal(metrics.realRepoCorpusLicenseProofMismatchRows, 1, 'synthetic license proof mismatch rows');
+  assert.equal(metrics.realRepoCorpusLicenseProofMissingRows, 0, 'synthetic license proof missing rows');
+  assert.equal(metrics.realRepoCorpusLicenseProofExpectationMissingRows, 0, 'synthetic license expectation rows');
+  assert.equal(metrics.realRepoCorpusSourceCacheLicenseVerifiedRows, 1, 'synthetic source-cache license verified rows');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyBlockedRows, (manifest.entries ?? []).length - 1, 'synthetic source-cache blocked rows');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyRows, (manifest.entries ?? []).length, 'synthetic source-cache artifact rows');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyAdmissibleRows, 1, 'synthetic source-cache admissible rows');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyArtifactBlockedRows, (manifest.entries ?? []).length - 1, 'synthetic source-cache artifact blocked rows');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicySourceTextIncludedRows, 0, 'synthetic source-cache artifact source text rows');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyPublishBlockedRows, (manifest.entries ?? []).length, 'synthetic source-cache artifact publish blocked rows');
 
   const rowsByEntry = new Map(metrics.realRepoCorpusCheckoutEvidenceRows.map((row) => [row.entryId, row]));
+  const sourceCacheRowsByEntry = new Map(metrics.realRepoCorpusSourceCachePolicyRowsByEntry.map((row) => [row.entryId, row]));
   const viteRow = rowsByEntry.get('vite-plugin-config');
+  const viteCacheRow = sourceCacheRowsByEntry.get('vite-plugin-config');
   assert.equal(viteRow?.checkoutProofStatus, 'checked-out', 'synthetic Vite checkout proof status');
   assert.equal(viteRow.checkoutProofExecution, 'executed', 'synthetic Vite checkout proof execution');
   assert.equal(viteRow.checkoutRootMode, 'env-override', 'synthetic Vite checkout root mode');
@@ -79,6 +96,25 @@ try {
   assert.equal(viteRow.gitRemoteOriginUrlPresent, true, 'synthetic Vite git origin present');
   assert.equal(viteRow.gitRemoteOriginMatchesManifest, true, 'synthetic Vite remote matches manifest');
   assert.equal(viteRow.gitRefMatchesManifest, true, 'synthetic Vite ref matches manifest');
+  assert.equal(viteRow.licenseExpectation, viteEntry.licenseExpectation, 'synthetic Vite license expectation');
+  assert.equal(viteRow.licenseExpectedId, 'MIT', 'synthetic Vite license expected id');
+  assert.equal(viteRow.licenseProofExecution, 'executed', 'synthetic Vite license proof execution');
+  assert.equal(viteRow.licenseProofStatus, 'license-proof-passed', 'synthetic Vite license proof status');
+  assert.equal(viteRow.licenseFilePresent, true, 'synthetic Vite license file present');
+  assert.equal(viteRow.licenseFilePath, 'LICENSE', 'synthetic Vite license file path');
+  assert.match(viteRow.licenseFileHash, /^[a-f0-9]{64}$/, 'synthetic Vite license file hash');
+  assert.equal(viteRow.licenseFileBytes > 0, true, 'synthetic Vite license bytes');
+  assert.equal(viteRow.licenseTextMatchesExpectation, true, 'synthetic Vite license text match');
+  assert.equal(viteRow.sourceCachePolicyStatus, 'source-cache-license-verified', 'synthetic Vite source-cache policy');
+  assert.equal(viteCacheRow.retentionAdmissionStatus, 'admissible', 'synthetic Vite source-cache retention admission');
+  assert.equal(viteCacheRow.retentionStatus, 'retention-admissible-local-private', 'synthetic Vite source-cache retention status');
+  assert.equal(viteCacheRow.retentionReason, 'source-cache-retention-policy-passed', 'synthetic Vite source-cache retention reason');
+  assert.equal(viteCacheRow.retainedSourceLocationKind, 'env-relative-checkout', 'synthetic Vite source-cache location kind');
+  assert.equal(viteCacheRow.retainedSourceRootEnv, envName, 'synthetic Vite source-cache root env');
+  assert.equal(viteCacheRow.retainedSourceCheckoutDir, 'vite', 'synthetic Vite source-cache checkout dir');
+  assert.equal(viteCacheRow.sourceTextIncluded, false, 'synthetic Vite source-cache source text omitted');
+  assert.equal(viteCacheRow.publishDecision, 'do-not-publish-source', 'synthetic Vite source-cache publish decision');
+  assert.match(viteCacheRow.evidenceHash, /^[a-f0-9]{64}$/, 'synthetic Vite source-cache evidence hash');
   assert.equal(viteRow.matchedFiles >= 1, true, 'synthetic Vite matched file stats');
   assert.equal(viteRow.sourceTextRead, false, 'synthetic Vite source text access');
   assert.equal(viteRow.commandDryRunStatus, 'ready-local-checkout', 'synthetic Vite command dry-run readiness');
@@ -92,6 +128,7 @@ try {
   assert.equal(viteRow.commandDryRunExecutedPhases, 0, 'synthetic Vite command dry-run executed phases');
 
   const reactRow = rowsByEntry.get('react-component-patterns');
+  const reactCacheRow = sourceCacheRowsByEntry.get('react-component-patterns');
   assert.equal(reactRow?.checkoutProofStatus, 'checked-out-no-proof-match', 'synthetic React no-proof-match status');
   assert.equal(reactRow.checkoutProofExecution, 'executed', 'synthetic React checkout proof execution');
   assert.equal(reactRow.checkoutRootMode, 'env-override', 'synthetic React checkout root mode');
@@ -107,6 +144,17 @@ try {
   assert.equal(reactRow.gitConfigPresent, false, 'synthetic React git config absent');
   assert.equal(reactRow.gitRemoteOriginUrlPresent, false, 'synthetic React git origin absent');
   assert.equal(reactRow.dependencyInstallProofStatus, 'lockfile-metadata-missing', 'synthetic React dependency metadata missing');
+  assert.equal(reactRow.licenseExpectedId, 'MIT', 'synthetic React license expected id');
+  assert.equal(reactRow.licenseProofExecution, 'executed', 'synthetic React license proof execution');
+  assert.equal(reactRow.licenseProofStatus, 'license-text-mismatch', 'synthetic React license proof mismatch');
+  assert.equal(reactRow.licenseFilePresent, true, 'synthetic React license file present');
+  assert.equal(reactRow.licenseFilePath, 'LICENSE', 'synthetic React license file path');
+  assert.match(reactRow.licenseFileHash, /^[a-f0-9]{64}$/, 'synthetic React license file hash');
+  assert.equal(reactRow.licenseTextMatchesExpectation, false, 'synthetic React license text mismatch');
+  assert.equal(reactRow.sourceCachePolicyStatus, 'source-cache-blocked-license-mismatch', 'synthetic React source-cache blocked');
+  assert.equal(reactCacheRow.retentionAdmissionStatus, 'blocked', 'synthetic React source-cache retention blocked');
+  assert.equal(reactCacheRow.retentionReason, 'source-cache-proof-globs-missing', 'synthetic React source-cache retention reason');
+  assert.equal(reactCacheRow.retainedSourceLocationKind, 'none', 'synthetic React source-cache location blocked');
   assert.equal(reactRow.commandDryRunStatus, 'ready-local-checkout', 'synthetic React command dry-run readiness');
   assert.equal(reactRow.commandDryRunExecutionStatus, 'opt-in-required', 'synthetic React command dry-run execution');
   assert.equal(reactRow.commandDryRunReadyPhases, 3, 'synthetic React command dry-run ready phases');
@@ -114,6 +162,7 @@ try {
   assert.equal(reactRow.matchedFiles, 0, 'synthetic React no-proof-match file stats');
 
   const typescriptRow = rowsByEntry.get('typescript-compiler-services');
+  const typescriptCacheRow = sourceCacheRowsByEntry.get('typescript-compiler-services');
   assert.equal(typescriptRow?.checkoutProofStatus, 'skipped-missing-checkout', 'synthetic missing checkout status');
   assert.equal(typescriptRow.checkoutProofExecution, 'skipped', 'synthetic missing checkout proof execution');
   assert.equal(typescriptRow.checkoutRootMode, 'env-override', 'synthetic missing checkout root mode');
@@ -124,6 +173,12 @@ try {
   assert.equal(typescriptRow.checkoutIdentityStatus, 'skipped-missing-checkout', 'synthetic missing checkout identity status');
   assert.equal(typescriptRow.checkoutIdentityExecution, 'skipped', 'synthetic missing checkout identity execution');
   assert.equal(typescriptRow.dependencyInstallProofStatus, 'skipped-missing-checkout', 'synthetic missing dependency proof');
+  assert.equal(typescriptRow.licenseProofExecution, 'skipped', 'synthetic missing license proof execution');
+  assert.equal(typescriptRow.licenseProofStatus, 'skipped-missing-checkout', 'synthetic missing license proof status');
+  assert.equal(typescriptRow.licenseFilePresent, false, 'synthetic missing license file absent');
+  assert.equal(typescriptRow.sourceCachePolicyStatus, 'source-cache-blocked-missing-checkout', 'synthetic missing source-cache policy');
+  assert.equal(typescriptCacheRow.retentionAdmissionStatus, 'blocked', 'synthetic missing source-cache retention blocked');
+  assert.equal(typescriptCacheRow.retentionReason, 'source-cache-checkout-missing', 'synthetic missing source-cache retention reason');
   assert.equal(typescriptRow.commandDryRunStatus, 'skipped-missing-checkout', 'synthetic missing command dry-run readiness');
   assert.equal(typescriptRow.commandDryRunExecutionStatus, 'skipped-missing-checkout', 'synthetic missing command dry-run execution');
   assert.equal(typescriptRow.commandDryRunSkippedPhases, 3, 'synthetic missing command dry-run skipped phases');

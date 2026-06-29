@@ -15,6 +15,14 @@ assert.equal(status.remainingWorkCount, 0, 'remaining work row count');
 assert.equal(status.statusCounts.high, 20, 'high matrix row count');
 assert.equal(status.statusCounts.partial ?? 0, 0, 'partial matrix row count');
 
+const realRepoRow = status.rows.find((row) => row.area === 'Real-repo corpus');
+assert.equal(Boolean(realRepoRow), true, 'real-repo corpus matrix row exists');
+assert.equal(realRepoRow.status, 'high', 'real-repo corpus high after live corpus/build/license cache proof');
+assert.equal(realRepoRow.remainingWork.length, 0, 'real-repo corpus remaining work rows');
+assert.equal(realRepoRow.evidenceFiles.some((file) => file.path === 'bench/real-repo-corpus-upstream-proof.mjs' && file.present), true, 'real-repo upstream proof runner evidence');
+assert.equal(realRepoRow.evidenceFiles.some((file) => file.path === 'research/real-repo-corpus-upstream-proof.json' && file.present), true, 'real-repo upstream proof artifact evidence');
+assert.equal(realRepoRow.evidenceFiles.some((file) => file.path === 'test/smoke/js-ts-real-repo-corpus-upstream-proof-artifact.mjs' && file.present), true, 'real-repo upstream proof artifact smoke evidence');
+
 for (const row of status.rows) {
   assert.equal(['high', 'partial', 'missing'].includes(row.status), true, `${row.area}: supported status`);
   assert.equal(row.mapped, true, `${row.area}: proof mapping`);

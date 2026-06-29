@@ -1,0 +1,184 @@
+{
+  "kind": "frontier.lang.realRepoUpstreamCorpusProof",
+  "version": 1,
+  "generatedAt": "2026-06-29T04:27:47.761Z",
+  "manifestSchema": "frontier.lang.jsTsSemanticMergeRealRepoCorpus.v1",
+  "rootEnv": "FRONTIER_REAL_REPO_CORPUS_ROOT",
+  "rootPathHash": "b58224045d210e592e3cbee42cc47c3c583781e60a640b27686c249749d360bd",
+  "selectedEntryIds": [
+    "frontier-merge-metrics-public-api"
+  ],
+  "cloneEnabled": true,
+  "liveProjectEnabled": true,
+  "commandExecutionEnabled": true,
+  "dependencyInstallEnabled": true,
+  "sourceTextIncluded": false,
+  "checkoutPreparation": [
+    {
+      "entryId": "frontier-merge-metrics-public-api",
+      "sourceType": "git",
+      "sourceUrl": "https://github.com/siliconjungle/-shapeshift-labs-frontier-merge-metrics.git",
+      "sourceRef": "main",
+      "checkoutDir": "frontier-merge-metrics",
+      "checkoutPathHash": "ffaf6fce0977f0e624c5ed30fc19ea8c5a2a4bef3952632818d1f33e6c488516",
+      "status": "cloned",
+      "exitCode": 0,
+      "signal": null,
+      "stdoutHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrHash": "cf08a494e80f3a3c8c5b90c4663486d7c2a6378f63ddb6eecda542512c3bedef",
+      "stdoutBytes": 0,
+      "stderrBytes": 81,
+      "headCommit": "b34e26cf3903572ef0645ca79be879409117786a"
+    }
+  ],
+  "summary": {
+    "corpusEntries": 6,
+    "selectedEntries": 1,
+    "checkoutCheckedOut": 1,
+    "checkoutIdentityMatched": 1,
+    "licenseProofPassedRows": 1,
+    "sourceCacheAdmissibleRows": 1,
+    "sourceCacheSourceTextIncludedRows": 0,
+    "liveProjectPassedRows": 1,
+    "liveProjectDiagnosticsPassedRows": 1,
+    "liveProjectDeclarationPassedRows": 1,
+    "liveProjectSourceTextReadRows": 1,
+    "commandRunExecutedPhases": 3,
+    "commandRunFailedPhases": 0,
+    "commandRunTimedOutPhases": 0,
+    "dependencyInstallsRun": 1,
+    "repositoryCommandsRun": 1
+  },
+  "selectedCheckoutRows": [
+    {
+      "entryId": "frontier-merge-metrics-public-api",
+      "checkoutProofStatus": "checked-out",
+      "checkoutIdentityStatus": "git-identity-matched",
+      "gitMetadataKind": "git-directory",
+      "gitRemoteOriginMatchesManifest": true,
+      "gitRefMatchesManifest": true,
+      "licenseExpectedId": "MIT",
+      "licenseProofStatus": "license-proof-passed",
+      "licenseFileHash": "72ddc2f4410cf13d3b6eccff09640b8354d4df3bd7101461aa6480d1367c75d1",
+      "sourceCachePolicyStatus": "source-cache-license-verified",
+      "packageManagersPresent": [
+        "npm"
+      ],
+      "packageManagerLockFiles": [
+        "package-lock.json"
+      ],
+      "matchedFiles": 1,
+      "maxObservedBytesPerFile": 54541,
+      "dependencyInstallExecution": "executed",
+      "repositoryCommandExecution": "executed",
+      "commandRunStatus": "executed",
+      "commandRunReason": "real-repo-command-executed",
+      "commandRunPhases": [
+        {
+          "phase": "dependency-install",
+          "executionStatus": "executed",
+          "reason": "real-repo-command-executed",
+          "manager": "npm",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "commandHash": "ff85de12c51ad8940b28bc98c1816c2045308fc28deca8f088ec2c424d606b11",
+          "exitCode": 0,
+          "signal": null,
+          "durationMs": 604,
+          "stdoutBytes": 27,
+          "stderrBytes": 0,
+          "stdoutHash": "ec5db628b73c5a4d8fe79796f42b654e5a0e6cf3f499c21c04caca4996fc387f",
+          "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdoutTruncated": false,
+          "stderrTruncated": false
+        },
+        {
+          "phase": "build",
+          "executionStatus": "executed",
+          "reason": "real-repo-command-executed",
+          "manager": "npm",
+          "argv": [
+            "npm",
+            "run",
+            "build"
+          ],
+          "commandHash": "9adf315bbd4238afbdfe1554bc58cc5a41b1dcd01b14668a68ba9cde3b462993",
+          "exitCode": 0,
+          "signal": null,
+          "durationMs": 993,
+          "stdoutBytes": 73,
+          "stderrBytes": 0,
+          "stdoutHash": "571bade44c1f50b9c208d0ba0b16d58846e97ff77bcbf4923e1ac9e6352fe03e",
+          "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdoutTruncated": false,
+          "stderrTruncated": false
+        },
+        {
+          "phase": "test",
+          "executionStatus": "executed",
+          "reason": "real-repo-command-executed",
+          "manager": "npm",
+          "argv": [
+            "npm",
+            "test"
+          ],
+          "commandHash": "527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+          "exitCode": 0,
+          "signal": null,
+          "durationMs": 5768,
+          "stdoutBytes": 352,
+          "stderrBytes": 0,
+          "stdoutHash": "f57b4cf33d87a80000badd83781be050d03025ec7f4e408c7eefde1149050141",
+          "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdoutTruncated": false,
+          "stderrTruncated": false
+        }
+      ]
+    }
+  ],
+  "selectedLiveProjectRows": [
+    {
+      "entryId": "frontier-merge-metrics-public-api",
+      "liveProjectProofStatus": "passed",
+      "liveProjectProofReason": "real-repo-live-project-passed",
+      "liveProjectSourceTextRead": true,
+      "liveProjectSourceFilesRead": 1,
+      "liveProjectSourceBytesRead": 54541,
+      "liveProjectSourceSetHash": "7d88d091a0989ad69a92af701d8298031f7f050df990524cedafc350f623abe5",
+      "liveProjectSourceFiles": [
+        {
+          "sourcePath": "src/index.ts",
+          "bytes": 54541,
+          "sourceHash": "20ca6e767526299bb23637e612513bd1df9d2c27ec00a05f1b7c4c22f4267a74"
+        }
+      ],
+      "liveProjectDiagnosticsStatus": "passed",
+      "liveProjectDiagnosticsErrors": 0,
+      "liveProjectDiagnosticsGateHash": "fnv1a32:1f5b1939",
+      "liveProjectDeclarationStatus": "passed",
+      "liveProjectDeclarationFiles": 1,
+      "liveProjectDeclarationBytes": 11001,
+      "liveProjectDeclarationGateHash": "fnv1a32:915ade77"
+    }
+  ],
+  "selectedSourceCacheRows": [
+    {
+      "entryId": "frontier-merge-metrics-public-api",
+      "retentionAdmissionStatus": "admissible",
+      "retentionStatus": "retention-admissible-local-private",
+      "retentionReason": "source-cache-retention-policy-passed",
+      "retainedSourceLocationKind": "env-relative-checkout",
+      "retainedSourceRootEnv": "FRONTIER_REAL_REPO_CORPUS_ROOT",
+      "retainedSourceCheckoutDir": "frontier-merge-metrics",
+      "sourceTextIncluded": false,
+      "sourceTextPublishable": false,
+      "publishDecision": "do-not-publish-source",
+      "licenseFileHash": "72ddc2f4410cf13d3b6eccff09640b8354d4df3bd7101461aa6480d1367c75d1",
+      "liveProjectSourceSetHash": "7d88d091a0989ad69a92af701d8298031f7f050df990524cedafc350f623abe5",
+      "evidenceHash": "9d6836561d48f269def239519d25c106ad7482a17cef5028f2d5ec0b5f1b82da"
+    }
+  ],
+  "artifactHash": "ef0a086069aaf21ca1e2fd3f65f60b8e53847f0028a353d5290d9be1efff8772"
+}

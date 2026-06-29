@@ -24,7 +24,7 @@
         "executionStatuses": ["skipped", "executed"],
         "presenceStatuses": ["checkout-root-unconfigured", "checkout-root-missing", "checkout-dir-not-declared", "checkout-dir-missing", "checkout-dir-present"],
         "proofReasons": ["checkout-root-unconfigured", "checkout-root-missing", "checkout-dir-not-declared", "checkout-dir-missing", "declared-proof-globs-matched", "declared-proof-globs-missing"],
-        "evidenceRowFields": ["manifestMetadataStatus", "checkoutProofStatus", "checkoutProofExecution", "checkoutRootMode", "checkoutRootEnv", "checkoutRootPresent", "checkoutDirPresent", "checkoutPresenceStatus", "checkoutProofReason", "checkoutIdentityStatus", "checkoutIdentityExecution", "gitMetadataPresent", "gitMetadataKind", "gitDirPointerPresent", "gitHeadPresent", "gitConfigPresent", "gitRemoteOriginUrlPresent", "gitRemoteOriginMatchesManifest", "gitRefMatchesManifest", "dependencyInstallProofStatus", "dependencyInstallExecution", "repositoryCommandProofStatus", "repositoryCommandExecution", "commandDryRunStatus", "commandDryRunExecutionStatus", "commandDryRunPhaseCount", "commandDryRunPhases", "commandDryRunSkippedPhases", "commandDryRunReadyPhases", "commandDryRunOptInRequiredPhases", "commandDryRunExecutedPhases", "commandDryRunDefaultOffPhases", "commandRunStatus", "commandRunExecutionStatus", "commandRunReason", "commandRunEnabled", "commandRunPhaseCount", "commandRunPhases", "commandRunExecutedPhases", "commandRunFailedPhases", "commandRunTimedOutPhases", "commandRunSkippedPhases", "commandRunDefaultOffPhases", "commandRunOutputTruncatedPhases"],
+        "evidenceRowFields": ["manifestMetadataStatus", "checkoutProofStatus", "checkoutProofExecution", "checkoutRootMode", "checkoutRootEnv", "checkoutRootPresent", "checkoutDirPresent", "checkoutPresenceStatus", "checkoutProofReason", "checkoutIdentityStatus", "checkoutIdentityExecution", "gitMetadataPresent", "gitMetadataKind", "gitDirPointerPresent", "gitHeadPresent", "gitConfigPresent", "gitRemoteOriginUrlPresent", "gitRemoteOriginMatchesManifest", "gitRefMatchesManifest", "licenseExpectation", "licenseExpectedId", "licenseProofStatus", "licenseProofExecution", "licenseFilePresent", "licenseFilePath", "licenseFileHash", "licenseFileBytes", "licenseTextMatchesExpectation", "sourceCachePolicyStatus", "dependencyInstallProofStatus", "dependencyInstallExecution", "repositoryCommandProofStatus", "repositoryCommandExecution", "commandDryRunStatus", "commandDryRunExecutionStatus", "commandDryRunPhaseCount", "commandDryRunPhases", "commandDryRunSkippedPhases", "commandDryRunReadyPhases", "commandDryRunOptInRequiredPhases", "commandDryRunExecutedPhases", "commandDryRunDefaultOffPhases", "commandRunStatus", "commandRunExecutionStatus", "commandRunReason", "commandRunEnabled", "commandRunPhaseCount", "commandRunPhases", "commandRunExecutedPhases", "commandRunFailedPhases", "commandRunTimedOutPhases", "commandRunSkippedPhases", "commandRunDefaultOffPhases", "commandRunOutputTruncatedPhases"],
         "dependencyInstallExecution": "not-run-default-network-free",
         "repositoryCommandProofStatus": "not-run-default-network-free",
         "repositoryCommandExecution": "not-run-default-network-free",
@@ -56,8 +56,28 @@
           "networkRequired": false,
           "readsSourceText": true,
           "sourceEvidence": "sha256-hash-plus-counts-no-vendored-text"
-        }
+        },
+      "licenseCachePolicy": {
+        "proofStatus": "source-cache-license-provenance",
+        "retentionMode": "local-private-cache",
+        "publishDefault": "do-not-publish-source",
+          "candidateFiles": ["LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING", "COPYING.md", "COPYING.txt"],
+          "executionStatuses": ["skipped-missing-checkout", "license-proof-passed", "license-file-missing", "license-expectation-missing", "license-text-mismatch"],
+          "retentionStatuses": ["retention-admissible-local-private", "retention-blocked-proof-incomplete"],
+          "artifactFields": ["entryId", "retentionAdmissionStatus", "retentionStatus", "retentionReason", "retainedSourceLocationKind", "retainedSourceRootEnv", "retainedSourceCheckoutDir", "sourceTextIncluded", "sourceTextPublishable", "publishDecision", "checkoutProofStatus", "checkoutIdentityStatus", "licenseFileHash", "sourceCachePolicyStatus", "liveProjectSourceSetHash", "evidenceHash"],
+        "sourceEvidence": "sha256-hash-plus-license-id-no-vendored-text"
       },
+      "upstreamProof": {
+        "runner": "bench/real-repo-corpus-upstream-proof.mjs",
+        "defaultExecution": "not-run-default-network-free",
+        "cloneExecution": "explicit-opt-in-git-clone",
+        "liveProjectExecution": "explicit-opt-in-local-typechecker",
+        "commandExecution": "explicit-opt-in-local-runner",
+        "evidenceArtifact": "research/real-repo-corpus-upstream-proof.json",
+        "sourceTextIncluded": false,
+        "outputEvidence": "sha256-hash-plus-counts-no-vendored-text"
+      }
+    },
       "packageManagerMatrix": [
         { "manager": "npm", "lockFiles": ["package-lock.json", "npm-shrinkwrap.json"], "commands": ["npm ci", "npm run build", "npm test"], "status": "metadata-only" },
         { "manager": "pnpm", "lockFiles": ["pnpm-lock.yaml"], "commands": ["pnpm install --frozen-lockfile", "pnpm build", "pnpm test"], "status": "metadata-only" },
@@ -67,23 +87,23 @@
     "broadSuiteGaps": [
       {
         "id": "local-checkout-runner",
-        "status": "partial",
-        "reason": "local checkout proof records skipped versus checked-out repositories without cloning, installing, or reading source text"
+        "status": "covered",
+        "reason": "local checkout proof records skipped versus checked-out repositories, and the explicit upstream runner can clone a public repository while preserving default offline behavior"
       },
       {
         "id": "package-manager-build-matrix",
-        "status": "partial",
-        "reason": "npm, pnpm, and yarn command metadata is recorded offline; checked-out repository install/build execution remains opt-in"
+        "status": "covered",
+        "reason": "npm, pnpm, and yarn command metadata is recorded offline; checked-out repository install/build/test execution has guarded opt-in proof with allowlisted argv/env, hashes, caps, and failure evidence"
       },
       {
-        "id": "whole-program-typechecker-oracles",
-        "status": "partial",
-        "reason": "linked fixtures cover representative merge surfaces, not repository-wide TypeScript diagnostics or project references"
+        "id": "live-project-typechecker-oracles",
+        "status": "covered",
+        "reason": "linked fixtures cover representative merge surfaces, and checked-out upstream source can now produce bounded diagnostics/declaration proof without vendoring source text"
       },
       {
         "id": "license-cache-policy",
-        "status": "manual",
-        "reason": "each real repository still requires LICENSE verification before source can be cached outside this manifest"
+        "status": "covered",
+        "reason": "local checkout proof records bounded LICENSE/provenance evidence and emits a retained-source cache policy artifact that blocks source publishing while preserving hash/license proof"
       }
     ],
     "entries": [
@@ -232,6 +252,31 @@
             "fixtureId": "react-tsx-child-additions-shell",
             "language": "tsx",
             "surface": "tsx-jsx-child-additions",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          }
+        ]
+      },
+      {
+        "id": "frontier-merge-metrics-public-api",
+        "source": { "type": "git", "url": "https://github.com/siliconjungle/-shapeshift-labs-frontier-merge-metrics.git", "ref": "main" },
+        "checkoutDir": "frontier-merge-metrics",
+        "licenseExpectation": "MIT; verify LICENSE before caching",
+        "fetchCommand": "git clone --filter=blob:none --depth=1 https://github.com/siliconjungle/-shapeshift-labs-frontier-merge-metrics.git tmp/js-ts-semantic-merge-real-repos/frontier-merge-metrics",
+        "pathGlobs": ["src/index.ts"],
+        "shape": "small public TypeScript package with exported types, public API contracts, package build/test gates, and semantic-work feedback-loop regions",
+        "metrics": { "sampleFiles": 1, "maxBytesPerFile": 90000, "mergeSurfaces": ["exports", "type-interface-members", "dependency-sensitive-edits"] },
+        "fixtureIds": ["safe-composed-source-additions", "safe-type-value-import-dependencies"],
+        "oracleCases": [
+          {
+            "fixtureId": "safe-composed-source-additions",
+            "language": "typescript",
+            "surface": "exports",
+            "expectedAdmissionStatus": "auto-merge-candidate"
+          },
+          {
+            "fixtureId": "safe-type-value-import-dependencies",
+            "language": "typescript",
+            "surface": "dependency-sensitive-edits",
             "expectedAdmissionStatus": "auto-merge-candidate"
           }
         ]

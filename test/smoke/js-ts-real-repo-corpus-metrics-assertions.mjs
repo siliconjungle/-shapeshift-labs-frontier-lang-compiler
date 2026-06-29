@@ -6,7 +6,10 @@ import {
   COMMAND_DRY_RUN_PHASES,
   COMMAND_DRY_RUN_READINESS_STATUSES,
   GIT_METADATA_KINDS,
+  LICENSE_CACHE_POLICY_EXECUTION_STATUSES,
   SKIPPED_CHECKOUT_PRESENCE_STATUSES,
+  SOURCE_CACHE_ARTIFACT_FIELDS,
+  SOURCE_CACHE_RETENTION_STATUSES,
   STRENGTHENED_CHECKOUT_EVIDENCE_FIELDS,
   assertDefaultCommandRunMetrics,
   assertDefaultCommandRunRow
@@ -61,6 +64,39 @@ function assertRealRepoCorpusMetrics(metrics, manifest, assert) {
   assert.equal(Number.isInteger(metrics.realRepoCorpusCheckoutGitDirPointers), true, 'real-repo metrics gitdir pointer proof rows');
   assert.equal(Number.isInteger(metrics.realRepoCorpusCheckoutGitConfigsPresent), true, 'real-repo metrics git config proof rows');
   assert.equal(Number.isInteger(metrics.realRepoCorpusCheckoutGitOriginUrlsPresent), true, 'real-repo metrics git origin proof rows');
+  assert.equal(metrics.realRepoCorpusLicenseProofRows, entries.length, 'real-repo metrics license proof rows');
+  assert.equal(
+    metrics.realRepoCorpusLicenseProofSkippedRows + metrics.realRepoCorpusLicenseProofExecutedRows,
+    entries.length,
+    'real-repo metrics license proof skipped/executed accounting'
+  );
+  assert.equal(
+    metrics.realRepoCorpusLicenseProofPassedRows +
+      metrics.realRepoCorpusLicenseProofMissingRows +
+      metrics.realRepoCorpusLicenseProofMismatchRows +
+      metrics.realRepoCorpusLicenseProofExpectationMissingRows,
+    metrics.realRepoCorpusLicenseProofExecutedRows,
+    'real-repo metrics license proof executed status accounting'
+  );
+  assert.equal(
+    metrics.realRepoCorpusSourceCacheLicenseVerifiedRows + metrics.realRepoCorpusSourceCachePolicyBlockedRows,
+    entries.length,
+    'real-repo metrics source-cache policy accounting'
+  );
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyArtifactKind, 'frontier.lang.realRepoSourceCachePolicyArtifact', 'real-repo source-cache artifact kind');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyArtifactVersion, 1, 'real-repo source-cache artifact version');
+  assert.match(metrics.realRepoCorpusSourceCachePolicyArtifactHash, /^[a-f0-9]{64}$/, 'real-repo source-cache artifact hash');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyRows, entries.length, 'real-repo source-cache artifact rows');
+  assert.equal(Array.isArray(metrics.realRepoCorpusSourceCachePolicyRowsByEntry), true, 'real-repo source-cache artifact row list');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyRowsByEntry.length, entries.length, 'real-repo source-cache artifact row count');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicySourceTextIncludedRows, 0, 'real-repo source-cache artifact must not include source text');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyHashOnlyRows, entries.length, 'real-repo source-cache artifact hash-only rows');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyPublishBlockedRows, entries.length, 'real-repo source-cache artifact publish block rows');
+  assert.equal(
+    metrics.realRepoCorpusSourceCachePolicyAdmissibleRows + metrics.realRepoCorpusSourceCachePolicyArtifactBlockedRows,
+    entries.length,
+    'real-repo source-cache artifact admission accounting'
+  );
   assert.equal(metrics.realRepoCorpusDependencyInstallDefaultOffRows, entries.length, 'real-repo metrics dependency install default-off rows');
   assert.equal(metrics.realRepoCorpusRepositoryCommandDefaultOffRows, entries.length, 'real-repo metrics repository command default-off rows');
   assert.equal(metrics.realRepoCorpusPackageManagerCommandMatrixRows, entries.length, 'real-repo metrics package-manager command matrix rows');
@@ -87,6 +123,36 @@ function assertRealRepoCorpusMetrics(metrics, manifest, assert) {
 
   for (const row of evidenceRows) {
     assertRealRepoCorpusEvidenceRow(row, { proof, manifest, metrics, entryIds, proofStatuses, presenceStatuses, proofReasons }, assert);
+  }
+  for (const row of metrics.realRepoCorpusSourceCachePolicyRowsByEntry) {
+    assertSourceCachePolicyArtifactRow(row, { entryIds }, assert);
+  }
+}
+
+function assertSourceCachePolicyArtifactRow(row, context, assert) {
+  const { entryIds } = context;
+  for (const field of SOURCE_CACHE_ARTIFACT_FIELDS) assert.equal(Object.hasOwn(row, field), true, `${row.entryId}: source-cache artifact field ${field}`);
+  assert.equal(entryIds.has(row.entryId), true, `${row.entryId}: source-cache artifact known entry`);
+  assert.equal(['admissible', 'blocked'].includes(row.retentionAdmissionStatus), true, `${row.entryId}: source-cache admission`);
+  assert.equal(SOURCE_CACHE_RETENTION_STATUSES.includes(row.retentionStatus), true, `${row.entryId}: source-cache retention status`);
+  assert.equal(typeof row.retentionReason === 'string' && row.retentionReason.length > 0, true, `${row.entryId}: source-cache retention reason`);
+  assert.equal(['env-relative-checkout', 'none'].includes(row.retainedSourceLocationKind), true, `${row.entryId}: source-cache location kind`);
+  assert.equal(row.retainedSourceRootEnv === null || typeof row.retainedSourceRootEnv === 'string', true, `${row.entryId}: source-cache root env`);
+  assert.equal(row.retainedSourceCheckoutDir === null || typeof row.retainedSourceCheckoutDir === 'string', true, `${row.entryId}: source-cache checkout dir`);
+  assert.equal(row.sourceTextIncluded, false, `${row.entryId}: source-cache source text omitted`);
+  assert.equal(row.sourceTextPublishable, false, `${row.entryId}: source-cache source text publish flag`);
+  assert.equal(row.publishDecision, 'do-not-publish-source', `${row.entryId}: source-cache publish decision`);
+  assert.equal(row.licenseFileHash === null || /^[a-f0-9]{64}$/.test(row.licenseFileHash), true, `${row.entryId}: source-cache license hash`);
+  assert.equal(row.liveProjectSourceSetHash === null || /^[a-f0-9]{64}$/.test(row.liveProjectSourceSetHash), true, `${row.entryId}: source-cache live source-set hash`);
+  assert.match(row.evidenceHash, /^[a-f0-9]{64}$/, `${row.entryId}: source-cache evidence hash`);
+  if (row.retentionAdmissionStatus === 'admissible') {
+    assert.equal(row.retentionStatus, 'retention-admissible-local-private', `${row.entryId}: source-cache admissible status`);
+    assert.equal(row.retentionReason, 'source-cache-retention-policy-passed', `${row.entryId}: source-cache admissible reason`);
+    assert.equal(row.retainedSourceLocationKind, 'env-relative-checkout', `${row.entryId}: source-cache admissible location`);
+    assert.equal(typeof row.retainedSourceCheckoutDir === 'string' && row.retainedSourceCheckoutDir.length > 0, true, `${row.entryId}: source-cache admissible checkout dir`);
+  } else {
+    assert.equal(row.retentionStatus, 'retention-blocked-proof-incomplete', `${row.entryId}: source-cache blocked status`);
+    assert.equal(row.retainedSourceLocationKind, 'none', `${row.entryId}: source-cache blocked location`);
   }
 }
 
@@ -142,6 +208,16 @@ function assertRealRepoCorpusEvidenceRow(row, context, assert) {
   assert.equal(typeof row.gitRemoteOriginUrlPresent, 'boolean', `${row.entryId}: git origin url present`);
   assert.equal(row.gitRemoteOriginMatchesManifest === null || typeof row.gitRemoteOriginMatchesManifest === 'boolean', true, `${row.entryId}: git remote match`);
   assert.equal(row.gitRefMatchesManifest === null || typeof row.gitRefMatchesManifest === 'boolean', true, `${row.entryId}: git ref match`);
+  assert.equal(typeof row.licenseExpectation === 'string' && row.licenseExpectation.length > 0, true, `${row.entryId}: license expectation`);
+  assert.equal(typeof row.licenseExpectedId === 'string' && row.licenseExpectedId.length > 0, true, `${row.entryId}: license expected id`);
+  assert.equal(LICENSE_CACHE_POLICY_EXECUTION_STATUSES.includes(row.licenseProofStatus), true, `${row.entryId}: license proof status`);
+  assert.equal(CHECKOUT_EXECUTION_STATUSES.includes(row.licenseProofExecution), true, `${row.entryId}: license proof execution`);
+  assert.equal(typeof row.licenseFilePresent, 'boolean', `${row.entryId}: license file present`);
+  assert.equal(row.licenseFilePath === null || typeof row.licenseFilePath === 'string', true, `${row.entryId}: license file path`);
+  assert.equal(row.licenseFileHash === null || /^[a-f0-9]{64}$/.test(row.licenseFileHash), true, `${row.entryId}: license file hash`);
+  assert.equal(Number.isInteger(row.licenseFileBytes) && row.licenseFileBytes >= 0, true, `${row.entryId}: license file bytes`);
+  assert.equal(row.licenseTextMatchesExpectation === null || typeof row.licenseTextMatchesExpectation === 'boolean', true, `${row.entryId}: license text match`);
+  assert.equal(typeof row.sourceCachePolicyStatus === 'string' && row.sourceCachePolicyStatus.startsWith('source-cache-'), true, `${row.entryId}: source cache policy status`);
   assert.equal(Number.isInteger(row.plannedSampleFiles) && row.plannedSampleFiles > 0, true, `${row.entryId}: planned sample files`);
   assert.equal(Number.isInteger(row.proofGlobs) && row.proofGlobs > 0, true, `${row.entryId}: proof globs`);
   assert.equal(Number.isInteger(row.matchedFiles) && row.matchedFiles >= 0, true, `${row.entryId}: matched files`);
@@ -174,6 +250,10 @@ function assertSkippedRealRepoCorpusEvidenceRow(row, assert) {
   assert.equal(row.gitDirPointerPresent, false, `${row.entryId}: skipped gitdir pointer`);
   assert.equal(row.gitConfigPresent, false, `${row.entryId}: skipped git config`);
   assert.equal(row.dependencyInstallProofStatus, 'skipped-missing-checkout', `${row.entryId}: skipped dependency proof`);
+  assert.equal(row.licenseProofExecution, 'skipped', `${row.entryId}: skipped license proof execution`);
+  assert.equal(row.licenseProofStatus, 'skipped-missing-checkout', `${row.entryId}: skipped license proof status`);
+  assert.equal(row.licenseFilePresent, false, `${row.entryId}: skipped license file present`);
+  assert.equal(row.sourceCachePolicyStatus, 'source-cache-blocked-missing-checkout', `${row.entryId}: skipped source cache policy`);
   assert.equal(row.commandDryRunStatus, 'skipped-missing-checkout', `${row.entryId}: skipped command dry-run status`);
   assert.equal(row.commandDryRunExecutionStatus, 'skipped-missing-checkout', `${row.entryId}: skipped command dry-run execution`);
   assert.equal(row.commandDryRunSkippedPhases, COMMAND_DRY_RUN_PHASES.length, `${row.entryId}: skipped command dry-run phases`);
@@ -190,6 +270,15 @@ function assertCheckedOutRealRepoCorpusEvidenceRow(row, assert) {
   assert.equal(row.checkoutIdentityExecution, 'executed', `${row.entryId}: checked-out identity proof execution`);
   assert.equal(row.gitMetadataKind !== 'not-scanned', true, `${row.entryId}: checked-out git metadata scanned`);
   assert.equal(['lockfile-metadata-present', 'lockfile-metadata-missing'].includes(row.dependencyInstallProofStatus), true, `${row.entryId}: dependency proof metadata status`);
+  assert.equal(row.licenseProofExecution, 'executed', `${row.entryId}: checked-out license proof execution`);
+  assert.equal(row.licenseProofStatus !== 'skipped-missing-checkout', true, `${row.entryId}: checked-out license proof status`);
+  if (row.licenseProofStatus === 'license-proof-passed') {
+    assert.equal(row.licenseFilePresent, true, `${row.entryId}: checked-out license file present`);
+    assert.equal(row.licenseTextMatchesExpectation, true, `${row.entryId}: checked-out license text match`);
+    assert.equal(row.sourceCachePolicyStatus, 'source-cache-license-verified', `${row.entryId}: source cache license verified`);
+  } else {
+    assert.equal(row.sourceCachePolicyStatus !== 'source-cache-license-verified', true, `${row.entryId}: source cache blocked on license proof`);
+  }
   assert.equal(row.commandDryRunStatus, 'ready-local-checkout', `${row.entryId}: checked-out command dry-run readiness`);
   assert.equal(row.commandDryRunExecutionStatus, 'opt-in-required', `${row.entryId}: checked-out command dry-run execution`);
   assert.equal(row.commandDryRunSkippedPhases, 0, `${row.entryId}: checked-out command dry-run skipped phases`);

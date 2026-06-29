@@ -1,20 +1,17 @@
-import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import { collectExternalCheckoutProofs } from './real-repo-corpus-checkout-proof.mjs';
+import { createSourceCachePolicyArtifact } from './real-repo-corpus-cache-policy.mjs';
 import { collectRealRepoCommandExecution } from './real-repo-corpus-command-execution.mjs';
 import { createCheckoutEvidenceRows } from './real-repo-corpus-evidence.mjs';
-import {
-  assertDefaultRealRepoLiveProjectProofMetrics,
-  collectRealRepoLiveProjectProofs,
-  realRepoCorpusLiveProjectProofMetrics
-} from './real-repo-corpus-live-project-proof.mjs';
+import { collectRealRepoLiveProjectProofs, realRepoCorpusLiveProjectProofMetrics } from './real-repo-corpus-live-project-proof.mjs';
 import {
   RealRepoCorpusOracleCoverage,
   assertRealRepoCorpusOracleCoverageMetrics
 } from './real-repo-corpus-oracle-coverage.mjs';
+import { assertRealRepoCorpusSuiteMetrics } from './real-repo-corpus-suite-assertions.mjs';
 import {
   RealRepoCorpusSurfaceAudit,
   createRealRepoSurfaceAuditRows,
@@ -118,6 +115,7 @@ function measureRealRepoCorpus(options = {}) {
   const commandExecution = collectRealRepoCommandExecution(manifest, checkoutProof, options.realRepoCommandExecution ?? {});
   const liveProjectProof = collectRealRepoLiveProjectProofs(manifest, checkoutProof, options.realRepoLiveProjectProof ?? {});
   const checkoutEvidenceRows = createCheckoutEvidenceRows(manifest, checkoutProof, commandExecution);
+  const sourceCachePolicy = createSourceCachePolicyArtifact(manifest, checkoutEvidenceRows, liveProjectProof);
   const metrics = {
     realRepoCorpusFixtureMode: fixture.mode,
     realRepoCorpusSchema: manifest.schema ?? null,
@@ -205,6 +203,26 @@ function measureRealRepoCorpus(options = {}) {
     realRepoCorpusCheckoutGitDirPointers: checkoutEvidenceRows.filter((row) => row.gitDirPointerPresent === true).length,
     realRepoCorpusCheckoutGitConfigsPresent: checkoutEvidenceRows.filter((row) => row.gitConfigPresent === true).length,
     realRepoCorpusCheckoutGitOriginUrlsPresent: checkoutEvidenceRows.filter((row) => row.gitRemoteOriginUrlPresent === true).length,
+    realRepoCorpusLicenseProofRows: checkoutEvidenceRows.length,
+    realRepoCorpusLicenseProofExecutedRows: checkoutEvidenceRows.filter((row) => row.licenseProofExecution === 'executed').length,
+    realRepoCorpusLicenseProofSkippedRows: checkoutEvidenceRows.filter((row) => row.licenseProofExecution === 'skipped').length,
+    realRepoCorpusLicenseProofPassedRows: checkoutEvidenceRows.filter((row) => row.licenseProofStatus === 'license-proof-passed').length,
+    realRepoCorpusLicenseProofMissingRows: checkoutEvidenceRows.filter((row) => row.licenseProofStatus === 'license-file-missing').length,
+    realRepoCorpusLicenseProofMismatchRows: checkoutEvidenceRows.filter((row) => row.licenseProofStatus === 'license-text-mismatch').length,
+    realRepoCorpusLicenseProofExpectationMissingRows: checkoutEvidenceRows.filter((row) => row.licenseProofStatus === 'license-expectation-missing').length,
+    realRepoCorpusSourceCacheLicenseVerifiedRows: checkoutEvidenceRows.filter((row) => row.sourceCachePolicyStatus === 'source-cache-license-verified').length,
+    realRepoCorpusSourceCachePolicyBlockedRows: checkoutEvidenceRows.filter((row) => row.sourceCachePolicyStatus !== 'source-cache-license-verified').length,
+    realRepoCorpusSourceCachePolicyArtifactKind: sourceCachePolicy.kind,
+    realRepoCorpusSourceCachePolicyArtifactVersion: sourceCachePolicy.version,
+    realRepoCorpusSourceCachePolicyArtifactHash: sourceCachePolicy.artifactHash,
+    realRepoCorpusSourceCachePolicyRows: sourceCachePolicy.rowCount,
+    realRepoCorpusSourceCachePolicyRowsByEntry: sourceCachePolicy.rows,
+    realRepoCorpusSourceCachePolicyAdmissibleRows: sourceCachePolicy.admissibleRows,
+    realRepoCorpusSourceCachePolicyArtifactBlockedRows: sourceCachePolicy.blockedRows,
+    realRepoCorpusSourceCachePolicySourceTextIncludedRows: sourceCachePolicy.sourceTextIncludedRows,
+    realRepoCorpusSourceCachePolicyHashOnlyRows: sourceCachePolicy.hashOnlyRows,
+    realRepoCorpusSourceCachePolicyPublishBlockedRows: sourceCachePolicy.publishBlockedRows,
+    realRepoCorpusSourceCachePolicyLiveProjectHashRows: sourceCachePolicy.rowsWithLiveProjectSourceSetHash,
     realRepoCorpusCommandReadinessRows: checkoutEvidenceRows.length,
     realRepoCorpusDependencyInstallDefaultOffRows: checkoutEvidenceRows.filter((row) => row.dependencyInstallExecution === 'not-run-default-network-free').length,
     realRepoCorpusRepositoryCommandDefaultOffRows: checkoutEvidenceRows.filter((row) => row.repositoryCommandExecution === 'not-run-default-network-free').length,
@@ -231,49 +249,7 @@ function measureRealRepoCorpus(options = {}) {
     ...realRepoCorpusLiveProjectProofMetrics(liveProjectProof),
     realRepoCorpusDurationMs: Number((performance.now() - start).toFixed(2))
   };
-  assertRealRepoCorpusOracleCoverageMetrics(metrics);
-  assert.equal(metrics.realRepoCorpusRealisticPatternOracleFixtures >= 2, true, 'realistic-pattern oracle fixture coverage');
-  assert.equal(metrics.realRepoCorpusHasReactPatternEntry, true, 'React manifest-only pattern entry');
-  assert.equal(metrics.realRepoCorpusPackageManagerMatrixEntries >= 3, true, 'package-manager matrix metadata');
-  assert.equal(oracleMatrixRows.has('module-export-import'), true, 'module/export/import matrix row covered');
-  assert.equal(oracleMatrixRows.has('parser-source-span-trivia'), true, 'parser/source-span/trivia matrix row covered');
-  assert.equal(oracleMatrixRows.has('jsx-tsx-element-prop'), true, 'JSX/TSX matrix row covered');
-  assert.equal(metrics.realRepoCorpusCheckoutProofEntries, entries.length, 'checkout proof row per real-repo entry');
-  assert.equal(
-    metrics.realRepoCorpusCheckoutSkipped + metrics.realRepoCorpusCheckoutCheckedOut,
-    entries.length,
-    'checkout proof rows distinguish skipped and checked-out entries'
-  );
-  assert.equal(
-    metrics.realRepoCorpusCheckoutProofSkipped + metrics.realRepoCorpusCheckoutProofExecuted,
-    entries.length,
-    'checkout proof rows distinguish skipped and executed proof rows'
-  );
-  assert.equal(metrics.realRepoCorpusCheckoutEvidenceRows.length, entries.length, 'checkout evidence row per real-repo entry');
-  assert.equal(
-    metrics.realRepoCorpusCheckoutEvidenceSkipped + metrics.realRepoCorpusCheckoutEvidenceExecuted,
-    entries.length,
-    'checkout evidence rows distinguish skipped and executed proof rows'
-  );
-  assert.equal(metrics.realRepoCorpusCheckoutDirPresentRows, metrics.realRepoCorpusCheckoutProofExecuted, 'checkout dir presence rows match executed proof rows');
-  assert.equal(
-    metrics.realRepoCorpusCheckoutDirPresentRows +
-      metrics.realRepoCorpusCheckoutRootMissingRows +
-      metrics.realRepoCorpusCheckoutRootUnconfiguredRows +
-      metrics.realRepoCorpusCheckoutDirMissingRows +
-      metrics.realRepoCorpusCheckoutDirNotDeclaredRows,
-    entries.length,
-    'checkout presence rows explain every real-repo entry'
-  );
-  if (!commandExecution.enabled) {
-    assert.equal(metrics.realRepoCorpusRepositoryCommandsRun, 0, 'default real-repo bench must not execute repository commands');
-    assert.equal(metrics.realRepoCorpusDependencyInstallDefaultOffRows, entries.length, 'default real-repo bench must keep dependency installs default-off');
-    assert.equal(metrics.realRepoCorpusRepositoryCommandDefaultOffRows, entries.length, 'default real-repo bench must keep repository commands default-off');
-    assert.equal(metrics.realRepoCorpusCommandDryRunExecutedPhases, 0, 'default real-repo bench must not execute command dry-run phases');
-    assert.equal(metrics.realRepoCorpusCommandRunExecutedPhases, 0, 'default real-repo bench must not execute command-run phases');
-    assert.equal(metrics.realRepoCorpusCommandRunDefaultOffRows, entries.length, 'default real-repo bench must keep command-run rows default-off');
-  }
-  if (!liveProjectProof.enabled) assertDefaultRealRepoLiveProjectProofMetrics(metrics, entries, assert);
+  assertRealRepoCorpusSuiteMetrics(metrics, { entries, oracleMatrixRows, commandExecution, liveProjectProof });
   return metrics;
 }
 

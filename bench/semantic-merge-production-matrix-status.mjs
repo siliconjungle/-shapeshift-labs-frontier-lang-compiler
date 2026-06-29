@@ -134,7 +134,7 @@ const rowProofs = new Map([
   }],
   ['Real-repo corpus', {
     anchors: [...jsTsAnchors, 'JSX/TSX parser and React-like layout hazards', 'CSS Modules contracts'],
-    evidence: ['bench/real-repo-corpus-suite.mjs', 'test/smoke/js-ts-real-repo-corpus-command-execution-proof.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs'],
+    evidence: ['bench/real-repo-corpus-suite.mjs', 'bench/real-repo-corpus-upstream-proof.mjs', 'research/real-repo-corpus-upstream-proof.json', 'test/smoke/js-ts-real-repo-corpus-command-execution-proof.mjs', 'test/smoke/js-ts-real-repo-corpus-live-project-proof.mjs', 'test/smoke/js-ts-real-repo-corpus-upstream-proof-artifact.mjs'],
     remaining: []
   }],
   ['Source-backed completeness matrix', {

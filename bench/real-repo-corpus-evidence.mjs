@@ -37,6 +37,20 @@ function createCheckoutEvidenceRows(manifest, checkoutProof, commandExecution = 
       gitRemoteOriginUrlPresent: row.gitRemoteOriginUrlPresent ?? false,
       gitRemoteOriginMatchesManifest: row.gitRemoteOriginMatchesManifest ?? null,
       gitRefMatchesManifest: row.gitRefMatchesManifest ?? null,
+      licenseExpectation: row.licenseExpectation ?? null,
+      licenseExpectedId: row.licenseExpectedId ?? null,
+      licenseProofStatus: row.licenseProofStatus ?? 'skipped-missing-checkout',
+      licenseProofExecution: row.licenseProofExecution ?? checkoutProofExecution,
+      licenseFilePresent: row.licenseFilePresent ?? false,
+      licenseFilePath: row.licenseFilePath ?? null,
+      licenseFileHash: row.licenseFileHash ?? null,
+      licenseFileBytes: row.licenseFileBytes ?? 0,
+      licenseTextMatchesExpectation: row.licenseTextMatchesExpectation ?? null,
+      sourceCachePolicyStatus: row.sourceCachePolicyStatus ?? (
+        checkoutProofExecution === 'skipped'
+          ? 'source-cache-blocked-missing-checkout'
+          : 'source-cache-blocked-license-missing'
+      ),
       dependencyInstallProofStatus: dependencyInstallProofStatus(row, checkoutProofExecution),
       dependencyInstallExecution: commandRun.dependencyInstallExecution ?? dependencyInstallExecution,
       dependencyInstallDefaultOffReason: proof.dependencyInstallDefaultOffReason ?? 'dependency installs require an explicit opt-in after a local checkout is supplied',

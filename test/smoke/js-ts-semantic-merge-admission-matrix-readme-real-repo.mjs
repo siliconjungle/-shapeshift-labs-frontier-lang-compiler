@@ -4,7 +4,7 @@ import { RealRepoCorpusOracleCoverage, RealRepoCorpusSurfaceAudit } from '../../
 function assertReadmeRealRepoBenchmarkSuiteRow(assert) {
   const readmeRow = readReadmeMatrixRows().get('Real-repo benchmark suite');
   assert.ok(readmeRow, 'README missing Real-repo benchmark suite row');
-  assert.equal(readmeRow.status, 'Partial', 'README real-repo benchmark status');
+  assert.equal(readmeRow.status, 'High', 'README real-repo benchmark status');
   assert.match(
     readmeRow.evidence,
     new RegExp(`${RealRepoCorpusOracleCoverage.oracleCases} oracle cases across ${RealRepoCorpusOracleCoverage.matrixRows.length} matrix rows`),
@@ -28,6 +28,10 @@ function assertReadmeRealRepoBenchmarkSuiteRow(assert) {
     assert.equal(readmeRow.evidence.includes(`\`${routeId}\``), true, `README real-repo fail-closed route ${routeId}`);
   }
   assert.equal(readmeRow.evidence.includes('realRepoCorpusMergeSurfaceUnroutedSurfaces'), true, 'README real-repo unrouted surface metric');
+  assert.equal(readmeRow.evidence.includes('bench/real-repo-corpus-upstream-proof.mjs'), true, 'README real-repo upstream proof runner');
+  assert.equal(readmeRow.evidence.includes('research/real-repo-corpus-upstream-proof.json'), true, 'README real-repo upstream proof artifact');
+  assert.equal(readmeRow.evidence.includes('frontier-merge-metrics-public-api'), true, 'README real-repo public upstream entry');
+  assert.equal(readmeRow.evidence.includes('npm install/build/test command hashes'), true, 'README real-repo public command hash proof');
 }
 
 function readReadmeMatrixRows() {

@@ -37,6 +37,7 @@ try {
   });
   const rows = new Map(metrics.realRepoCorpusLiveProjectProofRowsByEntry.map((row) => [row.entryId, row]));
   const checkoutRows = new Map(metrics.realRepoCorpusCheckoutEvidenceRows.map((row) => [row.entryId, row]));
+  const cacheRows = new Map(metrics.realRepoCorpusSourceCachePolicyRowsByEntry.map((row) => [row.entryId, row]));
   const viteCheckout = checkoutRows.get('vite-plugin-config');
   assert.equal(viteCheckout.checkoutProofStatus, 'checked-out', 'prepared Vite checkout proof status');
   assert.equal(viteCheckout.checkoutIdentityStatus, 'git-identity-matched', 'prepared Vite git identity');
@@ -51,6 +52,7 @@ try {
   assert.equal(metrics.realRepoCorpusLiveProjectProofPassedRows, 1, 'prepared Vite live-project proof passes');
   assert.equal(metrics.realRepoCorpusLiveProjectProofSkippedRows, 1, 'missing selected checkout is skipped');
   assert.equal(metrics.realRepoCorpusLiveProjectProofSourceTextReadRows, 1, 'only prepared selected checkout reads source text');
+  assert.equal(metrics.realRepoCorpusSourceCachePolicyLiveProjectHashRows, 1, 'prepared Vite source-cache artifact links live source-set hash');
   assert.equal(viteRow.liveProjectProofStatus, 'passed', 'Vite live-project proof status');
   assert.equal(viteRow.liveProjectProofExecutionStatus, 'passed', 'Vite live-project proof execution');
   assert.deepEqual(viteRow.liveProjectProofPhases.map((phase) => phase.phase), ['diagnostics', 'declaration-output']);
@@ -66,6 +68,10 @@ try {
   assert.equal(viteRow.liveProjectDeclarationFiles >= 2, true, 'Vite declaration files emitted');
   assert.equal(typeof viteRow.liveProjectDiagnosticsGateHash === 'string' && viteRow.liveProjectDiagnosticsGateHash.length > 0, true, 'Vite diagnostics gate hash');
   assert.equal(typeof viteRow.liveProjectDeclarationGateHash === 'string' && viteRow.liveProjectDeclarationGateHash.length > 0, true, 'Vite declaration gate hash');
+  const viteCacheRow = cacheRows.get('vite-plugin-config');
+  assert.equal(viteCacheRow.retentionAdmissionStatus, 'admissible', 'Vite source-cache retention admission');
+  assert.equal(viteCacheRow.liveProjectSourceSetHash, viteRow.liveProjectSourceSetHash, 'Vite source-cache live source-set hash binding');
+  assert.equal(viteCacheRow.sourceTextIncluded, false, 'Vite source-cache artifact omits source text');
 
   const missingRow = rows.get('typescript-compiler-services');
   assert.equal(missingRow.liveProjectProofStatus, 'skipped-missing-checkout', 'missing selected checkout live-project status');
@@ -115,6 +121,7 @@ function prepareViteCheckout(root, entry) {
     'export const defaultConfig: UserConfig = {};',
     ''
   ].join('\n'));
+  writeFileSync(join(root, 'LICENSE'), 'MIT License\n\nPermission is hereby granted, free of charge, to any person obtaining a copy.\n');
   writeFileSync(join(root, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages: {} }));
   runGit(root, ['init']);
   runGit(root, ['symbolic-ref', 'HEAD', `refs/heads/${entry.source.ref}`]);

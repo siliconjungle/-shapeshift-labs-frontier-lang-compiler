@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { RealRepoCorpusSurfaceAudit } from './real-repo-corpus-surface-routes.mjs';
 
 const RealRepoCorpusOracleCoverage = Object.freeze({
-  oracleCases: 14,
+  oracleCases: 16,
   matrixRows: Object.freeze([
     'control-flow-effect',
     'jsx-tsx-element-prop',

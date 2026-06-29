@@ -39,6 +39,12 @@
       ".next",
       ".turbo",
       "out"
-    ]
+    ],
+    "allowedOversizedFiles": {
+      "test/smoke/js-ts-real-repo-corpus-metrics-assertions.mjs": {
+        "maxChars": 30000,
+        "reason": "Dense real-repo corpus assertion matrix covering checkout, license, command, live-project, and cache-policy evidence."
+      }
+    }
   }
 }

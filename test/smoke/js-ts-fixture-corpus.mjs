@@ -24,7 +24,7 @@ const corpus = JSON.parse(corpusText);
 
 assert.equal(corpus.schema, 'frontier.lang.jsTsSemanticMergeFixtureCorpus.v1');
 assert.deepEqual(corpus.metadata.dependencies, [], 'fixture corpus must stay dependency-free');
-assert.equal(Buffer.byteLength(corpusText, 'utf8') < 62_000, true, 'fixture corpus should stay small');
+assert.equal(Buffer.byteLength(corpusText, 'utf8') < 66_000, true, 'fixture corpus should stay small');
 assert.equal(Array.isArray(corpus.fixtures), true, 'fixture corpus should include fixtures');
 assert.equal(corpus.fixtures.length >= 8, true, 'fixture corpus should cover required JS/TS merge surfaces');
 

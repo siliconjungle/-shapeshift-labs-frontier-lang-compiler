@@ -2,7 +2,7 @@ const CHECKOUT_PROOF_STATUSES = ['skipped-missing-checkout', 'checked-out', 'che
 const CHECKOUT_EXECUTION_STATUSES = ['skipped', 'executed'];
 const CHECKOUT_PRESENCE_STATUSES = ['checkout-root-unconfigured', 'checkout-root-missing', 'checkout-dir-not-declared', 'checkout-dir-missing', 'checkout-dir-present'];
 const CHECKOUT_PROOF_REASONS = ['checkout-root-unconfigured', 'checkout-root-missing', 'checkout-dir-not-declared', 'checkout-dir-missing', 'declared-proof-globs-matched', 'declared-proof-globs-missing'];
-const CHECKOUT_EVIDENCE_FIELDS = ['manifestMetadataStatus', 'checkoutProofStatus', 'checkoutProofExecution', 'checkoutRootMode', 'checkoutRootEnv', 'checkoutRootPresent', 'checkoutDirPresent', 'checkoutPresenceStatus', 'checkoutProofReason', 'checkoutIdentityStatus', 'checkoutIdentityExecution', 'gitMetadataPresent', 'gitMetadataKind', 'gitDirPointerPresent', 'gitHeadPresent', 'gitConfigPresent', 'gitRemoteOriginUrlPresent', 'gitRemoteOriginMatchesManifest', 'gitRefMatchesManifest', 'dependencyInstallProofStatus', 'dependencyInstallExecution', 'repositoryCommandProofStatus', 'repositoryCommandExecution', 'commandDryRunStatus', 'commandDryRunExecutionStatus', 'commandDryRunPhaseCount', 'commandDryRunPhases', 'commandDryRunSkippedPhases', 'commandDryRunReadyPhases', 'commandDryRunOptInRequiredPhases', 'commandDryRunExecutedPhases', 'commandDryRunDefaultOffPhases', 'commandRunStatus', 'commandRunExecutionStatus', 'commandRunReason', 'commandRunEnabled', 'commandRunPhaseCount', 'commandRunPhases', 'commandRunExecutedPhases', 'commandRunFailedPhases', 'commandRunTimedOutPhases', 'commandRunSkippedPhases', 'commandRunDefaultOffPhases', 'commandRunOutputTruncatedPhases'];
+const CHECKOUT_EVIDENCE_FIELDS = ['manifestMetadataStatus', 'checkoutProofStatus', 'checkoutProofExecution', 'checkoutRootMode', 'checkoutRootEnv', 'checkoutRootPresent', 'checkoutDirPresent', 'checkoutPresenceStatus', 'checkoutProofReason', 'checkoutIdentityStatus', 'checkoutIdentityExecution', 'gitMetadataPresent', 'gitMetadataKind', 'gitDirPointerPresent', 'gitHeadPresent', 'gitConfigPresent', 'gitRemoteOriginUrlPresent', 'gitRemoteOriginMatchesManifest', 'gitRefMatchesManifest', 'licenseExpectation', 'licenseExpectedId', 'licenseProofStatus', 'licenseProofExecution', 'licenseFilePresent', 'licenseFilePath', 'licenseFileHash', 'licenseFileBytes', 'licenseTextMatchesExpectation', 'sourceCachePolicyStatus', 'dependencyInstallProofStatus', 'dependencyInstallExecution', 'repositoryCommandProofStatus', 'repositoryCommandExecution', 'commandDryRunStatus', 'commandDryRunExecutionStatus', 'commandDryRunPhaseCount', 'commandDryRunPhases', 'commandDryRunSkippedPhases', 'commandDryRunReadyPhases', 'commandDryRunOptInRequiredPhases', 'commandDryRunExecutedPhases', 'commandDryRunDefaultOffPhases', 'commandRunStatus', 'commandRunExecutionStatus', 'commandRunReason', 'commandRunEnabled', 'commandRunPhaseCount', 'commandRunPhases', 'commandRunExecutedPhases', 'commandRunFailedPhases', 'commandRunTimedOutPhases', 'commandRunSkippedPhases', 'commandRunDefaultOffPhases', 'commandRunOutputTruncatedPhases'];
 const STRENGTHENED_CHECKOUT_EVIDENCE_FIELDS = ['checkoutIdentityStatus', 'checkoutIdentityExecution', 'gitMetadataPresent', 'gitHeadPresent', 'gitRemoteOriginMatchesManifest', 'gitRefMatchesManifest', 'dependencyInstallDefaultOffReason', 'dependencyInstallOptInRequired', 'repositoryCommandDefaultOffReason', 'repositoryCommandOptInRequired', 'packageManagerCommandMatrixStatus', 'packageManagerCommandMatrixCommands', 'packageManagerInstallCommands', 'packageManagerBuildCommands', 'packageManagerTestCommands'];
 const SKIPPED_CHECKOUT_PRESENCE_STATUSES = ['checkout-root-unconfigured', 'checkout-root-missing', 'checkout-dir-not-declared', 'checkout-dir-missing'];
 const CHECKOUT_IDENTITY_STATUSES = ['skipped-missing-checkout', 'git-metadata-missing', 'gitdir-pointer-present', 'git-metadata-present', 'git-identity-matched'];
@@ -13,6 +13,10 @@ const COMMAND_DRY_RUN_EXECUTION_STATUSES = ['skipped-missing-checkout', 'opt-in-
 const COMMAND_RUN_EXECUTION_STATUSES = ['skipped-missing-checkout', 'blocked-safety-invariant', 'blocked-opt-in-required', 'blocked-identity-mismatch', 'blocked-command-not-allowed', 'executed', 'failed', 'timed-out'];
 const LIVE_PROJECT_PROOF_PHASES = ['diagnostics', 'declaration-output'];
 const LIVE_PROJECT_PROOF_EXECUTION_STATUSES = ['not-run-default-source-free', 'skipped-missing-checkout', 'blocked-safety-invariant', 'blocked-identity-mismatch', 'blocked-compiler-unavailable', 'blocked-source-read', 'passed', 'failed'];
+const LICENSE_CACHE_POLICY_EXECUTION_STATUSES = ['skipped-missing-checkout', 'license-proof-passed', 'license-file-missing', 'license-expectation-missing', 'license-text-mismatch'];
+const SOURCE_CACHE_RETENTION_STATUSES = ['retention-admissible-local-private', 'retention-blocked-proof-incomplete'];
+const SOURCE_CACHE_ARTIFACT_FIELDS = ['entryId', 'retentionAdmissionStatus', 'retentionStatus', 'retentionReason', 'retainedSourceLocationKind', 'retainedSourceRootEnv', 'retainedSourceCheckoutDir', 'sourceTextIncluded', 'sourceTextPublishable', 'publishDecision', 'checkoutProofStatus', 'checkoutIdentityStatus', 'licenseFileHash', 'sourceCachePolicyStatus', 'liveProjectSourceSetHash', 'evidenceHash'];
+const UPSTREAM_PROOF_STATUSES = ['not-run-default-network-free', 'explicit-opt-in-git-clone', 'explicit-opt-in-local-typechecker', 'explicit-opt-in-local-runner'];
 
 function assertLocalCheckoutProof(manifest, assert) {
   const proof = manifest.localBehavior?.checkoutProof;
@@ -51,6 +55,22 @@ function assertLocalCheckoutProof(manifest, assert) {
   assert.equal(proof.liveProjectProof?.networkRequired, false, 'real-repo live-project proof network-free');
   assert.equal(proof.liveProjectProof?.readsSourceText, true, 'real-repo live-project proof source-text access is explicit opt-in');
   assert.equal(proof.liveProjectProof?.sourceEvidence, 'sha256-hash-plus-counts-no-vendored-text', 'real-repo live-project source evidence');
+  assert.equal(proof.licenseCachePolicy?.proofStatus, 'source-cache-license-provenance', 'real-repo license cache policy proof status');
+  assert.equal(proof.licenseCachePolicy?.retentionMode, 'local-private-cache', 'real-repo source cache retention mode');
+  assert.equal(proof.licenseCachePolicy?.publishDefault, 'do-not-publish-source', 'real-repo source cache publish default');
+  assert.deepEqual(proof.licenseCachePolicy?.candidateFiles, ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'COPYING', 'COPYING.md', 'COPYING.txt'], 'real-repo license cache policy candidates');
+  assert.deepEqual(proof.licenseCachePolicy?.executionStatuses, LICENSE_CACHE_POLICY_EXECUTION_STATUSES, 'real-repo license cache policy statuses');
+  assert.deepEqual(proof.licenseCachePolicy?.retentionStatuses, SOURCE_CACHE_RETENTION_STATUSES, 'real-repo source cache retention statuses');
+  assert.deepEqual(proof.licenseCachePolicy?.artifactFields, SOURCE_CACHE_ARTIFACT_FIELDS, 'real-repo source cache artifact fields');
+  assert.equal(proof.licenseCachePolicy?.sourceEvidence, 'sha256-hash-plus-license-id-no-vendored-text', 'real-repo license cache policy evidence');
+  assert.equal(proof.upstreamProof?.runner, 'bench/real-repo-corpus-upstream-proof.mjs', 'real-repo upstream proof runner');
+  assert.equal(UPSTREAM_PROOF_STATUSES.includes(proof.upstreamProof?.defaultExecution), true, 'real-repo upstream proof default status');
+  assert.equal(UPSTREAM_PROOF_STATUSES.includes(proof.upstreamProof?.cloneExecution), true, 'real-repo upstream proof clone status');
+  assert.equal(UPSTREAM_PROOF_STATUSES.includes(proof.upstreamProof?.liveProjectExecution), true, 'real-repo upstream proof live status');
+  assert.equal(UPSTREAM_PROOF_STATUSES.includes(proof.upstreamProof?.commandExecution), true, 'real-repo upstream proof command status');
+  assert.equal(proof.upstreamProof?.evidenceArtifact, 'research/real-repo-corpus-upstream-proof.json', 'real-repo upstream proof artifact');
+  assert.equal(proof.upstreamProof?.sourceTextIncluded, false, 'real-repo upstream proof omits source text');
+  assert.equal(proof.upstreamProof?.outputEvidence, 'sha256-hash-plus-counts-no-vendored-text', 'real-repo upstream proof output evidence');
 }
 
 function assertPackageManagerMatrix(manifest, assert) {
@@ -113,15 +133,14 @@ function assertBroadSuiteGaps(manifest, assert) {
     assert.match(gap.id, /^[a-z0-9]+(?:-[a-z0-9]+)*$/, `${gap.id}: gap id`);
     assert.equal(gapIds.has(gap.id), false, `${gap.id}: duplicate broad-suite gap`);
     gapIds.add(gap.id);
-    assert.equal(['missing', 'partial', 'manual'].includes(gap.status), true, `${gap.id}: gap status`);
+    assert.equal(['missing', 'partial', 'manual', 'covered'].includes(gap.status), true, `${gap.id}: gap status`);
     statuses.add(gap.status);
     assert.equal(typeof gap.reason === 'string' && gap.reason.length >= 24, true, `${gap.id}: gap reason`);
     for (const field of ['sourceLines', 'baseLines', 'workerLines', 'headLines', 'expectedLines']) {
       assert.equal(gap[field], undefined, `${gap.id}: gap must not vendor ${field}`);
     }
   }
-  assert.equal(statuses.has('partial'), true, 'real-repo corpus partial gaps');
-  assert.equal(statuses.has('manual'), true, 'real-repo corpus manual gaps');
+  assert.equal(statuses.has('covered'), true, 'real-repo corpus covered proof milestones');
 }
 
 export {
@@ -132,9 +151,12 @@ export {
   COMMAND_DRY_RUN_READINESS_STATUSES,
   COMMAND_RUN_EXECUTION_STATUSES,
   GIT_METADATA_KINDS,
+  LICENSE_CACHE_POLICY_EXECUTION_STATUSES,
   LIVE_PROJECT_PROOF_EXECUTION_STATUSES,
   LIVE_PROJECT_PROOF_PHASES,
   SKIPPED_CHECKOUT_PRESENCE_STATUSES,
+  SOURCE_CACHE_ARTIFACT_FIELDS,
+  SOURCE_CACHE_RETENTION_STATUSES,
   STRENGTHENED_CHECKOUT_EVIDENCE_FIELDS,
   assertBroadSuiteGaps,
   assertDefaultCommandRunMetrics,

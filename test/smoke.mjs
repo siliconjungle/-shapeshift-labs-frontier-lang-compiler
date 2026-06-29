@@ -165,7 +165,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-admission-proof-policy.mjs',
   './smoke/js-ts-conflict-sidecars.mjs',
   './smoke/js-ts-fixture-corpus.mjs',
-  './smoke/js-ts-real-repo-corpus-local-checkout-proof.mjs', './smoke/js-ts-real-repo-corpus-command-execution-proof.mjs', './smoke/js-ts-real-repo-corpus-live-project-proof.mjs',
+  './smoke/js-ts-real-repo-corpus-local-checkout-proof.mjs', './smoke/js-ts-real-repo-corpus-command-execution-proof.mjs', './smoke/js-ts-real-repo-corpus-live-project-proof.mjs', './smoke/js-ts-real-repo-corpus-upstream-proof-artifact.mjs',
   './smoke/js-ts-semantic-merge-oracles.mjs',
   './smoke/js-ts-semantic-merge-admission-matrix.mjs',
   './smoke/js-ts-semantic-merge-admission-matrix-html-css.mjs',
