@@ -31,6 +31,8 @@ export { createJsTsProjectMergeDeclarationEmitParityProof } from './js-ts-safe-p
 export { createJsTsProjectMergeDeclarationGate } from './js-ts-safe-project-merge-declarations.js';
 export { createJsTsProjectMergeDiagnosticsGate } from './js-ts-safe-project-merge-diagnostics.js';
 export { createJsTsProjectReferenceCompositeProof } from './js-ts-safe-project-merge-project-reference-proof.js';
+export { createJsxSemanticMergeEvidence, parseJsxSemanticTree, queryJsxElementRecords, summarizeJsxSemanticTree } from '@shapeshift-labs/frontier-lang-jsx';
+export { createSvgSemanticMergeEvidence, parseSvgSemanticTree, querySvgReferenceGraph, summarizeSvgSemanticTree } from '@shapeshift-labs/frontier-lang-svg';
 export { createSemanticSlice } from './internal/index-impl/createSemanticSlice.js';
 export { createSemanticSliceAdmissionRecord } from './internal/index-impl/createSemanticSliceAdmissionRecord.js';
 export { createSwiftSyntaxNativeImporterAdapter } from './internal/index-impl/createSwiftSyntaxNativeImporterAdapter.js';

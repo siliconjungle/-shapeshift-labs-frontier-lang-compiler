@@ -11,6 +11,13 @@ export function publicValueExportsFromDeclaration(url, seen = new Set()) {
   for (const match of text.matchAll(/^export declare (?:const|function) ([A-Za-z_$][\w$]*)/gm)) {
     names.push(match[1]);
   }
+  for (const match of text.matchAll(/^export\s+{([\s\S]*?)}\s+from ['"][^'"]+['"];?$/gm)) {
+    for (const specifier of match[1].split(',')) {
+      const name = specifier.trim();
+      if (!name) continue;
+      names.push(name.includes(' as ') ? name.split(/\s+as\s+/).at(-1).trim() : name);
+    }
+  }
   for (const match of text.matchAll(/^export \* from ['"]([^'"]+)['"];?$/gm)) {
     const declarationSpecifier = match[1].replace(/\.js$/, '.d.ts');
     names.push(...publicValueExportsFromDeclaration(new URL(declarationSpecifier, url), seen));

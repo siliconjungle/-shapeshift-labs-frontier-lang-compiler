@@ -124,7 +124,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-jsx-hook-effects.mjs',
   './smoke/js-ts-safe-project-merge-jsx-event-handlers.mjs', './smoke/js-ts-safe-project-merge-jsx-runtime-proof-bridge.mjs',
   './smoke/js-ts-safe-project-merge-jsx-prop-values.mjs',
-  './smoke/js-ts-safe-project-merge-html-css.mjs', './smoke/js-ts-safe-project-merge-svg.mjs', './smoke/js-ts-safe-project-merge-svg-guards.mjs',
+  './smoke/js-ts-safe-project-merge-html-css.mjs', './smoke/js-ts-safe-project-merge-svg.mjs', './smoke/js-ts-safe-project-merge-svg-guards.mjs', './smoke/jsx-svg-adapters.mjs',
   './smoke/js-ts-safe-project-merge-html-css-selectors.mjs',
   './smoke/js-ts-safe-project-merge-html-css-scoped-basic.mjs',
   './smoke/js-ts-safe-project-merge-html-css-scoped-nested.mjs',

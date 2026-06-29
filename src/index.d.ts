@@ -43,6 +43,36 @@ export * from './declarations/js-ts-project-merge-jsx-event-handler.js';
 export * from './declarations/js-ts-project-merge-jsx-hook-dependency.js';
 export * from './declarations/js-ts-project-merge-jsx-render-branch.js';
 export * from './declarations/js-ts-project-merge-semantic-equivalence-proof.js';
+export {
+  createJsxSemanticMergeEvidence,
+  parseJsxSemanticTree,
+  queryJsxElementRecords,
+  summarizeJsxSemanticTree
+} from '@shapeshift-labs/frontier-lang-jsx';
+export type {
+  SourceSpan as JsxSourceSpan,
+  JsxProofGap,
+  JsxPropRecord,
+  JsxElementRecord,
+  JsxSemanticTree,
+  JsxSemanticMergeEvidence
+} from '@shapeshift-labs/frontier-lang-jsx';
+export {
+  createSvgSemanticMergeEvidence,
+  parseSvgSemanticTree,
+  querySvgReferenceGraph,
+  summarizeSvgSemanticTree
+} from '@shapeshift-labs/frontier-lang-svg';
+export type {
+  SourceSpan as SvgSourceSpan,
+  SvgProofGap,
+  SvgElementRecord,
+  SvgDefinitionRecord,
+  SvgReferenceRecord,
+  SvgReferenceGraph,
+  SvgSemanticTree,
+  SvgSemanticMergeEvidence
+} from '@shapeshift-labs/frontier-lang-svg';
 export * from './declarations/native-diff.js';
 export * from './declarations/semantic-slice.js';
 export * from './declarations/semantic-slice-admission.js';
