@@ -68,6 +68,8 @@ assert.equal(canonicalRecord.runtimeDomSnapshotHash.startsWith('fnv1a32:'), true
 assert.equal(canonicalRecord.runtimeComputedStyleHash.startsWith('fnv1a32:'), true);
 assert.equal(canonicalRecord.runtimeLayoutSnapshotHash.startsWith('fnv1a32:'), true);
 assert.equal(canonicalRecord.runtimeEventTraceHash.startsWith('fnv1a32:'), true);
+assert.equal(canonicalRecord.runtimeAccessibilitySnapshotHash.startsWith('fnv1a32:'), true);
+assert.equal(canonicalRecord.runtimeFocusSnapshotHash.startsWith('fnv1a32:'), true);
 assert.equal(canonicalRecord.runtimeLayoutShiftHash.startsWith('fnv1a32:'), true);
 assert.equal(canonicalRecord.runtimeScreenshotHash.startsWith('fnv1a32:'), true);
 assert.equal(canonicalRecord.runtimeCumulativeLayoutShift, 0);
@@ -237,6 +239,8 @@ assert.equal(cssProofRecord.runtimeDomSnapshotHash.startsWith('fnv1a32:'), true)
 assert.equal(cssProofRecord.runtimeComputedStyleHash.startsWith('fnv1a32:'), true);
 assert.equal(cssProofRecord.runtimeLayoutSnapshotHash.startsWith('fnv1a32:'), true);
 assert.equal(cssProofRecord.runtimeEventTraceHash.startsWith('fnv1a32:'), true);
+assert.equal(cssProofRecord.runtimeAccessibilitySnapshotHash.startsWith('fnv1a32:'), true);
+assert.equal(cssProofRecord.runtimeFocusSnapshotHash.startsWith('fnv1a32:'), true);
 assert.equal(matrixSurface(cssProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
 
 function fakeRuntimePage({
@@ -280,6 +284,8 @@ function fakeRuntimePage({
         computedStyleSnapshot: [{ path: selector, properties: style }],
         layoutSnapshot: [{ path: selector, rect }],
         eventTrace: events,
+        accessibilitySnapshot: [{ path: selector, tag, role: tag === 'button' ? 'button' : undefined, labelHash: `label:${text}` }],
+        focusSnapshot: { path: selector, tag, role: tag === 'button' ? 'button' : undefined },
         layoutShift: {
           cumulativeLayoutShift,
           entries: cumulativeLayoutShift ? [{ value: cumulativeLayoutShift, hadRecentInput: false }] : []

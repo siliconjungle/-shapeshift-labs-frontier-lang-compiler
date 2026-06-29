@@ -37,6 +37,8 @@ const generatedRuntimeProof = await capturePlaywrightRuntimeProof({
       computedStyleSnapshot: [{ path: '#save', properties: { display: 'inline-block' } }],
       layoutSnapshot: [{ path: '#save', rect: { x: 0, y: 0, width: 80, height: 32 } }],
       eventTrace: [{ sequence: 0, type: 'click', target: '#save' }],
+      accessibilitySnapshot: [{ path: '#save', tag: 'button', role: 'button' }],
+      focusSnapshot: { path: '#save', tag: 'button', role: 'button' },
       layoutShift: { cumulativeLayoutShift: 0, entries: [] }
     };
   }
@@ -85,6 +87,8 @@ assert.equal(record.runtimeDomSnapshotHash.startsWith('fnv1a32:'), true);
 assert.equal(record.runtimeComputedStyleHash.startsWith('fnv1a32:'), true);
 assert.equal(record.runtimeLayoutSnapshotHash.startsWith('fnv1a32:'), true);
 assert.equal(record.runtimeEventTraceHash.startsWith('fnv1a32:'), true);
+assert.equal(record.runtimeAccessibilitySnapshotHash.startsWith('fnv1a32:'), true);
+assert.equal(record.runtimeFocusSnapshotHash.startsWith('fnv1a32:'), true);
 assert.equal(record.runtimeLayoutShiftHash.startsWith('fnv1a32:'), true);
 assert.equal(record.runtimeScreenshotHash.startsWith('fnv1a32:'), true);
 assert.equal(matrixSurface(project, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');

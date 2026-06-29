@@ -82,6 +82,8 @@ function runtimeProofCapsule({ command, probeId, evidenceHash, signals, label })
       computedStyleHash: `style:${label}`,
       layoutSnapshotHash: `layout:${label}`,
       eventTraceHash: `events:${label}`,
+      accessibilitySnapshotHash: `accessibility:${label}`,
+      focusSnapshotHash: `focus:${label}`,
       layoutShiftHash: `layout-shift:${label}`,
       screenshotHash: `screenshot:${label}`,
       cumulativeLayoutShift: 0

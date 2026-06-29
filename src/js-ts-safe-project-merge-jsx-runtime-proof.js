@@ -80,6 +80,8 @@ function jsxRenderRuntimeProofValidation(delta, proof) {
     requireComputedStyleHash: true,
     requireLayoutSnapshotHash: true,
     requireEventTraceHash: jsxRuntimeRequiresEventTrace(delta),
+    requireAccessibilitySnapshotHash: true,
+    requireFocusSnapshotHash: true,
     maxCumulativeLayoutShift: typeof proof?.maxCumulativeLayoutShift === 'number' ? proof.maxCumulativeLayoutShift : 0.01
   });
 }
@@ -110,6 +112,8 @@ function jsxRenderRuntimeProofResult(delta, proof, validation, reasonCodes) {
       runtimeComputedStyleHash: validation?.ok ? validation.metadata.capsule?.computedStyleHash : undefined,
       runtimeLayoutSnapshotHash: validation?.ok ? validation.metadata.capsule?.layoutSnapshotHash : undefined,
       runtimeEventTraceHash: validation?.ok ? validation.metadata.capsule?.eventTraceHash : undefined,
+      runtimeAccessibilitySnapshotHash: validation?.ok ? validation.metadata.capsule?.accessibilitySnapshotHash : undefined,
+      runtimeFocusSnapshotHash: validation?.ok ? validation.metadata.capsule?.focusSnapshotHash : undefined,
       runtimeCumulativeLayoutShift: validation?.ok ? validation.metadata.capsule?.cumulativeLayoutShift : undefined,
       sourceBoundRuntimeProofKind: proof?.kind,
       runtimeEvidenceBound: status === 'passed',

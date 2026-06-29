@@ -73,6 +73,9 @@ const capsuleProof = {
       computedStyleHash: 'css-project-capsule-style',
       layoutSnapshotHash: 'css-project-capsule-layout',
       eventTraceHash: 'css-project-capsule-events',
+      accessibilitySnapshotHash: 'css-project-capsule-accessibility',
+      focusSnapshotHash: 'css-project-capsule-focus',
+      layoutShiftHash: 'css-project-capsule-layout-shift',
       cumulativeLayoutShift: 0
     }
   }
@@ -99,6 +102,9 @@ assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeTelem
 assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeDomSnapshotHash, 'css-project-capsule-dom');
 assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeComputedStyleHash, 'css-project-capsule-style');
 assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeLayoutSnapshotHash, 'css-project-capsule-layout');
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeAccessibilitySnapshotHash, 'css-project-capsule-accessibility');
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeFocusSnapshotHash, 'css-project-capsule-focus');
+assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeLayoutShiftHash, 'css-project-capsule-layout-shift');
 assert.equal(capsuleProject.files[0].result.cascadeRuntimeProofs[0].runtimeCumulativeLayoutShift, 0);
 assert.equal(matrixSurface(capsuleProject, 'html-css-browser-runtime-proof').proofStatuses['browser-runtime-proof'], 'passed');
 

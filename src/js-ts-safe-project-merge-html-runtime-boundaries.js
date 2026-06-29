@@ -96,6 +96,8 @@ function htmlRuntimeBoundaryProofRecord(proof, change, binding) {
     runtimeComputedStyleHash: runtimeEvidence?.capsule?.computedStyleHash,
     runtimeLayoutSnapshotHash: runtimeEvidence?.capsule?.layoutSnapshotHash,
     runtimeEventTraceHash: runtimeEvidence?.capsule?.eventTraceHash,
+    runtimeAccessibilitySnapshotHash: runtimeEvidence?.capsule?.accessibilitySnapshotHash,
+    runtimeFocusSnapshotHash: runtimeEvidence?.capsule?.focusSnapshotHash,
     runtimeLayoutShiftHash: runtimeEvidence?.capsule?.layoutShiftHash,
     runtimeScreenshotHash: runtimeEvidence?.capsule?.screenshotHash,
     runtimeCumulativeLayoutShift: runtimeEvidence?.capsule?.cumulativeLayoutShift,
@@ -118,6 +120,8 @@ function htmlRuntimeBoundaryProofEvidenceMetadata(proof, change) {
     requireComputedStyleHash: true,
     requireLayoutSnapshotHash: true,
     requireEventTraceHash: true,
+    requireAccessibilitySnapshotHash: true,
+    requireFocusSnapshotHash: true,
     requireLayoutShiftHash: true,
     requireScreenshotHash: true,
     maxCumulativeLayoutShift: typeof proof.maxCumulativeLayoutShift === 'number' ? proof.maxCumulativeLayoutShift : 0.01

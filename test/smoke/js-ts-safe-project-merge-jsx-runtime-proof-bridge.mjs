@@ -43,6 +43,21 @@ const missingLayoutConflicts = projectGraphDeltaConflicts(hookDelta, { jsxRender
 assert.equal(missingLayoutConflicts.length, 1);
 assert.equal(missingLayoutConflicts[0].details.reasonCodes.includes('runtime-proof-layout-snapshot-hash-missing'), true);
 
+const missingAccessibilityProof = {
+  ...hookRuntimeProof,
+  runtimeProofCapsule: {
+    ...hookRuntimeProof.runtimeProofCapsule,
+    accessibilitySnapshotHash: undefined,
+    telemetry: {
+      ...hookRuntimeProof.runtimeProofCapsule.telemetry,
+      accessibilitySnapshotHash: undefined
+    }
+  }
+};
+const missingAccessibilityConflicts = projectGraphDeltaConflicts(hookDelta, { jsxRenderRuntimeProof: missingAccessibilityProof });
+assert.equal(missingAccessibilityConflicts.length, 1);
+assert.equal(missingAccessibilityConflicts[0].details.reasonCodes.includes('runtime-proof-accessibility-snapshot-hash-missing'), true);
+
 const broadClaimConflicts = projectGraphDeltaConflicts(hookDelta, {
   jsxRenderRuntimeProof: { ...hookRuntimeProof, renderEquivalenceClaim: true }
 });
@@ -111,6 +126,8 @@ function runtimeProofFor(conflict, signals) {
         computedStyleHash: `style:${details.identityKey}`,
         layoutSnapshotHash: `layout:${details.identityKey}`,
         eventTraceHash: `events:${details.identityKey}`,
+        accessibilitySnapshotHash: `accessibility:${details.identityKey}`,
+        focusSnapshotHash: `focus:${details.identityKey}`,
         cumulativeLayoutShift: 0
       }
     }

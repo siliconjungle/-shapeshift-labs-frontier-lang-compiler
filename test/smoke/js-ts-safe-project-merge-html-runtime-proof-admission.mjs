@@ -175,6 +175,8 @@ const htmlCapsuleProofProject = safeMergeJsTsProject({
           computedStyleHash: 'capsule-style',
           layoutSnapshotHash: 'capsule-layout',
           eventTraceHash: 'capsule-events',
+          accessibilitySnapshotHash: 'capsule-accessibility',
+          focusSnapshotHash: 'capsule-focus',
           layoutShiftHash: 'capsule-layout-shift',
           screenshotHash: 'capsule-screenshot',
           cumulativeLayoutShift: 0
@@ -197,6 +199,8 @@ assert.equal(htmlCapsuleRecord.runtimeDomSnapshotHash, 'capsule-dom');
 assert.equal(htmlCapsuleRecord.runtimeComputedStyleHash, 'capsule-style');
 assert.equal(htmlCapsuleRecord.runtimeLayoutSnapshotHash, 'capsule-layout');
 assert.equal(htmlCapsuleRecord.runtimeEventTraceHash, 'capsule-events');
+assert.equal(htmlCapsuleRecord.runtimeAccessibilitySnapshotHash, 'capsule-accessibility');
+assert.equal(htmlCapsuleRecord.runtimeFocusSnapshotHash, 'capsule-focus');
 assert.equal(htmlCapsuleRecord.runtimeLayoutShiftHash, 'capsule-layout-shift');
 assert.equal(htmlCapsuleRecord.runtimeCumulativeLayoutShift, 0);
 assert.equal(typeof htmlCapsuleRecord.runtimeProofCapsuleHash, 'string');
