@@ -1,5 +1,6 @@
 import { parseRustSemanticTree } from '@shapeshift-labs/frontier-lang-rust';
 import { idFragment, uniqueRecordsById } from '../../native-import-utils.js';
+import { appendRustBorrowScopes } from './semanticResourceGraphRustBorrowScopes.js';
 import { appendRustSignatureLifetimes } from './semanticResourceGraphRustLifetimes.js';
 import { appendRustLocalOwnership } from './semanticResourceGraphRustOwnership.js';
 
@@ -16,6 +17,7 @@ export function rustResourceGraphRecordsFromInput(input = {}) {
     escapes: uniqueRecordsById(records.flatMap((record) => record.escapes)),
     lifetimeRegions: uniqueRecordsById(records.flatMap((record) => record.lifetimeRegions)),
     lifetimeRelations: uniqueRecordsById(records.flatMap((record) => record.lifetimeRelations)),
+    borrowScopes: uniqueRecordsById(records.flatMap((record) => record.borrowScopes)),
     unsafeBoundaries: uniqueRecordsById(records.flatMap((record) => record.unsafeBoundaries))
   };
 }
@@ -113,6 +115,7 @@ function appendRustRecord(output, bundle, record, bundleIndex) {
   appendRustSignatureLifetimes(output, bundle, record, { recordId, ownerId, evidenceIds }, signature);
   appendRustSignatureLoans(output, bundle, record, { recordId, ownerId, evidenceIds, signature });
   appendRustLocalOwnership(output, bundle, record, { recordId, ownerId, evidenceIds });
+  appendRustBorrowScopes(output, bundle, record, { recordId, ownerId, evidenceIds }, signature);
   if ((record.proofGaps ?? []).some((gap) => gap?.code === 'rust-unsafe-boundary')) {
     output.unsafeBoundaries.push({
       id: `unsafe_rust_${recordId}`,
@@ -247,5 +250,5 @@ function uniqueRustBundles(bundles) {
 }
 
 function emptyRustRecords() {
-  return { resources: [], owners: [], loans: [], aliases: [], moves: [], drops: [], escapes: [], lifetimeRegions: [], lifetimeRelations: [], unsafeBoundaries: [] };
+  return { resources: [], owners: [], loans: [], aliases: [], moves: [], drops: [], escapes: [], lifetimeRegions: [], lifetimeRelations: [], borrowScopes: [], unsafeBoundaries: [] };
 }

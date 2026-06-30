@@ -212,6 +212,10 @@ function scopeRecordsFromImport(imported) {
     ...(imported?.borrowScopeConstraints ?? []),
     ...(imported?.borrowScopes ?? []),
     ...(imported?.borrowScopeRegions ?? []),
+    ...(imported?.resourceGraph?.borrowScopes ?? []),
+    ...(imported?.resourceGraph?.borrowScopeRegions ?? []),
+    ...(imported?.semanticResourceGraph?.borrowScopes ?? []),
+    ...(imported?.semanticResourceGraph?.borrowScopeRegions ?? []),
     ...(imported?.semanticIndex?.facts ?? []).filter(scopeLikeRecord)
   ];
 }

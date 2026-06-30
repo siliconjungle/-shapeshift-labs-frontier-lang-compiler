@@ -26,6 +26,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     paradigmSemantics,
     evidence
   });
+  const borrowScopes = resourceGraph.borrowScopes ?? [];
   const entryReadiness = importEntries.reduce(
     (current, entry) => maxSemanticMergeReadiness(current, entry.readiness),
     lossSummary.semanticMergeReadiness
@@ -107,6 +108,8 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     paradigmSemantics,
     dependencies,
     resourceGraph,
+    borrowScopes,
+    borrowScopeRegions: borrowScopes,
     graphLayers,
     semanticImpact,
     patchHints,
@@ -165,6 +168,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       resourceGraphEscapes: resourceGraph.summary.escapes,
       resourceGraphLifetimeRegions: resourceGraph.summary.lifetimeRegions,
       resourceGraphLifetimeRelations: resourceGraph.summary.lifetimeRelations,
+      resourceGraphBorrowScopes: resourceGraph.summary.borrowScopes,
       resourceGraphUnsafeBoundaries: resourceGraph.summary.unsafeBoundaries,
       resourceGraphConflicts: resourceGraph.summary.conflicts,
       dependencyRelations: dependencies.total,

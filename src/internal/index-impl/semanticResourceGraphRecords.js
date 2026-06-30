@@ -49,6 +49,24 @@ export function lifetimeRelationRecord(record, index, input, evidenceIds) {
   });
 }
 
+export function borrowScopeRecord(record, index, input, evidenceIds) {
+  return compactRecord({
+    ...record,
+    recordKind: 'borrow-scope',
+    id: record.id ?? `borrow_scope_${idFragment(record.resourceId ?? record.lifetimeRegionId ?? record.scopeKind ?? index)}`,
+    scopeKind: record.scopeKind ?? record.kind ?? record.constraintKind ?? 'loan-scope-boundary',
+    constraintKinds: uniqueStrings([
+      ...(record.constraintKinds ?? []),
+      record.constraintKind,
+      record.scopeKind,
+      record.kind
+    ].filter(Boolean)),
+    sourcePath: record.sourcePath ?? input.sourcePath,
+    sourceHash: record.sourceHash ?? input.sourceHash,
+    evidenceIds: uniqueStrings([...(record.evidenceIds ?? []), ...evidenceIds])
+  });
+}
+
 export function loanRecord(record, index, input, evidenceIds) {
   const mode = normalizeLoanMode(record.mode ?? record.loanMode ?? record.kind);
   return compactRecord({
@@ -208,6 +226,7 @@ export function resourceGraphSummary(input) {
     ...(input.loans.length || input.aliases.length || input.moves.length || input.drops.length ? [] : ['missing-alias-loan-move-drop-records']),
     ...(input.lifetimeRegions.length ? [] : ['missing-lifetime-region-records']),
     ...(input.lifetimeRelations.length ? ['lifetime-relation-review-required'] : []),
+    ...(input.borrowScopes.length ? ['borrow-scope-review-required'] : []),
     ...(input.escapes.length ? ['escape-proof-review-required'] : []),
     ...(input.unsafeBoundaries.length ? ['unsafe-boundary-review-required'] : []),
     ...input.conflicts.map((record) => record.reasonCode)
@@ -223,6 +242,7 @@ export function resourceGraphSummary(input) {
     escapes: input.escapes.length,
     lifetimeRegions: input.lifetimeRegions.length,
     lifetimeRelations: input.lifetimeRelations.length,
+    borrowScopes: input.borrowScopes.length,
     unsafeBoundaries: input.unsafeBoundaries.length,
     conflicts: input.conflicts.length,
     proofObligations: input.proofObligations.length,
@@ -248,6 +268,7 @@ export function allRecords(input) {
     ...(input.escapes ?? []),
     ...(input.lifetimeRegions ?? []),
     ...(input.lifetimeRelations ?? []),
+    ...(input.borrowScopes ?? []),
     ...(input.unsafeBoundaries ?? []),
     ...(input.conflicts ?? []),
     ...(input.proofObligations ?? [])

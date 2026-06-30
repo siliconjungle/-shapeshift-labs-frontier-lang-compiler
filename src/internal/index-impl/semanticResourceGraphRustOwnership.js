@@ -3,13 +3,14 @@ import { appendRustBorrowEscapes } from './semanticResourceGraphRustBorrowEscape
 
 export function appendRustLocalOwnership(output, bundle, record, context) {
   if (!['fn', 'method'].includes(record.kind) || !bundle.sourceText) return;
-  const body = rustRecordBody(bundle.sourceText, record);
+  const bodyInfo = rustRecordBody(bundle.sourceText, record);
+  const body = bodyInfo.text;
   if (!body) return;
   const bindings = new Map();
-  for (const statement of rustLetStatements(body, record.bodySpan)) {
+  for (const statement of rustLetStatements(body, bodyInfo.span)) {
     appendRustLetStatement(output, bundle, record, context, bindings, statement);
   }
-  for (const statement of rustExplicitDropStatements(body, record.bodySpan)) {
+  for (const statement of rustExplicitDropStatements(body, bodyInfo.span)) {
     const binding = bindings.get(statement.name);
     if (!binding) continue;
     output.drops.push({
@@ -181,8 +182,11 @@ function appendRustOwnedBinding(output, bundle, record, context, bindings, state
 function rustRecordBody(sourceText, record) {
   const start = record.bodySpan?.startOffset;
   const end = record.bodySpan?.endOffset;
-  if (typeof start !== 'number' || typeof end !== 'number' || end <= start) return '';
-  return sourceText.slice(start, end);
+  if (typeof start === 'number' && typeof end === 'number' && end > start) {
+    return { text: sourceText.slice(start, end), span: record.bodySpan };
+  }
+  const fallback = fallbackBodySpan(sourceText, record);
+  return fallback ? { text: sourceText.slice(fallback.startOffset, fallback.endOffset), span: fallback } : { text: '', span: record.bodySpan };
 }
 
 function rustLetStatements(body, bodySpan = {}) {
@@ -193,6 +197,7 @@ function rustLetStatements(body, bodySpan = {}) {
     statements.push({
       index: statements.length,
       offset: match.index + match[1].length,
+      bodyStartOffset: bodySpan.startOffset ?? 0,
       line: rustLineAt(body, match.index) + (bodySpan.startLine ?? 1) - 1,
       text: match[0].slice(match[1].length).trim(),
       mutable: Boolean(match[2]),
@@ -212,6 +217,7 @@ function rustExplicitDropStatements(body, bodySpan = {}) {
     statements.push({
       index: statements.length,
       offset: match.index + match[1].length,
+      bodyStartOffset: bodySpan.startOffset ?? 0,
       line: rustLineAt(body, match.index) + (bodySpan.startLine ?? 1) - 1,
       text: match[0].slice(match[1].length).trim(),
       name: match[2]
@@ -263,7 +269,7 @@ function rustLexicalDrop(resourceId, ownerId, lifetimeRegionId, statement, bundl
 }
 
 function rustStatementSpan(statement, bundle, record) {
-  const startOffset = (record.bodySpan?.startOffset ?? 0) + statement.offset;
+  const startOffset = (statement.bodyStartOffset ?? record.bodySpan?.startOffset ?? 0) + statement.offset;
   return {
     path: bundle.sourcePath,
     startOffset,
@@ -275,4 +281,27 @@ function rustStatementSpan(statement, bundle, record) {
 
 function rustLineAt(text, offset) {
   return text.slice(0, offset).split('\n').length;
+}
+
+function fallbackBodySpan(sourceText, record) {
+  const searchStart = record.sourceSpan?.startOffset ?? 0;
+  const open = sourceText.indexOf('{', searchStart);
+  if (open < 0) return undefined;
+  let depth = 0;
+  for (let index = open; index < sourceText.length; index += 1) {
+    if (sourceText[index] === '{') depth += 1;
+    else if (sourceText[index] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return {
+          path: record.sourceSpan?.path,
+          startOffset: open + 1,
+          endOffset: index,
+          startLine: rustLineAt(sourceText, open),
+          endLine: rustLineAt(sourceText, index)
+        };
+      }
+    }
+  }
+  return undefined;
 }

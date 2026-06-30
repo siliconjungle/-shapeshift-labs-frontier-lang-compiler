@@ -15,6 +15,7 @@ import { managedResourceGraphRecordsFromInput } from './internal/index-impl/sema
 import {
   aliasRecord,
   allRecords,
+  borrowScopeRecord,
   conflictRecord,
   dropRecord,
   escapeRecord,
@@ -44,6 +45,7 @@ export const SemanticResourceGraphRecordKinds = Object.freeze([
   'escape',
   'lifetime-region',
   'lifetime-relation',
+  'borrow-scope',
   'unsafe-boundary',
   'conflict',
   'proof-obligation'
@@ -104,6 +106,12 @@ export function createSemanticResourceGraph(input = {}) {
     ...(input.outlives ?? []),
     ...rustRecords.lifetimeRelations
   ].map((record, index) => lifetimeRelationRecord(record, index, input, evidenceIds)));
+  const borrowScopes = uniqueRecordsById([
+    ...graphs.flatMap((graph) => graph.borrowScopes ?? graph.borrowScopeRegions ?? []),
+    ...(input.borrowScopes ?? []),
+    ...(input.borrowScopeRegions ?? []),
+    ...rustRecords.borrowScopes
+  ].map((record, index) => borrowScopeRecord(record, index, input, evidenceIds)));
   const loans = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.loans ?? []),
     ...(input.loans ?? []),
@@ -156,7 +164,7 @@ export function createSemanticResourceGraph(input = {}) {
     ...(input.proofObligations ?? []),
     ...proofObligationsForUnsafeBoundaries(unsafeBoundaries)
   ].map((record, index) => proofObligationRecord(record, index, input, evidenceIds)));
-  const summary = resourceGraphSummary({ resources, owners, loans, aliases, moves, drops, escapes, lifetimeRegions, lifetimeRelations, unsafeBoundaries, conflicts, proofObligations });
+  const summary = resourceGraphSummary({ resources, owners, loans, aliases, moves, drops, escapes, lifetimeRegions, lifetimeRelations, borrowScopes, unsafeBoundaries, conflicts, proofObligations });
   return {
     kind: 'frontier.lang.semanticResourceGraph',
     version: 1,
@@ -175,6 +183,8 @@ export function createSemanticResourceGraph(input = {}) {
     lifetimeRegions,
     lifetimeRelations,
     outlives: lifetimeRelations,
+    borrowScopes,
+    borrowScopeRegions: borrowScopes,
     unsafeBoundaries,
     conflicts,
     proofObligations,
@@ -184,7 +194,7 @@ export function createSemanticResourceGraph(input = {}) {
       resourceIds: uniqueStrings(resources.map((record) => record.id)),
       ownerIds: uniqueStrings(owners.map((record) => record.id)),
       lifetimeRegionIds: uniqueStrings(lifetimeRegions.map((record) => record.id)),
-      sourcePaths: uniqueStrings(allRecords({ resources, owners, loans, aliases, moves, drops, escapes, lifetimeRegions, lifetimeRelations, unsafeBoundaries }).map((record) => record.sourcePath)),
+      sourcePaths: uniqueStrings(allRecords({ resources, owners, loans, aliases, moves, drops, escapes, lifetimeRegions, lifetimeRelations, borrowScopes, unsafeBoundaries }).map((record) => record.sourcePath)),
       evidenceIds,
       blockerReasonCodes: summary.reasonCodes
     },
@@ -213,6 +223,7 @@ export function summarizeSemanticResourceGraph(graph = {}) {
     escapes: graph.escapes ?? [],
     lifetimeRegions: graph.lifetimeRegions ?? [],
     lifetimeRelations: graph.lifetimeRelations ?? graph.outlives ?? [],
+    borrowScopes: graph.borrowScopes ?? graph.borrowScopeRegions ?? [],
     unsafeBoundaries: graph.unsafeBoundaries ?? [],
     conflicts: graph.conflicts ?? [],
     proofObligations: graph.proofObligations ?? []
@@ -228,6 +239,8 @@ export function querySemanticResourceGraph(graph = {}, query = {}) {
     .filter((record) => match(query.lifetimeRelationKind, record.relationKind))
     .filter((record) => match(query.fromLifetimeId, record.fromLifetimeId ?? record.from))
     .filter((record) => match(query.toLifetimeId, record.toLifetimeId ?? record.to))
+    .filter((record) => match(query.borrowScopeKind, record.scopeKind))
+    .filter((record) => match(query.borrowScopeConstraintKind, record.constraintKinds ?? record.constraintKind))
     .filter((record) => match(query.escapeKind, record.escapeKind))
     .filter((record) => match(query.sourcePath, record.sourcePath))
     .filter((record) => match(query.status, record.status))
