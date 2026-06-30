@@ -196,8 +196,9 @@ C/C++ native imports feed the same graph conservatively from source-preservation
 text. Pointer and array parameters become alias evidence, `malloc`, `calloc`,
 `realloc`, and `aligned_alloc` become heap resources, and `free` becomes drop
 evidence. C++ imports also expose `std::unique_ptr`, `std::shared_ptr`,
-`std::weak_ptr`, known RAII locals such as lock guards and streams, raw `new`,
-and `delete` as ownership, alias, lifetime, drop, and manual-memory records.
+`std::weak_ptr`, `std::move` ownership transfers for unique pointers, known
+RAII locals such as lock guards and streams, raw `new`, and `delete` as
+ownership, alias, lifetime, move, drop, and manual-memory records.
 Those records fail closed with manual-memory proof obligations when raw
 allocation/deletion or other unsafe alias/lifetime proof is missing.
 

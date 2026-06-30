@@ -130,7 +130,8 @@ export function createSemanticResourceGraph(input = {}) {
   const moves = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.moves ?? []),
     ...(input.moves ?? []),
-    ...rustRecords.moves
+    ...rustRecords.moves,
+    ...cppRecords.moves
   ].map((record, index) => movementRecord(record, index, input, evidenceIds)));
   const drops = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.drops ?? []),

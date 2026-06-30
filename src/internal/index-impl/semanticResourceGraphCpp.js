@@ -1,4 +1,5 @@
 import { idFragment, uniqueRecordsById } from '../../native-import-utils.js';
+import { appendCppMoveSemantics } from './semanticResourceGraphCppMoves.js';
 
 export function cppResourceGraphRecordsFromInput(input = {}) {
   const records = cppBundlesFromInput(input).map(cppRecordsFromBundle);
@@ -7,6 +8,7 @@ export function cppResourceGraphRecordsFromInput(input = {}) {
     owners: uniqueRecordsById(records.flatMap((record) => record.owners)),
     loans: uniqueRecordsById(records.flatMap((record) => record.loans)),
     aliases: uniqueRecordsById(records.flatMap((record) => record.aliases)),
+    moves: uniqueRecordsById(records.flatMap((record) => record.moves)),
     drops: uniqueRecordsById(records.flatMap((record) => record.drops)),
     lifetimeRegions: uniqueRecordsById(records.flatMap((record) => record.lifetimeRegions)),
     unsafeBoundaries: uniqueRecordsById(records.flatMap((record) => record.unsafeBoundaries))
@@ -30,22 +32,25 @@ function cppRecordsFromBundle(bundle) {
   const output = emptyCppRecords();
   const heapResourcesByName = new Map();
   for (const fn of cppFunctionRecords(bundle)) {
+    const bindings = new Map();
     output.owners.push(cppFunctionOwner(bundle, fn));
-    appendCppSmartPointers(output, bundle, fn);
+    appendCppSmartPointers(output, bundle, fn, bindings);
     appendCppRaiiLocals(output, bundle, fn);
+    appendCppMoveSemantics(output, bundle, fn, bindings);
     appendCppNewAllocations(output, bundle, fn, heapResourcesByName);
     appendCppDeletes(output, bundle, fn, heapResourcesByName);
   }
   return output;
 }
 
-function appendCppSmartPointers(output, bundle, fn) {
+function appendCppSmartPointers(output, bundle, fn, bindings) {
   for (const record of smartPointerRecords(fn)) {
     const base = cppRecordBase(bundle, fn, record.name, `smart_${record.kind}`);
     const kind = record.kind === 'unique_ptr' ? 'unique-owner' : record.kind === 'shared_ptr' ? 'shared-owner' : 'weak-observer';
     output.resources.push(resource(base, record.name, `cpp-${kind}-resource`, { pointerKind: record.kind, pointeeType: record.pointeeType, functionName: fn.name }));
     output.lifetimeRegions.push(lifetime(base, `${record.name} smart pointer lifetime`, 'cpp-smart-pointer-region'));
-    output.drops.push(drop(base, `cpp-${record.kind}-destructor`, { automatic: true, pointerKind: record.kind, functionName: fn.name }));
+    output.drops.push(drop(base, `cpp-${record.kind}-destructor`, { automatic: true, pointerKind: record.kind, functionName: fn.name, dropSemantics: 'cpp-smart-pointer-destructor' }));
+    bindings.set(record.name, { name: record.name, pointerKind: record.kind, pointeeType: record.pointeeType, resourceId: base.resourceId, ownerId: base.ownerId, lifetimeRegionId: base.lifetimeRegionId });
     if (record.kind === 'unique_ptr') {
       output.loans.push({
         id: `loan_cpp_unique_${base.idPart}`,
@@ -70,7 +75,7 @@ function appendCppRaiiLocals(output, bundle, fn) {
     const base = cppRecordBase(bundle, fn, record.name, `raii_${record.typeName}`);
     output.resources.push(resource(base, record.name, 'cpp-raii-local-resource', { typeName: record.typeName, functionName: fn.name }));
     output.lifetimeRegions.push(lifetime(base, `${record.name} RAII lifetime`, 'cpp-raii-local-region'));
-    output.drops.push(drop(base, 'cpp-automatic-destructor', { automatic: true, typeName: record.typeName, functionName: fn.name }));
+    output.drops.push(drop(base, 'cpp-automatic-destructor', { automatic: true, typeName: record.typeName, functionName: fn.name, dropSemantics: 'cpp-raii-destructor' }));
   }
 }
 
@@ -254,5 +259,5 @@ function uniqueBundles(bundles) {
 }
 
 function emptyCppRecords() {
-  return { resources: [], owners: [], loans: [], aliases: [], drops: [], lifetimeRegions: [], unsafeBoundaries: [] };
+  return { resources: [], owners: [], loans: [], aliases: [], moves: [], drops: [], lifetimeRegions: [], unsafeBoundaries: [] };
 }

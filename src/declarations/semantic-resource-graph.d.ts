@@ -79,6 +79,7 @@ export interface SemanticResourceMoveRecord extends SemanticResourceGraphBaseRec
   readonly resourceId?: string;
   readonly fromOwnerId?: string;
   readonly toOwnerId?: string;
+  readonly moveKind?: string;
 }
 
 export interface SemanticResourceDropRecord extends SemanticResourceGraphBaseRecord {

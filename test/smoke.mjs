@@ -183,7 +183,7 @@ const smokeModules = [
   './smoke/semantic-react-wrapper-names.mjs',
   './smoke/semantic-sidecar-scanned-fixture.mjs',
   './smoke/semantic-sidecars.mjs',
-  './smoke/semantic-sidecar-proof-paradigm.mjs', './smoke/semantic-resource-graph.mjs', './smoke/semantic-resource-graph-rust-lifetimes.mjs',
+  './smoke/semantic-sidecar-proof-paradigm.mjs', './smoke/semantic-resource-graph.mjs', './smoke/semantic-resource-graph-rust-lifetimes.mjs', './smoke/semantic-resource-graph-cpp-ownership.mjs',
   './smoke/semantic-impact-merge-signals.mjs',
   './smoke/semantic-sidecar-expected.mjs',
   './smoke/semantic-merge-candidates.mjs',
