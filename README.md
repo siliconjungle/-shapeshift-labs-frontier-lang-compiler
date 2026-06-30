@@ -179,7 +179,8 @@ text or Rust semantic merge evidence is available. The compiler derives
 source-region resources, shared or mutable loans from reference parameters, raw
 pointer aliases, owned value parameters, local `let` ownership resources,
 shared/mutable borrow bindings, Copy-like value copies, explicit `.clone()`
-owned-value creation, possible lexical moves, call-argument ownership transfers,
+owned-value creation, shared-borrow compatibility obligations, mutable-borrow
+alias/loan exclusion obligations, possible lexical moves, call-argument ownership transfers,
 return ownership transfers, explicit `drop(...)` calls, lexical-drop evidence
 and destructor-drop obligations, returned-borrow escape records, named lifetime/reference/return
 bindings, explicit outlives relations such as `'long: 'short`, lifetime-region

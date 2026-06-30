@@ -273,6 +273,7 @@ export interface SemanticResourceGraphQuery {
   readonly borrowScopeKind?: string | readonly string[];
   readonly borrowScopeConstraintKind?: string | readonly string[];
   readonly escapeKind?: string | readonly string[];
+  readonly reasonCode?: string | readonly string[];
   readonly sourcePath?: string | readonly string[];
   readonly status?: string | readonly string[];
   readonly evidenceId?: string | readonly string[];

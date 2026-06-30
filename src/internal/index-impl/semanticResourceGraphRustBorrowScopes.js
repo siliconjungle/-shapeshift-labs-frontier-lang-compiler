@@ -8,6 +8,7 @@ export function appendRustBorrowScopes(output, bundle, record, context, signatur
     const idPart = `${context.recordId}_${idFragment(parameter.name ?? `param_${index + 1}`)}`;
     const constraintKinds = uniqueStrings([
       'loan-scope-boundary',
+      ...rustBorrowCompatibilityKinds(parameter.mode),
       ...(flow.hasAwait && flow.isAsync ? ['borrow-across-await'] : []),
       ...(parameter.mode === 'mutable' && flow.hasBranch ? ['exclusive-borrow-branch-join'] : []),
       ...(parameter.returned && (flow.hasExit || flow.hasAwait) ? ['no-escape-flow'] : [])
@@ -82,6 +83,12 @@ function rustReferenceParameters(signature) {
       returned: Boolean(lifetimeName && returnedLifetime === lifetimeName)
     }];
   });
+}
+
+function rustBorrowCompatibilityKinds(mode) {
+  return mode === 'mutable'
+    ? ['exclusive-borrow-alias-exclusion', 'exclusive-borrow-loan-exclusion']
+    : ['shared-borrow-compatible'];
 }
 
 function rustFlowFacts(signature, body) {

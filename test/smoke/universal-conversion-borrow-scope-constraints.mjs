@@ -19,7 +19,10 @@ const degradedBorrowScope = createUniversalBorrowScopeConstraintEvidence({
 assert.equal(degradedBorrowScope.status, 'degraded');
 assert.equal(degradedBorrowScope.requiredKinds.includes('borrow-across-await'), true);
 assert.equal(degradedBorrowScope.requiredKinds.includes('exclusive-borrow-branch-join'), true);
+assert.equal(degradedBorrowScope.requiredKinds.includes('exclusive-borrow-alias-exclusion'), true);
+assert.equal(degradedBorrowScope.requiredKinds.includes('exclusive-borrow-loan-exclusion'), true);
 assert.equal(degradedBorrowScope.missingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
+assert.equal(degradedBorrowScope.missingEvidence.includes('translation-borrow-scope:exclusive-borrow-alias-exclusion'), true);
 assert.equal(degradedBorrowScope.claims.borrowCheckerClaim, false);
 assert.equal(degradedBorrowScope.claims.flowSensitiveLifetimeClaim, false);
 

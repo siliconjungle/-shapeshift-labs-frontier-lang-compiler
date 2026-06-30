@@ -1,5 +1,6 @@
 import { idFragment } from '../../native-import-utils.js';
 import { appendRustBorrowEscapes } from './semanticResourceGraphRustBorrowEscapes.js';
+import { appendRustBorrowBinding, rustBorrowInitializer } from './semanticResourceGraphRustBorrows.js';
 import { appendRustMoveTransferEvidence, appendRustValueParameterOwnership } from './semanticResourceGraphRustMoveTransfers.js';
 import { rustBindingOwnershipSemantics, rustCloneInitializer } from './semanticResourceGraphRustOwnershipSemantics.js';
 import { rustLineAt, rustRecordBody, rustRecordSignature, rustStatementSpan } from './semanticResourceGraphRustSourceSpans.js';
@@ -57,63 +58,6 @@ function appendRustLetStatement(output, bundle, record, context, bindings, state
     return;
   }
   appendRustOwnedBinding(output, bundle, record, context, bindings, statement);
-}
-
-function appendRustBorrowBinding(output, bundle, record, context, bindings, statement, borrowed) {
-  const target = bindings.get(borrowed.name);
-  const idPart = `${context.recordId}_${idFragment(statement.name)}`;
-  const ownerId = `owner_rust_borrow_${idPart}`;
-  const lifetimeRegionId = `lifetime_rust_borrow_${idPart}`;
-  const resourceId = target?.resourceId ?? `resource_rust_borrowed_place_${context.recordId}_${idFragment(borrowed.name)}`;
-  output.owners.push({
-    id: ownerId,
-    name: statement.name,
-    ownerKind: 'rust-borrow-binding',
-    sourcePath: bundle.sourcePath,
-    sourceHash: bundle.sourceHash,
-    sourceSpan: rustStatementSpan(statement, bundle, record),
-    evidenceIds: context.evidenceIds
-  });
-  if (!target) {
-    output.resources.push({
-      id: resourceId,
-      name: borrowed.name,
-      resourceKind: 'rust-borrowed-place',
-      ownerId: context.ownerId,
-      sourcePath: bundle.sourcePath,
-      sourceHash: bundle.sourceHash,
-      sourceSpan: rustStatementSpan(statement, bundle, record),
-      evidenceIds: context.evidenceIds,
-      metadata: { rustKey: record.key, unresolvedBorrowTarget: true }
-    });
-  }
-  output.lifetimeRegions.push(rustBindingLifetime(lifetimeRegionId, statement.name, 'rust-borrow-scope', statement, bundle, record, context));
-  output.loans.push({
-    id: `loan_rust_local_${borrowed.mode}_${idPart}`,
-    resourceId,
-    ownerId,
-    lifetimeRegionId,
-    mode: borrowed.mode,
-    sourcePath: bundle.sourcePath,
-    sourceHash: bundle.sourceHash,
-    sourceSpan: rustStatementSpan(statement, bundle, record),
-    evidenceIds: context.evidenceIds,
-    metadata: {
-      rustKey: record.key,
-      statementText: statement.text,
-      borrowedBinding: borrowed.name,
-      evidenceKind: 'rust-lexical-borrow'
-    }
-  });
-  bindings.set(statement.name, {
-    name: statement.name,
-    resourceId,
-    ownerId,
-    lifetimeRegionId,
-    loanId: `loan_rust_local_${borrowed.mode}_${idPart}`,
-    bindingKind: 'borrow',
-    borrowedBinding: borrowed.name
-  });
 }
 
 function appendRustCloneBinding(output, bundle, record, context, bindings, statement, cloned) {
@@ -253,12 +197,6 @@ function rustExplicitDropStatements(body, bodySpan = {}) {
     });
   }
   return statements;
-}
-
-function rustBorrowInitializer(initializer) {
-  const match = initializer.match(/^&\s*(mut\s+)?([A-Za-z_][A-Za-z0-9_]*)\b/);
-  if (!match) return undefined;
-  return { mode: match[1] ? 'mutable' : 'shared', name: match[2] };
 }
 
 function rustMovedBinding(initializer, bindings) {

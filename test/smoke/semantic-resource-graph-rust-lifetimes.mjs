@@ -80,6 +80,58 @@ assert.equal(rustAsyncBorrowConstraint.requiredKinds.includes('no-escape-flow'),
 assert.equal(rustAsyncBorrowConstraint.missingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 assert.equal(rustAsyncBorrowConstraint.claims.borrowCheckerClaim, false);
 
+const rustBorrowCompatibilityImport = importNativeSource({
+  language: 'rust',
+  sourcePath: 'src/borrow_compatibility.rs',
+  sourceText: [
+    'pub fn compatible(source: String) {',
+    '  let shared_a = &source;',
+    '  let shared_b = &source;',
+    '  inspect(shared_a);',
+    '  inspect(shared_b);',
+    '}',
+    '',
+    'pub fn conflicting(mut source: String) {',
+    '  let shared = &source;',
+    '  let exclusive = &mut source;',
+    '  inspect(shared);',
+    '  mutate(exclusive);',
+    '}',
+    ''
+  ].join('\n')
+});
+const rustBorrowCompatibilityGraph = createSemanticImportSidecar(rustBorrowCompatibilityImport, { generatedAt: 141.85 }).resourceGraph;
+const sharedBorrowScopes = querySemanticResourceGraph(rustBorrowCompatibilityGraph, {
+  kind: 'borrow-scope',
+  borrowScopeConstraintKind: 'shared-borrow-compatible'
+});
+const exclusiveBorrowScopes = querySemanticResourceGraph(rustBorrowCompatibilityGraph, {
+  kind: 'borrow-scope',
+  borrowScopeConstraintKind: 'exclusive-borrow-loan-exclusion'
+});
+const loanOverlapConflicts = querySemanticResourceGraph(rustBorrowCompatibilityGraph, {
+  kind: 'conflict',
+  reasonCode: 'exclusive-resource-loan-overlap-requires-proof'
+});
+
+assert.equal(sharedBorrowScopes.length >= 3, true);
+assert.equal(exclusiveBorrowScopes.length >= 1, true);
+assert.equal(loanOverlapConflicts.length, 1);
+assert.equal(rustBorrowCompatibilityGraph.status, 'blocked');
+assert.equal(rustBorrowCompatibilityGraph.proofObligations.some((record) => record.kind === 'borrowAliasCompatibilityProof'), true);
+
+const rustBorrowCompatibilityConstraint = createUniversalBorrowScopeConstraintEvidence({
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  sourceBorrowScopes: rustBorrowCompatibilityGraph.borrowScopes
+});
+
+assert.equal(rustBorrowCompatibilityConstraint.requiredKinds.includes('shared-borrow-compatible'), true);
+assert.equal(rustBorrowCompatibilityConstraint.requiredKinds.includes('exclusive-borrow-alias-exclusion'), true);
+assert.equal(rustBorrowCompatibilityConstraint.requiredKinds.includes('exclusive-borrow-loan-exclusion'), true);
+assert.equal(rustBorrowCompatibilityConstraint.missingEvidence.includes('translation-borrow-scope:exclusive-borrow-loan-exclusion'), true);
+assert.equal(rustBorrowCompatibilityConstraint.constraints.find((record) => record.kind === 'exclusive-borrow-loan-exclusion')?.severity, 'error');
+
 const rustMoveTransferImport = importNativeSource({
   language: 'rust',
   sourcePath: 'src/move_transfer.rs',

@@ -56,7 +56,10 @@ export interface UniversalBorrowScopeConstraintModel {
   readonly lifetimeKinds: readonly string[];
   readonly flowKinds: readonly string[];
   readonly hasBorrow: boolean;
+  readonly hasSharedBorrow: boolean;
   readonly hasExclusive: boolean;
+  readonly hasExclusiveAliasExclusion: boolean;
+  readonly hasExclusiveLoanExclusion: boolean;
   readonly hasMove: boolean;
   readonly hasDrop: boolean;
   readonly hasNoEscape: boolean;

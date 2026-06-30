@@ -12,6 +12,7 @@ import { rustResourceGraphRecordsFromInput } from './internal/index-impl/semanti
 import { cLikeResourceGraphRecordsFromInput } from './internal/index-impl/semanticResourceGraphCLike.js';
 import { cppResourceGraphRecordsFromInput } from './internal/index-impl/semanticResourceGraphCpp.js';
 import { managedResourceGraphRecordsFromInput } from './internal/index-impl/semanticResourceGraphManaged.js';
+import { exclusiveLoanConflicts, proofObligationsForBorrowConflicts } from './internal/index-impl/semanticResourceGraphBorrowConflicts.js';
 import {
   aliasRecord,
   allRecords,
@@ -153,16 +154,21 @@ export function createSemanticResourceGraph(input = {}) {
     ...cppRecords.unsafeBoundaries,
     ...managedRecords.unsafeBoundaries
   ].map((record, index) => unsafeBoundaryRecord(record, index, input, evidenceIds)));
+  const generatedConflicts = [
+    ...exclusiveAliasConflicts(loans, aliases),
+    ...exclusiveLoanConflicts(loans),
+    ...unsafeBoundaryConflicts(unsafeBoundaries)
+  ];
   const conflicts = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.conflicts ?? []),
     ...(input.conflicts ?? []),
-    ...exclusiveAliasConflicts(loans, aliases),
-    ...unsafeBoundaryConflicts(unsafeBoundaries)
+    ...generatedConflicts
   ].map((record, index) => conflictRecord(record, index, input, evidenceIds)));
   const proofObligations = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.proofObligations ?? []),
     ...(input.proofObligations ?? []),
-    ...proofObligationsForUnsafeBoundaries(unsafeBoundaries)
+    ...proofObligationsForUnsafeBoundaries(unsafeBoundaries),
+    ...proofObligationsForBorrowConflicts(generatedConflicts)
   ].map((record, index) => proofObligationRecord(record, index, input, evidenceIds)));
   const summary = resourceGraphSummary({ resources, owners, loans, aliases, moves, drops, escapes, lifetimeRegions, lifetimeRelations, borrowScopes, unsafeBoundaries, conflicts, proofObligations });
   return {
@@ -242,6 +248,7 @@ export function querySemanticResourceGraph(graph = {}, query = {}) {
     .filter((record) => match(query.borrowScopeKind, record.scopeKind))
     .filter((record) => match(query.borrowScopeConstraintKind, record.constraintKinds ?? record.constraintKind))
     .filter((record) => match(query.escapeKind, record.escapeKind))
+    .filter((record) => match(query.reasonCode, record.reasonCode))
     .filter((record) => match(query.sourcePath, record.sourcePath))
     .filter((record) => match(query.status, record.status))
     .filter((record) => match(query.evidenceId, record.evidenceIds))

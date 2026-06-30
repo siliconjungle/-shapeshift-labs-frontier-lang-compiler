@@ -129,8 +129,11 @@ function scopeModel(scopes, ownership = {}, lifetime = {}, controlFlow = {}) {
   const lifetimeKinds = uniqueStrings([...(lifetime.requiredKinds ?? []), ...(lifetime.representedKinds ?? [])]);
   const flowKinds = uniqueStrings([...(controlFlow.requiredKinds ?? []), ...(controlFlow.representedKinds ?? [])]);
   const scopeKinds = uniqueStrings(scopes.flatMap((record) => record.constraintKinds));
+  const hasSharedBorrow = scopeKinds.includes('shared-borrow-compatible') || ownershipKinds.includes('shared-borrow');
+  const hasExclusiveAliasExclusion = scopeKinds.includes('exclusive-borrow-alias-exclusion');
+  const hasExclusiveLoanExclusion = scopeKinds.includes('exclusive-borrow-loan-exclusion');
   const hasBorrow = ownershipKinds.some((kind) => /borrow|alias|owner/.test(kind)) || lifetimeKinds.some((kind) => /loan|alias|lifetime|region/.test(kind));
-  const hasExclusive = ownershipKinds.includes('exclusive-borrow');
+  const hasExclusive = ownershipKinds.includes('exclusive-borrow') || hasExclusiveAliasExclusion || hasExclusiveLoanExclusion;
   const hasMove = ownershipKinds.includes('move-invalidates-source') || lifetimeKinds.includes('move-region-bound');
   const hasDrop = ownershipKinds.includes('drop-order') || lifetimeKinds.includes('drop-region-bound');
   const hasNoEscape = lifetimeKinds.includes('no-escape');
@@ -139,12 +142,14 @@ function scopeModel(scopes, ownership = {}, lifetime = {}, controlFlow = {}) {
   const hasAsync = flowKinds.some((kind) => /async|await|generator/.test(kind));
   const hasExit = flowKinds.some((kind) => /return|exit|exception|cancellation|finally|non-local/.test(kind));
   const hasConcurrency = flowKinds.includes('concurrency-order');
-  return { scopeKinds, ownershipKinds, lifetimeKinds, flowKinds, hasBorrow, hasExclusive, hasMove, hasDrop, hasNoEscape, hasUnsafe, hasBranch, hasAsync, hasExit, hasConcurrency };
+  return { scopeKinds, ownershipKinds, lifetimeKinds, flowKinds, hasBorrow, hasSharedBorrow, hasExclusive, hasExclusiveAliasExclusion, hasExclusiveLoanExclusion, hasMove, hasDrop, hasNoEscape, hasUnsafe, hasBranch, hasAsync, hasExit, hasConcurrency };
 }
 
 function requiredScopeKinds(model) {
   return uniqueStrings([
     ...model.scopeKinds,
+    ...(model.hasSharedBorrow ? ['shared-borrow-compatible'] : []),
+    ...(model.hasExclusive ? ['exclusive-borrow-alias-exclusion', 'exclusive-borrow-loan-exclusion'] : []),
     ...(model.hasBorrow ? ['loan-scope-boundary'] : []),
     ...(model.hasExclusive && model.hasBranch ? ['exclusive-borrow-branch-join'] : []),
     ...(model.hasBorrow && model.hasAsync ? ['borrow-across-await'] : []),
@@ -176,6 +181,9 @@ function scopeMissingEvidence(missingKinds, sourceModel, targetModel, input) {
 function scopeReview(missingKinds, sourceModel, targetModel, input) {
   return uniqueStrings([
     ...(missingKinds.length ? [`Borrow-scope constraints are missing target evidence for: ${missingKinds.join(', ')}.`] : []),
+    ...(sourceModel.hasSharedBorrow && !targetModel.scopeKinds.includes('shared-borrow-compatible') ? ['Source shared-borrow compatibility is not represented in the target graph.'] : []),
+    ...(sourceModel.hasExclusiveAliasExclusion && !targetModel.scopeKinds.includes('exclusive-borrow-alias-exclusion') ? ['Source mutable borrow alias exclusion is not represented in the target graph.'] : []),
+    ...(sourceModel.hasExclusiveLoanExclusion && !targetModel.scopeKinds.includes('exclusive-borrow-loan-exclusion') ? ['Source mutable borrow loan exclusion is not represented in the target graph.'] : []),
     ...(sourceModel.hasBorrow && sourceModel.hasAsync && !targetModel.scopeKinds.includes('borrow-across-await') ? ['Borrow/lifetime obligations cross async or generator suspension without target scope proof.'] : []),
     ...(sourceModel.hasDrop && sourceModel.hasExit && !targetModel.scopeKinds.includes('drop-cleanup-order') ? ['Drop or cleanup order crosses non-linear exit flow without target scope proof.'] : []),
     ...(input.review ?? [])
@@ -203,7 +211,7 @@ function scopeConstraintRecord(kind, sourceScopes, targetScopes, representedKind
     status: representedKinds.includes(kind) ? 'represented' : 'missing',
     sourceBorrowScopeIds: sourceScopes.filter((record) => record.constraintKinds.includes(kind)).map((record) => record.id),
     targetBorrowScopeIds: targetScopes.filter((record) => record.constraintKinds.includes(kind)).map((record) => record.id),
-    severity: ['borrow-across-await', 'drop-cleanup-order', 'move-invalidates-exit', 'unsafe-boundary-flow-proof'].includes(kind) ? 'error' : 'warning'
+    severity: ['exclusive-borrow-alias-exclusion', 'exclusive-borrow-loan-exclusion', 'borrow-across-await', 'drop-cleanup-order', 'move-invalidates-exit', 'unsafe-boundary-flow-proof'].includes(kind) ? 'error' : 'warning'
   };
 }
 
@@ -243,6 +251,9 @@ function borrowScopeKindsForRecord(record = {}) {
 }
 
 function scopeKindForToken(token) {
+  if (/shared-borrow-compatible|shared.*borrow.*compat/.test(token)) return ['shared-borrow-compatible'];
+  if (/exclusive-borrow-alias-exclusion|exclusive.*alias.*exclusion|mutable.*alias.*exclusion/.test(token)) return ['exclusive-borrow-alias-exclusion'];
+  if (/exclusive-borrow-loan-exclusion|exclusive.*loan.*exclusion|mutable.*borrow.*overlap/.test(token)) return ['exclusive-borrow-loan-exclusion'];
   if (/borrow-across-await|await-borrow|async-borrow|suspension-borrow/.test(token)) return ['borrow-across-await'];
   if (/exclusive.*branch|branch.*exclusive|join.*borrow/.test(token)) return ['exclusive-borrow-branch-join'];
   if (/drop.*cleanup|cleanup.*drop|finally|defer/.test(token)) return ['drop-cleanup-order'];
