@@ -177,6 +177,13 @@ pointer aliases, lifetime-region spans, and unsafe-boundary proof obligations.
 That makes Rust borrow-checker-shaped evidence visible in the universal sidecar
 without claiming borrow-checker equivalence.
 
+C/C++ native imports feed the same graph conservatively from source-preservation
+text. Pointer and array parameters become alias evidence, `malloc`, `calloc`,
+`realloc`, and `aligned_alloc` become heap resources, and `free` becomes drop
+evidence. Those records always fail closed with manual-memory proof obligations
+until a host tool or reviewer attaches stronger alias, lifetime, and ownership
+proof.
+
 Native imports include source maps, semantic merge candidates, and a loss summary for admission queues and dashboards. Informational losses produce `ready-with-losses`, warning losses produce `needs-review`, and error losses or failed import evidence produce `blocked`:
 
 ```js

@@ -124,3 +124,29 @@ assert.equal(rustResourceGraph.claims.borrowCheckerClaim, false);
 assert.equal(querySemanticResourceGraph(rustResourceGraph, { kind: 'loan', resourceId: rustResourceGraph.loans[0].resourceId }).length, 1);
 assert.equal(querySemanticResourceGraph(rustResourceGraph, { unsafe: true }).length >= 2, true);
 assert.equal(rustResourceSidecar.graphLayers.layers.resourceAliasLifetime.status, 'blocked');
+
+const cResourceImport = importNativeSource({
+  language: 'c',
+  sourcePath: 'src/native.c',
+  sourceText: [
+    '#include <stdlib.h>',
+    'int read_buffer(char *buffer, const char *name) {',
+    '  char *copy = malloc(64);',
+    '  free(copy);',
+    '  return buffer[0] + name[0];',
+    '}',
+    ''
+  ].join('\n')
+});
+const cResourceSidecar = createSemanticImportSidecar(cResourceImport, { generatedAt: 142 });
+const cResourceGraph = cResourceSidecar.resourceGraph;
+
+assert.equal(cResourceGraph.status, 'blocked');
+assert.equal(cResourceGraph.summary.resources >= 4, true);
+assert.equal(cResourceGraph.summary.aliases >= 2, true);
+assert.equal(cResourceGraph.summary.drops >= 1, true);
+assert.equal(cResourceGraph.summary.unsafeBoundaries >= 3, true);
+assert.equal(cResourceGraph.summary.unsafeBoundariesWithoutProof >= 3, true);
+assert.equal(querySemanticResourceGraph(cResourceGraph, { kind: 'drop' }).length >= 1, true);
+assert.equal(querySemanticResourceGraph(cResourceGraph, { unsafe: true }).length >= 3, true);
+assert.equal(cResourceSidecar.graphLayers.layers.resourceAliasLifetime.status, 'blocked');
