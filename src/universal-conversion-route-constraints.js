@@ -12,6 +12,7 @@ import { memoryModelConstraintForConversionRoute, memoryModelConstraintMatches }
 import { metaprogrammingConstraintForConversionRoute, metaprogrammingConstraintMatches } from './universal-metaprogramming-constraints.js';
 import { moduleConstraintForConversionRoute, moduleConstraintMatches } from './universal-module-constraints.js';
 import { objectModelConstraintForConversionRoute, objectModelConstraintMatches } from './universal-object-model-constraints.js';
+import { protocolConstraintForConversionRoute, protocolConstraintMatches } from './universal-protocol-constraints.js';
 import { resourceTransferForConversionRoute, resourceTransferMatches } from './universal-resource-transfer.js';
 import { scopeBindingConstraintForConversionRoute, scopeBindingConstraintMatches } from './universal-scope-binding-constraints.js';
 import { typeConstraintForConversionRoute, typeConstraintMatches } from './universal-type-constraints.js';
@@ -32,6 +33,7 @@ const families = [
   ['scopeBindingConstraint', 'scopeBindingConstraints', 'translationScopeBindingConstraint'],
   ['moduleConstraint', 'moduleConstraints', 'translationModuleConstraint'],
   ['objectModelConstraint', 'objectModelConstraints', 'translationObjectModelConstraint'],
+  ['protocolConstraint', 'protocolConstraints', 'translationProtocolConstraint'],
   ['resourceTransfer', 'resourceTransfers', 'translationResourceTransfer'],
   ['typeConstraint', 'typeConstraints', 'translationTypeConstraint']
 ];
@@ -76,6 +78,7 @@ export function createConversionRouteConstraints(input = {}, route = {}, routeIm
     scopeBindingConstraint: scopeBindingConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     moduleConstraint: moduleConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     objectModelConstraint: objectModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
+    protocolConstraint: protocolConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     typeConstraint: typeConstraintForConversionRoute(input, route, routeImports, routeEvidence)
   };
 }
@@ -97,5 +100,6 @@ export function conversionRouteMatchesConstraintQuery(route = {}, query = {}) {
     && scopeBindingConstraintMatches(route.scopeBindingConstraint, query)
     && moduleConstraintMatches(route.moduleConstraint, query)
     && objectModelConstraintMatches(route.objectModelConstraint, query)
+    && protocolConstraintMatches(route.protocolConstraint, query)
     && typeConstraintMatches(route.typeConstraint, query);
 }

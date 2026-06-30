@@ -83,6 +83,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     moduleConstraintAction: route.moduleConstraint?.action,
     objectModelConstraintStatus: route.objectModelConstraint?.status,
     objectModelConstraintAction: route.objectModelConstraint?.action,
+    protocolConstraintStatus: route.protocolConstraint?.status,
+    protocolConstraintAction: route.protocolConstraint?.action,
     typeConstraintStatus: route.typeConstraint?.status,
     typeConstraintAction: route.typeConstraint?.action,
     reviewRequired: true,
@@ -155,6 +157,7 @@ export function createUniversalConversionAdmissionRecord(input) {
     scopeBindingConstraint: constraintRecord(route.scopeBindingConstraint),
     moduleConstraint: constraintRecord(route.moduleConstraint),
     objectModelConstraint: constraintRecord(route.objectModelConstraint),
+    protocolConstraint: constraintRecord(route.protocolConstraint),
     typeConstraint: constraintRecord(route.typeConstraint),
     ownership: {
       keys: uniqueStrings(input.history?.index?.ownershipKeys ?? input.patchBundle?.index?.ownershipKeys ?? []),
@@ -203,6 +206,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       metaprogrammingConstraint: route.metaprogrammingConstraint, scopeBindingConstraint: route.scopeBindingConstraint,
       moduleConstraint: route.moduleConstraint,
       objectModelConstraint: route.objectModelConstraint,
+      protocolConstraint: route.protocolConstraint,
       typeConstraint: route.typeConstraint,
       note: 'Admission records are sortable merge-review evidence, not proof of target semantic equivalence.'
     }

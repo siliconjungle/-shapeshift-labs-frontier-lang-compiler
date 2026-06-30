@@ -34,6 +34,7 @@ import type { UniversalMetaprogrammingConstraintQuery } from './universal-metapr
 import type { UniversalScopeBindingConstraintQuery } from './universal-scope-binding-constraints.js';
 import type { UniversalModuleConstraintQuery } from './universal-module-constraints.js';
 import type { UniversalObjectModelConstraintQuery } from './universal-object-model-constraints.js';
+import type { UniversalProtocolConstraintQuery } from './universal-protocol-constraints.js';
 import type { UniversalTypeConstraintQuery } from './universal-type-constraints.js';
 
 export interface UniversalConversionArtifactIndex {
@@ -171,18 +172,14 @@ export interface UniversalConversionArtifactIndex {
   readonly metaprogrammingConstraintMissingKinds: readonly string[];
   readonly scopeBindingConstraintStatuses: readonly string[]; readonly scopeBindingConstraintActions: readonly string[];
   readonly scopeBindingConstraintMissingEvidence: readonly string[]; readonly scopeBindingConstraintMissingKinds: readonly string[];
-  readonly moduleConstraintStatuses: readonly string[];
-  readonly moduleConstraintActions: readonly string[];
-  readonly moduleConstraintMissingEvidence: readonly string[];
-  readonly moduleConstraintMissingKinds: readonly string[];
-  readonly objectModelConstraintStatuses: readonly string[];
-  readonly objectModelConstraintActions: readonly string[];
-  readonly objectModelConstraintMissingEvidence: readonly string[];
-  readonly objectModelConstraintMissingKinds: readonly string[];
-  readonly typeConstraintStatuses: readonly string[];
-  readonly typeConstraintActions: readonly string[];
-  readonly typeConstraintMissingEvidence: readonly string[];
-  readonly typeConstraintMissingKinds: readonly string[];
+  readonly moduleConstraintStatuses: readonly string[]; readonly moduleConstraintActions: readonly string[];
+  readonly moduleConstraintMissingEvidence: readonly string[]; readonly moduleConstraintMissingKinds: readonly string[];
+  readonly objectModelConstraintStatuses: readonly string[]; readonly objectModelConstraintActions: readonly string[];
+  readonly objectModelConstraintMissingEvidence: readonly string[]; readonly objectModelConstraintMissingKinds: readonly string[];
+  readonly protocolConstraintStatuses: readonly string[]; readonly protocolConstraintActions: readonly string[];
+  readonly protocolConstraintMissingEvidence: readonly string[]; readonly protocolConstraintMissingKinds: readonly string[];
+  readonly typeConstraintStatuses: readonly string[]; readonly typeConstraintActions: readonly string[];
+  readonly typeConstraintMissingEvidence: readonly string[]; readonly typeConstraintMissingKinds: readonly string[];
   readonly interlinguaRecordIds: readonly string[];
   readonly interlinguaLayerKinds: readonly string[];
   readonly interlinguaRepresentedLayerKinds: readonly string[];
@@ -202,7 +199,7 @@ export interface UniversalConversionArtifactIndex {
   readonly transformIdentityHashes: readonly string[];
 }
 
-export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalHostEnvironmentConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalObjectModelConstraintQuery, UniversalTypeConstraintQuery {
+export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalHostEnvironmentConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalObjectModelConstraintQuery, UniversalProtocolConstraintQuery, UniversalTypeConstraintQuery {
   readonly routeId?: string | readonly string[];
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];

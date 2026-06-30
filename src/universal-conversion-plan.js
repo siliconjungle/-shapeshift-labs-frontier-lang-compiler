@@ -258,7 +258,7 @@ function conversionEvidence(language, targetCell) {
     targetLossKinds: targetCell?.lossKinds ?? []
   };
 }
-function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, dataLayoutConstraint, effectConstraint, concurrencyModelConstraint, errorModelConstraint, evaluationModelConstraint, hostEnvironmentConstraint, memoryModelConstraint, metaprogrammingConstraint, scopeBindingConstraint, moduleConstraint, objectModelConstraint, typeConstraint) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, dataLayoutConstraint, effectConstraint, concurrencyModelConstraint, errorModelConstraint, evaluationModelConstraint, hostEnvironmentConstraint, memoryModelConstraint, metaprogrammingConstraint, scopeBindingConstraint, moduleConstraint, objectModelConstraint, protocolConstraint, typeConstraint) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -280,6 +280,7 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...(effectConstraint?.missingEvidence ?? []), ...(concurrencyModelConstraint?.missingEvidence ?? []), ...(errorModelConstraint?.missingEvidence ?? []), ...(evaluationModelConstraint?.missingEvidence ?? []), ...(hostEnvironmentConstraint?.missingEvidence ?? []), ...(memoryModelConstraint?.missingEvidence ?? []), ...(metaprogrammingConstraint?.missingEvidence ?? []), ...(scopeBindingConstraint?.missingEvidence ?? []),
     ...(moduleConstraint?.missingEvidence ?? []),
     ...(objectModelConstraint?.missingEvidence ?? []),
+    ...(protocolConstraint?.missingEvidence ?? []),
     ...(typeConstraint?.missingEvidence ?? []),
     ...(hasPassedRouteEvidence(evidence) ? [] : ['proof-or-replay-evidence'])
   ]);

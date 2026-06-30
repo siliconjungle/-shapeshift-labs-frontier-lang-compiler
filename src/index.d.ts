@@ -28,6 +28,7 @@ export * from './declarations/universal-metaprogramming-constraints.js';
 export * from './declarations/universal-scope-binding-constraints.js';
 export * from './declarations/universal-module-constraints.js';
 export * from './declarations/universal-object-model-constraints.js';
+export * from './declarations/universal-protocol-constraints.js';
 export * from './declarations/universal-type-constraints.js';
 export * from './declarations/universal-ownership-constraints.js';
 export * from './declarations/universal-resource-transfer.js';

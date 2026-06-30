@@ -15,6 +15,7 @@ export type UniversalInterlinguaLayerKind =
   | 'runtime-capability'
   | 'dialect-projection'
   | 'semantic-ownership'
+  | 'protocol-contract'
   | 'proof-evidence'
   | string;
 
@@ -44,6 +45,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'effect'
   | 'module'
   | 'object-model'
+  | 'protocol'
   | 'type'
   | string;
 
