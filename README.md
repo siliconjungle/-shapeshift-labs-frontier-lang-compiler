@@ -781,6 +781,7 @@ import {
   createUniversalConversionWorklist,
   createUniversalEffectConstraintEvidence,
   createUniversalLifetimeConstraintEvidence,
+  createUniversalModuleConstraintEvidence,
   createUniversalTypeConstraintEvidence,
   createUniversalOwnershipConstraintEvidence,
   createUniversalResourceTransferEvidence,
@@ -872,6 +873,19 @@ const effectConstraints = createUniversalEffectConstraintEvidence({
 });
 console.log(effectConstraints.missingKinds); // ["network-io"]
 console.log(effectConstraints.claims.effectEquivalenceClaim); // false without executable proof
+
+const moduleConstraints = createUniversalModuleConstraintEvidence({
+  sourceLanguage: 'typescript',
+  target: 'rust',
+  sourceModules: [
+    { kind: 'static import', specifier: './api', importedName: 'readUser' },
+    { kind: 're-export', exportedName: 'readUser' },
+    { kind: 'package runtime condition', packageName: '@pkg/api', packageCondition: 'import' }
+  ],
+  targetModules: [{ kind: 'static import', specifier: 'crate::api' }]
+});
+console.log(moduleConstraints.missingKinds); // import/export/package-resolution obligations still needing target evidence
+console.log(moduleConstraints.claims.moduleEquivalenceClaim); // false without source-bound module proof
 
 const typeConstraints = createUniversalTypeConstraintEvidence({
   sourceLanguage: 'typescript',
@@ -1005,6 +1019,17 @@ coordinator separate "target code shape exists" from "target execution preserves
 the source effect boundary." The record remains conservative: runtime,
 effect-equivalence, semantic-equivalence, and auto-merge claims stay false unless
 separate proof is attached.
+
+Routes can also carry `moduleConstraint`, an import/export/module-linkage
+admission record for source module identity, static and dynamic imports,
+side-effect imports, named/default/namespace exports, re-exports, package export
+and import maps, runtime package conditions, import attributes, host dependency
+edges, module resolution, foreign linkage, ABI boundaries, and visibility. Module
+queries such as `moduleConstraintMissingKind: "package-runtime-condition"` let a
+coordinator distinguish "target code imports something" from "target lowering
+preserved the source package/module contract." The record remains conservative:
+module-equivalence, linkage-equivalence, package-resolution, semantic-equivalence,
+and auto-merge claims stay false unless separate proof is attached.
 
 Routes can also carry `typeConstraint`, a public API/type-shape admission record
 for callable signatures, parameter and return shape, generic parameters,

@@ -54,6 +54,7 @@ export { createUniversalConversionPlan } from './internal/index-impl/createUnive
 export { createUniversalRuntimeCapabilityMatrix, queryUniversalRuntimeCapabilityMatrix, UniversalRuntimeCapabilityKinds, UniversalRuntimeHostProfiles } from './universal-runtime-capabilities.js';
 export { createUniversalEffectConstraintEvidence, effectConstraintMatches, UniversalEffectConstraintStatuses } from './universal-effect-constraints.js';
 export { createUniversalLifetimeConstraintEvidence, lifetimeConstraintMatches, UniversalLifetimeConstraintStatuses } from './universal-lifetime-constraints.js';
+export { createUniversalModuleConstraintEvidence, moduleConstraintMatches, UniversalModuleConstraintStatuses } from './universal-module-constraints.js';
 export { createUniversalTypeConstraintEvidence, typeConstraintMatches, UniversalTypeConstraintStatuses } from './universal-type-constraints.js';
 export { createUniversalOwnershipConstraintEvidence, ownershipConstraintMatches, UniversalOwnershipConstraintStatuses } from './universal-ownership-constraints.js';
 export { createUniversalResourceTransferEvidence, resourceTransferMatches, UniversalResourceTransferStatuses } from './universal-resource-transfer.js';

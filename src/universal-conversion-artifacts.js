@@ -172,6 +172,7 @@ function createRouteArtifact(route, options) {
     resourceTransfer: route.resourceTransfer,
     lifetimeConstraint: route.lifetimeConstraint,
     effectConstraint: route.effectConstraint,
+    moduleConstraint: route.moduleConstraint,
     typeConstraint: route.typeConstraint,
     admissionStatus,
     reviewRequired: true,
@@ -185,7 +186,7 @@ function createRouteArtifact(route, options) {
     admissionBucket: admissionRecord.admissionBucket,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
-    metadata: { ...recordMetadata, materialization, resourceTransfer: route.resourceTransfer, lifetimeConstraint: route.lifetimeConstraint, effectConstraint: route.effectConstraint, typeConstraint: route.typeConstraint }
+    metadata: { ...recordMetadata, materialization, resourceTransfer: route.resourceTransfer, lifetimeConstraint: route.lifetimeConstraint, effectConstraint: route.effectConstraint, moduleConstraint: route.moduleConstraint, typeConstraint: route.typeConstraint }
   };
 }
 

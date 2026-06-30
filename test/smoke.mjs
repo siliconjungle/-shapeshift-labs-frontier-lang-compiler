@@ -272,7 +272,7 @@ const smokeModules = [
   './smoke/roundtrip.mjs',
   './smoke/js-ts-roundtrip-oracles.mjs',
   './smoke/scanned-languages.mjs',
-  './smoke/matrices-final.mjs', './smoke/universal-capability-package-denominator.mjs', './smoke/universal-conversion-translation-admission.mjs', './smoke/universal-conversion-type-constraints.mjs',
+  './smoke/matrices-final.mjs', './smoke/universal-capability-package-denominator.mjs', './smoke/universal-conversion-translation-admission.mjs', './smoke/universal-conversion-type-constraints.mjs', './smoke/universal-conversion-module-constraints.mjs',
   './smoke/universal-conversion-interlingua-lowering.mjs',
   './smoke/html-css-matrices.mjs',
   './smoke/html-css-admission-matrix-fixtures.mjs',

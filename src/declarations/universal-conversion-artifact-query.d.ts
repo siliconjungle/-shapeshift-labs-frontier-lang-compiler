@@ -21,6 +21,7 @@ import type { UniversalInterlinguaQuery } from './universal-interlingua.js';
 import type { UniversalResourceTransferQuery } from './universal-resource-transfer.js';
 import type { UniversalLifetimeConstraintQuery } from './universal-lifetime-constraints.js';
 import type { UniversalEffectConstraintQuery } from './universal-effect-constraints.js';
+import type { UniversalModuleConstraintQuery } from './universal-module-constraints.js';
 import type { UniversalTypeConstraintQuery } from './universal-type-constraints.js';
 
 export interface UniversalConversionArtifactIndex {
@@ -119,6 +120,10 @@ export interface UniversalConversionArtifactIndex {
   readonly effectConstraintActions: readonly string[];
   readonly effectConstraintMissingEvidence: readonly string[];
   readonly effectConstraintMissingKinds: readonly string[];
+  readonly moduleConstraintStatuses: readonly string[];
+  readonly moduleConstraintActions: readonly string[];
+  readonly moduleConstraintMissingEvidence: readonly string[];
+  readonly moduleConstraintMissingKinds: readonly string[];
   readonly typeConstraintStatuses: readonly string[];
   readonly typeConstraintActions: readonly string[];
   readonly typeConstraintMissingEvidence: readonly string[];
@@ -135,7 +140,7 @@ export interface UniversalConversionArtifactIndex {
   readonly transformIdentityHashes: readonly string[];
 }
 
-export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalEffectConstraintQuery, UniversalTypeConstraintQuery {
+export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalEffectConstraintQuery, UniversalModuleConstraintQuery, UniversalTypeConstraintQuery {
   readonly routeId?: string | readonly string[];
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];

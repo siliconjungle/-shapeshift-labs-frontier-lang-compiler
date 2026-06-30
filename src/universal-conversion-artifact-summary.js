@@ -55,6 +55,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const resourceTransfers = routeArtifacts.map((artifact) => artifact.resourceTransfer ?? artifact.metadata?.resourceTransfer ?? artifact.admissionRecord?.metadata?.resourceTransfer ?? {});
   const lifetimeConstraints = routeArtifacts.map((artifact) => artifact.lifetimeConstraint ?? artifact.metadata?.lifetimeConstraint ?? artifact.admissionRecord?.metadata?.lifetimeConstraint ?? {});
   const effectConstraints = routeArtifacts.map((artifact) => artifact.effectConstraint ?? artifact.metadata?.effectConstraint ?? artifact.admissionRecord?.metadata?.effectConstraint ?? {});
+  const moduleConstraints = routeArtifacts.map((artifact) => artifact.moduleConstraint ?? artifact.metadata?.moduleConstraint ?? artifact.admissionRecord?.metadata?.moduleConstraint ?? {});
   const typeConstraints = routeArtifacts.map((artifact) => artifact.typeConstraint ?? artifact.metadata?.typeConstraint ?? artifact.admissionRecord?.metadata?.typeConstraint ?? {});
   const semanticOperationInterlinguaRecords = semanticOperations.map((operation) => operation.metadata?.interlingua ?? {});
   return {
@@ -82,6 +83,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     resourceTransfer: compactResourceTransferCounts(resourceTransfers),
     lifetimeConstraint: compactConstraintCounts(lifetimeConstraints),
     effectConstraint: compactEffectConstraintCounts(effectConstraints),
+    moduleConstraint: compactConstraintCounts(moduleConstraints),
     typeConstraint: compactConstraintCounts(typeConstraints),
     evidenceReceipts: compactEvidenceReceiptCounts(evidenceReceipts),
     interlingua: compactInterlinguaCounts(interlinguaRecords),
