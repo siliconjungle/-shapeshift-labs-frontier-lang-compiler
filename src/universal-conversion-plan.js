@@ -117,11 +117,14 @@ function conversionRoute(language, target, input, planId) {
   const runtimeRoute = runtimeRouteForConversion(input.runtimeMatrix, language, target);
   const runtime = conversionRuntime(runtimeRoute);
   const mode = conversionMode(language, target, sourceTarget, targetCell);
-  const blockers = conversionBlockers(language, targetCell, mode);
-  const review = conversionReviewReasons(language, targetCell, mode);
+  const blockers = conversionBlockers(language, targetCell, mode, runtime);
+  const review = conversionReviewReasons(language, targetCell, mode, runtime);
   const readiness = blockers.length
     ? 'blocked'
-    : maxSemanticMergeReadiness(language.readiness, targetCell?.readiness ?? readinessCell?.readiness ?? 'needs-review');
+    : maxSemanticMergeReadiness(
+      maxSemanticMergeReadiness(language.readiness, targetCell?.readiness ?? readinessCell?.readiness ?? 'needs-review'),
+      runtime.readiness ?? 'ready'
+    );
   const id = `conversion_${idFragment(language.language)}_to_${idFragment(target)}`;
   const routeEvidence = conversionRouteEvidence(input.evidence, language, target, id);
   const routeImports = importsForConversionLanguage(input.imports, language);
@@ -163,10 +166,10 @@ function conversionRoute(language, target, input, planId) {
     runtimeAdapterRequirements: runtime.adapterRequirements,
     evidence: conversionEvidence(language, targetCell),
     representation,
-    missingEvidence: conversionMissingEvidence(language, targetCell, mode, routeEvidence),
+    missingEvidence: conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime),
     blockers,
     review,
-    tasks: conversionTasks(language, target, mode, blockers, review),
+    tasks: conversionTasks(language, target, mode, blockers, review, runtime),
     mergeScore,
     mergeRefs: { ...mergeRefs, admissionStatus },
     autoMergeClaim: false,
@@ -194,19 +197,23 @@ function conversionMode(language, target, sourceTarget, targetCell) {
   return 'blocked';
 }
 
-function conversionBlockers(language, targetCell, mode) {
+function conversionBlockers(language, targetCell, mode, runtime) {
   return uniqueStrings([
     ...(language.imports.total === 0 ? ['No source import exists for this language.'] : []),
     ...(mode === 'blocked' ? ['No viable preserve, adapter, stub, or semantic-index conversion route exists.'] : []),
     ...(targetCell?.lossClass === 'missingAdapter' && mode !== 'semantic-index-only' ? [targetCell.reason] : []),
-    ...(language.blockers ?? []).filter((reason) => !reason.includes('Missing native-to-target projection adapter'))
+    ...(language.blockers ?? []).filter((reason) => !reason.includes('Missing native-to-target projection adapter')),
+    ...(runtime?.blockers ?? []),
+    ...((runtime?.missingCapabilities ?? []).map((capability) => `Runtime capability is missing: ${capability}.`))
   ]);
 }
 
-function conversionReviewReasons(language, targetCell, mode) {
+function conversionReviewReasons(language, targetCell, mode, runtime) {
   return uniqueStrings([
     ...(language.review ?? []),
     ...(targetCell?.reason ? [targetCell.reason] : []),
+    ...(runtime?.review ?? []),
+    ...((runtime?.adapterRequirements ?? []).map((entry) => `Runtime adapter evidence is required for ${entry.capability}.`)),
     ...(mode === 'stub-only' ? ['Route can emit declaration stubs only; executable semantics require a target adapter.'] : []),
     ...(mode === 'semantic-index-only' ? ['Route has semantic index evidence but no target code projection adapter.'] : []),
     ...(mode === 'target-adapter' ? ['Host target adapter evidence must be reviewed before accepting emitted target code.'] : [])
@@ -280,7 +287,7 @@ function conversionEvidence(language, targetCell) {
   };
 }
 
-function conversionMissingEvidence(language, targetCell, mode, evidence = []) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -290,11 +297,13 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = []) {
     ...(mode === 'target-adapter' && !targetCell?.adapter ? ['target-adapter-evidence'] : []),
     ...(mode === 'semantic-index-only' || targetCell?.lossClass === 'missingAdapter' ? ['target-adapter'] : []),
     ...(mode === 'stub-only' ? ['executable-target-semantics'] : []),
+    ...((runtime.missingCapabilities ?? []).map((capability) => `runtime-capability:${capability}`)),
+    ...((runtime.adapterRequirements ?? []).length ? ['runtime-adapter-proof'] : []),
     ...(hasPassedRouteEvidence(evidence) ? [] : ['proof-or-replay-evidence'])
   ]);
 }
 
-function conversionTasks(language, target, mode, blockers, review) {
+function conversionTasks(language, target, mode, blockers, review, runtime = {}) {
   return uniqueStrings([
     ...(language.imports.total ? [] : [`import ${language.language} source before planning ${target} output`]),
     ...(language.imports.symbols ? [] : [`attach semantic index for ${language.language}`]),
@@ -302,6 +311,8 @@ function conversionTasks(language, target, mode, blockers, review) {
     ...(mode === 'semantic-index-only' || mode === 'blocked' ? [`add ${language.language} to ${target} target adapter`] : []),
     ...(mode === 'stub-only' ? [`replace ${target} declaration stubs with executable adapter output`] : []),
     ...(mode === 'target-adapter' ? [`run and verify ${language.language} to ${target} target adapter`] : []),
+    ...((runtime.missingCapabilities ?? []).map((capability) => `provide runtime capability or adapter evidence for ${capability}`)),
+    ...((runtime.adapterRequirements ?? []).length ? [`prove runtime adapter obligations for ${language.language} to ${target}`] : []),
     ...(blockers.length || review.length ? [`collect proof, replay, or oracle evidence for ${language.language} to ${target}`] : [])
   ]);
 }
