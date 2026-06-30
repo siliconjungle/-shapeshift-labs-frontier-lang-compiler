@@ -164,6 +164,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       resourceGraphDrops: resourceGraph.summary.drops,
       resourceGraphEscapes: resourceGraph.summary.escapes,
       resourceGraphLifetimeRegions: resourceGraph.summary.lifetimeRegions,
+      resourceGraphLifetimeRelations: resourceGraph.summary.lifetimeRelations,
       resourceGraphUnsafeBoundaries: resourceGraph.summary.unsafeBoundaries,
       resourceGraphConflicts: resourceGraph.summary.conflicts,
       dependencyRelations: dependencies.total,

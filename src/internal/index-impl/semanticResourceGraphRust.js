@@ -1,5 +1,6 @@
 import { parseRustSemanticTree } from '@shapeshift-labs/frontier-lang-rust';
 import { idFragment, uniqueRecordsById } from '../../native-import-utils.js';
+import { appendRustSignatureLifetimes } from './semanticResourceGraphRustLifetimes.js';
 import { appendRustLocalOwnership } from './semanticResourceGraphRustOwnership.js';
 
 export function rustResourceGraphRecordsFromInput(input = {}) {
@@ -14,6 +15,7 @@ export function rustResourceGraphRecordsFromInput(input = {}) {
     drops: uniqueRecordsById(records.flatMap((record) => record.drops)),
     escapes: uniqueRecordsById(records.flatMap((record) => record.escapes)),
     lifetimeRegions: uniqueRecordsById(records.flatMap((record) => record.lifetimeRegions)),
+    lifetimeRelations: uniqueRecordsById(records.flatMap((record) => record.lifetimeRelations)),
     unsafeBoundaries: uniqueRecordsById(records.flatMap((record) => record.unsafeBoundaries))
   };
 }
@@ -107,7 +109,9 @@ function appendRustRecord(output, bundle, record, bundleIndex) {
     endLine: (record.bodySpan ?? record.sourceSpan)?.endLine,
     evidenceIds
   });
-  appendRustSignatureLoans(output, bundle, record, { recordId, ownerId, evidenceIds });
+  const signature = ['fn', 'method'].includes(record.kind) && bundle.sourceText ? rustRecordSignature(bundle.sourceText, record) : '';
+  appendRustSignatureLifetimes(output, bundle, record, { recordId, ownerId, evidenceIds }, signature);
+  appendRustSignatureLoans(output, bundle, record, { recordId, ownerId, evidenceIds, signature });
   appendRustLocalOwnership(output, bundle, record, { recordId, ownerId, evidenceIds });
   if ((record.proofGaps ?? []).some((gap) => gap?.code === 'rust-unsafe-boundary')) {
     output.unsafeBoundaries.push({
@@ -125,7 +129,7 @@ function appendRustRecord(output, bundle, record, bundleIndex) {
 
 function appendRustSignatureLoans(output, bundle, record, context) {
   if (!['fn', 'method'].includes(record.kind) || !bundle.sourceText) return;
-  const signature = rustRecordSignature(bundle.sourceText, record);
+  const signature = context.signature ?? rustRecordSignature(bundle.sourceText, record);
   const params = rustParameterTexts(signature);
   for (const [index, param] of params.entries()) {
     const name = rustParameterName(param) ?? `param_${index + 1}`;
@@ -243,5 +247,5 @@ function uniqueRustBundles(bundles) {
 }
 
 function emptyRustRecords() {
-  return { resources: [], owners: [], loans: [], aliases: [], moves: [], drops: [], escapes: [], lifetimeRegions: [], unsafeBoundaries: [] };
+  return { resources: [], owners: [], loans: [], aliases: [], moves: [], drops: [], escapes: [], lifetimeRegions: [], lifetimeRelations: [], unsafeBoundaries: [] };
 }

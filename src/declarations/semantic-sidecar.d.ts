@@ -304,7 +304,7 @@ export interface SemanticImportSidecar {
     readonly paradigmSemanticsRecords: number;
     readonly paradigmSemanticsGroups: number;
     readonly paradigmSemanticsLoweringRecords: number;
-    readonly resourceGraphRecords: number; readonly resourceGraphResources: number; readonly resourceGraphLoans: number; readonly resourceGraphAliases: number; readonly resourceGraphMoves: number; readonly resourceGraphDrops: number; readonly resourceGraphEscapes: number; readonly resourceGraphLifetimeRegions: number; readonly resourceGraphUnsafeBoundaries: number; readonly resourceGraphConflicts: number;
+    readonly resourceGraphRecords: number; readonly resourceGraphResources: number; readonly resourceGraphLoans: number; readonly resourceGraphAliases: number; readonly resourceGraphMoves: number; readonly resourceGraphDrops: number; readonly resourceGraphEscapes: number; readonly resourceGraphLifetimeRegions: number; readonly resourceGraphLifetimeRelations: number; readonly resourceGraphUnsafeBoundaries: number; readonly resourceGraphConflicts: number;
     readonly dependencyRelations: number; readonly dependencyPredicates: readonly string[];
     readonly graphLayers: number; readonly graphLayersUsable: number; readonly graphLayerStatus: SemanticGraphLayerSummary['status'];
     readonly semanticImpactRecords: number; readonly semanticImpactHighRiskRecords: number; readonly semanticImpactRequiredVerificationSteps: number;

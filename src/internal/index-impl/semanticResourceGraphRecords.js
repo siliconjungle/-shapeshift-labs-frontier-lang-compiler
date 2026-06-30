@@ -37,6 +37,18 @@ export function lifetimeRegionRecord(record, index, input, evidenceIds) {
   });
 }
 
+export function lifetimeRelationRecord(record, index, input, evidenceIds) {
+  return compactRecord({
+    ...record,
+    recordKind: 'lifetime-relation',
+    id: record.id ?? `lifetime_relation_${idFragment(record.fromLifetimeId ?? record.from ?? index)}_${idFragment(record.toLifetimeId ?? record.to ?? record.relationKind ?? 'target')}`,
+    relationKind: record.relationKind ?? record.kind ?? 'outlives',
+    sourcePath: record.sourcePath ?? input.sourcePath,
+    sourceHash: record.sourceHash ?? input.sourceHash,
+    evidenceIds: uniqueStrings([...(record.evidenceIds ?? []), ...evidenceIds])
+  });
+}
+
 export function loanRecord(record, index, input, evidenceIds) {
   const mode = normalizeLoanMode(record.mode ?? record.loanMode ?? record.kind);
   return compactRecord({
@@ -195,6 +207,7 @@ export function resourceGraphSummary(input) {
     ...(input.resources.length ? [] : ['missing-resource-records']),
     ...(input.loans.length || input.aliases.length || input.moves.length || input.drops.length ? [] : ['missing-alias-loan-move-drop-records']),
     ...(input.lifetimeRegions.length ? [] : ['missing-lifetime-region-records']),
+    ...(input.lifetimeRelations.length ? ['lifetime-relation-review-required'] : []),
     ...(input.escapes.length ? ['escape-proof-review-required'] : []),
     ...(input.unsafeBoundaries.length ? ['unsafe-boundary-review-required'] : []),
     ...input.conflicts.map((record) => record.reasonCode)
@@ -209,6 +222,7 @@ export function resourceGraphSummary(input) {
     drops: input.drops.length,
     escapes: input.escapes.length,
     lifetimeRegions: input.lifetimeRegions.length,
+    lifetimeRelations: input.lifetimeRelations.length,
     unsafeBoundaries: input.unsafeBoundaries.length,
     conflicts: input.conflicts.length,
     proofObligations: input.proofObligations.length,
@@ -233,6 +247,7 @@ export function allRecords(input) {
     ...(input.drops ?? []),
     ...(input.escapes ?? []),
     ...(input.lifetimeRegions ?? []),
+    ...(input.lifetimeRelations ?? []),
     ...(input.unsafeBoundaries ?? []),
     ...(input.conflicts ?? []),
     ...(input.proofObligations ?? [])

@@ -154,6 +154,7 @@ const resourceGraph = createSemanticResourceGraph({
   resources: [{ id: 'resource_buffer', resourceKind: 'heap-buffer', ownerId: 'owner_parse' }],
   owners: [{ id: 'owner_parse', ownerKind: 'function' }],
   lifetimeRegions: [{ id: 'life_header', startLine: 3, endLine: 8 }],
+  lifetimeRelations: [{ id: 'life_header_outlives_body', relationKind: 'outlives', fromLifetimeId: 'life_header', toLifetimeId: 'life_body' }],
   loans: [{ id: 'loan_header', resourceId: 'resource_buffer', ownerId: 'owner_parse', lifetimeRegionId: 'life_header', mode: 'shared' }],
   escapes: [{ id: 'escape_header', resourceId: 'resource_buffer', lifetimeRegionId: 'life_header', escapeKind: 'returned-borrow', status: 'needs-proof' }],
   unsafeBoundaries: [{ id: 'unsafe_ffi', resourceId: 'resource_buffer', proofStatus: 'missing' }]
@@ -165,9 +166,9 @@ console.log(resourceGraph.claims.borrowCheckerClaim); // false
 
 This is the slot for borrow-checker-shaped information in the universal graph:
 resources, owners, shared/mutable/exclusive loans, aliases, moves, drops,
-borrow escapes, lifetime regions, unsafe boundaries, conflicts, and proof
-obligations. The record is runtime-neutral and does not pretend to be Rust's
-borrow checker.
+borrow escapes, lifetime regions, lifetime relations, unsafe boundaries,
+conflicts, and proof obligations. The record is runtime-neutral and does not
+pretend to be Rust's borrow checker.
 Rust, C/C++, Swift, GPU/canvas resource lifetimes, DOM mutation, and JS object
 aliasing can all attach evidence to the same shape, while semantic merge still
 fails closed when alias/lifetime proof is missing.
@@ -177,8 +178,9 @@ text or Rust semantic merge evidence is available. The compiler derives
 source-region resources, shared or mutable loans from reference parameters, raw
 pointer aliases, local `let` ownership resources, shared/mutable borrow
 bindings, possible lexical moves, explicit `drop(...)` calls, lexical-drop
-evidence, returned-borrow escape records, lifetime-region spans, and
-unsafe-boundary proof obligations.
+evidence, returned-borrow escape records, named lifetime/reference/return
+bindings, explicit outlives relations such as `'long: 'short`, lifetime-region
+spans, and unsafe-boundary proof obligations.
 That makes Rust borrow-checker-shaped evidence visible in the universal sidecar
 without claiming borrow-checker equivalence.
 
