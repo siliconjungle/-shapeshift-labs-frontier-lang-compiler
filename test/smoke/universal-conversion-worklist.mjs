@@ -68,10 +68,36 @@ const runtimeQuery = queryUniversalConversionWorklist(runtimePlan, {
 assert.equal(runtimeQuery.found, true);
 assert.equal(runtimeQuery.bestItem.kind, 'prove-runtime-adapter');
 assert.equal(runtimeQuery.bestItem.routeIds.includes(runtimeRoute.id), true);
+const obligationPlan = createUniversalConversionPlan({
+  generatedAt: 803,
+  universalCapabilityMatrix: readyCapabilityMatrix(),
+  targets: ['rust'],
+  imports: [scannedJsImport],
+  evidence: [routeProof('obligation')],
+  resourceTransfers: [{ sourceLanguage: 'javascript', target: 'rust', sourceResourceGraph: sourceResourceGraph(), targetResourceGraph: targetResourceGraph() }],
+  lifetimeConstraints: [{ sourceLanguage: 'javascript', target: 'rust', sourceLifetimeConstraints: [{ kind: 'lifetime-region' }, { kind: 'loan borrow region' }, { kind: 'move region bound' }], targetLifetimeConstraints: [{ kind: 'lifetime-region' }, { kind: 'loan borrow region' }] }],
+  controlFlowConstraints: [{ sourceLanguage: 'javascript', target: 'rust', sourceControlFlows: [{ id: 'branch', kind: 'branch condition' }, { id: 'await', kind: 'await-order promise chain' }], targetControlFlows: [{ id: 'rust_branch', kind: 'branch condition' }] }],
+  borrowScopeConstraints: [{ sourceLanguage: 'javascript', target: 'rust', targetBorrowScopes: [{ id: 'rust_scope', kind: 'loan scope boundary' }] }]
+});
+const obligationWorklist = createUniversalConversionWorklist(obligationPlan);
+assert.equal(obligationWorklist.summary.interlinguaObligationGaps >= 1, true);
+assert.equal(obligationWorklist.items.some((item) => item.kind === 'collect-interlingua-obligation-proof'
+  && item.interlinguaConstraintFamilies.includes('borrow-scope')
+  && item.interlinguaConstraintObligationKinds.includes('borrow-across-await')), true);
+const obligationQuery = queryUniversalConversionWorklist(obligationWorklist, {
+  kind: 'collect-interlingua-obligation-proof',
+  interlinguaConstraintFamily: 'borrow-scope',
+  interlinguaConstraintObligationKind: 'borrow-across-await',
+  interlinguaConstraintObligationStatus: 'missing'
+});
+assert.equal(obligationQuery.found, true);
+assert.equal(obligationQuery.bestItem.action, 'collect-interlingua-obligation-evidence');
+assert.equal(obligationQuery.bestItem.tasks.some((task) => task.includes('borrow-across-await')), true);
 const missQuery = queryUniversalConversionWorklist(adapterGapWorklist, { target: 'python' });
 assert.equal(missQuery.found, false);
 assert.equal(missQuery.reasons[0].includes('target=python'), true);
 assert.equal(UniversalConversionWorkItemKinds.includes('prove-runtime-adapter'), true);
+assert.equal(UniversalConversionWorkItemKinds.includes('collect-interlingua-obligation-proof'), true);
 
 function readyCapabilityMatrix() {
   return {
@@ -111,4 +137,35 @@ function readyCapabilityMatrix() {
     },
     metadata: { compileTargets: ['rust'] }
   };
+}
+
+function graphSummary(overrides = {}) {
+  return { records: 4, resources: 1, owners: 1, loans: 1, aliases: 0, moves: 0, drops: 0, lifetimeRegions: 1, unsafeBoundaries: 0, conflicts: 0, proofObligations: 0, unsafeBoundariesWithoutProof: 0, reasonCodes: [], ...overrides };
+}
+
+function sourceResourceGraph() {
+  return {
+    id: 'source_worklist_obligation_graph',
+    summary: graphSummary({ moves: 1 }),
+    resources: [{ id: 'user', resourceKind: 'object' }],
+    owners: [{ id: 'user_owner', ownerKind: 'single' }],
+    loans: [{ id: 'user_mut_loan', mode: 'mutable', lifetimeRegionId: 'lt_user' }],
+    moves: [{ id: 'user_move', moveKind: 'move', lifetimeRegionId: 'lt_user' }],
+    lifetimeRegions: [{ id: 'lt_user', lifetimeKind: 'lexical' }]
+  };
+}
+
+function targetResourceGraph() {
+  return {
+    id: 'target_worklist_obligation_graph',
+    summary: graphSummary(),
+    resources: [{ id: 'user', resourceKind: 'object' }],
+    owners: [{ id: 'user_owner', ownerKind: 'single' }],
+    loans: [{ id: 'user_mut_loan', mode: 'mutable', lifetimeRegionId: 'lt_user' }],
+    lifetimeRegions: [{ id: 'lt_user', lifetimeKind: 'lexical' }]
+  };
+}
+
+function routeProof(id) {
+  return { id: `worklist_${id}_proof`, kind: 'conversion-replay-proof', status: 'passed', routeId: 'conversion_javascript_to_rust', sourceLanguage: 'javascript', target: 'rust' };
 }

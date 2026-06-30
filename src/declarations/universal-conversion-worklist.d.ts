@@ -14,6 +14,7 @@ export type UniversalConversionWorkItemKind =
   | 'collect-translation-proof'
   | 'prove-runtime-adapter'
   | 'collect-dialect-evidence'
+  | 'collect-interlingua-obligation-proof'
   | 'collect-source-evidence'
   | 'review-route'
   | 'unblock-route';
@@ -23,6 +24,7 @@ export type UniversalConversionWorkItemAction =
   | 'collect-translation-evidence'
   | 'collect-runtime-adapter-proof'
   | 'collect-dialect-projection-evidence'
+  | 'collect-interlingua-obligation-evidence'
   | 'collect-source-evidence'
   | 'review-conversion-route'
   | 'resolve-blocker';
@@ -48,6 +50,11 @@ export interface UniversalConversionWorkItem {
   readonly runtimeAdapterRequirementIds: readonly string[];
   readonly dialectRecordIds: readonly string[];
   readonly targetAdapterIds: readonly string[];
+  readonly interlinguaConstraintFamilies: readonly string[];
+  readonly interlinguaConstraintSourceIds: readonly string[];
+  readonly interlinguaConstraintObligationKinds: readonly string[];
+  readonly interlinguaConstraintObligationStatuses: readonly string[];
+  readonly interlinguaConstraintObligationMissingEvidence: readonly string[];
   readonly autoMergeClaim: false;
   readonly semanticEquivalenceClaim: false;
 }
@@ -80,6 +87,11 @@ export interface UniversalConversionWorklistQuery extends UniversalConversionWor
   readonly runtimeAdapterRequirementId?: string | readonly string[];
   readonly dialectRecordId?: string | readonly string[];
   readonly targetAdapterId?: string | readonly string[];
+  readonly interlinguaConstraintFamily?: string | readonly string[];
+  readonly interlinguaConstraintSourceId?: string | readonly string[];
+  readonly interlinguaConstraintObligationKind?: string | readonly string[];
+  readonly interlinguaConstraintObligationStatus?: string | readonly string[];
+  readonly interlinguaConstraintObligationMissingEvidence?: string | readonly string[];
 }
 
 export interface UniversalConversionWorklist {
@@ -103,6 +115,7 @@ export interface UniversalConversionWorklist {
     readonly proofEvidenceGaps: number;
     readonly runtimeAdapterGaps: number;
     readonly dialectEvidenceGaps: number;
+    readonly interlinguaObligationGaps: number;
     readonly autoMergeClaims: 0;
     readonly semanticEquivalenceClaims: 0;
   };

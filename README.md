@@ -972,6 +972,11 @@ const proofWork = queryUniversalConversionWorklist(conversionWorklist, {
   evidenceKey: 'translation-proof-or-replay'
 });
 console.log(proofWork.bestItem?.routeIds); // route refs ready to refill a proof worker queue
+const obligationWork = queryUniversalConversionWorklist(conversionWorklist, {
+  kind: 'collect-interlingua-obligation-proof',
+  interlinguaConstraintObligationStatus: 'missing'
+});
+console.log(obligationWork.bestItem?.interlinguaConstraintObligationKinds); // missing source-bound proof obligations
 
 const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan);
 console.log(conversionArtifacts.historyRecords[0].kind); // "frontier.lang.semanticHistoryRecord"
@@ -1004,7 +1009,7 @@ The projection target matrix separates five runtime/API classes:
 
 `createUniversalConversionRouteEvidenceReceipt` turns one route plus optional raw evidence records into a compact proof receipt. It records route-bound evidence IDs, passed proof IDs, rejected unscoped or mismatched evidence, missing proof/source evidence, sources, ownership keys, conflict keys, blockers, and review reasons. This gives distributed workers a durable answer to "which evidence actually backs this conversion route?" without promoting a passed replay into a broad semantic-equivalence or auto-merge claim.
 
-`createUniversalConversionWorklist` derives queue-ready next work from those routes: add a target adapter, collect translation proof, prove runtime adapters, collect dialect projection evidence, collect source/parser/source-map evidence, review a route, or unblock a blocked route. Worklist items are grouped by source language, target, route IDs, evidence keys, missing evidence, blockers, review reasons, and tasks so coordinators can refill swarms without re-scanning every route. `queryUniversalConversionWorklist` filters those items by kind, priority, route, language, target, readiness, action, evidence key, missing evidence, blocker, review reason, runtime adapter requirement, dialect record, or target adapter ID. The worklist is still conservative route evidence: it keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
+`createUniversalConversionWorklist` derives queue-ready next work from those routes: add a target adapter, collect translation proof, prove runtime adapters, collect dialect projection evidence, collect source/parser/source-map evidence, collect missing interlingua obligation proof, review a route, or unblock a blocked route. Worklist items are grouped by source language, target, route IDs, evidence keys, missing evidence, blockers, review reasons, interlingua constraint families/obligations, and tasks so coordinators can refill swarms without re-scanning every route. `queryUniversalConversionWorklist` filters those items by kind, priority, route, language, target, readiness, action, evidence key, missing evidence, blocker, review reason, runtime adapter requirement, dialect record, target adapter ID, interlingua constraint family, or interlingua obligation kind/status. The worklist is still conservative route evidence: it keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
 Each route also carries `translationAdmission`, an explicit cross-language review contract with status/action pairs: `blocked`/`reject`, `needs-adapter`/`add-target-adapter`, `needs-evidence`/`collect-translation-evidence`, `needs-review`/`review-target-adapter`, or `admittable-for-review`/`materialize-review-record`. It records required and represented construct kinds, missing translation evidence, bound evidence IDs, runtime adapter requirements, dialect records, and the target adapter ID while keeping `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 

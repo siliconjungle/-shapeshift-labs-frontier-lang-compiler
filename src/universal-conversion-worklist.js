@@ -7,6 +7,7 @@ export const UniversalConversionWorkItemKinds = Object.freeze([
   'collect-translation-proof',
   'prove-runtime-adapter',
   'collect-dialect-evidence',
+  'collect-interlingua-obligation-proof',
   'collect-source-evidence',
   'review-route',
   'unblock-route'
@@ -57,11 +58,27 @@ function workItemsForRoutes(routes, options) {
     if (route.blockers?.length) addWorkItem(items, route, 'unblock-route', 'route-blocker', 'blocker');
     for (const key of route.missingEvidence ?? []) addMissingEvidenceItem(items, route, key);
     for (const key of route.translationAdmission?.missingEvidence ?? []) addMissingEvidenceItem(items, route, key);
+    addInterlinguaObligationItems(items, route);
     if (route.runtimeAdapterRequirements?.length) addWorkItem(items, route, 'prove-runtime-adapter', 'runtime-adapter-proof', 'high');
     if (route.dialect?.missingEvidence?.length) addWorkItem(items, route, 'collect-dialect-evidence', route.dialect.missingEvidence[0], 'high');
     if (options.includeReviewItems !== false && route.review?.length) addWorkItem(items, route, 'review-route', 'route-review', route.priority === 'blocker' ? 'blocker' : 'normal');
   }
   return items;
+}
+
+function addInterlinguaObligationItems(items, route) {
+  for (const obligation of route.interlingua?.constraints?.obligations ?? []) {
+    if (obligation.status !== 'missing' && !(obligation.missingEvidence ?? []).length) continue;
+    const key = (obligation.missingEvidence ?? [])[0] ?? `interlingua-obligation:${obligation.family}:${obligation.kind}`;
+    addWorkItem(items, route, 'collect-interlingua-obligation-proof', key, obligation.severity === 'error' ? 'high' : 'normal', {
+      constraintFamilies: [obligation.family],
+      constraintObligationKinds: [obligation.kind],
+      constraintObligationStatuses: [obligation.status],
+      constraintObligationMissingEvidence: obligation.missingEvidence ?? [],
+      constraintSourceIds: [obligation.sourceId],
+      missingEvidence: obligation.missingEvidence ?? []
+    });
+  }
 }
 
 function addMissingEvidenceItem(items, route, key) {
@@ -72,14 +89,14 @@ function addMissingEvidenceItem(items, route, key) {
   return addWorkItem(items, route, 'collect-source-evidence', key, route.readiness === 'blocked' ? 'blocker' : 'normal');
 }
 
-function addWorkItem(items, route, kind, evidenceKey, priority) {
+function addWorkItem(items, route, kind, evidenceKey, priority, details = {}) {
   const id = workItemId(kind, route, evidenceKey);
   const existing = items.get(id);
-  const next = workItemForRoute(id, kind, route, evidenceKey, priority);
+  const next = workItemForRoute(id, kind, route, evidenceKey, priority, details);
   items.set(id, existing ? mergeWorkItems(existing, next) : next);
 }
 
-function workItemForRoute(id, kind, route, evidenceKey, priority) {
+function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) {
   return {
     id,
     kind,
@@ -94,13 +111,18 @@ function workItemForRoute(id, kind, route, evidenceKey, priority) {
     admissionActions: [route.admissionAction],
     routeActions: [route.routeAction],
     evidenceKeys: [evidenceKey],
-    missingEvidence: uniqueStrings([...(route.missingEvidence ?? []), ...(route.translationAdmission?.missingEvidence ?? [])]),
+    missingEvidence: uniqueStrings([...(route.missingEvidence ?? []), ...(route.translationAdmission?.missingEvidence ?? []), ...(details.missingEvidence ?? [])]),
     blockers: route.blockers ?? [],
     review: route.review ?? [],
-    tasks: workItemTasks(kind, route, evidenceKey),
+    tasks: workItemTasks(kind, route, evidenceKey, details),
     runtimeAdapterRequirementIds: (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
     dialectRecordIds: route.dialect?.recordIds ?? [],
     targetAdapterIds: uniqueStrings([route.adapter, route.translationAdmission?.targetAdapterId]),
+    interlinguaConstraintFamilies: uniqueStrings(details.constraintFamilies ?? []),
+    interlinguaConstraintSourceIds: uniqueStrings(details.constraintSourceIds ?? []),
+    interlinguaConstraintObligationKinds: uniqueStrings(details.constraintObligationKinds ?? []),
+    interlinguaConstraintObligationStatuses: uniqueStrings(details.constraintObligationStatuses ?? []),
+    interlinguaConstraintObligationMissingEvidence: uniqueStrings(details.constraintObligationMissingEvidence ?? []),
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   };
@@ -125,7 +147,12 @@ function mergeWorkItems(left, right) {
     tasks: uniqueStrings([...left.tasks, ...right.tasks]),
     runtimeAdapterRequirementIds: uniqueStrings([...left.runtimeAdapterRequirementIds, ...right.runtimeAdapterRequirementIds]),
     dialectRecordIds: uniqueStrings([...left.dialectRecordIds, ...right.dialectRecordIds]),
-    targetAdapterIds: uniqueStrings([...left.targetAdapterIds, ...right.targetAdapterIds])
+    targetAdapterIds: uniqueStrings([...left.targetAdapterIds, ...right.targetAdapterIds]),
+    interlinguaConstraintFamilies: uniqueStrings([...left.interlinguaConstraintFamilies, ...right.interlinguaConstraintFamilies]),
+    interlinguaConstraintSourceIds: uniqueStrings([...left.interlinguaConstraintSourceIds, ...right.interlinguaConstraintSourceIds]),
+    interlinguaConstraintObligationKinds: uniqueStrings([...left.interlinguaConstraintObligationKinds, ...right.interlinguaConstraintObligationKinds]),
+    interlinguaConstraintObligationStatuses: uniqueStrings([...left.interlinguaConstraintObligationStatuses, ...right.interlinguaConstraintObligationStatuses]),
+    interlinguaConstraintObligationMissingEvidence: uniqueStrings([...left.interlinguaConstraintObligationMissingEvidence, ...right.interlinguaConstraintObligationMissingEvidence])
   };
 }
 
@@ -138,14 +165,16 @@ function workItemAction(kind) {
   if (kind === 'collect-translation-proof') return 'collect-translation-evidence';
   if (kind === 'prove-runtime-adapter') return 'collect-runtime-adapter-proof';
   if (kind === 'collect-dialect-evidence') return 'collect-dialect-projection-evidence';
+  if (kind === 'collect-interlingua-obligation-proof') return 'collect-interlingua-obligation-evidence';
   if (kind === 'review-route') return 'review-conversion-route';
   if (kind === 'unblock-route') return 'resolve-blocker';
   return 'collect-source-evidence';
 }
 
-function workItemTasks(kind, route, evidenceKey) {
+function workItemTasks(kind, route, evidenceKey, details = {}) {
   return uniqueStrings([
     `${workItemAction(kind)} for ${route.sourceLanguage} to ${route.target}`,
+    ...(details.constraintObligationKinds ?? []).map((kind) => `satisfy interlingua obligation ${kind}`),
     evidenceKey ? `satisfy evidence key ${evidenceKey}` : undefined,
     ...(route.tasks ?? [])
   ]);
@@ -167,6 +196,7 @@ function worklistSummary(items) {
     proofEvidenceGaps: items.filter((item) => item.kind === 'collect-translation-proof').length,
     runtimeAdapterGaps: items.filter((item) => item.kind === 'prove-runtime-adapter').length,
     dialectEvidenceGaps: items.filter((item) => item.kind === 'collect-dialect-evidence').length,
+    interlinguaObligationGaps: items.filter((item) => item.kind === 'collect-interlingua-obligation-proof').length,
     autoMergeClaims: 0,
     semanticEquivalenceClaims: 0
   };
@@ -202,7 +232,12 @@ function workItemMatchesQuery(item, query) {
     && match(query.task, item.tasks)
     && match(query.runtimeAdapterRequirementId, item.runtimeAdapterRequirementIds)
     && match(query.dialectRecordId, item.dialectRecordIds)
-    && match(query.targetAdapterId, item.targetAdapterIds);
+    && match(query.targetAdapterId, item.targetAdapterIds)
+    && match(query.interlinguaConstraintFamily, item.interlinguaConstraintFamilies)
+    && match(query.interlinguaConstraintSourceId, item.interlinguaConstraintSourceIds)
+    && match(query.interlinguaConstraintObligationKind, item.interlinguaConstraintObligationKinds)
+    && match(query.interlinguaConstraintObligationStatus, item.interlinguaConstraintObligationStatuses)
+    && match(query.interlinguaConstraintObligationMissingEvidence, item.interlinguaConstraintObligationMissingEvidence);
 }
 
 function sortWorkItems(items) {
