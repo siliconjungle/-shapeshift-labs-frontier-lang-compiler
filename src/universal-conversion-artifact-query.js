@@ -5,7 +5,7 @@ import { resourceTransferMatches } from './universal-resource-transfer.js';
 import { borrowCheckerConstraintMatches } from './universal-borrow-checker-constraints.js';
 import { borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
 import { controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
-import { effectConstraintMatches } from './universal-effect-constraints.js';
+import { effectConstraintMatches } from './universal-effect-constraints.js'; import { memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
 import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
 import { moduleConstraintMatches } from './universal-module-constraints.js';
 import { typeConstraintMatches } from './universal-type-constraints.js';
@@ -25,7 +25,7 @@ export function artifactIndex(a) {
   const cConstraints = a.map(ctrl);
   const bConstraints = a.map(bscope);
   const bc = a.map(bchecker);
-  const eConstraints = a.map(effect);
+  const eConstraints = a.map(effect); const memConstraints = a.map(mem);
   const mConstraints = a.map(mods);
   const tConstraints = a.map(types);
   const iRecords = a.map(intl);
@@ -118,7 +118,7 @@ export function artifactIndex(a) {
     ...constraintIndex('controlFlowConstraint', cConstraints),
     ...constraintIndex('borrowScopeConstraint', bConstraints),
     ...constraintIndex('borrowCheckerConstraint', bc),
-    ...constraintIndex('effectConstraint', eConstraints),
+    ...constraintIndex('effectConstraint', eConstraints), ...constraintIndex('memoryModelConstraint', memConstraints),
     ...constraintIndex('moduleConstraint', mConstraints),
     ...constraintIndex('typeConstraint', tConstraints),
     interlinguaRecordIds: uniqueStrings(iRecords.map((r) => r.id)),
@@ -235,74 +235,36 @@ function matchesArtifact(record, query) {
     && controlFlowConstraintMatches(ctrl(record), query)
     && borrowScopeConstraintMatches(bscope(record), query)
     && borrowCheckerConstraintMatches(bchecker(record), query)
-    && effectConstraintMatches(effect(record), query)
+    && effectConstraintMatches(effect(record), query) && memoryModelConstraintMatches(mem(record), query)
     && moduleConstraintMatches(mods(record), query)
     && typeConstraintMatches(types(record), query)
     && interlinguaRecordMatches(intl(record), query)
     && match(query.transformIdentityHash, tHashes(record));
 }
-function ops(record) {
-  return record.semanticOperations?.operations ?? [];
-}
-function constructs(record) {
-  return uniqueStrings([
-    ...(record.metadata?.representation?.constructKinds ?? []),
-    ...(record.mergeScore?.components?.representationCoverage?.signals?.constructKinds ?? []),
-    ...(record.semanticOperations?.operations ?? []).flatMap((o) => o.metadata?.representation?.constructKinds ?? [])
-  ]);
-}
-function rCaps(record) {
-  return uniqueStrings([
-    ...(record.metadata?.representation?.runtimeCapabilities ?? []),
-    ...(record.mergeScore?.components?.representationCoverage?.signals?.runtimeCapabilities ?? []),
-    ...(record.semanticOperations?.operations ?? []).flatMap((o) => o.metadata?.representation?.runtimeCapabilities ?? [])
-  ]);
-}
-function sMapPrecisions(record) {
-  return uniqueStrings([
-    ...(record.metadata?.representation?.sourceMapPrecisions ?? []),
-    ...(record.mergeScore?.components?.representationCoverage?.signals?.sourceMapPrecisions ?? []),
-    ...(record.semanticOperations?.operations ?? []).flatMap((o) => o.metadata?.representation?.sourceMapPrecisions ?? [])
-  ]);
-}
-function tHashes(record) {
-  return uniqueStrings([
-    ...(record.metadata?.representation?.transformIdentityHashes ?? []),
-    ...(record.patchBundle?.index?.transformIdentityHashes ?? []),
-    ...(record.history?.index?.transformIdentityHashes ?? [])
-  ]);
-}
-function tAdm(record) {
-  return record.translationAdmission ?? record.metadata?.translationAdmission ?? record.admissionRecord?.metadata?.translationAdmission ?? {};
-}
-function intl(record) {
-  return record.interlingua ?? record.metadata?.interlingua ?? record.admissionRecord?.metadata?.interlingua ?? {};
-}
-function res(record) {
-  return record.resourceTransfer ?? record.metadata?.resourceTransfer ?? record.translationAdmission?.resourceTransfer ?? record.admissionRecord?.metadata?.resourceTransfer ?? {};
-}
-function own(record) {
-  return res(record).ownershipConstraints ?? {};
-}
-function life(record) {
-  return record.lifetimeConstraint ?? record.metadata?.lifetimeConstraint ?? record.translationAdmission?.lifetimeConstraint ?? record.admissionRecord?.metadata?.lifetimeConstraint ?? {};
-}
-function ctrl(record) {
-  return record.controlFlowConstraint ?? record.metadata?.controlFlowConstraint ?? record.translationAdmission?.controlFlowConstraint ?? record.admissionRecord?.metadata?.controlFlowConstraint ?? {};
-}
-function bscope(record) {
-  return record.borrowScopeConstraint ?? record.metadata?.borrowScopeConstraint ?? record.translationAdmission?.borrowScopeConstraint ?? record.admissionRecord?.metadata?.borrowScopeConstraint ?? {};
-}
-function bchecker(record) { return record.borrowCheckerConstraint ?? record.metadata?.borrowCheckerConstraint ?? record.admissionRecord?.metadata?.borrowCheckerConstraint ?? {}; }
+function ops(record) { return record.semanticOperations?.operations ?? []; }
+function constructs(record) { return uniqueStrings([...(record.metadata?.representation?.constructKinds ?? []), ...(record.mergeScore?.components?.representationCoverage?.signals?.constructKinds ?? []), ...ops(record).flatMap((o) => o.metadata?.representation?.constructKinds ?? [])]); }
+function rCaps(record) { return uniqueStrings([...(record.metadata?.representation?.runtimeCapabilities ?? []), ...(record.mergeScore?.components?.representationCoverage?.signals?.runtimeCapabilities ?? []), ...ops(record).flatMap((o) => o.metadata?.representation?.runtimeCapabilities ?? [])]); }
+function sMapPrecisions(record) { return uniqueStrings([...(record.metadata?.representation?.sourceMapPrecisions ?? []), ...(record.mergeScore?.components?.representationCoverage?.signals?.sourceMapPrecisions ?? []), ...ops(record).flatMap((o) => o.metadata?.representation?.sourceMapPrecisions ?? [])]); }
+function tHashes(record) { return uniqueStrings([...(record.metadata?.representation?.transformIdentityHashes ?? []), ...(record.patchBundle?.index?.transformIdentityHashes ?? []), ...(record.history?.index?.transformIdentityHashes ?? [])]); }
+function tAdm(record) { return record.translationAdmission ?? record.metadata?.translationAdmission ?? record.admissionRecord?.metadata?.translationAdmission ?? {}; }
+function intl(record) { return record.interlingua ?? record.metadata?.interlingua ?? record.admissionRecord?.metadata?.interlingua ?? {}; }
+function res(record) { return record.resourceTransfer ?? metaConstraint(record, 'resourceTransfer'); }
+function own(record) { return res(record).ownershipConstraints ?? {}; }
+function life(record) { return record.lifetimeConstraint ?? metaConstraint(record, 'lifetimeConstraint'); }
+function ctrl(record) { return record.controlFlowConstraint ?? metaConstraint(record, 'controlFlowConstraint'); }
+function bscope(record) { return record.borrowScopeConstraint ?? metaConstraint(record, 'borrowScopeConstraint'); }
+function bchecker(record) { return record.borrowCheckerConstraint ?? metaConstraint(record, 'borrowCheckerConstraint'); }
 function effect(record) {
-  return record.effectConstraint ?? record.metadata?.effectConstraint ?? record.translationAdmission?.effectConstraint ?? record.admissionRecord?.metadata?.effectConstraint ?? {};
+  return record.effectConstraint ?? metaConstraint(record, 'effectConstraint');
 }
+function mem(record) { return record.memoryModelConstraint ?? metaConstraint(record, 'memoryModelConstraint'); }
 function mods(record) {
-  return record.moduleConstraint ?? record.metadata?.moduleConstraint ?? record.translationAdmission?.moduleConstraint ?? record.admissionRecord?.metadata?.moduleConstraint ?? {};
+  return record.moduleConstraint ?? metaConstraint(record, 'moduleConstraint');
 }
 function types(record) {
-  return record.typeConstraint ?? record.metadata?.typeConstraint ?? record.translationAdmission?.typeConstraint ?? record.admissionRecord?.metadata?.typeConstraint ?? {};
+  return record.typeConstraint ?? metaConstraint(record, 'typeConstraint');
 }
+function metaConstraint(record, key) { return record.metadata?.[key] ?? record.translationAdmission?.[key] ?? record.admissionRecord?.metadata?.[key] ?? {}; }
 function constraintIndex(prefix, records) {
   return {
     [`${prefix}Statuses`]: uniqueStrings(records.map((r) => r.status)),

@@ -18,6 +18,7 @@ export * from './declarations/universal-borrow-scope-constraints.js';
 export * from './declarations/universal-control-flow-constraints.js';
 export * from './declarations/universal-effect-constraints.js';
 export * from './declarations/universal-lifetime-constraints.js';
+export * from './declarations/universal-memory-model-constraints.js';
 export * from './declarations/universal-module-constraints.js';
 export * from './declarations/universal-type-constraints.js';
 export * from './declarations/universal-ownership-constraints.js';

@@ -30,6 +30,7 @@ export const UniversalInterlinguaConstraintEdgeKinds = Object.freeze([
   'control-flow',
   'borrow-scope',
   'borrow-checker',
+  'memory-model',
   'effect',
   'module',
   'type'
@@ -162,6 +163,7 @@ export function interlinguaConstraintSummary(route = {}) {
     constraintEdge('control-flow', route.controlFlowConstraint, 'runtime-capability', route),
     constraintEdge('borrow-scope', route.borrowScopeConstraint, 'semantic-ownership', route),
     constraintEdge('borrow-checker', route.borrowCheckerConstraint, 'semantic-ownership', route),
+    constraintEdge('memory-model', route.memoryModelConstraint, 'runtime-capability', route),
     constraintEdge('effect', route.effectConstraint, 'runtime-capability', route),
     constraintEdge('module', route.moduleConstraint, 'source-import', route),
     constraintEdge('type', route.typeConstraint, 'semantic-symbol', route)

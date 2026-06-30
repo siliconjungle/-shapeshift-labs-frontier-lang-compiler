@@ -58,6 +58,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const borrowScopeConstraints = routeArtifacts.map((artifact) => artifact.borrowScopeConstraint ?? artifact.metadata?.borrowScopeConstraint ?? artifact.admissionRecord?.metadata?.borrowScopeConstraint ?? {});
   const borrowCheckerConstraints = routeArtifacts.map((artifact) => artifact.borrowCheckerConstraint ?? artifact.metadata?.borrowCheckerConstraint ?? artifact.admissionRecord?.metadata?.borrowCheckerConstraint ?? {});
   const effectConstraints = routeArtifacts.map((artifact) => artifact.effectConstraint ?? artifact.metadata?.effectConstraint ?? artifact.admissionRecord?.metadata?.effectConstraint ?? {});
+  const memoryModelConstraints = routeArtifacts.map((artifact) => artifact.memoryModelConstraint ?? artifact.metadata?.memoryModelConstraint ?? artifact.admissionRecord?.metadata?.memoryModelConstraint ?? {});
   const moduleConstraints = routeArtifacts.map((artifact) => artifact.moduleConstraint ?? artifact.metadata?.moduleConstraint ?? artifact.admissionRecord?.metadata?.moduleConstraint ?? {});
   const typeConstraints = routeArtifacts.map((artifact) => artifact.typeConstraint ?? artifact.metadata?.typeConstraint ?? artifact.admissionRecord?.metadata?.typeConstraint ?? {});
   const semanticOperationInterlinguaRecords = semanticOperations.map((operation) => operation.metadata?.interlingua ?? {});
@@ -89,6 +90,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     borrowScopeConstraint: compactConstraintCounts(borrowScopeConstraints),
     borrowCheckerConstraint: compactConstraintCounts(borrowCheckerConstraints),
     effectConstraint: compactEffectConstraintCounts(effectConstraints),
+    memoryModelConstraint: compactConstraintCounts(memoryModelConstraints),
     moduleConstraint: compactConstraintCounts(moduleConstraints),
     typeConstraint: compactConstraintCounts(typeConstraints),
     evidenceReceipts: compactEvidenceReceiptCounts(evidenceReceipts),

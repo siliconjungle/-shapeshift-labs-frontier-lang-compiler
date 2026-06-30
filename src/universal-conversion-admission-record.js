@@ -64,6 +64,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     borrowCheckerConstraintAction: route.borrowCheckerConstraint?.action,
     effectConstraintStatus: route.effectConstraint?.status,
     effectConstraintAction: route.effectConstraint?.action,
+    memoryModelConstraintStatus: route.memoryModelConstraint?.status,
+    memoryModelConstraintAction: route.memoryModelConstraint?.action,
     moduleConstraintStatus: route.moduleConstraint?.status,
     moduleConstraintAction: route.moduleConstraint?.action,
     typeConstraintStatus: route.typeConstraint?.status,
@@ -168,6 +170,15 @@ export function createUniversalConversionAdmissionRecord(input) {
       missingKinds: route.effectConstraint?.missingKinds ?? [],
       missingEvidence: route.effectConstraint?.missingEvidence ?? []
     },
+    memoryModelConstraint: {
+      id: route.memoryModelConstraint?.id,
+      status: route.memoryModelConstraint?.status,
+      action: route.memoryModelConstraint?.action,
+      requiredKinds: route.memoryModelConstraint?.requiredKinds ?? [],
+      representedKinds: route.memoryModelConstraint?.representedKinds ?? [],
+      missingKinds: route.memoryModelConstraint?.missingKinds ?? [],
+      missingEvidence: route.memoryModelConstraint?.missingEvidence ?? []
+    },
     moduleConstraint: {
       id: route.moduleConstraint?.id,
       status: route.moduleConstraint?.status,
@@ -224,6 +235,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       borrowScopeConstraint: route.borrowScopeConstraint,
       borrowCheckerConstraint: route.borrowCheckerConstraint,
       effectConstraint: route.effectConstraint,
+      memoryModelConstraint: route.memoryModelConstraint,
       moduleConstraint: route.moduleConstraint,
       typeConstraint: route.typeConstraint,
       note: 'Admission records are sortable merge-review evidence, not proof of target semantic equivalence.'
