@@ -11,6 +11,7 @@ export function routeReasonCodes(route) {
     `mode:${route.mode}`,
     `action:${route.routeAction}`,
     ...(route.missingEvidence ?? []).map((item) => `missing:${item}`),
+    ...(route.translationAdmission?.missingEvidence ?? []).map((item) => `translation-missing:${item}`),
     ...(routeHasBoundEvidence(route) ? [] : ['missing:route-bound-evidence']),
     ...(route.blockers ?? []).map((item) => `blocker:${item}`),
     ...(route.review ?? []).map((item) => `review:${item}`)
@@ -25,6 +26,7 @@ export function routeAdmissionMetadata(route, planId) {
     admissionAction: route.admissionAction,
     priority: route.priority,
     mergeScore: route.mergeScore,
+    translationAdmission: route.translationAdmission,
     representation: routeRepresentationMetadata(route),
     ...routeSemanticEditRecordMetadata(route),
     autoMergeClaim: false,
@@ -40,6 +42,7 @@ export function routeRecordMetadata(route, planId, metadata) {
     target: route.target,
     mode: route.mode,
     routeAction: route.routeAction,
+    translationAdmission: route.translationAdmission,
     representation: routeRepresentationMetadata(route),
     ...routeSemanticEditRecordMetadata(route),
     missingEvidence: route.missingEvidence ?? [],

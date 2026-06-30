@@ -15,6 +15,7 @@ import type {
   UniversalConversionRoute,
   UniversalConversionRouteAction,
   UniversalConversionRouteMode,
+  UniversalTranslationAdmission, UniversalTranslationAdmissionAction, UniversalTranslationAdmissionStatus,
   UniversalConversionMergeScore,
   UniversalConversionRisk
 } from './universal-conversion-plan.js';
@@ -57,7 +58,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
   readonly admissionAction: UniversalConversionAdmissionAction;
   readonly admissionBucket: UniversalConversionArtifactAdmissionBucket;
-  readonly reviewRequired: true;
+  readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus; readonly translationAdmissionAction?: UniversalTranslationAdmissionAction; readonly reviewRequired: true;
   readonly readiness: SemanticMergeReadiness | string;
   readonly risk: UniversalConversionRisk | string;
   readonly score: {
@@ -119,7 +120,7 @@ export interface UniversalConversionRouteArtifact {
   readonly priority: UniversalConversionPriority;
   readonly readiness: SemanticMergeReadiness | string;
   readonly admissionAction: UniversalConversionAdmissionAction;
-  readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
+  readonly translationAdmission?: UniversalTranslationAdmission; readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
   readonly reviewRequired: true;
   readonly history: SemanticHistoryRecord;
   readonly patchBundle: SemanticPatchBundleRecord;
@@ -173,6 +174,9 @@ export interface UniversalConversionArtifactIndex {
   readonly representationConstructKinds: readonly string[];
   readonly runtimeCapabilities: readonly string[];
   readonly sourceMapPrecisions: readonly string[];
+  readonly translationAdmissionStatuses: readonly string[]; readonly translationAdmissionActions: readonly string[];
+  readonly missingTranslationEvidence: readonly string[]; readonly translationEvidenceIds: readonly string[]; readonly translationProofEvidenceIds: readonly string[];
+  readonly requiredTranslationConstructKinds: readonly string[]; readonly representedTranslationConstructKinds: readonly string[]; readonly targetAdapterIds: readonly string[];
   readonly transformIdentityHashes: readonly string[];
 }
 
@@ -253,6 +257,9 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly admissionAction?: UniversalConversionAdmissionAction | readonly string[];
   readonly admissionStatus?: UniversalConversionArtifactAdmissionStatus | readonly string[];
   readonly admissionBucket?: UniversalConversionArtifactAdmissionBucket | readonly string[];
+  readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus | readonly string[]; readonly translationAdmissionAction?: UniversalTranslationAdmissionAction | readonly string[];
+  readonly missingTranslationEvidence?: string | readonly string[]; readonly translationEvidenceId?: string | readonly string[]; readonly translationProofEvidenceId?: string | readonly string[];
+  readonly requiredTranslationConstructKind?: string | readonly string[]; readonly representedTranslationConstructKind?: string | readonly string[]; readonly targetAdapterId?: string | readonly string[];
   readonly risk?: UniversalConversionRisk | string | readonly string[];
   readonly priority?: UniversalConversionPriority | readonly string[];
   readonly routeAction?: UniversalConversionRouteAction | readonly string[];

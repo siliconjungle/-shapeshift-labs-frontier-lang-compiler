@@ -43,9 +43,8 @@ export type UniversalConversionRouteAction =
   | 'blocked';
 
 export type UniversalConversionAdmissionAction = 'admit' | 'prioritize' | 'reject';
-export type UniversalConversionPriority = 'low' | 'normal' | 'high' | 'blocker';
-export type UniversalConversionRisk = 'low' | 'medium' | 'high';
-
+export type UniversalConversionPriority = 'low' | 'normal' | 'high' | 'blocker'; export type UniversalConversionRisk = 'low' | 'medium' | 'high';
+export type UniversalTranslationAdmissionStatus = 'blocked' | 'needs-adapter' | 'needs-evidence' | 'needs-review' | 'admittable-for-review'; export type UniversalTranslationAdmissionAction = 'reject' | 'add-target-adapter' | 'collect-translation-evidence' | 'review-target-adapter' | 'materialize-review-record';
 export type UniversalConversionScoreComponentKey =
   | 'importEvidence'
   | 'parserEvidence'
@@ -92,6 +91,14 @@ export interface UniversalConversionRouteEvidence {
   readonly targetSupported: boolean;
   readonly targetAdapter?: string;
   readonly targetLossKinds: readonly NativeImportKnownLossKind[];
+}
+
+export interface UniversalTranslationAdmission {
+  readonly status: UniversalTranslationAdmissionStatus; readonly action: UniversalTranslationAdmissionAction;
+  readonly requiredConstructKinds: readonly string[]; readonly representedConstructKinds: readonly string[]; readonly missingConstructKinds: readonly string[]; readonly missingEvidence: readonly string[];
+  readonly blockers: readonly string[]; readonly review: readonly string[]; readonly evidenceIds: readonly string[]; readonly proofEvidenceIds: readonly string[];
+  readonly runtimeReadiness: SemanticMergeReadiness | string; readonly runtimeAdapterRequirementIds: readonly string[]; readonly dialectReadiness: SemanticMergeReadiness | string; readonly dialectRecordIds: readonly string[];
+  readonly targetAdapterId?: string; readonly autoMergeClaim: false; readonly semanticEquivalenceClaim: false;
 }
 
 export interface UniversalConversionRouteRuntime {
@@ -175,6 +182,7 @@ export interface UniversalConversionRoute {
   readonly evidence: UniversalConversionRouteEvidence;
   readonly representation: UniversalRepresentationCoverage;
   readonly missingEvidence: readonly string[];
+  readonly translationAdmission: UniversalTranslationAdmission;
   readonly blockers: readonly string[];
   readonly review: readonly string[];
   readonly tasks: readonly string[];
@@ -291,6 +299,9 @@ export interface UniversalConversionPlanQuery extends UniversalRepresentationCov
   readonly dialectRecordId?: string;
   readonly dialectConstructKind?: UniversalDialectConstructKind;
   readonly dialectDisposition?: UniversalDialectProjectionDisposition;
+  readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus; readonly translationAdmissionAction?: UniversalTranslationAdmissionAction;
+  readonly missingTranslationEvidence?: string; readonly translationEvidenceId?: string; readonly translationProofEvidenceId?: string;
+  readonly requiredTranslationConstructKind?: string; readonly representedTranslationConstructKind?: string; readonly targetAdapterId?: string;
 }
 
 export interface UniversalConversionPlanQueryResult {

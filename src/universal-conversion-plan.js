@@ -2,22 +2,14 @@ import { idFragment, maxSemanticMergeReadiness, normalizeNativeLanguageId, uniqu
 import { nativeLanguageCompileTarget, normalizeProjectionMatrixTargets } from './coverage-matrix-profiles.js';
 import { createUniversalCapabilityMatrix } from './universal-capability-matrix.js';
 import { createUniversalRuntimeCapabilityMatrix } from './universal-runtime-capabilities.js';
-import {
-  conversionMergeRefs,
-  importsForConversionLanguage
-} from './universal-conversion-plan-merge-refs.js';
+import { conversionMergeRefs, importsForConversionLanguage } from './universal-conversion-plan-merge-refs.js';
 import { conversionDialectCoverage, conversionDialectRegistries, conversionRouteMatchesDialectQuery } from './universal-conversion-dialect-routing.js';
 import { conversionRouteIdForRuntime, conversionRouteMatchesRuntimeQuery, conversionRuntimeRoutes } from './universal-conversion-runtime-routing.js';
-import {
-  conversionMergeScore,
-  conversionScoreComponents
-} from './universal-conversion-plan-scoring.js';
-import {
-  conversionRouteEvidence,
-  hasPassedRouteEvidence
-} from './universal-conversion-route-evidence.js';
+import { conversionMergeScore, conversionScoreComponents } from './universal-conversion-plan-scoring.js';
+import { conversionRouteEvidence, hasPassedRouteEvidence } from './universal-conversion-route-evidence.js';
 import { conversionPlanSummary } from './universal-conversion-plan-summary.js';
 import { createUniversalRepresentationCoverage, representationCoverageMatches } from './universal-representation-coverage.js';
+import { createUniversalTranslationAdmission, conversionRouteMatchesTranslationAdmissionQuery } from './universal-conversion-translation-admission.js';
 
 export function createUniversalConversionPlan(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
@@ -81,6 +73,7 @@ export function queryUniversalConversionPlan(planOrInput = {}, query = {}, conte
     if (query.admissionAction && route.admissionAction !== query.admissionAction) return false;
     if (!conversionRouteMatchesDialectQuery(route, query)) return false;
     if (!conversionRouteMatchesRuntimeQuery(route, query)) return false;
+    if (!conversionRouteMatchesTranslationAdmissionQuery(route, query)) return false;
     if (!representationCoverageMatches(route.representation, query)) return false;
     return true;
   });
@@ -144,6 +137,8 @@ function conversionRoute(language, target, input, planId) {
   const components = conversionScoreComponents(language, targetCell, readiness, mode, routeEvidence, representation);
   const mergeScore = conversionMergeScore({ readiness, mode, components, blockers, review });
   const admissionStatus = mergeScore.action;
+  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect);
+  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, blockers, review });
   return {
     id,
     sourceLanguage: language.language,
@@ -164,7 +159,8 @@ function conversionRoute(language, target, input, planId) {
     runtimeAdapterRequirements: runtime.adapterRequirements,
     evidence: conversionEvidence(language, targetCell),
     representation,
-    missingEvidence: conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect),
+    missingEvidence,
+    translationAdmission,
     blockers,
     review,
     tasks: conversionTasks(language, target, mode, blockers, review, runtime, dialect),

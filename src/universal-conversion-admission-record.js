@@ -19,6 +19,7 @@ export function createUniversalConversionAdmissionRecord(input) {
   const hasBoundEvidence = evidenceIds.length > 0 || proofIds.length > 0;
   const missingEvidence = uniqueStrings([
     ...(route.missingEvidence ?? []),
+    ...(route.translationAdmission?.missingEvidence ?? []),
     ...(hasBoundEvidence ? [] : ['route-bound-evidence'])
   ]);
   const blockers = route.blockers ?? [];
@@ -47,6 +48,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     admissionStatus: input.admissionStatus,
     admissionAction: score.action ?? route.admissionAction,
     admissionBucket: bucket,
+    translationAdmissionStatus: route.translationAdmission?.status,
+    translationAdmissionAction: route.translationAdmission?.action,
     reviewRequired: true,
     readiness: route.readiness,
     risk: score.risk ?? riskForRoute(route, input.admissionStatus),
@@ -103,6 +106,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       routeId: route.id,
       planId: input.planId,
       mergeScoreSchema: score.schema,
+      translationAdmission: route.translationAdmission,
       note: 'Admission records are sortable merge-review evidence, not proof of target semantic equivalence.'
     }
   };

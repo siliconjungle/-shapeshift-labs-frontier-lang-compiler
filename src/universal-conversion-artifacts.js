@@ -153,6 +153,7 @@ function createRouteArtifact(route, options) {
     priority: route.priority,
     readiness: route.readiness,
     admissionAction: route.admissionAction,
+    translationAdmission: route.translationAdmission,
     admissionStatus,
     reviewRequired: true,
     history,

@@ -50,6 +50,14 @@ export function artifactIndex(routeArtifacts) {
     representationConstructKinds: uniqueStrings(routeArtifacts.flatMap(artifactConstructKinds)),
     runtimeCapabilities: uniqueStrings(routeArtifacts.flatMap(artifactRuntimeCapabilities)),
     sourceMapPrecisions: uniqueStrings(routeArtifacts.flatMap(artifactSourceMapPrecisions)),
+    translationAdmissionStatuses: uniqueStrings(routeArtifacts.map((artifact) => artifactTranslationAdmission(artifact).status)),
+    translationAdmissionActions: uniqueStrings(routeArtifacts.map((artifact) => artifactTranslationAdmission(artifact).action)),
+    missingTranslationEvidence: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactTranslationAdmission(artifact).missingEvidence ?? [])),
+    translationEvidenceIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactTranslationAdmission(artifact).evidenceIds ?? [])),
+    translationProofEvidenceIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactTranslationAdmission(artifact).proofEvidenceIds ?? [])),
+    requiredTranslationConstructKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactTranslationAdmission(artifact).requiredConstructKinds ?? [])),
+    representedTranslationConstructKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactTranslationAdmission(artifact).representedConstructKinds ?? [])),
+    targetAdapterIds: uniqueStrings(routeArtifacts.map((artifact) => artifactTranslationAdmission(artifact).targetAdapterId)),
     transformIdentityHashes: uniqueStrings(routeArtifacts.flatMap(artifactTransformIdentityHashes))
   };
 }
@@ -104,6 +112,14 @@ function matchesArtifact(record, query) {
     && match(query.constructKind ?? query.representationConstructKind, artifactConstructKinds(record))
     && match(query.runtimeCapability, artifactRuntimeCapabilities(record))
     && match(query.sourceMapPrecision, artifactSourceMapPrecisions(record))
+    && match(query.translationAdmissionStatus, [artifactTranslationAdmission(record).status])
+    && match(query.translationAdmissionAction, [artifactTranslationAdmission(record).action])
+    && match(query.missingTranslationEvidence, artifactTranslationAdmission(record).missingEvidence)
+    && match(query.translationEvidenceId, artifactTranslationAdmission(record).evidenceIds)
+    && match(query.translationProofEvidenceId, artifactTranslationAdmission(record).proofEvidenceIds)
+    && match(query.requiredTranslationConstructKind, artifactTranslationAdmission(record).requiredConstructKinds)
+    && match(query.representedTranslationConstructKind, artifactTranslationAdmission(record).representedConstructKinds)
+    && match(query.targetAdapterId, [artifactTranslationAdmission(record).targetAdapterId])
     && match(query.transformIdentityHash, artifactTransformIdentityHashes(record));
 }
 
@@ -137,6 +153,10 @@ function artifactTransformIdentityHashes(record) {
     ...(record.patchBundle?.index?.transformIdentityHashes ?? []),
     ...(record.history?.index?.transformIdentityHashes ?? [])
   ]);
+}
+
+function artifactTranslationAdmission(record) {
+  return record.translationAdmission ?? record.metadata?.translationAdmission ?? record.admissionRecord?.metadata?.translationAdmission ?? {};
 }
 
 function match(filter, values) {

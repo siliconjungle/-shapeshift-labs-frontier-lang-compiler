@@ -1,0 +1,136 @@
+import { uniqueStrings } from './native-import-utils.js';
+
+export const UniversalTranslationAdmissionStatuses = Object.freeze([
+  'blocked',
+  'needs-adapter',
+  'needs-evidence',
+  'needs-review',
+  'admittable-for-review'
+]);
+
+export const UniversalTranslationAdmissionActions = Object.freeze([
+  'reject',
+  'add-target-adapter',
+  'collect-translation-evidence',
+  'review-target-adapter',
+  'materialize-review-record'
+]);
+
+export function createUniversalTranslationAdmission(input = {}) {
+  const requiredConstructKinds = requiredTranslationConstructKinds(input);
+  const representedConstructKinds = representedTranslationConstructKinds(input.representation);
+  const missingConstructKinds = requiredConstructKinds.filter((kind) => !representedConstructKinds.includes(kind));
+  const evidenceIds = uniqueStrings([...(input.mergeRefs?.evidenceIds ?? []), ...(input.routeEvidence ?? []).map((record) => record?.id)]);
+  const proofEvidenceIds = uniqueStrings([...(input.mergeRefs?.proofIds ?? []), ...proofEvidenceIdsFor(input.routeEvidence)]);
+  const missingEvidence = translationMissingEvidence(input, missingConstructKinds);
+  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? [])]);
+  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? [])]);
+  const status = translationAdmissionStatus(input, missingEvidence, blockers);
+  return {
+    status,
+    action: translationAdmissionAction(status),
+    requiredConstructKinds,
+    representedConstructKinds,
+    missingConstructKinds,
+    missingEvidence,
+    blockers,
+    review,
+    evidenceIds,
+    proofEvidenceIds,
+    runtimeReadiness: input.runtime?.readiness ?? 'ready',
+    runtimeAdapterRequirementIds: (input.runtime?.adapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
+    dialectReadiness: input.dialect?.readiness ?? 'ready',
+    dialectRecordIds: input.dialect?.recordIds ?? [],
+    targetAdapterId: input.targetCell?.adapter,
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false
+  };
+}
+
+export function conversionRouteMatchesTranslationAdmissionQuery(route, query = {}) {
+  const admission = route?.translationAdmission ?? {};
+  return match(query.translationAdmissionStatus, [admission.status])
+    && match(query.translationAdmissionAction, [admission.action])
+    && match(query.missingTranslationEvidence, admission.missingEvidence)
+    && match(query.translationEvidenceId, admission.evidenceIds)
+    && match(query.translationProofEvidenceId, admission.proofEvidenceIds)
+    && match(query.requiredTranslationConstructKind, admission.requiredConstructKinds)
+    && match(query.representedTranslationConstructKind, admission.representedConstructKinds)
+    && match(query.targetAdapterId, [admission.targetAdapterId, route?.adapter]);
+}
+
+function requiredTranslationConstructKinds(input) {
+  return uniqueStrings([
+    'source-import',
+    'semantic-symbol',
+    'source-map',
+    'parser-feature',
+    'target-adapter',
+    'semantic-ownership',
+    'proof-evidence',
+    ...((input.runtime?.requiredCapabilities ?? []).length || (input.runtime?.adapterRequirements ?? []).length ? ['runtime-capability'] : []),
+    ...((input.dialect?.records ?? []).length ? ['dialect-projection'] : [])
+  ]);
+}
+
+function representedTranslationConstructKinds(representation) {
+  return uniqueStrings((representation?.constructs ?? [])
+    .filter((construct) => construct.status === 'represented')
+    .map((construct) => construct.kind));
+}
+
+function translationMissingEvidence(input, missingConstructKinds) {
+  const runtimeAdapterRequirements = input.runtime?.adapterRequirements ?? [];
+  const dialectMissing = input.dialect?.missingEvidence ?? [];
+  return uniqueStrings([
+    ...(missingConstructKinds.includes('target-adapter') ? ['translation-target-adapter'] : []),
+    ...(hasPassedTranslationProof(input.routeEvidence) ? [] : ['translation-proof-or-replay']),
+    ...(missingConstructKinds.includes('source-map') ? ['translation-source-map'] : []),
+    ...(missingConstructKinds.includes('semantic-ownership') ? ['translation-semantic-ownership'] : []),
+    ...(runtimeAdapterRequirements.length && !hasPassedRuntimeAdapterProof(input.routeEvidence) ? ['translation-runtime-adapter-proof'] : []),
+    ...(dialectMissing.includes('dialect-projection-evidence') ? ['translation-dialect-projection-evidence'] : [])
+  ]);
+}
+
+function translationAdmissionStatus(input, missingEvidence, blockers) {
+  if (input.readiness === 'blocked' || blockers.length || (input.runtime?.missingCapabilities ?? []).length || input.dialect?.readiness === 'blocked') return 'blocked';
+  if (missingEvidence.includes('translation-target-adapter') || input.mode === 'semantic-index-only') return 'needs-adapter';
+  if (missingEvidence.length) return 'needs-evidence';
+  if ((input.runtime?.adapterRequirements ?? []).length || (input.dialect?.records ?? []).some((record) => record.readiness !== 'ready') || input.readiness !== 'ready') return 'needs-review';
+  return 'admittable-for-review';
+}
+
+function translationAdmissionAction(status) {
+  if (status === 'blocked') return 'reject';
+  if (status === 'needs-adapter') return 'add-target-adapter';
+  if (status === 'needs-evidence') return 'collect-translation-evidence';
+  if (status === 'needs-review') return 'review-target-adapter';
+  return 'materialize-review-record';
+}
+
+function hasPassedTranslationProof(evidence) {
+  return (evidence ?? []).some((record) => passed(record) && /proof|replay|oracle|test|gate|verification|runtime/i.test(evidenceKind(record)));
+}
+
+function hasPassedRuntimeAdapterProof(evidence) {
+  return (evidence ?? []).some((record) => passed(record) && /runtime|adapter|capability|proof|replay/i.test(evidenceKind(record)));
+}
+
+function proofEvidenceIdsFor(evidence) {
+  return (evidence ?? []).filter((record) => passed(record) && /proof|replay|oracle|test|gate|verification|runtime/i.test(evidenceKind(record))).map((record) => record.id).filter(Boolean);
+}
+
+function passed(record) {
+  return record?.status === 'passed' || record?.status === 'ok' || record?.status === 'success';
+}
+
+function evidenceKind(record) {
+  return String(record?.kind ?? record?.type ?? record?.scope ?? record?.metadata?.kind ?? '');
+}
+
+function match(filter, values) {
+  const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];
+  if (!filters.length) return true;
+  const valueSet = new Set((values ?? []).filter(Boolean).map(String));
+  return filters.some((item) => valueSet.has(String(item)));
+}

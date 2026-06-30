@@ -771,12 +771,20 @@ const pythonToRust = queryUniversalConversionPlan(conversionPlan, {
 
 console.log(pythonToRust.mode); // "semantic-index-only", "target-adapter", "stub-only", etc.
 console.log(pythonToRust.missingEvidence); // adapter/proof/source-map gaps for swarm workers
+console.log(pythonToRust.translationAdmission.status); // "needs-adapter", "needs-evidence", etc.
 console.log(pythonToRust.mergeScore.value); // sortable merge-review score, not a proof
+
+const adapterGaps = queryUniversalConversionPlan(conversionPlan, {
+  translationAdmissionStatus: 'needs-adapter',
+  missingTranslationEvidence: 'translation-target-adapter'
+});
+console.log(adapterGaps.routes.map((route) => route.id));
 
 const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan);
 console.log(conversionArtifacts.historyRecords[0].kind); // "frontier.lang.semanticHistoryRecord"
 console.log(conversionArtifacts.patchBundleRecords[0].admission.autoMergeClaim); // false
 console.log(conversionArtifacts.admissionRecords[0].admissionBucket); // "blocked", "needs-evidence", "merge-ready", etc.
+console.log(conversionArtifacts.routeArtifacts[0].translationAdmission.action); // review/materialization task
 console.log(conversionArtifacts.index.semanticOperationKinds); // sourcePreservation/projection/merge
 console.log(conversionArtifacts.routeArtifacts[0].semanticOperations.summary.conflictKeys);
 ```
@@ -792,6 +800,8 @@ The projection target matrix separates five runtime/API classes:
 `createUniversalCapabilityMatrix` composes the import coverage, parser AST format, parser feature, and projection target matrices into a single language row per source language. It is the coordinator-facing view for universal-language work: it shows imports, symbols, source-map mappings, parser feature readiness, projection targets, missing adapters, unsupported target features, blockers, and review reasons without claiming lossless conversion where evidence is absent.
 
 `createUniversalConversionPlan` turns that capability evidence into coordinator tasks: preserve exact source, run a target adapter, emit stubs, attach semantic-index evidence, or block the route until missing parser/adapter/proof evidence exists. Every route carries `autoMergeClaim: false`, `semanticEquivalenceClaim: false`, missing evidence, task hints, and a `frontier.lang.semanticMergeScore.v1` score for swarm merge admission.
+
+Each route also carries `translationAdmission`, an explicit cross-language review contract with status/action pairs: `blocked`/`reject`, `needs-adapter`/`add-target-adapter`, `needs-evidence`/`collect-translation-evidence`, `needs-review`/`review-target-adapter`, or `admittable-for-review`/`materialize-review-record`. It records required and represented construct kinds, missing translation evidence, bound evidence IDs, runtime adapter requirements, dialect records, and the target adapter ID while keeping `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
 `createUniversalConversionArtifacts` materializes those route refs into compact `SemanticHistoryRecord`, `SemanticPatchBundleRecord`, semantic operation sets, and `UniversalConversionAdmissionRecord` rows that swarm collectors can index by route, history ID, patch-bundle ID, admission-record ID, admission bucket, risk, operation kind, source path, ownership key, conflict key, evidence, proof, readiness, and admission status. It is still review evidence, not target-code proof: blocked and semantic-index-only routes stay blocked/needs-review, and every artifact keeps `autoMergeClaim: false` plus `semanticEquivalenceClaim: false`.
 
