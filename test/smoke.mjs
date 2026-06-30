@@ -266,7 +266,7 @@ const smokeModules = [
   './smoke/bidirectional-target-change-same-language-nonoverlap.mjs',
   './smoke/bidirectional-target-change-same-language-conflict.mjs',
   './smoke/bidirectional-target-change-same-language-already-applied.mjs',
-  './smoke/bidirectional-target-change-cross-language-transform.mjs',
+  './smoke/bidirectional-target-change-cross-language-transform.mjs', './smoke/bidirectional-target-change-generated-artifacts.mjs',
   './smoke/native-projection.mjs',
   './smoke-workbench.mjs',
   './smoke/roundtrip.mjs',

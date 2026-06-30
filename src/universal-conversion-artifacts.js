@@ -235,17 +235,27 @@ function routeRegions(route, refs, sources) {
 function routeSourceMapLinks(route, refs, sources, regions) {
   const source = sources[0] ?? {};
   const max = Math.max(refs.sourceMapIds?.length ?? 0, refs.sourceMapMappingIds?.length ?? 0);
+  const targetPaths = refs.generatedTargetPaths ?? refs.targetPaths ?? refs.sourceMapTargetPaths ?? refs.sourceMapTargets ?? [];
   return Array.from({ length: max }, (_, index) => ({
     id: refs.sourceMapLinkIds?.[index] ?? `route_source_map_link_${idFragment(route.id)}_${index + 1}`,
     sourceMapId: refs.sourceMapIds?.[index] ?? refs.sourceMapIds?.[0],
     sourceMapMappingId: refs.sourceMapMappingIds?.[index],
     sourcePath: source.sourcePath,
     sourceHash: source.sourceHash,
-    targetPath: `${route.target}:${source.sourcePath ?? route.id}`,
+    targetPath: targetPathForSourceMapLink(route, source, targetPaths, index),
     precision: route.mode === 'preserve-source' ? 'exact-source' : 'semantic-route',
     regionKey: regions[index % Math.max(1, regions.length)]?.key,
     regionKind: route.mode
   }));
+}
+
+function targetPathForSourceMapLink(route, source, targetPaths, index) {
+  const target = targetPaths[index] ?? targetPaths[0];
+  if (typeof target === 'string' && target) return target;
+  if (target && typeof target === 'object') {
+    return target.targetPath ?? target.path ?? target.generatedPath ?? target.generatedTargetPath;
+  }
+  return `${route.target}:${source.sourcePath ?? route.id}`;
 }
 
 function routeSemanticCandidates(route, refs) {

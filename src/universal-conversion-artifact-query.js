@@ -47,6 +47,21 @@ export function artifactIndex(routeArtifacts) {
     sourceIdentityHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.sourceIdentityHashes)),
     operationContentHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.operationContentHashes)),
     editContentHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.editContentHashes)),
+    sourceBackprojectionModes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.sourceBackprojectionModes)),
+    semanticTransformReadinesses: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticTransformReadinesses)),
+    transformSourceLanguages: uniqueStrings(semanticEditIndexes.flatMap((index) => index.transformSourceLanguages)),
+    transformTargetLanguages: uniqueStrings(semanticEditIndexes.flatMap((index) => index.transformTargetLanguages)),
+    transformSourcePaths: uniqueStrings(semanticEditIndexes.flatMap((index) => index.transformSourcePaths)),
+    transformTargetPaths: uniqueStrings(semanticEditIndexes.flatMap((index) => index.transformTargetPaths)),
+    transformCrossLanguages: uniqueStrings(semanticEditIndexes.flatMap((index) => index.transformCrossLanguages)),
+    transformSourceMapIds: uniqueStrings(semanticEditIndexes.flatMap((index) => index.transformSourceMapIds)),
+    transformSourceMapLinkIds: uniqueStrings(semanticEditIndexes.flatMap((index) => index.transformSourceMapLinkIds)),
+    transformSourceMapMappingIds: uniqueStrings(semanticEditIndexes.flatMap((index) => index.transformSourceMapMappingIds)),
+    transformBaseHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.transformBaseHashes)),
+    transformTargetHashes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.transformTargetHashes)),
+    targetPortabilityStatuses: uniqueStrings(semanticEditIndexes.flatMap((index) => index.targetPortabilityStatuses)),
+    targetPortabilityActions: uniqueStrings(semanticEditIndexes.flatMap((index) => index.targetPortabilityActions)),
+    targetPortabilityReasonCodes: uniqueStrings(semanticEditIndexes.flatMap((index) => index.targetPortabilityReasonCodes)),
     representationConstructKinds: uniqueStrings(routeArtifacts.flatMap(artifactConstructKinds)),
     runtimeCapabilities: uniqueStrings(routeArtifacts.flatMap(artifactRuntimeCapabilities)),
     sourceMapPrecisions: uniqueStrings(routeArtifacts.flatMap(artifactSourceMapPrecisions)),
@@ -109,6 +124,21 @@ function matchesArtifact(record, query) {
     && match(query.sourceIdentityHash ?? query.sourceIdentityHashes, semanticEditIndex.sourceIdentityHashes)
     && match(query.operationContentHash ?? query.operationContentHashes, semanticEditIndex.operationContentHashes)
     && match(query.editContentHash ?? query.editContentHashes, semanticEditIndex.editContentHashes)
+    && match(query.sourceBackprojectionMode ?? query.sourceBackprojectionModes, semanticEditIndex.sourceBackprojectionModes)
+    && match(query.semanticTransformReadiness ?? query.semanticTransformReadinesses, semanticEditIndex.semanticTransformReadinesses)
+    && match(query.transformSourceLanguage ?? query.transformSourceLanguages, semanticEditIndex.transformSourceLanguages)
+    && match(query.transformTargetLanguage ?? query.transformTargetLanguages, semanticEditIndex.transformTargetLanguages)
+    && match(query.transformSourcePath ?? query.transformSourcePaths, semanticEditIndex.transformSourcePaths)
+    && match(query.transformTargetPath ?? query.transformTargetPaths, semanticEditIndex.transformTargetPaths)
+    && match(query.transformCrossLanguage ?? query.transformCrossLanguages, semanticEditIndex.transformCrossLanguages)
+    && match(query.transformSourceMapId ?? query.transformSourceMapIds, semanticEditIndex.transformSourceMapIds)
+    && match(query.transformSourceMapLinkId ?? query.transformSourceMapLinkIds, semanticEditIndex.transformSourceMapLinkIds)
+    && match(query.transformSourceMapMappingId ?? query.transformSourceMapMappingIds, semanticEditIndex.transformSourceMapMappingIds)
+    && match(query.transformBaseHash ?? query.transformBaseHashes, semanticEditIndex.transformBaseHashes)
+    && match(query.transformTargetHash ?? query.transformTargetHashes, semanticEditIndex.transformTargetHashes)
+    && match(query.targetPortabilityStatus ?? query.targetPortabilityStatuses, semanticEditIndex.targetPortabilityStatuses)
+    && match(query.targetPortabilityAction ?? query.targetPortabilityActions, semanticEditIndex.targetPortabilityActions)
+    && match(query.targetPortabilityReasonCode ?? query.targetPortabilityReasonCodes, semanticEditIndex.targetPortabilityReasonCodes)
     && match(query.constructKind ?? query.representationConstructKind, artifactConstructKinds(record))
     && match(query.runtimeCapability, artifactRuntimeCapabilities(record))
     && match(query.sourceMapPrecision, artifactSourceMapPrecisions(record))

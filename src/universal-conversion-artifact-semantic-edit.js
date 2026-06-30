@@ -47,7 +47,22 @@ export function artifactSemanticEditIndex(record) {
     semanticIdentityHashes: editIndex.semanticIdentityHashes,
     sourceIdentityHashes: editIndex.sourceIdentityHashes,
     operationContentHashes: editIndex.operationContentHashes,
-    editContentHashes: editIndex.editContentHashes
+    editContentHashes: editIndex.editContentHashes,
+    sourceBackprojectionModes: strings(patchIndex.sourceBackprojectionModes),
+    semanticTransformReadinesses: strings(patchIndex.semanticTransformReadinesses),
+    transformSourceLanguages: strings(patchIndex.transformSourceLanguages),
+    transformTargetLanguages: strings(patchIndex.transformTargetLanguages),
+    transformSourcePaths: strings(patchIndex.transformSourcePaths),
+    transformTargetPaths: strings(patchIndex.transformTargetPaths),
+    transformCrossLanguages: strings(patchIndex.transformCrossLanguages),
+    transformSourceMapIds: strings(patchIndex.transformSourceMapIds),
+    transformSourceMapLinkIds: strings(patchIndex.transformSourceMapLinkIds),
+    transformSourceMapMappingIds: strings(patchIndex.transformSourceMapMappingIds),
+    transformBaseHashes: strings(patchIndex.transformBaseHashes),
+    transformTargetHashes: strings(patchIndex.transformTargetHashes),
+    targetPortabilityStatuses: strings(patchIndex.targetPortabilityStatuses),
+    targetPortabilityActions: strings(patchIndex.targetPortabilityActions),
+    targetPortabilityReasonCodes: strings(patchIndex.targetPortabilityReasonCodes)
   };
 }
 

@@ -8,7 +8,7 @@ import type { ImportNativeSourceOptions, NativeSourceImportResult } from './impo
 import type { NativeSourceChangeSet } from './native-diff.js';
 import type { SemanticHistoryRecord } from './semantic-history.js';
 import type { SemanticLineageEvent } from './semantic-lineage.js';
-import type { SemanticEditScript } from './semantic-edit-script.js';
+import type { SemanticEditProjection, SemanticEditReplay, SemanticEditScript } from './semantic-edit-script.js';
 import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
 import type { BidirectionalTargetChangeSourceEditProjectionHint } from './bidirectional-target-change-source-edit.js';
 import type {
@@ -77,6 +77,8 @@ export interface BidirectionalTargetChangeRecord {
   readonly targetPortability: BidirectionalTargetPortabilityRecord;
   readonly roundtripEvidence: BidirectionalTargetChangeRoundtripEvidence;
   readonly sourceEditScript?: SemanticEditScript;
+  readonly sourceEditProjection?: SemanticEditProjection;
+  readonly sourceEditReplay?: SemanticEditReplay;
   readonly sourceProjectionHint?: BidirectionalTargetChangeSourceEditProjectionHint;
   readonly sourcePatchBundle: SemanticPatchBundleRecord;
   readonly historyRecord: SemanticHistoryRecord;
@@ -109,6 +111,8 @@ export interface BidirectionalTargetChangeRecord {
     readonly roundtripEvidenceId?: string;
     readonly semanticMergeAdmission?: BidirectionalTargetChangeSemanticMergeAdmissionEvidence;
     readonly sourceEditScriptId?: string;
+    readonly sourceEditProjectionId?: string;
+    readonly sourceEditReplayId?: string;
     readonly sourceProjectionHintId?: string;
     readonly sourceProjectionHint?: BidirectionalTargetChangeSourceEditProjectionHint;
     readonly [key: string]: unknown;

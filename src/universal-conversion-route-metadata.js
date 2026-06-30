@@ -43,6 +43,7 @@ export function routeRecordMetadata(route, planId, metadata) {
     mode: route.mode,
     routeAction: route.routeAction,
     translationAdmission: route.translationAdmission,
+    targetPortability: route.targetPortability ?? route.metadata?.targetPortability,
     representation: routeRepresentationMetadata(route),
     ...routeSemanticEditRecordMetadata(route),
     missingEvidence: route.missingEvidence ?? [],
