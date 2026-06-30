@@ -9,14 +9,12 @@ import {
   normalizeProjectionMatrixTargets
 } from './coverage-matrix-profiles.js';
 import { createUniversalCapabilityMatrix } from './universal-capability-matrix.js';
-import {
-  createUniversalRuntimeCapabilityMatrix,
-  runtimeRouteForConversion
-} from './universal-runtime-capabilities.js';
+import { createUniversalRuntimeCapabilityMatrix } from './universal-runtime-capabilities.js';
 import {
   conversionMergeRefs,
   importsForConversionLanguage
 } from './universal-conversion-plan-merge-refs.js';
+import { conversionRouteIdForRuntime, conversionRouteMatchesRuntimeQuery, conversionRuntimeRoutes } from './universal-conversion-runtime-routing.js';
 import {
   conversionMergeScore,
   conversionScoreComponents
@@ -47,13 +45,15 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
       targets
     }, context);
   const evidence = input.evidence ?? [];
-  const routes = (matrix.languages ?? []).flatMap((language) => targets.map((target) => conversionRoute(language, target, {
-    evidence,
-    generatedAt,
-    imports: input.imports ?? [],
-    matrix,
-    runtimeMatrix
-  }, id)));
+  const routeInput = { evidence, generatedAt, imports: input.imports ?? [], matrix, runtimeMatrix };
+  const routes = (matrix.languages ?? []).flatMap((language) => targets.flatMap((target) => {
+    const runtimeRoutes = conversionRuntimeRoutes(runtimeMatrix, language, target);
+    return runtimeRoutes.map((runtimeRoute) => conversionRoute(language, target, {
+      ...routeInput,
+      runtimeRoute,
+      runtimeRouteCount: runtimeRoutes.length
+    }, id));
+  }));
   return {
     kind: 'frontier.lang.universalConversionPlan',
     version: 1,
@@ -89,6 +89,7 @@ export function queryUniversalConversionPlan(planOrInput = {}, query = {}, conte
     if (query.mode && route.mode !== query.mode) return false;
     if (query.readiness && route.readiness !== query.readiness) return false;
     if (query.admissionAction && route.admissionAction !== query.admissionAction) return false;
+    if (!conversionRouteMatchesRuntimeQuery(route, query)) return false;
     if (!representationCoverageMatches(route.representation, query)) return false;
     return true;
   });
@@ -114,7 +115,7 @@ function conversionRoute(language, target, input, planId) {
   const sourceTarget = nativeLanguageCompileTarget(language.language, language.aliases) ?? normalizeNativeLanguageId(language.language);
   const targetCell = (language.projection?.targets ?? []).find((entry) => entry.target === target);
   const readinessCell = projectionReadinessCell(input.matrix, language, target);
-  const runtimeRoute = runtimeRouteForConversion(input.runtimeMatrix, language, target);
+  const runtimeRoute = input.runtimeRoute;
   const runtime = conversionRuntime(runtimeRoute);
   const mode = conversionMode(language, target, sourceTarget, targetCell);
   const blockers = conversionBlockers(language, targetCell, mode, runtime);
@@ -125,7 +126,7 @@ function conversionRoute(language, target, input, planId) {
       maxSemanticMergeReadiness(language.readiness, targetCell?.readiness ?? readinessCell?.readiness ?? 'needs-review'),
       runtime.readiness ?? 'ready'
     );
-  const id = `conversion_${idFragment(language.language)}_to_${idFragment(target)}`;
+  const id = conversionRouteIdForRuntime(language, target, runtimeRoute, input.runtimeRouteCount);
   const routeEvidence = conversionRouteEvidence(input.evidence, language, target, id);
   const routeImports = importsForConversionLanguage(input.imports, language);
   const mergeRefs = conversionMergeRefs({

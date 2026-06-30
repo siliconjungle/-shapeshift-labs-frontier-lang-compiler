@@ -249,6 +249,15 @@ export interface UniversalConversionPlanQuery extends UniversalRepresentationCov
   readonly mode?: UniversalConversionRouteMode;
   readonly readiness?: SemanticMergeReadiness;
   readonly admissionAction?: UniversalConversionAdmissionAction;
+  readonly runtimeRouteId?: string;
+  readonly sourceHostId?: string;
+  readonly targetHostId?: string;
+  readonly sourceRuntime?: string;
+  readonly runtime?: string;
+  readonly targetRuntime?: string;
+  readonly runtimeReadiness?: SemanticMergeReadiness;
+  readonly missingRuntimeCapability?: UniversalRuntimeCapabilityKind;
+  readonly runtimeAdapterRequirementId?: string;
 }
 
 export interface UniversalConversionPlanQueryResult {

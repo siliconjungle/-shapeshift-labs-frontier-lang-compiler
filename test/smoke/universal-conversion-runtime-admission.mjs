@@ -25,6 +25,30 @@ assert.equal(fetchAdapterRoute.missingEvidence.includes('runtime-adapter-proof')
 assert.equal(fetchAdapterRoute.review.some((reason) => reason.includes('Runtime adapter evidence is required for fetch.')), true);
 assert.equal(fetchAdapterRoute.mergeScore.risk, 'medium');
 
+const hostPlan = createUniversalConversionPlan({
+  generatedAt: 791,
+  universalCapabilityMatrix: readyCapabilityMatrix(),
+  targets: ['rust'],
+  sourceHosts: ['javascript:web', 'javascript:node'],
+  targetHosts: ['rust:cli'],
+  runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'filesystem' }],
+  evidence: [{ id: 'host_filesystem_proof', kind: 'conversion-runtime-proof', status: 'passed', sourceLanguage: 'javascript', target: 'rust' }]
+});
+const hostQuery = queryUniversalConversionPlan(hostPlan, { sourceLanguage: 'javascript', target: 'rust' });
+assert.equal(hostQuery.routes.length, 2);
+assert.equal(new Set(hostQuery.routes.map((route) => route.id)).size, 2);
+const webHostRoute = queryUniversalConversionPlan(hostPlan, { sourceHostId: 'javascript:web', target: 'rust' }).bestRoute;
+const nodeHostRoute = queryUniversalConversionPlan(hostPlan, { sourceRuntime: 'node', target: 'rust' }).bestRoute;
+assert.equal(webHostRoute.runtime.source.id, 'javascript:web');
+assert.equal(webHostRoute.readiness, 'blocked');
+assert.equal(webHostRoute.admissionAction, 'reject');
+assert.equal(nodeHostRoute.runtime.source.id, 'javascript:node');
+assert.equal(nodeHostRoute.readiness, 'needs-review');
+assert.equal(nodeHostRoute.admissionAction, 'prioritize');
+assert.equal(hostQuery.bestRoute.id, nodeHostRoute.id);
+assert.equal(queryUniversalConversionPlan(hostPlan, { runtimeReadiness: 'blocked' }).bestRoute.id, webHostRoute.id);
+assert.equal(queryUniversalConversionPlan(hostPlan, { runtimeAdapterRequirementId: nodeHostRoute.runtimeAdapterRequirements[0].id }).bestRoute.id, nodeHostRoute.id);
+
 function conversionRouteForRequirement(capability) {
   const plan = createUniversalConversionPlan({
     generatedAt: 790,

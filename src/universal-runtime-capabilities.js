@@ -82,11 +82,15 @@ export function queryUniversalRuntimeCapabilityMatrix(matrixOrInput = {}, query 
   };
 }
 
-export function runtimeRouteForConversion(runtimeMatrix, language, target) {
+export function runtimeRoutesForConversion(runtimeMatrix, language, target) {
   const languageIds = uniqueStrings([language?.language, ...(language?.aliases ?? [])].map(normalizeNativeLanguageId));
   const normalizedTarget = normalizeProjectionMatrixTargets([target])[0] ?? String(target ?? '');
-  return (runtimeMatrix?.routes ?? []).find((route) => {
+  return (runtimeMatrix?.routes ?? []).filter((route) => {
     if (normalizedTarget && route.target.target !== normalizedTarget) return false;
     return route.source.languageIds.some((id) => languageIds.includes(id));
   });
+}
+
+export function runtimeRouteForConversion(runtimeMatrix, language, target) {
+  return runtimeRoutesForConversion(runtimeMatrix, language, target)[0];
 }
