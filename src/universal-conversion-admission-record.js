@@ -58,6 +58,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     lifetimeConstraintAction: route.lifetimeConstraint?.action,
     effectConstraintStatus: route.effectConstraint?.status,
     effectConstraintAction: route.effectConstraint?.action,
+    typeConstraintStatus: route.typeConstraint?.status,
+    typeConstraintAction: route.typeConstraint?.action,
     reviewRequired: true,
     readiness: route.readiness,
     risk: score.risk ?? riskForRoute(route, input.admissionStatus),
@@ -131,6 +133,15 @@ export function createUniversalConversionAdmissionRecord(input) {
       missingKinds: route.effectConstraint?.missingKinds ?? [],
       missingEvidence: route.effectConstraint?.missingEvidence ?? []
     },
+    typeConstraint: {
+      id: route.typeConstraint?.id,
+      status: route.typeConstraint?.status,
+      action: route.typeConstraint?.action,
+      requiredKinds: route.typeConstraint?.requiredKinds ?? [],
+      representedKinds: route.typeConstraint?.representedKinds ?? [],
+      missingKinds: route.typeConstraint?.missingKinds ?? [],
+      missingEvidence: route.typeConstraint?.missingEvidence ?? []
+    },
     ownership: {
       keys: uniqueStrings(input.history?.index?.ownershipKeys ?? input.patchBundle?.index?.ownershipKeys ?? []),
       conflictKeys: uniqueStrings(input.history?.index?.conflictKeys ?? input.patchBundle?.index?.conflictKeys ?? [])
@@ -166,6 +177,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       resourceTransfer: route.resourceTransfer,
       lifetimeConstraint: route.lifetimeConstraint,
       effectConstraint: route.effectConstraint,
+      typeConstraint: route.typeConstraint,
       note: 'Admission records are sortable merge-review evidence, not proof of target semantic equivalence.'
     }
   };

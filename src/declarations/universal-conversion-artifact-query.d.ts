@@ -21,6 +21,7 @@ import type { UniversalInterlinguaQuery } from './universal-interlingua.js';
 import type { UniversalResourceTransferQuery } from './universal-resource-transfer.js';
 import type { UniversalLifetimeConstraintQuery } from './universal-lifetime-constraints.js';
 import type { UniversalEffectConstraintQuery } from './universal-effect-constraints.js';
+import type { UniversalTypeConstraintQuery } from './universal-type-constraints.js';
 
 export interface UniversalConversionArtifactIndex {
   readonly routeIds: readonly string[];
@@ -118,6 +119,10 @@ export interface UniversalConversionArtifactIndex {
   readonly effectConstraintActions: readonly string[];
   readonly effectConstraintMissingEvidence: readonly string[];
   readonly effectConstraintMissingKinds: readonly string[];
+  readonly typeConstraintStatuses: readonly string[];
+  readonly typeConstraintActions: readonly string[];
+  readonly typeConstraintMissingEvidence: readonly string[];
+  readonly typeConstraintMissingKinds: readonly string[];
   readonly interlinguaRecordIds: readonly string[];
   readonly interlinguaLayerKinds: readonly string[];
   readonly interlinguaRepresentedLayerKinds: readonly string[];
@@ -130,7 +135,7 @@ export interface UniversalConversionArtifactIndex {
   readonly transformIdentityHashes: readonly string[];
 }
 
-export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalEffectConstraintQuery {
+export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalEffectConstraintQuery, UniversalTypeConstraintQuery {
   readonly routeId?: string | readonly string[];
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];

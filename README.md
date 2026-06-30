@@ -781,6 +781,7 @@ import {
   createUniversalConversionWorklist,
   createUniversalEffectConstraintEvidence,
   createUniversalLifetimeConstraintEvidence,
+  createUniversalTypeConstraintEvidence,
   createUniversalOwnershipConstraintEvidence,
   createUniversalResourceTransferEvidence,
   queryUniversalCapabilityMatrix,
@@ -871,6 +872,19 @@ const effectConstraints = createUniversalEffectConstraintEvidence({
 });
 console.log(effectConstraints.missingKinds); // ["network-io"]
 console.log(effectConstraints.claims.effectEquivalenceClaim); // false without executable proof
+
+const typeConstraints = createUniversalTypeConstraintEvidence({
+  sourceLanguage: 'typescript',
+  target: 'rust',
+  sourceTypes: [
+    { kind: 'public function', signatureHash: 'sig_read_user' },
+    { kind: 'generic type-parameter' },
+    { kind: 'property', optional: true }
+  ],
+  targetTypes: [{ kind: 'public function', signatureHash: 'sig_read_user' }]
+});
+console.log(typeConstraints.missingKinds); // public API/type-shape obligations still needing target evidence
+console.log(typeConstraints.claims.typeEquivalenceClaim); // false without source-bound type proof
 
 const ownershipConstraints = createUniversalOwnershipConstraintEvidence({
   sourceLanguage: 'rust',
@@ -991,6 +1005,16 @@ coordinator separate "target code shape exists" from "target execution preserves
 the source effect boundary." The record remains conservative: runtime,
 effect-equivalence, semantic-equivalence, and auto-merge claims stay false unless
 separate proof is attached.
+
+Routes can also carry `typeConstraint`, a public API/type-shape admission record
+for callable signatures, parameter and return shape, generic parameters,
+nullability/optionality, nominal/structural identity, overload sets, visibility,
+variance, and advanced type operators. Type queries such as
+`typeConstraintMissingKind: "nullability"` let a coordinator distinguish "target
+code exists" from "target lowering preserved the source API contract." The record
+is deliberately conservative: type-equivalence, public-API-equivalence,
+semantic-equivalence, and auto-merge claims stay false unless separate proof is
+attached.
 
 Each route also carries `interlingua`, a first-class superset-language route record. It binds the source lift (`sourcePaths`, hashes, source maps, ownership keys, evidence/proof IDs), represented/missing/review/blocked semantic layers, and target lowering disposition: `exact-source`, `target-adapter`, `declaration-stub`, `semantic-index-only`, `lossy-review`, or `blocked`. The record is queryable through `interlinguaLayerKind`, `interlinguaRepresentedLayerKind`, `interlinguaMissingLayerKind`, `interlinguaLoweringDisposition`, `interlinguaMissingEvidence`, `interlinguaProofEvidenceId`, and `interlinguaTargetAdapterId`. It is loss accounting for source -> interlingua -> target lowering, not a target semantic-equivalence proof.
 

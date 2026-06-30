@@ -15,6 +15,7 @@ import type { UniversalConversionPlanCompactCounts } from './universal-conversio
 import type { UniversalRuntimeAdapterRequirement, UniversalRuntimeCapabilityKind, UniversalRuntimeCapabilityMatrix, UniversalRuntimeCapabilityRoute, UniversalRuntimeHostProfile } from './universal-runtime-capabilities.js';
 import type { UniversalEffectConstraintEvidence, UniversalEffectConstraintInput, UniversalEffectConstraintQuery } from './universal-effect-constraints.js';
 import type { UniversalLifetimeConstraintEvidence, UniversalLifetimeConstraintInput, UniversalLifetimeConstraintQuery } from './universal-lifetime-constraints.js';
+import type { UniversalTypeConstraintEvidence, UniversalTypeConstraintInput, UniversalTypeConstraintQuery } from './universal-type-constraints.js';
 import type { UniversalResourceTransferEvidence, UniversalResourceTransferInput, UniversalResourceTransferQuery } from './universal-resource-transfer.js';
 import type {
   UniversalDialectConstructKind,
@@ -91,9 +92,9 @@ export interface UniversalTranslationAdmission {
   readonly resourceTransferStatus?: string; readonly resourceTransferAction?: string; readonly resourceTransferMissingEvidence: readonly string[];
   readonly lifetimeConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly lifetimeConstraintStatus?: string; readonly lifetimeConstraintAction?: string; readonly lifetimeConstraintMissingEvidence: readonly string[];
   readonly effectConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly effectConstraintStatus?: string; readonly effectConstraintAction?: string; readonly effectConstraintMissingEvidence: readonly string[];
+  readonly typeConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly typeConstraintStatus?: string; readonly typeConstraintAction?: string; readonly typeConstraintMissingEvidence: readonly string[];
   readonly targetAdapterId?: string; readonly autoMergeClaim: false; readonly semanticEquivalenceClaim: false;
 }
-
 export type { UniversalInterlinguaRecord } from './universal-interlingua.js';
 
 export interface UniversalConversionRouteRuntime {
@@ -177,7 +178,7 @@ export interface UniversalConversionRoute {
   readonly evidence: UniversalConversionRouteEvidence;
   readonly representation: UniversalRepresentationCoverage;
   readonly interlingua: UniversalInterlinguaRecord;
-  readonly resourceTransfer?: UniversalResourceTransferEvidence; readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence; readonly effectConstraint?: UniversalEffectConstraintEvidence;
+  readonly resourceTransfer?: UniversalResourceTransferEvidence; readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence; readonly effectConstraint?: UniversalEffectConstraintEvidence; readonly typeConstraint?: UniversalTypeConstraintEvidence;
   readonly missingEvidence: readonly string[];
   readonly translationAdmission: UniversalTranslationAdmission;
   readonly blockers: readonly string[];
@@ -189,7 +190,6 @@ export interface UniversalConversionRoute {
   readonly semanticEquivalenceClaim: false;
   readonly metadata: Record<string, unknown>;
 }
-
 export interface UniversalConversionPlan {
   readonly kind: 'frontier.lang.universalConversionPlan';
   readonly version: 1;
@@ -252,6 +252,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly resourceTransfer?: UniversalResourceTransferInput | UniversalResourceTransferEvidence; readonly translationResourceTransfer?: UniversalResourceTransferInput | UniversalResourceTransferEvidence; readonly resourceTransfers?: readonly (UniversalResourceTransferInput | UniversalResourceTransferEvidence)[];
   readonly lifetimeConstraint?: UniversalLifetimeConstraintInput | UniversalLifetimeConstraintEvidence; readonly translationLifetimeConstraint?: UniversalLifetimeConstraintInput | UniversalLifetimeConstraintEvidence; readonly lifetimeConstraints?: readonly (UniversalLifetimeConstraintInput | UniversalLifetimeConstraintEvidence)[];
   readonly effectConstraint?: UniversalEffectConstraintInput | UniversalEffectConstraintEvidence; readonly translationEffectConstraint?: UniversalEffectConstraintInput | UniversalEffectConstraintEvidence; readonly effectConstraints?: readonly (UniversalEffectConstraintInput | UniversalEffectConstraintEvidence)[];
+  readonly typeConstraint?: UniversalTypeConstraintInput | UniversalTypeConstraintEvidence; readonly translationTypeConstraint?: UniversalTypeConstraintInput | UniversalTypeConstraintEvidence; readonly typeConstraints?: readonly (UniversalTypeConstraintInput | UniversalTypeConstraintEvidence)[];
   readonly runtimeRequirements?: readonly (
     | UniversalRuntimeCapabilityKind
     | {
@@ -277,8 +278,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly effects?: UniversalConversionPlanOptions['runtimeRequirements'];
   readonly evidence?: readonly EvidenceRecord[];
 }
-
-export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalEffectConstraintQuery {
+export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalEffectConstraintQuery, UniversalTypeConstraintQuery {
   readonly sourceLanguage?: FrontierSourceLanguage | string;
   readonly language?: FrontierSourceLanguage | string;
   readonly target?: FrontierCompileTarget | string;

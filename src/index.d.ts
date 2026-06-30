@@ -15,6 +15,7 @@ export * from './declarations/universal-conversion-worklist.js';
 export * from './declarations/universal-runtime-capabilities.js';
 export * from './declarations/universal-effect-constraints.js';
 export * from './declarations/universal-lifetime-constraints.js';
+export * from './declarations/universal-type-constraints.js';
 export * from './declarations/universal-ownership-constraints.js';
 export * from './declarations/universal-resource-transfer.js';
 export * from './declarations/universal-dialects.js';

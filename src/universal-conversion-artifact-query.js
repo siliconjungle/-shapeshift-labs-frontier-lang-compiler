@@ -4,6 +4,7 @@ import { interlinguaRecordMatches } from './universal-interlingua-record.js';
 import { resourceTransferMatches } from './universal-resource-transfer.js';
 import { effectConstraintMatches } from './universal-effect-constraints.js';
 import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
+import { typeConstraintMatches } from './universal-type-constraints.js';
 
 export function queryUniversalConversionArtifacts(records, query = {}) {
   return artifactRecords(records)
@@ -13,14 +14,15 @@ export function queryUniversalConversionArtifacts(records, query = {}) {
 }
 
 export function artifactIndex(routeArtifacts) {
-  const editIndexes = routeArtifacts.map(artifactSemanticEditIndex);
-  const operations = routeArtifacts.flatMap(artifactSemanticOperations);
-  const tAdmissions = routeArtifacts.map(translation);
-  const rTransfers = routeArtifacts.map(resourceTransfer);
-  const oConstraints = routeArtifacts.map(ownership);
-  const lConstraints = routeArtifacts.map(lifetimeConstraint);
-  const eConstraints = routeArtifacts.map(effectConstraint);
-  const iRecords = routeArtifacts.map(interlingua);
+  const edits = routeArtifacts.map(artifactSemanticEditIndex);
+  const opList = routeArtifacts.flatMap(ops);
+  const tAdmissions = routeArtifacts.map(tAdm);
+  const rTransfers = routeArtifacts.map(res);
+  const oConstraints = routeArtifacts.map(own);
+  const lConstraints = routeArtifacts.map(life);
+  const eConstraints = routeArtifacts.map(effect);
+  const tConstraints = routeArtifacts.map(types);
+  const iRecords = routeArtifacts.map(intl);
   return {
     routeIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.routeId)),
     historyIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.history.id)),
@@ -52,47 +54,47 @@ export function artifactIndex(routeArtifacts) {
     evidenceReceiptMissingEvidence: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.evidenceReceipt?.missingEvidence ?? [])),
     evidenceReceiptRejectedReasons: uniqueStrings(routeArtifacts.flatMap((artifact) => (artifact.evidenceReceipt?.records?.rejected ?? []).map((record) => record.reason))),
     evidenceReceiptRejectedIds: uniqueStrings(routeArtifacts.flatMap((artifact) => (artifact.evidenceReceipt?.records?.rejected ?? []).map((record) => record.id))),
-    semanticOperationIds: uniqueStrings(operations.map((operation) => operation.id)),
-    semanticOperationKinds: uniqueStrings(operations.map((operation) => operation.operationKind)),
-    semanticOperationInterlinguaRecordIds: uniqueStrings(operations.map((operation) => operation.metadata?.interlingua?.id)),
-    semanticOperationInterlinguaLoweringDispositions: uniqueStrings(operations.map((operation) => operation.metadata?.interlingua?.loweringDisposition)),
-    semanticOperationInterlinguaMissingEvidence: uniqueStrings(operations.flatMap((operation) => operation.metadata?.interlingua?.missingEvidence ?? [])),
-    semanticOperationInterlinguaProofEvidenceIds: uniqueStrings(operations.flatMap((operation) => operation.metadata?.interlingua?.proofEvidenceIds ?? [])),
-    semanticEditStatuses: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditStatuses)),
-    semanticEditScriptIds: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditScriptIds)),
-    semanticEditProjectionIds: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditProjectionIds)),
-    semanticEditReplayIds: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditReplayIds)),
-    semanticEditReplayStatuses: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditReplayStatuses)),
-    semanticEditReplayActions: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditReplayActions)),
-    semanticEditAdmissionStatuses: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditAdmissionStatuses)),
-    semanticEditAdmissionActions: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditAdmissionActions)),
-    semanticEditAdmissionReadinesses: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditAdmissionReadinesses)),
-    semanticEditReplayCurrentHashes: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditReplayCurrentHashes)),
-    semanticEditReplayOutputHashes: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditReplayOutputHashes)),
-    semanticEditKeys: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditKeys)),
-    semanticEditHashes: uniqueStrings(editIndexes.flatMap((index) => index.semanticEditHashes)),
-    semanticIdentityHashes: uniqueStrings(editIndexes.flatMap((index) => index.semanticIdentityHashes)),
-    sourceIdentityHashes: uniqueStrings(editIndexes.flatMap((index) => index.sourceIdentityHashes)),
-    operationContentHashes: uniqueStrings(editIndexes.flatMap((index) => index.operationContentHashes)),
-    editContentHashes: uniqueStrings(editIndexes.flatMap((index) => index.editContentHashes)),
-    sourceBackprojectionModes: uniqueStrings(editIndexes.flatMap((index) => index.sourceBackprojectionModes)),
-    semanticTransformReadinesses: uniqueStrings(editIndexes.flatMap((index) => index.semanticTransformReadinesses)),
-    transformSourceLanguages: uniqueStrings(editIndexes.flatMap((index) => index.transformSourceLanguages)),
-    transformTargetLanguages: uniqueStrings(editIndexes.flatMap((index) => index.transformTargetLanguages)),
-    transformSourcePaths: uniqueStrings(editIndexes.flatMap((index) => index.transformSourcePaths)),
-    transformTargetPaths: uniqueStrings(editIndexes.flatMap((index) => index.transformTargetPaths)),
-    transformCrossLanguages: uniqueStrings(editIndexes.flatMap((index) => index.transformCrossLanguages)),
-    transformSourceMapIds: uniqueStrings(editIndexes.flatMap((index) => index.transformSourceMapIds)),
-    transformSourceMapLinkIds: uniqueStrings(editIndexes.flatMap((index) => index.transformSourceMapLinkIds)),
-    transformSourceMapMappingIds: uniqueStrings(editIndexes.flatMap((index) => index.transformSourceMapMappingIds)),
-    transformBaseHashes: uniqueStrings(editIndexes.flatMap((index) => index.transformBaseHashes)),
-    transformTargetHashes: uniqueStrings(editIndexes.flatMap((index) => index.transformTargetHashes)),
-    targetPortabilityStatuses: uniqueStrings(editIndexes.flatMap((index) => index.targetPortabilityStatuses)),
-    targetPortabilityActions: uniqueStrings(editIndexes.flatMap((index) => index.targetPortabilityActions)),
-    targetPortabilityReasonCodes: uniqueStrings(editIndexes.flatMap((index) => index.targetPortabilityReasonCodes)),
-    representationConstructKinds: uniqueStrings(routeArtifacts.flatMap(artifactConstructKinds)),
-    runtimeCapabilities: uniqueStrings(routeArtifacts.flatMap(artifactRuntimeCapabilities)),
-    sourceMapPrecisions: uniqueStrings(routeArtifacts.flatMap(artifactSourceMapPrecisions)),
+    semanticOperationIds: uniqueStrings(opList.map((operation) => operation.id)),
+    semanticOperationKinds: uniqueStrings(opList.map((operation) => operation.operationKind)),
+    semanticOperationInterlinguaRecordIds: uniqueStrings(opList.map((operation) => operation.metadata?.interlingua?.id)),
+    semanticOperationInterlinguaLoweringDispositions: uniqueStrings(opList.map((operation) => operation.metadata?.interlingua?.loweringDisposition)),
+    semanticOperationInterlinguaMissingEvidence: uniqueStrings(opList.flatMap((operation) => operation.metadata?.interlingua?.missingEvidence ?? [])),
+    semanticOperationInterlinguaProofEvidenceIds: uniqueStrings(opList.flatMap((operation) => operation.metadata?.interlingua?.proofEvidenceIds ?? [])),
+    semanticEditStatuses: uniqueStrings(edits.flatMap((index) => index.semanticEditStatuses)),
+    semanticEditScriptIds: uniqueStrings(edits.flatMap((index) => index.semanticEditScriptIds)),
+    semanticEditProjectionIds: uniqueStrings(edits.flatMap((index) => index.semanticEditProjectionIds)),
+    semanticEditReplayIds: uniqueStrings(edits.flatMap((index) => index.semanticEditReplayIds)),
+    semanticEditReplayStatuses: uniqueStrings(edits.flatMap((index) => index.semanticEditReplayStatuses)),
+    semanticEditReplayActions: uniqueStrings(edits.flatMap((index) => index.semanticEditReplayActions)),
+    semanticEditAdmissionStatuses: uniqueStrings(edits.flatMap((index) => index.semanticEditAdmissionStatuses)),
+    semanticEditAdmissionActions: uniqueStrings(edits.flatMap((index) => index.semanticEditAdmissionActions)),
+    semanticEditAdmissionReadinesses: uniqueStrings(edits.flatMap((index) => index.semanticEditAdmissionReadinesses)),
+    semanticEditReplayCurrentHashes: uniqueStrings(edits.flatMap((index) => index.semanticEditReplayCurrentHashes)),
+    semanticEditReplayOutputHashes: uniqueStrings(edits.flatMap((index) => index.semanticEditReplayOutputHashes)),
+    semanticEditKeys: uniqueStrings(edits.flatMap((index) => index.semanticEditKeys)),
+    semanticEditHashes: uniqueStrings(edits.flatMap((index) => index.semanticEditHashes)),
+    semanticIdentityHashes: uniqueStrings(edits.flatMap((index) => index.semanticIdentityHashes)),
+    sourceIdentityHashes: uniqueStrings(edits.flatMap((index) => index.sourceIdentityHashes)),
+    operationContentHashes: uniqueStrings(edits.flatMap((index) => index.operationContentHashes)),
+    editContentHashes: uniqueStrings(edits.flatMap((index) => index.editContentHashes)),
+    sourceBackprojectionModes: uniqueStrings(edits.flatMap((index) => index.sourceBackprojectionModes)),
+    semanticTransformReadinesses: uniqueStrings(edits.flatMap((index) => index.semanticTransformReadinesses)),
+    transformSourceLanguages: uniqueStrings(edits.flatMap((index) => index.transformSourceLanguages)),
+    transformTargetLanguages: uniqueStrings(edits.flatMap((index) => index.transformTargetLanguages)),
+    transformSourcePaths: uniqueStrings(edits.flatMap((index) => index.transformSourcePaths)),
+    transformTargetPaths: uniqueStrings(edits.flatMap((index) => index.transformTargetPaths)),
+    transformCrossLanguages: uniqueStrings(edits.flatMap((index) => index.transformCrossLanguages)),
+    transformSourceMapIds: uniqueStrings(edits.flatMap((index) => index.transformSourceMapIds)),
+    transformSourceMapLinkIds: uniqueStrings(edits.flatMap((index) => index.transformSourceMapLinkIds)),
+    transformSourceMapMappingIds: uniqueStrings(edits.flatMap((index) => index.transformSourceMapMappingIds)),
+    transformBaseHashes: uniqueStrings(edits.flatMap((index) => index.transformBaseHashes)),
+    transformTargetHashes: uniqueStrings(edits.flatMap((index) => index.transformTargetHashes)),
+    targetPortabilityStatuses: uniqueStrings(edits.flatMap((index) => index.targetPortabilityStatuses)),
+    targetPortabilityActions: uniqueStrings(edits.flatMap((index) => index.targetPortabilityActions)),
+    targetPortabilityReasonCodes: uniqueStrings(edits.flatMap((index) => index.targetPortabilityReasonCodes)),
+    representationConstructKinds: uniqueStrings(routeArtifacts.flatMap(constructs)),
+    runtimeCapabilities: uniqueStrings(routeArtifacts.flatMap(rCaps)),
+    sourceMapPrecisions: uniqueStrings(routeArtifacts.flatMap(sMapPrecisions)),
     translationAdmissionStatuses: uniqueStrings(tAdmissions.map((record) => record.status)),
     translationAdmissionActions: uniqueStrings(tAdmissions.map((record) => record.action)),
     missingTranslationEvidence: uniqueStrings(tAdmissions.flatMap((record) => record.missingEvidence ?? [])),
@@ -117,6 +119,10 @@ export function artifactIndex(routeArtifacts) {
     effectConstraintActions: uniqueStrings(eConstraints.map((record) => record.action)),
     effectConstraintMissingEvidence: uniqueStrings(eConstraints.flatMap((record) => record.missingEvidence ?? [])),
     effectConstraintMissingKinds: uniqueStrings(eConstraints.flatMap((record) => record.missingKinds ?? [])),
+    typeConstraintStatuses: uniqueStrings(tConstraints.map((record) => record.status)),
+    typeConstraintActions: uniqueStrings(tConstraints.map((record) => record.action)),
+    typeConstraintMissingEvidence: uniqueStrings(tConstraints.flatMap((record) => record.missingEvidence ?? [])),
+    typeConstraintMissingKinds: uniqueStrings(tConstraints.flatMap((record) => record.missingKinds ?? [])),
     interlinguaRecordIds: uniqueStrings(iRecords.map((record) => record.id)),
     interlinguaLayerKinds: uniqueStrings(iRecords.flatMap((record) => record.query?.layerKinds ?? [])),
     interlinguaRepresentedLayerKinds: uniqueStrings(iRecords.flatMap((record) => record.query?.representedLayerKinds ?? [])),
@@ -126,7 +132,7 @@ export function artifactIndex(routeArtifacts) {
     interlinguaLoweringDispositions: uniqueStrings(iRecords.map((record) => record.query?.loweringDisposition)),
     interlinguaMissingEvidence: uniqueStrings(iRecords.flatMap((record) => record.query?.missingEvidence ?? [])),
     interlinguaProofEvidenceIds: uniqueStrings(iRecords.flatMap((record) => record.query?.proofEvidenceIds ?? [])),
-    transformIdentityHashes: uniqueStrings(routeArtifacts.flatMap(artifactTransformIdentityHashes))
+    transformIdentityHashes: uniqueStrings(routeArtifacts.flatMap(tHashes))
   };
 }
 
@@ -139,7 +145,7 @@ function artifactRecords(records) {
 
 function matchesArtifact(record, query) {
   const editIndex = artifactSemanticEditIndex(record);
-  const operations = artifactSemanticOperations(record);
+  const operations = ops(record);
   return match(query.routeId, [record.routeId])
     && match(query.historyId, [record.history.id])
     && match(query.patchBundleId, [record.patchBundle.id])
@@ -210,29 +216,30 @@ function matchesArtifact(record, query) {
     && match(query.targetPortabilityStatus ?? query.targetPortabilityStatuses, editIndex.targetPortabilityStatuses)
     && match(query.targetPortabilityAction ?? query.targetPortabilityActions, editIndex.targetPortabilityActions)
     && match(query.targetPortabilityReasonCode ?? query.targetPortabilityReasonCodes, editIndex.targetPortabilityReasonCodes)
-    && match(query.constructKind ?? query.representationConstructKind, artifactConstructKinds(record))
-    && match(query.runtimeCapability, artifactRuntimeCapabilities(record))
-    && match(query.sourceMapPrecision, artifactSourceMapPrecisions(record))
-    && match(query.translationAdmissionStatus, [translation(record).status])
-    && match(query.translationAdmissionAction, [translation(record).action])
-    && match(query.missingTranslationEvidence, translation(record).missingEvidence)
-    && match(query.translationEvidenceId, translation(record).evidenceIds)
-    && match(query.translationProofEvidenceId, translation(record).proofEvidenceIds)
-    && match(query.requiredTranslationConstructKind, translation(record).requiredConstructKinds)
-    && match(query.representedTranslationConstructKind, translation(record).representedConstructKinds)
-    && match(query.targetAdapterId, [translation(record).targetAdapterId])
-    && resourceTransferMatches(resourceTransfer(record), query)
-    && lifetimeConstraintMatches(lifetimeConstraint(record), query)
-    && effectConstraintMatches(effectConstraint(record), query)
-    && interlinguaRecordMatches(interlingua(record), query)
-    && match(query.transformIdentityHash, artifactTransformIdentityHashes(record));
+    && match(query.constructKind ?? query.representationConstructKind, constructs(record))
+    && match(query.runtimeCapability, rCaps(record))
+    && match(query.sourceMapPrecision, sMapPrecisions(record))
+    && match(query.translationAdmissionStatus, [tAdm(record).status])
+    && match(query.translationAdmissionAction, [tAdm(record).action])
+    && match(query.missingTranslationEvidence, tAdm(record).missingEvidence)
+    && match(query.translationEvidenceId, tAdm(record).evidenceIds)
+    && match(query.translationProofEvidenceId, tAdm(record).proofEvidenceIds)
+    && match(query.requiredTranslationConstructKind, tAdm(record).requiredConstructKinds)
+    && match(query.representedTranslationConstructKind, tAdm(record).representedConstructKinds)
+    && match(query.targetAdapterId, [tAdm(record).targetAdapterId])
+    && resourceTransferMatches(res(record), query)
+    && lifetimeConstraintMatches(life(record), query)
+    && effectConstraintMatches(effect(record), query)
+    && typeConstraintMatches(types(record), query)
+    && interlinguaRecordMatches(intl(record), query)
+    && match(query.transformIdentityHash, tHashes(record));
 }
 
-function artifactSemanticOperations(record) {
+function ops(record) {
   return record.semanticOperations?.operations ?? [];
 }
 
-function artifactConstructKinds(record) {
+function constructs(record) {
   return uniqueStrings([
     ...(record.metadata?.representation?.constructKinds ?? []),
     ...(record.mergeScore?.components?.representationCoverage?.signals?.constructKinds ?? []),
@@ -240,7 +247,7 @@ function artifactConstructKinds(record) {
   ]);
 }
 
-function artifactRuntimeCapabilities(record) {
+function rCaps(record) {
   return uniqueStrings([
     ...(record.metadata?.representation?.runtimeCapabilities ?? []),
     ...(record.mergeScore?.components?.representationCoverage?.signals?.runtimeCapabilities ?? []),
@@ -248,7 +255,7 @@ function artifactRuntimeCapabilities(record) {
   ]);
 }
 
-function artifactSourceMapPrecisions(record) {
+function sMapPrecisions(record) {
   return uniqueStrings([
     ...(record.metadata?.representation?.sourceMapPrecisions ?? []),
     ...(record.mergeScore?.components?.representationCoverage?.signals?.sourceMapPrecisions ?? []),
@@ -256,7 +263,7 @@ function artifactSourceMapPrecisions(record) {
   ]);
 }
 
-function artifactTransformIdentityHashes(record) {
+function tHashes(record) {
   return uniqueStrings([
     ...(record.metadata?.representation?.transformIdentityHashes ?? []),
     ...(record.patchBundle?.index?.transformIdentityHashes ?? []),
@@ -264,33 +271,37 @@ function artifactTransformIdentityHashes(record) {
   ]);
 }
 
-function translation(record) {
+function tAdm(record) {
   return record.translationAdmission ?? record.metadata?.translationAdmission ?? record.admissionRecord?.metadata?.translationAdmission ?? {};
 }
 
-function interlingua(record) {
+function intl(record) {
   return record.interlingua ?? record.metadata?.interlingua ?? record.admissionRecord?.metadata?.interlingua ?? {};
 }
 
-function resourceTransfer(record) {
+function res(record) {
   return record.resourceTransfer ?? record.metadata?.resourceTransfer ?? record.translationAdmission?.resourceTransfer ?? record.admissionRecord?.metadata?.resourceTransfer ?? {};
 }
 
-function ownership(record) {
-  return resourceTransfer(record).ownershipConstraints ?? {};
+function own(record) {
+  return res(record).ownershipConstraints ?? {};
 }
 
-function lifetimeConstraint(record) {
+function life(record) {
   return record.lifetimeConstraint ?? record.metadata?.lifetimeConstraint ?? record.translationAdmission?.lifetimeConstraint ?? record.admissionRecord?.metadata?.lifetimeConstraint ?? {};
 }
 
-function effectConstraint(record) {
+function effect(record) {
   return record.effectConstraint ?? record.metadata?.effectConstraint ?? record.translationAdmission?.effectConstraint ?? record.admissionRecord?.metadata?.effectConstraint ?? {};
 }
 
-function match(filter, values) {
-  const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];
-  if (filters.length === 0) return true;
+function types(record) {
+  return record.typeConstraint ?? record.metadata?.typeConstraint ?? record.translationAdmission?.typeConstraint ?? record.admissionRecord?.metadata?.typeConstraint ?? {};
+}
+
+function match(f, values) {
+  const filters = Array.isArray(f) ? f : f === undefined ? [] : [f];
+  if (!filters.length) return true;
   const valueSet = new Set((values ?? []).map(String));
   return filters.some((item) => valueSet.has(String(item)));
 }

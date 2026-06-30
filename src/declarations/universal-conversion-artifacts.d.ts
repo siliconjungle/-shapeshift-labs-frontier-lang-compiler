@@ -12,6 +12,7 @@ import type { UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalResourceTransferEvidence } from './universal-resource-transfer.js';
 import type { UniversalLifetimeConstraintEvidence } from './universal-lifetime-constraints.js';
 import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
+import type { UniversalTypeConstraintEvidence } from './universal-type-constraints.js';
 import type {
   UniversalConversionAdmissionAction,
   UniversalConversionPlan,
@@ -75,6 +76,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly lifetimeConstraintAction?: string;
   readonly effectConstraintStatus?: string;
   readonly effectConstraintAction?: string;
+  readonly typeConstraintStatus?: string;
+  readonly typeConstraintAction?: string;
   readonly readiness: SemanticMergeReadiness | string;
   readonly risk: UniversalConversionRisk | string;
   readonly score: {
@@ -147,6 +150,15 @@ export interface UniversalConversionAdmissionRecord {
     readonly missingKinds: readonly string[];
     readonly missingEvidence: readonly string[];
   };
+  readonly typeConstraint: {
+    readonly id?: string;
+    readonly status?: string;
+    readonly action?: string;
+    readonly requiredKinds: readonly string[];
+    readonly representedKinds: readonly string[];
+    readonly missingKinds: readonly string[];
+    readonly missingEvidence: readonly string[];
+  };
   readonly ownership: {
     readonly keys: readonly string[];
     readonly conflictKeys: readonly string[];
@@ -195,6 +207,7 @@ export interface UniversalConversionRouteArtifact {
   readonly resourceTransfer?: UniversalResourceTransferEvidence;
   readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence;
   readonly effectConstraint?: UniversalEffectConstraintEvidence;
+  readonly typeConstraint?: UniversalTypeConstraintEvidence;
   readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
   readonly reviewRequired: true;
   readonly history: SemanticHistoryRecord;
