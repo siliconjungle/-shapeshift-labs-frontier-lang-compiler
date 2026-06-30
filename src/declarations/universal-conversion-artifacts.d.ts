@@ -11,6 +11,7 @@ import type { UniversalConversionRouteEvidenceReceipt } from './universal-conver
 import type { UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalResourceTransferEvidence } from './universal-resource-transfer.js';
 import type { UniversalLifetimeConstraintEvidence } from './universal-lifetime-constraints.js';
+import type { UniversalControlFlowConstraintEvidence } from './universal-control-flow-constraints.js';
 import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
 import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js';
 import type { UniversalTypeConstraintEvidence } from './universal-type-constraints.js';
@@ -53,6 +54,11 @@ export interface UniversalConversionArtifactMaterialization {
   readonly autoMergeClaim: false;
   readonly semanticEquivalenceClaim: false;
 }
+export interface UniversalConversionConstraintSummary {
+  readonly id?: string; readonly status?: string; readonly action?: string;
+  readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[];
+  readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[];
+}
 
 export interface UniversalConversionAdmissionRecord {
   readonly kind: 'frontier.lang.universalConversionAdmissionRecord';
@@ -75,6 +81,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly resourceTransferAction?: string;
   readonly lifetimeConstraintStatus?: string;
   readonly lifetimeConstraintAction?: string;
+  readonly controlFlowConstraintStatus?: string;
+  readonly controlFlowConstraintAction?: string;
   readonly effectConstraintStatus?: string;
   readonly effectConstraintAction?: string;
   readonly moduleConstraintStatus?: string;
@@ -135,42 +143,11 @@ export interface UniversalConversionAdmissionRecord {
       readonly missingEvidence: readonly string[];
     };
   };
-  readonly effectConstraint: {
-    readonly id?: string;
-    readonly status?: string;
-    readonly action?: string;
-    readonly requiredKinds: readonly string[];
-    readonly representedKinds: readonly string[];
-    readonly missingKinds: readonly string[];
-    readonly missingEvidence: readonly string[];
-  };
-  readonly lifetimeConstraint: {
-    readonly id?: string;
-    readonly status?: string;
-    readonly action?: string;
-    readonly requiredKinds: readonly string[];
-    readonly representedKinds: readonly string[];
-    readonly missingKinds: readonly string[];
-    readonly missingEvidence: readonly string[];
-  };
-  readonly moduleConstraint: {
-    readonly id?: string;
-    readonly status?: string;
-    readonly action?: string;
-    readonly requiredKinds: readonly string[];
-    readonly representedKinds: readonly string[];
-    readonly missingKinds: readonly string[];
-    readonly missingEvidence: readonly string[];
-  };
-  readonly typeConstraint: {
-    readonly id?: string;
-    readonly status?: string;
-    readonly action?: string;
-    readonly requiredKinds: readonly string[];
-    readonly representedKinds: readonly string[];
-    readonly missingKinds: readonly string[];
-    readonly missingEvidence: readonly string[];
-  };
+  readonly effectConstraint: UniversalConversionConstraintSummary;
+  readonly lifetimeConstraint: UniversalConversionConstraintSummary;
+  readonly controlFlowConstraint: UniversalConversionConstraintSummary;
+  readonly moduleConstraint: UniversalConversionConstraintSummary;
+  readonly typeConstraint: UniversalConversionConstraintSummary;
   readonly ownership: {
     readonly keys: readonly string[];
     readonly conflictKeys: readonly string[];
@@ -218,6 +195,7 @@ export interface UniversalConversionRouteArtifact {
   readonly interlingua?: UniversalInterlinguaRecord;
   readonly resourceTransfer?: UniversalResourceTransferEvidence;
   readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence;
+  readonly controlFlowConstraint?: UniversalControlFlowConstraintEvidence;
   readonly effectConstraint?: UniversalEffectConstraintEvidence;
   readonly moduleConstraint?: UniversalModuleConstraintEvidence;
   readonly typeConstraint?: UniversalTypeConstraintEvidence;

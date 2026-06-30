@@ -52,6 +52,7 @@ export { createUniversalConversionWorklist, queryUniversalConversionWorklist, Un
 export { queryUniversalConversionArtifacts } from './universal-conversion-artifacts.js';
 export { createUniversalConversionPlan } from './internal/index-impl/createUniversalConversionPlan.js';
 export { createUniversalRuntimeCapabilityMatrix, queryUniversalRuntimeCapabilityMatrix, UniversalRuntimeCapabilityKinds, UniversalRuntimeHostProfiles } from './universal-runtime-capabilities.js';
+export { createUniversalControlFlowConstraintEvidence, controlFlowConstraintMatches, UniversalControlFlowConstraintStatuses } from './universal-control-flow-constraints.js';
 export { createUniversalEffectConstraintEvidence, effectConstraintMatches, UniversalEffectConstraintStatuses } from './universal-effect-constraints.js';
 export { createUniversalLifetimeConstraintEvidence, lifetimeConstraintMatches, UniversalLifetimeConstraintStatuses } from './universal-lifetime-constraints.js';
 export { createUniversalModuleConstraintEvidence, moduleConstraintMatches, UniversalModuleConstraintStatuses } from './universal-module-constraints.js';

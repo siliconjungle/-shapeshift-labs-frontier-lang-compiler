@@ -779,6 +779,7 @@ import {
   createUniversalConversionPlan,
   createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
+  createUniversalControlFlowConstraintEvidence,
   createUniversalEffectConstraintEvidence,
   createUniversalLifetimeConstraintEvidence,
   createUniversalModuleConstraintEvidence,
@@ -864,6 +865,19 @@ const lifetimeConstraints = createUniversalLifetimeConstraintEvidence({
 });
 console.log(lifetimeConstraints.missingKinds); // lost borrow-region, drop-bound, no-escape, or unsafe lifetime obligations
 console.log(lifetimeConstraints.claims.lifetimeSoundnessClaim); // false without source-bound proof
+
+const controlFlowConstraints = createUniversalControlFlowConstraintEvidence({
+  sourceLanguage: 'typescript',
+  target: 'rust',
+  sourceControlFlows: [
+    { kind: 'branch condition', conditionHash: 'cond_retry' },
+    { kind: 'try finally cleanup' },
+    { kind: 'await-order promise chain', orderingKey: 'fetch:then:cleanup' }
+  ],
+  targetControlFlows: [{ kind: 'branch condition', conditionHash: 'cond_retry' }]
+});
+console.log(controlFlowConstraints.missingKinds); // branch/exit/exception/async ordering obligations still needing target evidence
+console.log(controlFlowConstraints.claims.controlFlowEquivalenceClaim); // false without source-bound control-flow proof
 
 const effectConstraints = createUniversalEffectConstraintEvidence({
   sourceLanguage: 'javascript',
@@ -1008,6 +1022,17 @@ distinguish "the target has an owner/resource graph" from "the target preserved
 the source borrow region." The record stays conservative: borrow-checker,
 lifetime-soundness, escape-safety, semantic-equivalence, and auto-merge claims
 remain false unless stronger proof is attached.
+
+Routes can also carry `controlFlowConstraint`, a branch/exit/exception/async
+admission record for conditions, loops, early returns, non-local exits, try/catch
+and finally cleanup, await ordering, promise chains, generator yields, switch or
+pattern dispatch, reachability, initialization order, cancellation, and
+concurrency ordering. Control-flow queries such as
+`controlFlowConstraintMissingKind: "await-order"` let a coordinator distinguish
+"target code exists" from "target lowering preserved when work runs and how it
+exits." The record remains conservative: control-flow-equivalence,
+exception-equivalence, async-ordering, semantic-equivalence, and auto-merge
+claims stay false unless separate proof is attached.
 
 Routes can also carry `effectConstraint`, an observable-effect admission record
 for source effects such as network I/O, storage, filesystem access, timers,

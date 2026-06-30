@@ -2,60 +2,60 @@ import { uniqueStrings } from './native-import-utils.js';
 import { artifactSemanticEditIndex } from './universal-conversion-artifact-semantic-edit.js';
 import { interlinguaRecordMatches } from './universal-interlingua-record.js';
 import { resourceTransferMatches } from './universal-resource-transfer.js';
+import { controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
 import { effectConstraintMatches } from './universal-effect-constraints.js';
 import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
 import { moduleConstraintMatches } from './universal-module-constraints.js';
 import { typeConstraintMatches } from './universal-type-constraints.js';
-
 export function queryUniversalConversionArtifacts(records, query = {}) {
   return artifactRecords(records)
     .filter((record) => matchesArtifact(record, query))
     .sort((left, right) => Number(right.mergeScore?.sortKey ?? 0) - Number(left.mergeScore?.sortKey ?? 0)
       || String(left.routeId).localeCompare(String(right.routeId)));
 }
-
-export function artifactIndex(routeArtifacts) {
-  const edits = routeArtifacts.map(artifactSemanticEditIndex);
-  const opList = routeArtifacts.flatMap(ops);
-  const tAdmissions = routeArtifacts.map(tAdm);
-  const rTransfers = routeArtifacts.map(res);
-  const oConstraints = routeArtifacts.map(own);
-  const lConstraints = routeArtifacts.map(life);
-  const eConstraints = routeArtifacts.map(effect);
-  const mConstraints = routeArtifacts.map(mods);
-  const tConstraints = routeArtifacts.map(types);
-  const iRecords = routeArtifacts.map(intl);
+export function artifactIndex(a) {
+  const edits = a.map(artifactSemanticEditIndex);
+  const opList = a.flatMap(ops);
+  const tAdmissions = a.map(tAdm);
+  const rTransfers = a.map(res);
+  const oConstraints = a.map(own);
+  const lConstraints = a.map(life);
+  const cConstraints = a.map(ctrl);
+  const eConstraints = a.map(effect);
+  const mConstraints = a.map(mods);
+  const tConstraints = a.map(types);
+  const iRecords = a.map(intl);
   return {
-    routeIds: uniqueStrings(routeArtifacts.map((a) => a.routeId)),
-    historyIds: uniqueStrings(routeArtifacts.map((a) => a.history.id)),
-    patchBundleIds: uniqueStrings(routeArtifacts.map((a) => a.patchBundle.id)),
-    admissionRecordIds: uniqueStrings(routeArtifacts.map((a) => a.admissionRecord.id)),
-    evidenceReceiptIds: uniqueStrings(routeArtifacts.map((a) => a.evidenceReceipt?.id)),
-    languages: uniqueStrings(routeArtifacts.map((a) => a.sourceLanguage)),
-    targets: uniqueStrings(routeArtifacts.map((a) => a.target)),
-    modes: uniqueStrings(routeArtifacts.map((a) => a.mode)),
-    lossClasses: uniqueStrings(routeArtifacts.map((a) => a.lossClass)),
-    adapterIds: uniqueStrings(routeArtifacts.map((a) => a.adapter)),
-    adapterKinds: uniqueStrings(routeArtifacts.map((a) => a.adapterKind)),
-    routeMissingEvidence: uniqueStrings(routeArtifacts.flatMap((a) => a.missingEvidence ?? [])),
-    runtimeAdapterRequirementIds: uniqueStrings(routeArtifacts.flatMap((a) => a.runtimeAdapterRequirementIds ?? [])),
-    blockers: uniqueStrings(routeArtifacts.flatMap((a) => a.blockers ?? [])),
-    reviewReasons: uniqueStrings(routeArtifacts.flatMap((a) => a.review ?? [])),
-    readinesses: uniqueStrings(routeArtifacts.map((a) => a.readiness)),
-    admissionStatuses: uniqueStrings(routeArtifacts.map((a) => a.admissionStatus)),
-    admissionBuckets: uniqueStrings(routeArtifacts.map((a) => a.admissionRecord.admissionBucket)),
-    admissionRisks: uniqueStrings(routeArtifacts.map((a) => a.admissionRecord.risk)),
-    sourcePaths: uniqueStrings(routeArtifacts.flatMap((a) => a.history.index.sourcePaths)),
-    sourceHashes: uniqueStrings(routeArtifacts.flatMap((a) => a.history.index.sourceHashes)),
-    ownershipKeys: uniqueStrings(routeArtifacts.flatMap((a) => a.history.index.ownershipKeys)),
-    conflictKeys: uniqueStrings(routeArtifacts.flatMap((a) => a.history.index.conflictKeys)),
-    evidenceIds: uniqueStrings(routeArtifacts.flatMap((a) => a.history.evidenceIds)),
-    proofIds: uniqueStrings(routeArtifacts.flatMap((a) => a.history.proofIds)),
-    evidenceReceiptEvidenceIds: uniqueStrings(routeArtifacts.flatMap((a) => a.evidenceReceipt?.evidenceIds ?? [])),
-    evidenceReceiptProofEvidenceIds: uniqueStrings(routeArtifacts.flatMap((a) => a.evidenceReceipt?.proofEvidenceIds ?? [])),
-    evidenceReceiptMissingEvidence: uniqueStrings(routeArtifacts.flatMap((a) => a.evidenceReceipt?.missingEvidence ?? [])),
-    evidenceReceiptRejectedReasons: uniqueStrings(routeArtifacts.flatMap((artifact) => (artifact.evidenceReceipt?.records?.rejected ?? []).map((r) => r.reason))),
-    evidenceReceiptRejectedIds: uniqueStrings(routeArtifacts.flatMap((artifact) => (artifact.evidenceReceipt?.records?.rejected ?? []).map((r) => r.id))),
+    routeIds: uniqueStrings(a.map((a) => a.routeId)),
+    historyIds: uniqueStrings(a.map((a) => a.history.id)),
+    patchBundleIds: uniqueStrings(a.map((a) => a.patchBundle.id)),
+    admissionRecordIds: uniqueStrings(a.map((a) => a.admissionRecord.id)),
+    evidenceReceiptIds: uniqueStrings(a.map((a) => a.evidenceReceipt?.id)),
+    languages: uniqueStrings(a.map((a) => a.sourceLanguage)),
+    targets: uniqueStrings(a.map((a) => a.target)),
+    modes: uniqueStrings(a.map((a) => a.mode)),
+    lossClasses: uniqueStrings(a.map((a) => a.lossClass)),
+    adapterIds: uniqueStrings(a.map((a) => a.adapter)),
+    adapterKinds: uniqueStrings(a.map((a) => a.adapterKind)),
+    routeMissingEvidence: uniqueStrings(a.flatMap((a) => a.missingEvidence ?? [])),
+    runtimeAdapterRequirementIds: uniqueStrings(a.flatMap((a) => a.runtimeAdapterRequirementIds ?? [])),
+    blockers: uniqueStrings(a.flatMap((a) => a.blockers ?? [])),
+    reviewReasons: uniqueStrings(a.flatMap((a) => a.review ?? [])),
+    readinesses: uniqueStrings(a.map((a) => a.readiness)),
+    admissionStatuses: uniqueStrings(a.map((a) => a.admissionStatus)),
+    admissionBuckets: uniqueStrings(a.map((a) => a.admissionRecord.admissionBucket)),
+    admissionRisks: uniqueStrings(a.map((a) => a.admissionRecord.risk)),
+    sourcePaths: uniqueStrings(a.flatMap((a) => a.history.index.sourcePaths)),
+    sourceHashes: uniqueStrings(a.flatMap((a) => a.history.index.sourceHashes)),
+    ownershipKeys: uniqueStrings(a.flatMap((a) => a.history.index.ownershipKeys)),
+    conflictKeys: uniqueStrings(a.flatMap((a) => a.history.index.conflictKeys)),
+    evidenceIds: uniqueStrings(a.flatMap((a) => a.history.evidenceIds)),
+    proofIds: uniqueStrings(a.flatMap((a) => a.history.proofIds)),
+    evidenceReceiptEvidenceIds: uniqueStrings(a.flatMap((a) => a.evidenceReceipt?.evidenceIds ?? [])),
+    evidenceReceiptProofEvidenceIds: uniqueStrings(a.flatMap((a) => a.evidenceReceipt?.proofEvidenceIds ?? [])),
+    evidenceReceiptMissingEvidence: uniqueStrings(a.flatMap((a) => a.evidenceReceipt?.missingEvidence ?? [])),
+    evidenceReceiptRejectedReasons: uniqueStrings(a.flatMap((artifact) => (artifact.evidenceReceipt?.records?.rejected ?? []).map((r) => r.reason))),
+    evidenceReceiptRejectedIds: uniqueStrings(a.flatMap((artifact) => (artifact.evidenceReceipt?.records?.rejected ?? []).map((r) => r.id))),
     semanticOperationIds: uniqueStrings(opList.map((o) => o.id)),
     semanticOperationKinds: uniqueStrings(opList.map((o) => o.operationKind)),
     semanticOperationInterlinguaRecordIds: uniqueStrings(opList.map((o) => o.metadata?.interlingua?.id)),
@@ -94,9 +94,9 @@ export function artifactIndex(routeArtifacts) {
     targetPortabilityStatuses: uniqueStrings(edits.flatMap((index) => index.targetPortabilityStatuses)),
     targetPortabilityActions: uniqueStrings(edits.flatMap((index) => index.targetPortabilityActions)),
     targetPortabilityReasonCodes: uniqueStrings(edits.flatMap((index) => index.targetPortabilityReasonCodes)),
-    representationConstructKinds: uniqueStrings(routeArtifacts.flatMap(constructs)),
-    runtimeCapabilities: uniqueStrings(routeArtifacts.flatMap(rCaps)),
-    sourceMapPrecisions: uniqueStrings(routeArtifacts.flatMap(sMapPrecisions)),
+    representationConstructKinds: uniqueStrings(a.flatMap(constructs)),
+    runtimeCapabilities: uniqueStrings(a.flatMap(rCaps)),
+    sourceMapPrecisions: uniqueStrings(a.flatMap(sMapPrecisions)),
     translationAdmissionStatuses: uniqueStrings(tAdmissions.map((r) => r.status)),
     translationAdmissionActions: uniqueStrings(tAdmissions.map((r) => r.action)),
     missingTranslationEvidence: uniqueStrings(tAdmissions.flatMap((r) => r.missingEvidence ?? [])),
@@ -117,6 +117,10 @@ export function artifactIndex(routeArtifacts) {
     lifetimeConstraintActions: uniqueStrings(lConstraints.map((r) => r.action)),
     lifetimeConstraintMissingEvidence: uniqueStrings(lConstraints.flatMap((r) => r.missingEvidence ?? [])),
     lifetimeConstraintMissingKinds: uniqueStrings(lConstraints.flatMap((r) => r.missingKinds ?? [])),
+    controlFlowConstraintStatuses: uniqueStrings(cConstraints.map((r) => r.status)),
+    controlFlowConstraintActions: uniqueStrings(cConstraints.map((r) => r.action)),
+    controlFlowConstraintMissingEvidence: uniqueStrings(cConstraints.flatMap((r) => r.missingEvidence ?? [])),
+    controlFlowConstraintMissingKinds: uniqueStrings(cConstraints.flatMap((r) => r.missingKinds ?? [])),
     effectConstraintStatuses: uniqueStrings(eConstraints.map((r) => r.status)),
     effectConstraintActions: uniqueStrings(eConstraints.map((r) => r.action)),
     effectConstraintMissingEvidence: uniqueStrings(eConstraints.flatMap((r) => r.missingEvidence ?? [])),
@@ -138,17 +142,15 @@ export function artifactIndex(routeArtifacts) {
     interlinguaLoweringDispositions: uniqueStrings(iRecords.map((r) => r.query?.loweringDisposition)),
     interlinguaMissingEvidence: uniqueStrings(iRecords.flatMap((r) => r.query?.missingEvidence ?? [])),
     interlinguaProofEvidenceIds: uniqueStrings(iRecords.flatMap((r) => r.query?.proofEvidenceIds ?? [])),
-    transformIdentityHashes: uniqueStrings(routeArtifacts.flatMap(tHashes))
+    transformIdentityHashes: uniqueStrings(a.flatMap(tHashes))
   };
 }
-
 function artifactRecords(records) {
   if (Array.isArray(records)) return records.flatMap(artifactRecords);
   if (records?.kind === 'frontier.lang.universalConversionArtifacts') return records.routeArtifacts ?? [];
   if (records?.kind === 'frontier.lang.universalConversionRouteArtifact') return [records];
   return [];
 }
-
 function matchesArtifact(record, query) {
   const editIndex = artifactSemanticEditIndex(record);
   const operations = ops(record);
@@ -235,17 +237,16 @@ function matchesArtifact(record, query) {
     && match(query.targetAdapterId, [tAdm(record).targetAdapterId])
     && resourceTransferMatches(res(record), query)
     && lifetimeConstraintMatches(life(record), query)
+    && controlFlowConstraintMatches(ctrl(record), query)
     && effectConstraintMatches(effect(record), query)
     && moduleConstraintMatches(mods(record), query)
     && typeConstraintMatches(types(record), query)
     && interlinguaRecordMatches(intl(record), query)
     && match(query.transformIdentityHash, tHashes(record));
 }
-
 function ops(record) {
   return record.semanticOperations?.operations ?? [];
 }
-
 function constructs(record) {
   return uniqueStrings([
     ...(record.metadata?.representation?.constructKinds ?? []),
@@ -253,7 +254,6 @@ function constructs(record) {
     ...(record.semanticOperations?.operations ?? []).flatMap((o) => o.metadata?.representation?.constructKinds ?? [])
   ]);
 }
-
 function rCaps(record) {
   return uniqueStrings([
     ...(record.metadata?.representation?.runtimeCapabilities ?? []),
@@ -261,7 +261,6 @@ function rCaps(record) {
     ...(record.semanticOperations?.operations ?? []).flatMap((o) => o.metadata?.representation?.runtimeCapabilities ?? [])
   ]);
 }
-
 function sMapPrecisions(record) {
   return uniqueStrings([
     ...(record.metadata?.representation?.sourceMapPrecisions ?? []),
@@ -269,7 +268,6 @@ function sMapPrecisions(record) {
     ...(record.semanticOperations?.operations ?? []).flatMap((o) => o.metadata?.representation?.sourceMapPrecisions ?? [])
   ]);
 }
-
 function tHashes(record) {
   return uniqueStrings([
     ...(record.metadata?.representation?.transformIdentityHashes ?? []),
@@ -277,39 +275,33 @@ function tHashes(record) {
     ...(record.history?.index?.transformIdentityHashes ?? [])
   ]);
 }
-
 function tAdm(record) {
   return record.translationAdmission ?? record.metadata?.translationAdmission ?? record.admissionRecord?.metadata?.translationAdmission ?? {};
 }
-
 function intl(record) {
   return record.interlingua ?? record.metadata?.interlingua ?? record.admissionRecord?.metadata?.interlingua ?? {};
 }
-
 function res(record) {
   return record.resourceTransfer ?? record.metadata?.resourceTransfer ?? record.translationAdmission?.resourceTransfer ?? record.admissionRecord?.metadata?.resourceTransfer ?? {};
 }
-
 function own(record) {
   return res(record).ownershipConstraints ?? {};
 }
-
 function life(record) {
   return record.lifetimeConstraint ?? record.metadata?.lifetimeConstraint ?? record.translationAdmission?.lifetimeConstraint ?? record.admissionRecord?.metadata?.lifetimeConstraint ?? {};
 }
-
+function ctrl(record) {
+  return record.controlFlowConstraint ?? record.metadata?.controlFlowConstraint ?? record.translationAdmission?.controlFlowConstraint ?? record.admissionRecord?.metadata?.controlFlowConstraint ?? {};
+}
 function effect(record) {
   return record.effectConstraint ?? record.metadata?.effectConstraint ?? record.translationAdmission?.effectConstraint ?? record.admissionRecord?.metadata?.effectConstraint ?? {};
 }
-
 function mods(record) {
   return record.moduleConstraint ?? record.metadata?.moduleConstraint ?? record.translationAdmission?.moduleConstraint ?? record.admissionRecord?.metadata?.moduleConstraint ?? {};
 }
-
 function types(record) {
   return record.typeConstraint ?? record.metadata?.typeConstraint ?? record.translationAdmission?.typeConstraint ?? record.admissionRecord?.metadata?.typeConstraint ?? {};
 }
-
 function match(f, values) {
   const filters = Array.isArray(f) ? f : f === undefined ? [] : [f];
   if (!filters.length) return true;

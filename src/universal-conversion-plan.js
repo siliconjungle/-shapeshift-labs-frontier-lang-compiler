@@ -12,6 +12,7 @@ import { createUniversalRepresentationCoverage, representationCoverageMatches } 
 import { createUniversalTranslationAdmission, conversionRouteMatchesTranslationAdmissionQuery } from './universal-conversion-translation-admission.js';
 import { createUniversalInterlinguaRecord, interlinguaRecordMatches } from './universal-interlingua-record.js';
 import { resourceTransferForConversionRoute } from './universal-resource-transfer.js';
+import { controlFlowConstraintForConversionRoute } from './universal-control-flow-constraints.js';
 import { effectConstraintForConversionRoute } from './universal-effect-constraints.js';
 import { lifetimeConstraintForConversionRoute } from './universal-lifetime-constraints.js';
 import { moduleConstraintForConversionRoute } from './universal-module-constraints.js';
@@ -32,7 +33,7 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
       targets
     }, context);
   const evidence = input.evidence ?? [];
-  const routeInput = { dialectRegistries: conversionDialectRegistries(input), effectConstraint: input.effectConstraint, effectConstraints: input.effectConstraints ?? [], evidence, generatedAt, imports: input.imports ?? [], lifetimeConstraint: input.lifetimeConstraint, lifetimeConstraints: input.lifetimeConstraints ?? [], matrix, moduleConstraint: input.moduleConstraint, moduleConstraints: input.moduleConstraints ?? [], resourceTransfer: input.resourceTransfer, resourceTransfers: input.resourceTransfers ?? [], translationEffectConstraint: input.translationEffectConstraint, translationLifetimeConstraint: input.translationLifetimeConstraint, translationModuleConstraint: input.translationModuleConstraint, translationResourceTransfer: input.translationResourceTransfer, translationTypeConstraint: input.translationTypeConstraint, typeConstraint: input.typeConstraint, typeConstraints: input.typeConstraints ?? [], runtimeMatrix };
+  const routeInput = { controlFlowConstraint: input.controlFlowConstraint, controlFlowConstraints: input.controlFlowConstraints ?? [], dialectRegistries: conversionDialectRegistries(input), effectConstraint: input.effectConstraint, effectConstraints: input.effectConstraints ?? [], evidence, generatedAt, imports: input.imports ?? [], lifetimeConstraint: input.lifetimeConstraint, lifetimeConstraints: input.lifetimeConstraints ?? [], matrix, moduleConstraint: input.moduleConstraint, moduleConstraints: input.moduleConstraints ?? [], resourceTransfer: input.resourceTransfer, resourceTransfers: input.resourceTransfers ?? [], translationControlFlowConstraint: input.translationControlFlowConstraint, translationEffectConstraint: input.translationEffectConstraint, translationLifetimeConstraint: input.translationLifetimeConstraint, translationModuleConstraint: input.translationModuleConstraint, translationResourceTransfer: input.translationResourceTransfer, translationTypeConstraint: input.translationTypeConstraint, typeConstraint: input.typeConstraint, typeConstraints: input.typeConstraints ?? [], runtimeMatrix };
   const routes = (matrix.languages ?? []).flatMap((language) => targets.flatMap((target) => {
     const runtimeRoutes = conversionRuntimeRoutes(runtimeMatrix, language, target);
     return runtimeRoutes.map((runtimeRoute) => conversionRoute(language, target, {
@@ -116,6 +117,7 @@ function conversionRoute(language, target, input, planId) {
   const routeImports = importsForConversionLanguage(input.imports, language);
   const resourceTransfer = resourceTransferForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
   const lifetimeConstraint = lifetimeConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
+  const controlFlowConstraint = controlFlowConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
   const effectConstraint = effectConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence, runtime);
   const moduleConstraint = moduleConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
   const typeConstraint = typeConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
@@ -139,8 +141,8 @@ function conversionRoute(language, target, input, planId) {
   const components = conversionScoreComponents(language, targetCell, readiness, mode, routeEvidence, representation);
   const mergeScore = conversionMergeScore({ readiness, mode, components, blockers, review });
   const admissionStatus = mergeScore.action;
-  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect, resourceTransfer, lifetimeConstraint, effectConstraint, moduleConstraint, typeConstraint);
-  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, resourceTransfer, lifetimeConstraint, effectConstraint, moduleConstraint, typeConstraint, blockers, review });
+  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect, resourceTransfer, lifetimeConstraint, controlFlowConstraint, effectConstraint, moduleConstraint, typeConstraint);
+  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, resourceTransfer, lifetimeConstraint, controlFlowConstraint, effectConstraint, moduleConstraint, typeConstraint, blockers, review });
   const route = {
     id,
     sourceLanguage: language.language,
@@ -165,6 +167,7 @@ function conversionRoute(language, target, input, planId) {
     translationAdmission,
     resourceTransfer,
     lifetimeConstraint,
+    controlFlowConstraint,
     effectConstraint,
     moduleConstraint,
     typeConstraint,
@@ -241,7 +244,6 @@ function conversionRuntime(runtimeRoute) {
     review: runtimeRoute.review
   };
 }
-
 function projectionReadinessCell(matrix, language, target) {
   const ids = uniqueStrings([language.language, ...(language.aliases ?? [])].map(normalizeNativeLanguageId));
   return (matrix.matrices?.projectionReadiness?.languages ?? [])
@@ -256,14 +258,12 @@ function conversionRouteAction(mode, targetCell, readiness) {
   if (targetCell?.lossClass === 'unsupportedTargetFeatures') return 'attach-adapter-evidence';
   return 'run-target-adapter';
 }
-
 function conversionPriority(action, readiness, mode) {
   if (action === 'reject' || readiness === 'blocked') return 'blocker';
   if (mode === 'semantic-index-only' || readiness === 'needs-review') return 'high';
   if (mode === 'stub-only' || readiness === 'ready-with-losses') return 'normal';
   return 'low';
 }
-
 function conversionEvidence(language, targetCell) {
   return {
     imports: language.imports.total,
@@ -281,8 +281,7 @@ function conversionEvidence(language, targetCell) {
     targetLossKinds: targetCell?.lossKinds ?? []
   };
 }
-
-function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, effectConstraint, moduleConstraint, typeConstraint) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, effectConstraint, moduleConstraint, typeConstraint) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -297,6 +296,7 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...(dialect.missingEvidence ?? []),
     ...(resourceTransfer?.missingEvidence ?? []),
     ...(lifetimeConstraint?.missingEvidence ?? []),
+    ...(controlFlowConstraint?.missingEvidence ?? []),
     ...(effectConstraint?.missingEvidence ?? []),
     ...(moduleConstraint?.missingEvidence ?? []),
     ...(typeConstraint?.missingEvidence ?? []),

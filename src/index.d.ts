@@ -13,6 +13,7 @@ export * from './declarations/universal-conversion-route-evidence.js';
 export * from './declarations/universal-conversion-plan.js';
 export * from './declarations/universal-conversion-worklist.js';
 export * from './declarations/universal-runtime-capabilities.js';
+export * from './declarations/universal-control-flow-constraints.js';
 export * from './declarations/universal-effect-constraints.js';
 export * from './declarations/universal-lifetime-constraints.js';
 export * from './declarations/universal-module-constraints.js';

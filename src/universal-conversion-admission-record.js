@@ -56,6 +56,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     resourceTransferAction: route.resourceTransfer?.action,
     lifetimeConstraintStatus: route.lifetimeConstraint?.status,
     lifetimeConstraintAction: route.lifetimeConstraint?.action,
+    controlFlowConstraintStatus: route.controlFlowConstraint?.status,
+    controlFlowConstraintAction: route.controlFlowConstraint?.action,
     effectConstraintStatus: route.effectConstraint?.status,
     effectConstraintAction: route.effectConstraint?.action,
     moduleConstraintStatus: route.moduleConstraint?.status,
@@ -126,6 +128,15 @@ export function createUniversalConversionAdmissionRecord(input) {
       missingKinds: route.lifetimeConstraint?.missingKinds ?? [],
       missingEvidence: route.lifetimeConstraint?.missingEvidence ?? []
     },
+    controlFlowConstraint: {
+      id: route.controlFlowConstraint?.id,
+      status: route.controlFlowConstraint?.status,
+      action: route.controlFlowConstraint?.action,
+      requiredKinds: route.controlFlowConstraint?.requiredKinds ?? [],
+      representedKinds: route.controlFlowConstraint?.representedKinds ?? [],
+      missingKinds: route.controlFlowConstraint?.missingKinds ?? [],
+      missingEvidence: route.controlFlowConstraint?.missingEvidence ?? []
+    },
     effectConstraint: {
       id: route.effectConstraint?.id,
       status: route.effectConstraint?.status,
@@ -187,6 +198,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       interlingua: route.interlingua,
       resourceTransfer: route.resourceTransfer,
       lifetimeConstraint: route.lifetimeConstraint,
+      controlFlowConstraint: route.controlFlowConstraint,
       effectConstraint: route.effectConstraint,
       moduleConstraint: route.moduleConstraint,
       typeConstraint: route.typeConstraint,

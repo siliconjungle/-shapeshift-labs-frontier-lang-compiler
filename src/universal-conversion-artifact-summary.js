@@ -54,6 +54,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const interlinguaRecords = routeArtifacts.map((artifact) => artifact.interlingua ?? artifact.metadata?.interlingua ?? artifact.admissionRecord?.metadata?.interlingua ?? {});
   const resourceTransfers = routeArtifacts.map((artifact) => artifact.resourceTransfer ?? artifact.metadata?.resourceTransfer ?? artifact.admissionRecord?.metadata?.resourceTransfer ?? {});
   const lifetimeConstraints = routeArtifacts.map((artifact) => artifact.lifetimeConstraint ?? artifact.metadata?.lifetimeConstraint ?? artifact.admissionRecord?.metadata?.lifetimeConstraint ?? {});
+  const controlFlowConstraints = routeArtifacts.map((artifact) => artifact.controlFlowConstraint ?? artifact.metadata?.controlFlowConstraint ?? artifact.admissionRecord?.metadata?.controlFlowConstraint ?? {});
   const effectConstraints = routeArtifacts.map((artifact) => artifact.effectConstraint ?? artifact.metadata?.effectConstraint ?? artifact.admissionRecord?.metadata?.effectConstraint ?? {});
   const moduleConstraints = routeArtifacts.map((artifact) => artifact.moduleConstraint ?? artifact.metadata?.moduleConstraint ?? artifact.admissionRecord?.metadata?.moduleConstraint ?? {});
   const typeConstraints = routeArtifacts.map((artifact) => artifact.typeConstraint ?? artifact.metadata?.typeConstraint ?? artifact.admissionRecord?.metadata?.typeConstraint ?? {});
@@ -82,6 +83,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
     resourceTransfer: compactResourceTransferCounts(resourceTransfers),
     lifetimeConstraint: compactConstraintCounts(lifetimeConstraints),
+    controlFlowConstraint: compactConstraintCounts(controlFlowConstraints),
     effectConstraint: compactEffectConstraintCounts(effectConstraints),
     moduleConstraint: compactConstraintCounts(moduleConstraints),
     typeConstraint: compactConstraintCounts(typeConstraints),

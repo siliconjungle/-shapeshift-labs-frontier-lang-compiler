@@ -77,6 +77,7 @@ export interface UniversalConversionEffectConstraintCompactCounts {
 }
 
 export interface UniversalConversionLifetimeConstraintCompactCounts extends UniversalConversionEffectConstraintCompactCounts {}
+export interface UniversalConversionControlFlowConstraintCompactCounts extends UniversalConversionEffectConstraintCompactCounts {}
 export interface UniversalConversionModuleConstraintCompactCounts extends UniversalConversionEffectConstraintCompactCounts {}
 export interface UniversalConversionTypeConstraintCompactCounts extends UniversalConversionEffectConstraintCompactCounts {}
 
@@ -114,6 +115,7 @@ export interface UniversalConversionArtifactCompactCounts {
   readonly translationAdmission: UniversalConversionTranslationAdmissionCompactCounts;
   readonly resourceTransfer: UniversalConversionResourceTransferCompactCounts;
   readonly lifetimeConstraint: UniversalConversionLifetimeConstraintCompactCounts;
+  readonly controlFlowConstraint: UniversalConversionControlFlowConstraintCompactCounts;
   readonly effectConstraint: UniversalConversionEffectConstraintCompactCounts;
   readonly moduleConstraint: UniversalConversionModuleConstraintCompactCounts;
   readonly typeConstraint: UniversalConversionTypeConstraintCompactCounts;
