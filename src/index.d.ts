@@ -24,6 +24,7 @@ export * from './declarations/universal-evaluation-model-constraints.js';
 export * from './declarations/universal-lifetime-constraints.js';
 export * from './declarations/universal-memory-model-constraints.js';
 export * from './declarations/universal-metaprogramming-constraints.js';
+export * from './declarations/universal-scope-binding-constraints.js';
 export * from './declarations/universal-module-constraints.js';
 export * from './declarations/universal-object-model-constraints.js';
 export * from './declarations/universal-type-constraints.js';

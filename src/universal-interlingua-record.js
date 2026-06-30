@@ -36,6 +36,7 @@ export const UniversalInterlinguaConstraintEdgeKinds = Object.freeze([
   'evaluation-model',
   'memory-model',
   'metaprogramming',
+  'scope-binding',
   'effect',
   'module',
   'object-model',
@@ -175,6 +176,7 @@ export function interlinguaConstraintSummary(route = {}) {
     constraintEdge('evaluation-model', route.evaluationModelConstraint, 'runtime-capability', route),
     constraintEdge('memory-model', route.memoryModelConstraint, 'runtime-capability', route),
     constraintEdge('metaprogramming', route.metaprogrammingConstraint, 'parser-feature', route),
+    constraintEdge('scope-binding', route.scopeBindingConstraint, 'semantic-symbol', route),
     constraintEdge('effect', route.effectConstraint, 'runtime-capability', route),
     constraintEdge('module', route.moduleConstraint, 'source-import', route),
     constraintEdge('object-model', route.objectModelConstraint, 'semantic-symbol', route),
@@ -258,7 +260,7 @@ function constraintObligations(family, evidence, edgeId) {
 }
 
 function constraintRecords(evidence = {}) {
-  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.memoryModelConstraints ?? evidence.metaprogrammingConstraints ?? evidence.moduleConstraints ?? evidence.objectModelConstraints ?? evidence.typeConstraints ?? [];
+  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.memoryModelConstraints ?? evidence.metaprogrammingConstraints ?? evidence.scopeBindingConstraints ?? evidence.moduleConstraints ?? evidence.objectModelConstraints ?? evidence.typeConstraints ?? [];
 }
 
 function nodeIds(record = {}, prefix) {

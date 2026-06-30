@@ -76,6 +76,7 @@ export function createUniversalConversionAdmissionRecord(input) {
     memoryModelConstraintAction: route.memoryModelConstraint?.action,
     metaprogrammingConstraintStatus: route.metaprogrammingConstraint?.status,
     metaprogrammingConstraintAction: route.metaprogrammingConstraint?.action,
+    scopeBindingConstraintStatus: route.scopeBindingConstraint?.status, scopeBindingConstraintAction: route.scopeBindingConstraint?.action,
     moduleConstraintStatus: route.moduleConstraint?.status,
     moduleConstraintAction: route.moduleConstraint?.action,
     objectModelConstraintStatus: route.objectModelConstraint?.status,
@@ -220,6 +221,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       missingEvidence: route.memoryModelConstraint?.missingEvidence ?? []
     },
     metaprogrammingConstraint: { id: route.metaprogrammingConstraint?.id, status: route.metaprogrammingConstraint?.status, action: route.metaprogrammingConstraint?.action, requiredKinds: route.metaprogrammingConstraint?.requiredKinds ?? [], representedKinds: route.metaprogrammingConstraint?.representedKinds ?? [], missingKinds: route.metaprogrammingConstraint?.missingKinds ?? [], missingEvidence: route.metaprogrammingConstraint?.missingEvidence ?? [] },
+    scopeBindingConstraint: { id: route.scopeBindingConstraint?.id, status: route.scopeBindingConstraint?.status, action: route.scopeBindingConstraint?.action, requiredKinds: route.scopeBindingConstraint?.requiredKinds ?? [], representedKinds: route.scopeBindingConstraint?.representedKinds ?? [], missingKinds: route.scopeBindingConstraint?.missingKinds ?? [], missingEvidence: route.scopeBindingConstraint?.missingEvidence ?? [] },
     moduleConstraint: {
       id: route.moduleConstraint?.id,
       status: route.moduleConstraint?.status,
@@ -290,7 +292,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       errorModelConstraint: route.errorModelConstraint,
       evaluationModelConstraint: route.evaluationModelConstraint,
       memoryModelConstraint: route.memoryModelConstraint,
-      metaprogrammingConstraint: route.metaprogrammingConstraint,
+      metaprogrammingConstraint: route.metaprogrammingConstraint, scopeBindingConstraint: route.scopeBindingConstraint,
       moduleConstraint: route.moduleConstraint,
       objectModelConstraint: route.objectModelConstraint,
       typeConstraint: route.typeConstraint,

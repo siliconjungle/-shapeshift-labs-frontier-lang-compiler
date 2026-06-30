@@ -30,6 +30,7 @@ import type { UniversalErrorModelConstraintQuery } from './universal-error-model
 import type { UniversalEvaluationModelConstraintQuery } from './universal-evaluation-model-constraints.js';
 import type { UniversalMemoryModelConstraintQuery } from './universal-memory-model-constraints.js';
 import type { UniversalMetaprogrammingConstraintQuery } from './universal-metaprogramming-constraints.js';
+import type { UniversalScopeBindingConstraintQuery } from './universal-scope-binding-constraints.js';
 import type { UniversalModuleConstraintQuery } from './universal-module-constraints.js';
 import type { UniversalObjectModelConstraintQuery } from './universal-object-model-constraints.js';
 import type { UniversalTypeConstraintQuery } from './universal-type-constraints.js';
@@ -166,6 +167,8 @@ export interface UniversalConversionArtifactIndex {
   readonly metaprogrammingConstraintActions: readonly string[];
   readonly metaprogrammingConstraintMissingEvidence: readonly string[];
   readonly metaprogrammingConstraintMissingKinds: readonly string[];
+  readonly scopeBindingConstraintStatuses: readonly string[]; readonly scopeBindingConstraintActions: readonly string[];
+  readonly scopeBindingConstraintMissingEvidence: readonly string[]; readonly scopeBindingConstraintMissingKinds: readonly string[];
   readonly moduleConstraintStatuses: readonly string[];
   readonly moduleConstraintActions: readonly string[];
   readonly moduleConstraintMissingEvidence: readonly string[];
@@ -197,7 +200,7 @@ export interface UniversalConversionArtifactIndex {
   readonly transformIdentityHashes: readonly string[];
 }
 
-export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalModuleConstraintQuery, UniversalObjectModelConstraintQuery, UniversalTypeConstraintQuery {
+export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalObjectModelConstraintQuery, UniversalTypeConstraintQuery {
   readonly routeId?: string | readonly string[];
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];

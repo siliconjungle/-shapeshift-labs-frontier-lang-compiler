@@ -13,6 +13,7 @@ import { memoryModelConstraintMatches } from './universal-memory-model-constrain
 import { metaprogrammingConstraintMatches } from './universal-metaprogramming-constraints.js';
 import { moduleConstraintMatches } from './universal-module-constraints.js';
 import { objectModelConstraintMatches } from './universal-object-model-constraints.js';
+import { scopeBindingConstraintMatches } from './universal-scope-binding-constraints.js';
 import { typeConstraintMatches } from './universal-type-constraints.js';
 
 export function artifactConstraintIndex(records = []) {
@@ -34,6 +35,7 @@ export function artifactConstraintIndex(records = []) {
     ...constraintIndex('evaluationModelConstraint', records.map(evalm)),
     ...constraintIndex('memoryModelConstraint', records.map(mem)),
     ...constraintIndex('metaprogrammingConstraint', records.map(meta)),
+    ...constraintIndex('scopeBindingConstraint', records.map(scope)),
     ...constraintIndex('moduleConstraint', records.map(mods)),
     ...constraintIndex('objectModelConstraint', records.map(obj)),
     ...constraintIndex('typeConstraint', records.map(types))
@@ -53,6 +55,7 @@ export function artifactConstraintsMatch(record, query = {}) {
     && evaluationModelConstraintMatches(evalm(record), query)
     && memoryModelConstraintMatches(mem(record), query)
     && metaprogrammingConstraintMatches(meta(record), query)
+    && scopeBindingConstraintMatches(scope(record), query)
     && moduleConstraintMatches(mods(record), query)
     && objectModelConstraintMatches(obj(record), query)
     && typeConstraintMatches(types(record), query);
@@ -71,6 +74,7 @@ function err(record) { return record.errorModelConstraint ?? metaConstraint(reco
 function evalm(record) { return record.evaluationModelConstraint ?? metaConstraint(record, 'evaluationModelConstraint'); }
 function mem(record) { return record.memoryModelConstraint ?? metaConstraint(record, 'memoryModelConstraint'); }
 function meta(record) { return record.metaprogrammingConstraint ?? metaConstraint(record, 'metaprogrammingConstraint'); }
+function scope(record) { return record.scopeBindingConstraint ?? metaConstraint(record, 'scopeBindingConstraint'); }
 function mods(record) { return record.moduleConstraint ?? metaConstraint(record, 'moduleConstraint'); }
 function obj(record) { return record.objectModelConstraint ?? metaConstraint(record, 'objectModelConstraint'); }
 function types(record) { return record.typeConstraint ?? metaConstraint(record, 'typeConstraint'); }
