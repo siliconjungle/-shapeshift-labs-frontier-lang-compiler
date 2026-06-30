@@ -125,6 +125,34 @@ assert.equal(querySemanticResourceGraph(rustResourceGraph, { kind: 'loan', resou
 assert.equal(querySemanticResourceGraph(rustResourceGraph, { unsafe: true }).length >= 2, true);
 assert.equal(rustResourceSidecar.graphLayers.layers.resourceAliasLifetime.status, 'blocked');
 
+const rustOwnershipImport = importNativeSource({
+  language: 'rust',
+  sourcePath: 'src/ownership.rs',
+  sourceText: [
+    'pub fn ownership() -> usize {',
+    '  let owned = String::from("a");',
+    '  let shared = &owned;',
+    '  let len = shared.len();',
+    '  let moved = owned;',
+    '  drop(moved);',
+    '  len',
+    '}',
+    ''
+  ].join('\n')
+});
+const rustOwnershipGraph = createSemanticImportSidecar(rustOwnershipImport, { generatedAt: 141.5 }).resourceGraph;
+
+assert.equal(rustOwnershipGraph.status, 'partial');
+assert.equal(rustOwnershipGraph.summary.resources >= 3, true);
+assert.equal(rustOwnershipGraph.summary.loans >= 1, true);
+assert.equal(rustOwnershipGraph.summary.moves >= 1, true);
+assert.equal(rustOwnershipGraph.summary.drops >= 3, true);
+assert.equal(rustOwnershipGraph.resources.some((record) => record.resourceKind === 'rust-owned-local-binding'), true);
+assert.equal(rustOwnershipGraph.loans.some((record) => record.mode === 'shared' && record.metadata?.borrowedBinding === 'owned'), true);
+assert.equal(rustOwnershipGraph.moves.some((record) => record.metadata?.fromBinding === 'owned' && record.metadata?.toBinding === 'moved'), true);
+assert.equal(rustOwnershipGraph.drops.some((record) => record.dropKind === 'rust-explicit-drop'), true);
+assert.equal(rustOwnershipGraph.claims.borrowCheckerClaim, false);
+
 const cResourceImport = importNativeSource({
   language: 'c',
   sourcePath: 'src/native.c',

@@ -173,7 +173,9 @@ fails closed when alias/lifetime proof is missing.
 Rust native imports also feed this graph automatically when source-preservation
 text or Rust semantic merge evidence is available. The compiler derives
 source-region resources, shared or mutable loans from reference parameters, raw
-pointer aliases, lifetime-region spans, and unsafe-boundary proof obligations.
+pointer aliases, local `let` ownership resources, shared/mutable borrow
+bindings, possible lexical moves, explicit `drop(...)` calls, lexical-drop
+evidence, lifetime-region spans, and unsafe-boundary proof obligations.
 That makes Rust borrow-checker-shaped evidence visible in the universal sidecar
 without claiming borrow-checker equivalence.
 

@@ -1,5 +1,6 @@
 import { parseRustSemanticTree } from '@shapeshift-labs/frontier-lang-rust';
 import { idFragment, uniqueRecordsById } from '../../native-import-utils.js';
+import { appendRustLocalOwnership } from './semanticResourceGraphRustOwnership.js';
 
 export function rustResourceGraphRecordsFromInput(input = {}) {
   const bundles = rustEvidenceBundlesFromInput(input);
@@ -9,6 +10,8 @@ export function rustResourceGraphRecordsFromInput(input = {}) {
     owners: uniqueRecordsById(records.flatMap((record) => record.owners)),
     loans: uniqueRecordsById(records.flatMap((record) => record.loans)),
     aliases: uniqueRecordsById(records.flatMap((record) => record.aliases)),
+    moves: uniqueRecordsById(records.flatMap((record) => record.moves)),
+    drops: uniqueRecordsById(records.flatMap((record) => record.drops)),
     lifetimeRegions: uniqueRecordsById(records.flatMap((record) => record.lifetimeRegions)),
     unsafeBoundaries: uniqueRecordsById(records.flatMap((record) => record.unsafeBoundaries))
   };
@@ -104,6 +107,7 @@ function appendRustRecord(output, bundle, record, bundleIndex) {
     evidenceIds
   });
   appendRustSignatureLoans(output, bundle, record, { recordId, ownerId, evidenceIds });
+  appendRustLocalOwnership(output, bundle, record, { recordId, ownerId, evidenceIds });
   if ((record.proofGaps ?? []).some((gap) => gap?.code === 'rust-unsafe-boundary')) {
     output.unsafeBoundaries.push({
       id: `unsafe_rust_${recordId}`,
@@ -238,5 +242,5 @@ function uniqueRustBundles(bundles) {
 }
 
 function emptyRustRecords() {
-  return { resources: [], owners: [], loans: [], aliases: [], lifetimeRegions: [], unsafeBoundaries: [] };
+  return { resources: [], owners: [], loans: [], aliases: [], moves: [], drops: [], lifetimeRegions: [], unsafeBoundaries: [] };
 }
