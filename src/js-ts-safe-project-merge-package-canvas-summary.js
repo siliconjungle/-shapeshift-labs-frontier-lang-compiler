@@ -60,7 +60,7 @@ function canvasProjectSummary(files) {
     canvasRuntimeBlockedFiles: runtimeConflicts.length,
     canvasDrawingRuntimeBlockedFiles: countFilesWithReason(files, 'canvas-drawing-runtime-proof-missing'),
     canvasOffscreenWorkerBlockedFiles: countFilesWithReason(files, 'canvas-offscreen-worker-proof-missing'),
-    canvasOffscreenWorkerProofs: proofs.filter((proof) => proof.offscreenWorkerProofHash).length
+    canvasOffscreenWorkerProofs: proofs.filter(hasOffscreenWorkerProof).length
   };
 }
 
@@ -75,6 +75,10 @@ function hasCanvasText(file) {
 
 function isCanvasConflict(conflict) {
   return String(conflict?.gateId) === 'canvas-runtime-semantic-merge' || String(conflict?.details?.reasonCode ?? conflict?.code).startsWith('canvas-');
+}
+
+function hasOffscreenWorkerProof(proof) {
+  return Boolean(proof?.offscreenWorkerProofHash || proof?.workerTraceHash || proof?.workerMessageTraceHash || (proof?.runtimeSignals ?? []).includes('canvas-offscreen-worker-proof'));
 }
 
 function countFilesWithReason(files, reasonCode) {

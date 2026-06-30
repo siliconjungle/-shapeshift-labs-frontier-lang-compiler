@@ -140,6 +140,7 @@ function canvasProofRecord(assessment, surface, sourcePath, binding) {
     accessibilitySnapshotHash: proof.accessibilitySnapshotHash,
     fallbackSnapshotHash: proof.fallbackSnapshotHash,
     offscreenWorkerProofHash: proof.offscreenWorkerProofHash,
+    workerTraceHash: proof.workerTraceHash,
     workerMessageTraceHash: proof.workerMessageTraceHash,
     runtimeEvidenceBound: true,
     autoMergeClaim: false,

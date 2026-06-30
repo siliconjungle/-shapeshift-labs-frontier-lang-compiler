@@ -272,3 +272,47 @@ const offscreenProject = safeMergeJsTsProject({
 assert.equal(offscreenProject.status, 'blocked');
 assert.equal(offscreenProject.summary.canvasOffscreenWorkerBlockedFiles, 1);
 assert.equal(matrixSurface(offscreenProject, 'canvas-offscreen-worker-proof').proofStatuses['canvas-offscreen-worker-proof'], 'failed');
+
+const offscreenSignals = [...canvasProofSignals, 'canvas-offscreen-worker-proof'];
+const offscreenProvenProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_canvas_offscreen_proven',
+  canvasOffscreenWorkerProofsByPath: {
+    'src/offscreen.js': [sourceProof({
+      id: 'canvas_offscreen_worker_proof',
+      sourcePath: 'src/offscreen.js',
+      base: canvasBase,
+      worker: offscreenWorker,
+      head: canvasBase,
+      output: offscreenWorker,
+      extra: {
+        kind: 'frontier.runtime-proof.source-bound-proof',
+        runtimeCommand: 'node test/probe-offscreen-canvas.mjs',
+        runtimeProbeId: 'canvas:offscreen-worker',
+        runtimeEvidenceHash: 'canvas:offscreen:evidence',
+        runtimeSignals: offscreenSignals,
+        runtimeProofCapsule: runtimeProofCapsule({
+          command: 'node test/probe-offscreen-canvas.mjs',
+          probeId: 'canvas:offscreen-worker',
+          evidenceHash: 'canvas:offscreen:evidence',
+          signals: offscreenSignals,
+          label: 'canvas-offscreen-worker-proof'
+        }),
+        inputSequenceHash: 'input:offscreen-sequence',
+        viewportDprHash: 'viewport:offscreen-dpr',
+        drawCommandTraceHash: 'draw:offscreen-trace',
+        canvasBitmapHash: 'bitmap:offscreen-hash',
+        hitTestTraceHash: 'hit:offscreen-test',
+        frameBudgetHash: 'frame:offscreen-budget',
+        accessibilitySnapshotHash: 'a11y:offscreen-hash',
+        workerTraceHash: 'worker:transfer-trace',
+        workerMessageTraceHash: 'worker:message-trace'
+      }
+    })]
+  },
+  files: [{ sourcePath: 'src/offscreen.js', baseSourceText: canvasBase, workerSourceText: offscreenWorker, headSourceText: canvasBase }]
+});
+assert.equal(offscreenProvenProject.status, 'merged');
+assert.equal(offscreenProvenProject.summary.canvasOffscreenWorkerProofs, 1);
+assert.equal(offscreenProvenProject.files[0].result.canvasRuntimeProofs[0].workerTraceHash, 'worker:transfer-trace');
+assert.equal(offscreenProvenProject.files[0].result.canvasRuntimeProofs[0].workerMessageTraceHash, 'worker:message-trace');
+assert.equal(matrixSurface(offscreenProvenProject, 'canvas-offscreen-worker-proof').proofStatuses['canvas-offscreen-worker-proof'], 'passed');
