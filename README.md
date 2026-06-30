@@ -724,6 +724,7 @@ import {
   createUniversalCapabilityMatrix,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  createUniversalConversionWorklist,
   queryUniversalCapabilityMatrix,
   queryUniversalConversionPlan,
   importNativeSource
@@ -796,6 +797,12 @@ const loweringGaps = queryUniversalConversionPlan(conversionPlan, {
 });
 console.log(loweringGaps.routes.map((route) => route.interlingua.id));
 
+const conversionWorklist = createUniversalConversionWorklist(conversionPlan, {
+  target: 'rust'
+});
+console.log(conversionWorklist.summary.byKind); // add-target-adapter/proof/runtime/dialect/source/review items
+console.log(conversionWorklist.items[0].tasks); // queue-ready next work derived from route evidence
+
 const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan);
 console.log(conversionArtifacts.historyRecords[0].kind); // "frontier.lang.semanticHistoryRecord"
 console.log(conversionArtifacts.patchBundleRecords[0].admission.autoMergeClaim); // false
@@ -821,6 +828,8 @@ The projection target matrix separates five runtime/API classes:
 `createUniversalCapabilityMatrix` composes the import coverage, parser AST format, parser feature, projection target, and language-adapter package-contract matrices into a single language row per source language. It is the coordinator-facing view for universal-language work: it shows imports, symbols, source-map mappings, parser feature readiness, projection targets, missing adapters, unsupported target features, package release readiness, source-importer-only contracts, planned package rows, blockers, and review reasons without claiming lossless conversion where evidence is absent. Pass `languageDenominator` when an audit needs exact rows such as Rust, Python, C, Swift, Kotlin, Java, Go, C#, Scala, Ruby, and Dart; package-contract rows keep Scala/Ruby/Dart visible as planned-only until release-ready adapter packages exist. Use `queryUniversalCapabilityMatrix` to filter that denominator by language, parser/projection/import readiness, package class/name, release readiness, planned-only status, source-importer-only contracts, target-projection support/missing state, package evidence keys, blockers, and review reasons.
 
 `createUniversalConversionPlan` turns that capability evidence into coordinator tasks: preserve exact source, run a target adapter, emit stubs, attach semantic-index evidence, or block the route until missing parser/adapter/proof evidence exists. Every route carries `autoMergeClaim: false`, `semanticEquivalenceClaim: false`, missing evidence, task hints, and a `frontier.lang.semanticMergeScore.v1` score for swarm merge admission.
+
+`createUniversalConversionWorklist` derives queue-ready next work from those routes: add a target adapter, collect translation proof, prove runtime adapters, collect dialect projection evidence, collect source/parser/source-map evidence, review a route, or unblock a blocked route. Worklist items are grouped by source language, target, route IDs, evidence keys, missing evidence, blockers, review reasons, and tasks so coordinators can refill swarms without re-scanning every route. The worklist is still conservative route evidence: it keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
 Each route also carries `translationAdmission`, an explicit cross-language review contract with status/action pairs: `blocked`/`reject`, `needs-adapter`/`add-target-adapter`, `needs-evidence`/`collect-translation-evidence`, `needs-review`/`review-target-adapter`, or `admittable-for-review`/`materialize-review-record`. It records required and represented construct kinds, missing translation evidence, bound evidence IDs, runtime adapter requirements, dialect records, and the target adapter ID while keeping `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 

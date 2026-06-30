@@ -46,6 +46,7 @@ export { queryUniversalCapabilityMatrix } from './internal/index-impl/queryUnive
 export { createUniversalRepresentationCoverage, representationCoverageMatches, UniversalRepresentationConstructKinds } from './universal-representation-coverage.js';
 export { createUniversalInterlinguaRecord, interlinguaRecordMatches, UniversalInterlinguaLayerKinds, UniversalInterlinguaLoweringDispositions } from './universal-interlingua-record.js';
 export { createUniversalConversionArtifacts } from './internal/index-impl/createUniversalConversionArtifacts.js';
+export { createUniversalConversionWorklist, UniversalConversionWorkItemKinds } from './internal/index-impl/createUniversalConversionWorklist.js';
 export { queryUniversalConversionArtifacts } from './universal-conversion-artifacts.js';
 export { createUniversalConversionPlan } from './internal/index-impl/createUniversalConversionPlan.js';
 export { createUniversalRuntimeCapabilityMatrix, queryUniversalRuntimeCapabilityMatrix, UniversalRuntimeCapabilityKinds, UniversalRuntimeHostProfiles } from './universal-runtime-capabilities.js';

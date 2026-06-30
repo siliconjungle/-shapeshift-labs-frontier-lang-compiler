@@ -10,6 +10,7 @@ export * from './declarations/universal-representation-coverage.js';
 export * from './declarations/universal-interlingua.js';
 export * from './declarations/universal-conversion-artifacts.js';
 export * from './declarations/universal-conversion-plan.js';
+export * from './declarations/universal-conversion-worklist.js';
 export * from './declarations/universal-runtime-capabilities.js';
 export * from './declarations/universal-dialects.js';
 export * from './declarations/language-adapter-package-contracts.js';

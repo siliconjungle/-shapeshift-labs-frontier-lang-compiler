@@ -278,7 +278,7 @@ const smokeModules = [
   './smoke/html-css-admission-matrix-fixtures.mjs',
   './smoke/matrices-universal-fixtures.mjs',
   './smoke/projection-readiness.mjs', './smoke/universal-conversion-admission-evidence.mjs', './smoke/universal-conversion-runtime-admission.mjs', './smoke/universal-conversion-dialect-admission.mjs',
-  './smoke/universal-conversion-plan.mjs', './smoke/universal-conversion-compact-counts.mjs'
+  './smoke/universal-conversion-plan.mjs', './smoke/universal-conversion-worklist.mjs', './smoke/universal-conversion-compact-counts.mjs'
 ];
 const semanticAutoMergeSmokeModules = [
   './smoke/semantic-edit-insertions.mjs',
