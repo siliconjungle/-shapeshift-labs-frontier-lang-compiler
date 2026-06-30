@@ -724,6 +724,7 @@ import {
   createUniversalCapabilityMatrix,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
   queryUniversalCapabilityMatrix,
   queryUniversalConversionPlan,
@@ -786,6 +787,19 @@ console.log(pythonToRust.interlingua.lowering.disposition); // "target-adapter",
 console.log(pythonToRust.interlingua.lowering.missingEvidence); // loss/proof gaps for target lowering
 console.log(pythonToRust.mergeScore.value); // sortable merge-review score, not a proof
 
+const routeEvidenceReceipt = createUniversalConversionRouteEvidenceReceipt(pythonToRust, {
+  evidence: [{
+    id: 'python_to_rust_replay',
+    kind: 'conversion-replay-proof',
+    status: 'passed',
+    routeId: pythonToRust.id,
+    sourceLanguage: 'python',
+    target: 'rust'
+  }]
+});
+console.log(routeEvidenceReceipt.proofEvidenceIds); // route-bound proof IDs
+console.log(routeEvidenceReceipt.records.rejected); // unscoped/mismatched evidence stays rejected
+
 const adapterGaps = queryUniversalConversionPlan(conversionPlan, {
   translationAdmissionStatus: 'needs-adapter',
   missingTranslationEvidence: 'translation-target-adapter'
@@ -835,6 +849,8 @@ The projection target matrix separates five runtime/API classes:
 `createUniversalCapabilityMatrix` composes the import coverage, parser AST format, parser feature, projection target, and language-adapter package-contract matrices into a single language row per source language. It is the coordinator-facing view for universal-language work: it shows imports, symbols, source-map mappings, parser feature readiness, projection targets, missing adapters, unsupported target features, package release readiness, source-importer-only contracts, planned package rows, blockers, and review reasons without claiming lossless conversion where evidence is absent. Pass `languageDenominator` when an audit needs exact rows such as Rust, Python, C, Swift, Kotlin, Java, Go, C#, Scala, Ruby, and Dart; package-contract rows keep Scala/Ruby/Dart visible as planned-only until release-ready adapter packages exist. Use `queryUniversalCapabilityMatrix` to filter that denominator by language, parser/projection/import readiness, package class/name, release readiness, planned-only status, source-importer-only contracts, target-projection support/missing state, package evidence keys, blockers, and review reasons.
 
 `createUniversalConversionPlan` turns that capability evidence into coordinator tasks: preserve exact source, run a target adapter, emit stubs, attach semantic-index evidence, or block the route until missing parser/adapter/proof evidence exists. Every route carries `autoMergeClaim: false`, `semanticEquivalenceClaim: false`, missing evidence, task hints, and a `frontier.lang.semanticMergeScore.v1` score for swarm merge admission.
+
+`createUniversalConversionRouteEvidenceReceipt` turns one route plus optional raw evidence records into a compact proof receipt. It records route-bound evidence IDs, passed proof IDs, rejected unscoped or mismatched evidence, missing proof/source evidence, sources, ownership keys, conflict keys, blockers, and review reasons. This gives distributed workers a durable answer to "which evidence actually backs this conversion route?" without promoting a passed replay into a broad semantic-equivalence or auto-merge claim.
 
 `createUniversalConversionWorklist` derives queue-ready next work from those routes: add a target adapter, collect translation proof, prove runtime adapters, collect dialect projection evidence, collect source/parser/source-map evidence, review a route, or unblock a blocked route. Worklist items are grouped by source language, target, route IDs, evidence keys, missing evidence, blockers, review reasons, and tasks so coordinators can refill swarms without re-scanning every route. `queryUniversalConversionWorklist` filters those items by kind, priority, route, language, target, readiness, action, evidence key, missing evidence, blocker, review reason, runtime adapter requirement, dialect record, or target adapter ID. The worklist is still conservative route evidence: it keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 

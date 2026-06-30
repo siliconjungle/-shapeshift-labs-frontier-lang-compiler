@@ -75,6 +75,7 @@ for (const requiredExport of [
   'createUniversalCapabilityMatrix',
   'createUniversalConversionArtifacts',
   'createUniversalConversionPlan',
+  'createUniversalConversionRouteEvidenceReceipt',
   'createUniversalConversionWorklist',
   'createUniversalDialectRecord',
   'createUniversalDialectRegistry',

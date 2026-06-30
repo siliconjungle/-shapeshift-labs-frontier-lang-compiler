@@ -3,6 +3,7 @@ import './public-api-native-fixtures.js';
 import './public-api-adapter-fixtures.js';
 import './public-api-bundle-types.js';
 import './public-api-transform-types.js';
+import './public-api-universal-conversion-receipt-types.js';
 
 type Expect<T extends true> = T;
 type Equal<A, B> =
@@ -79,7 +80,7 @@ type ExpectedPublicRuntimeExport =
   | 'createSemanticEditScript' | 'createSemanticGraphLayerSummary'
   | 'createSemanticPatchBundleRecord' | 'compareSemanticPatchBundleRecords' | 'composeSemanticPatchBundleProjections'
   | 'createSemanticTransformIdentityRecord' | 'deriveSemanticTransformIdentityRecords'
-  | 'createUniversalCapabilityMatrix' | 'createUniversalConversionArtifacts' | 'createUniversalConversionPlan' | 'createUniversalConversionWorklist'
+  | 'createUniversalCapabilityMatrix' | 'createUniversalConversionArtifacts' | 'createUniversalConversionPlan' | 'createUniversalConversionRouteEvidenceReceipt' | 'createUniversalConversionWorklist'
   | 'createUniversalRuntimeCapabilityMatrix'
   | 'createUniversalDialectRecord'
   | 'createUniversalDialectRegistry'
