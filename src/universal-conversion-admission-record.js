@@ -72,6 +72,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     errorModelConstraintAction: route.errorModelConstraint?.action,
     evaluationModelConstraintStatus: route.evaluationModelConstraint?.status,
     evaluationModelConstraintAction: route.evaluationModelConstraint?.action,
+    hostEnvironmentConstraintStatus: route.hostEnvironmentConstraint?.status,
+    hostEnvironmentConstraintAction: route.hostEnvironmentConstraint?.action,
     memoryModelConstraintStatus: route.memoryModelConstraint?.status,
     memoryModelConstraintAction: route.memoryModelConstraint?.action,
     metaprogrammingConstraintStatus: route.metaprogrammingConstraint?.status,
@@ -138,117 +140,22 @@ export function createUniversalConversionAdmissionRecord(input) {
         missingEvidence: route.resourceTransfer?.ownershipConstraints?.missingEvidence ?? []
       }
     },
-    lifetimeConstraint: {
-      id: route.lifetimeConstraint?.id,
-      status: route.lifetimeConstraint?.status,
-      action: route.lifetimeConstraint?.action,
-      requiredKinds: route.lifetimeConstraint?.requiredKinds ?? [],
-      representedKinds: route.lifetimeConstraint?.representedKinds ?? [],
-      missingKinds: route.lifetimeConstraint?.missingKinds ?? [],
-      missingEvidence: route.lifetimeConstraint?.missingEvidence ?? []
-    },
-    controlFlowConstraint: {
-      id: route.controlFlowConstraint?.id,
-      status: route.controlFlowConstraint?.status,
-      action: route.controlFlowConstraint?.action,
-      requiredKinds: route.controlFlowConstraint?.requiredKinds ?? [],
-      representedKinds: route.controlFlowConstraint?.representedKinds ?? [],
-      missingKinds: route.controlFlowConstraint?.missingKinds ?? [],
-      missingEvidence: route.controlFlowConstraint?.missingEvidence ?? []
-    },
-    borrowScopeConstraint: {
-      id: route.borrowScopeConstraint?.id,
-      status: route.borrowScopeConstraint?.status,
-      action: route.borrowScopeConstraint?.action,
-      requiredKinds: route.borrowScopeConstraint?.requiredKinds ?? [],
-      representedKinds: route.borrowScopeConstraint?.representedKinds ?? [],
-      missingKinds: route.borrowScopeConstraint?.missingKinds ?? [],
-      missingEvidence: route.borrowScopeConstraint?.missingEvidence ?? []
-    },
-    borrowCheckerConstraint: {
-      id: route.borrowCheckerConstraint?.id,
-      status: route.borrowCheckerConstraint?.status,
-      action: route.borrowCheckerConstraint?.action,
-      requiredKinds: route.borrowCheckerConstraint?.requiredKinds ?? [],
-      representedKinds: route.borrowCheckerConstraint?.representedKinds ?? [],
-      missingKinds: route.borrowCheckerConstraint?.missingKinds ?? [],
-      missingEvidence: route.borrowCheckerConstraint?.missingEvidence ?? []
-    },
-    dataLayoutConstraint: { id: route.dataLayoutConstraint?.id, status: route.dataLayoutConstraint?.status, action: route.dataLayoutConstraint?.action, requiredKinds: route.dataLayoutConstraint?.requiredKinds ?? [], representedKinds: route.dataLayoutConstraint?.representedKinds ?? [], missingKinds: route.dataLayoutConstraint?.missingKinds ?? [], missingEvidence: route.dataLayoutConstraint?.missingEvidence ?? [] },
-    effectConstraint: {
-      id: route.effectConstraint?.id,
-      status: route.effectConstraint?.status,
-      action: route.effectConstraint?.action,
-      requiredKinds: route.effectConstraint?.requiredKinds ?? [],
-      representedKinds: route.effectConstraint?.representedKinds ?? [],
-      missingKinds: route.effectConstraint?.missingKinds ?? [],
-      missingEvidence: route.effectConstraint?.missingEvidence ?? []
-    },
-    concurrencyModelConstraint: {
-      id: route.concurrencyModelConstraint?.id,
-      status: route.concurrencyModelConstraint?.status,
-      action: route.concurrencyModelConstraint?.action,
-      requiredKinds: route.concurrencyModelConstraint?.requiredKinds ?? [],
-      representedKinds: route.concurrencyModelConstraint?.representedKinds ?? [],
-      missingKinds: route.concurrencyModelConstraint?.missingKinds ?? [],
-      missingEvidence: route.concurrencyModelConstraint?.missingEvidence ?? []
-    },
-    errorModelConstraint: {
-      id: route.errorModelConstraint?.id,
-      status: route.errorModelConstraint?.status,
-      action: route.errorModelConstraint?.action,
-      requiredKinds: route.errorModelConstraint?.requiredKinds ?? [],
-      representedKinds: route.errorModelConstraint?.representedKinds ?? [],
-      missingKinds: route.errorModelConstraint?.missingKinds ?? [],
-      missingEvidence: route.errorModelConstraint?.missingEvidence ?? []
-    },
-    evaluationModelConstraint: {
-      id: route.evaluationModelConstraint?.id,
-      status: route.evaluationModelConstraint?.status,
-      action: route.evaluationModelConstraint?.action,
-      requiredKinds: route.evaluationModelConstraint?.requiredKinds ?? [],
-      representedKinds: route.evaluationModelConstraint?.representedKinds ?? [],
-      missingKinds: route.evaluationModelConstraint?.missingKinds ?? [],
-      missingEvidence: route.evaluationModelConstraint?.missingEvidence ?? []
-    },
-    memoryModelConstraint: {
-      id: route.memoryModelConstraint?.id,
-      status: route.memoryModelConstraint?.status,
-      action: route.memoryModelConstraint?.action,
-      requiredKinds: route.memoryModelConstraint?.requiredKinds ?? [],
-      representedKinds: route.memoryModelConstraint?.representedKinds ?? [],
-      missingKinds: route.memoryModelConstraint?.missingKinds ?? [],
-      missingEvidence: route.memoryModelConstraint?.missingEvidence ?? []
-    },
-    metaprogrammingConstraint: { id: route.metaprogrammingConstraint?.id, status: route.metaprogrammingConstraint?.status, action: route.metaprogrammingConstraint?.action, requiredKinds: route.metaprogrammingConstraint?.requiredKinds ?? [], representedKinds: route.metaprogrammingConstraint?.representedKinds ?? [], missingKinds: route.metaprogrammingConstraint?.missingKinds ?? [], missingEvidence: route.metaprogrammingConstraint?.missingEvidence ?? [] },
-    scopeBindingConstraint: { id: route.scopeBindingConstraint?.id, status: route.scopeBindingConstraint?.status, action: route.scopeBindingConstraint?.action, requiredKinds: route.scopeBindingConstraint?.requiredKinds ?? [], representedKinds: route.scopeBindingConstraint?.representedKinds ?? [], missingKinds: route.scopeBindingConstraint?.missingKinds ?? [], missingEvidence: route.scopeBindingConstraint?.missingEvidence ?? [] },
-    moduleConstraint: {
-      id: route.moduleConstraint?.id,
-      status: route.moduleConstraint?.status,
-      action: route.moduleConstraint?.action,
-      requiredKinds: route.moduleConstraint?.requiredKinds ?? [],
-      representedKinds: route.moduleConstraint?.representedKinds ?? [],
-      missingKinds: route.moduleConstraint?.missingKinds ?? [],
-      missingEvidence: route.moduleConstraint?.missingEvidence ?? []
-    },
-    objectModelConstraint: {
-      id: route.objectModelConstraint?.id,
-      status: route.objectModelConstraint?.status,
-      action: route.objectModelConstraint?.action,
-      requiredKinds: route.objectModelConstraint?.requiredKinds ?? [],
-      representedKinds: route.objectModelConstraint?.representedKinds ?? [],
-      missingKinds: route.objectModelConstraint?.missingKinds ?? [],
-      missingEvidence: route.objectModelConstraint?.missingEvidence ?? []
-    },
-    typeConstraint: {
-      id: route.typeConstraint?.id,
-      status: route.typeConstraint?.status,
-      action: route.typeConstraint?.action,
-      requiredKinds: route.typeConstraint?.requiredKinds ?? [],
-      representedKinds: route.typeConstraint?.representedKinds ?? [],
-      missingKinds: route.typeConstraint?.missingKinds ?? [],
-      missingEvidence: route.typeConstraint?.missingEvidence ?? []
-    },
+    lifetimeConstraint: constraintRecord(route.lifetimeConstraint),
+    controlFlowConstraint: constraintRecord(route.controlFlowConstraint),
+    borrowScopeConstraint: constraintRecord(route.borrowScopeConstraint),
+    borrowCheckerConstraint: constraintRecord(route.borrowCheckerConstraint),
+    dataLayoutConstraint: constraintRecord(route.dataLayoutConstraint),
+    effectConstraint: constraintRecord(route.effectConstraint),
+    concurrencyModelConstraint: constraintRecord(route.concurrencyModelConstraint),
+    errorModelConstraint: constraintRecord(route.errorModelConstraint),
+    evaluationModelConstraint: constraintRecord(route.evaluationModelConstraint),
+    hostEnvironmentConstraint: constraintRecord(route.hostEnvironmentConstraint),
+    memoryModelConstraint: constraintRecord(route.memoryModelConstraint),
+    metaprogrammingConstraint: constraintRecord(route.metaprogrammingConstraint),
+    scopeBindingConstraint: constraintRecord(route.scopeBindingConstraint),
+    moduleConstraint: constraintRecord(route.moduleConstraint),
+    objectModelConstraint: constraintRecord(route.objectModelConstraint),
+    typeConstraint: constraintRecord(route.typeConstraint),
     ownership: {
       keys: uniqueStrings(input.history?.index?.ownershipKeys ?? input.patchBundle?.index?.ownershipKeys ?? []),
       conflictKeys: uniqueStrings(input.history?.index?.conflictKeys ?? input.patchBundle?.index?.conflictKeys ?? [])
@@ -291,6 +198,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       concurrencyModelConstraint: route.concurrencyModelConstraint,
       errorModelConstraint: route.errorModelConstraint,
       evaluationModelConstraint: route.evaluationModelConstraint,
+      hostEnvironmentConstraint: route.hostEnvironmentConstraint,
       memoryModelConstraint: route.memoryModelConstraint,
       metaprogrammingConstraint: route.metaprogrammingConstraint, scopeBindingConstraint: route.scopeBindingConstraint,
       moduleConstraint: route.moduleConstraint,
@@ -317,4 +225,8 @@ function riskForRoute(route, status) {
 
 function componentStatuses(components = {}) {
   return Object.fromEntries(Object.entries(components).map(([key, component]) => [key, component.status]));
+}
+
+function constraintRecord(evidence) {
+  return { id: evidence?.id, status: evidence?.status, action: evidence?.action, requiredKinds: evidence?.requiredKinds ?? [], representedKinds: evidence?.representedKinds ?? [], missingKinds: evidence?.missingKinds ?? [], missingEvidence: evidence?.missingEvidence ?? [] };
 }

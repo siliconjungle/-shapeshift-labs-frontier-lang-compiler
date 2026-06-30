@@ -6,6 +6,7 @@ import { dataLayoutConstraintForConversionRoute, dataLayoutConstraintMatches } f
 import { effectConstraintForConversionRoute, effectConstraintMatches } from './universal-effect-constraints.js';
 import { errorModelConstraintForConversionRoute, errorModelConstraintMatches } from './universal-error-model-constraints.js';
 import { evaluationModelConstraintForConversionRoute, evaluationModelConstraintMatches } from './universal-evaluation-model-constraints.js';
+import { hostEnvironmentConstraintForConversionRoute, hostEnvironmentConstraintMatches } from './universal-host-environment-constraints.js';
 import { lifetimeConstraintForConversionRoute, lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
 import { memoryModelConstraintForConversionRoute, memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
 import { metaprogrammingConstraintForConversionRoute, metaprogrammingConstraintMatches } from './universal-metaprogramming-constraints.js';
@@ -24,6 +25,7 @@ const families = [
   ['effectConstraint', 'effectConstraints', 'translationEffectConstraint'],
   ['errorModelConstraint', 'errorModelConstraints', 'translationErrorModelConstraint'],
   ['evaluationModelConstraint', 'evaluationModelConstraints', 'translationEvaluationModelConstraint'],
+  ['hostEnvironmentConstraint', 'hostEnvironmentConstraints', 'translationHostEnvironmentConstraint'],
   ['lifetimeConstraint', 'lifetimeConstraints', 'translationLifetimeConstraint'],
   ['memoryModelConstraint', 'memoryModelConstraints', 'translationMemoryModelConstraint'],
   ['metaprogrammingConstraint', 'metaprogrammingConstraints', 'translationMetaprogrammingConstraint'],
@@ -68,6 +70,7 @@ export function createConversionRouteConstraints(input = {}, route = {}, routeIm
     concurrencyModelConstraint: concurrencyModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     errorModelConstraint: errorModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     evaluationModelConstraint: evaluationModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
+    hostEnvironmentConstraint: hostEnvironmentConstraintForConversionRoute(input, route, routeImports, routeEvidence, runtime),
     memoryModelConstraint: memoryModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     metaprogrammingConstraint: metaprogrammingConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     scopeBindingConstraint: scopeBindingConstraintForConversionRoute(input, route, routeImports, routeEvidence),
@@ -88,6 +91,7 @@ export function conversionRouteMatchesConstraintQuery(route = {}, query = {}) {
     && concurrencyModelConstraintMatches(route.concurrencyModelConstraint, query)
     && errorModelConstraintMatches(route.errorModelConstraint, query)
     && evaluationModelConstraintMatches(route.evaluationModelConstraint, query)
+    && hostEnvironmentConstraintMatches(route.hostEnvironmentConstraint, query)
     && memoryModelConstraintMatches(route.memoryModelConstraint, query)
     && metaprogrammingConstraintMatches(route.metaprogrammingConstraint, query)
     && scopeBindingConstraintMatches(route.scopeBindingConstraint, query)

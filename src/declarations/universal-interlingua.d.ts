@@ -37,6 +37,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'concurrency-model'
   | 'error-model'
   | 'evaluation-model'
+  | 'host-environment'
   | 'memory-model'
   | 'metaprogramming'
   | 'scope-binding'

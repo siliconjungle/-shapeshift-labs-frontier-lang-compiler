@@ -62,6 +62,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const concurrencyModelConstraints = routeArtifacts.map((artifact) => artifact.concurrencyModelConstraint ?? artifact.metadata?.concurrencyModelConstraint ?? artifact.admissionRecord?.metadata?.concurrencyModelConstraint ?? {});
   const errorModelConstraints = routeArtifacts.map((artifact) => artifact.errorModelConstraint ?? artifact.metadata?.errorModelConstraint ?? artifact.admissionRecord?.metadata?.errorModelConstraint ?? {});
   const evaluationModelConstraints = routeArtifacts.map((artifact) => artifact.evaluationModelConstraint ?? artifact.metadata?.evaluationModelConstraint ?? artifact.admissionRecord?.metadata?.evaluationModelConstraint ?? {});
+  const hostEnvironmentConstraints = routeArtifacts.map((artifact) => artifact.hostEnvironmentConstraint ?? artifact.metadata?.hostEnvironmentConstraint ?? artifact.admissionRecord?.metadata?.hostEnvironmentConstraint ?? {});
   const memoryModelConstraints = routeArtifacts.map((artifact) => artifact.memoryModelConstraint ?? artifact.metadata?.memoryModelConstraint ?? artifact.admissionRecord?.metadata?.memoryModelConstraint ?? {});
   const metaprogrammingConstraints = routeArtifacts.map((artifact) => artifact.metaprogrammingConstraint ?? artifact.metadata?.metaprogrammingConstraint ?? artifact.admissionRecord?.metadata?.metaprogrammingConstraint ?? {});
   const scopeBindingConstraints = routeArtifacts.map((artifact) => artifact.scopeBindingConstraint ?? artifact.metadata?.scopeBindingConstraint ?? artifact.admissionRecord?.metadata?.scopeBindingConstraint ?? {});
@@ -101,6 +102,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     concurrencyModelConstraint: compactConstraintCounts(concurrencyModelConstraints),
     errorModelConstraint: compactConstraintCounts(errorModelConstraints),
     evaluationModelConstraint: compactConstraintCounts(evaluationModelConstraints),
+    hostEnvironmentConstraint: compactConstraintCounts(hostEnvironmentConstraints),
     memoryModelConstraint: compactConstraintCounts(memoryModelConstraints),
     metaprogrammingConstraint: compactConstraintCounts(metaprogrammingConstraints),
     scopeBindingConstraint: compactConstraintCounts(scopeBindingConstraints),

@@ -34,6 +34,7 @@ export const UniversalInterlinguaConstraintEdgeKinds = Object.freeze([
   'concurrency-model',
   'error-model',
   'evaluation-model',
+  'host-environment',
   'memory-model',
   'metaprogramming',
   'scope-binding',
@@ -174,6 +175,7 @@ export function interlinguaConstraintSummary(route = {}) {
     constraintEdge('concurrency-model', route.concurrencyModelConstraint, 'runtime-capability', route),
     constraintEdge('error-model', route.errorModelConstraint, 'runtime-capability', route),
     constraintEdge('evaluation-model', route.evaluationModelConstraint, 'runtime-capability', route),
+    constraintEdge('host-environment', route.hostEnvironmentConstraint, 'runtime-capability', route),
     constraintEdge('memory-model', route.memoryModelConstraint, 'runtime-capability', route),
     constraintEdge('metaprogramming', route.metaprogrammingConstraint, 'parser-feature', route),
     constraintEdge('scope-binding', route.scopeBindingConstraint, 'semantic-symbol', route),
@@ -260,7 +262,7 @@ function constraintObligations(family, evidence, edgeId) {
 }
 
 function constraintRecords(evidence = {}) {
-  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.memoryModelConstraints ?? evidence.metaprogrammingConstraints ?? evidence.scopeBindingConstraints ?? evidence.moduleConstraints ?? evidence.objectModelConstraints ?? evidence.typeConstraints ?? [];
+  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.hostEnvironmentConstraints ?? evidence.memoryModelConstraints ?? evidence.metaprogrammingConstraints ?? evidence.scopeBindingConstraints ?? evidence.moduleConstraints ?? evidence.objectModelConstraints ?? evidence.typeConstraints ?? [];
 }
 
 function nodeIds(record = {}, prefix) {

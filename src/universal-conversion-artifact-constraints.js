@@ -8,6 +8,7 @@ import { dataLayoutConstraintMatches } from './universal-data-layout-constraints
 import { effectConstraintMatches } from './universal-effect-constraints.js';
 import { errorModelConstraintMatches } from './universal-error-model-constraints.js';
 import { evaluationModelConstraintMatches } from './universal-evaluation-model-constraints.js';
+import { hostEnvironmentConstraintMatches } from './universal-host-environment-constraints.js';
 import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
 import { memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
 import { metaprogrammingConstraintMatches } from './universal-metaprogramming-constraints.js';
@@ -33,6 +34,7 @@ export function artifactConstraintIndex(records = []) {
     ...constraintIndex('concurrencyModelConstraint', records.map(conc)),
     ...constraintIndex('errorModelConstraint', records.map(err)),
     ...constraintIndex('evaluationModelConstraint', records.map(evalm)),
+    ...constraintIndex('hostEnvironmentConstraint', records.map(host)),
     ...constraintIndex('memoryModelConstraint', records.map(mem)),
     ...constraintIndex('metaprogrammingConstraint', records.map(meta)),
     ...constraintIndex('scopeBindingConstraint', records.map(scope)),
@@ -53,6 +55,7 @@ export function artifactConstraintsMatch(record, query = {}) {
     && concurrencyModelConstraintMatches(conc(record), query)
     && errorModelConstraintMatches(err(record), query)
     && evaluationModelConstraintMatches(evalm(record), query)
+    && hostEnvironmentConstraintMatches(host(record), query)
     && memoryModelConstraintMatches(mem(record), query)
     && metaprogrammingConstraintMatches(meta(record), query)
     && scopeBindingConstraintMatches(scope(record), query)
@@ -72,6 +75,7 @@ function effect(record) { return record.effectConstraint ?? metaConstraint(recor
 function conc(record) { return record.concurrencyModelConstraint ?? metaConstraint(record, 'concurrencyModelConstraint'); }
 function err(record) { return record.errorModelConstraint ?? metaConstraint(record, 'errorModelConstraint'); }
 function evalm(record) { return record.evaluationModelConstraint ?? metaConstraint(record, 'evaluationModelConstraint'); }
+function host(record) { return record.hostEnvironmentConstraint ?? metaConstraint(record, 'hostEnvironmentConstraint'); }
 function mem(record) { return record.memoryModelConstraint ?? metaConstraint(record, 'memoryModelConstraint'); }
 function meta(record) { return record.metaprogrammingConstraint ?? metaConstraint(record, 'metaprogrammingConstraint'); }
 function scope(record) { return record.scopeBindingConstraint ?? metaConstraint(record, 'scopeBindingConstraint'); }

@@ -258,7 +258,7 @@ function conversionEvidence(language, targetCell) {
     targetLossKinds: targetCell?.lossKinds ?? []
   };
 }
-function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, dataLayoutConstraint, effectConstraint, concurrencyModelConstraint, errorModelConstraint, evaluationModelConstraint, memoryModelConstraint, metaprogrammingConstraint, scopeBindingConstraint, moduleConstraint, objectModelConstraint, typeConstraint) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, dataLayoutConstraint, effectConstraint, concurrencyModelConstraint, errorModelConstraint, evaluationModelConstraint, hostEnvironmentConstraint, memoryModelConstraint, metaprogrammingConstraint, scopeBindingConstraint, moduleConstraint, objectModelConstraint, typeConstraint) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -277,7 +277,7 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...(borrowScopeConstraint?.missingEvidence ?? []),
     ...(borrowCheckerConstraint?.missingEvidence ?? []),
     ...(dataLayoutConstraint?.missingEvidence ?? []),
-    ...(effectConstraint?.missingEvidence ?? []), ...(concurrencyModelConstraint?.missingEvidence ?? []), ...(errorModelConstraint?.missingEvidence ?? []), ...(evaluationModelConstraint?.missingEvidence ?? []), ...(memoryModelConstraint?.missingEvidence ?? []), ...(metaprogrammingConstraint?.missingEvidence ?? []), ...(scopeBindingConstraint?.missingEvidence ?? []),
+    ...(effectConstraint?.missingEvidence ?? []), ...(concurrencyModelConstraint?.missingEvidence ?? []), ...(errorModelConstraint?.missingEvidence ?? []), ...(evaluationModelConstraint?.missingEvidence ?? []), ...(hostEnvironmentConstraint?.missingEvidence ?? []), ...(memoryModelConstraint?.missingEvidence ?? []), ...(metaprogrammingConstraint?.missingEvidence ?? []), ...(scopeBindingConstraint?.missingEvidence ?? []),
     ...(moduleConstraint?.missingEvidence ?? []),
     ...(objectModelConstraint?.missingEvidence ?? []),
     ...(typeConstraint?.missingEvidence ?? []),

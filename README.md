@@ -807,6 +807,7 @@ import {
   createUniversalControlFlowConstraintEvidence,
   createUniversalDataLayoutConstraintEvidence,
   createUniversalEffectConstraintEvidence,
+  createUniversalHostEnvironmentConstraintEvidence,
   createUniversalLifetimeConstraintEvidence,
   createUniversalMetaprogrammingConstraintEvidence,
   createUniversalScopeBindingConstraintEvidence,
@@ -872,7 +873,7 @@ console.log(pythonToRust.mode); // "semantic-index-only", "target-adapter", "stu
 console.log(pythonToRust.missingEvidence); // adapter/proof/source-map gaps for swarm workers
 console.log(pythonToRust.translationAdmission.status); // "needs-adapter", "needs-evidence", etc.
 console.log(pythonToRust.interlingua.layers.representedKinds); // lifted semantic layers
-console.log(pythonToRust.interlingua.constraints.families); // ownership/lifetime/borrow/effect constraints
+console.log(pythonToRust.interlingua.constraints.families); // ownership/lifetime/borrow/host/effect constraints
 console.log(pythonToRust.interlingua.lowering.disposition); // "target-adapter", "semantic-index-only", etc.
 console.log(pythonToRust.interlingua.lowering.missingEvidence); // loss/proof gaps for target lowering
 console.log(pythonToRust.mergeScore.value); // sortable merge-review score, not a proof
@@ -949,6 +950,18 @@ const effectConstraints = createUniversalEffectConstraintEvidence({
 });
 console.log(effectConstraints.missingKinds); // ["network-io"]
 console.log(effectConstraints.claims.effectEquivalenceClaim); // false without executable proof
+
+const hostEnvironmentConstraints = createUniversalHostEnvironmentConstraintEvidence({
+  sourceLanguage: 'typescript',
+  target: 'rust',
+  sourceHostEnvironmentRecords: [
+    { kind: 'node process env secret permission-boundary', globalName: 'process.env.API_TOKEN' },
+    { kind: 'shell command filesystem platform path', apiName: 'spawn' },
+    { kind: 'browser dom clipboard', globalName: 'window' }
+  ]
+});
+console.log(hostEnvironmentConstraints.missingKinds); // host/runtime/permission obligations still needing target evidence
+console.log(hostEnvironmentConstraints.claims.hostEquivalenceClaim); // false without host-environment proof
 
 const metaprogrammingConstraints = createUniversalMetaprogrammingConstraintEvidence({
   sourceLanguage: 'rust',
@@ -1178,6 +1191,19 @@ coordinator separate "target code shape exists" from "target execution preserves
 the source effect boundary." The record remains conservative: runtime,
 effect-equivalence, semantic-equivalence, and auto-merge claims stay false unless
 separate proof is attached.
+
+Routes can also carry `hostEnvironmentConstraint`, a host/runtime/permission
+admission record for filesystem access, process and environment variables,
+network and storage APIs, databases, DOM/browser or Node-specific globals,
+workers, clocks, randomness, locale/timezone behavior, crypto, clipboard,
+canvas/GPU/WASM, sandboxing, secrets, shell commands, platform paths, native
+addons, and permission boundaries. Host-environment queries such as
+`hostEnvironmentConstraintMissingKind: "environment-variable"` or
+`interlinguaConstraintFamily: "host-environment"` let a coordinator distinguish
+"the source performs an effect" from "the target host can represent the same
+runtime/permission contract." The record remains conservative: host,
+permission, environment, semantic-equivalence, and auto-merge claims stay false
+unless separate proof is attached.
 
 Routes can also carry `concurrencyModelConstraint`, an async/task/thread/actor
 admission record for structured concurrency, async tasks, thread and worker

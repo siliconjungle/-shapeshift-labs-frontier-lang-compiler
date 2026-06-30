@@ -16,7 +16,7 @@ import type { UniversalBorrowScopeConstraintEvidence } from './universal-borrow-
 import type { UniversalBorrowCheckerConstraintEvidence } from './universal-borrow-checker-constraints.js';
 import type { UniversalDataLayoutConstraintEvidence } from './universal-data-layout-constraints.js'; import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
 import type { UniversalConcurrencyModelConstraintEvidence } from './universal-concurrency-model-constraints.js';
-import type { UniversalErrorModelConstraintEvidence } from './universal-error-model-constraints.js'; import type { UniversalEvaluationModelConstraintEvidence } from './universal-evaluation-model-constraints.js';
+import type { UniversalErrorModelConstraintEvidence } from './universal-error-model-constraints.js'; import type { UniversalEvaluationModelConstraintEvidence } from './universal-evaluation-model-constraints.js'; import type { UniversalHostEnvironmentConstraintEvidence } from './universal-host-environment-constraints.js';
 import type { UniversalMemoryModelConstraintEvidence } from './universal-memory-model-constraints.js'; import type { UniversalMetaprogrammingConstraintEvidence } from './universal-metaprogramming-constraints.js'; import type { UniversalScopeBindingConstraintEvidence } from './universal-scope-binding-constraints.js'; import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js'; import type { UniversalObjectModelConstraintEvidence } from './universal-object-model-constraints.js';
 import type { UniversalTypeConstraintEvidence } from './universal-type-constraints.js';
 import type {
@@ -95,7 +95,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly effectConstraintAction?: string;
   readonly concurrencyModelConstraintStatus?: string; readonly concurrencyModelConstraintAction?: string;
   readonly errorModelConstraintStatus?: string; readonly errorModelConstraintAction?: string;
-  readonly evaluationModelConstraintStatus?: string; readonly evaluationModelConstraintAction?: string;
+  readonly evaluationModelConstraintStatus?: string; readonly evaluationModelConstraintAction?: string; readonly hostEnvironmentConstraintStatus?: string; readonly hostEnvironmentConstraintAction?: string;
   readonly memoryModelConstraintStatus?: string;
   readonly memoryModelConstraintAction?: string; readonly metaprogrammingConstraintStatus?: string; readonly metaprogrammingConstraintAction?: string; readonly scopeBindingConstraintStatus?: string; readonly scopeBindingConstraintAction?: string;
   readonly moduleConstraintStatus?: string; readonly objectModelConstraintStatus?: string;
@@ -163,7 +163,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly borrowCheckerConstraint: UniversalConversionConstraintSummary; readonly dataLayoutConstraint: UniversalConversionConstraintSummary;
   readonly moduleConstraint: UniversalConversionConstraintSummary;
   readonly errorModelConstraint: UniversalConversionConstraintSummary;
-  readonly evaluationModelConstraint: UniversalConversionConstraintSummary;
+  readonly evaluationModelConstraint: UniversalConversionConstraintSummary; readonly hostEnvironmentConstraint: UniversalConversionConstraintSummary;
   readonly memoryModelConstraint: UniversalConversionConstraintSummary; readonly metaprogrammingConstraint: UniversalConversionConstraintSummary; readonly scopeBindingConstraint: UniversalConversionConstraintSummary; readonly objectModelConstraint: UniversalConversionConstraintSummary;
   readonly typeConstraint: UniversalConversionConstraintSummary;
   readonly ownership: {
@@ -220,7 +220,7 @@ export interface UniversalConversionRouteArtifact {
   readonly effectConstraint?: UniversalEffectConstraintEvidence;
   readonly concurrencyModelConstraint?: UniversalConcurrencyModelConstraintEvidence;
   readonly errorModelConstraint?: UniversalErrorModelConstraintEvidence;
-  readonly evaluationModelConstraint?: UniversalEvaluationModelConstraintEvidence;
+  readonly evaluationModelConstraint?: UniversalEvaluationModelConstraintEvidence; readonly hostEnvironmentConstraint?: UniversalHostEnvironmentConstraintEvidence;
   readonly memoryModelConstraint?: UniversalMemoryModelConstraintEvidence; readonly metaprogrammingConstraint?: UniversalMetaprogrammingConstraintEvidence; readonly scopeBindingConstraint?: UniversalScopeBindingConstraintEvidence;
   readonly moduleConstraint?: UniversalModuleConstraintEvidence; readonly objectModelConstraint?: UniversalObjectModelConstraintEvidence;
   readonly typeConstraint?: UniversalTypeConstraintEvidence;
