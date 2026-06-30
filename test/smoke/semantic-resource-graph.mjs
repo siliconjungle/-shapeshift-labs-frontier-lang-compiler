@@ -3,6 +3,7 @@ import {
   createSemanticGraphLayerSummary,
   createSemanticImportSidecar,
   createSemanticResourceGraph,
+  createUniversalLifetimeConstraintEvidence,
   importNativeSource,
   querySemanticResourceGraph,
   summarizeSemanticResourceGraph
@@ -152,6 +153,36 @@ assert.equal(rustOwnershipGraph.loans.some((record) => record.mode === 'shared' 
 assert.equal(rustOwnershipGraph.moves.some((record) => record.metadata?.fromBinding === 'owned' && record.metadata?.toBinding === 'moved'), true);
 assert.equal(rustOwnershipGraph.drops.some((record) => record.dropKind === 'rust-explicit-drop'), true);
 assert.equal(rustOwnershipGraph.claims.borrowCheckerClaim, false);
+
+const rustBorrowEscapeImport = importNativeSource({
+  language: 'rust',
+  sourcePath: 'src/borrow_escape.rs',
+  sourceText: [
+    'pub fn borrow_escape() -> &String {',
+    '  let owned = String::from("a");',
+    '  let shared = &owned;',
+    '  shared',
+    '}',
+    ''
+  ].join('\n')
+});
+const rustBorrowEscapeSidecar = createSemanticImportSidecar(rustBorrowEscapeImport, { generatedAt: 141.6 });
+const rustBorrowEscapeGraph = rustBorrowEscapeSidecar.resourceGraph;
+const rustBorrowEscapes = querySemanticResourceGraph(rustBorrowEscapeGraph, { kind: 'escape', escapeKind: 'rust-borrow-escape' });
+
+assert.equal(rustBorrowEscapeGraph.summary.escapes >= 1, true);
+assert.equal(rustBorrowEscapes.length >= 1, true);
+assert.equal(rustBorrowEscapes[0].status, 'needs-proof');
+assert.equal(rustBorrowEscapes[0].metadata?.borrowedBinding, 'owned');
+assert.equal(rustBorrowEscapeSidecar.summary.resourceGraphEscapes, rustBorrowEscapeGraph.summary.escapes);
+const rustBorrowEscapeLifetime = createUniversalLifetimeConstraintEvidence({
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  sourceGraph: rustBorrowEscapeGraph
+});
+assert.equal(rustBorrowEscapeLifetime.requiredKinds.includes('no-escape'), true);
+assert.equal(rustBorrowEscapeLifetime.missingKinds.includes('no-escape'), true);
+assert.equal(rustBorrowEscapeLifetime.missingEvidence.includes('translation-lifetime-constraint:no-escape'), true);
 
 const cResourceImport = importNativeSource({
   language: 'c',

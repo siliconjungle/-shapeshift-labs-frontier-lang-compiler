@@ -12,6 +12,7 @@ export function rustResourceGraphRecordsFromInput(input = {}) {
     aliases: uniqueRecordsById(records.flatMap((record) => record.aliases)),
     moves: uniqueRecordsById(records.flatMap((record) => record.moves)),
     drops: uniqueRecordsById(records.flatMap((record) => record.drops)),
+    escapes: uniqueRecordsById(records.flatMap((record) => record.escapes)),
     lifetimeRegions: uniqueRecordsById(records.flatMap((record) => record.lifetimeRegions)),
     unsafeBoundaries: uniqueRecordsById(records.flatMap((record) => record.unsafeBoundaries))
   };
@@ -242,5 +243,5 @@ function uniqueRustBundles(bundles) {
 }
 
 function emptyRustRecords() {
-  return { resources: [], owners: [], loans: [], aliases: [], moves: [], drops: [], lifetimeRegions: [], unsafeBoundaries: [] };
+  return { resources: [], owners: [], loans: [], aliases: [], moves: [], drops: [], escapes: [], lifetimeRegions: [], unsafeBoundaries: [] };
 }

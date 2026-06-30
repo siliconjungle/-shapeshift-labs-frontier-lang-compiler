@@ -115,6 +115,7 @@ function lifetimeModel(graph = {}, explicit = []) {
   const aliases = graph.aliases ?? [];
   const drops = graph.drops ?? [];
   const moves = graph.moves ?? [];
+  const escapes = graph.escapes ?? [];
   const unsafeBoundaries = graph.unsafeBoundaries ?? [];
   const explicitKinds = uniqueStrings(explicit.flatMap((record) => lifetimeKindsForRecord(record)));
   return {
@@ -125,7 +126,7 @@ function lifetimeModel(graph = {}, explicit = []) {
     dropRegionIds: uniqueStrings(drops.map((record) => record.lifetimeRegionId)),
     moveRegionIds: uniqueStrings(moves.map((record) => record.lifetimeRegionId)),
     outlivesRelations: uniqueStrings([...(graph.outlives ?? []), ...(graph.lifetimeRelations ?? [])].map((record) => relationKey(record))),
-    escapeRecords: uniqueStrings([...(graph.escapes ?? []), ...explicit.filter((record) => /escape/i.test(String(record?.kind ?? record?.constraintKind ?? '')))].map((record) => record.id ?? record.resourceId ?? record.name ?? record.kind)),
+    escapeRecords: uniqueStrings([...escapes, ...explicit.filter((record) => /escape/i.test(String(record?.kind ?? record?.constraintKind ?? '')))].map((record) => record.id ?? record.resourceId ?? record.name ?? record.kind)),
     unsafeBoundaryKinds: uniqueStrings(unsafeBoundaries.map((record) => record.kind ?? record.metadata?.proofGapCode ?? 'unsafe-boundary')),
     explicitKinds,
     hasLifetimeRegion: lifetimeRegions.length > 0,
@@ -134,7 +135,7 @@ function lifetimeModel(graph = {}, explicit = []) {
     hasDropRegions: drops.some((record) => record.lifetimeRegionId),
     hasMoveRegions: moves.some((record) => record.lifetimeRegionId),
     hasOutlives: (graph.outlives ?? []).length > 0 || (graph.lifetimeRelations ?? []).length > 0 || explicitKinds.includes('outlives-relation'),
-    hasEscapes: explicitKinds.includes('no-escape') || explicitKinds.includes('escape-proof'),
+    hasEscapes: escapes.length > 0 || explicitKinds.includes('no-escape') || explicitKinds.includes('escape-proof'),
     hasUnsafeLifetime: unsafeBoundaries.length > 0 || explicitKinds.includes('unsafe-lifetime-proof')
   };
 }

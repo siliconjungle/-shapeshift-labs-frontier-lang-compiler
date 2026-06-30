@@ -17,6 +17,7 @@ import {
   allRecords,
   conflictRecord,
   dropRecord,
+  escapeRecord,
   exclusiveAliasConflicts,
   lifetimeRegionRecord,
   loanRecord,
@@ -39,6 +40,7 @@ export const SemanticResourceGraphRecordKinds = Object.freeze([
   'alias',
   'move',
   'drop',
+  'escape',
   'lifetime-region',
   'unsafe-boundary',
   'conflict',
@@ -122,6 +124,11 @@ export function createSemanticResourceGraph(input = {}) {
     ...cppRecords.drops,
     ...managedRecords.drops
   ].map((record, index) => dropRecord(record, index, input, evidenceIds)));
+  const escapes = uniqueRecordsById([
+    ...graphs.flatMap((graph) => graph.escapes ?? []),
+    ...(input.escapes ?? []),
+    ...rustRecords.escapes
+  ].map((record, index) => escapeRecord(record, index, input, evidenceIds)));
   const unsafeBoundaries = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.unsafeBoundaries ?? []),
     ...(input.unsafeBoundaries ?? []),
@@ -141,7 +148,7 @@ export function createSemanticResourceGraph(input = {}) {
     ...(input.proofObligations ?? []),
     ...proofObligationsForUnsafeBoundaries(unsafeBoundaries)
   ].map((record, index) => proofObligationRecord(record, index, input, evidenceIds)));
-  const summary = resourceGraphSummary({ resources, owners, loans, aliases, moves, drops, lifetimeRegions, unsafeBoundaries, conflicts, proofObligations });
+  const summary = resourceGraphSummary({ resources, owners, loans, aliases, moves, drops, escapes, lifetimeRegions, unsafeBoundaries, conflicts, proofObligations });
   return {
     kind: 'frontier.lang.semanticResourceGraph',
     version: 1,
@@ -156,6 +163,7 @@ export function createSemanticResourceGraph(input = {}) {
     aliases,
     moves,
     drops,
+    escapes,
     lifetimeRegions,
     unsafeBoundaries,
     conflicts,
@@ -166,7 +174,7 @@ export function createSemanticResourceGraph(input = {}) {
       resourceIds: uniqueStrings(resources.map((record) => record.id)),
       ownerIds: uniqueStrings(owners.map((record) => record.id)),
       lifetimeRegionIds: uniqueStrings(lifetimeRegions.map((record) => record.id)),
-      sourcePaths: uniqueStrings(allRecords({ resources, owners, loans, aliases, moves, drops, lifetimeRegions, unsafeBoundaries }).map((record) => record.sourcePath)),
+      sourcePaths: uniqueStrings(allRecords({ resources, owners, loans, aliases, moves, drops, escapes, lifetimeRegions, unsafeBoundaries }).map((record) => record.sourcePath)),
       evidenceIds,
       blockerReasonCodes: summary.reasonCodes
     },
@@ -192,6 +200,7 @@ export function summarizeSemanticResourceGraph(graph = {}) {
     aliases: graph.aliases ?? [],
     moves: graph.moves ?? [],
     drops: graph.drops ?? [],
+    escapes: graph.escapes ?? [],
     lifetimeRegions: graph.lifetimeRegions ?? [],
     unsafeBoundaries: graph.unsafeBoundaries ?? [],
     conflicts: graph.conflicts ?? [],
@@ -205,6 +214,7 @@ export function querySemanticResourceGraph(graph = {}, query = {}) {
     .filter((record) => match(query.resourceId, record.resourceId ?? record.id))
     .filter((record) => match(query.ownerId, record.ownerId))
     .filter((record) => match(query.lifetimeRegionId, record.lifetimeRegionId))
+    .filter((record) => match(query.escapeKind, record.escapeKind))
     .filter((record) => match(query.sourcePath, record.sourcePath))
     .filter((record) => match(query.status, record.status))
     .filter((record) => match(query.evidenceId, record.evidenceIds))

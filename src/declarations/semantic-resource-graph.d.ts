@@ -7,6 +7,7 @@ export type SemanticResourceGraphRecordKind =
   | 'alias'
   | 'move'
   | 'drop'
+  | 'escape'
   | 'lifetime-region'
   | 'unsafe-boundary'
   | 'conflict'
@@ -88,6 +89,16 @@ export interface SemanticResourceDropRecord extends SemanticResourceGraphBaseRec
   readonly order?: number;
 }
 
+export interface SemanticResourceEscapeRecord extends SemanticResourceGraphBaseRecord {
+  readonly recordKind: 'escape';
+  readonly resourceId?: string;
+  readonly ownerId?: string;
+  readonly lifetimeRegionId?: string;
+  readonly loanId?: string;
+  readonly escapeKind: string;
+  readonly status: string;
+}
+
 export interface SemanticResourceUnsafeBoundaryRecord extends SemanticResourceGraphBaseRecord {
   readonly recordKind: 'unsafe-boundary';
   readonly resourceId?: string;
@@ -124,6 +135,7 @@ export type SemanticResourceGraphRecord =
   | SemanticResourceAliasRecord
   | SemanticResourceMoveRecord
   | SemanticResourceDropRecord
+  | SemanticResourceEscapeRecord
   | SemanticResourceLifetimeRegionRecord
   | SemanticResourceUnsafeBoundaryRecord
   | SemanticResourceConflictRecord
@@ -137,6 +149,7 @@ export interface SemanticResourceGraphSummary {
   readonly aliases: number;
   readonly moves: number;
   readonly drops: number;
+  readonly escapes: number;
   readonly lifetimeRegions: number;
   readonly unsafeBoundaries: number;
   readonly conflicts: number;
@@ -159,6 +172,7 @@ export interface SemanticResourceGraph {
   readonly aliases: readonly SemanticResourceAliasRecord[];
   readonly moves: readonly SemanticResourceMoveRecord[];
   readonly drops: readonly SemanticResourceDropRecord[];
+  readonly escapes: readonly SemanticResourceEscapeRecord[];
   readonly lifetimeRegions: readonly SemanticResourceLifetimeRegionRecord[];
   readonly unsafeBoundaries: readonly SemanticResourceUnsafeBoundaryRecord[];
   readonly conflicts: readonly SemanticResourceConflictRecord[];
@@ -195,6 +209,7 @@ export interface SemanticResourceGraphInput {
   readonly aliases?: readonly Partial<SemanticResourceAliasRecord>[];
   readonly moves?: readonly Partial<SemanticResourceMoveRecord>[];
   readonly drops?: readonly Partial<SemanticResourceDropRecord>[];
+  readonly escapes?: readonly Partial<SemanticResourceEscapeRecord>[];
   readonly lifetimeRegions?: readonly Partial<SemanticResourceLifetimeRegionRecord>[];
   readonly unsafeBoundaries?: readonly Partial<SemanticResourceUnsafeBoundaryRecord>[];
   readonly conflicts?: readonly Partial<SemanticResourceConflictRecord>[];
@@ -216,6 +231,7 @@ export interface SemanticResourceGraphQuery {
   readonly resourceId?: string | readonly string[];
   readonly ownerId?: string | readonly string[];
   readonly lifetimeRegionId?: string | readonly string[];
+  readonly escapeKind?: string | readonly string[];
   readonly sourcePath?: string | readonly string[];
   readonly status?: string | readonly string[];
   readonly evidenceId?: string | readonly string[];

@@ -1,4 +1,5 @@
 import { idFragment } from '../../native-import-utils.js';
+import { appendRustBorrowEscapes } from './semanticResourceGraphRustBorrowEscapes.js';
 
 export function appendRustLocalOwnership(output, bundle, record, context) {
   if (!['fn', 'method'].includes(record.kind) || !bundle.sourceText) return;
@@ -24,6 +25,7 @@ export function appendRustLocalOwnership(output, bundle, record, context) {
       metadata: { rustKey: record.key, statementText: statement.text }
     });
   }
+  appendRustBorrowEscapes(output, bundle, record, context, bindings, body);
 }
 
 function appendRustLetStatement(output, bundle, record, context, bindings, statement) {
@@ -87,7 +89,15 @@ function appendRustBorrowBinding(output, bundle, record, context, bindings, stat
       evidenceKind: 'rust-lexical-borrow'
     }
   });
-  bindings.set(statement.name, { resourceId, ownerId, lifetimeRegionId, bindingKind: 'borrow' });
+  bindings.set(statement.name, {
+    name: statement.name,
+    resourceId,
+    ownerId,
+    lifetimeRegionId,
+    loanId: `loan_rust_local_${borrowed.mode}_${idPart}`,
+    bindingKind: 'borrow',
+    borrowedBinding: borrowed.name
+  });
 }
 
 function appendRustMoveBinding(output, bundle, record, context, bindings, statement, movedFrom) {
@@ -128,7 +138,7 @@ function appendRustMoveBinding(output, bundle, record, context, bindings, statem
     }
   });
   output.drops.push(rustLexicalDrop(movedFrom.resourceId, ownerId, lifetimeRegionId, statement, bundle, record, context, 'rust-lexical-drop-after-move'));
-  bindings.set(statement.name, { resourceId: movedFrom.resourceId, ownerId, lifetimeRegionId, bindingKind: 'moved-local' });
+  bindings.set(statement.name, { name: statement.name, resourceId: movedFrom.resourceId, ownerId, lifetimeRegionId, bindingKind: 'moved-local' });
 }
 
 function appendRustOwnedBinding(output, bundle, record, context, bindings, statement) {
@@ -165,7 +175,7 @@ function appendRustOwnedBinding(output, bundle, record, context, bindings, state
   });
   output.lifetimeRegions.push(rustBindingLifetime(lifetimeRegionId, statement.name, 'rust-lexical-scope', statement, bundle, record, context));
   output.drops.push(rustLexicalDrop(resourceId, ownerId, lifetimeRegionId, statement, bundle, record, context, 'rust-lexical-drop'));
-  bindings.set(statement.name, { resourceId, ownerId, lifetimeRegionId, bindingKind: 'owned-local' });
+  bindings.set(statement.name, { name: statement.name, resourceId, ownerId, lifetimeRegionId, bindingKind: 'owned-local' });
 }
 
 function rustRecordBody(sourceText, record) {

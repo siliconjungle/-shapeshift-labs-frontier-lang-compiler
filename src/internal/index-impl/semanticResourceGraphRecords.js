@@ -86,6 +86,19 @@ export function dropRecord(record, index, input, evidenceIds) {
   });
 }
 
+export function escapeRecord(record, index, input, evidenceIds) {
+  return compactRecord({
+    ...record,
+    recordKind: 'escape',
+    id: record.id ?? `escape_${idFragment(record.resourceId ?? record.ownerId ?? record.name ?? index)}`,
+    escapeKind: record.escapeKind ?? record.kind ?? 'escape',
+    status: record.status ?? 'needs-proof',
+    sourcePath: record.sourcePath ?? input.sourcePath,
+    sourceHash: record.sourceHash ?? input.sourceHash,
+    evidenceIds: uniqueStrings([...(record.evidenceIds ?? []), ...evidenceIds])
+  });
+}
+
 export function unsafeBoundaryRecord(record, index, input, evidenceIds) {
   return compactRecord({
     ...record,
@@ -182,6 +195,7 @@ export function resourceGraphSummary(input) {
     ...(input.resources.length ? [] : ['missing-resource-records']),
     ...(input.loans.length || input.aliases.length || input.moves.length || input.drops.length ? [] : ['missing-alias-loan-move-drop-records']),
     ...(input.lifetimeRegions.length ? [] : ['missing-lifetime-region-records']),
+    ...(input.escapes.length ? ['escape-proof-review-required'] : []),
     ...(input.unsafeBoundaries.length ? ['unsafe-boundary-review-required'] : []),
     ...input.conflicts.map((record) => record.reasonCode)
   ]);
@@ -193,6 +207,7 @@ export function resourceGraphSummary(input) {
     aliases: input.aliases.length,
     moves: input.moves.length,
     drops: input.drops.length,
+    escapes: input.escapes.length,
     lifetimeRegions: input.lifetimeRegions.length,
     unsafeBoundaries: input.unsafeBoundaries.length,
     conflicts: input.conflicts.length,
@@ -216,6 +231,7 @@ export function allRecords(input) {
     ...(input.aliases ?? []),
     ...(input.moves ?? []),
     ...(input.drops ?? []),
+    ...(input.escapes ?? []),
     ...(input.lifetimeRegions ?? []),
     ...(input.unsafeBoundaries ?? []),
     ...(input.conflicts ?? []),
