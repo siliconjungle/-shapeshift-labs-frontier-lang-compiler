@@ -1,5 +1,6 @@
 import type { FrontierSourceLanguage } from '@shapeshift-labs/frontier-lang-kernel';
 import type { FrontierCompileTarget } from './compile.js';
+import type { UniversalOwnershipConstraintEvidence, UniversalOwnershipConstraintInput, UniversalOwnershipConstraintQuery } from './universal-ownership-constraints.js';
 import type { SemanticResourceGraph, SemanticResourceGraphSummary } from './semantic-resource-graph.js';
 
 export type UniversalResourceTransferStatus =
@@ -62,6 +63,7 @@ export interface UniversalResourceTransferEvidence {
   readonly source: UniversalResourceTransferSide;
   readonly targetSide: UniversalResourceTransferSide;
   readonly losses: readonly UniversalResourceTransferLoss[];
+  readonly ownershipConstraints: UniversalOwnershipConstraintEvidence;
   readonly claims: {
     readonly resourceEquivalenceClaim: false;
     readonly borrowCheckerClaim: false;
@@ -90,10 +92,11 @@ export interface UniversalResourceTransferInput {
   readonly missingEvidence?: readonly string[];
   readonly blockers?: readonly string[];
   readonly review?: readonly string[];
+  readonly ownershipConstraints?: UniversalOwnershipConstraintInput | UniversalOwnershipConstraintEvidence;
   readonly metadata?: Record<string, unknown>;
 }
 
-export interface UniversalResourceTransferQuery {
+export interface UniversalResourceTransferQuery extends UniversalOwnershipConstraintQuery {
   readonly resourceTransferStatus?: UniversalResourceTransferStatus | string | readonly string[];
   readonly resourceTransferAction?: UniversalResourceTransferAction | string | readonly string[];
   readonly resourceTransferMissingEvidence?: string | readonly string[];

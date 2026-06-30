@@ -3,6 +3,7 @@ import {
   createSemanticResourceGraph,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  createUniversalOwnershipConstraintEvidence,
   createUniversalResourceTransferEvidence,
   queryUniversalConversionArtifacts,
   queryUniversalConversionPlan
@@ -74,6 +75,19 @@ const preservedTransfer = createUniversalResourceTransferEvidence({
 assert.equal(preservedTransfer.status, 'preserved');
 assert.equal(preservedTransfer.representedKinds.includes('loan'), true);
 assert.equal(preservedTransfer.claims.semanticEquivalenceClaim, false);
+assert.equal(preservedTransfer.ownershipConstraints.status, 'satisfied');
+
+const degradedOwnershipConstraints = createUniversalOwnershipConstraintEvidence({
+  routeId: 'rust_to_typescript_constraints',
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  sourceGraph: sourceResourceGraph(),
+  targetGraph: targetResourceGraphWithoutBorrow()
+});
+assert.equal(degradedOwnershipConstraints.status, 'degraded');
+assert.equal(degradedOwnershipConstraints.missingKinds.includes('exclusive-borrow'), true);
+assert.equal(degradedOwnershipConstraints.missingEvidence.includes('translation-ownership-constraint:exclusive-borrow'), true);
+assert.equal(degradedOwnershipConstraints.claims.borrowCheckerClaim, false);
 
 const degradedResourcePlan = conversionPlan({
   evidence: [routeProof('resource_transfer')],
@@ -87,11 +101,13 @@ const degradedResourcePlan = conversionPlan({
 });
 const degradedResourceRoute = queryUniversalConversionPlan(degradedResourcePlan, {
   resourceTransferStatus: 'degraded',
-  resourceTransferMissingEvidence: 'translation-resource-transfer:loan'
+  resourceTransferMissingEvidence: 'translation-resource-transfer:loan',
+  ownershipConstraintMissingKind: 'exclusive-borrow'
 }).bestRoute;
 assert.equal(degradedResourceRoute.translationAdmission.status, 'needs-evidence');
 assert.equal(degradedResourceRoute.translationAdmission.resourceTransferStatus, 'degraded');
 assert.equal(degradedResourceRoute.translationAdmission.resourceTransfer.missingKinds.includes('loan'), true);
+assert.equal(degradedResourceRoute.resourceTransfer.ownershipConstraints.status, 'degraded');
 assert.equal(degradedResourceRoute.missingEvidence.includes('translation-resource-transfer-proof'), true);
 
 const artifacts = createUniversalConversionArtifacts(admittablePlan, { routeId: admittableRoute.id, generatedAt: 796 });
@@ -117,12 +133,16 @@ assert.equal(artifacts.index.evidenceReceiptProofEvidenceIds.includes('evidence_
 const degradedResourceArtifacts = createUniversalConversionArtifacts(degradedResourcePlan, { routeId: degradedResourceRoute.id, generatedAt: 797 });
 const degradedResourceArtifact = queryUniversalConversionArtifacts(degradedResourceArtifacts, {
   resourceTransferStatus: 'degraded',
-  resourceTransferLossKind: 'loan'
+  resourceTransferLossKind: 'loan',
+  ownershipConstraintMissingEvidence: 'translation-ownership-constraint:exclusive-borrow'
 })[0];
 assert.equal(degradedResourceArtifact.translationAdmission.resourceTransferStatus, 'degraded');
 assert.equal(degradedResourceArtifact.admissionRecord.resourceTransfer.missingKinds.includes('loan'), true);
+assert.equal(degradedResourceArtifact.admissionRecord.resourceTransfer.ownershipConstraints.missingKinds.includes('exclusive-borrow'), true);
 assert.equal(degradedResourceArtifacts.index.resourceTransferStatuses.includes('degraded'), true);
+assert.equal(degradedResourceArtifacts.index.ownershipConstraintMissingKinds.includes('exclusive-borrow'), true);
 assert.equal(degradedResourceArtifacts.summary.compactCounts.resourceTransfer.missingKinds.loan, 1);
+assert.equal(degradedResourceArtifacts.summary.compactCounts.resourceTransfer.ownershipConstraintMissingKinds['exclusive-borrow'], 1);
 
 function conversionPlan(options = {}) {
   return createUniversalConversionPlan({
@@ -206,7 +226,7 @@ function sourceResourceGraph() {
     resources: [{ id: 'resource_js_buffer', resourceKind: 'owned-buffer', ownerId: 'owner_js_parse' }],
     owners: [{ id: 'owner_js_parse', ownerKind: 'function' }],
     lifetimeRegions: [{ id: 'life_js_parse', lifetimeKind: 'lexical', startLine: 1, endLine: 7 }],
-    loans: [{ id: 'loan_js_buffer_read', resourceId: 'resource_js_buffer', ownerId: 'owner_js_parse', lifetimeRegionId: 'life_js_parse', mode: 'shared' }],
+    loans: [{ id: 'loan_js_buffer_read', resourceId: 'resource_js_buffer', ownerId: 'owner_js_parse', lifetimeRegionId: 'life_js_parse', mode: 'exclusive' }],
     moves: [{ id: 'move_js_buffer_worker', resourceId: 'resource_js_buffer', fromOwnerId: 'owner_js_parse', toOwnerId: 'owner_js_worker' }],
     drops: [{ id: 'drop_js_buffer', resourceId: 'resource_js_buffer', ownerId: 'owner_js_worker', lifetimeRegionId: 'life_js_parse' }]
   });

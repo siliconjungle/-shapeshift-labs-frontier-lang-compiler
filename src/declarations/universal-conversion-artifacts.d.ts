@@ -113,6 +113,15 @@ export interface UniversalConversionAdmissionRecord {
     readonly missingKinds: readonly string[];
     readonly missingEvidence: readonly string[];
     readonly losses: readonly string[];
+    readonly ownershipConstraints: {
+      readonly id?: string;
+      readonly status?: string;
+      readonly action?: string;
+      readonly requiredKinds: readonly string[];
+      readonly representedKinds: readonly string[];
+      readonly missingKinds: readonly string[];
+      readonly missingEvidence: readonly string[];
+    };
   };
   readonly ownership: {
     readonly keys: readonly string[];

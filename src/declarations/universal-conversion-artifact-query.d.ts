@@ -104,6 +104,10 @@ export interface UniversalConversionArtifactIndex {
   readonly resourceTransferActions: readonly string[];
   readonly resourceTransferMissingEvidence: readonly string[];
   readonly resourceTransferLossKinds: readonly string[];
+  readonly ownershipConstraintStatuses: readonly string[];
+  readonly ownershipConstraintActions: readonly string[];
+  readonly ownershipConstraintMissingEvidence: readonly string[];
+  readonly ownershipConstraintMissingKinds: readonly string[];
   readonly interlinguaRecordIds: readonly string[];
   readonly interlinguaLayerKinds: readonly string[];
   readonly interlinguaRepresentedLayerKinds: readonly string[];

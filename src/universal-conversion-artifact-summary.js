@@ -88,6 +88,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
 }
 
 function compactResourceTransferCounts(transfers) {
+  const constraints = transfers.map((transfer) => transfer.ownershipConstraints ?? {});
   return {
     byStatus: countBy(transfers.map((transfer) => transfer.status)),
     byAction: countBy(transfers.map((transfer) => transfer.action)),
@@ -95,7 +96,10 @@ function compactResourceTransferCounts(transfers) {
     representedKinds: countBy(transfers.flatMap((transfer) => transfer.representedKinds ?? [])),
     missingKinds: countBy(transfers.flatMap((transfer) => transfer.missingKinds ?? [])),
     missingEvidence: countBy(transfers.flatMap((transfer) => transfer.missingEvidence ?? [])),
-    losses: countBy(transfers.flatMap((transfer) => (transfer.losses ?? []).map((loss) => loss.kind)))
+    losses: countBy(transfers.flatMap((transfer) => (transfer.losses ?? []).map((loss) => loss.kind))),
+    ownershipConstraintStatuses: countBy(constraints.map((record) => record.status)),
+    ownershipConstraintMissingKinds: countBy(constraints.flatMap((record) => record.missingKinds ?? [])),
+    ownershipConstraintMissingEvidence: countBy(constraints.flatMap((record) => record.missingEvidence ?? []))
   };
 }
 

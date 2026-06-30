@@ -1,4 +1,5 @@
 import { uniqueStrings } from './native-import-utils.js';
+import { resourceTransferMatches } from './universal-resource-transfer.js';
 
 export const UniversalTranslationAdmissionStatuses = Object.freeze([
   'blocked',
@@ -58,8 +59,7 @@ export function conversionRouteMatchesTranslationAdmissionQuery(route, query = {
     && match(query.missingTranslationEvidence, admission.missingEvidence)
     && match(query.translationEvidenceId, admission.evidenceIds)
     && match(query.translationProofEvidenceId, admission.proofEvidenceIds)
-    && match(query.resourceTransferStatus, [admission.resourceTransferStatus])
-    && match(query.resourceTransferMissingEvidence, admission.resourceTransferMissingEvidence)
+    && resourceTransferMatches(route?.resourceTransfer ?? admission.resourceTransfer, query)
     && match(query.requiredTranslationConstructKind, admission.requiredConstructKinds)
     && match(query.representedTranslationConstructKind, admission.representedConstructKinds)
     && match(query.targetAdapterId, [admission.targetAdapterId, route?.adapter]);
@@ -144,7 +144,21 @@ function resourceTransferSummary(resourceTransfer) {
     requiredKinds: resourceTransfer.requiredKinds ?? [],
     representedKinds: resourceTransfer.representedKinds ?? [],
     missingKinds: resourceTransfer.missingKinds ?? [],
-    losses: (resourceTransfer.losses ?? []).map((loss) => loss.kind)
+    losses: (resourceTransfer.losses ?? []).map((loss) => loss.kind),
+    ownershipConstraints: ownershipConstraintSummary(resourceTransfer.ownershipConstraints)
+  };
+}
+
+function ownershipConstraintSummary(evidence) {
+  if (!evidence) return undefined;
+  return {
+    id: evidence.id,
+    status: evidence.status,
+    action: evidence.action,
+    requiredKinds: evidence.requiredKinds ?? [],
+    representedKinds: evidence.representedKinds ?? [],
+    missingKinds: evidence.missingKinds ?? [],
+    missingEvidence: evidence.missingEvidence ?? []
   };
 }
 

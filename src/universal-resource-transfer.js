@@ -1,4 +1,5 @@
 import { idFragment, uniqueStrings } from './native-import-utils.js';
+import { createUniversalOwnershipConstraintEvidence, ownershipConstraintMatches } from './universal-ownership-constraints.js';
 import { summarizeSemanticResourceGraph } from './semantic-resource-graph.js';
 
 export const UniversalResourceTransferStatuses = Object.freeze([
@@ -17,15 +18,28 @@ export function createUniversalResourceTransferEvidence(input = {}) {
   const targetSummary = summarize(targetGraph);
   const sourceFeatures = resourceFeatures(sourceGraph);
   const targetFeatures = resourceFeatures(targetGraph);
+  const ownershipConstraints = input.ownershipConstraints?.kind === 'frontier.lang.universalOwnershipConstraintEvidence'
+    ? input.ownershipConstraints
+    : createUniversalOwnershipConstraintEvidence({
+      ...(input.ownershipConstraints ?? {}),
+      route,
+      routeId: input.routeId ?? route.id,
+      sourceLanguage: input.sourceLanguage ?? route.sourceLanguage,
+      target: input.target ?? route.target,
+      mode: input.mode ?? route.mode,
+      sourceGraphs: sourceGraph ? [sourceGraph] : [],
+      targetGraphs: targetGraph ? [targetGraph] : [],
+      evidenceIds: input.evidenceIds ?? []
+    });
   const requiredKinds = requiredResourceTransferKinds(sourceSummary, sourceFeatures);
   const representedKinds = representedResourceTransferKinds(requiredKinds, targetSummary, targetFeatures, {
     mode: input.mode ?? route.mode,
     sameLanguage: sameLanguage(input.sourceLanguage ?? route.sourceLanguage, input.target ?? route.target)
   });
   const missingKinds = requiredKinds.filter((kind) => !representedKinds.includes(kind));
-  const missingEvidence = transferMissingEvidence(missingKinds, sourceSummary, targetSummary, input);
-  const blockers = transferBlockers(sourceSummary, targetSummary, input);
-  const review = transferReview(missingKinds, sourceFeatures, targetFeatures, input);
+  const missingEvidence = transferMissingEvidence(missingKinds, sourceSummary, targetSummary, input, ownershipConstraints);
+  const blockers = transferBlockers(sourceSummary, targetSummary, input, ownershipConstraints);
+  const review = transferReview(missingKinds, sourceFeatures, targetFeatures, input, ownershipConstraints);
   const status = transferStatus({ sourceSummary, targetSummary, requiredKinds, missingEvidence, blockers });
   return {
     kind: 'frontier.lang.universalResourceTransferEvidence',
@@ -51,6 +65,7 @@ export function createUniversalResourceTransferEvidence(input = {}) {
     source: transferSide('source', sourceGraph, sourceSummary, sourceFeatures),
     targetSide: transferSide('target', targetGraph, targetSummary, targetFeatures),
     losses: transferLosses(missingKinds, sourceFeatures, targetFeatures),
+    ownershipConstraints,
     claims: {
       resourceEquivalenceClaim: false,
       borrowCheckerClaim: false,
@@ -74,7 +89,8 @@ export function resourceTransferMatches(transfer = {}, query = {}) {
     && match(query.resourceTransferRepresentedKind, transfer.representedKinds)
     && match(query.resourceTransferMissingKind, transfer.missingKinds)
     && match(query.resourceTransferLossKind, (transfer.losses ?? []).map((loss) => loss.kind))
-    && match(query.resourceTransferEvidenceId, transfer.evidenceIds);
+    && match(query.resourceTransferEvidenceId, transfer.evidenceIds)
+    && ownershipConstraintMatches(transfer.ownershipConstraints, query);
 }
 
 export function resourceTransferForConversionRoute(input = {}, route = {}, routeImports = [], routeEvidence = []) {
@@ -158,7 +174,7 @@ function representedResourceTransferKinds(requiredKinds, targetSummary, targetFe
   });
 }
 
-function transferMissingEvidence(missingKinds, sourceSummary, targetSummary, input) {
+function transferMissingEvidence(missingKinds, sourceSummary, targetSummary, input, ownershipConstraints = {}) {
   if (!sourceSummary.records) return [];
   const preserveSource = input.mode === 'preserve-source' && sameLanguage(input.sourceLanguage, input.target);
   return uniqueStrings([
@@ -166,25 +182,28 @@ function transferMissingEvidence(missingKinds, sourceSummary, targetSummary, inp
     ...(missingKinds.length ? ['translation-resource-transfer-proof'] : []),
     ...(missingKinds.map((kind) => `translation-resource-transfer:${kind}`)),
     ...(sourceSummary.unsafeBoundariesWithoutProof || targetSummary.unsafeBoundariesWithoutProof ? ['translation-unsafe-resource-proof'] : []),
+    ...(ownershipConstraints.missingEvidence ?? []),
     ...(input.missingEvidence ?? [])
   ]);
 }
 
-function transferBlockers(sourceSummary, targetSummary, input) {
+function transferBlockers(sourceSummary, targetSummary, input, ownershipConstraints = {}) {
   return uniqueStrings([
     ...(sourceSummary.conflicts ? ['Source resource graph has unresolved conflicts.'] : []),
     ...(targetSummary.conflicts ? ['Target resource graph has unresolved conflicts.'] : []),
     ...(sourceSummary.unsafeBoundariesWithoutProof ? ['Source unsafe resource boundary proof is missing.'] : []),
     ...(targetSummary.unsafeBoundariesWithoutProof ? ['Target unsafe resource boundary proof is missing.'] : []),
+    ...(ownershipConstraints.blockers ?? []),
     ...(input.blockers ?? [])
   ]);
 }
 
-function transferReview(missingKinds, sourceFeatures, targetFeatures, input) {
+function transferReview(missingKinds, sourceFeatures, targetFeatures, input, ownershipConstraints = {}) {
   return uniqueStrings([
     ...(missingKinds.length ? [`Resource transfer is missing target evidence for: ${missingKinds.join(', ')}.`] : []),
     ...(sourceFeatures.loanModes.length && !targetFeatures.loanModes.length ? ['Source borrow modes are not represented in the target graph.'] : []),
     ...(sourceFeatures.dropKinds.length && !targetFeatures.dropKinds.length ? ['Source cleanup/drop evidence is not represented in the target graph.'] : []),
+    ...(ownershipConstraints.review ?? []),
     ...(input.review ?? [])
   ]);
 }

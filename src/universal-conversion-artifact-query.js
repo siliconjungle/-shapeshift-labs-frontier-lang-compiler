@@ -97,6 +97,10 @@ export function artifactIndex(routeArtifacts) {
     resourceTransferActions: uniqueStrings(routeArtifacts.map((artifact) => artifactResourceTransfer(artifact).action)),
     resourceTransferMissingEvidence: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactResourceTransfer(artifact).missingEvidence ?? [])),
     resourceTransferLossKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => (artifactResourceTransfer(artifact).losses ?? []).map((loss) => loss.kind))),
+    ownershipConstraintStatuses: uniqueStrings(routeArtifacts.map((artifact) => artifactOwnershipConstraints(artifact).status)),
+    ownershipConstraintActions: uniqueStrings(routeArtifacts.map((artifact) => artifactOwnershipConstraints(artifact).action)),
+    ownershipConstraintMissingEvidence: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactOwnershipConstraints(artifact).missingEvidence ?? [])),
+    ownershipConstraintMissingKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactOwnershipConstraints(artifact).missingKinds ?? [])),
     interlinguaRecordIds: uniqueStrings(routeArtifacts.map((artifact) => artifactInterlingua(artifact).id)),
     interlinguaLayerKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactInterlingua(artifact).query?.layerKinds ?? [])),
     interlinguaRepresentedLayerKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactInterlingua(artifact).query?.representedLayerKinds ?? [])),
@@ -252,6 +256,10 @@ function artifactInterlingua(record) {
 
 function artifactResourceTransfer(record) {
   return record.resourceTransfer ?? record.metadata?.resourceTransfer ?? record.translationAdmission?.resourceTransfer ?? record.admissionRecord?.metadata?.resourceTransfer ?? {};
+}
+
+function artifactOwnershipConstraints(record) {
+  return artifactResourceTransfer(record).ownershipConstraints ?? {};
 }
 
 function match(filter, values) {

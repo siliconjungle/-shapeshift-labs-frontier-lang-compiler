@@ -98,7 +98,16 @@ export function createUniversalConversionAdmissionRecord(input) {
       representedKinds: route.resourceTransfer?.representedKinds ?? [],
       missingKinds: route.resourceTransfer?.missingKinds ?? [],
       missingEvidence: route.resourceTransfer?.missingEvidence ?? [],
-      losses: (route.resourceTransfer?.losses ?? []).map((loss) => loss.kind)
+      losses: (route.resourceTransfer?.losses ?? []).map((loss) => loss.kind),
+      ownershipConstraints: {
+        id: route.resourceTransfer?.ownershipConstraints?.id,
+        status: route.resourceTransfer?.ownershipConstraints?.status,
+        action: route.resourceTransfer?.ownershipConstraints?.action,
+        requiredKinds: route.resourceTransfer?.ownershipConstraints?.requiredKinds ?? [],
+        representedKinds: route.resourceTransfer?.ownershipConstraints?.representedKinds ?? [],
+        missingKinds: route.resourceTransfer?.ownershipConstraints?.missingKinds ?? [],
+        missingEvidence: route.resourceTransfer?.ownershipConstraints?.missingEvidence ?? []
+      }
     },
     ownership: {
       keys: uniqueStrings(input.history?.index?.ownershipKeys ?? input.patchBundle?.index?.ownershipKeys ?? []),

@@ -779,6 +779,7 @@ import {
   createUniversalConversionPlan,
   createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
+  createUniversalOwnershipConstraintEvidence,
   createUniversalResourceTransferEvidence,
   queryUniversalCapabilityMatrix,
   queryUniversalConversionPlan,
@@ -849,6 +850,16 @@ const resourceTransfer = createUniversalResourceTransferEvidence({
 });
 console.log(resourceTransfer.status); // "preserved", "degraded", "needs-evidence", etc.
 console.log(resourceTransfer.missingEvidence); // resource semantics that need proof before admission
+console.log(resourceTransfer.ownershipConstraints.missingKinds); // borrow/lifetime/drop constraints lost by target lowering
+
+const ownershipConstraints = createUniversalOwnershipConstraintEvidence({
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  sourceGraph: rustResourceGraph,
+  targetGraph: typescriptResourceGraph
+});
+console.log(ownershipConstraints.status); // "satisfied", "degraded", "needs-evidence", etc.
+console.log(ownershipConstraints.claims.borrowCheckerClaim); // always false without a real proof
 
 const routeEvidenceReceipt = createUniversalConversionRouteEvidenceReceipt(pythonToRust, {
   evidence: [{
@@ -931,6 +942,14 @@ instead of being treated as broadly admittable. The record is intentionally
 bounded evidence: it keeps borrow-checker, lifetime-soundness, semantic
 equivalence, and auto-merge claims false unless a caller attaches stronger
 proof.
+
+Resource transfers also embed `ownershipConstraints`, a borrow-checker-shaped
+constraint record for source graphs that expose owners, shared/exclusive loans,
+aliases, moves, drops, lifetimes, raw access, or unsafe boundaries. Constraint
+queries such as `ownershipConstraintMissingKind: "exclusive-borrow"` let a
+coordinator distinguish "target resource identity is present" from "target
+lowering lost the exclusive-borrow obligation." This is still evidence and loss
+accounting, not a claim that the target language enforces Rust's borrow checker.
 
 Each route also carries `interlingua`, a first-class superset-language route record. It binds the source lift (`sourcePaths`, hashes, source maps, ownership keys, evidence/proof IDs), represented/missing/review/blocked semantic layers, and target lowering disposition: `exact-source`, `target-adapter`, `declaration-stub`, `semantic-index-only`, `lossy-review`, or `blocked`. The record is queryable through `interlinguaLayerKind`, `interlinguaRepresentedLayerKind`, `interlinguaMissingLayerKind`, `interlinguaLoweringDisposition`, `interlinguaMissingEvidence`, `interlinguaProofEvidenceId`, and `interlinguaTargetAdapterId`. It is loss accounting for source -> interlingua -> target lowering, not a target semantic-equivalence proof.
 

@@ -62,6 +62,9 @@ export interface UniversalConversionResourceTransferCompactCounts {
   readonly missingKinds: Readonly<Record<string, number>>;
   readonly missingEvidence: Readonly<Record<string, number>>;
   readonly losses: Readonly<Record<string, number>>;
+  readonly ownershipConstraintStatuses: Readonly<Record<string, number>>;
+  readonly ownershipConstraintMissingKinds: Readonly<Record<string, number>>;
+  readonly ownershipConstraintMissingEvidence: Readonly<Record<string, number>>;
 }
 
 export interface UniversalConversionSemanticOperationInterlinguaCompactCounts extends UniversalConversionInterlinguaCompactCounts {
