@@ -4,6 +4,7 @@ import {
   createUniversalConversionArtifacts,
   createUniversalEffectConstraintEvidence,
   createUniversalConversionPlan,
+  createUniversalLifetimeConstraintEvidence,
   createUniversalOwnershipConstraintEvidence,
   createUniversalResourceTransferEvidence,
   queryUniversalConversionArtifacts,
@@ -89,7 +90,6 @@ assert.equal(degradedOwnershipConstraints.status, 'degraded');
 assert.equal(degradedOwnershipConstraints.missingKinds.includes('exclusive-borrow'), true);
 assert.equal(degradedOwnershipConstraints.missingEvidence.includes('translation-ownership-constraint:exclusive-borrow'), true);
 assert.equal(degradedOwnershipConstraints.claims.borrowCheckerClaim, false);
-
 const degradedEffectConstraints = createUniversalEffectConstraintEvidence({
   routeId: 'javascript_to_rust_effects',
   sourceLanguage: 'javascript',
@@ -101,6 +101,18 @@ assert.equal(degradedEffectConstraints.status, 'degraded');
 assert.equal(degradedEffectConstraints.missingKinds.includes('network-io'), true);
 assert.equal(degradedEffectConstraints.missingEvidence.includes('translation-effect-constraint:network-io'), true);
 assert.equal(degradedEffectConstraints.claims.effectEquivalenceClaim, false);
+
+const degradedLifetimeConstraints = createUniversalLifetimeConstraintEvidence({
+  routeId: 'rust_to_typescript_lifetimes',
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  sourceGraph: sourceResourceGraph(),
+  targetGraph: targetResourceGraphWithoutBorrow()
+});
+assert.equal(degradedLifetimeConstraints.status, 'degraded');
+assert.equal(degradedLifetimeConstraints.missingKinds.includes('loan-region-binding'), true);
+assert.equal(degradedLifetimeConstraints.missingEvidence.includes('translation-lifetime-constraint:loan-region-binding'), true);
+assert.equal(degradedLifetimeConstraints.claims.lifetimeSoundnessClaim, false);
 
 const degradedResourcePlan = conversionPlan({
   evidence: [routeProof('resource_transfer')],
@@ -123,6 +135,24 @@ assert.equal(degradedResourceRoute.translationAdmission.resourceTransfer.missing
 assert.equal(degradedResourceRoute.resourceTransfer.ownershipConstraints.status, 'degraded');
 assert.equal(degradedResourceRoute.missingEvidence.includes('translation-resource-transfer-proof'), true);
 
+const degradedLifetimePlan = conversionPlan({
+  evidence: [routeProof('lifetime_constraint')],
+  imports: [sourceImport()],
+  lifetimeConstraints: [{
+    sourceLanguage: 'javascript',
+    target: 'rust',
+    sourceGraph: sourceResourceGraph(),
+    targetGraph: targetResourceGraphWithoutBorrow()
+  }]
+});
+const degradedLifetimeRoute = queryUniversalConversionPlan(degradedLifetimePlan, {
+  lifetimeConstraintStatus: 'degraded',
+  lifetimeConstraintMissingKind: 'loan-region-binding'
+}).bestRoute;
+assert.equal(degradedLifetimeRoute.translationAdmission.status, 'needs-evidence');
+assert.equal(degradedLifetimeRoute.translationAdmission.lifetimeConstraintStatus, 'degraded');
+assert.equal(degradedLifetimeRoute.lifetimeConstraint.missingEvidence.includes('translation-lifetime-constraint:loan-region-binding'), true);
+assert.equal(degradedLifetimeRoute.missingEvidence.includes('translation-lifetime-constraint-proof'), true);
 const degradedEffectPlan = conversionPlan({
   evidence: [routeProof('effect_constraint')],
   imports: [sourceImport()],
@@ -175,6 +205,13 @@ assert.equal(degradedResourceArtifacts.index.ownershipConstraintMissingKinds.inc
 assert.equal(degradedResourceArtifacts.summary.compactCounts.resourceTransfer.missingKinds.loan, 1);
 assert.equal(degradedResourceArtifacts.summary.compactCounts.resourceTransfer.ownershipConstraintMissingKinds['exclusive-borrow'], 1);
 
+const degradedLifetimeArtifacts = createUniversalConversionArtifacts(degradedLifetimePlan, { routeId: degradedLifetimeRoute.id, generatedAt: 798 });
+const degradedLifetimeArtifact = queryUniversalConversionArtifacts(degradedLifetimeArtifacts, {
+  lifetimeConstraintMissingEvidence: 'translation-lifetime-constraint:loan-region-binding'
+})[0];
+assert.equal(degradedLifetimeArtifact.admissionRecord.lifetimeConstraint.missingKinds.includes('loan-region-binding'), true);
+assert.equal(degradedLifetimeArtifacts.index.lifetimeConstraintMissingKinds.includes('loan-region-binding'), true);
+assert.equal(degradedLifetimeArtifacts.summary.compactCounts.lifetimeConstraint.missingKinds['loan-region-binding'], 1);
 const degradedEffectArtifacts = createUniversalConversionArtifacts(degradedEffectPlan, { routeId: degradedEffectRoute.id, generatedAt: 798 });
 const degradedEffectArtifact = queryUniversalConversionArtifacts(degradedEffectArtifacts, {
   effectConstraintMissingEvidence: 'translation-effect-constraint:network-io'
@@ -191,6 +228,7 @@ function conversionPlan(options = {}) {
     imports: options.imports ?? [],
     evidence: options.evidence ?? [],
     resourceTransfers: options.resourceTransfers ?? [],
+    lifetimeConstraints: options.lifetimeConstraints ?? [],
     effectConstraints: options.effectConstraints ?? [],
     runtimeRequirements: options.runtimeRequirements ?? []
   });
@@ -235,7 +273,6 @@ function capabilityMatrix(options = {}) {
     metadata: { compileTargets: ['rust'] }
   };
 }
-
 function sourceImport() {
   return {
     id: 'native_import_js_translation',

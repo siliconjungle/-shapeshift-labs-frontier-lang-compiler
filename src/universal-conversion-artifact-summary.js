@@ -53,6 +53,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const evidenceReceipts = routeArtifacts.map((artifact) => artifact.evidenceReceipt ?? {});
   const interlinguaRecords = routeArtifacts.map((artifact) => artifact.interlingua ?? artifact.metadata?.interlingua ?? artifact.admissionRecord?.metadata?.interlingua ?? {});
   const resourceTransfers = routeArtifacts.map((artifact) => artifact.resourceTransfer ?? artifact.metadata?.resourceTransfer ?? artifact.admissionRecord?.metadata?.resourceTransfer ?? {});
+  const lifetimeConstraints = routeArtifacts.map((artifact) => artifact.lifetimeConstraint ?? artifact.metadata?.lifetimeConstraint ?? artifact.admissionRecord?.metadata?.lifetimeConstraint ?? {});
   const effectConstraints = routeArtifacts.map((artifact) => artifact.effectConstraint ?? artifact.metadata?.effectConstraint ?? artifact.admissionRecord?.metadata?.effectConstraint ?? {});
   const semanticOperationInterlinguaRecords = semanticOperations.map((operation) => operation.metadata?.interlingua ?? {});
   return {
@@ -78,6 +79,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     },
     translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
     resourceTransfer: compactResourceTransferCounts(resourceTransfers),
+    lifetimeConstraint: compactConstraintCounts(lifetimeConstraints),
     effectConstraint: compactEffectConstraintCounts(effectConstraints),
     evidenceReceipts: compactEvidenceReceiptCounts(evidenceReceipts),
     interlingua: compactInterlinguaCounts(interlinguaRecords),
@@ -106,6 +108,10 @@ function compactResourceTransferCounts(transfers) {
 }
 
 function compactEffectConstraintCounts(records) {
+  return compactConstraintCounts(records);
+}
+
+function compactConstraintCounts(records) {
   return {
     byStatus: countBy(records.map((record) => record.status)),
     byAction: countBy(records.map((record) => record.action)),

@@ -780,6 +780,7 @@ import {
   createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
   createUniversalEffectConstraintEvidence,
+  createUniversalLifetimeConstraintEvidence,
   createUniversalOwnershipConstraintEvidence,
   createUniversalResourceTransferEvidence,
   queryUniversalCapabilityMatrix,
@@ -852,6 +853,15 @@ const resourceTransfer = createUniversalResourceTransferEvidence({
 console.log(resourceTransfer.status); // "preserved", "degraded", "needs-evidence", etc.
 console.log(resourceTransfer.missingEvidence); // resource semantics that need proof before admission
 console.log(resourceTransfer.ownershipConstraints.missingKinds); // borrow/lifetime/drop constraints lost by target lowering
+
+const lifetimeConstraints = createUniversalLifetimeConstraintEvidence({
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  sourceGraph: rustResourceGraph,
+  targetGraph: typescriptResourceGraph
+});
+console.log(lifetimeConstraints.missingKinds); // lost borrow-region, drop-bound, no-escape, or unsafe lifetime obligations
+console.log(lifetimeConstraints.claims.lifetimeSoundnessClaim); // false without source-bound proof
 
 const effectConstraints = createUniversalEffectConstraintEvidence({
   sourceLanguage: 'javascript',
@@ -960,6 +970,16 @@ queries such as `ownershipConstraintMissingKind: "exclusive-borrow"` let a
 coordinator distinguish "target resource identity is present" from "target
 lowering lost the exclusive-borrow obligation." This is still evidence and loss
 accounting, not a claim that the target language enforces Rust's borrow checker.
+
+Routes can also carry `lifetimeConstraint`, a narrower borrow-region admission
+record for lifetime regions, loan-region bindings, alias-region bindings,
+drop-region bounds, move-region bounds, outlives relations, no-escape
+obligations, and unsafe lifetime proof. Lifetime queries such as
+`lifetimeConstraintMissingKind: "loan-region-binding"` let a coordinator
+distinguish "the target has an owner/resource graph" from "the target preserved
+the source borrow region." The record stays conservative: borrow-checker,
+lifetime-soundness, escape-safety, semantic-equivalence, and auto-merge claims
+remain false unless stronger proof is attached.
 
 Routes can also carry `effectConstraint`, an observable-effect admission record
 for source effects such as network I/O, storage, filesystem access, timers,

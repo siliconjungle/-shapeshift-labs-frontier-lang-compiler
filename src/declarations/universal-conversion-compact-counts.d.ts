@@ -76,6 +76,8 @@ export interface UniversalConversionEffectConstraintCompactCounts {
   readonly missingEvidence: Readonly<Record<string, number>>;
 }
 
+export interface UniversalConversionLifetimeConstraintCompactCounts extends UniversalConversionEffectConstraintCompactCounts {}
+
 export interface UniversalConversionSemanticOperationInterlinguaCompactCounts extends UniversalConversionInterlinguaCompactCounts {
   readonly operations: number;
   readonly operationRecords: number;
@@ -109,6 +111,7 @@ export interface UniversalConversionArtifactCompactCounts {
   };
   readonly translationAdmission: UniversalConversionTranslationAdmissionCompactCounts;
   readonly resourceTransfer: UniversalConversionResourceTransferCompactCounts;
+  readonly lifetimeConstraint: UniversalConversionLifetimeConstraintCompactCounts;
   readonly effectConstraint: UniversalConversionEffectConstraintCompactCounts;
   readonly evidenceReceipts: UniversalConversionEvidenceReceiptCompactCounts;
   readonly interlingua: UniversalConversionInterlinguaCompactCounts;

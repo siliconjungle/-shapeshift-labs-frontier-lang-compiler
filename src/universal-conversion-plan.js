@@ -13,7 +13,7 @@ import { createUniversalTranslationAdmission, conversionRouteMatchesTranslationA
 import { createUniversalInterlinguaRecord, interlinguaRecordMatches } from './universal-interlingua-record.js';
 import { resourceTransferForConversionRoute } from './universal-resource-transfer.js';
 import { effectConstraintForConversionRoute } from './universal-effect-constraints.js';
-
+import { lifetimeConstraintForConversionRoute } from './universal-lifetime-constraints.js';
 export function createUniversalConversionPlan(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
   const id = input.id ?? conversionPlanId(input, generatedAt);
@@ -30,7 +30,7 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
       targets
     }, context);
   const evidence = input.evidence ?? [];
-  const routeInput = { dialectRegistries: conversionDialectRegistries(input), effectConstraint: input.effectConstraint, effectConstraints: input.effectConstraints ?? [], evidence, generatedAt, imports: input.imports ?? [], matrix, resourceTransfer: input.resourceTransfer, resourceTransfers: input.resourceTransfers ?? [], translationEffectConstraint: input.translationEffectConstraint, translationResourceTransfer: input.translationResourceTransfer, runtimeMatrix };
+  const routeInput = { dialectRegistries: conversionDialectRegistries(input), effectConstraint: input.effectConstraint, effectConstraints: input.effectConstraints ?? [], evidence, generatedAt, imports: input.imports ?? [], lifetimeConstraint: input.lifetimeConstraint, lifetimeConstraints: input.lifetimeConstraints ?? [], matrix, resourceTransfer: input.resourceTransfer, resourceTransfers: input.resourceTransfers ?? [], translationEffectConstraint: input.translationEffectConstraint, translationLifetimeConstraint: input.translationLifetimeConstraint, translationResourceTransfer: input.translationResourceTransfer, runtimeMatrix };
   const routes = (matrix.languages ?? []).flatMap((language) => targets.flatMap((target) => {
     const runtimeRoutes = conversionRuntimeRoutes(runtimeMatrix, language, target);
     return runtimeRoutes.map((runtimeRoute) => conversionRoute(language, target, {
@@ -55,7 +55,6 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
     metadata: { compileTargets: targets, requiredFeatures: matrix.metadata?.requiredFeatures ?? [], autoMergeClaim: false, semanticEquivalenceClaim: false, note: 'Conversion plans rank source-to-target routes and missing evidence for agent coordination. They do not prove semantic equivalence or grant auto-merge.' }
   };
 }
-
 export function queryUniversalConversionPlan(planOrInput = {}, query = {}, context = {}) {
   const plan = planOrInput?.kind === 'frontier.lang.universalConversionPlan'
     ? planOrInput
@@ -116,6 +115,7 @@ function conversionRoute(language, target, input, planId) {
   const routeEvidence = conversionRouteEvidence(input.evidence, language, target, id);
   const routeImports = importsForConversionLanguage(input.imports, language);
   const resourceTransfer = resourceTransferForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
+  const lifetimeConstraint = lifetimeConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
   const effectConstraint = effectConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence, runtime);
   const mergeRefs = conversionMergeRefs({
     planId,
@@ -137,8 +137,8 @@ function conversionRoute(language, target, input, planId) {
   const components = conversionScoreComponents(language, targetCell, readiness, mode, routeEvidence, representation);
   const mergeScore = conversionMergeScore({ readiness, mode, components, blockers, review });
   const admissionStatus = mergeScore.action;
-  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect, resourceTransfer, effectConstraint);
-  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, resourceTransfer, effectConstraint, blockers, review });
+  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect, resourceTransfer, lifetimeConstraint, effectConstraint);
+  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, resourceTransfer, lifetimeConstraint, effectConstraint, blockers, review });
   const route = {
     id,
     sourceLanguage: language.language,
@@ -162,6 +162,7 @@ function conversionRoute(language, target, input, planId) {
     missingEvidence,
     translationAdmission,
     resourceTransfer,
+    lifetimeConstraint,
     effectConstraint,
     blockers,
     review,
@@ -283,7 +284,7 @@ function conversionEvidence(language, targetCell) {
   };
 }
 
-function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, effectConstraint) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, effectConstraint) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -297,6 +298,7 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...((runtime.adapterRequirements ?? []).length ? ['runtime-adapter-proof'] : []),
     ...(dialect.missingEvidence ?? []),
     ...(resourceTransfer?.missingEvidence ?? []),
+    ...(lifetimeConstraint?.missingEvidence ?? []),
     ...(effectConstraint?.missingEvidence ?? []),
     ...(hasPassedRouteEvidence(evidence) ? [] : ['proof-or-replay-evidence'])
   ]);

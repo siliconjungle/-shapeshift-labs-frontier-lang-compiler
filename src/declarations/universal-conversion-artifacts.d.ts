@@ -10,6 +10,7 @@ import type { UniversalConversionArtifactCompactCounts } from './universal-conve
 import type { UniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence.js';
 import type { UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalResourceTransferEvidence } from './universal-resource-transfer.js';
+import type { UniversalLifetimeConstraintEvidence } from './universal-lifetime-constraints.js';
 import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
 import type {
   UniversalConversionAdmissionAction,
@@ -70,6 +71,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly interlinguaLoweringDisposition?: string;
   readonly resourceTransferStatus?: string;
   readonly resourceTransferAction?: string;
+  readonly lifetimeConstraintStatus?: string;
+  readonly lifetimeConstraintAction?: string;
   readonly effectConstraintStatus?: string;
   readonly effectConstraintAction?: string;
   readonly readiness: SemanticMergeReadiness | string;
@@ -135,6 +138,15 @@ export interface UniversalConversionAdmissionRecord {
     readonly missingKinds: readonly string[];
     readonly missingEvidence: readonly string[];
   };
+  readonly lifetimeConstraint: {
+    readonly id?: string;
+    readonly status?: string;
+    readonly action?: string;
+    readonly requiredKinds: readonly string[];
+    readonly representedKinds: readonly string[];
+    readonly missingKinds: readonly string[];
+    readonly missingEvidence: readonly string[];
+  };
   readonly ownership: {
     readonly keys: readonly string[];
     readonly conflictKeys: readonly string[];
@@ -181,6 +193,7 @@ export interface UniversalConversionRouteArtifact {
   readonly translationAdmission?: UniversalTranslationAdmission;
   readonly interlingua?: UniversalInterlinguaRecord;
   readonly resourceTransfer?: UniversalResourceTransferEvidence;
+  readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence;
   readonly effectConstraint?: UniversalEffectConstraintEvidence;
   readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
   readonly reviewRequired: true;

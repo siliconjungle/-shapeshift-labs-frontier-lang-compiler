@@ -14,6 +14,7 @@ import type { UniversalInterlinguaQuery, UniversalInterlinguaRecord } from './un
 import type { UniversalConversionPlanCompactCounts } from './universal-conversion-compact-counts.js';
 import type { UniversalRuntimeAdapterRequirement, UniversalRuntimeCapabilityKind, UniversalRuntimeCapabilityMatrix, UniversalRuntimeCapabilityRoute, UniversalRuntimeHostProfile } from './universal-runtime-capabilities.js';
 import type { UniversalEffectConstraintEvidence, UniversalEffectConstraintInput, UniversalEffectConstraintQuery } from './universal-effect-constraints.js';
+import type { UniversalLifetimeConstraintEvidence, UniversalLifetimeConstraintInput, UniversalLifetimeConstraintQuery } from './universal-lifetime-constraints.js';
 import type { UniversalResourceTransferEvidence, UniversalResourceTransferInput, UniversalResourceTransferQuery } from './universal-resource-transfer.js';
 import type {
   UniversalDialectConstructKind,
@@ -23,16 +24,13 @@ import type {
   UniversalDialectRegistryInput,
   UniversalExternRecordInput
 } from './universal-dialects.js';
-
 export type UniversalConversionRouteMode =
   | 'preserve-source'
   | 'target-adapter'
   | 'stub-only'
   | 'semantic-index-only'
   | 'blocked';
-
 export type UniversalConversionRouteAction = 'preserve-source' | 'run-target-adapter' | 'attach-adapter-evidence' | 'emit-stub' | 'add-target-adapter' | 'blocked';
-
 export type UniversalConversionAdmissionAction = 'admit' | 'prioritize' | 'reject';
 export type UniversalConversionPriority = 'low' | 'normal' | 'high' | 'blocker'; export type UniversalConversionRisk = 'low' | 'medium' | 'high';
 export type UniversalTranslationAdmissionStatus = 'blocked' | 'needs-adapter' | 'needs-evidence' | 'needs-review' | 'admittable-for-review'; export type UniversalTranslationAdmissionAction = 'reject' | 'add-target-adapter' | 'collect-translation-evidence' | 'review-target-adapter' | 'materialize-review-record';
@@ -91,6 +89,7 @@ export interface UniversalTranslationAdmission {
   readonly runtimeReadiness: SemanticMergeReadiness | string; readonly runtimeAdapterRequirementIds: readonly string[]; readonly dialectReadiness: SemanticMergeReadiness | string; readonly dialectRecordIds: readonly string[];
   readonly resourceTransfer?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly losses: readonly string[]; readonly ownershipConstraints?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] } };
   readonly resourceTransferStatus?: string; readonly resourceTransferAction?: string; readonly resourceTransferMissingEvidence: readonly string[];
+  readonly lifetimeConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly lifetimeConstraintStatus?: string; readonly lifetimeConstraintAction?: string; readonly lifetimeConstraintMissingEvidence: readonly string[];
   readonly effectConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly effectConstraintStatus?: string; readonly effectConstraintAction?: string; readonly effectConstraintMissingEvidence: readonly string[];
   readonly targetAdapterId?: string; readonly autoMergeClaim: false; readonly semanticEquivalenceClaim: false;
 }
@@ -178,7 +177,7 @@ export interface UniversalConversionRoute {
   readonly evidence: UniversalConversionRouteEvidence;
   readonly representation: UniversalRepresentationCoverage;
   readonly interlingua: UniversalInterlinguaRecord;
-  readonly resourceTransfer?: UniversalResourceTransferEvidence; readonly effectConstraint?: UniversalEffectConstraintEvidence;
+  readonly resourceTransfer?: UniversalResourceTransferEvidence; readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence; readonly effectConstraint?: UniversalEffectConstraintEvidence;
   readonly missingEvidence: readonly string[];
   readonly translationAdmission: UniversalTranslationAdmission;
   readonly blockers: readonly string[];
@@ -251,6 +250,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly dialects?: readonly UniversalDialectRecordInput[];
   readonly externs?: readonly UniversalExternRecordInput[];
   readonly resourceTransfer?: UniversalResourceTransferInput | UniversalResourceTransferEvidence; readonly translationResourceTransfer?: UniversalResourceTransferInput | UniversalResourceTransferEvidence; readonly resourceTransfers?: readonly (UniversalResourceTransferInput | UniversalResourceTransferEvidence)[];
+  readonly lifetimeConstraint?: UniversalLifetimeConstraintInput | UniversalLifetimeConstraintEvidence; readonly translationLifetimeConstraint?: UniversalLifetimeConstraintInput | UniversalLifetimeConstraintEvidence; readonly lifetimeConstraints?: readonly (UniversalLifetimeConstraintInput | UniversalLifetimeConstraintEvidence)[];
   readonly effectConstraint?: UniversalEffectConstraintInput | UniversalEffectConstraintEvidence; readonly translationEffectConstraint?: UniversalEffectConstraintInput | UniversalEffectConstraintEvidence; readonly effectConstraints?: readonly (UniversalEffectConstraintInput | UniversalEffectConstraintEvidence)[];
   readonly runtimeRequirements?: readonly (
     | UniversalRuntimeCapabilityKind
@@ -278,7 +278,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly evidence?: readonly EvidenceRecord[];
 }
 
-export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalEffectConstraintQuery {
+export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalEffectConstraintQuery {
   readonly sourceLanguage?: FrontierSourceLanguage | string;
   readonly language?: FrontierSourceLanguage | string;
   readonly target?: FrontierCompileTarget | string;

@@ -1,6 +1,7 @@
 import { uniqueStrings } from './native-import-utils.js';
 import { resourceTransferMatches } from './universal-resource-transfer.js';
 import { effectConstraintMatches } from './universal-effect-constraints.js';
+import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
 
 export const UniversalTranslationAdmissionStatuses = Object.freeze([
   'blocked',
@@ -25,8 +26,8 @@ export function createUniversalTranslationAdmission(input = {}) {
   const evidenceIds = uniqueStrings([...(input.mergeRefs?.evidenceIds ?? []), ...(input.routeEvidence ?? []).map((record) => record?.id)]);
   const proofEvidenceIds = uniqueStrings([...(input.mergeRefs?.proofIds ?? []), ...proofEvidenceIdsFor(input.routeEvidence)]);
   const missingEvidence = translationMissingEvidence(input, missingConstructKinds);
-  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.effectConstraint?.blockers ?? [])]);
-  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.effectConstraint?.review ?? [])]);
+  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.lifetimeConstraint?.blockers ?? []), ...(input.effectConstraint?.blockers ?? [])]);
+  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.lifetimeConstraint?.review ?? []), ...(input.effectConstraint?.review ?? [])]);
   const status = translationAdmissionStatus(input, missingEvidence, blockers);
   return {
     status,
@@ -47,6 +48,10 @@ export function createUniversalTranslationAdmission(input = {}) {
     resourceTransferStatus: input.resourceTransfer?.status,
     resourceTransferAction: input.resourceTransfer?.action,
     resourceTransferMissingEvidence: input.resourceTransfer?.missingEvidence ?? [],
+    lifetimeConstraint: constraintSummary(input.lifetimeConstraint),
+    lifetimeConstraintStatus: input.lifetimeConstraint?.status,
+    lifetimeConstraintAction: input.lifetimeConstraint?.action,
+    lifetimeConstraintMissingEvidence: input.lifetimeConstraint?.missingEvidence ?? [],
     effectConstraint: effectConstraintSummary(input.effectConstraint),
     effectConstraintStatus: input.effectConstraint?.status,
     effectConstraintAction: input.effectConstraint?.action,
@@ -65,6 +70,7 @@ export function conversionRouteMatchesTranslationAdmissionQuery(route, query = {
     && match(query.translationEvidenceId, admission.evidenceIds)
     && match(query.translationProofEvidenceId, admission.proofEvidenceIds)
     && resourceTransferMatches(route?.resourceTransfer ?? admission.resourceTransfer, query)
+    && lifetimeConstraintMatches(route?.lifetimeConstraint ?? admission.lifetimeConstraint, query)
     && effectConstraintMatches(route?.effectConstraint ?? admission.effectConstraint, query)
     && match(query.requiredTranslationConstructKind, admission.requiredConstructKinds)
     && match(query.representedTranslationConstructKind, admission.representedConstructKinds)
@@ -102,6 +108,7 @@ function translationMissingEvidence(input, missingConstructKinds) {
     ...(runtimeAdapterRequirements.length && !hasPassedRuntimeAdapterProof(input.routeEvidence) ? ['translation-runtime-adapter-proof'] : []),
     ...(dialectMissing.includes('dialect-projection-evidence') ? ['translation-dialect-projection-evidence'] : []),
     ...(input.resourceTransfer?.missingEvidence ?? []),
+    ...(input.lifetimeConstraint?.missingEvidence ?? []),
     ...(input.effectConstraint?.missingEvidence ?? [])
   ]);
 }
@@ -157,6 +164,19 @@ function resourceTransferSummary(resourceTransfer) {
 }
 
 function ownershipConstraintSummary(evidence) {
+  if (!evidence) return undefined;
+  return {
+    id: evidence.id,
+    status: evidence.status,
+    action: evidence.action,
+    requiredKinds: evidence.requiredKinds ?? [],
+    representedKinds: evidence.representedKinds ?? [],
+    missingKinds: evidence.missingKinds ?? [],
+    missingEvidence: evidence.missingEvidence ?? []
+  };
+}
+
+function constraintSummary(evidence) {
   if (!evidence) return undefined;
   return {
     id: evidence.id,
