@@ -21,6 +21,7 @@ import type { UniversalInterlinguaQuery } from './universal-interlingua.js';
 import type { UniversalResourceTransferQuery } from './universal-resource-transfer.js';
 import type { UniversalLifetimeConstraintQuery } from './universal-lifetime-constraints.js';
 import type { UniversalControlFlowConstraintQuery } from './universal-control-flow-constraints.js';
+import type { UniversalBorrowScopeConstraintQuery } from './universal-borrow-scope-constraints.js';
 import type { UniversalEffectConstraintQuery } from './universal-effect-constraints.js';
 import type { UniversalModuleConstraintQuery } from './universal-module-constraints.js';
 import type { UniversalTypeConstraintQuery } from './universal-type-constraints.js';
@@ -121,6 +122,10 @@ export interface UniversalConversionArtifactIndex {
   readonly controlFlowConstraintActions: readonly string[];
   readonly controlFlowConstraintMissingEvidence: readonly string[];
   readonly controlFlowConstraintMissingKinds: readonly string[];
+  readonly borrowScopeConstraintStatuses: readonly string[];
+  readonly borrowScopeConstraintActions: readonly string[];
+  readonly borrowScopeConstraintMissingEvidence: readonly string[];
+  readonly borrowScopeConstraintMissingKinds: readonly string[];
   readonly effectConstraintStatuses: readonly string[];
   readonly effectConstraintActions: readonly string[];
   readonly effectConstraintMissingEvidence: readonly string[];
@@ -145,7 +150,7 @@ export interface UniversalConversionArtifactIndex {
   readonly transformIdentityHashes: readonly string[];
 }
 
-export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalEffectConstraintQuery, UniversalModuleConstraintQuery, UniversalTypeConstraintQuery {
+export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalEffectConstraintQuery, UniversalModuleConstraintQuery, UniversalTypeConstraintQuery {
   readonly routeId?: string | readonly string[];
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];

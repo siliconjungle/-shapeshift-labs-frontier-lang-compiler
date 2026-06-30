@@ -12,6 +12,7 @@ import type { UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalResourceTransferEvidence } from './universal-resource-transfer.js';
 import type { UniversalLifetimeConstraintEvidence } from './universal-lifetime-constraints.js';
 import type { UniversalControlFlowConstraintEvidence } from './universal-control-flow-constraints.js';
+import type { UniversalBorrowScopeConstraintEvidence } from './universal-borrow-scope-constraints.js';
 import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
 import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js';
 import type { UniversalTypeConstraintEvidence } from './universal-type-constraints.js';
@@ -83,6 +84,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly lifetimeConstraintAction?: string;
   readonly controlFlowConstraintStatus?: string;
   readonly controlFlowConstraintAction?: string;
+  readonly borrowScopeConstraintStatus?: string;
+  readonly borrowScopeConstraintAction?: string;
   readonly effectConstraintStatus?: string;
   readonly effectConstraintAction?: string;
   readonly moduleConstraintStatus?: string;
@@ -146,6 +149,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly effectConstraint: UniversalConversionConstraintSummary;
   readonly lifetimeConstraint: UniversalConversionConstraintSummary;
   readonly controlFlowConstraint: UniversalConversionConstraintSummary;
+  readonly borrowScopeConstraint: UniversalConversionConstraintSummary;
   readonly moduleConstraint: UniversalConversionConstraintSummary;
   readonly typeConstraint: UniversalConversionConstraintSummary;
   readonly ownership: {
@@ -196,6 +200,7 @@ export interface UniversalConversionRouteArtifact {
   readonly resourceTransfer?: UniversalResourceTransferEvidence;
   readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence;
   readonly controlFlowConstraint?: UniversalControlFlowConstraintEvidence;
+  readonly borrowScopeConstraint?: UniversalBorrowScopeConstraintEvidence;
   readonly effectConstraint?: UniversalEffectConstraintEvidence;
   readonly moduleConstraint?: UniversalModuleConstraintEvidence;
   readonly typeConstraint?: UniversalTypeConstraintEvidence;

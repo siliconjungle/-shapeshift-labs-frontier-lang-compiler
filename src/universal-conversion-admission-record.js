@@ -58,6 +58,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     lifetimeConstraintAction: route.lifetimeConstraint?.action,
     controlFlowConstraintStatus: route.controlFlowConstraint?.status,
     controlFlowConstraintAction: route.controlFlowConstraint?.action,
+    borrowScopeConstraintStatus: route.borrowScopeConstraint?.status,
+    borrowScopeConstraintAction: route.borrowScopeConstraint?.action,
     effectConstraintStatus: route.effectConstraint?.status,
     effectConstraintAction: route.effectConstraint?.action,
     moduleConstraintStatus: route.moduleConstraint?.status,
@@ -137,6 +139,15 @@ export function createUniversalConversionAdmissionRecord(input) {
       missingKinds: route.controlFlowConstraint?.missingKinds ?? [],
       missingEvidence: route.controlFlowConstraint?.missingEvidence ?? []
     },
+    borrowScopeConstraint: {
+      id: route.borrowScopeConstraint?.id,
+      status: route.borrowScopeConstraint?.status,
+      action: route.borrowScopeConstraint?.action,
+      requiredKinds: route.borrowScopeConstraint?.requiredKinds ?? [],
+      representedKinds: route.borrowScopeConstraint?.representedKinds ?? [],
+      missingKinds: route.borrowScopeConstraint?.missingKinds ?? [],
+      missingEvidence: route.borrowScopeConstraint?.missingEvidence ?? []
+    },
     effectConstraint: {
       id: route.effectConstraint?.id,
       status: route.effectConstraint?.status,
@@ -199,6 +210,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       resourceTransfer: route.resourceTransfer,
       lifetimeConstraint: route.lifetimeConstraint,
       controlFlowConstraint: route.controlFlowConstraint,
+      borrowScopeConstraint: route.borrowScopeConstraint,
       effectConstraint: route.effectConstraint,
       moduleConstraint: route.moduleConstraint,
       typeConstraint: route.typeConstraint,

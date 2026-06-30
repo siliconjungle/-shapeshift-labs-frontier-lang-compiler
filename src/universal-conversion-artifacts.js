@@ -172,6 +172,7 @@ function createRouteArtifact(route, options) {
     resourceTransfer: route.resourceTransfer,
     lifetimeConstraint: route.lifetimeConstraint,
     controlFlowConstraint: route.controlFlowConstraint,
+    borrowScopeConstraint: route.borrowScopeConstraint,
     effectConstraint: route.effectConstraint,
     moduleConstraint: route.moduleConstraint,
     typeConstraint: route.typeConstraint,
@@ -187,7 +188,7 @@ function createRouteArtifact(route, options) {
     admissionBucket: admissionRecord.admissionBucket,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
-    metadata: { ...recordMetadata, materialization, resourceTransfer: route.resourceTransfer, lifetimeConstraint: route.lifetimeConstraint, controlFlowConstraint: route.controlFlowConstraint, effectConstraint: route.effectConstraint, moduleConstraint: route.moduleConstraint, typeConstraint: route.typeConstraint }
+    metadata: { ...recordMetadata, materialization, resourceTransfer: route.resourceTransfer, lifetimeConstraint: route.lifetimeConstraint, controlFlowConstraint: route.controlFlowConstraint, borrowScopeConstraint: route.borrowScopeConstraint, effectConstraint: route.effectConstraint, moduleConstraint: route.moduleConstraint, typeConstraint: route.typeConstraint }
   };
 }
 

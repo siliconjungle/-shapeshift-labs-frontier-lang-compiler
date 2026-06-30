@@ -2,6 +2,7 @@ import { uniqueStrings } from './native-import-utils.js';
 import { artifactSemanticEditIndex } from './universal-conversion-artifact-semantic-edit.js';
 import { interlinguaRecordMatches } from './universal-interlingua-record.js';
 import { resourceTransferMatches } from './universal-resource-transfer.js';
+import { borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
 import { controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
 import { effectConstraintMatches } from './universal-effect-constraints.js';
 import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
@@ -21,6 +22,7 @@ export function artifactIndex(a) {
   const oConstraints = a.map(own);
   const lConstraints = a.map(life);
   const cConstraints = a.map(ctrl);
+  const bConstraints = a.map(bscope);
   const eConstraints = a.map(effect);
   const mConstraints = a.map(mods);
   const tConstraints = a.map(types);
@@ -109,30 +111,13 @@ export function artifactIndex(a) {
     resourceTransferActions: uniqueStrings(rTransfers.map((r) => r.action)),
     resourceTransferMissingEvidence: uniqueStrings(rTransfers.flatMap((r) => r.missingEvidence ?? [])),
     resourceTransferLossKinds: uniqueStrings(rTransfers.flatMap((record) => (record.losses ?? []).map((loss) => loss.kind))),
-    ownershipConstraintStatuses: uniqueStrings(oConstraints.map((r) => r.status)),
-    ownershipConstraintActions: uniqueStrings(oConstraints.map((r) => r.action)),
-    ownershipConstraintMissingEvidence: uniqueStrings(oConstraints.flatMap((r) => r.missingEvidence ?? [])),
-    ownershipConstraintMissingKinds: uniqueStrings(oConstraints.flatMap((r) => r.missingKinds ?? [])),
-    lifetimeConstraintStatuses: uniqueStrings(lConstraints.map((r) => r.status)),
-    lifetimeConstraintActions: uniqueStrings(lConstraints.map((r) => r.action)),
-    lifetimeConstraintMissingEvidence: uniqueStrings(lConstraints.flatMap((r) => r.missingEvidence ?? [])),
-    lifetimeConstraintMissingKinds: uniqueStrings(lConstraints.flatMap((r) => r.missingKinds ?? [])),
-    controlFlowConstraintStatuses: uniqueStrings(cConstraints.map((r) => r.status)),
-    controlFlowConstraintActions: uniqueStrings(cConstraints.map((r) => r.action)),
-    controlFlowConstraintMissingEvidence: uniqueStrings(cConstraints.flatMap((r) => r.missingEvidence ?? [])),
-    controlFlowConstraintMissingKinds: uniqueStrings(cConstraints.flatMap((r) => r.missingKinds ?? [])),
-    effectConstraintStatuses: uniqueStrings(eConstraints.map((r) => r.status)),
-    effectConstraintActions: uniqueStrings(eConstraints.map((r) => r.action)),
-    effectConstraintMissingEvidence: uniqueStrings(eConstraints.flatMap((r) => r.missingEvidence ?? [])),
-    effectConstraintMissingKinds: uniqueStrings(eConstraints.flatMap((r) => r.missingKinds ?? [])),
-    moduleConstraintStatuses: uniqueStrings(mConstraints.map((r) => r.status)),
-    moduleConstraintActions: uniqueStrings(mConstraints.map((r) => r.action)),
-    moduleConstraintMissingEvidence: uniqueStrings(mConstraints.flatMap((r) => r.missingEvidence ?? [])),
-    moduleConstraintMissingKinds: uniqueStrings(mConstraints.flatMap((r) => r.missingKinds ?? [])),
-    typeConstraintStatuses: uniqueStrings(tConstraints.map((r) => r.status)),
-    typeConstraintActions: uniqueStrings(tConstraints.map((r) => r.action)),
-    typeConstraintMissingEvidence: uniqueStrings(tConstraints.flatMap((r) => r.missingEvidence ?? [])),
-    typeConstraintMissingKinds: uniqueStrings(tConstraints.flatMap((r) => r.missingKinds ?? [])),
+    ...constraintIndex('ownershipConstraint', oConstraints),
+    ...constraintIndex('lifetimeConstraint', lConstraints),
+    ...constraintIndex('controlFlowConstraint', cConstraints),
+    ...constraintIndex('borrowScopeConstraint', bConstraints),
+    ...constraintIndex('effectConstraint', eConstraints),
+    ...constraintIndex('moduleConstraint', mConstraints),
+    ...constraintIndex('typeConstraint', tConstraints),
     interlinguaRecordIds: uniqueStrings(iRecords.map((r) => r.id)),
     interlinguaLayerKinds: uniqueStrings(iRecords.flatMap((r) => r.query?.layerKinds ?? [])),
     interlinguaRepresentedLayerKinds: uniqueStrings(iRecords.flatMap((r) => r.query?.representedLayerKinds ?? [])),
@@ -238,6 +223,7 @@ function matchesArtifact(record, query) {
     && resourceTransferMatches(res(record), query)
     && lifetimeConstraintMatches(life(record), query)
     && controlFlowConstraintMatches(ctrl(record), query)
+    && borrowScopeConstraintMatches(bscope(record), query)
     && effectConstraintMatches(effect(record), query)
     && moduleConstraintMatches(mods(record), query)
     && typeConstraintMatches(types(record), query)
@@ -293,6 +279,9 @@ function life(record) {
 function ctrl(record) {
   return record.controlFlowConstraint ?? record.metadata?.controlFlowConstraint ?? record.translationAdmission?.controlFlowConstraint ?? record.admissionRecord?.metadata?.controlFlowConstraint ?? {};
 }
+function bscope(record) {
+  return record.borrowScopeConstraint ?? record.metadata?.borrowScopeConstraint ?? record.translationAdmission?.borrowScopeConstraint ?? record.admissionRecord?.metadata?.borrowScopeConstraint ?? {};
+}
 function effect(record) {
   return record.effectConstraint ?? record.metadata?.effectConstraint ?? record.translationAdmission?.effectConstraint ?? record.admissionRecord?.metadata?.effectConstraint ?? {};
 }
@@ -301,6 +290,14 @@ function mods(record) {
 }
 function types(record) {
   return record.typeConstraint ?? record.metadata?.typeConstraint ?? record.translationAdmission?.typeConstraint ?? record.admissionRecord?.metadata?.typeConstraint ?? {};
+}
+function constraintIndex(prefix, records) {
+  return {
+    [`${prefix}Statuses`]: uniqueStrings(records.map((r) => r.status)),
+    [`${prefix}Actions`]: uniqueStrings(records.map((r) => r.action)),
+    [`${prefix}MissingEvidence`]: uniqueStrings(records.flatMap((r) => r.missingEvidence ?? [])),
+    [`${prefix}MissingKinds`]: uniqueStrings(records.flatMap((r) => r.missingKinds ?? []))
+  };
 }
 function match(f, values) {
   const filters = Array.isArray(f) ? f : f === undefined ? [] : [f];

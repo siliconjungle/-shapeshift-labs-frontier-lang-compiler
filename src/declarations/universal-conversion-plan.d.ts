@@ -13,6 +13,7 @@ import type { UniversalRepresentationCoverage, UniversalRepresentationCoverageQu
 import type { UniversalInterlinguaQuery, UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalConversionPlanCompactCounts } from './universal-conversion-compact-counts.js';
 import type { UniversalRuntimeAdapterRequirement, UniversalRuntimeCapabilityKind, UniversalRuntimeCapabilityMatrix, UniversalRuntimeCapabilityRoute, UniversalRuntimeHostProfile } from './universal-runtime-capabilities.js';
+import type { UniversalBorrowScopeConstraintEvidence, UniversalBorrowScopeConstraintInput, UniversalBorrowScopeConstraintQuery } from './universal-borrow-scope-constraints.js';
 import type { UniversalControlFlowConstraintEvidence, UniversalControlFlowConstraintInput, UniversalControlFlowConstraintQuery } from './universal-control-flow-constraints.js';
 import type { UniversalEffectConstraintEvidence, UniversalEffectConstraintInput, UniversalEffectConstraintQuery } from './universal-effect-constraints.js';
 import type { UniversalLifetimeConstraintEvidence, UniversalLifetimeConstraintInput, UniversalLifetimeConstraintQuery } from './universal-lifetime-constraints.js';
@@ -90,6 +91,7 @@ export interface UniversalTranslationAdmission {
   readonly resourceTransferStatus?: string; readonly resourceTransferAction?: string; readonly resourceTransferMissingEvidence: readonly string[];
   readonly lifetimeConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly lifetimeConstraintStatus?: string; readonly lifetimeConstraintAction?: string; readonly lifetimeConstraintMissingEvidence: readonly string[];
   readonly controlFlowConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly controlFlowConstraintStatus?: string; readonly controlFlowConstraintAction?: string; readonly controlFlowConstraintMissingEvidence: readonly string[];
+  readonly borrowScopeConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly borrowScopeConstraintStatus?: string; readonly borrowScopeConstraintAction?: string; readonly borrowScopeConstraintMissingEvidence: readonly string[];
   readonly effectConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly effectConstraintStatus?: string; readonly effectConstraintAction?: string; readonly effectConstraintMissingEvidence: readonly string[];
   readonly moduleConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly moduleConstraintStatus?: string; readonly moduleConstraintAction?: string; readonly moduleConstraintMissingEvidence: readonly string[];
   readonly typeConstraint?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[] }; readonly typeConstraintStatus?: string; readonly typeConstraintAction?: string; readonly typeConstraintMissingEvidence: readonly string[];
@@ -176,7 +178,7 @@ export interface UniversalConversionRoute {
   readonly evidence: UniversalConversionRouteEvidence;
   readonly representation: UniversalRepresentationCoverage;
   readonly interlingua: UniversalInterlinguaRecord;
-  readonly resourceTransfer?: UniversalResourceTransferEvidence; readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence; readonly controlFlowConstraint?: UniversalControlFlowConstraintEvidence; readonly effectConstraint?: UniversalEffectConstraintEvidence; readonly moduleConstraint?: UniversalModuleConstraintEvidence; readonly typeConstraint?: UniversalTypeConstraintEvidence;
+  readonly resourceTransfer?: UniversalResourceTransferEvidence; readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence; readonly controlFlowConstraint?: UniversalControlFlowConstraintEvidence; readonly borrowScopeConstraint?: UniversalBorrowScopeConstraintEvidence; readonly effectConstraint?: UniversalEffectConstraintEvidence; readonly moduleConstraint?: UniversalModuleConstraintEvidence; readonly typeConstraint?: UniversalTypeConstraintEvidence;
   readonly missingEvidence: readonly string[];
   readonly translationAdmission: UniversalTranslationAdmission;
   readonly blockers: readonly string[];
@@ -250,6 +252,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly resourceTransfer?: UniversalResourceTransferInput | UniversalResourceTransferEvidence; readonly translationResourceTransfer?: UniversalResourceTransferInput | UniversalResourceTransferEvidence; readonly resourceTransfers?: readonly (UniversalResourceTransferInput | UniversalResourceTransferEvidence)[];
   readonly lifetimeConstraint?: UniversalLifetimeConstraintInput | UniversalLifetimeConstraintEvidence; readonly translationLifetimeConstraint?: UniversalLifetimeConstraintInput | UniversalLifetimeConstraintEvidence; readonly lifetimeConstraints?: readonly (UniversalLifetimeConstraintInput | UniversalLifetimeConstraintEvidence)[];
   readonly controlFlowConstraint?: UniversalControlFlowConstraintInput | UniversalControlFlowConstraintEvidence; readonly translationControlFlowConstraint?: UniversalControlFlowConstraintInput | UniversalControlFlowConstraintEvidence; readonly controlFlowConstraints?: readonly (UniversalControlFlowConstraintInput | UniversalControlFlowConstraintEvidence)[];
+  readonly borrowScopeConstraint?: UniversalBorrowScopeConstraintInput | UniversalBorrowScopeConstraintEvidence; readonly translationBorrowScopeConstraint?: UniversalBorrowScopeConstraintInput | UniversalBorrowScopeConstraintEvidence; readonly borrowScopeConstraints?: readonly (UniversalBorrowScopeConstraintInput | UniversalBorrowScopeConstraintEvidence)[];
   readonly effectConstraint?: UniversalEffectConstraintInput | UniversalEffectConstraintEvidence; readonly translationEffectConstraint?: UniversalEffectConstraintInput | UniversalEffectConstraintEvidence; readonly effectConstraints?: readonly (UniversalEffectConstraintInput | UniversalEffectConstraintEvidence)[];
   readonly moduleConstraint?: UniversalModuleConstraintInput | UniversalModuleConstraintEvidence; readonly translationModuleConstraint?: UniversalModuleConstraintInput | UniversalModuleConstraintEvidence; readonly moduleConstraints?: readonly (UniversalModuleConstraintInput | UniversalModuleConstraintEvidence)[];
   readonly typeConstraint?: UniversalTypeConstraintInput | UniversalTypeConstraintEvidence; readonly translationTypeConstraint?: UniversalTypeConstraintInput | UniversalTypeConstraintEvidence; readonly typeConstraints?: readonly (UniversalTypeConstraintInput | UniversalTypeConstraintEvidence)[];
@@ -278,7 +281,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly effects?: UniversalConversionPlanOptions['runtimeRequirements'];
   readonly evidence?: readonly EvidenceRecord[];
 }
-export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalEffectConstraintQuery, UniversalModuleConstraintQuery, UniversalTypeConstraintQuery {
+export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalEffectConstraintQuery, UniversalModuleConstraintQuery, UniversalTypeConstraintQuery {
   readonly sourceLanguage?: FrontierSourceLanguage | string;
   readonly language?: FrontierSourceLanguage | string;
   readonly target?: FrontierCompileTarget | string;
@@ -314,7 +317,4 @@ export interface UniversalConversionPlanQueryResult {
 }
 
 export declare function createUniversalConversionPlan(options?: UniversalConversionPlanOptions): UniversalConversionPlan;
-export declare function queryUniversalConversionPlan(
-  planOrOptions?: UniversalConversionPlan | UniversalConversionPlanOptions,
-  query?: UniversalConversionPlanQuery
-): UniversalConversionPlanQueryResult;
+export declare function queryUniversalConversionPlan(planOrOptions?: UniversalConversionPlan | UniversalConversionPlanOptions, query?: UniversalConversionPlanQuery): UniversalConversionPlanQueryResult;

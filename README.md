@@ -775,6 +775,7 @@ import {
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
   createUniversalCapabilityMatrix,
+  createUniversalBorrowScopeConstraintEvidence,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
   createUniversalConversionRouteEvidenceReceipt,
@@ -878,6 +879,17 @@ const controlFlowConstraints = createUniversalControlFlowConstraintEvidence({
 });
 console.log(controlFlowConstraints.missingKinds); // branch/exit/exception/async ordering obligations still needing target evidence
 console.log(controlFlowConstraints.claims.controlFlowEquivalenceClaim); // false without source-bound control-flow proof
+
+const borrowScopeConstraints = createUniversalBorrowScopeConstraintEvidence({
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  ownershipConstraint: resourceTransfer.ownershipConstraints,
+  lifetimeConstraint: lifetimeConstraints,
+  controlFlowConstraint: controlFlowConstraints,
+  targetBorrowScopes: [{ kind: 'loan scope boundary' }]
+});
+console.log(borrowScopeConstraints.missingKinds); // flow-sensitive borrow/lifetime obligations still needing target proof
+console.log(borrowScopeConstraints.claims.borrowCheckerClaim); // false without target borrow-scope proof
 
 const effectConstraints = createUniversalEffectConstraintEvidence({
   sourceLanguage: 'javascript',
@@ -1033,6 +1045,18 @@ concurrency ordering. Control-flow queries such as
 exits." The record remains conservative: control-flow-equivalence,
 exception-equivalence, async-ordering, semantic-equivalence, and auto-merge
 claims stay false unless separate proof is attached.
+
+Routes can also carry `borrowScopeConstraint`, a flow-sensitive ownership
+admission record that joins ownership, lifetime, and control-flow evidence. It
+models obligations such as loan scope boundaries, exclusive-borrow branch joins,
+borrows across async suspension, drop cleanup through early returns or throws,
+move invalidation across exits, no-escape flow, unsafe-boundary flow proof, and
+concurrency alias proof. Borrow-scope queries such as
+`borrowScopeConstraintMissingKind: "borrow-across-await"` let a coordinator
+distinguish "the target has borrow and control-flow records" from "the target
+proved the borrow survives this control-flow shape." The record remains
+conservative: borrow-checker, flow-sensitive lifetime, semantic-equivalence, and
+auto-merge claims stay false unless separate proof is attached.
 
 Routes can also carry `effectConstraint`, an observable-effect admission record
 for source effects such as network I/O, storage, filesystem access, timers,
