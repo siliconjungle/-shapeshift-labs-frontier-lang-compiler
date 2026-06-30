@@ -30,6 +30,8 @@ export interface UniversalLifetimeConstraintModel {
   readonly escapeRecords: readonly string[];
   readonly unsafeBoundaryKinds: readonly string[];
   readonly explicitKinds: readonly string[];
+  readonly graphKinds: readonly string[];
+  readonly combinedKinds: readonly string[];
   readonly hasLifetimeRegion: boolean;
   readonly hasLoanRegions: boolean;
   readonly hasAliasRegions: boolean;
@@ -38,6 +40,11 @@ export interface UniversalLifetimeConstraintModel {
   readonly hasOutlives: boolean;
   readonly hasEscapes: boolean;
   readonly hasUnsafeLifetime: boolean;
+  readonly hasNonLexicalLifetime: boolean;
+  readonly hasReborrowLifetime: boolean;
+  readonly hasHigherRankedLifetime: boolean;
+  readonly hasVarianceLifetime: boolean;
+  readonly hasDropCheckLifetime: boolean;
 }
 
 export interface UniversalLifetimeConstraintSide {

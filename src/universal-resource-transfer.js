@@ -2,13 +2,7 @@ import { idFragment, uniqueStrings } from './native-import-utils.js';
 import { createUniversalOwnershipConstraintEvidence, ownershipConstraintMatches } from './universal-ownership-constraints.js';
 import { summarizeSemanticResourceGraph } from './semantic-resource-graph.js';
 
-export const UniversalResourceTransferStatuses = Object.freeze([
-  'not-applicable',
-  'preserved',
-  'degraded',
-  'needs-evidence',
-  'blocked'
-]);
+export const UniversalResourceTransferStatuses = Object.freeze(['not-applicable', 'preserved', 'degraded', 'needs-evidence', 'blocked']);
 
 export function createUniversalResourceTransferEvidence(input = {}) {
   const route = input.route ?? {};
@@ -95,19 +89,8 @@ export function resourceTransferMatches(transfer = {}, query = {}) {
 
 export function resourceTransferForConversionRoute(input = {}, route = {}, routeImports = [], routeEvidence = []) {
   const explicit = matchingTransferInput(input, route, routeEvidence);
-  const sourceGraphs = uniqueGraphs([
-    ...(explicit?.sourceGraphs ?? []),
-    explicit?.sourceGraph,
-    explicit?.sourceResourceGraph,
-    ...routeImports.flatMap(resourceGraphsFromImport),
-    ...routeEvidence.flatMap((record) => resourceGraphsFromEvidence(record, 'source'))
-  ]);
-  const targetGraphs = uniqueGraphs([
-    ...(explicit?.targetGraphs ?? []),
-    explicit?.targetGraph,
-    explicit?.targetResourceGraph,
-    ...routeEvidence.flatMap((record) => resourceGraphsFromEvidence(record, 'target'))
-  ]);
+  const sourceGraphs = uniqueGraphs([...(explicit?.sourceGraphs ?? []), explicit?.sourceGraph, explicit?.sourceResourceGraph, ...routeImports.flatMap(resourceGraphsFromImport), ...routeEvidence.flatMap((record) => resourceGraphsFromEvidence(record, 'source'))]);
+  const targetGraphs = uniqueGraphs([...(explicit?.targetGraphs ?? []), explicit?.targetGraph, explicit?.targetResourceGraph, ...routeEvidence.flatMap((record) => resourceGraphsFromEvidence(record, 'target'))]);
   if (!explicit && !sourceGraphs.length && !targetGraphs.length) return undefined;
   return createUniversalResourceTransferEvidence({
     ...explicit,
@@ -122,9 +105,7 @@ export function resourceTransferForConversionRoute(input = {}, route = {}, route
   });
 }
 
-function firstGraph(...graphs) {
-  return graphs.flat().find((graph) => graph && typeof graph === 'object');
-}
+function firstGraph(...graphs) { return graphs.flat().find((graph) => graph && typeof graph === 'object'); }
 
 function summarize(graph) {
   if (!graph) return { records: 0, resources: 0, owners: 0, loans: 0, aliases: 0, moves: 0, drops: 0, lifetimeRegions: 0, unsafeBoundaries: 0, conflicts: 0, proofObligations: 0, unsafeBoundariesWithoutProof: 0, reasonCodes: ['missing-resource-graph'] };
@@ -132,6 +113,10 @@ function summarize(graph) {
 }
 
 function resourceFeatures(graph = {}) {
+  const resourceTokens = recordTokenKinds(graph.resources ?? []);
+  const loanTokens = recordTokenKinds(graph.loans ?? []);
+  const moveTokens = recordTokenKinds(graph.moves ?? []);
+  const scopeTokens = recordTokenKinds(graph.borrowScopes ?? graph.borrowScopeRegions ?? []);
   return {
     resourceKinds: uniqueStrings((graph.resources ?? []).map((record) => record.resourceKind)),
     loanModes: uniqueStrings((graph.loans ?? []).map((record) => record.mode)),
@@ -139,7 +124,11 @@ function resourceFeatures(graph = {}) {
     moveKinds: uniqueStrings((graph.moves ?? []).map((record) => record.moveKind ?? record.kind ?? 'move')),
     dropKinds: uniqueStrings((graph.drops ?? []).map((record) => record.dropKind)),
     lifetimeKinds: uniqueStrings((graph.lifetimeRegions ?? []).map((record) => record.lifetimeKind)),
-    unsafeBoundaryKinds: uniqueStrings((graph.unsafeBoundaries ?? []).map((record) => record.kind ?? record.metadata?.proofGapCode ?? 'unsafe-boundary'))
+    unsafeBoundaryKinds: uniqueStrings((graph.unsafeBoundaries ?? []).map((record) => record.kind ?? record.metadata?.proofGapCode ?? 'unsafe-boundary')),
+    reborrowKinds: tokenMatches([...loanTokens, ...scopeTokens], /reborrow/),
+    interiorMutabilityKinds: tokenMatches([...resourceTokens, ...scopeTokens], /interior-mutability|unsafecell|refcell|cell|mutex|rwlock|atomic/),
+    pinKinds: tokenMatches([...resourceTokens, ...loanTokens, ...scopeTokens], /\bpin\b|pinned|pin-projection|unpin/),
+    threadTransferKinds: tokenMatches([...resourceTokens, ...moveTokens, ...scopeTokens], /\bsend\b|\bsync\b|thread-transfer|cross-thread|send-sync/)
   };
 }
 
@@ -153,6 +142,10 @@ function requiredResourceTransferKinds(summary, features) {
     ...(summary.moves ? ['move'] : []),
     ...(summary.drops ? ['drop'] : []),
     ...(summary.lifetimeRegions ? ['lifetime-region'] : []),
+    ...(features.reborrowKinds.length ? ['reborrow'] : []),
+    ...(features.interiorMutabilityKinds.length ? ['interior-mutability'] : []),
+    ...(features.pinKinds.length ? ['pinned-resource'] : []),
+    ...(features.threadTransferKinds.length ? ['thread-transfer'] : []),
     ...(summary.unsafeBoundaries ? ['unsafe-boundary'] : [])
   ]);
 }
@@ -169,6 +162,10 @@ function representedResourceTransferKinds(requiredKinds, targetSummary, targetFe
     if (kind === 'move') return targetSummary.moves > 0;
     if (kind === 'drop') return targetSummary.drops > 0;
     if (kind === 'lifetime-region') return targetSummary.lifetimeRegions > 0;
+    if (kind === 'reborrow') return targetFeatures.reborrowKinds.length > 0;
+    if (kind === 'interior-mutability') return targetFeatures.interiorMutabilityKinds.length > 0;
+    if (kind === 'pinned-resource') return targetFeatures.pinKinds.length > 0;
+    if (kind === 'thread-transfer') return targetFeatures.threadTransferKinds.length > 0;
     if (kind === 'unsafe-boundary') return targetSummary.unsafeBoundaries > 0 && targetSummary.unsafeBoundariesWithoutProof === 0;
     return false;
   });
@@ -203,6 +200,8 @@ function transferReview(missingKinds, sourceFeatures, targetFeatures, input, own
     ...(missingKinds.length ? [`Resource transfer is missing target evidence for: ${missingKinds.join(', ')}.`] : []),
     ...(sourceFeatures.loanModes.length && !targetFeatures.loanModes.length ? ['Source borrow modes are not represented in the target graph.'] : []),
     ...(sourceFeatures.dropKinds.length && !targetFeatures.dropKinds.length ? ['Source cleanup/drop evidence is not represented in the target graph.'] : []),
+    ...(sourceFeatures.pinKinds.length && !targetFeatures.pinKinds.length ? ['Source pinned-resource transfer constraints are not represented in the target graph.'] : []),
+    ...(sourceFeatures.threadTransferKinds.length && !targetFeatures.threadTransferKinds.length ? ['Source thread-transfer traits are not represented in the target graph.'] : []),
     ...(ownershipConstraints.review ?? []),
     ...(input.review ?? [])
   ]);
@@ -241,7 +240,7 @@ function transferLosses(missingKinds, sourceFeatures, targetFeatures) {
     kind,
     source: featureValuesForKind(kind, sourceFeatures),
     target: featureValuesForKind(kind, targetFeatures),
-    severity: kind === 'unsafe-boundary' || kind === 'exclusive-borrow' ? 'error' : 'warning'
+    severity: ['unsafe-boundary', 'exclusive-borrow', 'pinned-resource', 'thread-transfer'].includes(kind) ? 'error' : 'warning'
   }));
 }
 
@@ -252,8 +251,18 @@ function featureValuesForKind(kind, features) {
   if (kind === 'drop') return features.dropKinds;
   if (kind === 'lifetime-region') return features.lifetimeKinds;
   if (kind === 'unsafe-boundary') return features.unsafeBoundaryKinds;
+  if (kind === 'reborrow') return features.reborrowKinds;
+  if (kind === 'interior-mutability') return features.interiorMutabilityKinds;
+  if (kind === 'pinned-resource') return features.pinKinds;
+  if (kind === 'thread-transfer') return features.threadTransferKinds;
   return features.resourceKinds;
 }
+
+function recordTokenKinds(records = []) {
+  return uniqueStrings(records.flatMap((record) => [record.kind, record.constraintKind, record.scopeKind, record.resourceKind, record.moveKind, record.mode, record.metadata?.ownershipSemantics, record.metadata?.borrowSemantics, record.metadata?.resourceSemantics, ...(record.constraintKinds ?? []), ...(record.factKinds ?? []), ...(record.metadata?.factKinds ?? []), ...(record.metadata?.traits ?? []), ...(record.metadata?.autoTraits ?? [])].filter(Boolean).map((value) => String(value).toLowerCase())));
+}
+
+function tokenMatches(tokens, pattern) { return uniqueStrings(tokens.filter((token) => pattern.test(token))); }
 
 function matchingTransferInput(input, route, routeEvidence) {
   const candidates = [
@@ -271,15 +280,7 @@ function routeMatch(candidate, route) {
     && (!candidate.target || candidate.target === route.target);
 }
 
-function resourceGraphsFromImport(imported) {
-  return uniqueGraphs([
-    imported?.resourceGraph,
-    imported?.semanticResourceGraph,
-    imported?.universalAst?.resourceGraph,
-    imported?.universalAst?.semanticResourceGraph,
-    imported?.metadata?.resourceGraph
-  ]);
-}
+function resourceGraphsFromImport(imported) { return uniqueGraphs([imported?.resourceGraph, imported?.semanticResourceGraph, imported?.universalAst?.resourceGraph, imported?.universalAst?.semanticResourceGraph, imported?.metadata?.resourceGraph]); }
 
 function resourceGraphsFromEvidence(record, role) {
   const direct = role === 'source'
@@ -299,9 +300,7 @@ function uniqueGraphs(graphs) {
   });
 }
 
-function sameLanguage(source, target) {
-  return String(source ?? '').toLowerCase() === String(target ?? '').toLowerCase();
-}
+function sameLanguage(source, target) { return String(source ?? '').toLowerCase() === String(target ?? '').toLowerCase(); }
 
 function match(filter, values) {
   const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];

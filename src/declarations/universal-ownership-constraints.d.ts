@@ -27,12 +27,26 @@ export interface UniversalOwnershipConstraintModel {
   readonly destructorDropKinds: readonly string[];
   readonly lifetimeKinds: readonly string[];
   readonly unsafeBoundaryKinds: readonly string[];
+  readonly reborrowKinds: readonly string[];
+  readonly twoPhaseBorrowKinds: readonly string[];
+  readonly interiorMutabilityKinds: readonly string[];
+  readonly pinKinds: readonly string[];
+  readonly threadTransferKinds: readonly string[];
+  readonly varianceKinds: readonly string[];
+  readonly dropCheckKinds: readonly string[];
   readonly hasSharedBorrow: boolean;
   readonly hasExclusiveBorrow: boolean;
   readonly hasRawAccess: boolean;
   readonly hasLifetimeBoundLoans: boolean;
   readonly hasCallArgumentTransfer: boolean;
   readonly hasReturnTransfer: boolean;
+  readonly hasReborrow: boolean;
+  readonly hasTwoPhaseBorrow: boolean;
+  readonly hasInteriorMutability: boolean;
+  readonly hasPinnedResource: boolean;
+  readonly hasThreadTransfer: boolean;
+  readonly hasVariance: boolean;
+  readonly hasDropCheck: boolean;
 }
 
 export interface UniversalOwnershipConstraintSide {

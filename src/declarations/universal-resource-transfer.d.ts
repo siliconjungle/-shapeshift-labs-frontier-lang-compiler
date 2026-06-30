@@ -33,6 +33,10 @@ export interface UniversalResourceTransferSide {
     readonly dropKinds: readonly string[];
     readonly lifetimeKinds: readonly string[];
     readonly unsafeBoundaryKinds: readonly string[];
+    readonly reborrowKinds: readonly string[];
+    readonly interiorMutabilityKinds: readonly string[];
+    readonly pinKinds: readonly string[];
+    readonly threadTransferKinds: readonly string[];
   };
 }
 

@@ -176,7 +176,8 @@ void (null as unknown as PublicRuntimeExportsMatchDeclarations);
 void (null as unknown as RoundtripRouteAuditBuckets);
 void (null as unknown as RoundtripSemanticEquivalenceClaimStaysFalse);
 void (null as unknown as RoundtripRouteSourceMapPrecisionIsTyped);
-
+type RustBorrowPrimitiveModelFields = Expect<Equal<compilerApi.UniversalOwnershipConstraintModel['hasReborrow'] | compilerApi.UniversalOwnershipConstraintModel['hasTwoPhaseBorrow'] | compilerApi.UniversalOwnershipConstraintModel['hasInteriorMutability'] | compilerApi.UniversalOwnershipConstraintModel['hasPinnedResource'] | compilerApi.UniversalLifetimeConstraintModel['hasNonLexicalLifetime'] | compilerApi.UniversalLifetimeConstraintModel['hasHigherRankedLifetime'] | compilerApi.UniversalBorrowScopeConstraintModel['hasPinProjection'], boolean>>;
+void (null as unknown as RustBorrowPrimitiveModelFields);
 const bidirectionalTargetChange = compilerApi.createBidirectionalTargetChangeRecord({
   source: {
     language: 'typescript',

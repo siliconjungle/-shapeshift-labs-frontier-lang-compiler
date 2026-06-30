@@ -68,6 +68,13 @@ export interface UniversalBorrowScopeConstraintModel {
   readonly hasAsync: boolean;
   readonly hasExit: boolean;
   readonly hasConcurrency: boolean;
+  readonly hasReborrow: boolean;
+  readonly hasTwoPhaseBorrow: boolean;
+  readonly hasInteriorMutability: boolean;
+  readonly hasPinProjection: boolean;
+  readonly hasClosureCapture: boolean;
+  readonly hasIteratorYield: boolean;
+  readonly hasDropCheck: boolean;
 }
 
 export interface UniversalBorrowScopeConstraintSide {

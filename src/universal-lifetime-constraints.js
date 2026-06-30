@@ -1,13 +1,7 @@
 import { idFragment, uniqueStrings } from './native-import-utils.js';
 import { summarizeSemanticResourceGraph } from './semantic-resource-graph.js';
 
-export const UniversalLifetimeConstraintStatuses = Object.freeze([
-  'not-applicable',
-  'satisfied',
-  'degraded',
-  'needs-evidence',
-  'blocked'
-]);
+export const UniversalLifetimeConstraintStatuses = Object.freeze(['not-applicable', 'satisfied', 'degraded', 'needs-evidence', 'blocked']);
 
 export function createUniversalLifetimeConstraintEvidence(input = {}) {
   const route = input.route ?? {};
@@ -77,19 +71,8 @@ export function lifetimeConstraintMatches(evidence = {}, query = {}) {
 
 export function lifetimeConstraintForConversionRoute(input = {}, route = {}, routeImports = [], routeEvidence = []) {
   const explicit = matchingLifetimeInput(input, route, routeEvidence);
-  const sourceGraphs = uniqueGraphs([
-    ...(explicit?.sourceGraphs ?? []),
-    explicit?.sourceGraph,
-    explicit?.sourceResourceGraph,
-    ...routeImports.flatMap(resourceGraphsFromImport),
-    ...routeEvidence.flatMap((record) => resourceGraphsFromEvidence(record, 'source'))
-  ]);
-  const targetGraphs = uniqueGraphs([
-    ...(explicit?.targetGraphs ?? []),
-    explicit?.targetGraph,
-    explicit?.targetResourceGraph,
-    ...routeEvidence.flatMap((record) => resourceGraphsFromEvidence(record, 'target'))
-  ]);
+  const sourceGraphs = uniqueGraphs([...(explicit?.sourceGraphs ?? []), explicit?.sourceGraph, explicit?.sourceResourceGraph, ...routeImports.flatMap(resourceGraphsFromImport), ...routeEvidence.flatMap((record) => resourceGraphsFromEvidence(record, 'source'))]);
+  const targetGraphs = uniqueGraphs([...(explicit?.targetGraphs ?? []), explicit?.targetGraph, explicit?.targetResourceGraph, ...routeEvidence.flatMap((record) => resourceGraphsFromEvidence(record, 'target'))]);
   if (!explicit && !sourceGraphs.length && !targetGraphs.length) return undefined;
   return createUniversalLifetimeConstraintEvidence({
     ...explicit,
@@ -117,7 +100,9 @@ function lifetimeModel(graph = {}, explicit = []) {
   const moves = graph.moves ?? [];
   const escapes = graph.escapes ?? [];
   const unsafeBoundaries = graph.unsafeBoundaries ?? [];
+  const graphKinds = recordLifetimeKinds([...(graph.lifetimeRegions ?? []), ...(graph.lifetimeRelations ?? graph.outlives ?? []), ...loans, ...aliases, ...drops, ...moves, ...escapes, ...(graph.borrowScopes ?? graph.borrowScopeRegions ?? []), ...(graph.proofObligations ?? [])]);
   const explicitKinds = uniqueStrings(explicit.flatMap((record) => lifetimeKindsForRecord(record)));
+  const combinedKinds = uniqueStrings([...graphKinds, ...explicitKinds]);
   return {
     lifetimeKinds: uniqueStrings(lifetimeRegions.map((record) => record.lifetimeKind ?? record.kind ?? record.constraintKind)),
     loanModes: uniqueStrings(loans.map((record) => record.mode)),
@@ -129,6 +114,8 @@ function lifetimeModel(graph = {}, explicit = []) {
     escapeRecords: uniqueStrings([...escapes, ...explicit.filter((record) => /escape/i.test(String(record?.kind ?? record?.constraintKind ?? '')))].map((record) => record.id ?? record.resourceId ?? record.name ?? record.kind)),
     unsafeBoundaryKinds: uniqueStrings(unsafeBoundaries.map((record) => record.kind ?? record.metadata?.proofGapCode ?? 'unsafe-boundary')),
     explicitKinds,
+    graphKinds,
+    combinedKinds,
     hasLifetimeRegion: lifetimeRegions.length > 0,
     hasLoanRegions: loans.some((record) => record.lifetimeRegionId),
     hasAliasRegions: aliases.some((record) => record.lifetimeRegionId),
@@ -136,22 +123,23 @@ function lifetimeModel(graph = {}, explicit = []) {
     hasMoveRegions: moves.some((record) => record.lifetimeRegionId),
     hasOutlives: (graph.outlives ?? []).length > 0 || (graph.lifetimeRelations ?? []).length > 0 || explicitKinds.includes('outlives-relation'),
     hasEscapes: escapes.length > 0 || explicitKinds.includes('no-escape') || explicitKinds.includes('escape-proof'),
-    hasUnsafeLifetime: unsafeBoundaries.length > 0 || explicitKinds.includes('unsafe-lifetime-proof')
+    hasUnsafeLifetime: unsafeBoundaries.length > 0 || explicitKinds.includes('unsafe-lifetime-proof'),
+    hasNonLexicalLifetime: combinedKinds.includes('non-lexical-lifetime'),
+    hasReborrowLifetime: combinedKinds.includes('reborrow-lifetime'),
+    hasHigherRankedLifetime: combinedKinds.includes('higher-ranked-lifetime'),
+    hasVarianceLifetime: combinedKinds.includes('variance-lifetime'),
+    hasDropCheckLifetime: combinedKinds.includes('drop-check-lifetime')
   };
 }
 
 function lifetimeKindsForRecord(record = {}) {
-  const tokens = uniqueStrings([
-    record.kind,
-    record.constraintKind,
-    record.lifetimeKind,
-    record.regionKind,
-    record.predicate,
-    ...(record.constraintKinds ?? []),
-    ...(record.factKinds ?? []),
-    ...(record.metadata?.factKinds ?? [])
-  ].filter(Boolean).map((value) => String(value).toLowerCase()));
+  const tokens = uniqueStrings([record.kind, record.constraintKind, record.lifetimeKind, record.regionKind, record.predicate, ...(record.constraintKinds ?? []), ...(record.factKinds ?? []), ...(record.metadata?.factKinds ?? [])].filter(Boolean).map((value) => String(value).toLowerCase()));
   return uniqueStrings(tokens.flatMap((token) => {
+    if (/non-lexical|nll/.test(token)) return ['non-lexical-lifetime'];
+    if (/reborrow/.test(token)) return ['reborrow-lifetime'];
+    if (/higher-ranked|hrtb|for<|forall/.test(token)) return ['higher-ranked-lifetime'];
+    if (/variance|covariant|contravariant|invariant/.test(token)) return ['variance-lifetime'];
+    if (/dropck|drop-check|may_dangle|drop.*outlives/.test(token)) return ['drop-check-lifetime'];
     if (/lifetime|region|scope/.test(token)) return ['lifetime-region'];
     if (/loan|borrow/.test(token)) return ['loan-region-binding'];
     if (/alias|reference/.test(token)) return ['alias-region-binding'];
@@ -173,6 +161,11 @@ function requiredLifetimeKinds(model, summary) {
     ...(model.hasMoveRegions ? ['move-region-bound'] : []),
     ...(model.hasOutlives ? ['outlives-relation'] : []),
     ...(model.hasEscapes ? ['no-escape'] : []),
+    ...(model.hasNonLexicalLifetime ? ['non-lexical-lifetime'] : []),
+    ...(model.hasReborrowLifetime ? ['reborrow-lifetime'] : []),
+    ...(model.hasHigherRankedLifetime ? ['higher-ranked-lifetime'] : []),
+    ...(model.hasVarianceLifetime ? ['variance-lifetime'] : []),
+    ...(model.hasDropCheckLifetime ? ['drop-check-lifetime'] : []),
     ...(model.hasUnsafeLifetime ? ['unsafe-lifetime-proof'] : [])
   ]);
 }
@@ -187,6 +180,11 @@ function representedLifetimeKinds(requiredKinds, model, summary, options) {
     if (kind === 'move-region-bound') return model.hasMoveRegions;
     if (kind === 'outlives-relation') return model.hasOutlives;
     if (kind === 'no-escape') return model.hasEscapes;
+    if (kind === 'non-lexical-lifetime') return model.hasNonLexicalLifetime;
+    if (kind === 'reborrow-lifetime') return model.hasReborrowLifetime;
+    if (kind === 'higher-ranked-lifetime') return model.hasHigherRankedLifetime;
+    if (kind === 'variance-lifetime') return model.hasVarianceLifetime;
+    if (kind === 'drop-check-lifetime') return model.hasDropCheckLifetime;
     if (kind === 'unsafe-lifetime-proof') return model.hasUnsafeLifetime && summary.unsafeBoundariesWithoutProof === 0;
     return false;
   });
@@ -220,6 +218,11 @@ function lifetimeReview(missingKinds, sourceModel, targetModel, input) {
     ...(sourceModel.hasLoanRegions && !targetModel.hasLoanRegions ? ['Source borrow regions are not represented in the target graph.'] : []),
     ...(sourceModel.hasDropRegions && !targetModel.hasDropRegions ? ['Source drop bounds are not represented in the target graph.'] : []),
     ...(sourceModel.hasEscapes && !targetModel.hasEscapes ? ['Source no-escape constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.hasNonLexicalLifetime && !targetModel.hasNonLexicalLifetime ? ['Source non-lexical lifetime constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.hasReborrowLifetime && !targetModel.hasReborrowLifetime ? ['Source reborrow lifetime constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.hasHigherRankedLifetime && !targetModel.hasHigherRankedLifetime ? ['Source higher-ranked lifetime constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.hasVarianceLifetime && !targetModel.hasVarianceLifetime ? ['Source lifetime variance constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.hasDropCheckLifetime && !targetModel.hasDropCheckLifetime ? ['Source drop-check lifetime constraints are not represented in the target graph.'] : []),
     ...(input.review ?? [])
   ]);
 }
@@ -249,7 +252,7 @@ function lifetimeConstraintRecord(kind, sourceModel, targetModel, representedKin
     status: representedKinds.includes(kind) ? 'represented' : 'missing',
     source: lifetimeValuesForKind(kind, sourceModel),
     target: lifetimeValuesForKind(kind, targetModel),
-    severity: ['loan-region-binding', 'no-escape', 'unsafe-lifetime-proof'].includes(kind) ? 'error' : 'warning'
+    severity: ['loan-region-binding', 'no-escape', 'unsafe-lifetime-proof', 'reborrow-lifetime', 'higher-ranked-lifetime', 'drop-check-lifetime'].includes(kind) ? 'error' : 'warning'
   };
 }
 
@@ -262,17 +265,18 @@ function lifetimeValuesForKind(kind, model) {
   if (kind === 'outlives-relation') return model.outlivesRelations;
   if (kind === 'no-escape') return model.escapeRecords;
   if (kind === 'unsafe-lifetime-proof') return model.unsafeBoundaryKinds;
+  if (kind === 'non-lexical-lifetime' || kind === 'reborrow-lifetime' || kind === 'higher-ranked-lifetime' || kind === 'variance-lifetime' || kind === 'drop-check-lifetime') return model.combinedKinds.filter((item) => item === kind);
   return model.explicitKinds;
 }
+
+function recordLifetimeKinds(records = []) { return uniqueStrings(records.flatMap((record) => lifetimeKindsForRecord(record))); }
 
 function matchingLifetimeInput(input, route, routeEvidence) {
   const candidates = [input.lifetimeConstraint, input.translationLifetimeConstraint, ...(input.lifetimeConstraints ?? []), ...routeEvidence.map((record) => record?.lifetimeConstraint ?? record?.translationLifetimeConstraint)].filter(Boolean);
   return candidates.find((candidate) => routeMatch(candidate, route));
 }
 
-function resourceGraphsFromImport(imported) {
-  return uniqueGraphs([imported?.resourceGraph, imported?.semanticResourceGraph, imported?.universalAst?.resourceGraph, imported?.universalAst?.semanticResourceGraph, imported?.metadata?.resourceGraph]);
-}
+function resourceGraphsFromImport(imported) { return uniqueGraphs([imported?.resourceGraph, imported?.semanticResourceGraph, imported?.universalAst?.resourceGraph, imported?.universalAst?.semanticResourceGraph, imported?.metadata?.resourceGraph]); }
 
 function resourceGraphsFromEvidence(record, role) {
   const direct = role === 'source' ? [record?.sourceResourceGraph, record?.sourceGraph] : [record?.targetResourceGraph, record?.targetGraph];
@@ -290,13 +294,9 @@ function uniqueGraphs(graphs) {
   });
 }
 
-function firstGraph(...graphs) {
-  return graphs.flat().find((graph) => graph && typeof graph === 'object');
-}
+function firstGraph(...graphs) { return graphs.flat().find((graph) => graph && typeof graph === 'object'); }
 
-function relationKey(record = {}) {
-  return record.id ?? `${record.shorter ?? record.from ?? record.source ?? 'source'}>${record.longer ?? record.to ?? record.target ?? 'target'}`;
-}
+function relationKey(record = {}) { return record.id ?? `${record.shorter ?? record.from ?? record.source ?? 'source'}>${record.longer ?? record.to ?? record.target ?? 'target'}`; }
 
 function routeMatch(candidate, route) {
   return (!candidate.routeId || candidate.routeId === route.id)
@@ -304,9 +304,7 @@ function routeMatch(candidate, route) {
     && (!candidate.target || candidate.target === route.target);
 }
 
-function sameLanguage(source, target) {
-  return String(source ?? '').toLowerCase() === String(target ?? '').toLowerCase();
-}
+function sameLanguage(source, target) { return String(source ?? '').toLowerCase() === String(target ?? '').toLowerCase(); }
 
 function match(filter, values) {
   const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];

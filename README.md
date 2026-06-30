@@ -168,8 +168,12 @@ console.log(resourceGraph.claims.borrowCheckerClaim); // false
 This is the slot for borrow-checker-shaped information in the universal graph:
 resources, owners, shared/mutable/exclusive loans, aliases, moves, drops,
 borrow escapes, lifetime regions, lifetime relations, borrow-scope obligations,
-unsafe boundaries, conflicts, and proof obligations. The record is
-runtime-neutral and does not pretend to be Rust's borrow checker.
+unsafe boundaries, conflicts, and proof obligations. Rust-grade facts such as
+reborrow chains, two-phase borrow reservation/activation, interior mutability,
+pin stability, Send/Sync thread-transfer obligations, lifetime variance,
+drop-check, non-lexical lifetime regions, and higher-ranked lifetime obligations
+are represented as explicit constraints instead of broad semantic claims. The
+record is runtime-neutral and does not pretend to be Rust's borrow checker.
 Rust, C/C++, Swift, GPU/canvas resource lifetimes, DOM mutation, and JS object
 aliasing can all attach evidence to the same shape, while semantic merge still
 fails closed when alias/lifetime proof is missing.
@@ -185,7 +189,9 @@ return ownership transfers, explicit `drop(...)` calls, lexical-drop evidence
 and destructor-drop obligations, returned-borrow escape records, named lifetime/reference/return
 bindings, explicit outlives relations such as `'long: 'short`, lifetime-region
 spans, source-bound borrow-scope obligations for async borrows, branch joins,
-no-escape flow, drop cleanup, and move invalidation, and unsafe-boundary proof
+no-escape flow, drop cleanup, move invalidation, reborrows, two-phase borrows,
+interior mutability, pin projection, Send/Sync transfer, non-lexical lifetimes,
+higher-ranked lifetimes, variance, drop-check, and unsafe-boundary proof
 obligations. Rust public generic, trait-bound, `where` clause, associated-type,
 `impl Trait`, and type-lifetime obligations also become universal type
 constraints for translation admission.
@@ -1078,8 +1084,10 @@ proof.
 
 Resource transfers also embed `ownershipConstraints`, a borrow-checker-shaped
 constraint record for source graphs that expose owners, shared/exclusive loans,
-aliases, moves, drops, lifetimes, raw access, or unsafe boundaries. Constraint
-queries such as `ownershipConstraintMissingKind: "exclusive-borrow"` let a
+aliases, moves, drops, lifetimes, raw access, unsafe boundaries, reborrows,
+two-phase borrows, interior mutability, pin stability, Send/Sync thread
+transfer, variance, or drop-check obligations. Constraint queries such as
+`ownershipConstraintMissingKind: "pin-stability"` let a
 coordinator distinguish "target resource identity is present" from "target
 lowering lost the exclusive-borrow obligation." This is still evidence and loss
 accounting, not a claim that the target language enforces Rust's borrow checker.
@@ -1100,7 +1108,9 @@ borrow-checker proof gaps as one first-class review surface. It still keeps
 Routes can also carry `lifetimeConstraint`, a narrower borrow-region admission
 record for lifetime regions, loan-region bindings, alias-region bindings,
 drop-region bounds, move-region bounds, outlives relations, no-escape
-obligations, and unsafe lifetime proof. Lifetime queries such as
+obligations, non-lexical lifetime regions, reborrow lifetimes, higher-ranked
+lifetime obligations, lifetime variance, drop-check lifetime constraints, and
+unsafe lifetime proof. Lifetime queries such as
 `lifetimeConstraintMissingKind: "loan-region-binding"` let a coordinator
 distinguish "the target has an owner/resource graph" from "the target preserved
 the source borrow region." The record stays conservative: borrow-checker,
@@ -1123,8 +1133,11 @@ admission record that joins ownership, lifetime, and control-flow evidence. It
 models obligations such as loan scope boundaries, exclusive-borrow branch joins,
 borrows across async suspension, drop cleanup through early returns or throws,
 move invalidation across exits, no-escape flow, unsafe-boundary flow proof, and
-concurrency alias proof. Borrow-scope queries such as
-`borrowScopeConstraintMissingKind: "borrow-across-await"` let a coordinator
+concurrency alias proof. It also records Rust-grade scope obligations such as
+reborrow chain boundaries, two-phase borrow activation, interior-mutability
+runtime checks, pin-projection boundaries, closure-capture borrows,
+iterator/yield borrows, and drop-check flow. Borrow-scope queries such as
+`borrowScopeConstraintMissingKind: "two-phase-borrow-activation"` let a coordinator
 distinguish "the target has borrow and control-flow records" from "the target
 proved the borrow survives this control-flow shape." The record remains
 conservative: borrow-checker, flow-sensitive lifetime, semantic-equivalence, and

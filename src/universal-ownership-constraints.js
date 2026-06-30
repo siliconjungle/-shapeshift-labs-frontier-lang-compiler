@@ -78,6 +78,16 @@ function summarize(graph) {
 
 function constraintModel(graph = {}, summary = {}) {
   const loanModes = uniqueStrings((graph.loans ?? []).map((record) => record.mode));
+  const resourceTokens = recordTokenKinds(graph.resources ?? []);
+  const loanTokens = recordTokenKinds(graph.loans ?? []);
+  const aliasTokens = recordTokenKinds(graph.aliases ?? []);
+  const moveTokens = recordTokenKinds(graph.moves ?? []);
+  const dropTokens = recordTokenKinds(graph.drops ?? []);
+  const lifetimeTokens = recordTokenKinds(graph.lifetimeRegions ?? []);
+  const relationTokens = recordTokenKinds(graph.lifetimeRelations ?? graph.outlives ?? []);
+  const scopeTokens = recordTokenKinds(graph.borrowScopes ?? graph.borrowScopeRegions ?? []);
+  const proofTokens = recordTokenKinds(graph.proofObligations ?? []);
+  const allTokens = uniqueStrings([...resourceTokens, ...loanTokens, ...aliasTokens, ...moveTokens, ...dropTokens, ...lifetimeTokens, ...relationTokens, ...scopeTokens, ...proofTokens]);
   return {
     ownerKinds: uniqueStrings((graph.owners ?? []).map((record) => record.ownerKind)),
     loanModes,
@@ -89,12 +99,26 @@ function constraintModel(graph = {}, summary = {}) {
     destructorDropKinds: uniqueStrings((graph.drops ?? []).filter((record) => record.metadata?.dropSemantics).map((record) => record.metadata?.dropSemantics)),
     lifetimeKinds: uniqueStrings((graph.lifetimeRegions ?? []).map((record) => record.lifetimeKind)),
     unsafeBoundaryKinds: uniqueStrings((graph.unsafeBoundaries ?? []).map((record) => record.kind ?? record.metadata?.proofGapCode ?? 'unsafe-boundary')),
+    reborrowKinds: tokenMatches([...loanTokens, ...aliasTokens, ...scopeTokens], /reborrow|borrow-reborrow/),
+    twoPhaseBorrowKinds: tokenMatches([...loanTokens, ...scopeTokens], /two-phase|reservation|activation/),
+    interiorMutabilityKinds: tokenMatches([...resourceTokens, ...aliasTokens, ...scopeTokens], /interior-mutability|unsafecell|refcell|cell|mutex|rwlock|atomic/),
+    pinKinds: tokenMatches([...resourceTokens, ...loanTokens, ...scopeTokens], /\bpin\b|pinned|unpin|pin-projection/),
+    threadTransferKinds: tokenMatches([...resourceTokens, ...moveTokens, ...scopeTokens], /\bsend\b|\bsync\b|thread-transfer|cross-thread|send-sync/),
+    varianceKinds: tokenMatches([...lifetimeTokens, ...relationTokens, ...proofTokens], /variance|covariant|contravariant|invariant/),
+    dropCheckKinds: tokenMatches([...dropTokens, ...lifetimeTokens, ...relationTokens, ...proofTokens], /dropck|drop-check|may_dangle|drop.*outlives/),
     hasSharedBorrow: loanModes.includes('shared'),
     hasExclusiveBorrow: loanModes.includes('mutable') || loanModes.includes('exclusive'),
     hasRawAccess: loanModes.includes('raw') || summary.unsafeBoundaries > 0,
     hasLifetimeBoundLoans: (graph.loans ?? []).some((record) => record.lifetimeRegionId),
     hasCallArgumentTransfer: (graph.moves ?? []).some((record) => String(record.moveKind ?? '').includes('call-argument')),
-    hasReturnTransfer: (graph.moves ?? []).some((record) => String(record.moveKind ?? '').includes('return'))
+    hasReturnTransfer: (graph.moves ?? []).some((record) => String(record.moveKind ?? '').includes('return')),
+    hasReborrow: allTokens.some((token) => /reborrow|borrow-reborrow/.test(token)),
+    hasTwoPhaseBorrow: allTokens.some((token) => /two-phase|reservation|activation/.test(token)),
+    hasInteriorMutability: allTokens.some((token) => /interior-mutability|unsafecell|refcell|cell|mutex|rwlock|atomic/.test(token)),
+    hasPinnedResource: allTokens.some((token) => /\bpin\b|pinned|unpin|pin-projection/.test(token)),
+    hasThreadTransfer: allTokens.some((token) => /\bsend\b|\bsync\b|thread-transfer|cross-thread|send-sync/.test(token)),
+    hasVariance: allTokens.some((token) => /variance|covariant|contravariant|invariant/.test(token)),
+    hasDropCheck: allTokens.some((token) => /dropck|drop-check|may_dangle|drop.*outlives/.test(token))
   };
 }
 
@@ -112,6 +136,13 @@ function requiredConstraintKinds(model, summary) {
     ...(model.destructorDropKinds.length ? ['destructor-drop-semantics'] : []),
     ...(summary.drops ? ['drop-order'] : []),
     ...(summary.lifetimeRegions || model.hasLifetimeBoundLoans ? ['lifetime-bound'] : []),
+    ...(model.hasReborrow ? ['reborrow-chain'] : []),
+    ...(model.hasTwoPhaseBorrow ? ['two-phase-borrow'] : []),
+    ...(model.hasInteriorMutability ? ['interior-mutability'] : []),
+    ...(model.hasPinnedResource ? ['pin-stability'] : []),
+    ...(model.hasThreadTransfer ? ['send-sync-thread-transfer'] : []),
+    ...(model.hasVariance ? ['variance-bound'] : []),
+    ...(model.hasDropCheck ? ['drop-check'] : []),
     ...(model.hasRawAccess ? ['raw-access-boundary'] : []),
     ...(summary.unsafeBoundaries ? ['unsafe-boundary-proof'] : [])
   ]);
@@ -132,6 +163,13 @@ function representedConstraintKinds(requiredKinds, model, summary, options) {
     if (kind === 'destructor-drop-semantics') return model.destructorDropKinds.length > 0;
     if (kind === 'drop-order') return summary.drops > 0;
     if (kind === 'lifetime-bound') return summary.lifetimeRegions > 0 || model.hasLifetimeBoundLoans;
+    if (kind === 'reborrow-chain') return model.hasReborrow;
+    if (kind === 'two-phase-borrow') return model.hasTwoPhaseBorrow;
+    if (kind === 'interior-mutability') return model.hasInteriorMutability;
+    if (kind === 'pin-stability') return model.hasPinnedResource;
+    if (kind === 'send-sync-thread-transfer') return model.hasThreadTransfer;
+    if (kind === 'variance-bound') return model.hasVariance;
+    if (kind === 'drop-check') return model.hasDropCheck;
     if (kind === 'raw-access-boundary') return model.hasRawAccess;
     if (kind === 'unsafe-boundary-proof') return summary.unsafeBoundaries > 0 && summary.unsafeBoundariesWithoutProof === 0;
     return false;
@@ -170,6 +208,13 @@ function constraintReview(missingKinds, sourceModel, targetModel, input) {
     ...(sourceModel.hasReturnTransfer && !targetModel.hasReturnTransfer ? ['Source return ownership transfers are not represented in the target graph.'] : []),
     ...(sourceModel.destructorDropKinds.length && !targetModel.destructorDropKinds.length ? ['Source destructor/drop semantics are not represented in the target graph.'] : []),
     ...(sourceModel.dropKinds.length && !targetModel.dropKinds.length ? ['Source drop-order constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.hasReborrow && !targetModel.hasReborrow ? ['Source reborrow chains are not represented in the target graph.'] : []),
+    ...(sourceModel.hasTwoPhaseBorrow && !targetModel.hasTwoPhaseBorrow ? ['Source two-phase borrow reservation/activation is not represented in the target graph.'] : []),
+    ...(sourceModel.hasInteriorMutability && !targetModel.hasInteriorMutability ? ['Source interior mutability semantics are not represented in the target graph.'] : []),
+    ...(sourceModel.hasPinnedResource && !targetModel.hasPinnedResource ? ['Source pinning/stability constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.hasThreadTransfer && !targetModel.hasThreadTransfer ? ['Source Send/Sync or thread-transfer constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.hasVariance && !targetModel.hasVariance ? ['Source lifetime/type variance constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.hasDropCheck && !targetModel.hasDropCheck ? ['Source drop-check constraints are not represented in the target graph.'] : []),
     ...(input.review ?? [])
   ]);
 }
@@ -199,7 +244,7 @@ function constraintRecord(kind, sourceModel, targetModel, representedKinds) {
     status: representedKinds.includes(kind) ? 'represented' : 'missing',
     source: valuesForConstraint(kind, sourceModel),
     target: valuesForConstraint(kind, targetModel),
-    severity: ['exclusive-borrow', 'unsafe-boundary-proof', 'raw-access-boundary', 'call-argument-ownership-transfer', 'return-ownership-transfer', 'destructor-drop-semantics'].includes(kind) ? 'error' : 'warning'
+    severity: ['exclusive-borrow', 'unsafe-boundary-proof', 'raw-access-boundary', 'call-argument-ownership-transfer', 'return-ownership-transfer', 'destructor-drop-semantics', 'reborrow-chain', 'two-phase-borrow', 'interior-mutability', 'pin-stability', 'send-sync-thread-transfer', 'drop-check'].includes(kind) ? 'error' : 'warning'
   };
 }
 
@@ -212,8 +257,46 @@ function valuesForConstraint(kind, model) {
   if (kind === 'destructor-drop-semantics') return model.destructorDropKinds;
   if (kind === 'drop-order') return model.dropKinds;
   if (kind === 'lifetime-bound') return model.lifetimeKinds;
+  if (kind === 'reborrow-chain') return model.reborrowKinds;
+  if (kind === 'two-phase-borrow') return model.twoPhaseBorrowKinds;
+  if (kind === 'interior-mutability') return model.interiorMutabilityKinds;
+  if (kind === 'pin-stability') return model.pinKinds;
+  if (kind === 'send-sync-thread-transfer') return model.threadTransferKinds;
+  if (kind === 'variance-bound') return model.varianceKinds;
+  if (kind === 'drop-check') return model.dropCheckKinds;
   if (kind.includes('unsafe') || kind.includes('raw')) return model.unsafeBoundaryKinds;
   return model.ownerKinds;
+}
+
+function recordTokenKinds(records = []) {
+  return uniqueStrings(records.flatMap((record) => [
+    record.kind,
+    record.constraintKind,
+    record.scopeKind,
+    record.ownerKind,
+    record.resourceKind,
+    record.aliasKind,
+    record.moveKind,
+    record.dropKind,
+    record.lifetimeKind,
+    record.relationKind,
+    record.mode,
+    record.metadata?.ownershipSemantics,
+    record.metadata?.borrowSemantics,
+    record.metadata?.lifetimeSemantics,
+    record.metadata?.dropSemantics,
+    record.metadata?.aliasSemantics,
+    record.metadata?.resourceSemantics,
+    ...(record.constraintKinds ?? []),
+    ...(record.factKinds ?? []),
+    ...(record.metadata?.factKinds ?? []),
+    ...(record.metadata?.traits ?? []),
+    ...(record.metadata?.autoTraits ?? [])
+  ].filter(Boolean).map((value) => String(value).toLowerCase())));
+}
+
+function tokenMatches(tokens, pattern) {
+  return uniqueStrings(tokens.filter((token) => pattern.test(token)));
 }
 
 function firstGraph(...graphs) {

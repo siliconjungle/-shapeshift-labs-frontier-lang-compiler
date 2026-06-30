@@ -142,7 +142,14 @@ function scopeModel(scopes, ownership = {}, lifetime = {}, controlFlow = {}) {
   const hasAsync = flowKinds.some((kind) => /async|await|generator/.test(kind));
   const hasExit = flowKinds.some((kind) => /return|exit|exception|cancellation|finally|non-local/.test(kind));
   const hasConcurrency = flowKinds.includes('concurrency-order');
-  return { scopeKinds, ownershipKinds, lifetimeKinds, flowKinds, hasBorrow, hasSharedBorrow, hasExclusive, hasExclusiveAliasExclusion, hasExclusiveLoanExclusion, hasMove, hasDrop, hasNoEscape, hasUnsafe, hasBranch, hasAsync, hasExit, hasConcurrency };
+  const hasReborrow = scopeKinds.includes('reborrow-chain-boundary') || ownershipKinds.includes('reborrow-chain') || lifetimeKinds.includes('reborrow-lifetime');
+  const hasTwoPhaseBorrow = scopeKinds.includes('two-phase-borrow-activation') || ownershipKinds.includes('two-phase-borrow');
+  const hasInteriorMutability = scopeKinds.includes('interior-mutability-runtime-check') || ownershipKinds.includes('interior-mutability');
+  const hasPinProjection = scopeKinds.includes('pin-projection-boundary') || ownershipKinds.includes('pin-stability');
+  const hasClosureCapture = scopeKinds.includes('closure-capture-borrow');
+  const hasIteratorYield = scopeKinds.includes('iterator-yield-borrow') || flowKinds.some((kind) => /yield|generator/.test(kind));
+  const hasDropCheck = scopeKinds.includes('drop-check-flow') || ownershipKinds.includes('drop-check') || lifetimeKinds.includes('drop-check-lifetime');
+  return { scopeKinds, ownershipKinds, lifetimeKinds, flowKinds, hasBorrow, hasSharedBorrow, hasExclusive, hasExclusiveAliasExclusion, hasExclusiveLoanExclusion, hasMove, hasDrop, hasNoEscape, hasUnsafe, hasBranch, hasAsync, hasExit, hasConcurrency, hasReborrow, hasTwoPhaseBorrow, hasInteriorMutability, hasPinProjection, hasClosureCapture, hasIteratorYield, hasDropCheck };
 }
 
 function requiredScopeKinds(model) {
@@ -157,6 +164,13 @@ function requiredScopeKinds(model) {
     ...(model.hasMove && model.hasExit ? ['move-invalidates-exit'] : []),
     ...(model.hasNoEscape && (model.hasAsync || model.hasExit) ? ['no-escape-flow'] : []),
     ...(model.hasUnsafe && model.flowKinds.length ? ['unsafe-boundary-flow-proof'] : []),
+    ...(model.hasReborrow ? ['reborrow-chain-boundary'] : []),
+    ...(model.hasTwoPhaseBorrow ? ['two-phase-borrow-activation'] : []),
+    ...(model.hasInteriorMutability ? ['interior-mutability-runtime-check'] : []),
+    ...(model.hasPinProjection ? ['pin-projection-boundary'] : []),
+    ...(model.hasClosureCapture ? ['closure-capture-borrow'] : []),
+    ...(model.hasIteratorYield ? ['iterator-yield-borrow'] : []),
+    ...(model.hasDropCheck && (model.hasExit || model.hasBranch) ? ['drop-check-flow'] : []),
     ...((model.hasExclusive || model.ownershipKinds.includes('alias-control')) && model.hasConcurrency ? ['concurrency-alias-proof'] : [])
   ]);
 }
@@ -186,6 +200,11 @@ function scopeReview(missingKinds, sourceModel, targetModel, input) {
     ...(sourceModel.hasExclusiveLoanExclusion && !targetModel.scopeKinds.includes('exclusive-borrow-loan-exclusion') ? ['Source mutable borrow loan exclusion is not represented in the target graph.'] : []),
     ...(sourceModel.hasBorrow && sourceModel.hasAsync && !targetModel.scopeKinds.includes('borrow-across-await') ? ['Borrow/lifetime obligations cross async or generator suspension without target scope proof.'] : []),
     ...(sourceModel.hasDrop && sourceModel.hasExit && !targetModel.scopeKinds.includes('drop-cleanup-order') ? ['Drop or cleanup order crosses non-linear exit flow without target scope proof.'] : []),
+    ...(sourceModel.hasReborrow && !targetModel.scopeKinds.includes('reborrow-chain-boundary') ? ['Reborrow chains are not bounded by target borrow-scope evidence.'] : []),
+    ...(sourceModel.hasTwoPhaseBorrow && !targetModel.scopeKinds.includes('two-phase-borrow-activation') ? ['Two-phase borrow reservation/activation is not represented in target scope evidence.'] : []),
+    ...(sourceModel.hasInteriorMutability && !targetModel.scopeKinds.includes('interior-mutability-runtime-check') ? ['Interior mutability requires runtime-borrow target evidence.'] : []),
+    ...(sourceModel.hasPinProjection && !targetModel.scopeKinds.includes('pin-projection-boundary') ? ['Pin projection or stability constraints are not represented in target scope evidence.'] : []),
+    ...(sourceModel.hasIteratorYield && !targetModel.scopeKinds.includes('iterator-yield-borrow') ? ['Borrow obligations crossing yield/generator suspension need target scope evidence.'] : []),
     ...(input.review ?? [])
   ]);
 }
@@ -211,7 +230,7 @@ function scopeConstraintRecord(kind, sourceScopes, targetScopes, representedKind
     status: representedKinds.includes(kind) ? 'represented' : 'missing',
     sourceBorrowScopeIds: sourceScopes.filter((record) => record.constraintKinds.includes(kind)).map((record) => record.id),
     targetBorrowScopeIds: targetScopes.filter((record) => record.constraintKinds.includes(kind)).map((record) => record.id),
-    severity: ['exclusive-borrow-alias-exclusion', 'exclusive-borrow-loan-exclusion', 'borrow-across-await', 'drop-cleanup-order', 'move-invalidates-exit', 'unsafe-boundary-flow-proof'].includes(kind) ? 'error' : 'warning'
+    severity: ['exclusive-borrow-alias-exclusion', 'exclusive-borrow-loan-exclusion', 'borrow-across-await', 'drop-cleanup-order', 'move-invalidates-exit', 'unsafe-boundary-flow-proof', 'reborrow-chain-boundary', 'two-phase-borrow-activation', 'interior-mutability-runtime-check', 'pin-projection-boundary', 'iterator-yield-borrow', 'drop-check-flow'].includes(kind) ? 'error' : 'warning'
   };
 }
 
@@ -261,6 +280,13 @@ function scopeKindForToken(token) {
   if (/no-escape|escape-flow|closure-escape|generator-escape/.test(token)) return ['no-escape-flow'];
   if (/unsafe.*flow|raw.*flow|unsafe-boundary/.test(token)) return ['unsafe-boundary-flow-proof'];
   if (/concurrency.*alias|alias.*concurrency|race|atomic|thread/.test(token)) return ['concurrency-alias-proof'];
+  if (/reborrow|reborrow-chain/.test(token)) return ['reborrow-chain-boundary'];
+  if (/two-phase|reservation|activation/.test(token)) return ['two-phase-borrow-activation'];
+  if (/interior-mutability|unsafecell|refcell|cell|runtime-borrow/.test(token)) return ['interior-mutability-runtime-check'];
+  if (/\bpin\b|pinned|pin-projection|unpin/.test(token)) return ['pin-projection-boundary'];
+  if (/closure.*capture|capture.*borrow/.test(token)) return ['closure-capture-borrow'];
+  if (/iterator.*yield|yield.*borrow|generator.*borrow/.test(token)) return ['iterator-yield-borrow'];
+  if (/dropck|drop-check|may_dangle|drop.*outlives/.test(token)) return ['drop-check-flow'];
   if (/loan|borrow|lifetime|region|scope/.test(token)) return ['loan-scope-boundary'];
   return [];
 }
