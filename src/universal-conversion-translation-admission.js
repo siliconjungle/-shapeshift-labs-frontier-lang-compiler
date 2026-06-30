@@ -6,6 +6,7 @@ import { controlFlowConstraintMatches } from './universal-control-flow-constrain
 import { concurrencyModelConstraintMatches } from './universal-concurrency-model-constraints.js';
 import { effectConstraintMatches } from './universal-effect-constraints.js';
 import { errorModelConstraintMatches } from './universal-error-model-constraints.js';
+import { evaluationModelConstraintMatches } from './universal-evaluation-model-constraints.js';
 import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
 import { memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
 import { moduleConstraintMatches } from './universal-module-constraints.js';
@@ -34,8 +35,8 @@ export function createUniversalTranslationAdmission(input = {}) {
   const evidenceIds = uniqueStrings([...(input.mergeRefs?.evidenceIds ?? []), ...(input.routeEvidence ?? []).map((record) => record?.id)]);
   const proofEvidenceIds = uniqueStrings([...(input.mergeRefs?.proofIds ?? []), ...proofEvidenceIdsFor(input.routeEvidence)]);
   const missingEvidence = translationMissingEvidence(input, missingConstructKinds);
-  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.lifetimeConstraint?.blockers ?? []), ...(input.controlFlowConstraint?.blockers ?? []), ...(input.borrowScopeConstraint?.blockers ?? []), ...(input.borrowCheckerConstraint?.blockers ?? []), ...(input.effectConstraint?.blockers ?? []), ...(input.concurrencyModelConstraint?.blockers ?? []), ...(input.errorModelConstraint?.blockers ?? []), ...(input.memoryModelConstraint?.blockers ?? []), ...(input.moduleConstraint?.blockers ?? []), ...(input.typeConstraint?.blockers ?? [])]);
-  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.lifetimeConstraint?.review ?? []), ...(input.controlFlowConstraint?.review ?? []), ...(input.borrowScopeConstraint?.review ?? []), ...(input.borrowCheckerConstraint?.review ?? []), ...(input.effectConstraint?.review ?? []), ...(input.concurrencyModelConstraint?.review ?? []), ...(input.errorModelConstraint?.review ?? []), ...(input.memoryModelConstraint?.review ?? []), ...(input.moduleConstraint?.review ?? []), ...(input.typeConstraint?.review ?? [])]);
+  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.lifetimeConstraint?.blockers ?? []), ...(input.controlFlowConstraint?.blockers ?? []), ...(input.borrowScopeConstraint?.blockers ?? []), ...(input.borrowCheckerConstraint?.blockers ?? []), ...(input.effectConstraint?.blockers ?? []), ...(input.concurrencyModelConstraint?.blockers ?? []), ...(input.errorModelConstraint?.blockers ?? []), ...(input.evaluationModelConstraint?.blockers ?? []), ...(input.memoryModelConstraint?.blockers ?? []), ...(input.moduleConstraint?.blockers ?? []), ...(input.typeConstraint?.blockers ?? [])]);
+  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.lifetimeConstraint?.review ?? []), ...(input.controlFlowConstraint?.review ?? []), ...(input.borrowScopeConstraint?.review ?? []), ...(input.borrowCheckerConstraint?.review ?? []), ...(input.effectConstraint?.review ?? []), ...(input.concurrencyModelConstraint?.review ?? []), ...(input.errorModelConstraint?.review ?? []), ...(input.evaluationModelConstraint?.review ?? []), ...(input.memoryModelConstraint?.review ?? []), ...(input.moduleConstraint?.review ?? []), ...(input.typeConstraint?.review ?? [])]);
   const status = translationAdmissionStatus(input, missingEvidence, blockers);
   return {
     status,
@@ -84,6 +85,10 @@ export function createUniversalTranslationAdmission(input = {}) {
     errorModelConstraintStatus: input.errorModelConstraint?.status,
     errorModelConstraintAction: input.errorModelConstraint?.action,
     errorModelConstraintMissingEvidence: input.errorModelConstraint?.missingEvidence ?? [],
+    evaluationModelConstraint: constraintSummary(input.evaluationModelConstraint),
+    evaluationModelConstraintStatus: input.evaluationModelConstraint?.status,
+    evaluationModelConstraintAction: input.evaluationModelConstraint?.action,
+    evaluationModelConstraintMissingEvidence: input.evaluationModelConstraint?.missingEvidence ?? [],
     memoryModelConstraint: constraintSummary(input.memoryModelConstraint),
     memoryModelConstraintStatus: input.memoryModelConstraint?.status,
     memoryModelConstraintAction: input.memoryModelConstraint?.action,
@@ -117,6 +122,7 @@ export function conversionRouteMatchesTranslationAdmissionQuery(route, query = {
     && effectConstraintMatches(route?.effectConstraint ?? admission.effectConstraint, query)
     && concurrencyModelConstraintMatches(route?.concurrencyModelConstraint ?? admission.concurrencyModelConstraint, query)
     && errorModelConstraintMatches(route?.errorModelConstraint ?? admission.errorModelConstraint, query)
+    && evaluationModelConstraintMatches(route?.evaluationModelConstraint ?? admission.evaluationModelConstraint, query)
     && memoryModelConstraintMatches(route?.memoryModelConstraint ?? admission.memoryModelConstraint, query)
     && moduleConstraintMatches(route?.moduleConstraint ?? admission.moduleConstraint, query)
     && typeConstraintMatches(route?.typeConstraint ?? admission.typeConstraint, query)
@@ -163,6 +169,7 @@ function translationMissingEvidence(input, missingConstructKinds) {
     ...(input.effectConstraint?.missingEvidence ?? []),
     ...(input.concurrencyModelConstraint?.missingEvidence ?? []),
     ...(input.errorModelConstraint?.missingEvidence ?? []),
+    ...(input.evaluationModelConstraint?.missingEvidence ?? []),
     ...(input.memoryModelConstraint?.missingEvidence ?? []),
     ...(input.moduleConstraint?.missingEvidence ?? []),
     ...(input.typeConstraint?.missingEvidence ?? [])

@@ -68,6 +68,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     concurrencyModelConstraintAction: route.concurrencyModelConstraint?.action,
     errorModelConstraintStatus: route.errorModelConstraint?.status,
     errorModelConstraintAction: route.errorModelConstraint?.action,
+    evaluationModelConstraintStatus: route.evaluationModelConstraint?.status,
+    evaluationModelConstraintAction: route.evaluationModelConstraint?.action,
     memoryModelConstraintStatus: route.memoryModelConstraint?.status,
     memoryModelConstraintAction: route.memoryModelConstraint?.action,
     moduleConstraintStatus: route.moduleConstraint?.status,
@@ -192,6 +194,15 @@ export function createUniversalConversionAdmissionRecord(input) {
       missingKinds: route.errorModelConstraint?.missingKinds ?? [],
       missingEvidence: route.errorModelConstraint?.missingEvidence ?? []
     },
+    evaluationModelConstraint: {
+      id: route.evaluationModelConstraint?.id,
+      status: route.evaluationModelConstraint?.status,
+      action: route.evaluationModelConstraint?.action,
+      requiredKinds: route.evaluationModelConstraint?.requiredKinds ?? [],
+      representedKinds: route.evaluationModelConstraint?.representedKinds ?? [],
+      missingKinds: route.evaluationModelConstraint?.missingKinds ?? [],
+      missingEvidence: route.evaluationModelConstraint?.missingEvidence ?? []
+    },
     memoryModelConstraint: {
       id: route.memoryModelConstraint?.id,
       status: route.memoryModelConstraint?.status,
@@ -259,6 +270,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       effectConstraint: route.effectConstraint,
       concurrencyModelConstraint: route.concurrencyModelConstraint,
       errorModelConstraint: route.errorModelConstraint,
+      evaluationModelConstraint: route.evaluationModelConstraint,
       memoryModelConstraint: route.memoryModelConstraint,
       moduleConstraint: route.moduleConstraint,
       typeConstraint: route.typeConstraint,

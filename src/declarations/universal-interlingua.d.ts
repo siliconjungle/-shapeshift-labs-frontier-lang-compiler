@@ -35,6 +35,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'borrow-checker'
   | 'concurrency-model'
   | 'error-model'
+  | 'evaluation-model'
   | 'memory-model'
   | 'effect'
   | 'module'

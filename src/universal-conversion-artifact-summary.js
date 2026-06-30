@@ -60,6 +60,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const effectConstraints = routeArtifacts.map((artifact) => artifact.effectConstraint ?? artifact.metadata?.effectConstraint ?? artifact.admissionRecord?.metadata?.effectConstraint ?? {});
   const concurrencyModelConstraints = routeArtifacts.map((artifact) => artifact.concurrencyModelConstraint ?? artifact.metadata?.concurrencyModelConstraint ?? artifact.admissionRecord?.metadata?.concurrencyModelConstraint ?? {});
   const errorModelConstraints = routeArtifacts.map((artifact) => artifact.errorModelConstraint ?? artifact.metadata?.errorModelConstraint ?? artifact.admissionRecord?.metadata?.errorModelConstraint ?? {});
+  const evaluationModelConstraints = routeArtifacts.map((artifact) => artifact.evaluationModelConstraint ?? artifact.metadata?.evaluationModelConstraint ?? artifact.admissionRecord?.metadata?.evaluationModelConstraint ?? {});
   const memoryModelConstraints = routeArtifacts.map((artifact) => artifact.memoryModelConstraint ?? artifact.metadata?.memoryModelConstraint ?? artifact.admissionRecord?.metadata?.memoryModelConstraint ?? {});
   const moduleConstraints = routeArtifacts.map((artifact) => artifact.moduleConstraint ?? artifact.metadata?.moduleConstraint ?? artifact.admissionRecord?.metadata?.moduleConstraint ?? {});
   const typeConstraints = routeArtifacts.map((artifact) => artifact.typeConstraint ?? artifact.metadata?.typeConstraint ?? artifact.admissionRecord?.metadata?.typeConstraint ?? {});
@@ -94,6 +95,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     effectConstraint: compactEffectConstraintCounts(effectConstraints),
     concurrencyModelConstraint: compactConstraintCounts(concurrencyModelConstraints),
     errorModelConstraint: compactConstraintCounts(errorModelConstraints),
+    evaluationModelConstraint: compactConstraintCounts(evaluationModelConstraints),
     memoryModelConstraint: compactConstraintCounts(memoryModelConstraints),
     moduleConstraint: compactConstraintCounts(moduleConstraints),
     typeConstraint: compactConstraintCounts(typeConstraints),

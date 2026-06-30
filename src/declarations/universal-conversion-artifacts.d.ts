@@ -16,7 +16,7 @@ import type { UniversalBorrowScopeConstraintEvidence } from './universal-borrow-
 import type { UniversalBorrowCheckerConstraintEvidence } from './universal-borrow-checker-constraints.js';
 import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
 import type { UniversalConcurrencyModelConstraintEvidence } from './universal-concurrency-model-constraints.js';
-import type { UniversalErrorModelConstraintEvidence } from './universal-error-model-constraints.js';
+import type { UniversalErrorModelConstraintEvidence } from './universal-error-model-constraints.js'; import type { UniversalEvaluationModelConstraintEvidence } from './universal-evaluation-model-constraints.js';
 import type { UniversalMemoryModelConstraintEvidence } from './universal-memory-model-constraints.js';
 import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js';
 import type { UniversalTypeConstraintEvidence } from './universal-type-constraints.js';
@@ -94,10 +94,9 @@ export interface UniversalConversionAdmissionRecord {
   readonly borrowCheckerConstraintAction?: string;
   readonly effectConstraintStatus?: string;
   readonly effectConstraintAction?: string;
-  readonly concurrencyModelConstraintStatus?: string;
-  readonly concurrencyModelConstraintAction?: string;
-  readonly errorModelConstraintStatus?: string;
-  readonly errorModelConstraintAction?: string;
+  readonly concurrencyModelConstraintStatus?: string; readonly concurrencyModelConstraintAction?: string;
+  readonly errorModelConstraintStatus?: string; readonly errorModelConstraintAction?: string;
+  readonly evaluationModelConstraintStatus?: string; readonly evaluationModelConstraintAction?: string;
   readonly memoryModelConstraintStatus?: string;
   readonly memoryModelConstraintAction?: string;
   readonly moduleConstraintStatus?: string;
@@ -158,14 +157,14 @@ export interface UniversalConversionAdmissionRecord {
       readonly missingEvidence: readonly string[];
     };
   };
-  readonly effectConstraint: UniversalConversionConstraintSummary;
-  readonly concurrencyModelConstraint: UniversalConversionConstraintSummary;
+  readonly effectConstraint: UniversalConversionConstraintSummary; readonly concurrencyModelConstraint: UniversalConversionConstraintSummary;
   readonly lifetimeConstraint: UniversalConversionConstraintSummary;
   readonly controlFlowConstraint: UniversalConversionConstraintSummary;
   readonly borrowScopeConstraint: UniversalConversionConstraintSummary;
   readonly borrowCheckerConstraint: UniversalConversionConstraintSummary;
   readonly moduleConstraint: UniversalConversionConstraintSummary;
   readonly errorModelConstraint: UniversalConversionConstraintSummary;
+  readonly evaluationModelConstraint: UniversalConversionConstraintSummary;
   readonly memoryModelConstraint: UniversalConversionConstraintSummary;
   readonly typeConstraint: UniversalConversionConstraintSummary;
   readonly ownership: {
@@ -221,6 +220,7 @@ export interface UniversalConversionRouteArtifact {
   readonly effectConstraint?: UniversalEffectConstraintEvidence;
   readonly concurrencyModelConstraint?: UniversalConcurrencyModelConstraintEvidence;
   readonly errorModelConstraint?: UniversalErrorModelConstraintEvidence;
+  readonly evaluationModelConstraint?: UniversalEvaluationModelConstraintEvidence;
   readonly memoryModelConstraint?: UniversalMemoryModelConstraintEvidence;
   readonly moduleConstraint?: UniversalModuleConstraintEvidence;
   readonly typeConstraint?: UniversalTypeConstraintEvidence;

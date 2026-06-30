@@ -58,6 +58,7 @@ export { createUniversalControlFlowConstraintEvidence, controlFlowConstraintMatc
 export { createUniversalConcurrencyModelConstraintEvidence, concurrencyModelConstraintMatches, UniversalConcurrencyModelConstraintStatuses } from './universal-concurrency-model-constraints.js';
 export { createUniversalEffectConstraintEvidence, effectConstraintMatches, UniversalEffectConstraintStatuses } from './universal-effect-constraints.js';
 export { createUniversalErrorModelConstraintEvidence, errorModelConstraintMatches, UniversalErrorModelConstraintStatuses } from './universal-error-model-constraints.js';
+export { createUniversalEvaluationModelConstraintEvidence, evaluationModelConstraintMatches, UniversalEvaluationModelConstraintStatuses } from './universal-evaluation-model-constraints.js';
 export { createUniversalLifetimeConstraintEvidence, lifetimeConstraintMatches, UniversalLifetimeConstraintStatuses } from './universal-lifetime-constraints.js';
 export { createUniversalMemoryModelConstraintEvidence, memoryModelConstraintMatches, UniversalMemoryModelConstraintStatuses } from './universal-memory-model-constraints.js';
 export { createUniversalModuleConstraintEvidence, moduleConstraintMatches, UniversalModuleConstraintStatuses } from './universal-module-constraints.js';
