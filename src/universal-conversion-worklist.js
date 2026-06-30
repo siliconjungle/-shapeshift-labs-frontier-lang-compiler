@@ -35,6 +35,22 @@ export function createUniversalConversionWorklist(planOrInput = {}, options = {}
   };
 }
 
+export function queryUniversalConversionWorklist(worklistOrInput = {}, query = {}, context = {}) {
+  const worklist = worklistOrInput?.kind === 'frontier.lang.universalConversionWorklist'
+    ? worklistOrInput
+    : createUniversalConversionWorklist(worklistOrInput, query, context);
+  const items = sortWorkItems((worklist.items ?? []).filter((item) => workItemMatchesQuery(item, query)));
+  return {
+    kind: 'frontier.lang.universalConversionWorklistQuery',
+    version: 1,
+    found: items.length > 0,
+    items,
+    bestItem: items[0],
+    summary: worklistSummary(items),
+    reasons: items.length ? [] : [`No conversion work item matched kind=${query.kind ?? '*'} target=${query.target ?? '*'} evidence=${query.evidenceKey ?? '*'}.`]
+  };
+}
+
 function workItemsForRoutes(routes, options) {
   const items = new Map();
   for (const route of routes) {
@@ -162,6 +178,31 @@ function routeMatchesWorklistOptions(route, options) {
   return (!source || route.languageIds.includes(source))
     && (!target || route.target === target)
     && match(options.routeId, [route.id]);
+}
+
+function workItemMatchesQuery(item, query) {
+  const source = normalizeNativeLanguageId(query.sourceLanguage ?? query.language);
+  const target = normalizeProjectionMatrixTargets(query.target ? [query.target] : [])[0];
+  return match(query.itemId ?? query.id, [item.id])
+    && match(query.kind, [item.kind])
+    && match(query.action, [item.action])
+    && match(query.priority, [item.priority])
+    && match(query.routeId, item.routeIds)
+    && (!source || item.languageIds.includes(source) || item.sourceLanguages.map(normalizeNativeLanguageId).includes(source))
+    && match(query.languageId, item.languageIds)
+    && (!target || item.targets.includes(target))
+    && match(query.mode, item.modes)
+    && match(query.readiness, item.readinesses)
+    && match(query.admissionAction, item.admissionActions)
+    && match(query.routeAction, item.routeActions)
+    && match(query.evidenceKey, item.evidenceKeys)
+    && match(query.missingEvidence, item.missingEvidence)
+    && match(query.blocker, item.blockers)
+    && match(query.reviewReason, item.review)
+    && match(query.task, item.tasks)
+    && match(query.runtimeAdapterRequirementId, item.runtimeAdapterRequirementIds)
+    && match(query.dialectRecordId, item.dialectRecordIds)
+    && match(query.targetAdapterId, item.targetAdapterIds);
 }
 
 function sortWorkItems(items) {

@@ -4,6 +4,7 @@ import {
   createUniversalConversionPlan,
   createUniversalConversionWorklist,
   queryUniversalConversionPlan,
+  queryUniversalConversionWorklist,
   UniversalConversionWorkItemKinds
 } from './compiler-api.mjs';
 
@@ -24,6 +25,14 @@ assert.equal(adapterGapWorklist.summary.proofEvidenceGaps >= 1, true);
 assert.equal(adapterGapWorklist.items.some((item) => item.kind === 'add-target-adapter' && item.targets.includes('rust')), true);
 assert.equal(adapterGapWorklist.items.some((item) => item.kind === 'collect-translation-proof'), true);
 assert.equal(adapterGapWorklist.items.every((item) => item.autoMergeClaim === false && item.semanticEquivalenceClaim === false), true);
+const proofQuery = queryUniversalConversionWorklist(adapterGapWorklist, {
+  kind: 'collect-translation-proof',
+  evidenceKey: 'translation-proof-or-replay'
+});
+assert.equal(proofQuery.kind, 'frontier.lang.universalConversionWorklistQuery');
+assert.equal(proofQuery.found, true);
+assert.equal(proofQuery.bestItem.kind, 'collect-translation-proof');
+assert.equal(proofQuery.summary.proofEvidenceGaps >= 1, true);
 
 const filteredWorklist = createUniversalConversionWorklist(adapterGapPlan, {
   sourceLanguage: 'javascript',
@@ -52,6 +61,16 @@ const runtimeWorklist = createUniversalConversionWorklist(runtimePlan, { routeId
 assert.equal(runtimeWorklist.summary.runtimeAdapterGaps >= 1, true);
 assert.equal(runtimeWorklist.items.some((item) => item.kind === 'prove-runtime-adapter'
   && item.runtimeAdapterRequirementIds.includes(runtimeRoute.runtimeAdapterRequirements[0].id)), true);
+const runtimeQuery = queryUniversalConversionWorklist(runtimePlan, {
+  kind: 'prove-runtime-adapter',
+  runtimeAdapterRequirementId: runtimeRoute.runtimeAdapterRequirements[0].id
+});
+assert.equal(runtimeQuery.found, true);
+assert.equal(runtimeQuery.bestItem.kind, 'prove-runtime-adapter');
+assert.equal(runtimeQuery.bestItem.routeIds.includes(runtimeRoute.id), true);
+const missQuery = queryUniversalConversionWorklist(adapterGapWorklist, { target: 'python' });
+assert.equal(missQuery.found, false);
+assert.equal(missQuery.reasons[0].includes('target=python'), true);
 assert.equal(UniversalConversionWorkItemKinds.includes('prove-runtime-adapter'), true);
 
 function readyCapabilityMatrix() {

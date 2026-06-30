@@ -114,6 +114,7 @@ export {
   queryNativeParserFeatureMatrix,
   queryUniversalCapabilityMatrix,
   queryProjectionReadinessMatrix,
+  queryUniversalConversionWorklist,
   querySemanticHistoryRecordOverlaps,
   querySemanticLineageEvents,
   resolveSemanticLineage,

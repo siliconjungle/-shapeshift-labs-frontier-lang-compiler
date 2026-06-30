@@ -111,6 +111,7 @@ for (const requiredExport of [
   'querySemanticMergeConflictClasses',
   'queryUniversalConversionArtifacts',
   'queryUniversalConversionPlan',
+  'queryUniversalConversionWorklist',
   'readSemanticSliceJson',
   'representationCoverageMatches',
   'semanticMergeConflictRiskScore',

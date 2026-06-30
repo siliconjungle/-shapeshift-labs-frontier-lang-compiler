@@ -121,7 +121,7 @@ type ExpectedPublicRuntimeExport =
   | 'querySemanticMergeCandidateAdmissionOverlaps'
   | 'querySemanticPatchBundleRecords' | 'querySemanticPatchBundleOverlaps' | 'querySvgReferenceGraph'
   | 'querySemanticMergeConflictClasses'
-  | 'queryUniversalConversionArtifacts' | 'queryUniversalConversionPlan' | 'queryUniversalRuntimeCapabilityMatrix' | 'UniversalConversionWorkItemKinds'
+  | 'queryUniversalConversionArtifacts' | 'queryUniversalConversionPlan' | 'queryUniversalConversionWorklist' | 'queryUniversalRuntimeCapabilityMatrix' | 'UniversalConversionWorkItemKinds'
   | 'resolveSemanticLineage'
   | 'resolveSemanticLineageBatch'
   | 'resolveSemanticHistoryRecordLineage'

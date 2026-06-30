@@ -62,6 +62,26 @@ export interface UniversalConversionWorklistOptions {
   readonly includeReviewItems?: boolean;
 }
 
+export interface UniversalConversionWorklistQuery extends UniversalConversionWorklistOptions {
+  readonly id?: string | readonly string[];
+  readonly itemId?: string | readonly string[];
+  readonly action?: UniversalConversionWorkItemAction | readonly UniversalConversionWorkItemAction[];
+  readonly priority?: UniversalConversionPriority | readonly UniversalConversionPriority[];
+  readonly languageId?: string | readonly string[];
+  readonly mode?: UniversalConversionRouteMode | readonly UniversalConversionRouteMode[];
+  readonly readiness?: string | readonly string[];
+  readonly admissionAction?: UniversalConversionAdmissionAction | readonly UniversalConversionAdmissionAction[];
+  readonly routeAction?: UniversalConversionRouteAction | readonly UniversalConversionRouteAction[];
+  readonly evidenceKey?: string | readonly string[];
+  readonly missingEvidence?: string | readonly string[];
+  readonly blocker?: string | readonly string[];
+  readonly reviewReason?: string | readonly string[];
+  readonly task?: string | readonly string[];
+  readonly runtimeAdapterRequirementId?: string | readonly string[];
+  readonly dialectRecordId?: string | readonly string[];
+  readonly targetAdapterId?: string | readonly string[];
+}
+
 export interface UniversalConversionWorklist {
   readonly kind: 'frontier.lang.universalConversionWorklist';
   readonly version: 1;
@@ -94,8 +114,22 @@ export interface UniversalConversionWorklist {
   };
 }
 
+export interface UniversalConversionWorklistQueryResult {
+  readonly kind: 'frontier.lang.universalConversionWorklistQuery';
+  readonly version: 1;
+  readonly found: boolean;
+  readonly items: readonly UniversalConversionWorkItem[];
+  readonly bestItem?: UniversalConversionWorkItem;
+  readonly summary: UniversalConversionWorklist['summary'];
+  readonly reasons: readonly string[];
+}
+
 export declare const UniversalConversionWorkItemKinds: readonly UniversalConversionWorkItemKind[];
 export declare function createUniversalConversionWorklist(
   planOrOptions?: UniversalConversionPlan | UniversalConversionPlanOptions,
   options?: UniversalConversionWorklistOptions
 ): UniversalConversionWorklist;
+export declare function queryUniversalConversionWorklist(
+  worklistOrOptions?: UniversalConversionWorklist | UniversalConversionPlan | UniversalConversionPlanOptions,
+  query?: UniversalConversionWorklistQuery
+): UniversalConversionWorklistQueryResult;
