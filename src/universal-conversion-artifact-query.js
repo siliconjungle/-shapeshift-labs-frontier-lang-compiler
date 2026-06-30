@@ -132,6 +132,8 @@ export function artifactIndex(a) {
     interlinguaConstraintMissingKinds: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintMissingKinds ?? [])),
     interlinguaConstraintMissingEvidence: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintMissingEvidence ?? [])),
     interlinguaConstraintSourceIds: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintSourceIds ?? [])),
+    interlinguaConstraintObligationKinds: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintObligationKinds ?? [])),
+    interlinguaConstraintObligationStatuses: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintObligationStatuses ?? [])),
     transformIdentityHashes: uniqueStrings(a.flatMap(tHashes))
   };
 }

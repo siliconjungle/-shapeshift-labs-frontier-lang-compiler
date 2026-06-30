@@ -117,6 +117,9 @@ export function createUniversalInterlinguaRecord(input = {}) {
       constraintRepresentedKinds: constraints.representedKinds,
       constraintMissingKinds: constraints.missingKinds,
       constraintMissingEvidence: constraints.missingEvidence,
+      constraintObligationKinds: constraints.obligationKinds,
+      constraintObligationStatuses: constraints.obligationStatuses,
+      constraintObligationMissingEvidence: constraints.obligationMissingEvidence,
       loweringDisposition: disposition,
       missingEvidence,
       proofEvidenceIds: translationAdmission.proofEvidenceIds ?? mergeRefs.proofIds ?? [],
@@ -141,6 +144,9 @@ export function interlinguaRecordMatches(record, query = {}) {
     && match(query.interlinguaConstraintRepresentedKind, record?.query?.constraintRepresentedKinds)
     && match(query.interlinguaConstraintMissingKind, record?.query?.constraintMissingKinds)
     && match(query.interlinguaConstraintMissingEvidence, record?.query?.constraintMissingEvidence)
+    && match(query.interlinguaConstraintObligationKind, record?.query?.constraintObligationKinds)
+    && match(query.interlinguaConstraintObligationStatus, record?.query?.constraintObligationStatuses)
+    && match(query.interlinguaConstraintObligationMissingEvidence, record?.query?.constraintObligationMissingEvidence)
     && match(query.interlinguaLoweringDisposition, [record?.query?.loweringDisposition])
     && match(query.interlinguaMissingEvidence, record?.query?.missingEvidence)
     && match(query.interlinguaProofEvidenceId, record?.query?.proofEvidenceIds)
@@ -158,9 +164,12 @@ export function interlinguaConstraintSummary(route = {}) {
     constraintEdge('module', route.moduleConstraint, 'source-import', route),
     constraintEdge('type', route.typeConstraint, 'semantic-symbol', route)
   ].filter(Boolean);
+  const obligations = edges.flatMap((edge) => edge.obligations);
   return {
     edges,
     edgeCount: edges.length,
+    obligations,
+    obligationCount: obligations.length,
     families: uniqueStrings(edges.map((edge) => edge.family)),
     statuses: uniqueStrings(edges.map((edge) => edge.status)),
     actions: uniqueStrings(edges.map((edge) => edge.action)),
@@ -169,6 +178,9 @@ export function interlinguaConstraintSummary(route = {}) {
     representedKinds: uniqueStrings(edges.flatMap((edge) => edge.representedKinds)),
     missingKinds: uniqueStrings(edges.flatMap((edge) => edge.missingKinds)),
     missingEvidence: uniqueStrings(edges.flatMap((edge) => edge.missingEvidence)),
+    obligationKinds: uniqueStrings(obligations.map((obligation) => obligation.kind)),
+    obligationStatuses: uniqueStrings(obligations.map((obligation) => obligation.status)),
+    obligationMissingEvidence: uniqueStrings(obligations.flatMap((obligation) => obligation.missingEvidence)),
     blockers: uniqueStrings(edges.flatMap((edge) => edge.blockers)),
     review: uniqueStrings(edges.flatMap((edge) => edge.review))
   };
@@ -178,8 +190,10 @@ function constraintEdge(family, evidence, layerKind, route) {
   if (!evidence?.id && !evidence?.status && !(evidence?.missingKinds ?? []).length) return undefined;
   const missingKinds = evidence.missingKinds ?? [];
   const missingEvidence = evidence.missingEvidence ?? [];
+  const id = `interlingua_constraint_${idFragment([route.id, family, evidence.id, evidence.status, missingKinds.join('_')].join('_'))}`;
+  const obligations = constraintObligations(family, evidence, id);
   return {
-    id: `interlingua_constraint_${idFragment([route.id, family, evidence.id, evidence.status, missingKinds.join('_')].join('_'))}`,
+    id,
     family,
     layerKind,
     sourceId: evidence.id,
@@ -189,12 +203,55 @@ function constraintEdge(family, evidence, layerKind, route) {
     representedKinds: evidence.representedKinds ?? [],
     missingKinds,
     missingEvidence,
+    obligations,
     blockers: evidence.blockers ?? [],
     review: evidence.review ?? [],
     severity: constraintSeverity(evidence.status, missingKinds),
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   };
+}
+
+function constraintObligations(family, evidence, edgeId) {
+  const records = constraintRecords(evidence);
+  const kinds = uniqueStrings([
+    ...records.map((record) => record.kind),
+    ...(evidence.requiredKinds ?? []),
+    ...(evidence.representedKinds ?? []),
+    ...(evidence.missingKinds ?? [])
+  ]);
+  return kinds.map((kind) => {
+    const record = records.find((entry) => entry.kind === kind) ?? {};
+    const status = record.status ?? ((evidence.missingKinds ?? []).includes(kind) ? 'missing' : (evidence.representedKinds ?? []).includes(kind) ? 'represented' : 'required');
+    return {
+      id: `interlingua_obligation_${idFragment([edgeId, kind, status].join('_'))}`,
+      edgeId,
+      family,
+      kind,
+      status,
+      sourceId: evidence.id,
+      sourceNodeIds: nodeIds(record, 'source'),
+      targetNodeIds: nodeIds(record, 'target'),
+      evidenceIds: evidence.evidenceIds ?? [],
+      missingEvidence: status === 'missing' ? missingEvidenceForKind(kind, evidence.missingEvidence ?? []) : [],
+      severity: record.severity ?? constraintSeverity(status, status === 'missing' ? [kind] : []),
+      autoMergeClaim: false,
+      semanticEquivalenceClaim: false
+    };
+  });
+}
+
+function constraintRecords(evidence = {}) {
+  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.effectConstraints ?? evidence.moduleConstraints ?? evidence.typeConstraints ?? [];
+}
+
+function nodeIds(record = {}, prefix) {
+  return uniqueStrings(Object.entries(record).filter(([key]) => key.startsWith(prefix) && key.endsWith('Ids')).flatMap(([, value]) => value ?? []));
+}
+
+function missingEvidenceForKind(kind, missingEvidence) {
+  const scoped = (missingEvidence ?? []).filter((entry) => String(entry).includes(kind));
+  return scoped.length ? scoped : missingEvidence ?? [];
 }
 
 function constraintSeverity(status, missingKinds) {

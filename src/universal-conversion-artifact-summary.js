@@ -165,6 +165,8 @@ function compactInterlinguaCounts(records) {
     constraintStatuses: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'statuses'))),
     constraintMissingKinds: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'missingKinds'))),
     constraintMissingEvidence: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'missingEvidence'))),
+    constraintObligationKinds: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'obligationKinds'))),
+    constraintObligationStatuses: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'obligationStatuses'))),
     missingEvidence: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'missingEvidence'))),
     proofEvidenceIds: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'proofEvidenceIds')))
   };
@@ -178,6 +180,12 @@ function compactOperationInterlinguaCounts(records) {
     missingLayerKinds: countBy(records.flatMap((record) => record.missingLayerKinds ?? [])),
     reviewLayerKinds: countBy(records.flatMap((record) => record.reviewLayerKinds ?? [])),
     blockedLayerKinds: countBy(records.flatMap((record) => record.blockedLayerKinds ?? [])),
+    constraintFamilies: countBy(records.flatMap((record) => record.constraintFamilies ?? [])),
+    constraintStatuses: countBy(records.flatMap((record) => record.constraintStatuses ?? [])),
+    constraintMissingKinds: countBy(records.flatMap((record) => record.constraintMissingKinds ?? [])),
+    constraintMissingEvidence: countBy(records.flatMap((record) => record.constraintMissingEvidence ?? [])),
+    constraintObligationKinds: countBy(records.flatMap((record) => record.constraintObligationKinds ?? [])),
+    constraintObligationStatuses: countBy(records.flatMap((record) => record.constraintObligationStatuses ?? [])),
     missingEvidence: countBy(records.flatMap((record) => record.missingEvidence ?? [])),
     proofEvidenceIds: countBy(records.flatMap((record) => record.proofEvidenceIds ?? []))
   };

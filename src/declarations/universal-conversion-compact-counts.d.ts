@@ -54,6 +54,8 @@ export interface UniversalConversionInterlinguaCompactCounts {
   readonly constraintStatuses: Readonly<Record<string, number>>;
   readonly constraintMissingKinds: Readonly<Record<string, number>>;
   readonly constraintMissingEvidence: Readonly<Record<string, number>>;
+  readonly constraintObligationKinds: Readonly<Record<string, number>>;
+  readonly constraintObligationStatuses: Readonly<Record<string, number>>;
   readonly missingEvidence: Readonly<Record<string, number>>;
   readonly proofEvidenceIds: Readonly<Record<string, number>>;
 }

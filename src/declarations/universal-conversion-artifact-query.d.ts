@@ -152,6 +152,8 @@ export interface UniversalConversionArtifactIndex {
   readonly interlinguaConstraintMissingKinds: readonly string[];
   readonly interlinguaConstraintMissingEvidence: readonly string[];
   readonly interlinguaConstraintSourceIds: readonly string[];
+  readonly interlinguaConstraintObligationKinds: readonly string[];
+  readonly interlinguaConstraintObligationStatuses: readonly string[];
   readonly transformIdentityHashes: readonly string[];
 }
 

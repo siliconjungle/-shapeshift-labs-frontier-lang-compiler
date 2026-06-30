@@ -112,13 +112,22 @@ const constraintRoute = queryUniversalConversionPlan(constraintPlan, {
 assert.equal(constraintRoute.interlingua.constraints.families.includes('borrow-scope'), true);
 assert.equal(constraintRoute.interlingua.constraints.missingKinds.includes('borrow-across-await'), true);
 assert.equal(constraintRoute.interlingua.constraints.edges.some((edge) => edge.family === 'borrow-scope' && edge.semanticEquivalenceClaim === false), true);
+const borrowAwaitObligation = constraintRoute.interlingua.constraints.obligations.find((obligation) => obligation.kind === 'borrow-across-await');
+assert.equal(borrowAwaitObligation.status, 'missing');
+assert.equal(borrowAwaitObligation.family, 'borrow-scope');
+assert.equal(borrowAwaitObligation.missingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 const constraintArtifacts = createUniversalConversionArtifacts(constraintPlan, { routeId: constraintRoute.id, generatedAt: 800 });
 assert.equal(constraintArtifacts.index.interlinguaConstraintFamilies.includes('borrow-scope'), true);
 assert.equal(constraintArtifacts.index.interlinguaConstraintMissingKinds.includes('borrow-across-await'), true);
+assert.equal(constraintArtifacts.index.interlinguaConstraintObligationKinds.includes('borrow-across-await'), true);
+assert.equal(constraintArtifacts.index.interlinguaConstraintObligationStatuses.includes('missing'), true);
 assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintFamilies['borrow-scope'], 1);
+assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintObligationKinds['borrow-across-await'], 1);
 assert.equal(queryUniversalConversionArtifacts(constraintArtifacts, {
   interlinguaConstraintFamily: 'borrow-scope',
-  interlinguaConstraintMissingKind: 'borrow-across-await'
+  interlinguaConstraintMissingKind: 'borrow-across-await',
+  interlinguaConstraintObligationKind: 'borrow-across-await',
+  interlinguaConstraintObligationStatus: 'missing'
 })[0].routeId, constraintRoute.id);
 
 const artifacts = createUniversalConversionArtifacts(adapterPlan, { routeId: adapterRoute.id, generatedAt: 797 });

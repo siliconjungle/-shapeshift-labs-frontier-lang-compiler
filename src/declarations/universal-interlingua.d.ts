@@ -61,8 +61,25 @@ export interface UniversalInterlinguaConstraintEdge {
   readonly representedKinds: readonly string[];
   readonly missingKinds: readonly string[];
   readonly missingEvidence: readonly string[];
+  readonly obligations: readonly UniversalInterlinguaConstraintObligation[];
   readonly blockers: readonly string[];
   readonly review: readonly string[];
+  readonly severity: 'info' | 'warning' | 'error' | string;
+  readonly autoMergeClaim: false;
+  readonly semanticEquivalenceClaim: false;
+}
+
+export interface UniversalInterlinguaConstraintObligation {
+  readonly id: string;
+  readonly edgeId: string;
+  readonly family: UniversalInterlinguaConstraintEdgeKind;
+  readonly kind: string;
+  readonly status: 'represented' | 'missing' | 'required' | string;
+  readonly sourceId?: string;
+  readonly sourceNodeIds: readonly string[];
+  readonly targetNodeIds: readonly string[];
+  readonly evidenceIds: readonly string[];
+  readonly missingEvidence: readonly string[];
   readonly severity: 'info' | 'warning' | 'error' | string;
   readonly autoMergeClaim: false;
   readonly semanticEquivalenceClaim: false;
@@ -71,6 +88,8 @@ export interface UniversalInterlinguaConstraintEdge {
 export interface UniversalInterlinguaConstraintSummary {
   readonly edges: readonly UniversalInterlinguaConstraintEdge[];
   readonly edgeCount: number;
+  readonly obligations: readonly UniversalInterlinguaConstraintObligation[];
+  readonly obligationCount: number;
   readonly families: readonly UniversalInterlinguaConstraintEdgeKind[];
   readonly statuses: readonly string[];
   readonly actions: readonly string[];
@@ -79,6 +98,9 @@ export interface UniversalInterlinguaConstraintSummary {
   readonly representedKinds: readonly string[];
   readonly missingKinds: readonly string[];
   readonly missingEvidence: readonly string[];
+  readonly obligationKinds: readonly string[];
+  readonly obligationStatuses: readonly string[];
+  readonly obligationMissingEvidence: readonly string[];
   readonly blockers: readonly string[];
   readonly review: readonly string[];
 }
@@ -150,6 +172,9 @@ export interface UniversalInterlinguaRecord {
     readonly constraintRepresentedKinds: readonly string[];
     readonly constraintMissingKinds: readonly string[];
     readonly constraintMissingEvidence: readonly string[];
+    readonly constraintObligationKinds: readonly string[];
+    readonly constraintObligationStatuses: readonly string[];
+    readonly constraintObligationMissingEvidence: readonly string[];
     readonly loweringDisposition: UniversalInterlinguaLoweringDisposition;
     readonly missingEvidence: readonly string[];
     readonly proofEvidenceIds: readonly string[];
@@ -173,6 +198,9 @@ export interface UniversalInterlinguaQuery {
   readonly interlinguaConstraintRepresentedKind?: string | readonly string[];
   readonly interlinguaConstraintMissingKind?: string | readonly string[];
   readonly interlinguaConstraintMissingEvidence?: string | readonly string[];
+  readonly interlinguaConstraintObligationKind?: string | readonly string[];
+  readonly interlinguaConstraintObligationStatus?: string | readonly string[];
+  readonly interlinguaConstraintObligationMissingEvidence?: string | readonly string[];
   readonly interlinguaLoweringDisposition?: UniversalInterlinguaLoweringDisposition | readonly UniversalInterlinguaLoweringDisposition[];
   readonly interlinguaMissingEvidence?: string | readonly string[];
   readonly interlinguaProofEvidenceId?: string | readonly string[];
