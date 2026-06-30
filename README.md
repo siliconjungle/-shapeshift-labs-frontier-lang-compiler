@@ -792,6 +792,7 @@ import {
   createNativeParserAstFormatMatrix,
   createProjectionTargetLossMatrix,
   createUniversalCapabilityMatrix,
+  createUniversalBorrowCheckerConstraintEvidence,
   createUniversalBorrowScopeConstraintEvidence,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
@@ -875,6 +876,15 @@ const resourceTransfer = createUniversalResourceTransferEvidence({
 console.log(resourceTransfer.status); // "preserved", "degraded", "needs-evidence", etc.
 console.log(resourceTransfer.missingEvidence); // resource semantics that need proof before admission
 console.log(resourceTransfer.ownershipConstraints.missingKinds); // borrow/lifetime/drop constraints lost by target lowering
+
+const borrowCheckerConstraints = createUniversalBorrowCheckerConstraintEvidence({
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  sourceGraph: rustResourceGraph,
+  targetGraph: typescriptResourceGraph
+});
+console.log(borrowCheckerConstraints.status); // "preserved", "degraded", "needs-evidence", etc.
+console.log(borrowCheckerConstraints.missingKinds); // ownership/lifetime/borrow-scope obligations not represented by the target
 
 const lifetimeConstraints = createUniversalLifetimeConstraintEvidence({
   sourceLanguage: 'rust',
@@ -1047,6 +1057,16 @@ queries such as `ownershipConstraintMissingKind: "exclusive-borrow"` let a
 coordinator distinguish "target resource identity is present" from "target
 lowering lost the exclusive-borrow obligation." This is still evidence and loss
 accounting, not a claim that the target language enforces Rust's borrow checker.
+
+Routes can also carry `borrowCheckerConstraint`, a composed evidence record that
+rolls resource-transfer, ownership, lifetime, and borrow-scope constraints into
+one queryable answer. It is the route-level question "did this conversion
+preserve the borrow-checker-shaped semantics we could observe?" Queries such as
+`borrowCheckerConstraintMissingKind: "ownership:shared-borrow"` or
+`borrowCheckerConstraintStatus: "needs-evidence"` route lost ownership/lifetime
+proof directly to workers without requiring humans to inspect each lower-level
+record. It still keeps `borrowCheckerClaim`, `semanticEquivalenceClaim`, and
+`autoMergeClaim` false.
 
 Routes can also carry `lifetimeConstraint`, a narrower borrow-region admission
 record for lifetime regions, loan-region bindings, alias-region bindings,

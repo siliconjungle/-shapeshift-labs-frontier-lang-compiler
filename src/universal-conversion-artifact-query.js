@@ -2,6 +2,7 @@ import { uniqueStrings } from './native-import-utils.js';
 import { artifactSemanticEditIndex } from './universal-conversion-artifact-semantic-edit.js';
 import { interlinguaRecordMatches } from './universal-interlingua-record.js';
 import { resourceTransferMatches } from './universal-resource-transfer.js';
+import { borrowCheckerConstraintMatches } from './universal-borrow-checker-constraints.js';
 import { borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
 import { controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
 import { effectConstraintMatches } from './universal-effect-constraints.js';
@@ -23,6 +24,7 @@ export function artifactIndex(a) {
   const lConstraints = a.map(life);
   const cConstraints = a.map(ctrl);
   const bConstraints = a.map(bscope);
+  const bc = a.map(bchecker);
   const eConstraints = a.map(effect);
   const mConstraints = a.map(mods);
   const tConstraints = a.map(types);
@@ -115,6 +117,7 @@ export function artifactIndex(a) {
     ...constraintIndex('lifetimeConstraint', lConstraints),
     ...constraintIndex('controlFlowConstraint', cConstraints),
     ...constraintIndex('borrowScopeConstraint', bConstraints),
+    ...constraintIndex('borrowCheckerConstraint', bc),
     ...constraintIndex('effectConstraint', eConstraints),
     ...constraintIndex('moduleConstraint', mConstraints),
     ...constraintIndex('typeConstraint', tConstraints),
@@ -231,6 +234,7 @@ function matchesArtifact(record, query) {
     && lifetimeConstraintMatches(life(record), query)
     && controlFlowConstraintMatches(ctrl(record), query)
     && borrowScopeConstraintMatches(bscope(record), query)
+    && borrowCheckerConstraintMatches(bchecker(record), query)
     && effectConstraintMatches(effect(record), query)
     && moduleConstraintMatches(mods(record), query)
     && typeConstraintMatches(types(record), query)
@@ -289,6 +293,7 @@ function ctrl(record) {
 function bscope(record) {
   return record.borrowScopeConstraint ?? record.metadata?.borrowScopeConstraint ?? record.translationAdmission?.borrowScopeConstraint ?? record.admissionRecord?.metadata?.borrowScopeConstraint ?? {};
 }
+function bchecker(record) { return record.borrowCheckerConstraint ?? record.metadata?.borrowCheckerConstraint ?? record.admissionRecord?.metadata?.borrowCheckerConstraint ?? {}; }
 function effect(record) {
   return record.effectConstraint ?? record.metadata?.effectConstraint ?? record.translationAdmission?.effectConstraint ?? record.admissionRecord?.metadata?.effectConstraint ?? {};
 }

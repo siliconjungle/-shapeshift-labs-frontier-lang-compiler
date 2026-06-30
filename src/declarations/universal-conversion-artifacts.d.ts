@@ -13,6 +13,7 @@ import type { UniversalResourceTransferEvidence } from './universal-resource-tra
 import type { UniversalLifetimeConstraintEvidence } from './universal-lifetime-constraints.js';
 import type { UniversalControlFlowConstraintEvidence } from './universal-control-flow-constraints.js';
 import type { UniversalBorrowScopeConstraintEvidence } from './universal-borrow-scope-constraints.js';
+import type { UniversalBorrowCheckerConstraintEvidence } from './universal-borrow-checker-constraints.js';
 import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
 import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js';
 import type { UniversalTypeConstraintEvidence } from './universal-type-constraints.js';
@@ -86,6 +87,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly controlFlowConstraintAction?: string;
   readonly borrowScopeConstraintStatus?: string;
   readonly borrowScopeConstraintAction?: string;
+  readonly borrowCheckerConstraintStatus?: string;
+  readonly borrowCheckerConstraintAction?: string;
   readonly effectConstraintStatus?: string;
   readonly effectConstraintAction?: string;
   readonly moduleConstraintStatus?: string;
@@ -150,6 +153,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly lifetimeConstraint: UniversalConversionConstraintSummary;
   readonly controlFlowConstraint: UniversalConversionConstraintSummary;
   readonly borrowScopeConstraint: UniversalConversionConstraintSummary;
+  readonly borrowCheckerConstraint: UniversalConversionConstraintSummary;
   readonly moduleConstraint: UniversalConversionConstraintSummary;
   readonly typeConstraint: UniversalConversionConstraintSummary;
   readonly ownership: {
@@ -201,6 +205,7 @@ export interface UniversalConversionRouteArtifact {
   readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence;
   readonly controlFlowConstraint?: UniversalControlFlowConstraintEvidence;
   readonly borrowScopeConstraint?: UniversalBorrowScopeConstraintEvidence;
+  readonly borrowCheckerConstraint?: UniversalBorrowCheckerConstraintEvidence;
   readonly effectConstraint?: UniversalEffectConstraintEvidence;
   readonly moduleConstraint?: UniversalModuleConstraintEvidence;
   readonly typeConstraint?: UniversalTypeConstraintEvidence;

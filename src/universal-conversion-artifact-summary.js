@@ -56,6 +56,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const lifetimeConstraints = routeArtifacts.map((artifact) => artifact.lifetimeConstraint ?? artifact.metadata?.lifetimeConstraint ?? artifact.admissionRecord?.metadata?.lifetimeConstraint ?? {});
   const controlFlowConstraints = routeArtifacts.map((artifact) => artifact.controlFlowConstraint ?? artifact.metadata?.controlFlowConstraint ?? artifact.admissionRecord?.metadata?.controlFlowConstraint ?? {});
   const borrowScopeConstraints = routeArtifacts.map((artifact) => artifact.borrowScopeConstraint ?? artifact.metadata?.borrowScopeConstraint ?? artifact.admissionRecord?.metadata?.borrowScopeConstraint ?? {});
+  const borrowCheckerConstraints = routeArtifacts.map((artifact) => artifact.borrowCheckerConstraint ?? artifact.metadata?.borrowCheckerConstraint ?? artifact.admissionRecord?.metadata?.borrowCheckerConstraint ?? {});
   const effectConstraints = routeArtifacts.map((artifact) => artifact.effectConstraint ?? artifact.metadata?.effectConstraint ?? artifact.admissionRecord?.metadata?.effectConstraint ?? {});
   const moduleConstraints = routeArtifacts.map((artifact) => artifact.moduleConstraint ?? artifact.metadata?.moduleConstraint ?? artifact.admissionRecord?.metadata?.moduleConstraint ?? {});
   const typeConstraints = routeArtifacts.map((artifact) => artifact.typeConstraint ?? artifact.metadata?.typeConstraint ?? artifact.admissionRecord?.metadata?.typeConstraint ?? {});
@@ -86,6 +87,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     lifetimeConstraint: compactConstraintCounts(lifetimeConstraints),
     controlFlowConstraint: compactConstraintCounts(controlFlowConstraints),
     borrowScopeConstraint: compactConstraintCounts(borrowScopeConstraints),
+    borrowCheckerConstraint: compactConstraintCounts(borrowCheckerConstraints),
     effectConstraint: compactEffectConstraintCounts(effectConstraints),
     moduleConstraint: compactConstraintCounts(moduleConstraints),
     typeConstraint: compactConstraintCounts(typeConstraints),
