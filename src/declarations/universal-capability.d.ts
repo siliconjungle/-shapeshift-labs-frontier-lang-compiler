@@ -50,6 +50,33 @@ import type { NativeTargetProjectionAdapterCoverageInput, NativeTargetProjection
 import type { NativeProjectSourceInput, ImportNativeProjectOptions, NativeProjectImportResult, NativeSourceProjectionMode, ProjectNativeImportToSourceOptions, NativeSourceProjectionDeclaration, NativeSourceProjectionResult, NativeSourceCompileOutputMode, CompileNativeSourceOptions, NativeSourceCompileResult } from './native-project.js';
 import type { NativeImportRoundtripReadinessStatus, NativeImportRoundtripReadinessOptions, NativeImportRoundtripReadinessClassification } from './roundtrip.js';
 import type { UniversalRepresentationCoverage } from './universal-representation-coverage.js';
+import type { LanguageAdapterPackageContract } from './language-adapter-package-contracts.js';
+
+export interface UniversalCapabilityPackageContractCoverage {
+  readonly total: number;
+  readonly readiness: SemanticMergeReadiness;
+  readonly missingContract: boolean;
+  readonly releaseReady: boolean;
+  readonly releaseReadyCount: number;
+  readonly plannedOnly: boolean;
+  readonly packageNames: readonly string[];
+  readonly packageVersions: readonly string[];
+  readonly packageClasses: readonly string[];
+  readonly byPackageClass: Readonly<Record<string, number>>;
+  readonly byReleaseReadiness: Readonly<Record<string, number>>;
+  readonly sourceParsers: readonly string[];
+  readonly sourceFormats: readonly string[];
+  readonly semanticIndexFormats: readonly string[];
+  readonly requiredEvidenceKeys: readonly string[];
+  readonly hostEvidenceRequired: boolean;
+  readonly sourceImporterOnly: boolean;
+  readonly targetProjection: {
+    readonly supported: boolean;
+    readonly packages: readonly string[];
+    readonly targets: readonly string[];
+    readonly missing: boolean;
+  };
+}
 
 export interface UniversalCapabilityLanguageRow {
   readonly language: FrontierSourceLanguage | string;
@@ -83,6 +110,7 @@ export interface UniversalCapabilityLanguageRow {
     readonly missingTargets: readonly (FrontierCompileTarget | string)[];
     readonly unsupportedTargets: readonly (FrontierCompileTarget | string)[];
   };
+  readonly packageContract: UniversalCapabilityPackageContractCoverage;
   readonly evidence: {
     readonly parserAdapters: number;
     readonly adapterCoverageSummaries: number;
@@ -115,6 +143,13 @@ export interface UniversalCapabilityMatrix {
     readonly nativeSourceStubs: number;
     readonly representationConstructs: number;
     readonly representationMissing: number;
+    readonly packageContractRows: number;
+    readonly packageContracts: number;
+    readonly packageReleaseReady: number;
+    readonly packagePlannedOnly: number;
+    readonly packageMissingContracts: number;
+    readonly packageSourceImporterOnly: number;
+    readonly packageTargetProjectionSupported: number;
     readonly blockers: number;
     readonly reviewReasons: number;
     readonly readyLanguages: number;
@@ -125,6 +160,8 @@ export interface UniversalCapabilityMatrix {
     readonly byImportReadiness: Readonly<Record<SemanticMergeReadiness, number>>;
     readonly byParserReadiness: Readonly<Record<SemanticMergeReadiness, number>>;
     readonly byProjectionReadiness: Readonly<Record<SemanticMergeReadiness, number>>;
+    readonly byPackageClass: Readonly<Record<string, number>>;
+    readonly byPackageReleaseReadiness: Readonly<Record<string, number>>;
   };
   readonly matrices: {
     readonly importCoverage: NativeImportCoverageMatrix;
@@ -132,11 +169,23 @@ export interface UniversalCapabilityMatrix {
     readonly parserFeatures: NativeParserFeatureMatrix;
     readonly projectionTargets: ProjectionTargetLossMatrix;
     readonly projectionReadiness: ProjectionReadinessMatrix;
+    readonly packageContracts: {
+      readonly kind: 'frontier.lang.universalCapabilityPackageContractMatrix';
+      readonly version: 1;
+      readonly packages: number;
+      readonly releaseReady: number;
+      readonly plannedOnly: number;
+      readonly languages: readonly string[];
+      readonly projectionTargets: readonly string[];
+      readonly byPackageClass: Readonly<Record<string, number>>;
+      readonly byReleaseReadiness: Readonly<Record<string, number>>;
+    };
   };
   readonly metadata: {
     readonly requiredFeatures: readonly NativeParserFeatureCategory[];
     readonly minimumReadiness: SemanticMergeReadiness;
     readonly compileTargets: readonly (FrontierCompileTarget | string)[];
+    readonly languageDenominator: readonly string[];
     readonly note: string;
   };
 }
@@ -149,4 +198,7 @@ export interface UniversalCapabilityMatrixOptions extends
   readonly targetAdapters?: readonly NativeTargetProjectionAdapter[];
   readonly targets?: readonly (FrontierCompileTarget | string)[];
   readonly projectionFeatureCategories?: readonly (NativeParserFeatureCategory | string)[];
+  readonly packageContracts?: readonly LanguageAdapterPackageContract[];
+  readonly languageDenominator?: readonly (FrontierSourceLanguage | string)[];
+  readonly requiredLanguages?: readonly (FrontierSourceLanguage | string)[];
 }

@@ -12,13 +12,21 @@ import { createNativeParserFeatureMatrix } from './native-parser-feature-matrix.
 import { createProjectionReadinessMatrix } from './projection-readiness-matrix.js';
 import { createProjectionTargetLossMatrix } from './projection-target-loss-matrix.js';
 import { createUniversalRepresentationCoverage } from './universal-representation-coverage.js';
+import {
+  DefaultUniversalCapabilityPackageContracts,
+  packageContractCoverageForLanguage,
+  universalCapabilityLanguages,
+  universalCapabilityPackageContractSummary
+} from './universal-capability-package-contracts.js';
+import { universalCapabilityMatrixSummary } from './universal-capability-summary.js';
 
 export function createUniversalCapabilityMatrix(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
   const imports = input.imports ?? [];
   const adapters = input.adapters ?? [];
   const targetAdapters = input.targetAdapters ?? [];
-  const languages = input.languages ?? NativeImportLanguageProfiles;
+  const packageContracts = input.packageContracts ?? DefaultUniversalCapabilityPackageContracts;
+  const languages = universalCapabilityLanguages(input.languages ?? NativeImportLanguageProfiles, packageContracts, input.languageDenominator ?? input.requiredLanguages);
   const targets = input.targets ?? context.compileTargets ?? [];
   const importCoverage = createNativeImportCoverageMatrix({ languages, imports, adapters, generatedAt }, context);
   const parserFormats = createNativeParserAstFormatMatrix({
@@ -51,7 +59,8 @@ export function createUniversalCapabilityMatrix(input = {}, context = {}) {
   }, context);
   const rows = importCoverage.languages.map((entry) => universalCapabilityLanguageRow(entry, {
     parserFeatures,
-    projectionTargets
+    projectionTargets,
+    packageContracts
   }));
   return {
     kind: 'frontier.lang.universalCapabilityMatrix',
@@ -64,12 +73,14 @@ export function createUniversalCapabilityMatrix(input = {}, context = {}) {
       parserFormats,
       parserFeatures,
       projectionTargets,
-      projectionReadiness
+      projectionReadiness,
+      packageContracts: universalCapabilityPackageContractSummary(packageContracts)
     },
     metadata: {
       requiredFeatures: parserFeatures.metadata.requiredFeatures,
       minimumReadiness: parserFeatures.metadata.minimumReadiness,
       compileTargets: projectionTargets.metadata.compileTargets,
+      languageDenominator: rows.map((row) => row.language),
       note: 'Universal capability coverage composes import, parser, source-preservation, and projection evidence. It identifies gaps; it is not a proof that every language feature is losslessly portable.'
     }
   };
@@ -80,6 +91,7 @@ function universalCapabilityLanguageRow(importCoverage, context) {
   const parserRows = (context.parserFeatures.parsers ?? []).filter((row) => universalLanguageIds(row).some((id) => languageIds.includes(id)));
   const parserLanguage = (context.parserFeatures.languages ?? []).find((row) => universalLanguageIds(row).some((id) => languageIds.includes(id)));
   const projection = (context.projectionTargets.languages ?? []).find((row) => universalLanguageIds(row).some((id) => languageIds.includes(id)));
+  const packageContract = packageContractCoverageForLanguage(languageIds, context.packageContracts);
   const parserReadiness = parserRows.length
     ? parserRows.reduce((current, row) => maxSemanticMergeReadiness(current, row.merge?.readiness ?? row.imports?.readiness ?? 'blocked'), 'ready')
     : 'blocked';
@@ -90,7 +102,7 @@ function universalCapabilityLanguageRow(importCoverage, context) {
     ? projection.targets.reduce((current, entry) => maxSemanticMergeReadiness(current, entry.readiness ?? 'blocked'), 'ready')
     : 'blocked';
   const projectionReadiness = maxSemanticMergeReadiness(sourceProjectionReadiness, targetReadiness);
-  const readiness = maxSemanticMergeReadiness(importCoverage.imports.readiness, maxSemanticMergeReadiness(parserReadiness, projectionReadiness));
+  const readiness = maxSemanticMergeReadiness(importCoverage.imports.readiness, maxSemanticMergeReadiness(parserReadiness, maxSemanticMergeReadiness(projectionReadiness, packageContract.readiness)));
   const parserBlockingFeatures = uniqueStrings(parserRows.flatMap((row) => row.merge?.blockingFeatures ?? []));
   const parserReviewFeatures = uniqueStrings(parserRows.flatMap((row) => row.merge?.reviewFeatures ?? []));
   const missingTargets = (projection?.targets ?? []).filter((entry) => entry.lossClass === 'missingAdapter').map((entry) => entry.target);
@@ -102,6 +114,7 @@ function universalCapabilityLanguageRow(importCoverage, context) {
     parserBlockingFeatures,
     projection,
     missingTargets,
+    packageContract,
     readiness
   });
   const review = universalCapabilityReviewReasons({
@@ -109,6 +122,7 @@ function universalCapabilityLanguageRow(importCoverage, context) {
     parserRows,
     parserReviewFeatures,
     unsupportedTargets,
+    packageContract,
     readiness
   });
   const representation = createUniversalRepresentationCoverage({
@@ -165,6 +179,7 @@ function universalCapabilityLanguageRow(importCoverage, context) {
       missingTargets,
       unsupportedTargets
     },
+    packageContract,
     evidence: {
       parserAdapters: importCoverage.parserAdapters.length,
       adapterCoverageSummaries: importCoverage.adapterCoverage.total,
@@ -198,6 +213,9 @@ function universalCapabilityBlockers(input) {
   for (const target of input.missingTargets) {
     blockers.push(`Missing native-to-target projection adapter for ${target}.`);
   }
+  if (input.packageContract.missingContract) {
+    blockers.push('No language adapter package contract matched this language.');
+  }
   if (input.readiness === 'blocked' && blockers.length === 0) {
     blockers.push('Combined universal capability readiness is blocked.');
   }
@@ -218,81 +236,20 @@ function universalCapabilityReviewReasons(input) {
   for (const target of input.unsupportedTargets) {
     review.push(`Target projection has unsupported feature losses for ${target}.`);
   }
+  if (input.packageContract.plannedOnly) {
+    review.push('Language package contract is planned-only and not release-ready.');
+  } else if (input.packageContract.total && !input.packageContract.releaseReady) {
+    review.push('Language package contracts exist but none are release-ready.');
+  }
+  if (input.packageContract.sourceImporterOnly) {
+    review.push('Language package contract is source-importer-only; package-owned target projection is missing.');
+  }
   if (input.readiness === 'needs-review') {
     review.push('Combined universal capability readiness requires review.');
   } else if (input.readiness === 'ready-with-losses') {
     review.push('Combined universal capability readiness is ready with disclosed losses.');
   }
   return uniqueStrings(review);
-}
-
-function universalCapabilityMatrixSummary(rows) {
-  const byReadiness = {};
-  const byImportReadiness = {};
-  const byParserReadiness = {};
-  const byProjectionReadiness = {};
-  let imports = 0;
-  let symbols = 0;
-  let sourceMapMappings = 0;
-  let losses = 0;
-  let parserRows = 0;
-  let parserMergeReady = 0;
-  let targetEntries = 0;
-  let missingAdapters = 0;
-  let unsupportedTargetFeatures = 0;
-  let exactSourceProjection = 0;
-  let nativeSourceStubs = 0;
-  let representationConstructs = 0;
-  let representationMissing = 0;
-  let blockers = 0;
-  let reviewReasons = 0;
-  for (const row of rows) {
-    byReadiness[row.readiness] = (byReadiness[row.readiness] ?? 0) + 1;
-    byImportReadiness[row.imports.readiness] = (byImportReadiness[row.imports.readiness] ?? 0) + 1;
-    byParserReadiness[row.parser.readiness] = (byParserReadiness[row.parser.readiness] ?? 0) + 1;
-    byProjectionReadiness[row.projection.readiness] = (byProjectionReadiness[row.projection.readiness] ?? 0) + 1;
-    imports += row.imports.total;
-    symbols += row.imports.symbols;
-    sourceMapMappings += row.imports.sourceMapMappings;
-    losses += row.imports.losses;
-    parserRows += row.parser.rows;
-    parserMergeReady += row.parser.mergeReadyParsers.length;
-    targetEntries += row.projection.targets.length;
-    missingAdapters += row.projection.missingTargets.length;
-    unsupportedTargetFeatures += row.projection.unsupportedTargets.length;
-    exactSourceProjection += row.projection.summary.byLossClass?.exactSourceProjection ?? 0;
-    nativeSourceStubs += row.projection.summary.byLossClass?.nativeSourceStubs ?? 0;
-    representationConstructs += row.representation?.summary?.representedConstructs ?? 0;
-    representationMissing += row.representation?.summary?.missing ?? 0;
-    blockers += row.blockers.length;
-    reviewReasons += row.review.length;
-  }
-  return {
-    languages: rows.length,
-    imports,
-    symbols,
-    sourceMapMappings,
-    losses,
-    parserRows,
-    parserMergeReady,
-    targetEntries,
-    missingAdapters,
-    unsupportedTargetFeatures,
-    exactSourceProjection,
-    nativeSourceStubs,
-    representationConstructs,
-    representationMissing,
-    blockers,
-    reviewReasons,
-    readyLanguages: rows.filter((row) => row.readiness === 'ready').length,
-    readyWithLossesLanguages: rows.filter((row) => row.readiness === 'ready-with-losses').length,
-    reviewLanguages: rows.filter((row) => row.readiness === 'needs-review').length,
-    blockedLanguages: rows.filter((row) => row.readiness === 'blocked').length,
-    byReadiness,
-    byImportReadiness,
-    byParserReadiness,
-    byProjectionReadiness
-  };
 }
 
 function universalLanguageIds(entry) {
