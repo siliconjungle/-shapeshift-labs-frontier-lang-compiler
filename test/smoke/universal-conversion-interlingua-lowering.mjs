@@ -97,6 +97,8 @@ assert.equal(blockedRoute.interlingua.claims.blocked, true);
 const artifacts = createUniversalConversionArtifacts(adapterPlan, { routeId: adapterRoute.id, generatedAt: 797 });
 assert.equal(artifacts.index.interlinguaLoweringDispositions.includes('target-adapter'), true);
 assert.equal(artifacts.index.interlinguaRepresentedLayerKinds.includes('proof-evidence'), true);
+assert.equal(artifacts.index.semanticOperationInterlinguaLoweringDispositions.includes('target-adapter'), true);
+assert.equal(artifacts.index.semanticOperationInterlinguaProofEvidenceIds.includes('evidence_adapter_translation_proof'), true);
 assert.equal(artifacts.index.lossClasses.includes('targetAdapterProjection'), true);
 assert.equal(artifacts.index.adapterIds.includes('fixture-js-rust'), true);
 const queriedArtifact = queryUniversalConversionArtifacts(artifacts, {
@@ -104,9 +106,13 @@ const queriedArtifact = queryUniversalConversionArtifacts(artifacts, {
   adapterId: 'fixture-js-rust',
   interlinguaLoweringDisposition: 'target-adapter',
   interlinguaRepresentedLayerKind: 'target-adapter',
-  interlinguaProofEvidenceId: 'evidence_adapter_translation_proof'
+  interlinguaProofEvidenceId: 'evidence_adapter_translation_proof',
+  semanticOperationInterlinguaLoweringDisposition: 'target-adapter',
+  semanticOperationInterlinguaProofEvidenceId: 'evidence_adapter_translation_proof'
 })[0];
 assert.equal(queriedArtifact.interlingua.lowering.disposition, 'target-adapter');
+assert.equal(queriedArtifact.semanticOperations.operations[0].metadata.interlingua.loweringDisposition, 'target-adapter');
+assert.equal(queriedArtifact.semanticOperations.operations[0].metadata.interlingua.proofEvidenceIds.includes('evidence_adapter_translation_proof'), true);
 assert.equal(queriedArtifact.admissionRecord.interlingua.loweringDisposition, 'target-adapter');
 assert.equal(queriedArtifact.admissionRecord.metadata.interlingua.query.loweringDisposition, 'target-adapter');
 

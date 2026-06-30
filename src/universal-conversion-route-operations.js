@@ -54,10 +54,35 @@ function routeOperationMetadata(route, source, sourceMapLinks) {
       missing: route.representation?.missing ?? [],
       blockers: route.representation?.blockers ?? []
     },
+    translationAdmission: route.translationAdmission,
+    interlingua: routeOperationInterlinguaMetadata(route),
     targetLossKinds: route.evidence?.targetLossKinds ?? [],
     missingEvidence: route.missingEvidence ?? [],
     blockers: route.blockers ?? [],
     review: route.review ?? [],
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false
+  };
+}
+
+function routeOperationInterlinguaMetadata(route) {
+  const record = route.interlingua ?? {};
+  const lowering = record.lowering ?? {};
+  const query = record.query ?? {};
+  const layers = record.layers ?? {};
+  return {
+    id: record.id,
+    routeId: record.routeId ?? route.id,
+    layerKinds: query.layerKinds ?? layers.kinds ?? [],
+    representedLayerKinds: query.representedLayerKinds ?? layers.representedKinds ?? [],
+    missingLayerKinds: query.missingLayerKinds ?? layers.missingKinds ?? [],
+    reviewLayerKinds: query.reviewLayerKinds ?? layers.reviewKinds ?? [],
+    blockedLayerKinds: query.blockedLayerKinds ?? layers.blockedKinds ?? [],
+    loweringDisposition: lowering.disposition ?? query.loweringDisposition,
+    adapterId: lowering.adapterId ?? query.targetAdapterId,
+    missingEvidence: lowering.missingEvidence ?? query.missingEvidence ?? [],
+    lossIds: lowering.lossIds ?? [],
+    proofEvidenceIds: lowering.proofEvidenceIds ?? query.proofEvidenceIds ?? [],
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   };

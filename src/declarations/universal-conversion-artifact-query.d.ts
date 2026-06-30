@@ -46,6 +46,10 @@ export interface UniversalConversionArtifactIndex {
   readonly proofIds: readonly string[];
   readonly semanticOperationIds: readonly string[];
   readonly semanticOperationKinds: readonly string[];
+  readonly semanticOperationInterlinguaRecordIds: readonly string[];
+  readonly semanticOperationInterlinguaLoweringDispositions: readonly string[];
+  readonly semanticOperationInterlinguaMissingEvidence: readonly string[];
+  readonly semanticOperationInterlinguaProofEvidenceIds: readonly string[];
   readonly semanticEditStatuses: readonly string[];
   readonly semanticEditScriptIds: readonly string[];
   readonly semanticEditProjectionIds: readonly string[];
@@ -139,6 +143,10 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly proofId?: string | readonly string[];
   readonly semanticOperationId?: string | readonly string[];
   readonly semanticOperationKind?: string | readonly string[];
+  readonly semanticOperationInterlinguaRecordId?: string | readonly string[];
+  readonly semanticOperationInterlinguaLoweringDisposition?: string | readonly string[];
+  readonly semanticOperationInterlinguaMissingEvidence?: string | readonly string[];
+  readonly semanticOperationInterlinguaProofEvidenceId?: string | readonly string[];
   readonly semanticEditStatus?: string | readonly string[];
   readonly semanticEditStatuses?: readonly string[];
   readonly semanticEditScriptId?: string | readonly string[];

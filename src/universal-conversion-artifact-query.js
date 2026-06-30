@@ -11,6 +11,7 @@ export function queryUniversalConversionArtifacts(records, query = {}) {
 
 export function artifactIndex(routeArtifacts) {
   const semanticEditIndexes = routeArtifacts.map(artifactSemanticEditIndex);
+  const semanticOperations = routeArtifacts.flatMap(artifactSemanticOperations);
   return {
     routeIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.routeId)),
     historyIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.history.id)),
@@ -36,8 +37,12 @@ export function artifactIndex(routeArtifacts) {
     conflictKeys: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.index.conflictKeys)),
     evidenceIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.evidenceIds)),
     proofIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.proofIds)),
-    semanticOperationIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []).map((operation) => operation.id)),
-    semanticOperationKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []).map((operation) => operation.operationKind)),
+    semanticOperationIds: uniqueStrings(semanticOperations.map((operation) => operation.id)),
+    semanticOperationKinds: uniqueStrings(semanticOperations.map((operation) => operation.operationKind)),
+    semanticOperationInterlinguaRecordIds: uniqueStrings(semanticOperations.map((operation) => operation.metadata?.interlingua?.id)),
+    semanticOperationInterlinguaLoweringDispositions: uniqueStrings(semanticOperations.map((operation) => operation.metadata?.interlingua?.loweringDisposition)),
+    semanticOperationInterlinguaMissingEvidence: uniqueStrings(semanticOperations.flatMap((operation) => operation.metadata?.interlingua?.missingEvidence ?? [])),
+    semanticOperationInterlinguaProofEvidenceIds: uniqueStrings(semanticOperations.flatMap((operation) => operation.metadata?.interlingua?.proofEvidenceIds ?? [])),
     semanticEditStatuses: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditStatuses)),
     semanticEditScriptIds: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditScriptIds)),
     semanticEditProjectionIds: uniqueStrings(semanticEditIndexes.flatMap((index) => index.semanticEditProjectionIds)),
@@ -103,6 +108,7 @@ function artifactRecords(records) {
 
 function matchesArtifact(record, query) {
   const semanticEditIndex = artifactSemanticEditIndex(record);
+  const semanticOperations = artifactSemanticOperations(record);
   return match(query.routeId, [record.routeId])
     && match(query.historyId, [record.history.id])
     && match(query.patchBundleId, [record.patchBundle.id])
@@ -129,8 +135,12 @@ function matchesArtifact(record, query) {
     && match(query.conflictKey, record.history.index.conflictKeys)
     && match(query.evidenceId, record.history.evidenceIds)
     && match(query.proofId, record.history.proofIds)
-    && match(query.semanticOperationId, (record.semanticOperations?.operations ?? []).map((operation) => operation.id))
-    && match(query.semanticOperationKind, (record.semanticOperations?.operations ?? []).map((operation) => operation.operationKind))
+    && match(query.semanticOperationId, semanticOperations.map((operation) => operation.id))
+    && match(query.semanticOperationKind, semanticOperations.map((operation) => operation.operationKind))
+    && match(query.semanticOperationInterlinguaRecordId, semanticOperations.map((operation) => operation.metadata?.interlingua?.id))
+    && match(query.semanticOperationInterlinguaLoweringDisposition, semanticOperations.map((operation) => operation.metadata?.interlingua?.loweringDisposition))
+    && match(query.semanticOperationInterlinguaMissingEvidence, semanticOperations.flatMap((operation) => operation.metadata?.interlingua?.missingEvidence ?? []))
+    && match(query.semanticOperationInterlinguaProofEvidenceId, semanticOperations.flatMap((operation) => operation.metadata?.interlingua?.proofEvidenceIds ?? []))
     && match(query.semanticEditStatus ?? query.semanticEditStatuses, semanticEditIndex.semanticEditStatuses)
     && match(query.semanticEditScriptId ?? query.semanticEditScriptIds, semanticEditIndex.semanticEditScriptIds)
     && match(query.semanticEditProjectionId ?? query.semanticEditProjectionIds, semanticEditIndex.semanticEditProjectionIds)
@@ -176,6 +186,10 @@ function matchesArtifact(record, query) {
     && match(query.targetAdapterId, [artifactTranslationAdmission(record).targetAdapterId])
     && interlinguaRecordMatches(artifactInterlingua(record), query)
     && match(query.transformIdentityHash, artifactTransformIdentityHashes(record));
+}
+
+function artifactSemanticOperations(record) {
+  return record.semanticOperations?.operations ?? [];
 }
 
 function artifactConstructKinds(record) {
