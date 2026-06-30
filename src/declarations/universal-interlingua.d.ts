@@ -32,6 +32,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'lifetime'
   | 'control-flow'
   | 'borrow-scope'
+  | 'borrow-checker'
   | 'effect'
   | 'module'
   | 'type'

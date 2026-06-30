@@ -1,5 +1,6 @@
 import { uniqueStrings } from './native-import-utils.js';
 import { resourceTransferMatches } from './universal-resource-transfer.js';
+import { borrowCheckerConstraintMatches } from './universal-borrow-checker-constraints.js';
 import { borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
 import { controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
 import { effectConstraintMatches } from './universal-effect-constraints.js';
@@ -30,8 +31,8 @@ export function createUniversalTranslationAdmission(input = {}) {
   const evidenceIds = uniqueStrings([...(input.mergeRefs?.evidenceIds ?? []), ...(input.routeEvidence ?? []).map((record) => record?.id)]);
   const proofEvidenceIds = uniqueStrings([...(input.mergeRefs?.proofIds ?? []), ...proofEvidenceIdsFor(input.routeEvidence)]);
   const missingEvidence = translationMissingEvidence(input, missingConstructKinds);
-  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.lifetimeConstraint?.blockers ?? []), ...(input.controlFlowConstraint?.blockers ?? []), ...(input.borrowScopeConstraint?.blockers ?? []), ...(input.effectConstraint?.blockers ?? []), ...(input.moduleConstraint?.blockers ?? []), ...(input.typeConstraint?.blockers ?? [])]);
-  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.lifetimeConstraint?.review ?? []), ...(input.controlFlowConstraint?.review ?? []), ...(input.borrowScopeConstraint?.review ?? []), ...(input.effectConstraint?.review ?? []), ...(input.moduleConstraint?.review ?? []), ...(input.typeConstraint?.review ?? [])]);
+  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.lifetimeConstraint?.blockers ?? []), ...(input.controlFlowConstraint?.blockers ?? []), ...(input.borrowScopeConstraint?.blockers ?? []), ...(input.borrowCheckerConstraint?.blockers ?? []), ...(input.effectConstraint?.blockers ?? []), ...(input.moduleConstraint?.blockers ?? []), ...(input.typeConstraint?.blockers ?? [])]);
+  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.lifetimeConstraint?.review ?? []), ...(input.controlFlowConstraint?.review ?? []), ...(input.borrowScopeConstraint?.review ?? []), ...(input.borrowCheckerConstraint?.review ?? []), ...(input.effectConstraint?.review ?? []), ...(input.moduleConstraint?.review ?? []), ...(input.typeConstraint?.review ?? [])]);
   const status = translationAdmissionStatus(input, missingEvidence, blockers);
   return {
     status,
@@ -64,6 +65,10 @@ export function createUniversalTranslationAdmission(input = {}) {
     borrowScopeConstraintStatus: input.borrowScopeConstraint?.status,
     borrowScopeConstraintAction: input.borrowScopeConstraint?.action,
     borrowScopeConstraintMissingEvidence: input.borrowScopeConstraint?.missingEvidence ?? [],
+    borrowCheckerConstraint: constraintSummary(input.borrowCheckerConstraint),
+    borrowCheckerConstraintStatus: input.borrowCheckerConstraint?.status,
+    borrowCheckerConstraintAction: input.borrowCheckerConstraint?.action,
+    borrowCheckerConstraintMissingEvidence: input.borrowCheckerConstraint?.missingEvidence ?? [],
     effectConstraint: constraintSummary(input.effectConstraint),
     effectConstraintStatus: input.effectConstraint?.status,
     effectConstraintAction: input.effectConstraint?.action,
@@ -93,6 +98,7 @@ export function conversionRouteMatchesTranslationAdmissionQuery(route, query = {
     && lifetimeConstraintMatches(route?.lifetimeConstraint ?? admission.lifetimeConstraint, query)
     && controlFlowConstraintMatches(route?.controlFlowConstraint ?? admission.controlFlowConstraint, query)
     && borrowScopeConstraintMatches(route?.borrowScopeConstraint ?? admission.borrowScopeConstraint, query)
+    && borrowCheckerConstraintMatches(route?.borrowCheckerConstraint ?? admission.borrowCheckerConstraint, query)
     && effectConstraintMatches(route?.effectConstraint ?? admission.effectConstraint, query)
     && moduleConstraintMatches(route?.moduleConstraint ?? admission.moduleConstraint, query)
     && typeConstraintMatches(route?.typeConstraint ?? admission.typeConstraint, query)
@@ -135,6 +141,7 @@ function translationMissingEvidence(input, missingConstructKinds) {
     ...(input.lifetimeConstraint?.missingEvidence ?? []),
     ...(input.controlFlowConstraint?.missingEvidence ?? []),
     ...(input.borrowScopeConstraint?.missingEvidence ?? []),
+    ...(input.borrowCheckerConstraint?.missingEvidence ?? []),
     ...(input.effectConstraint?.missingEvidence ?? []),
     ...(input.moduleConstraint?.missingEvidence ?? []),
     ...(input.typeConstraint?.missingEvidence ?? [])

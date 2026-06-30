@@ -1,4 +1,4 @@
-import { idFragment, uniqueStrings } from './native-import-utils.js';
+import { caseSensitiveIdFragment, idFragment, uniqueStrings } from './native-import-utils.js';
 
 export const UniversalInterlinguaLayerKinds = Object.freeze([
   'source-import',
@@ -29,6 +29,7 @@ export const UniversalInterlinguaConstraintEdgeKinds = Object.freeze([
   'lifetime',
   'control-flow',
   'borrow-scope',
+  'borrow-checker',
   'effect',
   'module',
   'type'
@@ -160,6 +161,7 @@ export function interlinguaConstraintSummary(route = {}) {
     constraintEdge('lifetime', route.lifetimeConstraint, 'semantic-ownership', route),
     constraintEdge('control-flow', route.controlFlowConstraint, 'runtime-capability', route),
     constraintEdge('borrow-scope', route.borrowScopeConstraint, 'semantic-ownership', route),
+    constraintEdge('borrow-checker', route.borrowCheckerConstraint, 'semantic-ownership', route),
     constraintEdge('effect', route.effectConstraint, 'runtime-capability', route),
     constraintEdge('module', route.moduleConstraint, 'source-import', route),
     constraintEdge('type', route.typeConstraint, 'semantic-symbol', route)
@@ -224,7 +226,7 @@ function constraintObligations(family, evidence, edgeId) {
     const record = records.find((entry) => entry.kind === kind) ?? {};
     const status = record.status ?? ((evidence.missingKinds ?? []).includes(kind) ? 'missing' : (evidence.representedKinds ?? []).includes(kind) ? 'represented' : 'required');
     return {
-      id: `interlingua_obligation_${idFragment([edgeId, kind, status].join('_'))}`,
+      id: `interlingua_obligation_${caseSensitiveIdFragment([edgeId, kind, status].join('_'))}`,
       edgeId,
       family,
       kind,

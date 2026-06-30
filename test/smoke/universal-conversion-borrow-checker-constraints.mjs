@@ -6,9 +6,12 @@ import {
   createUniversalBorrowCheckerConstraintEvidence,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  createUniversalConversionWorklist,
   importNativeSource,
   queryUniversalConversionArtifacts,
-  queryUniversalConversionPlan
+  queryUniversalConversionPlan,
+  queryUniversalConversionWorklist,
+  UniversalInterlinguaConstraintEdgeKinds
 } from './compiler-api.mjs';
 
 const sourceGraph = borrowGraph('source');
@@ -71,19 +74,44 @@ assert.equal(Boolean(route), true);
 assert.equal(route.borrowCheckerConstraint.status, 'needs-evidence');
 assert.equal(route.borrowCheckerConstraint.missingFamilies.includes('ownership'), true);
 assert.equal(route.borrowCheckerConstraint.missingKinds.includes('borrow-scope:shared-borrow-compatible'), true);
-assert.equal(route.missingEvidence.includes('translation-borrow-checker-evidence'), false);
 assert.equal(route.borrowCheckerConstraint.claims.semanticEquivalenceClaim, false);
+assert.equal(route.translationAdmission.borrowCheckerConstraint.status, 'needs-evidence');
+assert.equal(route.translationAdmission.borrowCheckerConstraintMissingEvidence.includes('translation-ownership-constraint:shared-borrow'), true);
+assert.equal(route.translationAdmission.missingEvidence.includes('translation-borrow-scope:shared-borrow-compatible'), true);
+assert.equal(UniversalInterlinguaConstraintEdgeKinds.includes('borrow-checker'), true);
+assert.equal(route.interlingua.constraints.families.includes('borrow-checker'), true);
+assert.equal(route.interlingua.constraints.missingKinds.includes('ownership:shared-borrow'), true);
+const borrowCheckerObligations = route.interlingua.constraints.obligations.filter((obligation) => obligation.family === 'borrow-checker');
+assert.equal(borrowCheckerObligations.some((obligation) => obligation.kind === 'ownership:shared-borrow' && obligation.status === 'missing'), true);
+assert.equal(new Set(borrowCheckerObligations.map((obligation) => obligation.id)).size, borrowCheckerObligations.length);
 
 const artifacts = createUniversalConversionArtifacts(routePlan, { routeId: route.id, generatedAt: 903 });
 const artifact = queryUniversalConversionArtifacts(artifacts, {
-  borrowCheckerConstraintMissingKind: 'borrow-scope:shared-borrow-compatible'
+  borrowCheckerConstraintMissingKind: 'borrow-scope:shared-borrow-compatible',
+  interlinguaConstraintFamily: 'borrow-checker',
+  interlinguaConstraintObligationKind: 'borrow-scope:shared-borrow-compatible',
+  interlinguaConstraintObligationStatus: 'missing'
 })[0];
 
 assert.equal(Boolean(artifact), true);
 assert.equal(artifact.borrowCheckerConstraint.status, 'needs-evidence');
 assert.equal(artifacts.index.borrowCheckerConstraintMissingKinds.includes('ownership:shared-borrow'), true);
+assert.equal(artifacts.index.interlinguaConstraintFamilies.includes('borrow-checker'), true);
+assert.equal(artifacts.index.interlinguaConstraintObligationKinds.includes('borrow-scope:shared-borrow-compatible'), true);
 assert.equal(artifacts.summary.compactCounts.borrowCheckerConstraint.missingKinds['borrow-scope:shared-borrow-compatible'], 1);
+assert.equal(artifacts.summary.compactCounts.interlingua.constraintFamilies['borrow-checker'], 1);
 assert.equal(artifact.admissionRecord.borrowCheckerConstraint.status, 'needs-evidence');
+
+const worklist = createUniversalConversionWorklist(routePlan, { routeId: route.id });
+const obligationWork = queryUniversalConversionWorklist(worklist, {
+  kind: 'collect-interlingua-obligation-proof',
+  interlinguaConstraintFamily: 'borrow-checker',
+  interlinguaConstraintObligationKind: 'borrow-scope:shared-borrow-compatible',
+  interlinguaConstraintObligationStatus: 'missing'
+});
+assert.equal(obligationWork.found, true);
+assert.equal(obligationWork.bestItem.interlinguaConstraintFamilies.includes('borrow-checker'), true);
+assert.equal(obligationWork.bestItem.tasks.some((task) => task.includes('borrow-scope:shared-borrow-compatible')), true);
 
 function borrowGraph(prefix) {
   return createSemanticResourceGraph({
