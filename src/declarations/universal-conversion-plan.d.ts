@@ -13,6 +13,7 @@ import type { UniversalRepresentationCoverage, UniversalRepresentationCoverageQu
 import type { UniversalInterlinguaQuery, UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalConversionPlanCompactCounts } from './universal-conversion-compact-counts.js';
 import type { UniversalRuntimeAdapterRequirement, UniversalRuntimeCapabilityKind, UniversalRuntimeCapabilityMatrix, UniversalRuntimeCapabilityRoute, UniversalRuntimeHostProfile } from './universal-runtime-capabilities.js';
+import type { UniversalResourceTransferEvidence, UniversalResourceTransferInput } from './universal-resource-transfer.js';
 import type {
   UniversalDialectConstructKind,
   UniversalDialectProjectionDisposition,
@@ -29,13 +30,7 @@ export type UniversalConversionRouteMode =
   | 'semantic-index-only'
   | 'blocked';
 
-export type UniversalConversionRouteAction =
-  | 'preserve-source'
-  | 'run-target-adapter'
-  | 'attach-adapter-evidence'
-  | 'emit-stub'
-  | 'add-target-adapter'
-  | 'blocked';
+export type UniversalConversionRouteAction = 'preserve-source' | 'run-target-adapter' | 'attach-adapter-evidence' | 'emit-stub' | 'add-target-adapter' | 'blocked';
 
 export type UniversalConversionAdmissionAction = 'admit' | 'prioritize' | 'reject';
 export type UniversalConversionPriority = 'low' | 'normal' | 'high' | 'blocker'; export type UniversalConversionRisk = 'low' | 'medium' | 'high';
@@ -93,6 +88,8 @@ export interface UniversalTranslationAdmission {
   readonly requiredConstructKinds: readonly string[]; readonly representedConstructKinds: readonly string[]; readonly missingConstructKinds: readonly string[]; readonly missingEvidence: readonly string[];
   readonly blockers: readonly string[]; readonly review: readonly string[]; readonly evidenceIds: readonly string[]; readonly proofEvidenceIds: readonly string[];
   readonly runtimeReadiness: SemanticMergeReadiness | string; readonly runtimeAdapterRequirementIds: readonly string[]; readonly dialectReadiness: SemanticMergeReadiness | string; readonly dialectRecordIds: readonly string[];
+  readonly resourceTransfer?: { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly losses: readonly string[] };
+  readonly resourceTransferStatus?: string; readonly resourceTransferAction?: string; readonly resourceTransferMissingEvidence: readonly string[];
   readonly targetAdapterId?: string; readonly autoMergeClaim: false; readonly semanticEquivalenceClaim: false;
 }
 
@@ -179,6 +176,7 @@ export interface UniversalConversionRoute {
   readonly evidence: UniversalConversionRouteEvidence;
   readonly representation: UniversalRepresentationCoverage;
   readonly interlingua: UniversalInterlinguaRecord;
+  readonly resourceTransfer?: UniversalResourceTransferEvidence;
   readonly missingEvidence: readonly string[];
   readonly translationAdmission: UniversalTranslationAdmission;
   readonly blockers: readonly string[];
@@ -250,6 +248,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly universalDialectRegistry?: UniversalDialectRegistryInput | UniversalDialectRegistry;
   readonly dialects?: readonly UniversalDialectRecordInput[];
   readonly externs?: readonly UniversalExternRecordInput[];
+  readonly resourceTransfer?: UniversalResourceTransferInput | UniversalResourceTransferEvidence; readonly translationResourceTransfer?: UniversalResourceTransferInput | UniversalResourceTransferEvidence; readonly resourceTransfers?: readonly (UniversalResourceTransferInput | UniversalResourceTransferEvidence)[];
   readonly runtimeRequirements?: readonly (
     | UniversalRuntimeCapabilityKind
     | {

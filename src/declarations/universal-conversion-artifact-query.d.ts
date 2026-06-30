@@ -18,6 +18,7 @@ import type {
 } from './universal-conversion-artifacts.js';
 import type { UniversalRepresentationCoverageQuery } from './universal-representation-coverage.js';
 import type { UniversalInterlinguaQuery } from './universal-interlingua.js';
+import type { UniversalResourceTransferQuery } from './universal-resource-transfer.js';
 
 export interface UniversalConversionArtifactIndex {
   readonly routeIds: readonly string[];
@@ -99,6 +100,10 @@ export interface UniversalConversionArtifactIndex {
   readonly requiredTranslationConstructKinds: readonly string[];
   readonly representedTranslationConstructKinds: readonly string[];
   readonly targetAdapterIds: readonly string[];
+  readonly resourceTransferStatuses: readonly string[];
+  readonly resourceTransferActions: readonly string[];
+  readonly resourceTransferMissingEvidence: readonly string[];
+  readonly resourceTransferLossKinds: readonly string[];
   readonly interlinguaRecordIds: readonly string[];
   readonly interlinguaLayerKinds: readonly string[];
   readonly interlinguaRepresentedLayerKinds: readonly string[];
@@ -111,7 +116,7 @@ export interface UniversalConversionArtifactIndex {
   readonly transformIdentityHashes: readonly string[];
 }
 
-export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery {
+export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery {
   readonly routeId?: string | readonly string[];
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];

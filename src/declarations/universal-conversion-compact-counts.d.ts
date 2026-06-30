@@ -54,6 +54,16 @@ export interface UniversalConversionInterlinguaCompactCounts {
   readonly proofEvidenceIds: Readonly<Record<string, number>>;
 }
 
+export interface UniversalConversionResourceTransferCompactCounts {
+  readonly byStatus: Readonly<Record<string, number>>;
+  readonly byAction: Readonly<Record<string, number>>;
+  readonly requiredKinds: Readonly<Record<string, number>>;
+  readonly representedKinds: Readonly<Record<string, number>>;
+  readonly missingKinds: Readonly<Record<string, number>>;
+  readonly missingEvidence: Readonly<Record<string, number>>;
+  readonly losses: Readonly<Record<string, number>>;
+}
+
 export interface UniversalConversionSemanticOperationInterlinguaCompactCounts extends UniversalConversionInterlinguaCompactCounts {
   readonly operations: number;
   readonly operationRecords: number;
@@ -86,6 +96,7 @@ export interface UniversalConversionArtifactCompactCounts {
     readonly byRisk: Readonly<Record<string, number>>;
   };
   readonly translationAdmission: UniversalConversionTranslationAdmissionCompactCounts;
+  readonly resourceTransfer: UniversalConversionResourceTransferCompactCounts;
   readonly evidenceReceipts: UniversalConversionEvidenceReceiptCompactCounts;
   readonly interlingua: UniversalConversionInterlinguaCompactCounts;
   readonly semanticOperationInterlingua: UniversalConversionSemanticOperationInterlinguaCompactCounts;

@@ -11,6 +11,7 @@ import { conversionPlanSummary } from './universal-conversion-plan-summary.js';
 import { createUniversalRepresentationCoverage, representationCoverageMatches } from './universal-representation-coverage.js';
 import { createUniversalTranslationAdmission, conversionRouteMatchesTranslationAdmissionQuery } from './universal-conversion-translation-admission.js';
 import { createUniversalInterlinguaRecord, interlinguaRecordMatches } from './universal-interlingua-record.js';
+import { resourceTransferForConversionRoute } from './universal-resource-transfer.js';
 
 export function createUniversalConversionPlan(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
@@ -28,7 +29,7 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
       targets
     }, context);
   const evidence = input.evidence ?? [];
-  const routeInput = { dialectRegistries: conversionDialectRegistries(input), evidence, generatedAt, imports: input.imports ?? [], matrix, runtimeMatrix };
+  const routeInput = { dialectRegistries: conversionDialectRegistries(input), evidence, generatedAt, imports: input.imports ?? [], matrix, resourceTransfer: input.resourceTransfer, resourceTransfers: input.resourceTransfers ?? [], translationResourceTransfer: input.translationResourceTransfer, runtimeMatrix };
   const routes = (matrix.languages ?? []).flatMap((language) => targets.flatMap((target) => {
     const runtimeRoutes = conversionRuntimeRoutes(runtimeMatrix, language, target);
     return runtimeRoutes.map((runtimeRoute) => conversionRoute(language, target, {
@@ -50,13 +51,7 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
       projectionReadiness: matrix.matrices?.projectionReadiness,
       projectionTargets: matrix.matrices?.projectionTargets
     },
-    metadata: {
-      compileTargets: targets,
-      requiredFeatures: matrix.metadata?.requiredFeatures ?? [],
-      autoMergeClaim: false,
-      semanticEquivalenceClaim: false,
-      note: 'Conversion plans rank source-to-target routes and missing evidence for agent coordination. They do not prove semantic equivalence or grant auto-merge.'
-    }
+    metadata: { compileTargets: targets, requiredFeatures: matrix.metadata?.requiredFeatures ?? [], autoMergeClaim: false, semanticEquivalenceClaim: false, note: 'Conversion plans rank source-to-target routes and missing evidence for agent coordination. They do not prove semantic equivalence or grant auto-merge.' }
   };
 }
 
@@ -119,6 +114,7 @@ function conversionRoute(language, target, input, planId) {
   const id = conversionRouteIdForRuntime(language, target, runtimeRoute, input.runtimeRouteCount);
   const routeEvidence = conversionRouteEvidence(input.evidence, language, target, id);
   const routeImports = importsForConversionLanguage(input.imports, language);
+  const resourceTransfer = resourceTransferForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
   const mergeRefs = conversionMergeRefs({
     planId,
     routeId: id,
@@ -139,8 +135,8 @@ function conversionRoute(language, target, input, planId) {
   const components = conversionScoreComponents(language, targetCell, readiness, mode, routeEvidence, representation);
   const mergeScore = conversionMergeScore({ readiness, mode, components, blockers, review });
   const admissionStatus = mergeScore.action;
-  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect);
-  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, blockers, review });
+  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect, resourceTransfer);
+  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, resourceTransfer, blockers, review });
   const route = {
     id,
     sourceLanguage: language.language,
@@ -163,6 +159,7 @@ function conversionRoute(language, target, input, planId) {
     representation,
     missingEvidence,
     translationAdmission,
+    resourceTransfer,
     blockers,
     review,
     tasks: conversionTasks(language, target, mode, blockers, review, runtime, dialect),
@@ -170,10 +167,7 @@ function conversionRoute(language, target, input, planId) {
     mergeRefs: { ...mergeRefs, admissionStatus },
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
-    metadata: {
-      generatedAt: input.generatedAt,
-      note: 'Route readiness is merge-review evidence for a conversion attempt, not proof that emitted target code is semantically equivalent.'
-    }
+    metadata: { generatedAt: input.generatedAt, note: 'Route readiness is merge-review evidence for a conversion attempt, not proof that emitted target code is semantically equivalent.' }
   };
   return { ...route, interlingua: createUniversalInterlinguaRecord({ route, representation, translationAdmission, mergeRefs, runtime, dialect }) };
 }
@@ -286,7 +280,7 @@ function conversionEvidence(language, targetCell) {
   };
 }
 
-function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -299,6 +293,7 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...((runtime.missingCapabilities ?? []).map((capability) => `runtime-capability:${capability}`)),
     ...((runtime.adapterRequirements ?? []).length ? ['runtime-adapter-proof'] : []),
     ...(dialect.missingEvidence ?? []),
+    ...(resourceTransfer?.missingEvidence ?? []),
     ...(hasPassedRouteEvidence(evidence) ? [] : ['proof-or-replay-evidence'])
   ]);
 }

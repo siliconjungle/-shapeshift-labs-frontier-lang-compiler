@@ -779,6 +779,7 @@ import {
   createUniversalConversionPlan,
   createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
+  createUniversalResourceTransferEvidence,
   queryUniversalCapabilityMatrix,
   queryUniversalConversionPlan,
   queryUniversalConversionWorklist,
@@ -839,6 +840,15 @@ console.log(pythonToRust.interlingua.layers.representedKinds); // lifted semanti
 console.log(pythonToRust.interlingua.lowering.disposition); // "target-adapter", "semantic-index-only", etc.
 console.log(pythonToRust.interlingua.lowering.missingEvidence); // loss/proof gaps for target lowering
 console.log(pythonToRust.mergeScore.value); // sortable merge-review score, not a proof
+
+const resourceTransfer = createUniversalResourceTransferEvidence({
+  sourceLanguage: 'rust',
+  target: 'javascript',
+  sourceGraph: rustResourceGraph,
+  targetGraph: javascriptResourceGraph
+});
+console.log(resourceTransfer.status); // "preserved", "degraded", "needs-evidence", etc.
+console.log(resourceTransfer.missingEvidence); // resource semantics that need proof before admission
 
 const routeEvidenceReceipt = createUniversalConversionRouteEvidenceReceipt(pythonToRust, {
   evidence: [{
@@ -911,6 +921,16 @@ The projection target matrix separates five runtime/API classes:
 `createUniversalConversionWorklist` derives queue-ready next work from those routes: add a target adapter, collect translation proof, prove runtime adapters, collect dialect projection evidence, collect source/parser/source-map evidence, review a route, or unblock a blocked route. Worklist items are grouped by source language, target, route IDs, evidence keys, missing evidence, blockers, review reasons, and tasks so coordinators can refill swarms without re-scanning every route. `queryUniversalConversionWorklist` filters those items by kind, priority, route, language, target, readiness, action, evidence key, missing evidence, blocker, review reason, runtime adapter requirement, dialect record, or target adapter ID. The worklist is still conservative route evidence: it keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
 Each route also carries `translationAdmission`, an explicit cross-language review contract with status/action pairs: `blocked`/`reject`, `needs-adapter`/`add-target-adapter`, `needs-evidence`/`collect-translation-evidence`, `needs-review`/`review-target-adapter`, or `admittable-for-review`/`materialize-review-record`. It records required and represented construct kinds, missing translation evidence, bound evidence IDs, runtime adapter requirements, dialect records, and the target adapter ID while keeping `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
+
+Routes can also carry `resourceTransfer`, a cross-language ownership/resource
+admission record. It compares source and target `SemanticResourceGraph` records
+for resource identity, owners, loans, aliases, moves, drops, lifetimes, and
+unsafe boundaries. A target adapter that preserves syntax but drops borrow,
+move, cleanup, or unsafe-boundary proof gets `degraded`/`needs-evidence`
+instead of being treated as broadly admittable. The record is intentionally
+bounded evidence: it keeps borrow-checker, lifetime-soundness, semantic
+equivalence, and auto-merge claims false unless a caller attaches stronger
+proof.
 
 Each route also carries `interlingua`, a first-class superset-language route record. It binds the source lift (`sourcePaths`, hashes, source maps, ownership keys, evidence/proof IDs), represented/missing/review/blocked semantic layers, and target lowering disposition: `exact-source`, `target-adapter`, `declaration-stub`, `semantic-index-only`, `lossy-review`, or `blocked`. The record is queryable through `interlinguaLayerKind`, `interlinguaRepresentedLayerKind`, `interlinguaMissingLayerKind`, `interlinguaLoweringDisposition`, `interlinguaMissingEvidence`, `interlinguaProofEvidenceId`, and `interlinguaTargetAdapterId`. It is loss accounting for source -> interlingua -> target lowering, not a target semantic-equivalence proof.
 

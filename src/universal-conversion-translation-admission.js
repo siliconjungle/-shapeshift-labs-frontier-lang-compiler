@@ -23,8 +23,8 @@ export function createUniversalTranslationAdmission(input = {}) {
   const evidenceIds = uniqueStrings([...(input.mergeRefs?.evidenceIds ?? []), ...(input.routeEvidence ?? []).map((record) => record?.id)]);
   const proofEvidenceIds = uniqueStrings([...(input.mergeRefs?.proofIds ?? []), ...proofEvidenceIdsFor(input.routeEvidence)]);
   const missingEvidence = translationMissingEvidence(input, missingConstructKinds);
-  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? [])]);
-  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? [])]);
+  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? [])]);
+  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? [])]);
   const status = translationAdmissionStatus(input, missingEvidence, blockers);
   return {
     status,
@@ -41,6 +41,10 @@ export function createUniversalTranslationAdmission(input = {}) {
     runtimeAdapterRequirementIds: (input.runtime?.adapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
     dialectReadiness: input.dialect?.readiness ?? 'ready',
     dialectRecordIds: input.dialect?.recordIds ?? [],
+    resourceTransfer: resourceTransferSummary(input.resourceTransfer),
+    resourceTransferStatus: input.resourceTransfer?.status,
+    resourceTransferAction: input.resourceTransfer?.action,
+    resourceTransferMissingEvidence: input.resourceTransfer?.missingEvidence ?? [],
     targetAdapterId: input.targetCell?.adapter,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
@@ -54,6 +58,8 @@ export function conversionRouteMatchesTranslationAdmissionQuery(route, query = {
     && match(query.missingTranslationEvidence, admission.missingEvidence)
     && match(query.translationEvidenceId, admission.evidenceIds)
     && match(query.translationProofEvidenceId, admission.proofEvidenceIds)
+    && match(query.resourceTransferStatus, [admission.resourceTransferStatus])
+    && match(query.resourceTransferMissingEvidence, admission.resourceTransferMissingEvidence)
     && match(query.requiredTranslationConstructKind, admission.requiredConstructKinds)
     && match(query.representedTranslationConstructKind, admission.representedConstructKinds)
     && match(query.targetAdapterId, [admission.targetAdapterId, route?.adapter]);
@@ -88,7 +94,8 @@ function translationMissingEvidence(input, missingConstructKinds) {
     ...(missingConstructKinds.includes('source-map') ? ['translation-source-map'] : []),
     ...(missingConstructKinds.includes('semantic-ownership') ? ['translation-semantic-ownership'] : []),
     ...(runtimeAdapterRequirements.length && !hasPassedRuntimeAdapterProof(input.routeEvidence) ? ['translation-runtime-adapter-proof'] : []),
-    ...(dialectMissing.includes('dialect-projection-evidence') ? ['translation-dialect-projection-evidence'] : [])
+    ...(dialectMissing.includes('dialect-projection-evidence') ? ['translation-dialect-projection-evidence'] : []),
+    ...(input.resourceTransfer?.missingEvidence ?? [])
   ]);
 }
 
@@ -126,6 +133,19 @@ function passed(record) {
 
 function evidenceKind(record) {
   return String(record?.kind ?? record?.type ?? record?.scope ?? record?.metadata?.kind ?? '');
+}
+
+function resourceTransferSummary(resourceTransfer) {
+  if (!resourceTransfer) return undefined;
+  return {
+    id: resourceTransfer.id,
+    status: resourceTransfer.status,
+    action: resourceTransfer.action,
+    requiredKinds: resourceTransfer.requiredKinds ?? [],
+    representedKinds: resourceTransfer.representedKinds ?? [],
+    missingKinds: resourceTransfer.missingKinds ?? [],
+    losses: (resourceTransfer.losses ?? []).map((loss) => loss.kind)
+  };
 }
 
 function match(filter, values) {

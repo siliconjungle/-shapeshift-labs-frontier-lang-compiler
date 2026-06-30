@@ -169,6 +169,7 @@ function createRouteArtifact(route, options) {
     admissionAction: route.admissionAction,
     translationAdmission: route.translationAdmission,
     interlingua: route.interlingua,
+    resourceTransfer: route.resourceTransfer,
     admissionStatus,
     reviewRequired: true,
     history,
@@ -181,7 +182,7 @@ function createRouteArtifact(route, options) {
     admissionBucket: admissionRecord.admissionBucket,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
-    metadata: { ...recordMetadata, materialization }
+    metadata: { ...recordMetadata, materialization, resourceTransfer: route.resourceTransfer }
   };
 }
 

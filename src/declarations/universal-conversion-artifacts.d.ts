@@ -9,6 +9,7 @@ import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
 import type { UniversalConversionArtifactCompactCounts } from './universal-conversion-compact-counts.js';
 import type { UniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence.js';
 import type { UniversalInterlinguaRecord } from './universal-interlingua.js';
+import type { UniversalResourceTransferEvidence } from './universal-resource-transfer.js';
 import type {
   UniversalConversionAdmissionAction,
   UniversalConversionPlan,
@@ -66,6 +67,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus; readonly translationAdmissionAction?: UniversalTranslationAdmissionAction; readonly reviewRequired: true;
   readonly interlinguaRecordId?: string;
   readonly interlinguaLoweringDisposition?: string;
+  readonly resourceTransferStatus?: string;
+  readonly resourceTransferAction?: string;
   readonly readiness: SemanticMergeReadiness | string;
   readonly risk: UniversalConversionRisk | string;
   readonly score: {
@@ -100,6 +103,16 @@ export interface UniversalConversionAdmissionRecord {
     readonly blockedLayerKinds: readonly string[];
     readonly lossIds: readonly string[];
     readonly missingEvidence: readonly string[];
+  };
+  readonly resourceTransfer: {
+    readonly id?: string;
+    readonly status?: string;
+    readonly action?: string;
+    readonly requiredKinds: readonly string[];
+    readonly representedKinds: readonly string[];
+    readonly missingKinds: readonly string[];
+    readonly missingEvidence: readonly string[];
+    readonly losses: readonly string[];
   };
   readonly ownership: {
     readonly keys: readonly string[];
@@ -146,6 +159,7 @@ export interface UniversalConversionRouteArtifact {
   readonly admissionAction: UniversalConversionAdmissionAction;
   readonly translationAdmission?: UniversalTranslationAdmission;
   readonly interlingua?: UniversalInterlinguaRecord;
+  readonly resourceTransfer?: UniversalResourceTransferEvidence;
   readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
   readonly reviewRequired: true;
   readonly history: SemanticHistoryRecord;

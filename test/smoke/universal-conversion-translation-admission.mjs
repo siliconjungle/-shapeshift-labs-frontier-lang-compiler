@@ -1,7 +1,9 @@
 import { assert } from './helpers.mjs';
 import {
+  createSemanticResourceGraph,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  createUniversalResourceTransferEvidence,
   queryUniversalConversionArtifacts,
   queryUniversalConversionPlan
 } from './compiler-api.mjs';
@@ -62,6 +64,36 @@ const blockedRoute = queryUniversalConversionPlan(conversionPlan({
 assert.equal(blockedRoute.translationAdmission.action, 'reject');
 assert.equal(blockedRoute.translationAdmission.blockers.some((reason) => reason.includes('Runtime capability is missing: dom.')), true);
 
+const preservedTransfer = createUniversalResourceTransferEvidence({
+  routeId: 'preserve_js_source',
+  sourceLanguage: 'javascript',
+  target: 'javascript',
+  mode: 'preserve-source',
+  sourceGraph: sourceResourceGraph()
+});
+assert.equal(preservedTransfer.status, 'preserved');
+assert.equal(preservedTransfer.representedKinds.includes('loan'), true);
+assert.equal(preservedTransfer.claims.semanticEquivalenceClaim, false);
+
+const degradedResourcePlan = conversionPlan({
+  evidence: [routeProof('resource_transfer')],
+  imports: [sourceImport()],
+  resourceTransfers: [{
+    sourceLanguage: 'javascript',
+    target: 'rust',
+    sourceGraph: sourceResourceGraph(),
+    targetGraph: targetResourceGraphWithoutBorrow()
+  }]
+});
+const degradedResourceRoute = queryUniversalConversionPlan(degradedResourcePlan, {
+  resourceTransferStatus: 'degraded',
+  resourceTransferMissingEvidence: 'translation-resource-transfer:loan'
+}).bestRoute;
+assert.equal(degradedResourceRoute.translationAdmission.status, 'needs-evidence');
+assert.equal(degradedResourceRoute.translationAdmission.resourceTransferStatus, 'degraded');
+assert.equal(degradedResourceRoute.translationAdmission.resourceTransfer.missingKinds.includes('loan'), true);
+assert.equal(degradedResourceRoute.missingEvidence.includes('translation-resource-transfer-proof'), true);
+
 const artifacts = createUniversalConversionArtifacts(admittablePlan, { routeId: admittableRoute.id, generatedAt: 796 });
 const artifact = queryUniversalConversionArtifacts(artifacts, {
   translationAdmissionAction: 'materialize-review-record',
@@ -82,6 +114,16 @@ assert.equal(artifacts.index.requiredTranslationConstructKinds.includes('proof-e
 assert.equal(artifacts.index.evidenceReceiptIds.includes(artifact.evidenceReceipt.id), true);
 assert.equal(artifacts.index.evidenceReceiptProofEvidenceIds.includes('evidence_admittable_translation_proof'), true);
 
+const degradedResourceArtifacts = createUniversalConversionArtifacts(degradedResourcePlan, { routeId: degradedResourceRoute.id, generatedAt: 797 });
+const degradedResourceArtifact = queryUniversalConversionArtifacts(degradedResourceArtifacts, {
+  resourceTransferStatus: 'degraded',
+  resourceTransferLossKind: 'loan'
+})[0];
+assert.equal(degradedResourceArtifact.translationAdmission.resourceTransferStatus, 'degraded');
+assert.equal(degradedResourceArtifact.admissionRecord.resourceTransfer.missingKinds.includes('loan'), true);
+assert.equal(degradedResourceArtifacts.index.resourceTransferStatuses.includes('degraded'), true);
+assert.equal(degradedResourceArtifacts.summary.compactCounts.resourceTransfer.missingKinds.loan, 1);
+
 function conversionPlan(options = {}) {
   return createUniversalConversionPlan({
     generatedAt: 795,
@@ -89,6 +131,7 @@ function conversionPlan(options = {}) {
     targets: ['rust'],
     imports: options.imports ?? [],
     evidence: options.evidence ?? [],
+    resourceTransfers: options.resourceTransfers ?? [],
     runtimeRequirements: options.runtimeRequirements ?? []
   });
 }
@@ -154,4 +197,27 @@ function routeProof(id, kind = 'conversion-replay-proof') {
     sourceLanguage: 'javascript',
     target: 'rust'
   };
+}
+
+function sourceResourceGraph() {
+  return createSemanticResourceGraph({
+    id: 'resource_graph_js_source_buffer',
+    language: 'javascript',
+    resources: [{ id: 'resource_js_buffer', resourceKind: 'owned-buffer', ownerId: 'owner_js_parse' }],
+    owners: [{ id: 'owner_js_parse', ownerKind: 'function' }],
+    lifetimeRegions: [{ id: 'life_js_parse', lifetimeKind: 'lexical', startLine: 1, endLine: 7 }],
+    loans: [{ id: 'loan_js_buffer_read', resourceId: 'resource_js_buffer', ownerId: 'owner_js_parse', lifetimeRegionId: 'life_js_parse', mode: 'shared' }],
+    moves: [{ id: 'move_js_buffer_worker', resourceId: 'resource_js_buffer', fromOwnerId: 'owner_js_parse', toOwnerId: 'owner_js_worker' }],
+    drops: [{ id: 'drop_js_buffer', resourceId: 'resource_js_buffer', ownerId: 'owner_js_worker', lifetimeRegionId: 'life_js_parse' }]
+  });
+}
+
+function targetResourceGraphWithoutBorrow() {
+  return createSemanticResourceGraph({
+    id: 'resource_graph_rust_target_buffer',
+    language: 'rust',
+    resources: [{ id: 'resource_rust_buffer', resourceKind: 'owned-buffer', ownerId: 'owner_rust_parse' }],
+    owners: [{ id: 'owner_rust_parse', ownerKind: 'function' }],
+    lifetimeRegions: [{ id: 'life_rust_parse', lifetimeKind: 'lexical', startLine: 1, endLine: 7 }]
+  });
 }

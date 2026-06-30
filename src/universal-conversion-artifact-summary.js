@@ -52,6 +52,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const translationAdmissions = routeArtifacts.map((artifact) => artifact.translationAdmission ?? artifact.metadata?.translationAdmission ?? {});
   const evidenceReceipts = routeArtifacts.map((artifact) => artifact.evidenceReceipt ?? {});
   const interlinguaRecords = routeArtifacts.map((artifact) => artifact.interlingua ?? artifact.metadata?.interlingua ?? artifact.admissionRecord?.metadata?.interlingua ?? {});
+  const resourceTransfers = routeArtifacts.map((artifact) => artifact.resourceTransfer ?? artifact.metadata?.resourceTransfer ?? artifact.admissionRecord?.metadata?.resourceTransfer ?? {});
   const semanticOperationInterlinguaRecords = semanticOperations.map((operation) => operation.metadata?.interlingua ?? {});
   return {
     representationConstructs: {
@@ -75,6 +76,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
       byRisk: countBy(admissionRecords.map((record) => record.risk))
     },
     translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
+    resourceTransfer: compactResourceTransferCounts(resourceTransfers),
     evidenceReceipts: compactEvidenceReceiptCounts(evidenceReceipts),
     interlingua: compactInterlinguaCounts(interlinguaRecords),
     semanticOperationInterlingua: {
@@ -82,6 +84,18 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
       operationRecords: semanticOperationInterlinguaRecords.filter((record) => record.id || record.loweringDisposition).length,
       ...compactOperationInterlinguaCounts(semanticOperationInterlinguaRecords)
     }
+  };
+}
+
+function compactResourceTransferCounts(transfers) {
+  return {
+    byStatus: countBy(transfers.map((transfer) => transfer.status)),
+    byAction: countBy(transfers.map((transfer) => transfer.action)),
+    requiredKinds: countBy(transfers.flatMap((transfer) => transfer.requiredKinds ?? [])),
+    representedKinds: countBy(transfers.flatMap((transfer) => transfer.representedKinds ?? [])),
+    missingKinds: countBy(transfers.flatMap((transfer) => transfer.missingKinds ?? [])),
+    missingEvidence: countBy(transfers.flatMap((transfer) => transfer.missingEvidence ?? [])),
+    losses: countBy(transfers.flatMap((transfer) => (transfer.losses ?? []).map((loss) => loss.kind)))
   };
 }
 
