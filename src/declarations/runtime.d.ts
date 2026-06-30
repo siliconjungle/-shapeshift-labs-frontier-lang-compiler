@@ -36,7 +36,7 @@ import type { NativeParserAstFormatKind, NativeParserAstFormatProfile, NativePar
 import type { NativeParserFeatureCategory, NativeParserFeatureCoverageStatus, NativeParserFeatureCoverage, NativeParserFeatureCoverageMap, NativeParserFeatureMergeAssessment, NativeParserFeatureParserRow, NativeParserFeatureLanguageSummary, NativeParserFeatureMatrix, NativeParserFeatureMatrixOptions, NativeParserFeatureMatrixQuery, NativeParserFeatureMatrixQueryResult, NativeImporterAdapterCoverageAggregate } from './native-parser-features.js';
 import type { NativeImportCoverageLanguage, NativeImportCoverageMatrix, NativeImportCoverageMatrixOptions } from './native-import-coverage.js';
 import type { ProjectionTargetLossClass, ProjectionSourceProjectionCoverage, ProjectionTargetCoverageEntry, ProjectionTargetLanguageCoverage, ProjectionTargetLossMatrix, ProjectionTargetLossMatrixOptions } from './projection-coverage.js';
-import type { UniversalCapabilityLanguageRow, UniversalCapabilityMatrix, UniversalCapabilityMatrixOptions } from './universal-capability.js';
+import type { UniversalCapabilityLanguageRow, UniversalCapabilityMatrix, UniversalCapabilityMatrixOptions, UniversalCapabilityMatrixQuery, UniversalCapabilityMatrixQueryResult } from './universal-capability.js';
 import type { CreateUniversalConversionArtifactsInput, CreateUniversalConversionArtifactsOptions, UniversalConversionArtifactQuery, UniversalConversionArtifacts, UniversalConversionRouteArtifact } from './universal-conversion-artifacts.js';
 import type { UniversalConversionPlan, UniversalConversionPlanOptions, UniversalConversionPlanQuery, UniversalConversionPlanQueryResult } from './universal-conversion-plan.js';
 import type { UniversalDialectRegistry, UniversalDialectRegistryInput, UniversalDialectRecordInput, UniversalExternRecordInput } from './universal-dialects.js';
@@ -89,6 +89,7 @@ export declare function createNativeParserFeatureMatrix(options?: NativeParserFe
 export declare function queryNativeParserFeatureMatrix(matrixOrOptions?: NativeParserFeatureMatrix | NativeParserFeatureMatrixOptions, query?: NativeParserFeatureMatrixQuery): NativeParserFeatureMatrixQueryResult;
 export declare function createProjectionTargetLossMatrix(options?: ProjectionTargetLossMatrixOptions): ProjectionTargetLossMatrix;
 export declare function createUniversalCapabilityMatrix(options?: UniversalCapabilityMatrixOptions): UniversalCapabilityMatrix;
+export declare function queryUniversalCapabilityMatrix(matrixOrOptions?: UniversalCapabilityMatrix | UniversalCapabilityMatrixOptions, query?: UniversalCapabilityMatrixQuery): UniversalCapabilityMatrixQueryResult;
 export declare function createNativeSourcePreservation(options: CreateNativeSourcePreservationOptions): NativeSourcePreservation;
 export declare function createSemanticImportSidecar(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: SemanticImportSidecarOptions): SemanticImportSidecar;
 export declare function createNativeImportResultContract(importResult: NativeSourceImportResult | NativeProjectImportResult, options?: NativeImportResultContractOptions): NativeImportResultContract;

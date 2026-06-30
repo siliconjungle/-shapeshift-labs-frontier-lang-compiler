@@ -110,6 +110,7 @@ export {
   getNativeParserAstFormatProfile,
   queryLanguageAdapterPackageContracts,
   queryNativeParserFeatureMatrix,
+  queryUniversalCapabilityMatrix,
   queryProjectionReadinessMatrix,
   querySemanticHistoryRecordOverlaps,
   querySemanticLineageEvents,

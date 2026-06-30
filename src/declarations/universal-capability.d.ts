@@ -202,3 +202,61 @@ export interface UniversalCapabilityMatrixOptions extends
   readonly languageDenominator?: readonly (FrontierSourceLanguage | string)[];
   readonly requiredLanguages?: readonly (FrontierSourceLanguage | string)[];
 }
+
+export interface UniversalCapabilityMatrixQuery {
+  readonly language?: FrontierSourceLanguage | string | readonly string[];
+  readonly readiness?: SemanticMergeReadiness | string | readonly string[];
+  readonly importReadiness?: SemanticMergeReadiness | string | readonly string[];
+  readonly parserReadiness?: SemanticMergeReadiness | string | readonly string[];
+  readonly projectionReadiness?: SemanticMergeReadiness | string | readonly string[];
+  readonly parser?: string | readonly string[];
+  readonly target?: FrontierCompileTarget | string | readonly string[];
+  readonly targetLossClass?: ProjectionTargetLossClass | string | readonly string[];
+  readonly targetAdapterId?: string | readonly string[];
+  readonly missingTarget?: FrontierCompileTarget | string | readonly string[];
+  readonly unsupportedTarget?: FrontierCompileTarget | string | readonly string[];
+  readonly packageReadiness?: SemanticMergeReadiness | string | readonly string[];
+  readonly packageName?: string | readonly string[];
+  readonly packageClass?: string | readonly string[];
+  readonly packageReleaseStatus?: string | readonly string[];
+  readonly packageReleaseReady?: boolean | readonly boolean[];
+  readonly packagePlannedOnly?: boolean | readonly boolean[];
+  readonly packageMissingContract?: boolean | readonly boolean[];
+  readonly packageSourceImporterOnly?: boolean | readonly boolean[];
+  readonly packageHostEvidenceRequired?: boolean | readonly boolean[];
+  readonly packageTargetProjectionSupported?: boolean | readonly boolean[];
+  readonly packageTargetProjectionMissing?: boolean | readonly boolean[];
+  readonly packageTargetProjectionTarget?: FrontierCompileTarget | string | readonly string[];
+  readonly requiredEvidenceKey?: string | readonly string[];
+  readonly blocker?: string | readonly string[];
+  readonly reviewReason?: string | readonly string[];
+}
+
+export interface UniversalCapabilityMatrixQuerySummary {
+  readonly rows: number;
+  readonly languages: readonly string[];
+  readonly ready: number;
+  readonly readyWithLosses: number;
+  readonly needsReview: number;
+  readonly blocked: number;
+  readonly packageReleaseReady: number;
+  readonly packagePlannedOnly: number;
+  readonly packageSourceImporterOnly: number;
+  readonly packageMissingContracts: number;
+  readonly packageTargetProjectionSupported: number;
+  readonly packageTargetProjectionMissing: number;
+  readonly packageNames: readonly string[];
+  readonly packageClasses: readonly string[];
+  readonly packageTargetProjectionTargets: readonly string[];
+  readonly requiredEvidenceKeys: readonly string[];
+}
+
+export interface UniversalCapabilityMatrixQueryResult {
+  readonly kind: 'frontier.lang.universalCapabilityQuery';
+  readonly version: 1;
+  readonly found: boolean;
+  readonly rows: readonly UniversalCapabilityLanguageRow[];
+  readonly bestRow?: UniversalCapabilityLanguageRow;
+  readonly summary: UniversalCapabilityMatrixQuerySummary;
+  readonly reasons: readonly string[];
+}

@@ -95,6 +95,7 @@ for (const requiredExport of [
   'queryLanguageAdapterPackageContracts',
   'parseRustSemanticTree',
 	  'queryNativeParserFeatureMatrix',
+  'queryUniversalCapabilityMatrix',
 	  'queryProjectionReadinessMatrix',
 	  'querySemanticHistoryRecordOverlaps',
 	  'querySemanticLineageEvents',

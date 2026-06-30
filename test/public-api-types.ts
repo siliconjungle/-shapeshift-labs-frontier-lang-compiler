@@ -117,7 +117,7 @@ type ExpectedPublicRuntimeExport =
   | 'parseJsxSemanticTree' | 'parseSvgSemanticTree' | 'parsePackageManifestSemanticTree' | 'parseRustSemanticTree'
   | 'queryLanguageAdapterPackageContracts' | 'queryJsxElementRecords' | 'queryPackageDependencyRecords' | 'queryRustItemRecords'
   | 'queryNativeParserFeatureMatrix'
-  | 'queryProjectionReadinessMatrix'
+  | 'queryProjectionReadinessMatrix' | 'queryUniversalCapabilityMatrix'
   | 'querySemanticHistoryRecordOverlaps'
   | 'querySemanticLineageEvents'
   | 'querySemanticMergeCandidateAdmissionOverlaps'

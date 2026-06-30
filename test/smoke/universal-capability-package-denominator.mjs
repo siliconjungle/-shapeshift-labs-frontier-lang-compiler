@@ -1,5 +1,5 @@
 import { assert } from './helpers.mjs';
-import { createUniversalCapabilityMatrix } from './compiler-api.mjs';
+import { createUniversalCapabilityMatrix, queryUniversalCapabilityMatrix } from './compiler-api.mjs';
 
 const languageDenominator = ['rust', 'python', 'c', 'swift', 'kotlin', 'java', 'go', 'csharp', 'scala', 'ruby', 'dart'];
 const matrix = createUniversalCapabilityMatrix({
@@ -23,6 +23,41 @@ assert.equal(matrix.matrices.packageContracts.kind, 'frontier.lang.universalCapa
 assert.equal(matrix.matrices.packageContracts.languages.includes('scala'), true);
 assert.equal(matrix.matrices.packageContracts.languages.includes('ruby'), true);
 assert.equal(matrix.matrices.packageContracts.languages.includes('dart'), true);
+
+const sourceImporterOnlyQuery = queryUniversalCapabilityMatrix(matrix, {
+  packageSourceImporterOnly: true,
+  packageReleaseReady: true
+});
+assert.equal(sourceImporterOnlyQuery.kind, 'frontier.lang.universalCapabilityQuery');
+assert.equal(sourceImporterOnlyQuery.found, true);
+assert.deepEqual(sourceImporterOnlyQuery.summary.languages, ['csharp', 'go', 'java', 'kotlin', 'swift']);
+assert.equal(sourceImporterOnlyQuery.summary.packageSourceImporterOnly, 5);
+assert.equal(sourceImporterOnlyQuery.summary.packageTargetProjectionMissing, 5);
+assert.equal(sourceImporterOnlyQuery.bestRow.packageContract.releaseReady, true);
+
+const plannedOnlyQuery = queryUniversalCapabilityMatrix(matrix, {
+  packagePlannedOnly: true,
+  packageTargetProjectionSupported: false
+});
+assert.equal(plannedOnlyQuery.found, true);
+assert.deepEqual(plannedOnlyQuery.summary.languages, ['dart', 'ruby', 'scala']);
+assert.equal(plannedOnlyQuery.summary.packagePlannedOnly, 3);
+assert.equal(plannedOnlyQuery.summary.packageReleaseReady, 0);
+
+const targetProjectionQuery = queryUniversalCapabilityMatrix(matrix, {
+  packageTargetProjectionSupported: true,
+  packageTargetProjectionTarget: 'rust'
+});
+assert.equal(targetProjectionQuery.found, true);
+assert.deepEqual(targetProjectionQuery.summary.languages, ['rust']);
+assert.equal(targetProjectionQuery.rows[0].packageContract.targetProjection.targets.includes('rust'), true);
+
+const missingContractQuery = queryUniversalCapabilityMatrix(matrix, {
+  language: 'haskell',
+  packageMissingContract: true
+});
+assert.equal(missingContractQuery.found, false);
+assert.equal(missingContractQuery.reasons[0].includes('language=haskell'), true);
 
 for (const language of languageDenominator) {
   const row = rowFor(language);

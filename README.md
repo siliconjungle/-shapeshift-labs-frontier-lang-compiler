@@ -724,6 +724,7 @@ import {
   createUniversalCapabilityMatrix,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  queryUniversalCapabilityMatrix,
   queryUniversalConversionPlan,
   importNativeSource
 } from '@shapeshift-labs/frontier-lang-compiler';
@@ -758,6 +759,12 @@ const pythonUniversal = universalMatrix.languages.find((entry) => entry.language
 
 console.log(pythonUniversal.readiness); // combined import/parser/projection readiness
 console.log(pythonUniversal.blockers); // missing evidence/adapters that prevent merge admission
+
+const packageGaps = queryUniversalCapabilityMatrix(universalMatrix, {
+  packageSourceImporterOnly: true,
+  packageTargetProjectionMissing: true
+});
+console.log(packageGaps.summary.languages); // source-importer packages that still need target projection work
 
 const conversionPlan = createUniversalConversionPlan({
   imports: [imported],
@@ -811,7 +818,7 @@ The projection target matrix separates five runtime/API classes:
 - `targetAdapterProjection`: a host-owned native-to-target adapter is present and produced target output with its own evidence/readiness.
 - `missingAdapter`: no native-to-target projection adapter is declared; preserve or stub the original source language instead, or inject host-owned parser/semantic adapter evidence.
 
-`createUniversalCapabilityMatrix` composes the import coverage, parser AST format, parser feature, projection target, and language-adapter package-contract matrices into a single language row per source language. It is the coordinator-facing view for universal-language work: it shows imports, symbols, source-map mappings, parser feature readiness, projection targets, missing adapters, unsupported target features, package release readiness, source-importer-only contracts, planned package rows, blockers, and review reasons without claiming lossless conversion where evidence is absent. Pass `languageDenominator` when an audit needs exact rows such as Rust, Python, C, Swift, Kotlin, Java, Go, C#, Scala, Ruby, and Dart; package-contract rows keep Scala/Ruby/Dart visible as planned-only until release-ready adapter packages exist.
+`createUniversalCapabilityMatrix` composes the import coverage, parser AST format, parser feature, projection target, and language-adapter package-contract matrices into a single language row per source language. It is the coordinator-facing view for universal-language work: it shows imports, symbols, source-map mappings, parser feature readiness, projection targets, missing adapters, unsupported target features, package release readiness, source-importer-only contracts, planned package rows, blockers, and review reasons without claiming lossless conversion where evidence is absent. Pass `languageDenominator` when an audit needs exact rows such as Rust, Python, C, Swift, Kotlin, Java, Go, C#, Scala, Ruby, and Dart; package-contract rows keep Scala/Ruby/Dart visible as planned-only until release-ready adapter packages exist. Use `queryUniversalCapabilityMatrix` to filter that denominator by language, parser/projection/import readiness, package class/name, release readiness, planned-only status, source-importer-only contracts, target-projection support/missing state, package evidence keys, blockers, and review reasons.
 
 `createUniversalConversionPlan` turns that capability evidence into coordinator tasks: preserve exact source, run a target adapter, emit stubs, attach semantic-index evidence, or block the route until missing parser/adapter/proof evidence exists. Every route carries `autoMergeClaim: false`, `semanticEquivalenceClaim: false`, missing evidence, task hints, and a `frontier.lang.semanticMergeScore.v1` score for swarm merge admission.
 
