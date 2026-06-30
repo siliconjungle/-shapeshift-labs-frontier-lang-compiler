@@ -18,6 +18,14 @@ import type {
   UniversalRuntimeCapabilityRoute,
   UniversalRuntimeHostProfile
 } from './universal-runtime-capabilities.js';
+import type {
+  UniversalDialectConstructKind,
+  UniversalDialectProjectionDisposition,
+  UniversalDialectRecordInput,
+  UniversalDialectRegistry,
+  UniversalDialectRegistryInput,
+  UniversalExternRecordInput
+} from './universal-dialects.js';
 
 export type UniversalConversionRouteMode =
   | 'preserve-source'
@@ -99,6 +107,22 @@ export interface UniversalConversionRouteRuntime {
   readonly review: readonly string[];
 }
 
+export interface UniversalConversionRouteDialect {
+  readonly registryIds: readonly string[];
+  readonly recordIds: readonly string[];
+  readonly constructKinds: readonly UniversalDialectConstructKind[];
+  readonly externKinds: readonly string[];
+  readonly projectionDispositions: readonly UniversalDialectProjectionDisposition[];
+  readonly evidenceIds: readonly string[];
+  readonly lossIds: readonly string[];
+  readonly readiness: SemanticMergeReadiness;
+  readonly records: readonly Record<string, unknown>[];
+  readonly blockers: readonly string[];
+  readonly review: readonly string[];
+  readonly missingEvidence: readonly string[];
+  readonly tasks: readonly string[];
+}
+
 export interface UniversalConversionRouteMergeRefs {
   readonly planId: string;
   readonly routeId: string;
@@ -146,6 +170,7 @@ export interface UniversalConversionRoute {
   };
   readonly projectionReadiness?: ProjectionReadinessTargetCell;
   readonly runtime: UniversalConversionRouteRuntime;
+  readonly dialect: UniversalConversionRouteDialect;
   readonly runtimeAdapterRequirements: readonly UniversalRuntimeAdapterRequirement[];
   readonly evidence: UniversalConversionRouteEvidence;
   readonly representation: UniversalRepresentationCoverage;
@@ -216,6 +241,9 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly targetRuntime?: string;
   readonly sourceRuntimes?: Readonly<Record<string, string>>;
   readonly targetRuntimes?: Readonly<Record<string, string>>;
+  readonly universalDialectRegistry?: UniversalDialectRegistryInput | UniversalDialectRegistry;
+  readonly dialects?: readonly UniversalDialectRecordInput[];
+  readonly externs?: readonly UniversalExternRecordInput[];
   readonly runtimeRequirements?: readonly (
     | UniversalRuntimeCapabilityKind
     | {
@@ -258,6 +286,11 @@ export interface UniversalConversionPlanQuery extends UniversalRepresentationCov
   readonly runtimeReadiness?: SemanticMergeReadiness;
   readonly missingRuntimeCapability?: UniversalRuntimeCapabilityKind;
   readonly runtimeAdapterRequirementId?: string;
+  readonly dialectReadiness?: SemanticMergeReadiness;
+  readonly dialectRegistryId?: string;
+  readonly dialectRecordId?: string;
+  readonly dialectConstructKind?: UniversalDialectConstructKind;
+  readonly dialectDisposition?: UniversalDialectProjectionDisposition;
 }
 
 export interface UniversalConversionPlanQueryResult {

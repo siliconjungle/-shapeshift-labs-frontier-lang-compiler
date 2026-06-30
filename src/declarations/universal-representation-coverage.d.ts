@@ -11,6 +11,7 @@ export type UniversalRepresentationConstructKind =
   | 'declaration-stub'
   | 'target-adapter'
   | 'runtime-capability'
+  | 'dialect-projection'
   | 'semantic-ownership'
   | 'proof-evidence'
   | string;
@@ -49,6 +50,14 @@ export interface UniversalRepresentationCoverage {
       readonly missingCapabilities: readonly UniversalRuntimeCapabilityKind[];
       readonly adapterRequirements: readonly string[];
     };
+    readonly dialect: {
+      readonly readiness: string;
+      readonly registryIds: readonly string[];
+      readonly recordIds: readonly string[];
+      readonly constructKinds: readonly string[];
+      readonly externKinds: readonly string[];
+      readonly projectionDispositions: readonly string[];
+    };
     readonly mergeRefs: {
       readonly ownershipKeys: readonly string[];
       readonly conflictKeys: readonly string[];
@@ -78,6 +87,8 @@ export interface UniversalRepresentationCoverageQuery {
   readonly constructKind?: UniversalRepresentationConstructKind | readonly UniversalRepresentationConstructKind[];
   readonly construct?: UniversalRepresentationConstructKind | readonly UniversalRepresentationConstructKind[];
   readonly runtimeCapability?: UniversalRuntimeCapabilityKind | readonly UniversalRuntimeCapabilityKind[];
+  readonly dialectConstructKind?: string | readonly string[];
+  readonly dialectReadiness?: string;
   readonly sourceMapPrecision?: string | readonly string[];
   readonly transformIdentityHash?: string | readonly string[];
 }

@@ -1,19 +1,12 @@
-import {
-  idFragment,
-  maxSemanticMergeReadiness,
-  normalizeNativeLanguageId,
-  uniqueStrings
-} from './native-import-utils.js';
-import {
-  nativeLanguageCompileTarget,
-  normalizeProjectionMatrixTargets
-} from './coverage-matrix-profiles.js';
+import { idFragment, maxSemanticMergeReadiness, normalizeNativeLanguageId, uniqueStrings } from './native-import-utils.js';
+import { nativeLanguageCompileTarget, normalizeProjectionMatrixTargets } from './coverage-matrix-profiles.js';
 import { createUniversalCapabilityMatrix } from './universal-capability-matrix.js';
 import { createUniversalRuntimeCapabilityMatrix } from './universal-runtime-capabilities.js';
 import {
   conversionMergeRefs,
   importsForConversionLanguage
 } from './universal-conversion-plan-merge-refs.js';
+import { conversionDialectCoverage, conversionDialectRegistries, conversionRouteMatchesDialectQuery } from './universal-conversion-dialect-routing.js';
 import { conversionRouteIdForRuntime, conversionRouteMatchesRuntimeQuery, conversionRuntimeRoutes } from './universal-conversion-runtime-routing.js';
 import {
   conversionMergeScore,
@@ -24,10 +17,7 @@ import {
   hasPassedRouteEvidence
 } from './universal-conversion-route-evidence.js';
 import { conversionPlanSummary } from './universal-conversion-plan-summary.js';
-import {
-  createUniversalRepresentationCoverage,
-  representationCoverageMatches
-} from './universal-representation-coverage.js';
+import { createUniversalRepresentationCoverage, representationCoverageMatches } from './universal-representation-coverage.js';
 
 export function createUniversalConversionPlan(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
@@ -45,7 +35,7 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
       targets
     }, context);
   const evidence = input.evidence ?? [];
-  const routeInput = { evidence, generatedAt, imports: input.imports ?? [], matrix, runtimeMatrix };
+  const routeInput = { dialectRegistries: conversionDialectRegistries(input), evidence, generatedAt, imports: input.imports ?? [], matrix, runtimeMatrix };
   const routes = (matrix.languages ?? []).flatMap((language) => targets.flatMap((target) => {
     const runtimeRoutes = conversionRuntimeRoutes(runtimeMatrix, language, target);
     return runtimeRoutes.map((runtimeRoute) => conversionRoute(language, target, {
@@ -89,6 +79,7 @@ export function queryUniversalConversionPlan(planOrInput = {}, query = {}, conte
     if (query.mode && route.mode !== query.mode) return false;
     if (query.readiness && route.readiness !== query.readiness) return false;
     if (query.admissionAction && route.admissionAction !== query.admissionAction) return false;
+    if (!conversionRouteMatchesDialectQuery(route, query)) return false;
     if (!conversionRouteMatchesRuntimeQuery(route, query)) return false;
     if (!representationCoverageMatches(route.representation, query)) return false;
     return true;
@@ -117,14 +108,18 @@ function conversionRoute(language, target, input, planId) {
   const readinessCell = projectionReadinessCell(input.matrix, language, target);
   const runtimeRoute = input.runtimeRoute;
   const runtime = conversionRuntime(runtimeRoute);
+  const dialect = conversionDialectCoverage(input.dialectRegistries, language, target);
   const mode = conversionMode(language, target, sourceTarget, targetCell);
-  const blockers = conversionBlockers(language, targetCell, mode, runtime);
-  const review = conversionReviewReasons(language, targetCell, mode, runtime);
+  const blockers = conversionBlockers(language, targetCell, mode, runtime, dialect);
+  const review = conversionReviewReasons(language, targetCell, mode, runtime, dialect);
   const readiness = blockers.length
     ? 'blocked'
     : maxSemanticMergeReadiness(
-      maxSemanticMergeReadiness(language.readiness, targetCell?.readiness ?? readinessCell?.readiness ?? 'needs-review'),
-      runtime.readiness ?? 'ready'
+      maxSemanticMergeReadiness(
+        maxSemanticMergeReadiness(language.readiness, targetCell?.readiness ?? readinessCell?.readiness ?? 'needs-review'),
+        runtime.readiness ?? 'ready'
+      ),
+      dialect.readiness ?? 'ready'
     );
   const id = conversionRouteIdForRuntime(language, target, runtimeRoute, input.runtimeRouteCount);
   const routeEvidence = conversionRouteEvidence(input.evidence, language, target, id);
@@ -142,6 +137,7 @@ function conversionRoute(language, target, input, planId) {
     target,
     targetCell,
     runtime,
+    dialect,
     mergeRefs,
     evidence: routeEvidence
   });
@@ -164,13 +160,14 @@ function conversionRoute(language, target, input, planId) {
     sourceProjection: language.projection?.sourceProjection,
     projectionReadiness: readinessCell,
     runtime,
+    dialect,
     runtimeAdapterRequirements: runtime.adapterRequirements,
     evidence: conversionEvidence(language, targetCell),
     representation,
-    missingEvidence: conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime),
+    missingEvidence: conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect),
     blockers,
     review,
-    tasks: conversionTasks(language, target, mode, blockers, review, runtime),
+    tasks: conversionTasks(language, target, mode, blockers, review, runtime, dialect),
     mergeScore,
     mergeRefs: { ...mergeRefs, admissionStatus },
     autoMergeClaim: false,
@@ -198,22 +195,24 @@ function conversionMode(language, target, sourceTarget, targetCell) {
   return 'blocked';
 }
 
-function conversionBlockers(language, targetCell, mode, runtime) {
+function conversionBlockers(language, targetCell, mode, runtime, dialect) {
   return uniqueStrings([
     ...(language.imports.total === 0 ? ['No source import exists for this language.'] : []),
     ...(mode === 'blocked' ? ['No viable preserve, adapter, stub, or semantic-index conversion route exists.'] : []),
     ...(targetCell?.lossClass === 'missingAdapter' && mode !== 'semantic-index-only' ? [targetCell.reason] : []),
     ...(language.blockers ?? []).filter((reason) => !reason.includes('Missing native-to-target projection adapter')),
     ...(runtime?.blockers ?? []),
+    ...(dialect?.blockers ?? []),
     ...((runtime?.missingCapabilities ?? []).map((capability) => `Runtime capability is missing: ${capability}.`))
   ]);
 }
 
-function conversionReviewReasons(language, targetCell, mode, runtime) {
+function conversionReviewReasons(language, targetCell, mode, runtime, dialect) {
   return uniqueStrings([
     ...(language.review ?? []),
     ...(targetCell?.reason ? [targetCell.reason] : []),
     ...(runtime?.review ?? []),
+    ...(dialect?.review ?? []),
     ...((runtime?.adapterRequirements ?? []).map((entry) => `Runtime adapter evidence is required for ${entry.capability}.`)),
     ...(mode === 'stub-only' ? ['Route can emit declaration stubs only; executable semantics require a target adapter.'] : []),
     ...(mode === 'semantic-index-only' ? ['Route has semantic index evidence but no target code projection adapter.'] : []),
@@ -288,7 +287,7 @@ function conversionEvidence(language, targetCell) {
   };
 }
 
-function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -300,11 +299,12 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...(mode === 'stub-only' ? ['executable-target-semantics'] : []),
     ...((runtime.missingCapabilities ?? []).map((capability) => `runtime-capability:${capability}`)),
     ...((runtime.adapterRequirements ?? []).length ? ['runtime-adapter-proof'] : []),
+    ...(dialect.missingEvidence ?? []),
     ...(hasPassedRouteEvidence(evidence) ? [] : ['proof-or-replay-evidence'])
   ]);
 }
 
-function conversionTasks(language, target, mode, blockers, review, runtime = {}) {
+function conversionTasks(language, target, mode, blockers, review, runtime = {}, dialect = {}) {
   return uniqueStrings([
     ...(language.imports.total ? [] : [`import ${language.language} source before planning ${target} output`]),
     ...(language.imports.symbols ? [] : [`attach semantic index for ${language.language}`]),
@@ -314,6 +314,7 @@ function conversionTasks(language, target, mode, blockers, review, runtime = {})
     ...(mode === 'target-adapter' ? [`run and verify ${language.language} to ${target} target adapter`] : []),
     ...((runtime.missingCapabilities ?? []).map((capability) => `provide runtime capability or adapter evidence for ${capability}`)),
     ...((runtime.adapterRequirements ?? []).length ? [`prove runtime adapter obligations for ${language.language} to ${target}`] : []),
+    ...(dialect.tasks ?? []),
     ...(blockers.length || review.length ? [`collect proof, replay, or oracle evidence for ${language.language} to ${target}`] : [])
   ]);
 }
