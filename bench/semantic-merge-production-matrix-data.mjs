@@ -160,13 +160,21 @@ const rowProofs = new Map([
   }],
   ['Package management intent and lockfile proof', {
     anchors: packageAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-package-canvas.mjs'],
-    remaining: ['Package manager execution proof corpus']
+    evidence: [
+      'test/smoke/js-ts-safe-project-merge-package-canvas.mjs',
+      'test/smoke/js-ts-safe-project-merge-package-command-execution.mjs',
+      'test/smoke/js-ts-safe-project-merge-package-manager-corpus.mjs',
+      'test/smoke/js-ts-real-repo-corpus-command-execution-proof.mjs'
+    ],
+    remaining: []
   }],
   ['Canvas static element and runtime proof', {
     anchors: canvasAnchors,
-    evidence: ['test/smoke/js-ts-safe-project-merge-package-canvas.mjs'],
-    remaining: ['Canvas browser probe corpus']
+    evidence: [
+      'test/smoke/js-ts-safe-project-merge-package-canvas.mjs',
+      'test/smoke/js-ts-safe-project-merge-canvas-runtime-proof-corpus.mjs'
+    ],
+    remaining: []
   }],
   ['Real-repo corpus', {
     anchors: [...jsTsAnchors, 'JSX/TSX parser and React-like layout hazards', 'CSS Modules contracts'],
@@ -181,6 +189,8 @@ const rowProofs = new Map([
 ]);
 
 const readmeHighRowProofs = new Map([
+  ['Package management intent and lockfile proof', rowProofs.get('Package management intent and lockfile proof')],
+  ['Canvas static element and runtime proof', rowProofs.get('Canvas static element and runtime proof')],
   ['Real-repo benchmark suite', rowProofs.get('Real-repo corpus')]
 ]);
 

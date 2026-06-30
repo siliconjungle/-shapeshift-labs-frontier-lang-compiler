@@ -26,9 +26,9 @@ assert.equal(status.unmappedProofRows.length, 0, 'proof rows must map to product
 assert.equal(status.unmappedSourceAnchors.length, 0, 'all source anchors must be linked');
 assert.equal(status.unmappedRemainingWork.length, 0, 'all remaining-work rows must be linked');
 assert.equal(status.rowCount, 24, 'production matrix row count');
-assert.equal(status.remainingWorkCount, 2, 'remaining work row count');
-assert.equal(status.statusCounts.high, 22, 'high matrix row count');
-assert.equal(status.statusCounts.partial, 2, 'partial matrix row count');
+assert.equal(status.remainingWorkCount, 0, 'remaining work row count');
+assert.equal(status.statusCounts.high, 24, 'high matrix row count');
+assert.equal(status.statusCounts.partial ?? 0, 0, 'partial matrix row count');
 assert.deepEqual(status.highRowsWithoutExecutableEvidence, [], 'high rows must map to executable evidence');
 assert.deepEqual(status.runtimeEquivalenceOverclaimRows, [], 'runtime/browser/render rows must stay bounded or fail-closed');
 assert.equal(
@@ -87,27 +87,42 @@ assert.match(completenessRow.currentExecutableEvidence, /runtime-equivalence cav
 
 const packageManagementRow = status.rows.find((row) => row.area === 'Package management intent and lockfile proof');
 assert.equal(Boolean(packageManagementRow), true, 'package-management matrix row exists');
-assert.equal(packageManagementRow.status, 'partial', 'package-management row stays partial until package-manager execution corpus exists');
+assert.equal(packageManagementRow.status, 'high', 'package-management row high after package-manager execution corpus exists');
 assert.match(packageManagementRow.currentExecutableEvidence, /does not text-merge lockfiles/, 'package-management row names lockfile no-text-merge rule');
-assert.equal(packageManagementRow.remainingWork.some((item) => item.workItem === 'Package manager execution proof corpus' && item.present), true, 'package-manager execution proof work is tracked');
+assert.equal(packageManagementRow.remainingWork.length, 0, 'package-management row has no current remaining work rows');
 assert.equal(packageManagementRow.evidenceFiles.some((file) => file.path === 'test/smoke/js-ts-safe-project-merge-package-canvas.mjs' && file.present), true, 'package-management focused smoke evidence');
+assert.equal(packageManagementRow.evidenceFiles.some((file) => file.path === 'test/smoke/js-ts-safe-project-merge-package-manager-corpus.mjs' && file.present), true, 'package-management package-manager corpus evidence');
+assert.equal(packageManagementRow.evidenceFiles.some((file) => file.path === 'test/smoke/js-ts-real-repo-corpus-command-execution-proof.mjs' && file.present), true, 'package-management real-repo command execution evidence');
 
 const canvasRow = status.rows.find((row) => row.area === 'Canvas static element and runtime proof');
 assert.equal(Boolean(canvasRow), true, 'canvas matrix row exists');
-assert.equal(canvasRow.status, 'partial', 'canvas row stays partial until browser probe corpus exists');
+assert.equal(canvasRow.status, 'high', 'canvas row high after browser probe corpus exists');
 assert.match(canvasRow.currentExecutableEvidence, /OffscreenCanvas worker fail-closed/, 'canvas row names OffscreenCanvas fail-closed behavior');
-assert.equal(canvasRow.remainingWork.some((item) => item.workItem === 'Canvas browser probe corpus' && item.present), true, 'canvas browser probe work is tracked');
+assert.equal(canvasRow.remainingWork.length, 0, 'canvas row has no current remaining work rows');
 assert.equal(canvasRow.evidenceFiles.some((file) => file.path === 'test/smoke/js-ts-safe-project-merge-package-canvas.mjs' && file.present), true, 'canvas focused smoke evidence');
+assert.equal(canvasRow.evidenceFiles.some((file) => file.path === 'test/smoke/js-ts-safe-project-merge-canvas-runtime-proof-corpus.mjs' && file.present), true, 'canvas browser probe corpus evidence');
 
 const readmeMatrix = status.readmeSemanticMergeMatrix;
 assert.equal(Boolean(readmeMatrix), true, 'README semantic merge matrix audit exists');
 assert.equal(readmeMatrix.matrixPath, 'README.md', 'README semantic merge matrix path');
 assert.equal(readmeMatrix.rowCount, 35, 'README semantic merge row count');
-assert.equal(readmeMatrix.statusCounts.high, 1, 'README semantic merge high row count');
+assert.equal(readmeMatrix.statusCounts.high, 3, 'README semantic merge high row count');
 assert.deepEqual(readmeMatrix.unmappedHighRows, [], 'README high rows must map to proof rows');
 assert.deepEqual(readmeMatrix.highRowsWithoutSourceAnchors, [], 'README high rows must map to source anchors');
 assert.deepEqual(readmeMatrix.highRowsWithoutExecutableEvidence, [], 'README high rows must map to executable evidence');
 assert.deepEqual(readmeMatrix.runtimeEquivalenceOverclaimRows, [], 'README runtime/browser/render rows must stay bounded or fail-closed');
+
+const readmePackageRow = readmeMatrix.rows.find((row) => row.surface === 'Package management intent and lockfile proof');
+assert.equal(Boolean(readmePackageRow), true, 'README package-management high row exists');
+assert.equal(readmePackageRow.status, 'High', 'README package-management high status');
+assert.equal(readmePackageRow.sourceAnchorsPresent, true, 'README package-management source anchors');
+assert.equal(readmePackageRow.executableEvidenceFilesPresent, true, 'README package-management executable evidence');
+
+const readmeCanvasRow = readmeMatrix.rows.find((row) => row.surface === 'Canvas static element and runtime proof');
+assert.equal(Boolean(readmeCanvasRow), true, 'README canvas high row exists');
+assert.equal(readmeCanvasRow.status, 'High', 'README canvas high status');
+assert.equal(readmeCanvasRow.sourceAnchorsPresent, true, 'README canvas source anchors');
+assert.equal(readmeCanvasRow.executableEvidenceFilesPresent, true, 'README canvas executable evidence');
 
 const readmeRealRepoRow = readmeMatrix.rows.find((row) => row.surface === 'Real-repo benchmark suite');
 assert.equal(Boolean(readmeRealRepoRow), true, 'README real-repo high row exists');
