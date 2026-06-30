@@ -183,7 +183,9 @@ evidence, returned-borrow escape records, named lifetime/reference/return
 bindings, explicit outlives relations such as `'long: 'short`, lifetime-region
 spans, source-bound borrow-scope obligations for async borrows, branch joins,
 no-escape flow, drop cleanup, and move invalidation, and unsafe-boundary proof
-obligations.
+obligations. Rust public generic, trait-bound, `where` clause, associated-type,
+`impl Trait`, and type-lifetime obligations also become universal type
+constraints for translation admission.
 That makes Rust borrow-checker-shaped evidence visible in the universal sidecar
 without claiming borrow-checker equivalence.
 
@@ -1096,8 +1098,10 @@ and auto-merge claims stay false unless separate proof is attached.
 
 Routes can also carry `typeConstraint`, a public API/type-shape admission record
 for callable signatures, parameter and return shape, generic parameters,
-nullability/optionality, nominal/structural identity, overload sets, visibility,
-variance, and advanced type operators. Type queries such as
+trait/protocol/interface bounds, `where` clauses, associated-type bindings,
+type-lifetime bounds, existential/opaque result types, nullability/optionality,
+nominal/structural identity, overload sets, visibility, variance, and advanced
+type operators. Type queries such as
 `typeConstraintMissingKind: "nullability"` let a coordinator distinguish "target
 code exists" from "target lowering preserved the source API contract." The record
 is deliberately conservative: type-equivalence, public-API-equivalence,

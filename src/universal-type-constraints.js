@@ -1,3 +1,4 @@
+import { rustTypeConstraintRecordsFromInput } from './internal/index-impl/rustTypeConstraintRecords.js';
 import { idFragment, uniqueStrings } from './native-import-utils.js';
 
 export const UniversalTypeConstraintStatuses = Object.freeze([
@@ -102,15 +103,16 @@ function normalizeTypeRecords(role, records) {
 }
 
 function typeRecordsFromImport(imported) {
-  return [
+  return uniqueTypeRecords([
     ...(imported?.typeConstraints ?? []),
     ...(imported?.types ?? []),
     ...(imported?.publicContracts ?? []),
     ...(imported?.semanticIndex?.symbols ?? []).filter(publicTypeRecord),
     ...(imported?.symbols ?? []).filter(publicTypeRecord),
     ...(imported?.declarations ?? []).filter(publicTypeRecord),
-    ...(imported?.nativeAst?.declarations ?? []).filter(publicTypeRecord)
-  ];
+    ...(imported?.nativeAst?.declarations ?? []).filter(publicTypeRecord),
+    ...rustTypeConstraintRecordsFromInput(imported)
+  ]);
 }
 
 function publicTypeRecord(record = {}) {
@@ -141,6 +143,11 @@ function typeKindForToken(token) {
   if (/public|api|contract|export|declaration/.test(token)) return ['public-contract'];
   if (/call|construct|function|method|signature|delegate/.test(token)) return ['callable-signature'];
   if (/generic|template|typeparam|type-parameter/.test(token)) return ['generic-parameters'];
+  if (/trait.*bound|bound.*trait|protocol.*constraint|interface.*constraint/.test(token)) return ['trait-bound'];
+  if (/where-clause|where.*constraint/.test(token)) return ['where-clause'];
+  if (/lifetime.*bound|type-lifetime|outlives.*type/.test(token)) return ['type-lifetime-bound'];
+  if (/associated-type|assoc.*type/.test(token)) return ['associated-type-binding'];
+  if (/existential|impl-trait|opaque-type/.test(token)) return ['existential-type'];
   if (/parameter|argument|param/.test(token)) return ['parameter-shape'];
   if (/return|result|yield/.test(token)) return ['return-type'];
   if (/null|optional|undefined|maybe|nullable/.test(token)) return ['nullability'];
@@ -199,7 +206,7 @@ function typeConstraintRecord(kind, sourceTypes, targetTypes, representedKinds) 
     status: representedKinds.includes(kind) ? 'represented' : 'missing',
     sourceTypeIds: sourceTypes.filter((record) => record.constraintKinds.includes(kind)).map((record) => record.id),
     targetTypeIds: targetTypes.filter((record) => record.constraintKinds.includes(kind)).map((record) => record.id),
-    severity: ['public-contract', 'callable-signature', 'return-type', 'nullability'].includes(kind) ? 'error' : 'warning'
+    severity: ['public-contract', 'callable-signature', 'return-type', 'nullability', 'trait-bound', 'associated-type-binding'].includes(kind) ? 'error' : 'warning'
   };
 }
 
@@ -223,4 +230,19 @@ function match(filter, values) {
   if (!filters.length) return true;
   const valueSet = new Set((values ?? []).map(String));
   return filters.some((item) => valueSet.has(String(item)));
+}
+
+function uniqueTypeRecords(records) {
+  const seen = new Set();
+  const result = [];
+  for (const record of records) {
+    if (!record?.id) {
+      result.push(record);
+      continue;
+    }
+    if (seen.has(record.id)) continue;
+    seen.add(record.id);
+    result.push(record);
+  }
+  return result;
 }

@@ -1,5 +1,6 @@
 import{idFragment,maxSemanticMergeReadiness,uniqueRecordsById}from'../../native-import-utils.js';import{summarizeSemanticImportDependencies}from'../../semantic-import-dependencies.js';import{createSemanticGraphLayerSummary}from'../../semantic-import-graph-layers.js';import{createSemanticImportImpact}from'../../semantic-import-impact.js';import{summarizeSemanticImportSidecarParadigmSemantics,summarizeSemanticImportSidecarProofSpec,summarizeSemanticImportSidecarUniversalAstLayers}from'../../semantic-import-layers.js';import{semanticPatchHintForRegion,summarizeSemanticImportRegionTaxonomy}from'../../semantic-import-regions.js';import{createSemanticResourceGraph}from'../../semantic-resource-graph.js';import{semanticImportSidecarEntry}from'../../semantic-import-sidecar-entry.js';import{summarizeKernelSourcePreservation}from'../../semantic-import-source-preservation.js';
 import{createSemanticImportSidecarAdmission,createSemanticImportSidecarQuality}from'./createSemanticImportSidecarAdmission.js';
+import{rustTypeConstraintRecordsFromInput}from'./rustTypeConstraintRecords.js';
 import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';
 export function createSemanticImportSidecar(importResult, options = {}) {
   const imports = Array.isArray(importResult?.imports) ? importResult.imports : [importResult].filter(Boolean);
@@ -18,6 +19,10 @@ export function createSemanticImportSidecar(importResult, options = {}) {
   const proofSpec = summarizeSemanticImportSidecarProofSpec(importEntries);
   const paradigmSemantics = summarizeSemanticImportSidecarParadigmSemantics(importEntries);
   const dependencies = summarizeSemanticImportDependencies(imports);
+  const typeConstraints = uniqueRecordsById([
+    ...imports.flatMap((imported) => imported?.typeConstraints ?? []),
+    ...rustTypeConstraintRecordsFromInput({ imports })
+  ]);
   const resourceGraph = createSemanticResourceGraph({
     id: `resource_graph_${idFragment(importResult?.id ?? importResult?.projectRoot ?? imports[0]?.sourcePath ?? imports[0]?.language ?? 'source')}`,
     language: importResult?.language ?? (imports.length === 1 ? imports[0]?.language : 'mixed'),
@@ -107,6 +112,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     proofSpec,
     paradigmSemantics,
     dependencies,
+    typeConstraints,
     resourceGraph,
     borrowScopes,
     borrowScopeRegions: borrowScopes,
@@ -159,6 +165,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       paradigmSemanticsRecords: paradigmSemantics.total,
       paradigmSemanticsGroups: paradigmSemantics.groups.length,
       paradigmSemanticsLoweringRecords: paradigmSemantics.loweringRecords,
+      typeConstraintRecords: typeConstraints.length,
       resourceGraphRecords: resourceGraph.summary.records,
       resourceGraphResources: resourceGraph.summary.resources,
       resourceGraphLoans: resourceGraph.summary.loans,

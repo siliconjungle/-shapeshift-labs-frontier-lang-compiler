@@ -264,8 +264,7 @@ export interface SemanticImportSidecar {
   readonly paradigmSemantics: SemanticImportSidecarParadigmSemanticsSummary;
   readonly dependencies: SemanticImportDependencySummary; readonly semanticImpact: SemanticImportImpactSummary;
   readonly resourceGraph: SemanticResourceGraph;
-  readonly borrowScopes: readonly SemanticResourceBorrowScopeRecord[];
-  readonly borrowScopeRegions: readonly SemanticResourceBorrowScopeRecord[];
+  readonly borrowScopes: readonly SemanticResourceBorrowScopeRecord[]; readonly borrowScopeRegions: readonly SemanticResourceBorrowScopeRecord[]; readonly typeConstraints: readonly Record<string, unknown>[];
   readonly graphLayers: SemanticGraphLayerSummary;
   readonly patchHints: readonly SemanticImportPatchHint[];
   readonly quality: SemanticImportSidecarQuality;
@@ -305,7 +304,7 @@ export interface SemanticImportSidecar {
     readonly proofSpecFailedObligations: number;
     readonly paradigmSemanticsRecords: number;
     readonly paradigmSemanticsGroups: number;
-    readonly paradigmSemanticsLoweringRecords: number;
+    readonly paradigmSemanticsLoweringRecords: number; readonly typeConstraintRecords: number;
     readonly resourceGraphRecords: number; readonly resourceGraphResources: number; readonly resourceGraphLoans: number; readonly resourceGraphAliases: number; readonly resourceGraphMoves: number; readonly resourceGraphDrops: number; readonly resourceGraphEscapes: number; readonly resourceGraphLifetimeRegions: number; readonly resourceGraphLifetimeRelations: number; readonly resourceGraphBorrowScopes: number; readonly resourceGraphUnsafeBoundaries: number; readonly resourceGraphConflicts: number;
     readonly dependencyRelations: number; readonly dependencyPredicates: readonly string[];
     readonly graphLayers: number; readonly graphLayersUsable: number; readonly graphLayerStatus: SemanticGraphLayerSummary['status'];

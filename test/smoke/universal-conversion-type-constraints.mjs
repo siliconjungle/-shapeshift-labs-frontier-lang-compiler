@@ -1,8 +1,10 @@
 import { assert } from './helpers.mjs';
 import {
+  createSemanticImportSidecar,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
   createUniversalTypeConstraintEvidence,
+  importNativeSource,
   queryUniversalConversionArtifacts,
   queryUniversalConversionPlan
 } from './compiler-api.mjs';
@@ -25,9 +27,41 @@ assert.equal(degradedTypeConstraints.missingEvidence.includes('translation-type-
 assert.equal(degradedTypeConstraints.claims.typeEquivalenceClaim, false);
 assert.equal(degradedTypeConstraints.claims.publicApiEquivalenceClaim, false);
 
+const rustBoundImport = importNativeSource({
+  language: 'rust',
+  sourcePath: 'src/cache.rs',
+  sourceText: [
+    "pub trait Cache<'a, T: Clone + Send>",
+    "where T: Into<String> + 'a {",
+    '  fn get(&self) -> T;',
+    '}',
+    "pub fn read<'a, T: Cache<'a, Item = String> + Send>(cache: T) -> impl Iterator<Item = String> where T: 'a {",
+    '  std::iter::empty()',
+    '}',
+    ''
+  ].join('\n')
+});
+const rustBoundSidecar = createSemanticImportSidecar(rustBoundImport, { generatedAt: 812.5 });
+assert.equal(rustBoundSidecar.typeConstraints.length >= 2, true);
+assert.equal(rustBoundSidecar.summary.typeConstraintRecords, rustBoundSidecar.typeConstraints.length);
+
+const rustBoundConstraints = createUniversalTypeConstraintEvidence({
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  imports: [rustBoundImport]
+});
+assert.equal(rustBoundConstraints.status, 'needs-evidence');
+assert.equal(rustBoundConstraints.requiredKinds.includes('trait-bound'), true);
+assert.equal(rustBoundConstraints.requiredKinds.includes('where-clause'), true);
+assert.equal(rustBoundConstraints.requiredKinds.includes('type-lifetime-bound'), true);
+assert.equal(rustBoundConstraints.requiredKinds.includes('associated-type-binding'), true);
+assert.equal(rustBoundConstraints.requiredKinds.includes('existential-type'), true);
+assert.equal(rustBoundConstraints.missingEvidence.includes('translation-type-constraint:trait-bound'), true);
+assert.equal(rustBoundConstraints.claims.typeEquivalenceClaim, false);
+
 const degradedTypePlan = createUniversalConversionPlan({
   generatedAt: 812,
-  universalCapabilityMatrix: capabilityMatrix(),
+  universalCapabilityMatrix: capabilityMatrix('javascript', 'rust'),
   targets: ['rust'],
   imports: [sourceImport()],
   evidence: [routeProof('type_constraint')],
@@ -63,14 +97,28 @@ assert.equal(degradedTypeArtifacts.index.typeConstraintStatuses.includes('degrad
 assert.equal(degradedTypeArtifacts.index.typeConstraintMissingKinds.includes('generic-parameters'), true);
 assert.equal(degradedTypeArtifacts.summary.compactCounts.typeConstraint.missingKinds.nullability, 1);
 
-function capabilityMatrix() {
+const rustBoundPlan = createUniversalConversionPlan({
+  generatedAt: 814,
+  universalCapabilityMatrix: capabilityMatrix('rust', 'typescript'),
+  targets: ['typescript'],
+  imports: [rustBoundImport]
+});
+const rustBoundRoute = queryUniversalConversionPlan(rustBoundPlan, {
+  typeConstraintStatus: 'needs-evidence',
+  typeConstraintMissingKind: 'trait-bound'
+}).bestRoute;
+assert.equal(rustBoundRoute.typeConstraint.missingKinds.includes('where-clause'), true);
+assert.equal(rustBoundRoute.missingEvidence.includes('translation-type-constraint:trait-bound'), true);
+assert.equal(rustBoundRoute.translationAdmission.typeConstraintStatus, 'needs-evidence');
+
+function capabilityMatrix(language, target) {
   return {
     kind: 'frontier.lang.universalCapabilityMatrix',
     version: 1,
     generatedAt: 812,
     languages: [{
-      language: 'javascript',
-      aliases: ['js'],
+      language,
+      aliases: language === 'javascript' ? ['js'] : [],
       readiness: 'ready',
       imports: { total: 1, readiness: 'ready', symbols: 1, sourceMaps: 1, sourceMapMappings: 1, losses: 0 },
       parser: { readiness: 'ready', rows: 1, parsers: ['fixture'], mergeReadyParsers: ['fixture'], blockingFeatures: [], reviewFeatures: [] },
@@ -80,17 +128,17 @@ function capabilityMatrix() {
           exactSource: { evidence: { importsWithExactSource: 1 } },
           stubs: { evidence: { importsWithDeclarations: 1 } }
         },
-        targets: [{ target: 'rust', lossClass: 'targetAdapterProjection', supported: true, readiness: 'ready', adapter: 'fixture-js-rust', adapterKind: 'targetProjection', lossKinds: [], reason: 'fixture target adapter' }]
+        targets: [{ target, lossClass: 'targetAdapterProjection', supported: true, readiness: 'ready', adapter: `fixture-${language}-${target}`, adapterKind: 'targetProjection', lossKinds: [], reason: 'fixture target adapter' }]
       },
       blockers: [],
       review: []
     }],
     matrices: {
       projectionReadiness: {
-        languages: [{ language: 'javascript', targets: [{ target: 'rust', readiness: 'ready' }] }]
+        languages: [{ language, targets: [{ target, readiness: 'ready' }] }]
       }
     },
-    metadata: { compileTargets: ['rust'] }
+    metadata: { compileTargets: [target] }
   };
 }
 
