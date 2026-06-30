@@ -1,4 +1,5 @@
 import { idFragment } from '../../native-import-utils.js';
+import { rustBindingOwnershipSemantics } from './semanticResourceGraphRustOwnershipSemantics.js';
 
 export function appendRustValueParameterOwnership(output, bundle, record, context, bindings, signature) {
   for (const [index, parameter] of rustValueParameters(signature).entries()) {
@@ -7,16 +8,17 @@ export function appendRustValueParameterOwnership(output, bundle, record, contex
     const ownerId = `owner_rust_owned_param_${idPart}`;
     const lifetimeRegionId = `lifetime_rust_owned_param_${idPart}`;
     const sourceSpan = record.sourceSpan;
+    const semantics = rustBindingOwnershipSemantics({ typeText: parameter.typeText });
     output.resources.push({
       id: resourceId,
       name: parameter.name,
-      resourceKind: 'rust-owned-value-parameter',
+      resourceKind: semantics.copySemantics ? 'rust-copy-value-parameter' : 'rust-owned-value-parameter',
       ownerId,
       sourcePath: bundle.sourcePath,
       sourceHash: bundle.sourceHash,
       sourceSpan,
       evidenceIds: context.evidenceIds,
-      metadata: { rustKey: record.key, parameterText: parameter.text, typeText: parameter.typeText }
+      metadata: { rustKey: record.key, parameterText: parameter.text, typeText: parameter.typeText, ...semantics }
     });
     output.owners.push({
       id: ownerId,
@@ -36,8 +38,8 @@ export function appendRustValueParameterOwnership(output, bundle, record, contex
       sourceSpan,
       evidenceIds: context.evidenceIds
     });
-    output.drops.push(lexicalDrop(resourceId, ownerId, lifetimeRegionId, 'rust-parameter-lexical-drop', bundle, record, context, sourceSpan, parameter.text));
-    bindings.set(parameter.name, { name: parameter.name, resourceId, ownerId, lifetimeRegionId, bindingKind: 'owned-parameter' });
+    if (semantics.dropSemantics) output.drops.push(lexicalDrop(resourceId, ownerId, lifetimeRegionId, 'rust-parameter-lexical-drop', bundle, record, context, sourceSpan, parameter.text, { dropSemantics: semantics.dropSemantics }));
+    bindings.set(parameter.name, { name: parameter.name, resourceId, ownerId, lifetimeRegionId, bindingKind: 'owned-parameter', typeText: parameter.typeText, ...semantics });
   }
 }
 
@@ -164,6 +166,7 @@ function movedArgumentName(text) {
 }
 
 function movableBinding(binding = {}) {
+  if (binding.copySemantics) return false;
   if (['owned-parameter', 'moved-local'].includes(binding.bindingKind)) return true;
   const typeText = String(binding.typeText ?? '');
   const initializerText = String(binding.initializerText ?? '');
@@ -195,7 +198,7 @@ function removeLexicalDrops(output, binding) {
   output.drops = output.drops.filter((drop) => !(drop.resourceId === binding.resourceId && drop.ownerId === binding.ownerId && String(drop.dropKind ?? '').includes('lexical-drop')));
 }
 
-function lexicalDrop(resourceId, ownerId, lifetimeRegionId, dropKind, bundle, record, context, sourceSpan, text) {
+function lexicalDrop(resourceId, ownerId, lifetimeRegionId, dropKind, bundle, record, context, sourceSpan, text, metadata = {}) {
   return {
     id: `drop_${dropKind}_${idFragment(resourceId)}_${idFragment(ownerId)}`,
     resourceId,
@@ -206,7 +209,7 @@ function lexicalDrop(resourceId, ownerId, lifetimeRegionId, dropKind, bundle, re
     sourceHash: bundle.sourceHash,
     sourceSpan,
     evidenceIds: context.evidenceIds,
-    metadata: { rustKey: record.key, statementText: text }
+    metadata: { rustKey: record.key, statementText: text, ...metadata }
   };
 }
 

@@ -22,6 +22,9 @@ export interface UniversalOwnershipConstraintModel {
   readonly aliasKinds: readonly string[];
   readonly moveKinds: readonly string[];
   readonly dropKinds: readonly string[];
+  readonly copyKinds: readonly string[];
+  readonly cloneKinds: readonly string[];
+  readonly destructorDropKinds: readonly string[];
   readonly lifetimeKinds: readonly string[];
   readonly unsafeBoundaryKinds: readonly string[];
   readonly hasSharedBorrow: boolean;

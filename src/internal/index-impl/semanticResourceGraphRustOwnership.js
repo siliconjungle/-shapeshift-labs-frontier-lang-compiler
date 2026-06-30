@@ -1,6 +1,8 @@
 import { idFragment } from '../../native-import-utils.js';
 import { appendRustBorrowEscapes } from './semanticResourceGraphRustBorrowEscapes.js';
 import { appendRustMoveTransferEvidence, appendRustValueParameterOwnership } from './semanticResourceGraphRustMoveTransfers.js';
+import { rustBindingOwnershipSemantics, rustCloneInitializer } from './semanticResourceGraphRustOwnershipSemantics.js';
+import { rustLineAt, rustRecordBody, rustRecordSignature, rustStatementSpan } from './semanticResourceGraphRustSourceSpans.js';
 
 export function appendRustLocalOwnership(output, bundle, record, context) {
   if (!['fn', 'method'].includes(record.kind) || !bundle.sourceText) return;
@@ -26,7 +28,7 @@ export function appendRustLocalOwnership(output, bundle, record, context) {
       sourceHash: bundle.sourceHash,
       sourceSpan: rustStatementSpan(statement, bundle, record),
       evidenceIds: context.evidenceIds,
-      metadata: { rustKey: record.key, statementText: statement.text }
+      metadata: { rustKey: record.key, statementText: statement.text, dropSemantics: binding.dropSemantics }
     });
   }
   appendRustBorrowEscapes(output, bundle, record, context, bindings, body);
@@ -40,8 +42,17 @@ function appendRustLetStatement(output, bundle, record, context, bindings, state
     appendRustBorrowBinding(output, bundle, record, context, bindings, statement, borrowed);
     return;
   }
+  const cloned = rustCloneInitializer(init);
+  if (cloned) {
+    appendRustCloneBinding(output, bundle, record, context, bindings, statement, cloned);
+    return;
+  }
   const movedFrom = rustMovedBinding(init, bindings);
   if (movedFrom) {
+    if (movedFrom.copySemantics) {
+      appendRustCopyBinding(output, bundle, record, context, bindings, statement, movedFrom);
+      return;
+    }
     appendRustMoveBinding(output, bundle, record, context, bindings, statement, movedFrom);
     return;
   }
@@ -105,6 +116,27 @@ function appendRustBorrowBinding(output, bundle, record, context, bindings, stat
   });
 }
 
+function appendRustCloneBinding(output, bundle, record, context, bindings, statement, cloned) {
+  const source = bindings.get(cloned.sourceBinding);
+  const semantics = rustBindingOwnershipSemantics({ typeText: source?.typeText, initializerText: statement.initializer });
+  appendRustOwnedBinding(output, bundle, record, context, bindings, statement, {
+    resourceKind: 'rust-clone-value-binding',
+    extraMetadata: { cloneSourceBinding: cloned.sourceBinding, sourceResourceId: source?.resourceId, ...semantics },
+    bindingKind: 'clone-local',
+    semantics
+  });
+}
+
+function appendRustCopyBinding(output, bundle, record, context, bindings, statement, copiedFrom) {
+  const semantics = rustBindingOwnershipSemantics({ typeText: copiedFrom.typeText, initializerText: statement.initializer });
+  appendRustOwnedBinding(output, bundle, record, context, bindings, statement, {
+    resourceKind: 'rust-copy-value-binding',
+    extraMetadata: { copiedFromBinding: copiedFrom.name, sourceResourceId: copiedFrom.resourceId, ...semantics },
+    bindingKind: 'copy-local',
+    semantics
+  });
+}
+
 function appendRustMoveBinding(output, bundle, record, context, bindings, statement, movedFrom) {
   const idPart = `${context.recordId}_${idFragment(statement.name)}`;
   const ownerId = `owner_rust_binding_${idPart}`;
@@ -142,20 +174,21 @@ function appendRustMoveBinding(output, bundle, record, context, bindings, statem
       note: 'Lexical move evidence is source-derived and does not prove Copy or borrow-checker behavior.'
     }
   });
-  output.drops.push(rustLexicalDrop(movedFrom.resourceId, ownerId, lifetimeRegionId, statement, bundle, record, context, 'rust-lexical-drop-after-move'));
-  bindings.set(statement.name, { name: statement.name, resourceId: movedFrom.resourceId, ownerId, lifetimeRegionId, bindingKind: 'moved-local', typeText: movedFrom.typeText, initializerText: movedFrom.initializerText });
+  if (movedFrom.dropSemantics) output.drops.push(rustLexicalDrop(movedFrom.resourceId, ownerId, lifetimeRegionId, statement, bundle, record, context, 'rust-lexical-drop-after-move', { dropSemantics: movedFrom.dropSemantics }));
+  bindings.set(statement.name, { name: statement.name, resourceId: movedFrom.resourceId, ownerId, lifetimeRegionId, bindingKind: 'moved-local', typeText: movedFrom.typeText, initializerText: movedFrom.initializerText, copySemantics: false, cloneSemantics: movedFrom.cloneSemantics, dropSemantics: movedFrom.dropSemantics });
 }
 
-function appendRustOwnedBinding(output, bundle, record, context, bindings, statement) {
+function appendRustOwnedBinding(output, bundle, record, context, bindings, statement, options = {}) {
   const idPart = `${context.recordId}_${idFragment(statement.name)}`;
   const resourceId = `resource_rust_local_${idPart}`;
   const ownerId = `owner_rust_binding_${idPart}`;
   const lifetimeRegionId = `lifetime_rust_binding_${idPart}`;
   const span = rustStatementSpan(statement, bundle, record);
+  const semantics = options.semantics ?? rustBindingOwnershipSemantics({ typeText: statement.typeText, initializerText: statement.initializer });
   output.resources.push({
     id: resourceId,
     name: statement.name,
-    resourceKind: 'rust-owned-local-binding',
+    resourceKind: options.resourceKind ?? (semantics.copySemantics ? 'rust-copy-value-binding' : 'rust-owned-local-binding'),
     ownerId,
     sourcePath: bundle.sourcePath,
     sourceHash: bundle.sourceHash,
@@ -166,7 +199,9 @@ function appendRustOwnedBinding(output, bundle, record, context, bindings, state
       statementText: statement.text,
       initializerText: statement.initializer,
       typeText: statement.typeText,
-      mutable: statement.mutable
+      mutable: statement.mutable,
+      ...semantics,
+      ...(options.extraMetadata ?? {})
     }
   });
   output.owners.push({
@@ -179,24 +214,8 @@ function appendRustOwnedBinding(output, bundle, record, context, bindings, state
     evidenceIds: context.evidenceIds
   });
   output.lifetimeRegions.push(rustBindingLifetime(lifetimeRegionId, statement.name, 'rust-lexical-scope', statement, bundle, record, context));
-  output.drops.push(rustLexicalDrop(resourceId, ownerId, lifetimeRegionId, statement, bundle, record, context, 'rust-lexical-drop'));
-  bindings.set(statement.name, { name: statement.name, resourceId, ownerId, lifetimeRegionId, bindingKind: 'owned-local', typeText: statement.typeText, initializerText: statement.initializer });
-}
-
-function rustRecordBody(sourceText, record) {
-  const start = record.bodySpan?.startOffset;
-  const end = record.bodySpan?.endOffset;
-  if (typeof start === 'number' && typeof end === 'number' && end > start) {
-    return { text: sourceText.slice(start, end), span: record.bodySpan };
-  }
-  const fallback = fallbackBodySpan(sourceText, record);
-  return fallback ? { text: sourceText.slice(fallback.startOffset, fallback.endOffset), span: fallback } : { text: '', span: record.bodySpan };
-}
-
-function rustRecordSignature(sourceText, record) {
-  const start = record.sourceSpan?.startOffset ?? 0;
-  const bodyStart = record.bodySpan?.startOffset ?? record.sourceSpan?.endOffset ?? sourceText.length;
-  return sourceText.slice(start, bodyStart);
+  if (semantics.dropSemantics || !semantics.copySemantics) output.drops.push(rustLexicalDrop(resourceId, ownerId, lifetimeRegionId, statement, bundle, record, context, 'rust-lexical-drop', { dropSemantics: semantics.dropSemantics }));
+  bindings.set(statement.name, { name: statement.name, resourceId, ownerId, lifetimeRegionId, bindingKind: options.bindingKind ?? 'owned-local', typeText: statement.typeText, initializerText: statement.initializer, ...semantics });
 }
 
 function rustLetStatements(body, bodySpan = {}) {
@@ -263,7 +282,7 @@ function rustBindingLifetime(id, name, lifetimeKind, statement, bundle, record, 
   };
 }
 
-function rustLexicalDrop(resourceId, ownerId, lifetimeRegionId, statement, bundle, record, context, dropKind) {
+function rustLexicalDrop(resourceId, ownerId, lifetimeRegionId, statement, bundle, record, context, dropKind, metadata = {}) {
   return {
     id: `drop_${dropKind}_${idFragment(resourceId)}_${idFragment(ownerId)}`,
     resourceId,
@@ -274,44 +293,6 @@ function rustLexicalDrop(resourceId, ownerId, lifetimeRegionId, statement, bundl
     sourceHash: bundle.sourceHash,
     sourceSpan: rustStatementSpan(statement, bundle, record),
     evidenceIds: context.evidenceIds,
-    metadata: { rustKey: record.key, statementText: statement.text }
+    metadata: { rustKey: record.key, statementText: statement.text, ...metadata }
   };
-}
-
-function rustStatementSpan(statement, bundle, record) {
-  const startOffset = (statement.bodyStartOffset ?? record.bodySpan?.startOffset ?? 0) + statement.offset;
-  return {
-    path: bundle.sourcePath,
-    startOffset,
-    endOffset: startOffset + statement.text.length,
-    startLine: statement.line,
-    endLine: statement.line
-  };
-}
-
-function rustLineAt(text, offset) {
-  return text.slice(0, offset).split('\n').length;
-}
-
-function fallbackBodySpan(sourceText, record) {
-  const searchStart = record.sourceSpan?.startOffset ?? 0;
-  const open = sourceText.indexOf('{', searchStart);
-  if (open < 0) return undefined;
-  let depth = 0;
-  for (let index = open; index < sourceText.length; index += 1) {
-    if (sourceText[index] === '{') depth += 1;
-    else if (sourceText[index] === '}') {
-      depth -= 1;
-      if (depth === 0) {
-        return {
-          path: record.sourceSpan?.path,
-          startOffset: open + 1,
-          endOffset: index,
-          startLine: rustLineAt(sourceText, open),
-          endLine: rustLineAt(sourceText, index)
-        };
-      }
-    }
-  }
-  return undefined;
 }

@@ -84,6 +84,9 @@ function constraintModel(graph = {}, summary = {}) {
     aliasKinds: uniqueStrings((graph.aliases ?? []).map((record) => record.aliasKind)),
     moveKinds: uniqueStrings((graph.moves ?? []).map((record) => record.moveKind ?? 'move')),
     dropKinds: uniqueStrings((graph.drops ?? []).map((record) => record.dropKind)),
+    copyKinds: uniqueStrings((graph.resources ?? []).filter((record) => record.metadata?.copySemantics).map((record) => record.metadata?.ownershipSemantics ?? record.resourceKind)),
+    cloneKinds: uniqueStrings((graph.resources ?? []).filter((record) => record.metadata?.cloneSemantics).map((record) => record.metadata?.ownershipSemantics ?? record.resourceKind)),
+    destructorDropKinds: uniqueStrings((graph.drops ?? []).filter((record) => record.metadata?.dropSemantics).map((record) => record.metadata?.dropSemantics)),
     lifetimeKinds: uniqueStrings((graph.lifetimeRegions ?? []).map((record) => record.lifetimeKind)),
     unsafeBoundaryKinds: uniqueStrings((graph.unsafeBoundaries ?? []).map((record) => record.kind ?? record.metadata?.proofGapCode ?? 'unsafe-boundary')),
     hasSharedBorrow: loanModes.includes('shared'),
@@ -102,8 +105,11 @@ function requiredConstraintKinds(model, summary) {
     ...(model.hasExclusiveBorrow ? ['exclusive-borrow'] : []),
     ...(summary.aliases ? ['alias-control'] : []),
     ...(summary.moves ? ['move-invalidates-source'] : []),
+    ...(model.copyKinds.length ? ['copy-preserves-source'] : []),
+    ...(model.cloneKinds.length ? ['clone-produces-owned-value'] : []),
     ...(model.hasCallArgumentTransfer ? ['call-argument-ownership-transfer'] : []),
     ...(model.hasReturnTransfer ? ['return-ownership-transfer'] : []),
+    ...(model.destructorDropKinds.length ? ['destructor-drop-semantics'] : []),
     ...(summary.drops ? ['drop-order'] : []),
     ...(summary.lifetimeRegions || model.hasLifetimeBoundLoans ? ['lifetime-bound'] : []),
     ...(model.hasRawAccess ? ['raw-access-boundary'] : []),
@@ -119,8 +125,11 @@ function representedConstraintKinds(requiredKinds, model, summary, options) {
     if (kind === 'exclusive-borrow') return model.hasExclusiveBorrow;
     if (kind === 'alias-control') return summary.aliases > 0;
     if (kind === 'move-invalidates-source') return summary.moves > 0;
+    if (kind === 'copy-preserves-source') return model.copyKinds.length > 0;
+    if (kind === 'clone-produces-owned-value') return model.cloneKinds.length > 0;
     if (kind === 'call-argument-ownership-transfer') return model.hasCallArgumentTransfer;
     if (kind === 'return-ownership-transfer') return model.hasReturnTransfer;
+    if (kind === 'destructor-drop-semantics') return model.destructorDropKinds.length > 0;
     if (kind === 'drop-order') return summary.drops > 0;
     if (kind === 'lifetime-bound') return summary.lifetimeRegions > 0 || model.hasLifetimeBoundLoans;
     if (kind === 'raw-access-boundary') return model.hasRawAccess;
@@ -155,8 +164,11 @@ function constraintReview(missingKinds, sourceModel, targetModel, input) {
   return uniqueStrings([
     ...(missingKinds.length ? [`Ownership constraints are missing target evidence for: ${missingKinds.join(', ')}.`] : []),
     ...(sourceModel.hasExclusiveBorrow && !targetModel.hasExclusiveBorrow ? ['Source exclusive borrow constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.copyKinds.length && !targetModel.copyKinds.length ? ['Source Copy-like value semantics are not represented in the target graph.'] : []),
+    ...(sourceModel.cloneKinds.length && !targetModel.cloneKinds.length ? ['Source clone ownership semantics are not represented in the target graph.'] : []),
     ...(sourceModel.hasCallArgumentTransfer && !targetModel.hasCallArgumentTransfer ? ['Source call-argument ownership transfers are not represented in the target graph.'] : []),
     ...(sourceModel.hasReturnTransfer && !targetModel.hasReturnTransfer ? ['Source return ownership transfers are not represented in the target graph.'] : []),
+    ...(sourceModel.destructorDropKinds.length && !targetModel.destructorDropKinds.length ? ['Source destructor/drop semantics are not represented in the target graph.'] : []),
     ...(sourceModel.dropKinds.length && !targetModel.dropKinds.length ? ['Source drop-order constraints are not represented in the target graph.'] : []),
     ...(input.review ?? [])
   ]);
@@ -187,14 +199,17 @@ function constraintRecord(kind, sourceModel, targetModel, representedKinds) {
     status: representedKinds.includes(kind) ? 'represented' : 'missing',
     source: valuesForConstraint(kind, sourceModel),
     target: valuesForConstraint(kind, targetModel),
-    severity: ['exclusive-borrow', 'unsafe-boundary-proof', 'raw-access-boundary', 'call-argument-ownership-transfer', 'return-ownership-transfer'].includes(kind) ? 'error' : 'warning'
+    severity: ['exclusive-borrow', 'unsafe-boundary-proof', 'raw-access-boundary', 'call-argument-ownership-transfer', 'return-ownership-transfer', 'destructor-drop-semantics'].includes(kind) ? 'error' : 'warning'
   };
 }
 
 function valuesForConstraint(kind, model) {
   if (kind.endsWith('borrow')) return model.loanModes;
   if (kind === 'alias-control') return model.aliasKinds;
+  if (kind === 'copy-preserves-source') return model.copyKinds;
+  if (kind === 'clone-produces-owned-value') return model.cloneKinds;
   if (kind === 'move-invalidates-source' || kind.includes('ownership-transfer')) return model.moveKinds;
+  if (kind === 'destructor-drop-semantics') return model.destructorDropKinds;
   if (kind === 'drop-order') return model.dropKinds;
   if (kind === 'lifetime-bound') return model.lifetimeKinds;
   if (kind.includes('unsafe') || kind.includes('raw')) return model.unsafeBoundaryKinds;

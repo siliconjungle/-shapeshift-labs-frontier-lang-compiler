@@ -113,3 +113,40 @@ assert.equal(rustMoveTransferConstraint.requiredKinds.includes('call-argument-ow
 assert.equal(rustMoveTransferConstraint.requiredKinds.includes('return-ownership-transfer'), true);
 assert.equal(rustMoveTransferConstraint.missingEvidence.includes('translation-ownership-constraint:call-argument-ownership-transfer'), true);
 assert.equal(rustMoveTransferConstraint.missingEvidence.includes('translation-ownership-constraint:return-ownership-transfer'), true);
+
+const rustCopyCloneDropImport = importNativeSource({
+  language: 'rust',
+  sourcePath: 'src/copy_clone_drop.rs',
+  sourceText: [
+    'pub fn copy_clone_drop(source: String, count: usize) -> String {',
+    '  let temp = String::new();',
+    '  let copied = count;',
+    '  let cloned = source.clone();',
+    '  consume(cloned);',
+    '  source',
+    '}',
+    ''
+  ].join('\n')
+});
+const rustCopyCloneDropGraph = createSemanticImportSidecar(rustCopyCloneDropImport, { generatedAt: 142 }).resourceGraph;
+const copyResources = rustCopyCloneDropGraph.resources.filter((record) => record.metadata?.copySemantics);
+const cloneResources = rustCopyCloneDropGraph.resources.filter((record) => record.metadata?.cloneSemantics);
+const destructorDrops = rustCopyCloneDropGraph.drops.filter((record) => record.metadata?.dropSemantics === 'rust-destructor-drop');
+const countMoves = rustCopyCloneDropGraph.moves.filter((record) => record.metadata?.fromBinding === 'count' || record.metadata?.movedBinding === 'count');
+
+assert.equal(copyResources.some((record) => record.name === 'count'), true);
+assert.equal(copyResources.some((record) => record.name === 'copied'), true);
+assert.equal(cloneResources.some((record) => record.metadata?.cloneSourceBinding === 'source'), true);
+assert.equal(destructorDrops.length >= 1, true);
+assert.equal(countMoves.length, 0);
+
+const rustCopyCloneDropConstraint = createUniversalOwnershipConstraintEvidence({
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  sourceGraph: rustCopyCloneDropGraph
+});
+
+assert.equal(rustCopyCloneDropConstraint.requiredKinds.includes('copy-preserves-source'), true);
+assert.equal(rustCopyCloneDropConstraint.requiredKinds.includes('clone-produces-owned-value'), true);
+assert.equal(rustCopyCloneDropConstraint.requiredKinds.includes('destructor-drop-semantics'), true);
+assert.equal(rustCopyCloneDropConstraint.missingEvidence.includes('translation-ownership-constraint:copy-preserves-source'), true);

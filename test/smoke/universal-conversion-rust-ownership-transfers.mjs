@@ -55,6 +55,51 @@ assert.equal(Boolean(artifact), true);
 assert.equal(artifacts.index.ownershipConstraintMissingKinds.includes('call-argument-ownership-transfer'), true);
 assert.equal(artifacts.summary.compactCounts.resourceTransfer.ownershipConstraintMissingKinds['return-ownership-transfer'], 1);
 
+const copyCloneDropImport = importNativeSource({
+  language: 'rust',
+  sourcePath: 'src/copy_clone_drop.rs',
+  sourceText: [
+    'pub fn copy_clone_drop(source: String, count: usize) -> String {',
+    '  let temp = String::new();',
+    '  let copied = count;',
+    '  let cloned = source.clone();',
+    '  consume(cloned);',
+    '  source',
+    '}',
+    ''
+  ].join('\n')
+});
+const copyCloneDropSidecar = createSemanticImportSidecar(copyCloneDropImport, { generatedAt: 814 });
+const copyCloneDropPlan = createUniversalConversionPlan({
+  generatedAt: 814,
+  universalCapabilityMatrix: rustToTypescriptCapabilityMatrix(),
+  targets: ['typescript'],
+  imports: [copyCloneDropImport],
+  evidence: [routeProof()],
+  resourceTransfers: [{
+    sourceLanguage: 'rust',
+    target: 'typescript',
+    sourceGraph: copyCloneDropSidecar.resourceGraph
+  }]
+});
+const copyCloneDropRoute = queryUniversalConversionPlan(copyCloneDropPlan, {
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  ownershipConstraintMissingKind: 'clone-produces-owned-value'
+}).bestRoute;
+
+assert.equal(copyCloneDropRoute.resourceTransfer.ownershipConstraints.missingKinds.includes('copy-preserves-source'), true);
+assert.equal(copyCloneDropRoute.resourceTransfer.ownershipConstraints.missingKinds.includes('destructor-drop-semantics'), true);
+assert.equal(copyCloneDropRoute.interlingua.constraints.missingKinds.includes('clone-produces-owned-value'), true);
+
+const copyCloneDropArtifacts = createUniversalConversionArtifacts(copyCloneDropPlan, { routeId: copyCloneDropRoute.id, generatedAt: 815 });
+const copyCloneDropArtifact = queryUniversalConversionArtifacts(copyCloneDropArtifacts, {
+  interlinguaConstraintMissingKind: 'destructor-drop-semantics'
+})[0];
+
+assert.equal(Boolean(copyCloneDropArtifact), true);
+assert.equal(copyCloneDropArtifacts.index.ownershipConstraintMissingKinds.includes('copy-preserves-source'), true);
+
 function routeProof() {
   return {
     id: 'evidence_rust_ts_transfer_route_proof',
