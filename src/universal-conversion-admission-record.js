@@ -50,6 +50,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     admissionBucket: bucket,
     translationAdmissionStatus: route.translationAdmission?.status,
     translationAdmissionAction: route.translationAdmission?.action,
+    interlinguaRecordId: route.interlingua?.id,
+    interlinguaLoweringDisposition: route.interlingua?.lowering?.disposition,
     reviewRequired: true,
     readiness: route.readiness,
     risk: score.risk ?? riskForRoute(route, input.admissionStatus),
@@ -75,6 +77,16 @@ export function createUniversalConversionAdmissionRecord(input) {
       kinds: operationKinds,
       dynamic: operations.filter((operation) => operation.dynamic).map((operation) => operation.id),
       opaque: operations.filter((operation) => operation.opaque).map((operation) => operation.id)
+    },
+    interlingua: {
+      id: route.interlingua?.id,
+      loweringDisposition: route.interlingua?.lowering?.disposition,
+      representedLayerKinds: route.interlingua?.layers?.representedKinds ?? [],
+      missingLayerKinds: route.interlingua?.layers?.missingKinds ?? [],
+      reviewLayerKinds: route.interlingua?.layers?.reviewKinds ?? [],
+      blockedLayerKinds: route.interlingua?.layers?.blockedKinds ?? [],
+      lossIds: route.interlingua?.lowering?.lossIds ?? [],
+      missingEvidence: route.interlingua?.lowering?.missingEvidence ?? []
     },
     ownership: {
       keys: uniqueStrings(input.history?.index?.ownershipKeys ?? input.patchBundle?.index?.ownershipKeys ?? []),
@@ -107,6 +119,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       planId: input.planId,
       mergeScoreSchema: score.schema,
       translationAdmission: route.translationAdmission,
+      interlingua: route.interlingua,
       note: 'Admission records are sortable merge-review evidence, not proof of target semantic equivalence.'
     }
   };

@@ -1,5 +1,6 @@
 import { uniqueStrings } from './native-import-utils.js';
 import { artifactSemanticEditIndex } from './universal-conversion-artifact-semantic-edit.js';
+import { interlinguaRecordMatches } from './universal-interlingua-record.js';
 
 export function queryUniversalConversionArtifacts(records, query = {}) {
   return artifactRecords(records)
@@ -18,6 +19,13 @@ export function artifactIndex(routeArtifacts) {
     languages: uniqueStrings(routeArtifacts.map((artifact) => artifact.sourceLanguage)),
     targets: uniqueStrings(routeArtifacts.map((artifact) => artifact.target)),
     modes: uniqueStrings(routeArtifacts.map((artifact) => artifact.mode)),
+    lossClasses: uniqueStrings(routeArtifacts.map((artifact) => artifact.lossClass)),
+    adapterIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.adapter)),
+    adapterKinds: uniqueStrings(routeArtifacts.map((artifact) => artifact.adapterKind)),
+    routeMissingEvidence: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.missingEvidence ?? [])),
+    runtimeAdapterRequirementIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.runtimeAdapterRequirementIds ?? [])),
+    blockers: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.blockers ?? [])),
+    reviewReasons: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.review ?? [])),
     readinesses: uniqueStrings(routeArtifacts.map((artifact) => artifact.readiness)),
     admissionStatuses: uniqueStrings(routeArtifacts.map((artifact) => artifact.admissionStatus)),
     admissionBuckets: uniqueStrings(routeArtifacts.map((artifact) => artifact.admissionRecord.admissionBucket)),
@@ -73,6 +81,15 @@ export function artifactIndex(routeArtifacts) {
     requiredTranslationConstructKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactTranslationAdmission(artifact).requiredConstructKinds ?? [])),
     representedTranslationConstructKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactTranslationAdmission(artifact).representedConstructKinds ?? [])),
     targetAdapterIds: uniqueStrings(routeArtifacts.map((artifact) => artifactTranslationAdmission(artifact).targetAdapterId)),
+    interlinguaRecordIds: uniqueStrings(routeArtifacts.map((artifact) => artifactInterlingua(artifact).id)),
+    interlinguaLayerKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactInterlingua(artifact).query?.layerKinds ?? [])),
+    interlinguaRepresentedLayerKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactInterlingua(artifact).query?.representedLayerKinds ?? [])),
+    interlinguaMissingLayerKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactInterlingua(artifact).query?.missingLayerKinds ?? [])),
+    interlinguaReviewLayerKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactInterlingua(artifact).query?.reviewLayerKinds ?? [])),
+    interlinguaBlockedLayerKinds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactInterlingua(artifact).query?.blockedLayerKinds ?? [])),
+    interlinguaLoweringDispositions: uniqueStrings(routeArtifacts.map((artifact) => artifactInterlingua(artifact).query?.loweringDisposition)),
+    interlinguaMissingEvidence: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactInterlingua(artifact).query?.missingEvidence ?? [])),
+    interlinguaProofEvidenceIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifactInterlingua(artifact).query?.proofEvidenceIds ?? [])),
     transformIdentityHashes: uniqueStrings(routeArtifacts.flatMap(artifactTransformIdentityHashes))
   };
 }
@@ -93,6 +110,13 @@ function matchesArtifact(record, query) {
     && match(query.sourceLanguage, [record.sourceLanguage])
     && match(query.target, [record.target])
     && match(query.mode, [record.mode])
+    && match(query.lossClass, [record.lossClass])
+    && match(query.adapterId, [record.adapter])
+    && match(query.adapterKind, [record.adapterKind])
+    && match(query.routeMissingEvidence, record.missingEvidence)
+    && match(query.runtimeAdapterRequirementId, record.runtimeAdapterRequirementIds)
+    && match(query.blocker, record.blockers)
+    && match(query.reviewReason, record.review)
     && match(query.routeAction, [record.routeAction])
     && match(query.priority, [record.priority])
     && match(query.readiness, [record.readiness])
@@ -150,6 +174,7 @@ function matchesArtifact(record, query) {
     && match(query.requiredTranslationConstructKind, artifactTranslationAdmission(record).requiredConstructKinds)
     && match(query.representedTranslationConstructKind, artifactTranslationAdmission(record).representedConstructKinds)
     && match(query.targetAdapterId, [artifactTranslationAdmission(record).targetAdapterId])
+    && interlinguaRecordMatches(artifactInterlingua(record), query)
     && match(query.transformIdentityHash, artifactTransformIdentityHashes(record));
 }
 
@@ -187,6 +212,10 @@ function artifactTransformIdentityHashes(record) {
 
 function artifactTranslationAdmission(record) {
   return record.translationAdmission ?? record.metadata?.translationAdmission ?? record.admissionRecord?.metadata?.translationAdmission ?? {};
+}
+
+function artifactInterlingua(record) {
+  return record.interlingua ?? record.metadata?.interlingua ?? record.admissionRecord?.metadata?.interlingua ?? {};
 }
 
 function match(filter, values) {

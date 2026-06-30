@@ -10,6 +10,7 @@ import { conversionRouteEvidence, hasPassedRouteEvidence } from './universal-con
 import { conversionPlanSummary } from './universal-conversion-plan-summary.js';
 import { createUniversalRepresentationCoverage, representationCoverageMatches } from './universal-representation-coverage.js';
 import { createUniversalTranslationAdmission, conversionRouteMatchesTranslationAdmissionQuery } from './universal-conversion-translation-admission.js';
+import { createUniversalInterlinguaRecord, interlinguaRecordMatches } from './universal-interlingua-record.js';
 
 export function createUniversalConversionPlan(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
@@ -75,6 +76,7 @@ export function queryUniversalConversionPlan(planOrInput = {}, query = {}, conte
     if (!conversionRouteMatchesRuntimeQuery(route, query)) return false;
     if (!conversionRouteMatchesTranslationAdmissionQuery(route, query)) return false;
     if (!representationCoverageMatches(route.representation, query)) return false;
+    if (!interlinguaRecordMatches(route.interlingua, query)) return false;
     return true;
   });
   return {
@@ -139,7 +141,7 @@ function conversionRoute(language, target, input, planId) {
   const admissionStatus = mergeScore.action;
   const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect);
   const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, blockers, review });
-  return {
+  const route = {
     id,
     sourceLanguage: language.language,
     languageIds: uniqueStrings([language.language, ...(language.aliases ?? [])].map(normalizeNativeLanguageId)),
@@ -173,6 +175,7 @@ function conversionRoute(language, target, input, planId) {
       note: 'Route readiness is merge-review evidence for a conversion attempt, not proof that emitted target code is semantically equivalent.'
     }
   };
+  return { ...route, interlingua: createUniversalInterlinguaRecord({ route, representation, translationAdmission, mergeRefs, runtime, dialect }) };
 }
 
 function conversionPlanId(input, generatedAt) {

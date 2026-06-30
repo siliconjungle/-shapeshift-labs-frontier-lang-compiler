@@ -10,6 +10,7 @@ export function routeReasonCodes(route) {
   return uniqueStrings([
     `mode:${route.mode}`,
     `action:${route.routeAction}`,
+    ...(route.interlingua?.lowering?.disposition ? [`interlingua-lowering:${route.interlingua.lowering.disposition}`] : []),
     ...(route.missingEvidence ?? []).map((item) => `missing:${item}`),
     ...(route.translationAdmission?.missingEvidence ?? []).map((item) => `translation-missing:${item}`),
     ...(routeHasBoundEvidence(route) ? [] : ['missing:route-bound-evidence']),
@@ -27,6 +28,7 @@ export function routeAdmissionMetadata(route, planId) {
     priority: route.priority,
     mergeScore: route.mergeScore,
     translationAdmission: route.translationAdmission,
+    interlingua: route.interlingua,
     representation: routeRepresentationMetadata(route),
     ...routeSemanticEditRecordMetadata(route),
     autoMergeClaim: false,
@@ -43,6 +45,7 @@ export function routeRecordMetadata(route, planId, metadata) {
     mode: route.mode,
     routeAction: route.routeAction,
     translationAdmission: route.translationAdmission,
+    interlingua: route.interlingua,
     targetPortability: route.targetPortability ?? route.metadata?.targetPortability,
     representation: routeRepresentationMetadata(route),
     ...routeSemanticEditRecordMetadata(route),

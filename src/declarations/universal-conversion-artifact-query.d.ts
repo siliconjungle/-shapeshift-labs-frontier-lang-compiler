@@ -17,6 +17,7 @@ import type {
   UniversalConversionArtifactAdmissionStatus
 } from './universal-conversion-artifacts.js';
 import type { UniversalRepresentationCoverageQuery } from './universal-representation-coverage.js';
+import type { UniversalInterlinguaQuery } from './universal-interlingua.js';
 
 export interface UniversalConversionArtifactIndex {
   readonly routeIds: readonly string[];
@@ -26,6 +27,13 @@ export interface UniversalConversionArtifactIndex {
   readonly languages: readonly string[];
   readonly targets: readonly string[];
   readonly modes: readonly string[];
+  readonly lossClasses: readonly string[];
+  readonly adapterIds: readonly string[];
+  readonly adapterKinds: readonly string[];
+  readonly routeMissingEvidence: readonly string[];
+  readonly runtimeAdapterRequirementIds: readonly string[];
+  readonly blockers: readonly string[];
+  readonly reviewReasons: readonly string[];
   readonly readinesses: readonly string[];
   readonly admissionStatuses: readonly string[];
   readonly admissionBuckets: readonly string[];
@@ -81,10 +89,19 @@ export interface UniversalConversionArtifactIndex {
   readonly requiredTranslationConstructKinds: readonly string[];
   readonly representedTranslationConstructKinds: readonly string[];
   readonly targetAdapterIds: readonly string[];
+  readonly interlinguaRecordIds: readonly string[];
+  readonly interlinguaLayerKinds: readonly string[];
+  readonly interlinguaRepresentedLayerKinds: readonly string[];
+  readonly interlinguaMissingLayerKinds: readonly string[];
+  readonly interlinguaReviewLayerKinds: readonly string[];
+  readonly interlinguaBlockedLayerKinds: readonly string[];
+  readonly interlinguaLoweringDispositions: readonly string[];
+  readonly interlinguaMissingEvidence: readonly string[];
+  readonly interlinguaProofEvidenceIds: readonly string[];
   readonly transformIdentityHashes: readonly string[];
 }
 
-export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery {
+export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery {
   readonly routeId?: string | readonly string[];
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];
@@ -92,6 +109,13 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly sourceLanguage?: FrontierSourceLanguage | string | readonly string[];
   readonly target?: FrontierCompileTarget | string | readonly string[];
   readonly mode?: UniversalConversionRouteMode | readonly string[];
+  readonly lossClass?: string | readonly string[];
+  readonly adapterId?: string | readonly string[];
+  readonly adapterKind?: string | readonly string[];
+  readonly routeMissingEvidence?: string | readonly string[];
+  readonly runtimeAdapterRequirementId?: string | readonly string[];
+  readonly blocker?: string | readonly string[];
+  readonly reviewReason?: string | readonly string[];
   readonly readiness?: SemanticMergeReadiness | string | readonly string[];
   readonly admissionAction?: UniversalConversionAdmissionAction | readonly string[];
   readonly admissionStatus?: UniversalConversionArtifactAdmissionStatus | readonly string[];

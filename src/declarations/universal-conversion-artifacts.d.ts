@@ -7,6 +7,7 @@ import type { FrontierCompileTarget } from './compile.js';
 import type { SemanticHistoryRecord } from './semantic-history.js';
 import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
 import type { UniversalConversionArtifactCompactCounts } from './universal-conversion-compact-counts.js';
+import type { UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type {
   UniversalConversionAdmissionAction,
   UniversalConversionPlan,
@@ -61,6 +62,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly admissionAction: UniversalConversionAdmissionAction;
   readonly admissionBucket: UniversalConversionArtifactAdmissionBucket;
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus; readonly translationAdmissionAction?: UniversalTranslationAdmissionAction; readonly reviewRequired: true;
+  readonly interlinguaRecordId?: string;
+  readonly interlinguaLoweringDisposition?: string;
   readonly readiness: SemanticMergeReadiness | string;
   readonly risk: UniversalConversionRisk | string;
   readonly score: {
@@ -85,6 +88,16 @@ export interface UniversalConversionAdmissionRecord {
     readonly kinds: readonly string[];
     readonly dynamic: readonly string[];
     readonly opaque: readonly string[];
+  };
+  readonly interlingua: {
+    readonly id?: string;
+    readonly loweringDisposition?: string;
+    readonly representedLayerKinds: readonly string[];
+    readonly missingLayerKinds: readonly string[];
+    readonly reviewLayerKinds: readonly string[];
+    readonly blockedLayerKinds: readonly string[];
+    readonly lossIds: readonly string[];
+    readonly missingEvidence: readonly string[];
   };
   readonly ownership: {
     readonly keys: readonly string[];
@@ -121,8 +134,17 @@ export interface UniversalConversionRouteArtifact {
   readonly routeAction: UniversalConversionRouteAction;
   readonly priority: UniversalConversionPriority;
   readonly readiness: SemanticMergeReadiness | string;
+  readonly lossClass?: string;
+  readonly adapter?: string;
+  readonly adapterKind?: string;
+  readonly missingEvidence: readonly string[];
+  readonly runtimeAdapterRequirementIds: readonly string[];
+  readonly blockers: readonly string[];
+  readonly review: readonly string[];
   readonly admissionAction: UniversalConversionAdmissionAction;
-  readonly translationAdmission?: UniversalTranslationAdmission; readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
+  readonly translationAdmission?: UniversalTranslationAdmission;
+  readonly interlingua?: UniversalInterlinguaRecord;
+  readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
   readonly reviewRequired: true;
   readonly history: SemanticHistoryRecord;
   readonly patchBundle: SemanticPatchBundleRecord;

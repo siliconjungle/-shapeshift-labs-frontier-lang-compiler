@@ -43,6 +43,7 @@ export { createTypeScriptCompilerNativeImporterAdapter } from './internal/index-
 export { createUniversalAstFromDocument } from './internal/index-impl/createUniversalAstFromDocument.js';
 export { createUniversalCapabilityMatrix } from './internal/index-impl/createUniversalCapabilityMatrix.js';
 export { createUniversalRepresentationCoverage, representationCoverageMatches, UniversalRepresentationConstructKinds } from './universal-representation-coverage.js';
+export { createUniversalInterlinguaRecord, interlinguaRecordMatches, UniversalInterlinguaLayerKinds, UniversalInterlinguaLoweringDispositions } from './universal-interlingua-record.js';
 export { createUniversalConversionArtifacts } from './internal/index-impl/createUniversalConversionArtifacts.js';
 export { queryUniversalConversionArtifacts } from './universal-conversion-artifacts.js';
 export { createUniversalConversionPlan } from './internal/index-impl/createUniversalConversionPlan.js';

@@ -1,0 +1,127 @@
+import type {
+  FrontierSourceLanguage,
+  SemanticMergeReadiness
+} from '@shapeshift-labs/frontier-lang-kernel';
+import type { FrontierCompileTarget } from './compile.js';
+
+export type UniversalInterlinguaLayerKind =
+  | 'source-import'
+  | 'semantic-symbol'
+  | 'source-map'
+  | 'parser-feature'
+  | 'source-preservation'
+  | 'declaration-stub'
+  | 'target-adapter'
+  | 'runtime-capability'
+  | 'dialect-projection'
+  | 'semantic-ownership'
+  | 'proof-evidence'
+  | string;
+
+export type UniversalInterlinguaLoweringDisposition =
+  | 'exact-source'
+  | 'target-adapter'
+  | 'declaration-stub'
+  | 'semantic-index-only'
+  | 'lossy-review'
+  | 'blocked';
+
+export interface UniversalInterlinguaLayerSummary {
+  readonly kinds: readonly UniversalInterlinguaLayerKind[];
+  readonly representedKinds: readonly UniversalInterlinguaLayerKind[];
+  readonly missingKinds: readonly UniversalInterlinguaLayerKind[];
+  readonly reviewKinds: readonly UniversalInterlinguaLayerKind[];
+  readonly blockedKinds: readonly UniversalInterlinguaLayerKind[];
+  readonly constructCount: number;
+  readonly representedCount: number;
+  readonly missingCount: number;
+  readonly reviewCount: number;
+  readonly blockedCount: number;
+}
+
+export interface UniversalInterlinguaRecord {
+  readonly kind: 'frontier.lang.universalInterlinguaRecord';
+  readonly version: 1;
+  readonly id: string;
+  readonly routeId?: string;
+  readonly sourceLanguage?: FrontierSourceLanguage | string;
+  readonly target?: FrontierCompileTarget | string;
+  readonly lift: {
+    readonly sourceLanguage?: FrontierSourceLanguage | string;
+    readonly sourceImportIds: readonly string[];
+    readonly sourcePaths: readonly string[];
+    readonly sourceHashes: readonly string[];
+    readonly sourceMapIds: readonly string[];
+    readonly sourceMapMappingIds: readonly string[];
+    readonly ownershipKeys: readonly string[];
+    readonly conflictKeys: readonly string[];
+    readonly evidenceIds: readonly string[];
+    readonly proofIds: readonly string[];
+  };
+  readonly layers: UniversalInterlinguaLayerSummary;
+  readonly lowering: {
+    readonly disposition: UniversalInterlinguaLoweringDisposition;
+    readonly mode?: string;
+    readonly routeAction?: string;
+    readonly lossClass?: string;
+    readonly adapterId?: string;
+    readonly adapterKind?: string;
+    readonly readiness?: SemanticMergeReadiness | string;
+    readonly targetSupported: boolean;
+    readonly runtimeReadiness?: SemanticMergeReadiness | string;
+    readonly runtimeRequiredCapabilities: readonly string[];
+    readonly runtimeAdapterRequirementIds: readonly string[];
+    readonly dialectReadiness?: SemanticMergeReadiness | string;
+    readonly dialectRecordIds: readonly string[];
+    readonly dialectProjectionDispositions: readonly string[];
+    readonly proofEvidenceIds: readonly string[];
+    readonly evidenceIds: readonly string[];
+    readonly missingEvidence: readonly string[];
+    readonly lossIds: readonly string[];
+    readonly blockers: readonly string[];
+    readonly review: readonly string[];
+  };
+  readonly claims: {
+    readonly exactSource: boolean;
+    readonly adapterMediated: boolean;
+    readonly declarationOnly: boolean;
+    readonly semanticIndexOnly: boolean;
+    readonly lossyReview: boolean;
+    readonly blocked: boolean;
+    readonly autoMergeClaim: false;
+    readonly semanticEquivalenceClaim: false;
+  };
+  readonly query: {
+    readonly layerKinds: readonly UniversalInterlinguaLayerKind[];
+    readonly representedLayerKinds: readonly UniversalInterlinguaLayerKind[];
+    readonly missingLayerKinds: readonly UniversalInterlinguaLayerKind[];
+    readonly reviewLayerKinds: readonly UniversalInterlinguaLayerKind[];
+    readonly blockedLayerKinds: readonly UniversalInterlinguaLayerKind[];
+    readonly loweringDisposition: UniversalInterlinguaLoweringDisposition;
+    readonly missingEvidence: readonly string[];
+    readonly proofEvidenceIds: readonly string[];
+    readonly targetAdapterId?: string;
+  };
+  readonly autoMergeClaim: false;
+  readonly semanticEquivalenceClaim: false;
+}
+
+export interface UniversalInterlinguaQuery {
+  readonly interlinguaLayerKind?: UniversalInterlinguaLayerKind | readonly UniversalInterlinguaLayerKind[];
+  readonly interlinguaRepresentedLayerKind?: UniversalInterlinguaLayerKind | readonly UniversalInterlinguaLayerKind[];
+  readonly interlinguaMissingLayerKind?: UniversalInterlinguaLayerKind | readonly UniversalInterlinguaLayerKind[];
+  readonly interlinguaReviewLayerKind?: UniversalInterlinguaLayerKind | readonly UniversalInterlinguaLayerKind[];
+  readonly interlinguaBlockedLayerKind?: UniversalInterlinguaLayerKind | readonly UniversalInterlinguaLayerKind[];
+  readonly interlinguaLoweringDisposition?: UniversalInterlinguaLoweringDisposition | readonly UniversalInterlinguaLoweringDisposition[];
+  readonly interlinguaMissingEvidence?: string | readonly string[];
+  readonly interlinguaProofEvidenceId?: string | readonly string[];
+  readonly interlinguaTargetAdapterId?: string | readonly string[];
+}
+
+export declare const UniversalInterlinguaLayerKinds: readonly UniversalInterlinguaLayerKind[];
+export declare const UniversalInterlinguaLoweringDispositions: readonly UniversalInterlinguaLoweringDisposition[];
+export declare function createUniversalInterlinguaRecord(input?: Record<string, unknown>): UniversalInterlinguaRecord;
+export declare function interlinguaRecordMatches(
+  record?: UniversalInterlinguaRecord,
+  query?: UniversalInterlinguaQuery
+): boolean;

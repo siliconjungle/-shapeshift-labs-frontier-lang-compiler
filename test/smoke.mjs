@@ -273,12 +273,12 @@ const smokeModules = [
   './smoke/js-ts-roundtrip-oracles.mjs',
   './smoke/scanned-languages.mjs',
   './smoke/matrices-final.mjs', './smoke/universal-capability-package-denominator.mjs', './smoke/universal-conversion-translation-admission.mjs',
+  './smoke/universal-conversion-interlingua-lowering.mjs',
   './smoke/html-css-matrices.mjs',
   './smoke/html-css-admission-matrix-fixtures.mjs',
   './smoke/matrices-universal-fixtures.mjs',
   './smoke/projection-readiness.mjs', './smoke/universal-conversion-admission-evidence.mjs', './smoke/universal-conversion-runtime-admission.mjs', './smoke/universal-conversion-dialect-admission.mjs',
-  './smoke/universal-conversion-plan.mjs',
-  './smoke/universal-conversion-compact-counts.mjs'
+  './smoke/universal-conversion-plan.mjs', './smoke/universal-conversion-compact-counts.mjs'
 ];
 const semanticAutoMergeSmokeModules = [
   './smoke/semantic-edit-insertions.mjs',

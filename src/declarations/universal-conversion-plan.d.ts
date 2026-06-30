@@ -10,14 +10,9 @@ import type { ProjectionSourceProjectionCoverage, ProjectionTargetCoverageEntry 
 import type { ProjectionReadinessTargetCell } from './projection-readiness.js';
 import type { UniversalCapabilityMatrix, UniversalCapabilityMatrixOptions } from './universal-capability.js';
 import type { UniversalRepresentationCoverage, UniversalRepresentationCoverageQuery } from './universal-representation-coverage.js';
+import type { UniversalInterlinguaQuery, UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalConversionPlanCompactCounts } from './universal-conversion-compact-counts.js';
-import type {
-  UniversalRuntimeAdapterRequirement,
-  UniversalRuntimeCapabilityKind,
-  UniversalRuntimeCapabilityMatrix,
-  UniversalRuntimeCapabilityRoute,
-  UniversalRuntimeHostProfile
-} from './universal-runtime-capabilities.js';
+import type { UniversalRuntimeAdapterRequirement, UniversalRuntimeCapabilityKind, UniversalRuntimeCapabilityMatrix, UniversalRuntimeCapabilityRoute, UniversalRuntimeHostProfile } from './universal-runtime-capabilities.js';
 import type {
   UniversalDialectConstructKind,
   UniversalDialectProjectionDisposition,
@@ -101,6 +96,8 @@ export interface UniversalTranslationAdmission {
   readonly targetAdapterId?: string; readonly autoMergeClaim: false; readonly semanticEquivalenceClaim: false;
 }
 
+export type { UniversalInterlinguaRecord } from './universal-interlingua.js';
+
 export interface UniversalConversionRouteRuntime {
   readonly routeId?: string;
   readonly source?: UniversalRuntimeCapabilityRoute['source'];
@@ -181,6 +178,7 @@ export interface UniversalConversionRoute {
   readonly runtimeAdapterRequirements: readonly UniversalRuntimeAdapterRequirement[];
   readonly evidence: UniversalConversionRouteEvidence;
   readonly representation: UniversalRepresentationCoverage;
+  readonly interlingua: UniversalInterlinguaRecord;
   readonly missingEvidence: readonly string[];
   readonly translationAdmission: UniversalTranslationAdmission;
   readonly blockers: readonly string[];
@@ -278,7 +276,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly evidence?: readonly EvidenceRecord[];
 }
 
-export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery {
+export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery {
   readonly sourceLanguage?: FrontierSourceLanguage | string;
   readonly language?: FrontierSourceLanguage | string;
   readonly target?: FrontierCompileTarget | string;
