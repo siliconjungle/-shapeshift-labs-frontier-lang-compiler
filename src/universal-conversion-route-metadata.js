@@ -2,7 +2,7 @@ import { uniqueStrings } from './native-import-utils.js';
 
 export function routeAdmissionStatus(route) {
   if (route.readiness === 'blocked' || route.admissionAction === 'reject') return 'blocked';
-  if (route.readiness === 'ready' && route.missingEvidence?.length === 0) return 'queued';
+  if (route.readiness === 'ready' && route.missingEvidence?.length === 0 && routeHasBoundEvidence(route)) return 'queued';
   return 'needs-review';
 }
 
@@ -11,6 +11,7 @@ export function routeReasonCodes(route) {
     `mode:${route.mode}`,
     `action:${route.routeAction}`,
     ...(route.missingEvidence ?? []).map((item) => `missing:${item}`),
+    ...(routeHasBoundEvidence(route) ? [] : ['missing:route-bound-evidence']),
     ...(route.blockers ?? []).map((item) => `blocker:${item}`),
     ...(route.review ?? []).map((item) => `review:${item}`)
   ]);
@@ -33,6 +34,7 @@ export function routeAdmissionMetadata(route, planId) {
 
 export function routeRecordMetadata(route, planId, metadata) {
   return {
+    ...metadata,
     planId,
     routeId: route.id,
     target: route.target,
@@ -44,9 +46,28 @@ export function routeRecordMetadata(route, planId, metadata) {
     blockers: route.blockers ?? [],
     review: route.review ?? [],
     autoMergeClaim: false,
-    semanticEquivalenceClaim: false,
-    ...metadata
+    semanticEquivalenceClaim: false
   };
+}
+
+export function routeHasBoundEvidence(route) {
+  return Boolean(
+    route?.mergeRefs?.evidenceIds?.length
+    || route?.mergeRefs?.proofIds?.length
+    || route?.evidenceIds?.length
+    || route?.proofIds?.length
+    || evidenceRecords(route?.evidence).length
+    || evidenceRecords(route?.metadata?.evidence).length
+    || evidenceRecords(route?.semanticEditEvidence).length
+    || evidenceRecords(route?.semanticEditTestEvidence).length
+    || evidenceRecords(route?.semanticEditGateEvidence).length
+    || evidenceRecords(route?.semanticEditProofEvidence).length
+    || evidenceRecords(route?.metadata?.semanticEditEvidence).length
+    || evidenceRecords(route?.metadata?.semanticEdit?.evidence).length
+    || evidenceRecords(route?.metadata?.semanticEdit?.testEvidence).length
+    || evidenceRecords(route?.metadata?.semanticEdit?.gateEvidence).length
+    || evidenceRecords(route?.metadata?.semanticEdit?.proofEvidence).length
+  );
 }
 
 export function routeSemanticEditBundle(route) {
@@ -93,4 +114,9 @@ function firstDefined(...values) {
 
 function compactRecord(value) {
   return Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined && (!Array.isArray(entry) || entry.length > 0)));
+}
+
+function evidenceRecords(value) {
+  const records = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
+  return records.filter((record) => record?.id);
 }

@@ -52,10 +52,10 @@ export function createUniversalConversionArtifacts(input = {}, options = {}) {
       admissionRecords
     }),
     metadata: {
+      ...options.metadata,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
-      note: 'Materialized conversion artifacts are merge-review records. They preserve provenance and admission state but do not prove target semantic equivalence.',
-      ...options.metadata
+      note: 'Materialized conversion artifacts are merge-review records. They preserve provenance and admission state but do not prove target semantic equivalence.'
     }
   };
 }

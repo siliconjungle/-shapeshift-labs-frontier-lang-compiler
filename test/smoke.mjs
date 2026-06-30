@@ -276,7 +276,7 @@ const smokeModules = [
   './smoke/html-css-matrices.mjs',
   './smoke/html-css-admission-matrix-fixtures.mjs',
   './smoke/matrices-universal-fixtures.mjs',
-  './smoke/projection-readiness.mjs',
+  './smoke/projection-readiness.mjs', './smoke/universal-conversion-admission-evidence.mjs',
   './smoke/universal-conversion-plan.mjs',
   './smoke/universal-conversion-compact-counts.mjs'
 ];

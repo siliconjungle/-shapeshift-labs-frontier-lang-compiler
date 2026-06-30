@@ -16,7 +16,11 @@ export function createUniversalConversionAdmissionRecord(input) {
     ...(input.materialization?.proofIds ?? [])
   ]);
   const score = route.mergeScore ?? {};
-  const missingEvidence = route.missingEvidence ?? [];
+  const hasBoundEvidence = evidenceIds.length > 0 || proofIds.length > 0;
+  const missingEvidence = uniqueStrings([
+    ...(route.missingEvidence ?? []),
+    ...(hasBoundEvidence ? [] : ['route-bound-evidence'])
+  ]);
   const blockers = route.blockers ?? [];
   const bucket = admissionBucket({
     action: score.action ?? route.admissionAction,
@@ -25,6 +29,7 @@ export function createUniversalConversionAdmissionRecord(input) {
     mode: route.mode,
     operationKinds,
     opaqueOperations: operations.filter((operation) => operation.opaque).length,
+    hasBoundEvidence,
     scoreValue: score.value,
     status: input.admissionStatus
   });
@@ -106,7 +111,7 @@ export function createUniversalConversionAdmissionRecord(input) {
 function admissionBucket(input) {
   if (input.status === 'blocked' || input.action === 'reject' || input.blockers.length) return 'blocked';
   if (input.mode === 'semantic-index-only' || input.missingEvidence.includes('target-adapter')) return 'needs-adapter';
-  if (input.missingEvidence.length || input.opaqueOperations || input.operationKinds.includes('merge')) return 'needs-evidence';
+  if (!input.hasBoundEvidence || input.missingEvidence.length || input.opaqueOperations || input.operationKinds.includes('merge')) return 'needs-evidence';
   if (Number(input.scoreValue ?? 0) >= 80) return 'merge-ready';
   return 'needs-review';
 }

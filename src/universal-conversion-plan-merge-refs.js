@@ -11,6 +11,7 @@ export function importsForConversionLanguage(imports, language) {
 
 export function conversionMergeRefs(input) {
   const routeImports = input.imports ?? [];
+  const routeEvidence = evidenceRecords(input);
   const routeId = input.routeId;
   const sourceMaps = routeImports.flatMap(sourceMapsForImport);
   return {
@@ -21,8 +22,14 @@ export function conversionMergeRefs(input) {
     patchIds: [],
     mergeCandidateIds: uniqueStrings(routeImports.flatMap(mergeCandidateIds)),
     replayLinks: routeImports.flatMap((imported) => imported?.replayLinks ?? imported?.universalAst?.replayLinks ?? []),
-    evidenceIds: uniqueStrings(routeImports.flatMap((imported) => evidenceRecords(imported).map((record) => record.id))),
-    proofIds: uniqueStrings(routeImports.flatMap(proofIdsForImport)),
+    evidenceIds: uniqueStrings([
+      ...routeImports.flatMap((imported) => evidenceRecords(imported).map((record) => record.id)),
+      ...routeEvidence.map((record) => record.id)
+    ]),
+    proofIds: uniqueStrings([
+      ...routeImports.flatMap(proofIdsForImport),
+      ...proofIdsForEvidence(routeEvidence)
+    ]),
     sources: routeImports.map(conversionSourceRef),
     semanticOwnershipKeys: uniqueStrings(routeImports.flatMap(semanticOwnershipKeysForImport)),
     conflictKeys: uniqueStrings(routeImports.flatMap(conflictKeysForImport)),
@@ -62,8 +69,12 @@ function evidenceRecords(imported) {
 function proofIdsForImport(imported) {
   return [
     ...(imported?.proofIds ?? []),
-    ...evidenceRecords(imported).filter((record) => record?.kind === 'proof' || record?.type === 'proof').map((record) => record.id)
+    ...proofIdsForEvidence(evidenceRecords(imported))
   ];
+}
+
+function proofIdsForEvidence(evidence) {
+  return (evidence ?? []).filter((record) => record?.kind === 'proof' || record?.type === 'proof' || /proof|replay/i.test(String(record?.kind ?? record?.type ?? ''))).map((record) => record.id);
 }
 
 function mergeCandidateIds(imported) {

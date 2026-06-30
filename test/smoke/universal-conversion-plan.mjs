@@ -159,8 +159,10 @@ const directReadyArtifact = createUniversalConversionArtifacts({
     conflictKeys: ['content.manualReady']
   }
 });
-assert.equal(directReadyArtifact.summary.mergeReady, 1);
-assert.equal(directReadyArtifact.admissionRecords[0].admissionBucket, 'merge-ready');
+assert.equal(directReadyArtifact.summary.mergeReady, 0);
+assert.equal(directReadyArtifact.routeArtifacts[0].admissionStatus, 'needs-review');
+assert.equal(directReadyArtifact.admissionRecords[0].admissionBucket, 'needs-evidence');
+assert.equal(directReadyArtifact.admissionRecords[0].evidence.missing.includes('route-bound-evidence'), true);
 
 const editBase = 'export function convert(count) { return count + 1; }\n';
 const editWorker = 'export function convert(count, step) { return count + step; }\n';

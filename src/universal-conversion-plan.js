@@ -21,6 +21,10 @@ import {
   conversionMergeScore,
   conversionScoreComponents
 } from './universal-conversion-plan-scoring.js';
+import {
+  conversionRouteEvidence,
+  hasPassedRouteEvidence
+} from './universal-conversion-route-evidence.js';
 import { conversionPlanSummary } from './universal-conversion-plan-summary.js';
 import {
   createUniversalRepresentationCoverage,
@@ -119,11 +123,13 @@ function conversionRoute(language, target, input, planId) {
     ? 'blocked'
     : maxSemanticMergeReadiness(language.readiness, targetCell?.readiness ?? readinessCell?.readiness ?? 'needs-review');
   const id = `conversion_${idFragment(language.language)}_to_${idFragment(target)}`;
+  const routeEvidence = conversionRouteEvidence(input.evidence, language, target, id);
   const routeImports = importsForConversionLanguage(input.imports, language);
   const mergeRefs = conversionMergeRefs({
     planId,
     routeId: id,
     imports: routeImports,
+    evidence: routeEvidence,
     readiness,
     admissionStatus: 'pending'
   });
@@ -133,9 +139,9 @@ function conversionRoute(language, target, input, planId) {
     targetCell,
     runtime,
     mergeRefs,
-    evidence: input.evidence
+    evidence: routeEvidence
   });
-  const components = conversionScoreComponents(language, targetCell, readiness, mode, input.evidence, representation);
+  const components = conversionScoreComponents(language, targetCell, readiness, mode, routeEvidence, representation);
   const mergeScore = conversionMergeScore({ readiness, mode, components, blockers, review });
   const admissionStatus = mergeScore.action;
   return {
@@ -157,7 +163,7 @@ function conversionRoute(language, target, input, planId) {
     runtimeAdapterRequirements: runtime.adapterRequirements,
     evidence: conversionEvidence(language, targetCell),
     representation,
-    missingEvidence: conversionMissingEvidence(language, targetCell, mode),
+    missingEvidence: conversionMissingEvidence(language, targetCell, mode, routeEvidence),
     blockers,
     review,
     tasks: conversionTasks(language, target, mode, blockers, review),
@@ -274,7 +280,7 @@ function conversionEvidence(language, targetCell) {
   };
 }
 
-function conversionMissingEvidence(language, targetCell, mode) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = []) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -284,7 +290,7 @@ function conversionMissingEvidence(language, targetCell, mode) {
     ...(mode === 'target-adapter' && !targetCell?.adapter ? ['target-adapter-evidence'] : []),
     ...(mode === 'semantic-index-only' || targetCell?.lossClass === 'missingAdapter' ? ['target-adapter'] : []),
     ...(mode === 'stub-only' ? ['executable-target-semantics'] : []),
-    ['proof-or-replay-evidence']
+    ...(hasPassedRouteEvidence(evidence) ? [] : ['proof-or-replay-evidence'])
   ]);
 }
 
