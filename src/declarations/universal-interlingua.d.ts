@@ -33,6 +33,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'control-flow'
   | 'borrow-scope'
   | 'borrow-checker'
+  | 'concurrency-model'
   | 'error-model'
   | 'memory-model'
   | 'effect'

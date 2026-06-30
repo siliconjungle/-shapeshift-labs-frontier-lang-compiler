@@ -55,6 +55,7 @@ export { createUniversalRuntimeCapabilityMatrix, queryUniversalRuntimeCapability
 export { createUniversalBorrowScopeConstraintEvidence, borrowScopeConstraintMatches, UniversalBorrowScopeConstraintStatuses } from './universal-borrow-scope-constraints.js';
 export { createUniversalBorrowCheckerConstraintEvidence, borrowCheckerConstraintMatches, UniversalBorrowCheckerConstraintStatuses } from './universal-borrow-checker-constraints.js';
 export { createUniversalControlFlowConstraintEvidence, controlFlowConstraintMatches, UniversalControlFlowConstraintStatuses } from './universal-control-flow-constraints.js';
+export { createUniversalConcurrencyModelConstraintEvidence, concurrencyModelConstraintMatches, UniversalConcurrencyModelConstraintStatuses } from './universal-concurrency-model-constraints.js';
 export { createUniversalEffectConstraintEvidence, effectConstraintMatches, UniversalEffectConstraintStatuses } from './universal-effect-constraints.js';
 export { createUniversalErrorModelConstraintEvidence, errorModelConstraintMatches, UniversalErrorModelConstraintStatuses } from './universal-error-model-constraints.js';
 export { createUniversalLifetimeConstraintEvidence, lifetimeConstraintMatches, UniversalLifetimeConstraintStatuses } from './universal-lifetime-constraints.js';

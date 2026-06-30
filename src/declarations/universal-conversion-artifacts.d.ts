@@ -15,6 +15,7 @@ import type { UniversalControlFlowConstraintEvidence } from './universal-control
 import type { UniversalBorrowScopeConstraintEvidence } from './universal-borrow-scope-constraints.js';
 import type { UniversalBorrowCheckerConstraintEvidence } from './universal-borrow-checker-constraints.js';
 import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
+import type { UniversalConcurrencyModelConstraintEvidence } from './universal-concurrency-model-constraints.js';
 import type { UniversalErrorModelConstraintEvidence } from './universal-error-model-constraints.js';
 import type { UniversalMemoryModelConstraintEvidence } from './universal-memory-model-constraints.js';
 import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js';
@@ -93,6 +94,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly borrowCheckerConstraintAction?: string;
   readonly effectConstraintStatus?: string;
   readonly effectConstraintAction?: string;
+  readonly concurrencyModelConstraintStatus?: string;
+  readonly concurrencyModelConstraintAction?: string;
   readonly errorModelConstraintStatus?: string;
   readonly errorModelConstraintAction?: string;
   readonly memoryModelConstraintStatus?: string;
@@ -156,6 +159,7 @@ export interface UniversalConversionAdmissionRecord {
     };
   };
   readonly effectConstraint: UniversalConversionConstraintSummary;
+  readonly concurrencyModelConstraint: UniversalConversionConstraintSummary;
   readonly lifetimeConstraint: UniversalConversionConstraintSummary;
   readonly controlFlowConstraint: UniversalConversionConstraintSummary;
   readonly borrowScopeConstraint: UniversalConversionConstraintSummary;
@@ -215,6 +219,7 @@ export interface UniversalConversionRouteArtifact {
   readonly borrowScopeConstraint?: UniversalBorrowScopeConstraintEvidence;
   readonly borrowCheckerConstraint?: UniversalBorrowCheckerConstraintEvidence;
   readonly effectConstraint?: UniversalEffectConstraintEvidence;
+  readonly concurrencyModelConstraint?: UniversalConcurrencyModelConstraintEvidence;
   readonly errorModelConstraint?: UniversalErrorModelConstraintEvidence;
   readonly memoryModelConstraint?: UniversalMemoryModelConstraintEvidence;
   readonly moduleConstraint?: UniversalModuleConstraintEvidence;

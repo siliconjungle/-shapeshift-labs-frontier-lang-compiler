@@ -1,16 +1,7 @@
 import { uniqueStrings } from './native-import-utils.js';
 import { artifactSemanticEditIndex } from './universal-conversion-artifact-semantic-edit.js';
+import { artifactConstraintIndex, artifactConstraintsMatch } from './universal-conversion-artifact-constraints.js';
 import { interlinguaRecordMatches } from './universal-interlingua-record.js';
-import { resourceTransferMatches } from './universal-resource-transfer.js';
-import { borrowCheckerConstraintMatches } from './universal-borrow-checker-constraints.js';
-import { borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
-import { controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
-import { effectConstraintMatches } from './universal-effect-constraints.js';
-import { errorModelConstraintMatches } from './universal-error-model-constraints.js';
-import { memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
-import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
-import { moduleConstraintMatches } from './universal-module-constraints.js';
-import { typeConstraintMatches } from './universal-type-constraints.js';
 export function queryUniversalConversionArtifacts(records, query = {}) {
   return artifactRecords(records)
     .filter((record) => matchesArtifact(record, query))
@@ -21,17 +12,6 @@ export function artifactIndex(a) {
   const edits = a.map(artifactSemanticEditIndex);
   const opList = a.flatMap(ops);
   const tAdmissions = a.map(tAdm);
-  const rTransfers = a.map(res);
-  const oConstraints = a.map(own);
-  const lConstraints = a.map(life);
-  const cConstraints = a.map(ctrl);
-  const bConstraints = a.map(bscope);
-  const bc = a.map(bchecker);
-  const eConstraints = a.map(effect);
-  const errConstraints = a.map(err);
-  const memConstraints = a.map(mem);
-  const mConstraints = a.map(mods);
-  const tConstraints = a.map(types);
   const iRecords = a.map(intl);
   return {
     routeIds: uniqueStrings(a.map((a) => a.routeId)),
@@ -113,20 +93,7 @@ export function artifactIndex(a) {
     requiredTranslationConstructKinds: uniqueStrings(tAdmissions.flatMap((r) => r.requiredConstructKinds ?? [])),
     representedTranslationConstructKinds: uniqueStrings(tAdmissions.flatMap((r) => r.representedConstructKinds ?? [])),
     targetAdapterIds: uniqueStrings(tAdmissions.map((r) => r.targetAdapterId)),
-    resourceTransferStatuses: uniqueStrings(rTransfers.map((r) => r.status)),
-    resourceTransferActions: uniqueStrings(rTransfers.map((r) => r.action)),
-    resourceTransferMissingEvidence: uniqueStrings(rTransfers.flatMap((r) => r.missingEvidence ?? [])),
-    resourceTransferLossKinds: uniqueStrings(rTransfers.flatMap((record) => (record.losses ?? []).map((loss) => loss.kind))),
-    ...constraintIndex('ownershipConstraint', oConstraints),
-    ...constraintIndex('lifetimeConstraint', lConstraints),
-    ...constraintIndex('controlFlowConstraint', cConstraints),
-    ...constraintIndex('borrowScopeConstraint', bConstraints),
-    ...constraintIndex('borrowCheckerConstraint', bc),
-    ...constraintIndex('effectConstraint', eConstraints),
-    ...constraintIndex('errorModelConstraint', errConstraints),
-    ...constraintIndex('memoryModelConstraint', memConstraints),
-    ...constraintIndex('moduleConstraint', mConstraints),
-    ...constraintIndex('typeConstraint', tConstraints),
+    ...artifactConstraintIndex(a),
     interlinguaRecordIds: uniqueStrings(iRecords.map((r) => r.id)),
     interlinguaLayerKinds: uniqueStrings(iRecords.flatMap((r) => r.query?.layerKinds ?? [])),
     interlinguaRepresentedLayerKinds: uniqueStrings(iRecords.flatMap((r) => r.query?.representedLayerKinds ?? [])),
@@ -236,16 +203,7 @@ function matchesArtifact(record, query) {
     && match(query.requiredTranslationConstructKind, tAdm(record).requiredConstructKinds)
     && match(query.representedTranslationConstructKind, tAdm(record).representedConstructKinds)
     && match(query.targetAdapterId, [tAdm(record).targetAdapterId])
-    && resourceTransferMatches(res(record), query)
-    && lifetimeConstraintMatches(life(record), query)
-    && controlFlowConstraintMatches(ctrl(record), query)
-    && borrowScopeConstraintMatches(bscope(record), query)
-    && borrowCheckerConstraintMatches(bchecker(record), query)
-    && effectConstraintMatches(effect(record), query)
-    && errorModelConstraintMatches(err(record), query)
-    && memoryModelConstraintMatches(mem(record), query)
-    && moduleConstraintMatches(mods(record), query)
-    && typeConstraintMatches(types(record), query)
+    && artifactConstraintsMatch(record, query)
     && interlinguaRecordMatches(intl(record), query)
     && match(query.transformIdentityHash, tHashes(record));
 }
@@ -256,32 +214,6 @@ function sMapPrecisions(record) { return uniqueStrings([...(record.metadata?.rep
 function tHashes(record) { return uniqueStrings([...(record.metadata?.representation?.transformIdentityHashes ?? []), ...(record.patchBundle?.index?.transformIdentityHashes ?? []), ...(record.history?.index?.transformIdentityHashes ?? [])]); }
 function tAdm(record) { return record.translationAdmission ?? record.metadata?.translationAdmission ?? record.admissionRecord?.metadata?.translationAdmission ?? {}; }
 function intl(record) { return record.interlingua ?? record.metadata?.interlingua ?? record.admissionRecord?.metadata?.interlingua ?? {}; }
-function res(record) { return record.resourceTransfer ?? metaConstraint(record, 'resourceTransfer'); }
-function own(record) { return res(record).ownershipConstraints ?? {}; }
-function life(record) { return record.lifetimeConstraint ?? metaConstraint(record, 'lifetimeConstraint'); }
-function ctrl(record) { return record.controlFlowConstraint ?? metaConstraint(record, 'controlFlowConstraint'); }
-function bscope(record) { return record.borrowScopeConstraint ?? metaConstraint(record, 'borrowScopeConstraint'); }
-function bchecker(record) { return record.borrowCheckerConstraint ?? metaConstraint(record, 'borrowCheckerConstraint'); }
-function effect(record) {
-  return record.effectConstraint ?? metaConstraint(record, 'effectConstraint');
-}
-function err(record) { return record.errorModelConstraint ?? metaConstraint(record, 'errorModelConstraint'); }
-function mem(record) { return record.memoryModelConstraint ?? metaConstraint(record, 'memoryModelConstraint'); }
-function mods(record) {
-  return record.moduleConstraint ?? metaConstraint(record, 'moduleConstraint');
-}
-function types(record) {
-  return record.typeConstraint ?? metaConstraint(record, 'typeConstraint');
-}
-function metaConstraint(record, key) { return record.metadata?.[key] ?? record.translationAdmission?.[key] ?? record.admissionRecord?.metadata?.[key] ?? {}; }
-function constraintIndex(prefix, records) {
-  return {
-    [`${prefix}Statuses`]: uniqueStrings(records.map((r) => r.status)),
-    [`${prefix}Actions`]: uniqueStrings(records.map((r) => r.action)),
-    [`${prefix}MissingEvidence`]: uniqueStrings(records.flatMap((r) => r.missingEvidence ?? [])),
-    [`${prefix}MissingKinds`]: uniqueStrings(records.flatMap((r) => r.missingKinds ?? []))
-  };
-}
 function match(f, values) {
   const filters = Array.isArray(f) ? f : f === undefined ? [] : [f];
   if (!filters.length) return true;
