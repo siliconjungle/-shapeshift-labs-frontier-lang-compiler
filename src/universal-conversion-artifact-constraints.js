@@ -10,6 +10,7 @@ import { evaluationModelConstraintMatches } from './universal-evaluation-model-c
 import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
 import { memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
 import { moduleConstraintMatches } from './universal-module-constraints.js';
+import { objectModelConstraintMatches } from './universal-object-model-constraints.js';
 import { typeConstraintMatches } from './universal-type-constraints.js';
 
 export function artifactConstraintIndex(records = []) {
@@ -30,6 +31,7 @@ export function artifactConstraintIndex(records = []) {
     ...constraintIndex('evaluationModelConstraint', records.map(evalm)),
     ...constraintIndex('memoryModelConstraint', records.map(mem)),
     ...constraintIndex('moduleConstraint', records.map(mods)),
+    ...constraintIndex('objectModelConstraint', records.map(obj)),
     ...constraintIndex('typeConstraint', records.map(types))
   };
 }
@@ -46,6 +48,7 @@ export function artifactConstraintsMatch(record, query = {}) {
     && evaluationModelConstraintMatches(evalm(record), query)
     && memoryModelConstraintMatches(mem(record), query)
     && moduleConstraintMatches(mods(record), query)
+    && objectModelConstraintMatches(obj(record), query)
     && typeConstraintMatches(types(record), query);
 }
 
@@ -61,6 +64,7 @@ function err(record) { return record.errorModelConstraint ?? metaConstraint(reco
 function evalm(record) { return record.evaluationModelConstraint ?? metaConstraint(record, 'evaluationModelConstraint'); }
 function mem(record) { return record.memoryModelConstraint ?? metaConstraint(record, 'memoryModelConstraint'); }
 function mods(record) { return record.moduleConstraint ?? metaConstraint(record, 'moduleConstraint'); }
+function obj(record) { return record.objectModelConstraint ?? metaConstraint(record, 'objectModelConstraint'); }
 function types(record) { return record.typeConstraint ?? metaConstraint(record, 'typeConstraint'); }
 function metaConstraint(record, key) { return record.metadata?.[key] ?? record.translationAdmission?.[key] ?? record.admissionRecord?.metadata?.[key] ?? {}; }
 function constraintIndex(prefix, records) {

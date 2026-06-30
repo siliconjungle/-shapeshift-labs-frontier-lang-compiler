@@ -8,6 +8,7 @@ import { evaluationModelConstraintForConversionRoute, evaluationModelConstraintM
 import { lifetimeConstraintForConversionRoute, lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
 import { memoryModelConstraintForConversionRoute, memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
 import { moduleConstraintForConversionRoute, moduleConstraintMatches } from './universal-module-constraints.js';
+import { objectModelConstraintForConversionRoute, objectModelConstraintMatches } from './universal-object-model-constraints.js';
 import { resourceTransferForConversionRoute, resourceTransferMatches } from './universal-resource-transfer.js';
 import { typeConstraintForConversionRoute, typeConstraintMatches } from './universal-type-constraints.js';
 
@@ -22,6 +23,7 @@ const families = [
   ['lifetimeConstraint', 'lifetimeConstraints', 'translationLifetimeConstraint'],
   ['memoryModelConstraint', 'memoryModelConstraints', 'translationMemoryModelConstraint'],
   ['moduleConstraint', 'moduleConstraints', 'translationModuleConstraint'],
+  ['objectModelConstraint', 'objectModelConstraints', 'translationObjectModelConstraint'],
   ['resourceTransfer', 'resourceTransfers', 'translationResourceTransfer'],
   ['typeConstraint', 'typeConstraints', 'translationTypeConstraint']
 ];
@@ -61,6 +63,7 @@ export function createConversionRouteConstraints(input = {}, route = {}, routeIm
     evaluationModelConstraint: evaluationModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     memoryModelConstraint: memoryModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     moduleConstraint: moduleConstraintForConversionRoute(input, route, routeImports, routeEvidence),
+    objectModelConstraint: objectModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     typeConstraint: typeConstraintForConversionRoute(input, route, routeImports, routeEvidence)
   };
 }
@@ -77,5 +80,6 @@ export function conversionRouteMatchesConstraintQuery(route = {}, query = {}) {
     && evaluationModelConstraintMatches(route.evaluationModelConstraint, query)
     && memoryModelConstraintMatches(route.memoryModelConstraint, query)
     && moduleConstraintMatches(route.moduleConstraint, query)
+    && objectModelConstraintMatches(route.objectModelConstraint, query)
     && typeConstraintMatches(route.typeConstraint, query);
 }

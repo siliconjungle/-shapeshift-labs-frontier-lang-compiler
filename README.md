@@ -802,6 +802,7 @@ import {
   createUniversalEffectConstraintEvidence,
   createUniversalLifetimeConstraintEvidence,
   createUniversalModuleConstraintEvidence,
+  createUniversalObjectModelConstraintEvidence,
   createUniversalTypeConstraintEvidence,
   createUniversalOwnershipConstraintEvidence,
   createUniversalResourceTransferEvidence,
@@ -940,6 +941,18 @@ const moduleConstraints = createUniversalModuleConstraintEvidence({
 });
 console.log(moduleConstraints.missingKinds); // import/export/package-resolution obligations still needing target evidence
 console.log(moduleConstraints.claims.moduleEquivalenceClaim); // false without source-bound module proof
+
+const objectModelConstraints = createUniversalObjectModelConstraintEvidence({
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  sourceObjectModelRecords: [
+    { kind: 'prototype-chain object-identity reference-semantics', prototypeId: 'AdminUser.prototype' },
+    { kind: 'virtual-dispatch override-rules super-dispatch', methodId: 'AdminUser.save' }
+  ],
+  targetObjectModelRecords: [{ kind: 'class-construction static-dispatch', classId: 'AdminUser' }]
+});
+console.log(objectModelConstraints.missingKinds); // prototype/dispatch/object-identity obligations still needing target evidence
+console.log(objectModelConstraints.claims.objectModelEquivalenceClaim); // false without source-bound object-model proof
 
 const typeConstraints = createUniversalTypeConstraintEvidence({
   sourceLanguage: 'typescript',
@@ -1174,6 +1187,20 @@ preserved the source package/module contract." The record remains conservative:
 module-equivalence, linkage-equivalence, package-resolution, semantic-equivalence,
 and auto-merge claims stay false unless separate proof is attached.
 
+Routes can also carry `objectModelConstraint`, a class/prototype/object-dispatch
+admission record for class construction, constructor order, field initialization,
+object identity, reference vs value semantics, prototype chains, inheritance,
+multiple inheritance, method-resolution order, virtual/static dispatch, override
+rules, `super` dispatch, traits, mixins, extension methods, visibility, sealed or
+final classes, destructors/finalizers, reflection, and metaclasses. Object-model
+queries such as `objectModelConstraintMissingKind: "virtual-dispatch"` or
+`interlinguaConstraintFamily: "object-model"` let a coordinator distinguish
+"target code has fields and methods" from "target lowering preserved how objects
+are constructed, identified, inherited, and dispatched." The record remains
+conservative: object-model equivalence, dispatch equivalence,
+semantic-equivalence, and auto-merge claims stay false unless separate proof is
+attached.
+
 Routes can also carry `typeConstraint`, a public API/type-shape admission record
 for callable signatures, parameter and return shape, generic parameters,
 trait/protocol/interface bounds, `where` clauses, associated-type bindings,
@@ -1186,7 +1213,7 @@ is deliberately conservative: type-equivalence, public-API-equivalence,
 semantic-equivalence, and auto-merge claims stay false unless separate proof is
 attached.
 
-Each route also carries `interlingua`, a first-class superset-language route record. It binds the source lift (`sourcePaths`, hashes, source maps, ownership keys, evidence/proof IDs), represented/missing/review/blocked semantic layers, constraint edges for resource transfer, ownership, lifetime, control-flow, borrow-scope, borrow-checker, effect, concurrency-model, error-model, evaluation-model, memory-model, module, and type obligations, and target lowering disposition: `exact-source`, `target-adapter`, `declaration-stub`, `semantic-index-only`, `lossy-review`, or `blocked`. Constraint edges also carry normalized `obligations` so a missing proof such as `borrow-across-await`, `ownership:shared-borrow`, `cancellation-propagation`, `integer-division`, `cleanup-boundary`, or `atomic-ordering` can be routed directly to a worker without rereading the family-specific evidence payload. The record is queryable through `interlinguaLayerKind`, `interlinguaRepresentedLayerKind`, `interlinguaMissingLayerKind`, `interlinguaConstraintFamily`, `interlinguaConstraintMissingKind`, `interlinguaConstraintMissingEvidence`, `interlinguaConstraintObligationKind`, `interlinguaConstraintObligationStatus`, `interlinguaLoweringDisposition`, `interlinguaMissingEvidence`, `interlinguaProofEvidenceId`, and `interlinguaTargetAdapterId`. It is loss accounting for source -> interlingua -> target lowering, not a target semantic-equivalence proof.
+Each route also carries `interlingua`, a first-class superset-language route record. It binds the source lift (`sourcePaths`, hashes, source maps, ownership keys, evidence/proof IDs), represented/missing/review/blocked semantic layers, constraint edges for resource transfer, ownership, lifetime, control-flow, borrow-scope, borrow-checker, effect, concurrency-model, error-model, evaluation-model, memory-model, module, object-model, and type obligations, and target lowering disposition: `exact-source`, `target-adapter`, `declaration-stub`, `semantic-index-only`, `lossy-review`, or `blocked`. Constraint edges also carry normalized `obligations` so a missing proof such as `borrow-across-await`, `ownership:shared-borrow`, `cancellation-propagation`, `integer-division`, `cleanup-boundary`, `atomic-ordering`, or `virtual-dispatch` can be routed directly to a worker without rereading the family-specific evidence payload. The record is queryable through `interlinguaLayerKind`, `interlinguaRepresentedLayerKind`, `interlinguaMissingLayerKind`, `interlinguaConstraintFamily`, `interlinguaConstraintMissingKind`, `interlinguaConstraintMissingEvidence`, `interlinguaConstraintObligationKind`, `interlinguaConstraintObligationStatus`, `interlinguaLoweringDisposition`, `interlinguaMissingEvidence`, `interlinguaProofEvidenceId`, and `interlinguaTargetAdapterId`. It is loss accounting for source -> interlingua -> target lowering, not a target semantic-equivalence proof.
 
 `createUniversalConversionArtifacts` materializes those route refs into compact `SemanticHistoryRecord`, `SemanticPatchBundleRecord`, `UniversalConversionRouteEvidenceReceipt`, semantic operation sets, and `UniversalConversionAdmissionRecord` rows that swarm collectors can index by route, history ID, patch-bundle ID, admission-record ID, evidence-receipt ID, admission bucket, risk, operation kind, source path, ownership key, conflict key, evidence, proof, receipt missing evidence, receipt rejected evidence, readiness, admission status, loss class, adapter ID/kind, route missing evidence, runtime adapter requirement IDs, blockers, review reasons, and interlingua lowering/constraint fields. Semantic operation metadata also carries compact interlingua lift/lowering coordinates so operation-only consumers can see what was represented, missing, adapted, or blocked without treating the route as a broad semantic-equivalence proof. Plan and artifact summaries expose compact translation-admission, evidence-receipt, interlingua lowering, and interlingua constraint distributions for queue dashboards and refill policy without forcing consumers to load every route. It is still review evidence, not target-code proof: blocked and semantic-index-only routes stay blocked/needs-review, and every artifact keeps `autoMergeClaim: false` plus `semanticEquivalenceClaim: false`.
 

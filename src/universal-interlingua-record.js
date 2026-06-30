@@ -36,6 +36,7 @@ export const UniversalInterlinguaConstraintEdgeKinds = Object.freeze([
   'memory-model',
   'effect',
   'module',
+  'object-model',
   'type'
 ]);
 
@@ -172,6 +173,7 @@ export function interlinguaConstraintSummary(route = {}) {
     constraintEdge('memory-model', route.memoryModelConstraint, 'runtime-capability', route),
     constraintEdge('effect', route.effectConstraint, 'runtime-capability', route),
     constraintEdge('module', route.moduleConstraint, 'source-import', route),
+    constraintEdge('object-model', route.objectModelConstraint, 'semantic-symbol', route),
     constraintEdge('type', route.typeConstraint, 'semantic-symbol', route)
   ].filter(Boolean);
   const obligations = edges.flatMap((edge) => edge.obligations);
@@ -252,7 +254,7 @@ function constraintObligations(family, evidence, edgeId) {
 }
 
 function constraintRecords(evidence = {}) {
-  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.memoryModelConstraints ?? evidence.moduleConstraints ?? evidence.typeConstraints ?? [];
+  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.memoryModelConstraints ?? evidence.moduleConstraints ?? evidence.objectModelConstraints ?? evidence.typeConstraints ?? [];
 }
 
 function nodeIds(record = {}, prefix) {

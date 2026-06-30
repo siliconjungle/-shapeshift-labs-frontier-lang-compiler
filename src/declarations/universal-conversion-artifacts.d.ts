@@ -18,7 +18,7 @@ import type { UniversalEffectConstraintEvidence } from './universal-effect-const
 import type { UniversalConcurrencyModelConstraintEvidence } from './universal-concurrency-model-constraints.js';
 import type { UniversalErrorModelConstraintEvidence } from './universal-error-model-constraints.js'; import type { UniversalEvaluationModelConstraintEvidence } from './universal-evaluation-model-constraints.js';
 import type { UniversalMemoryModelConstraintEvidence } from './universal-memory-model-constraints.js';
-import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js';
+import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js'; import type { UniversalObjectModelConstraintEvidence } from './universal-object-model-constraints.js';
 import type { UniversalTypeConstraintEvidence } from './universal-type-constraints.js';
 import type {
   UniversalConversionAdmissionAction,
@@ -99,8 +99,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly evaluationModelConstraintStatus?: string; readonly evaluationModelConstraintAction?: string;
   readonly memoryModelConstraintStatus?: string;
   readonly memoryModelConstraintAction?: string;
-  readonly moduleConstraintStatus?: string;
-  readonly moduleConstraintAction?: string;
+  readonly moduleConstraintStatus?: string; readonly objectModelConstraintStatus?: string;
+  readonly moduleConstraintAction?: string; readonly objectModelConstraintAction?: string;
   readonly typeConstraintStatus?: string;
   readonly typeConstraintAction?: string;
   readonly readiness: SemanticMergeReadiness | string;
@@ -165,7 +165,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly moduleConstraint: UniversalConversionConstraintSummary;
   readonly errorModelConstraint: UniversalConversionConstraintSummary;
   readonly evaluationModelConstraint: UniversalConversionConstraintSummary;
-  readonly memoryModelConstraint: UniversalConversionConstraintSummary;
+  readonly memoryModelConstraint: UniversalConversionConstraintSummary; readonly objectModelConstraint: UniversalConversionConstraintSummary;
   readonly typeConstraint: UniversalConversionConstraintSummary;
   readonly ownership: {
     readonly keys: readonly string[];
@@ -222,7 +222,7 @@ export interface UniversalConversionRouteArtifact {
   readonly errorModelConstraint?: UniversalErrorModelConstraintEvidence;
   readonly evaluationModelConstraint?: UniversalEvaluationModelConstraintEvidence;
   readonly memoryModelConstraint?: UniversalMemoryModelConstraintEvidence;
-  readonly moduleConstraint?: UniversalModuleConstraintEvidence;
+  readonly moduleConstraint?: UniversalModuleConstraintEvidence; readonly objectModelConstraint?: UniversalObjectModelConstraintEvidence;
   readonly typeConstraint?: UniversalTypeConstraintEvidence;
   readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
   readonly reviewRequired: true;

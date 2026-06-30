@@ -39,6 +39,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'memory-model'
   | 'effect'
   | 'module'
+  | 'object-model'
   | 'type'
   | string;
 

@@ -258,7 +258,7 @@ function conversionEvidence(language, targetCell) {
     targetLossKinds: targetCell?.lossKinds ?? []
   };
 }
-function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, effectConstraint, concurrencyModelConstraint, errorModelConstraint, evaluationModelConstraint, memoryModelConstraint, moduleConstraint, typeConstraint) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, effectConstraint, concurrencyModelConstraint, errorModelConstraint, evaluationModelConstraint, memoryModelConstraint, moduleConstraint, objectModelConstraint, typeConstraint) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -278,6 +278,7 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...(borrowCheckerConstraint?.missingEvidence ?? []),
     ...(effectConstraint?.missingEvidence ?? []), ...(concurrencyModelConstraint?.missingEvidence ?? []), ...(errorModelConstraint?.missingEvidence ?? []), ...(evaluationModelConstraint?.missingEvidence ?? []), ...(memoryModelConstraint?.missingEvidence ?? []),
     ...(moduleConstraint?.missingEvidence ?? []),
+    ...(objectModelConstraint?.missingEvidence ?? []),
     ...(typeConstraint?.missingEvidence ?? []),
     ...(hasPassedRouteEvidence(evidence) ? [] : ['proof-or-replay-evidence'])
   ]);

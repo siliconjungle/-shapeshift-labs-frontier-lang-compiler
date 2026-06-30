@@ -62,6 +62,7 @@ export { createUniversalEvaluationModelConstraintEvidence, evaluationModelConstr
 export { createUniversalLifetimeConstraintEvidence, lifetimeConstraintMatches, UniversalLifetimeConstraintStatuses } from './universal-lifetime-constraints.js';
 export { createUniversalMemoryModelConstraintEvidence, memoryModelConstraintMatches, UniversalMemoryModelConstraintStatuses } from './universal-memory-model-constraints.js';
 export { createUniversalModuleConstraintEvidence, moduleConstraintMatches, UniversalModuleConstraintStatuses } from './universal-module-constraints.js';
+export { createUniversalObjectModelConstraintEvidence, objectModelConstraintMatches, UniversalObjectModelConstraintStatuses } from './universal-object-model-constraints.js';
 export { createUniversalTypeConstraintEvidence, typeConstraintMatches, UniversalTypeConstraintStatuses } from './universal-type-constraints.js';
 export { createUniversalOwnershipConstraintEvidence, ownershipConstraintMatches, UniversalOwnershipConstraintStatuses } from './universal-ownership-constraints.js';
 export { createUniversalResourceTransferEvidence, resourceTransferMatches, UniversalResourceTransferStatuses } from './universal-resource-transfer.js';

@@ -63,6 +63,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const evaluationModelConstraints = routeArtifacts.map((artifact) => artifact.evaluationModelConstraint ?? artifact.metadata?.evaluationModelConstraint ?? artifact.admissionRecord?.metadata?.evaluationModelConstraint ?? {});
   const memoryModelConstraints = routeArtifacts.map((artifact) => artifact.memoryModelConstraint ?? artifact.metadata?.memoryModelConstraint ?? artifact.admissionRecord?.metadata?.memoryModelConstraint ?? {});
   const moduleConstraints = routeArtifacts.map((artifact) => artifact.moduleConstraint ?? artifact.metadata?.moduleConstraint ?? artifact.admissionRecord?.metadata?.moduleConstraint ?? {});
+  const objectModelConstraints = routeArtifacts.map((artifact) => artifact.objectModelConstraint ?? artifact.metadata?.objectModelConstraint ?? artifact.admissionRecord?.metadata?.objectModelConstraint ?? {});
   const typeConstraints = routeArtifacts.map((artifact) => artifact.typeConstraint ?? artifact.metadata?.typeConstraint ?? artifact.admissionRecord?.metadata?.typeConstraint ?? {});
   const semanticOperationInterlinguaRecords = semanticOperations.map((operation) => operation.metadata?.interlingua ?? {});
   return {
@@ -98,6 +99,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     evaluationModelConstraint: compactConstraintCounts(evaluationModelConstraints),
     memoryModelConstraint: compactConstraintCounts(memoryModelConstraints),
     moduleConstraint: compactConstraintCounts(moduleConstraints),
+    objectModelConstraint: compactConstraintCounts(objectModelConstraints),
     typeConstraint: compactConstraintCounts(typeConstraints),
     evidenceReceipts: compactEvidenceReceiptCounts(evidenceReceipts),
     interlingua: compactInterlinguaCounts(interlinguaRecords),
