@@ -93,12 +93,12 @@ const requiredStaticPackages = [
   ['@shapeshift-labs/frontier-lang-c', 'clang-ast-json', 'c']
 ];
 const publishedPlatformPackages = [
-  ['@shapeshift-labs/frontier-lang-java', '0.1.8', 'java', 'java-ast', 'semanticdb'],
-  ['@shapeshift-labs/frontier-lang-kotlin', '0.1.8', 'kotlin', 'kotlin-psi', 'semanticdb'],
-  ['@shapeshift-labs/frontier-lang-swift', '0.1.8', 'swift', 'swift-syntax', 'sourcekit-lsp'],
-  ['@shapeshift-labs/frontier-lang-csharp', '0.1.8', 'csharp', 'roslyn-csharp', 'lsp'],
-  ['@shapeshift-labs/frontier-lang-go', '0.1.8', 'go', 'go-ast', 'lsp'],
-  ['@shapeshift-labs/frontier-lang-clang', '0.1.8', 'c', 'clang-ast-json', 'lsp']
+  ['@shapeshift-labs/frontier-lang-java', '0.1.18', 'java', 'java-ast', 'semanticdb'],
+  ['@shapeshift-labs/frontier-lang-kotlin', '0.1.18', 'kotlin', 'kotlin-psi', 'semanticdb'],
+  ['@shapeshift-labs/frontier-lang-swift', '0.1.18', 'swift', 'swift-syntax', 'sourcekit-lsp'],
+  ['@shapeshift-labs/frontier-lang-csharp', '0.1.18', 'csharp', 'roslyn-csharp', 'lsp'],
+  ['@shapeshift-labs/frontier-lang-go', '0.1.18', 'go', 'go-ast', 'lsp'],
+  ['@shapeshift-labs/frontier-lang-clang', '0.1.18', 'c', 'clang-ast-json', 'lsp']
 ];
 const plannedPlatformPackages = [
   { packageName: '@shapeshift-labs/frontier-lang-lisp', language: 'lisp', queryLanguage: 'scheme', parserFormat: 'tree-sitter', semanticFormat: 'lsp', supportedLanguage: 'scheme', caveat: 'macro' },
