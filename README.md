@@ -205,9 +205,12 @@ allocation/deletion or other unsafe alias/lifetime proof is missing.
 Managed and defer-style native imports attach cleanup evidence to the same
 resource graph. Java/Kotlin try-with-resources and `use`, C# `using`, Go
 `defer file.Close()`, and Swift `defer { file.close() }` become resources,
-lexical lifetimes, and drop records. Swift unsafe-pointer surfaces also become
-alias and unsafe-boundary records, so cross-language admission can distinguish
-ordinary cleanup preservation from missing pointer proof.
+lexical lifetimes, and deterministic disposal records. Java/C#/Swift finalizers
+and `deinit` become nondeterministic finalizer obligations, while Java/C#/Swift
+weak or unowned references become alias records. Swift unsafe-pointer surfaces
+also become alias and unsafe-boundary records, so cross-language admission can
+distinguish ordinary cleanup preservation from missing pointer or finalizer
+proof.
 
 Native imports include source maps, semantic merge candidates, and a loss summary for admission queues and dashboards. Informational losses produce `ready-with-losses`, warning losses produce `needs-review`, and error losses or failed import evidence produce `blocked`:
 

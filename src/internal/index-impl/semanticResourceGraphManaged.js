@@ -1,4 +1,5 @@
 import { idFragment, uniqueRecordsById } from '../../native-import-utils.js';
+import { appendManagedFinalizers, appendManagedReferenceAliases, disposalSemanticsFor, managedHelperSet } from './semanticResourceGraphManagedReferences.js';
 
 export function managedResourceGraphRecordsFromInput(input = {}) {
   const records = managedBundlesFromInput(input).map(managedRecordsFromBundle);
@@ -37,6 +38,9 @@ function managedRecordsFromBundle(bundle) {
   appendSwiftDefers(output, bundle, owner);
   appendKotlinUseBlocks(output, bundle, owner);
   appendSwiftUnsafePointers(output, bundle, owner);
+  const helpers = managedHelperSet({ managedBase, resource, lifetime, drop, alias, unsafe });
+  appendManagedReferenceAliases(output, bundle, owner, helpers);
+  appendManagedFinalizers(output, bundle, owner, helpers);
   return output;
 }
 
@@ -95,7 +99,12 @@ function appendLexicalResource(output, bundle, owner, match, name, resourceKind,
   const base = managedBase(bundle, owner, match, name, resourceKind);
   output.resources.push(resource(base, name, resourceKind, metadata));
   output.lifetimeRegions.push(lifetime(base, `${name} cleanup lifetime`, `${bundle.language}-cleanup-region`));
-  output.drops.push(drop(base, dropKind, { ...metadata, automatic: true }));
+  output.drops.push(drop(base, dropKind, {
+    ...metadata,
+    automatic: true,
+    disposalSemantics: disposalSemanticsFor(bundle, dropKind),
+    dropSemantics: 'managed-deterministic-disposal'
+  }));
 }
 
 function managedBase(bundle, owner, match, name, kind) {
