@@ -15,6 +15,7 @@ import type { UniversalControlFlowConstraintEvidence } from './universal-control
 import type { UniversalBorrowScopeConstraintEvidence } from './universal-borrow-scope-constraints.js';
 import type { UniversalBorrowCheckerConstraintEvidence } from './universal-borrow-checker-constraints.js';
 import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
+import type { UniversalErrorModelConstraintEvidence } from './universal-error-model-constraints.js';
 import type { UniversalMemoryModelConstraintEvidence } from './universal-memory-model-constraints.js';
 import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js';
 import type { UniversalTypeConstraintEvidence } from './universal-type-constraints.js';
@@ -92,6 +93,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly borrowCheckerConstraintAction?: string;
   readonly effectConstraintStatus?: string;
   readonly effectConstraintAction?: string;
+  readonly errorModelConstraintStatus?: string;
+  readonly errorModelConstraintAction?: string;
   readonly memoryModelConstraintStatus?: string;
   readonly memoryModelConstraintAction?: string;
   readonly moduleConstraintStatus?: string;
@@ -158,6 +161,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly borrowScopeConstraint: UniversalConversionConstraintSummary;
   readonly borrowCheckerConstraint: UniversalConversionConstraintSummary;
   readonly moduleConstraint: UniversalConversionConstraintSummary;
+  readonly errorModelConstraint: UniversalConversionConstraintSummary;
   readonly memoryModelConstraint: UniversalConversionConstraintSummary;
   readonly typeConstraint: UniversalConversionConstraintSummary;
   readonly ownership: {
@@ -211,6 +215,7 @@ export interface UniversalConversionRouteArtifact {
   readonly borrowScopeConstraint?: UniversalBorrowScopeConstraintEvidence;
   readonly borrowCheckerConstraint?: UniversalBorrowCheckerConstraintEvidence;
   readonly effectConstraint?: UniversalEffectConstraintEvidence;
+  readonly errorModelConstraint?: UniversalErrorModelConstraintEvidence;
   readonly memoryModelConstraint?: UniversalMemoryModelConstraintEvidence;
   readonly moduleConstraint?: UniversalModuleConstraintEvidence;
   readonly typeConstraint?: UniversalTypeConstraintEvidence;

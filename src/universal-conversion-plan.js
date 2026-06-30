@@ -15,7 +15,7 @@ import { borrowCheckerConstraintForConversionRoute, borrowCheckerConstraintMatch
 import { resourceTransferForConversionRoute } from './universal-resource-transfer.js';
 import { borrowScopeConstraintForConversionRoute } from './universal-borrow-scope-constraints.js';
 import { controlFlowConstraintForConversionRoute } from './universal-control-flow-constraints.js';
-import { effectConstraintForConversionRoute } from './universal-effect-constraints.js';
+import { effectConstraintForConversionRoute } from './universal-effect-constraints.js'; import { errorModelConstraintForConversionRoute, errorModelConstraintMatches } from './universal-error-model-constraints.js';
 import { lifetimeConstraintForConversionRoute } from './universal-lifetime-constraints.js';
 import { memoryModelConstraintForConversionRoute, memoryModelConstraintMatches } from './universal-memory-model-constraints.js'; import { moduleConstraintForConversionRoute } from './universal-module-constraints.js';
 import { typeConstraintForConversionRoute } from './universal-type-constraints.js';
@@ -26,7 +26,7 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
   const targets = conversionTargets(input, matrix, context);
   const runtimeMatrix = input.universalRuntimeCapabilityMatrix?.kind === 'frontier.lang.universalRuntimeCapabilityMatrix' ? input.universalRuntimeCapabilityMatrix : createUniversalRuntimeCapabilityMatrix({ ...input, generatedAt, sourceLanguages: matrix.languages, targets }, context);
   const evidence = input.evidence ?? [];
-  const routeInput = { borrowCheckerConstraint: input.borrowCheckerConstraint, borrowCheckerConstraints: input.borrowCheckerConstraints ?? [], borrowScopeConstraint: input.borrowScopeConstraint, borrowScopeConstraints: input.borrowScopeConstraints ?? [], controlFlowConstraint: input.controlFlowConstraint, controlFlowConstraints: input.controlFlowConstraints ?? [], dialectRegistries: conversionDialectRegistries(input), effectConstraint: input.effectConstraint, effectConstraints: input.effectConstraints ?? [], evidence, generatedAt, imports: input.imports ?? [], lifetimeConstraint: input.lifetimeConstraint, lifetimeConstraints: input.lifetimeConstraints ?? [], matrix, memoryModelConstraint: input.memoryModelConstraint, memoryModelConstraints: input.memoryModelConstraints ?? [], moduleConstraint: input.moduleConstraint, moduleConstraints: input.moduleConstraints ?? [], resourceTransfer: input.resourceTransfer, resourceTransfers: input.resourceTransfers ?? [], translationBorrowCheckerConstraint: input.translationBorrowCheckerConstraint, translationBorrowScopeConstraint: input.translationBorrowScopeConstraint, translationControlFlowConstraint: input.translationControlFlowConstraint, translationEffectConstraint: input.translationEffectConstraint, translationLifetimeConstraint: input.translationLifetimeConstraint, translationMemoryModelConstraint: input.translationMemoryModelConstraint, translationModuleConstraint: input.translationModuleConstraint, translationResourceTransfer: input.translationResourceTransfer, translationTypeConstraint: input.translationTypeConstraint, typeConstraint: input.typeConstraint, typeConstraints: input.typeConstraints ?? [], runtimeMatrix };
+  const routeInput = { borrowCheckerConstraint: input.borrowCheckerConstraint, borrowCheckerConstraints: input.borrowCheckerConstraints ?? [], borrowScopeConstraint: input.borrowScopeConstraint, borrowScopeConstraints: input.borrowScopeConstraints ?? [], controlFlowConstraint: input.controlFlowConstraint, controlFlowConstraints: input.controlFlowConstraints ?? [], dialectRegistries: conversionDialectRegistries(input), effectConstraint: input.effectConstraint, effectConstraints: input.effectConstraints ?? [], errorModelConstraint: input.errorModelConstraint, errorModelConstraints: input.errorModelConstraints ?? [], evidence, generatedAt, imports: input.imports ?? [], lifetimeConstraint: input.lifetimeConstraint, lifetimeConstraints: input.lifetimeConstraints ?? [], matrix, memoryModelConstraint: input.memoryModelConstraint, memoryModelConstraints: input.memoryModelConstraints ?? [], moduleConstraint: input.moduleConstraint, moduleConstraints: input.moduleConstraints ?? [], resourceTransfer: input.resourceTransfer, resourceTransfers: input.resourceTransfers ?? [], translationBorrowCheckerConstraint: input.translationBorrowCheckerConstraint, translationBorrowScopeConstraint: input.translationBorrowScopeConstraint, translationControlFlowConstraint: input.translationControlFlowConstraint, translationEffectConstraint: input.translationEffectConstraint, translationErrorModelConstraint: input.translationErrorModelConstraint, translationLifetimeConstraint: input.translationLifetimeConstraint, translationMemoryModelConstraint: input.translationMemoryModelConstraint, translationModuleConstraint: input.translationModuleConstraint, translationResourceTransfer: input.translationResourceTransfer, translationTypeConstraint: input.translationTypeConstraint, typeConstraint: input.typeConstraint, typeConstraints: input.typeConstraints ?? [], runtimeMatrix };
   const routes = (matrix.languages ?? []).flatMap((language) => targets.flatMap((target) => {
     const runtimeRoutes = conversionRuntimeRoutes(runtimeMatrix, language, target);
     return runtimeRoutes.map((runtimeRoute) => conversionRoute(language, target, {
@@ -67,7 +67,7 @@ export function queryUniversalConversionPlan(planOrInput = {}, query = {}, conte
     if (!conversionRouteMatchesRuntimeQuery(route, query)) return false;
     if (!conversionRouteMatchesTranslationAdmissionQuery(route, query)) return false;
     if (!representationCoverageMatches(route.representation, query)) return false;
-    if (!interlinguaRecordMatches(route.interlingua, query) || !borrowCheckerConstraintMatches(route.borrowCheckerConstraint, query) || !memoryModelConstraintMatches(route.memoryModelConstraint, query)) return false;
+    if (!interlinguaRecordMatches(route.interlingua, query) || !borrowCheckerConstraintMatches(route.borrowCheckerConstraint, query) || !errorModelConstraintMatches(route.errorModelConstraint, query) || !memoryModelConstraintMatches(route.memoryModelConstraint, query)) return false;
     return true;
   });
   return {
@@ -113,7 +113,7 @@ function conversionRoute(language, target, input, planId) {
   const controlFlowConstraint = controlFlowConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
   const borrowScopeConstraint = borrowScopeConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence, { ownershipConstraint: resourceTransfer?.ownershipConstraints, lifetimeConstraint, controlFlowConstraint });
   const borrowCheckerConstraint = borrowCheckerConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence, { resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint });
-  const effectConstraint = effectConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence, runtime);
+  const effectConstraint = effectConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence, runtime); const errorModelConstraint = errorModelConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
   const memoryModelConstraint = memoryModelConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
   const moduleConstraint = moduleConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
   const typeConstraint = typeConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
@@ -137,8 +137,8 @@ function conversionRoute(language, target, input, planId) {
   const components = conversionScoreComponents(language, targetCell, readiness, mode, routeEvidence, representation);
   const mergeScore = conversionMergeScore({ readiness, mode, components, blockers, review });
   const admissionStatus = mergeScore.action;
-  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, effectConstraint, memoryModelConstraint, moduleConstraint, typeConstraint);
-  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, effectConstraint, memoryModelConstraint, moduleConstraint, typeConstraint, blockers, review });
+  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, effectConstraint, errorModelConstraint, memoryModelConstraint, moduleConstraint, typeConstraint);
+  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, effectConstraint, errorModelConstraint, memoryModelConstraint, moduleConstraint, typeConstraint, blockers, review });
   const route = {
     id,
     sourceLanguage: language.language,
@@ -166,7 +166,7 @@ function conversionRoute(language, target, input, planId) {
     controlFlowConstraint,
     borrowScopeConstraint,
     borrowCheckerConstraint,
-    effectConstraint, memoryModelConstraint,
+    effectConstraint, errorModelConstraint, memoryModelConstraint,
     moduleConstraint,
     typeConstraint,
     blockers,
@@ -279,7 +279,7 @@ function conversionEvidence(language, targetCell) {
     targetLossKinds: targetCell?.lossKinds ?? []
   };
 }
-function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, effectConstraint, memoryModelConstraint, moduleConstraint, typeConstraint) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, effectConstraint, errorModelConstraint, memoryModelConstraint, moduleConstraint, typeConstraint) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -297,7 +297,7 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...(controlFlowConstraint?.missingEvidence ?? []),
     ...(borrowScopeConstraint?.missingEvidence ?? []),
     ...(borrowCheckerConstraint?.missingEvidence ?? []),
-    ...(effectConstraint?.missingEvidence ?? []), ...(memoryModelConstraint?.missingEvidence ?? []),
+    ...(effectConstraint?.missingEvidence ?? []), ...(errorModelConstraint?.missingEvidence ?? []), ...(memoryModelConstraint?.missingEvidence ?? []),
     ...(moduleConstraint?.missingEvidence ?? []),
     ...(typeConstraint?.missingEvidence ?? []),
     ...(hasPassedRouteEvidence(evidence) ? [] : ['proof-or-replay-evidence'])

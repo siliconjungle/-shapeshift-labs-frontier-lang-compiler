@@ -56,6 +56,7 @@ export { createUniversalBorrowScopeConstraintEvidence, borrowScopeConstraintMatc
 export { createUniversalBorrowCheckerConstraintEvidence, borrowCheckerConstraintMatches, UniversalBorrowCheckerConstraintStatuses } from './universal-borrow-checker-constraints.js';
 export { createUniversalControlFlowConstraintEvidence, controlFlowConstraintMatches, UniversalControlFlowConstraintStatuses } from './universal-control-flow-constraints.js';
 export { createUniversalEffectConstraintEvidence, effectConstraintMatches, UniversalEffectConstraintStatuses } from './universal-effect-constraints.js';
+export { createUniversalErrorModelConstraintEvidence, errorModelConstraintMatches, UniversalErrorModelConstraintStatuses } from './universal-error-model-constraints.js';
 export { createUniversalLifetimeConstraintEvidence, lifetimeConstraintMatches, UniversalLifetimeConstraintStatuses } from './universal-lifetime-constraints.js';
 export { createUniversalMemoryModelConstraintEvidence, memoryModelConstraintMatches, UniversalMemoryModelConstraintStatuses } from './universal-memory-model-constraints.js';
 export { createUniversalModuleConstraintEvidence, moduleConstraintMatches, UniversalModuleConstraintStatuses } from './universal-module-constraints.js';

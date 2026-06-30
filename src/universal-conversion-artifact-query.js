@@ -5,7 +5,9 @@ import { resourceTransferMatches } from './universal-resource-transfer.js';
 import { borrowCheckerConstraintMatches } from './universal-borrow-checker-constraints.js';
 import { borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
 import { controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
-import { effectConstraintMatches } from './universal-effect-constraints.js'; import { memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
+import { effectConstraintMatches } from './universal-effect-constraints.js';
+import { errorModelConstraintMatches } from './universal-error-model-constraints.js';
+import { memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
 import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
 import { moduleConstraintMatches } from './universal-module-constraints.js';
 import { typeConstraintMatches } from './universal-type-constraints.js';
@@ -25,7 +27,9 @@ export function artifactIndex(a) {
   const cConstraints = a.map(ctrl);
   const bConstraints = a.map(bscope);
   const bc = a.map(bchecker);
-  const eConstraints = a.map(effect); const memConstraints = a.map(mem);
+  const eConstraints = a.map(effect);
+  const errConstraints = a.map(err);
+  const memConstraints = a.map(mem);
   const mConstraints = a.map(mods);
   const tConstraints = a.map(types);
   const iRecords = a.map(intl);
@@ -118,7 +122,9 @@ export function artifactIndex(a) {
     ...constraintIndex('controlFlowConstraint', cConstraints),
     ...constraintIndex('borrowScopeConstraint', bConstraints),
     ...constraintIndex('borrowCheckerConstraint', bc),
-    ...constraintIndex('effectConstraint', eConstraints), ...constraintIndex('memoryModelConstraint', memConstraints),
+    ...constraintIndex('effectConstraint', eConstraints),
+    ...constraintIndex('errorModelConstraint', errConstraints),
+    ...constraintIndex('memoryModelConstraint', memConstraints),
     ...constraintIndex('moduleConstraint', mConstraints),
     ...constraintIndex('typeConstraint', tConstraints),
     interlinguaRecordIds: uniqueStrings(iRecords.map((r) => r.id)),
@@ -235,7 +241,9 @@ function matchesArtifact(record, query) {
     && controlFlowConstraintMatches(ctrl(record), query)
     && borrowScopeConstraintMatches(bscope(record), query)
     && borrowCheckerConstraintMatches(bchecker(record), query)
-    && effectConstraintMatches(effect(record), query) && memoryModelConstraintMatches(mem(record), query)
+    && effectConstraintMatches(effect(record), query)
+    && errorModelConstraintMatches(err(record), query)
+    && memoryModelConstraintMatches(mem(record), query)
     && moduleConstraintMatches(mods(record), query)
     && typeConstraintMatches(types(record), query)
     && interlinguaRecordMatches(intl(record), query)
@@ -257,6 +265,7 @@ function bchecker(record) { return record.borrowCheckerConstraint ?? metaConstra
 function effect(record) {
   return record.effectConstraint ?? metaConstraint(record, 'effectConstraint');
 }
+function err(record) { return record.errorModelConstraint ?? metaConstraint(record, 'errorModelConstraint'); }
 function mem(record) { return record.memoryModelConstraint ?? metaConstraint(record, 'memoryModelConstraint'); }
 function mods(record) {
   return record.moduleConstraint ?? metaConstraint(record, 'moduleConstraint');
