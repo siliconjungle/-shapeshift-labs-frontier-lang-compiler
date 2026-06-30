@@ -33,6 +33,16 @@ export interface UniversalConversionTranslationAdmissionCompactCounts {
   readonly dialectReadiness: Readonly<Record<string, number>>;
 }
 
+export interface UniversalConversionEvidenceReceiptCompactCounts {
+  readonly routeArtifacts: number;
+  readonly boundEvidence: number;
+  readonly rejectedEvidence: number;
+  readonly proofEvidence: number;
+  readonly missingEvidence: Readonly<Record<string, number>>;
+  readonly proofEvidenceIds: Readonly<Record<string, number>>;
+  readonly rejectedByReason: Readonly<Record<string, number>>;
+}
+
 export interface UniversalConversionInterlinguaCompactCounts {
   readonly byLoweringDisposition: Readonly<Record<string, number>>;
   readonly layerKinds: Readonly<Record<string, number>>;
@@ -76,6 +86,7 @@ export interface UniversalConversionArtifactCompactCounts {
     readonly byRisk: Readonly<Record<string, number>>;
   };
   readonly translationAdmission: UniversalConversionTranslationAdmissionCompactCounts;
+  readonly evidenceReceipts: UniversalConversionEvidenceReceiptCompactCounts;
   readonly interlingua: UniversalConversionInterlinguaCompactCounts;
   readonly semanticOperationInterlingua: UniversalConversionSemanticOperationInterlinguaCompactCounts;
 }

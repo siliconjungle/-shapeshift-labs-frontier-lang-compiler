@@ -2,6 +2,7 @@ import { countBy } from './native-import-utils.js';
 
 export function universalConversionArtifactSummary(routeArtifacts, records) {
   const admissionRecords = records.admissionRecords;
+  const evidenceReceipts = records.evidenceReceipts ?? routeArtifacts.map((artifact) => artifact.evidenceReceipt).filter(Boolean);
   const semanticOperations = routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []);
   const compactCounts = compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperations);
   return {
@@ -9,6 +10,7 @@ export function universalConversionArtifactSummary(routeArtifacts, records) {
     histories: records.historyRecords.length,
     patchBundles: records.patchBundleRecords.length,
     admissionRecords: admissionRecords.length,
+    evidenceReceipts: evidenceReceipts.length,
     semanticOperations: semanticOperations.length,
     compactCounts,
     mergeReady: countAdmissionBucket(admissionRecords, 'merge-ready'),
@@ -28,6 +30,9 @@ export function universalConversionArtifactSummary(routeArtifacts, records) {
     reviewReasons: admissionRecords.reduce((sum, record) => sum + record.evidence.review.length, 0),
     evidenceIds: admissionRecords.reduce((sum, record) => sum + record.ids.evidenceIds.length, 0),
     proofIds: admissionRecords.reduce((sum, record) => sum + record.ids.proofIds.length, 0),
+    receiptBoundEvidence: evidenceReceipts.reduce((sum, receipt) => sum + receipt.summary.boundEvidence, 0),
+    receiptRejectedEvidence: evidenceReceipts.reduce((sum, receipt) => sum + receipt.summary.rejectedEvidence, 0),
+    receiptProofEvidence: evidenceReceipts.reduce((sum, receipt) => sum + receipt.summary.proofEvidence, 0),
     autoMergeClaims: 0,
     semanticEquivalenceClaims: 0
   };
@@ -45,6 +50,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const constructKinds = routeArtifacts.flatMap((artifact) => artifact.metadata?.representation?.constructKinds ?? []);
   const missingConstructs = routeArtifacts.flatMap((artifact) => artifact.metadata?.representation?.missing ?? []);
   const translationAdmissions = routeArtifacts.map((artifact) => artifact.translationAdmission ?? artifact.metadata?.translationAdmission ?? {});
+  const evidenceReceipts = routeArtifacts.map((artifact) => artifact.evidenceReceipt ?? {});
   const interlinguaRecords = routeArtifacts.map((artifact) => artifact.interlingua ?? artifact.metadata?.interlingua ?? artifact.admissionRecord?.metadata?.interlingua ?? {});
   const semanticOperationInterlinguaRecords = semanticOperations.map((operation) => operation.metadata?.interlingua ?? {});
   return {
@@ -69,12 +75,25 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
       byRisk: countBy(admissionRecords.map((record) => record.risk))
     },
     translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
+    evidenceReceipts: compactEvidenceReceiptCounts(evidenceReceipts),
     interlingua: compactInterlinguaCounts(interlinguaRecords),
     semanticOperationInterlingua: {
       operations: semanticOperations.length,
       operationRecords: semanticOperationInterlinguaRecords.filter((record) => record.id || record.loweringDisposition).length,
       ...compactOperationInterlinguaCounts(semanticOperationInterlinguaRecords)
     }
+  };
+}
+
+function compactEvidenceReceiptCounts(receipts) {
+  return {
+    routeArtifacts: receipts.filter((receipt) => receipt.id).length,
+    boundEvidence: receipts.reduce((sum, receipt) => sum + Number(receipt.summary?.boundEvidence ?? 0), 0),
+    rejectedEvidence: receipts.reduce((sum, receipt) => sum + Number(receipt.summary?.rejectedEvidence ?? 0), 0),
+    proofEvidence: receipts.reduce((sum, receipt) => sum + Number(receipt.summary?.proofEvidence ?? 0), 0),
+    missingEvidence: countBy(receipts.flatMap((receipt) => receipt.missingEvidence ?? [])),
+    proofEvidenceIds: countBy(receipts.flatMap((receipt) => receipt.proofEvidenceIds ?? [])),
+    rejectedByReason: countBy(receipts.flatMap((receipt) => (receipt.records?.rejected ?? []).map((record) => record.reason)))
   };
 }
 

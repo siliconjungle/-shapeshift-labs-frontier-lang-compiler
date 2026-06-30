@@ -24,6 +24,7 @@ export interface UniversalConversionArtifactIndex {
   readonly historyIds: readonly string[];
   readonly patchBundleIds: readonly string[];
   readonly admissionRecordIds: readonly string[];
+  readonly evidenceReceiptIds: readonly string[];
   readonly languages: readonly string[];
   readonly targets: readonly string[];
   readonly modes: readonly string[];
@@ -44,6 +45,11 @@ export interface UniversalConversionArtifactIndex {
   readonly conflictKeys: readonly string[];
   readonly evidenceIds: readonly string[];
   readonly proofIds: readonly string[];
+  readonly evidenceReceiptEvidenceIds: readonly string[];
+  readonly evidenceReceiptProofEvidenceIds: readonly string[];
+  readonly evidenceReceiptMissingEvidence: readonly string[];
+  readonly evidenceReceiptRejectedReasons: readonly string[];
+  readonly evidenceReceiptRejectedIds: readonly string[];
   readonly semanticOperationIds: readonly string[];
   readonly semanticOperationKinds: readonly string[];
   readonly semanticOperationInterlinguaRecordIds: readonly string[];
@@ -110,6 +116,7 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];
   readonly admissionRecordId?: string | readonly string[];
+  readonly evidenceReceiptId?: string | readonly string[];
   readonly sourceLanguage?: FrontierSourceLanguage | string | readonly string[];
   readonly target?: FrontierCompileTarget | string | readonly string[];
   readonly mode?: UniversalConversionRouteMode | readonly string[];
@@ -141,6 +148,11 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly conflictKey?: string | readonly string[];
   readonly evidenceId?: string | readonly string[];
   readonly proofId?: string | readonly string[];
+  readonly evidenceReceiptEvidenceId?: string | readonly string[];
+  readonly evidenceReceiptProofEvidenceId?: string | readonly string[];
+  readonly evidenceReceiptMissingEvidence?: string | readonly string[];
+  readonly evidenceReceiptRejectedReason?: string | readonly string[];
+  readonly evidenceReceiptRejectedId?: string | readonly string[];
   readonly semanticOperationId?: string | readonly string[];
   readonly semanticOperationKind?: string | readonly string[];
   readonly semanticOperationInterlinguaRecordId?: string | readonly string[];

@@ -48,15 +48,20 @@ assert.equal(scopedProofRoute.representation.constructs.find((item) => item.kind
 const scopedProofArtifact = createUniversalConversionArtifacts(scopedProofPlan, { generatedAt: 782 }).routeArtifacts.find((artifact) => artifact.routeId === scopedProofRoute.id);
 assert.equal(scopedProofArtifact.admissionRecord.ids.evidenceIds.includes('scoped_conversion_proof'), true);
 assert.equal(scopedProofArtifact.admissionRecord.ids.proofIds.includes('scoped_conversion_proof'), true);
+assert.equal(scopedProofArtifact.evidenceReceipt.proofEvidenceIds.includes('scoped_conversion_proof'), true);
+assert.equal(scopedProofArtifact.materialization.evidenceReceiptIds.includes(scopedProofArtifact.evidenceReceipt.id), true);
 
 const directReadyArtifact = createUniversalConversionArtifacts(manualReadyRoute('manual-ready-route'));
 assert.equal(directReadyArtifact.summary.mergeReady, 0);
+assert.equal(directReadyArtifact.summary.evidenceReceipts, 1);
 assert.equal(directReadyArtifact.routeArtifacts[0].admissionStatus, 'needs-review');
 assert.equal(directReadyArtifact.admissionRecords[0].admissionBucket, 'needs-evidence');
 assert.equal(directReadyArtifact.admissionRecords[0].evidence.missing.includes('route-bound-evidence'), true);
+assert.equal(directReadyArtifact.routeArtifacts[0].evidenceReceipt.missingEvidence.includes('route-bound-proof-evidence'), true);
 
 const directProofReadyArtifact = createUniversalConversionArtifacts(manualReadyRoute('manual-ready-proof-route', {
-  evidenceIds: ['evidence_manual_ready_proof']
+  evidenceIds: ['evidence_manual_ready_proof'],
+  proofIds: ['evidence_manual_ready_proof']
 }), {
   metadata: {
     autoMergeClaim: true,
@@ -65,8 +70,10 @@ const directProofReadyArtifact = createUniversalConversionArtifacts(manualReadyR
 });
 const directProofArtifact = directProofReadyArtifact.routeArtifacts[0];
 assert.equal(directProofReadyArtifact.summary.mergeReady, 1);
+assert.equal(directProofReadyArtifact.summary.receiptProofEvidence, 1);
 assert.equal(directProofArtifact.admissionStatus, 'queued');
 assert.equal(directProofArtifact.admissionRecord.admissionBucket, 'merge-ready');
+assert.equal(directProofArtifact.evidenceReceipt.evidenceIds.includes('evidence_manual_ready_proof'), true);
 assert.equal(directProofReadyArtifact.metadata.autoMergeClaim, false);
 assert.equal(directProofReadyArtifact.metadata.semanticEquivalenceClaim, false);
 assert.equal(directProofArtifact.metadata.autoMergeClaim, false);

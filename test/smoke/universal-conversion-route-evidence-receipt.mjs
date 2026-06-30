@@ -1,8 +1,10 @@
 import { assert } from './helpers.mjs';
 import { scannedJsImport } from './scanned-js.mjs';
 import {
+  createUniversalConversionArtifacts,
   createUniversalConversionPlan,
   createUniversalConversionRouteEvidenceReceipt,
+  queryUniversalConversionArtifacts,
   queryUniversalConversionPlan
 } from './compiler-api.mjs';
 
@@ -38,6 +40,7 @@ const receipt = createUniversalConversionRouteEvidenceReceipt(plan, {
   evidence: [scopedEvidence, unscopedEvidence, wrongTargetEvidence]
 });
 assert.equal(receipt.kind, 'frontier.lang.universalConversionRouteEvidenceReceipt');
+assert.equal(receipt.id, `evidence_receipt_${route.id}`);
 assert.equal(receipt.routeId, route.id);
 assert.equal(receipt.evidenceIds.includes('receipt_scoped_translation_proof'), true);
 assert.equal(receipt.proofEvidenceIds.includes('receipt_scoped_translation_proof'), true);
@@ -51,6 +54,18 @@ assert.equal(receipt.summary.rejectedByReason['unscoped-evidence'], 1);
 assert.equal(receipt.summary.rejectedByReason['target-mismatch'], 1);
 assert.equal(receipt.autoMergeClaim, false);
 assert.equal(receipt.semanticEquivalenceClaim, false);
+
+const artifactsWithReceipts = createUniversalConversionArtifacts(plan, {
+  routeId: route.id,
+  evidence: [scopedEvidence, unscopedEvidence, wrongTargetEvidence]
+});
+const rejectedArtifact = queryUniversalConversionArtifacts(artifactsWithReceipts, {
+  evidenceReceiptRejectedReason: 'unscoped-evidence',
+  evidenceReceiptRejectedId: 'receipt_unscoped_translation_proof'
+})[0];
+assert.equal(rejectedArtifact.evidenceReceipt.records.rejected.length, 2);
+assert.equal(artifactsWithReceipts.summary.receiptRejectedEvidence, 2);
+assert.equal(artifactsWithReceipts.summary.compactCounts.evidenceReceipts.rejectedByReason['target-mismatch'], 1);
 
 const routeReceipt = createUniversalConversionRouteEvidenceReceipt(route);
 assert.equal(routeReceipt.routeId, route.id);

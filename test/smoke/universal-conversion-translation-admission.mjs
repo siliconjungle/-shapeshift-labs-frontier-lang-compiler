@@ -68,12 +68,19 @@ const artifact = queryUniversalConversionArtifacts(artifacts, {
   representedTranslationConstructKind: 'target-adapter',
   translationProofEvidenceId: 'evidence_admittable_translation_proof'
 })[0];
+const receiptArtifact = queryUniversalConversionArtifacts(artifacts, {
+  evidenceReceiptProofEvidenceId: 'evidence_admittable_translation_proof'
+})[0];
 assert.equal(artifact.translationAdmission.status, 'admittable-for-review');
+assert.equal(receiptArtifact.routeId, artifact.routeId);
+assert.equal(artifact.evidenceReceipt.proofEvidenceIds.includes('evidence_admittable_translation_proof'), true);
 assert.equal(artifact.history.admission.metadata.translationAdmission.status, 'admittable-for-review');
 assert.equal(artifact.patchBundle.admission.metadata.translationAdmission.action, 'materialize-review-record');
 assert.equal(artifact.admissionRecord.metadata.translationAdmission.status, 'admittable-for-review');
 assert.equal(artifacts.index.translationAdmissionStatuses.includes('admittable-for-review'), true);
 assert.equal(artifacts.index.requiredTranslationConstructKinds.includes('proof-evidence'), true);
+assert.equal(artifacts.index.evidenceReceiptIds.includes(artifact.evidenceReceipt.id), true);
+assert.equal(artifacts.index.evidenceReceiptProofEvidenceIds.includes('evidence_admittable_translation_proof'), true);
 
 function conversionPlan(options = {}) {
   return createUniversalConversionPlan({

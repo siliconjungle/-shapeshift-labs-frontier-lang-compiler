@@ -17,6 +17,7 @@ export function artifactIndex(routeArtifacts) {
     historyIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.history.id)),
     patchBundleIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.patchBundle.id)),
     admissionRecordIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.admissionRecord.id)),
+    evidenceReceiptIds: uniqueStrings(routeArtifacts.map((artifact) => artifact.evidenceReceipt?.id)),
     languages: uniqueStrings(routeArtifacts.map((artifact) => artifact.sourceLanguage)),
     targets: uniqueStrings(routeArtifacts.map((artifact) => artifact.target)),
     modes: uniqueStrings(routeArtifacts.map((artifact) => artifact.mode)),
@@ -37,6 +38,11 @@ export function artifactIndex(routeArtifacts) {
     conflictKeys: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.index.conflictKeys)),
     evidenceIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.evidenceIds)),
     proofIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.history.proofIds)),
+    evidenceReceiptEvidenceIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.evidenceReceipt?.evidenceIds ?? [])),
+    evidenceReceiptProofEvidenceIds: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.evidenceReceipt?.proofEvidenceIds ?? [])),
+    evidenceReceiptMissingEvidence: uniqueStrings(routeArtifacts.flatMap((artifact) => artifact.evidenceReceipt?.missingEvidence ?? [])),
+    evidenceReceiptRejectedReasons: uniqueStrings(routeArtifacts.flatMap((artifact) => (artifact.evidenceReceipt?.records?.rejected ?? []).map((record) => record.reason))),
+    evidenceReceiptRejectedIds: uniqueStrings(routeArtifacts.flatMap((artifact) => (artifact.evidenceReceipt?.records?.rejected ?? []).map((record) => record.id))),
     semanticOperationIds: uniqueStrings(semanticOperations.map((operation) => operation.id)),
     semanticOperationKinds: uniqueStrings(semanticOperations.map((operation) => operation.operationKind)),
     semanticOperationInterlinguaRecordIds: uniqueStrings(semanticOperations.map((operation) => operation.metadata?.interlingua?.id)),
@@ -113,6 +119,7 @@ function matchesArtifact(record, query) {
     && match(query.historyId, [record.history.id])
     && match(query.patchBundleId, [record.patchBundle.id])
     && match(query.admissionRecordId, [record.admissionRecord.id])
+    && match(query.evidenceReceiptId, [record.evidenceReceipt?.id])
     && match(query.sourceLanguage, [record.sourceLanguage])
     && match(query.target, [record.target])
     && match(query.mode, [record.mode])
@@ -135,6 +142,11 @@ function matchesArtifact(record, query) {
     && match(query.conflictKey, record.history.index.conflictKeys)
     && match(query.evidenceId, record.history.evidenceIds)
     && match(query.proofId, record.history.proofIds)
+    && match(query.evidenceReceiptEvidenceId, record.evidenceReceipt?.evidenceIds ?? [])
+    && match(query.evidenceReceiptProofEvidenceId, record.evidenceReceipt?.proofEvidenceIds ?? [])
+    && match(query.evidenceReceiptMissingEvidence, record.evidenceReceipt?.missingEvidence ?? [])
+    && match(query.evidenceReceiptRejectedReason, (record.evidenceReceipt?.records?.rejected ?? []).map((entry) => entry.reason))
+    && match(query.evidenceReceiptRejectedId, (record.evidenceReceipt?.records?.rejected ?? []).map((entry) => entry.id))
     && match(query.semanticOperationId, semanticOperations.map((operation) => operation.id))
     && match(query.semanticOperationKind, semanticOperations.map((operation) => operation.operationKind))
     && match(query.semanticOperationInterlinguaRecordId, semanticOperations.map((operation) => operation.metadata?.interlingua?.id))

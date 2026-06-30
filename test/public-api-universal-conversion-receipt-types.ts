@@ -1,5 +1,5 @@
-import { createUniversalConversionPlan, createUniversalConversionRouteEvidenceReceipt, importNativeSource, queryUniversalConversionPlan } from '../src/index.js';
-import type { UniversalConversionRouteEvidenceReceipt } from '../src/index.js';
+import { createUniversalConversionArtifacts, createUniversalConversionPlan, createUniversalConversionRouteEvidenceReceipt, importNativeSource, queryUniversalConversionArtifacts, queryUniversalConversionPlan } from '../src/index.js';
+import type { UniversalConversionArtifacts, UniversalConversionRouteArtifact, UniversalConversionRouteEvidenceReceipt } from '../src/index.js';
 
 const receiptImport = importNativeSource({
   language: 'javascript',
@@ -20,6 +20,23 @@ const receipt: UniversalConversionRouteEvidenceReceipt = createUniversalConversi
 });
 
 receipt.summary.boundEvidence satisfies number;
+receipt.id satisfies string;
 receipt.records.rejected[0]?.reason satisfies string | undefined;
 receipt.records.bound[0]?.proof satisfies boolean | undefined;
 receipt.autoMergeClaim satisfies false;
+
+const receiptArtifacts: UniversalConversionArtifacts = createUniversalConversionArtifacts(receiptPlan, {
+  evidence: [
+    { id: 'receipt_type_route_proof', kind: 'conversion-replay-proof', status: 'passed', routeId: receiptRoute?.id, sourceLanguage: 'javascript', target: 'javascript' },
+    { id: 'receipt_type_unscoped_proof', kind: 'conversion-replay-proof', status: 'passed' }
+  ]
+});
+const receiptArtifact: UniversalConversionRouteArtifact | undefined = queryUniversalConversionArtifacts(receiptArtifacts, {
+  evidenceReceiptRejectedReason: 'unscoped-evidence'
+})[0];
+receiptArtifacts.evidenceReceipts[0]?.id satisfies string | undefined;
+receiptArtifacts.summary.evidenceReceipts satisfies number;
+receiptArtifacts.summary.receiptProofEvidence satisfies number;
+receiptArtifacts.summary.compactCounts.evidenceReceipts.missingEvidence satisfies Readonly<Record<string, number>>;
+receiptArtifact?.evidenceReceipt.autoMergeClaim satisfies false | undefined;
+receiptArtifact?.materialization.evidenceReceiptIds satisfies readonly string[] | undefined;

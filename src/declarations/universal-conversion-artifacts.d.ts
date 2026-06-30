@@ -7,6 +7,7 @@ import type { FrontierCompileTarget } from './compile.js';
 import type { SemanticHistoryRecord } from './semantic-history.js';
 import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
 import type { UniversalConversionArtifactCompactCounts } from './universal-conversion-compact-counts.js';
+import type { UniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence.js';
 import type { UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type {
   UniversalConversionAdmissionAction,
@@ -41,6 +42,7 @@ export interface UniversalConversionArtifactMaterialization {
   readonly patchBundleIds: readonly string[];
   readonly sourceMapLinkIds: readonly string[];
   readonly semanticOperationIds: readonly string[];
+  readonly evidenceReceiptIds: readonly string[];
   readonly evidenceIds: readonly string[];
   readonly proofIds: readonly string[];
   readonly autoMergeClaim: false;
@@ -149,6 +151,7 @@ export interface UniversalConversionRouteArtifact {
   readonly history: SemanticHistoryRecord;
   readonly patchBundle: SemanticPatchBundleRecord;
   readonly admissionRecord: UniversalConversionAdmissionRecord;
+  readonly evidenceReceipt: UniversalConversionRouteEvidenceReceipt;
   readonly semanticOperations: SemanticOperationSet;
   readonly materialization: UniversalConversionArtifactMaterialization;
   readonly mergeScore?: UniversalConversionMergeScore;
@@ -169,12 +172,14 @@ export interface UniversalConversionArtifacts {
   readonly historyRecords: readonly SemanticHistoryRecord[];
   readonly patchBundleRecords: readonly SemanticPatchBundleRecord[];
   readonly admissionRecords: readonly UniversalConversionAdmissionRecord[];
+  readonly evidenceReceipts: readonly UniversalConversionRouteEvidenceReceipt[];
   readonly index: UniversalConversionArtifactIndex;
   readonly summary: {
     readonly routes: number;
     readonly histories: number;
     readonly patchBundles: number;
     readonly admissionRecords: number;
+    readonly evidenceReceipts: number;
     readonly semanticOperations: number;
     readonly compactCounts: UniversalConversionArtifactCompactCounts;
     readonly mergeReady: number;
@@ -194,6 +199,9 @@ export interface UniversalConversionArtifacts {
     readonly reviewReasons: number;
     readonly evidenceIds: number;
     readonly proofIds: number;
+    readonly receiptBoundEvidence: number;
+    readonly receiptRejectedEvidence: number;
+    readonly receiptProofEvidence: number;
     readonly autoMergeClaims: 0;
     readonly semanticEquivalenceClaims: 0;
   };
@@ -215,6 +223,7 @@ export interface CreateUniversalConversionArtifactsOptions {
   readonly readiness?: SemanticMergeReadiness | string;
   readonly admissionAction?: UniversalConversionAdmissionAction;
   readonly maxRoutes?: number;
+  readonly evidence?: readonly Record<string, unknown>[];
   readonly metadata?: Record<string, unknown>;
 }
 

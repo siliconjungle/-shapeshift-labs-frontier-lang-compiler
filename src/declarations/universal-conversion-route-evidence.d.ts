@@ -52,6 +52,7 @@ export interface UniversalConversionRouteEvidenceReceipt {
   readonly kind: 'frontier.lang.universalConversionRouteEvidenceReceipt';
   readonly version: 1;
   readonly schema: 'frontier.lang.universalConversionRouteEvidenceReceipt.v1';
+  readonly id: string;
   readonly routeId: string;
   readonly planId?: string;
   readonly sourceLanguage?: FrontierSourceLanguage | string;

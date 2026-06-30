@@ -3,6 +3,7 @@ import { universalConversionArtifactSummary } from './universal-conversion-artif
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
 import { artifactIndex } from './universal-conversion-artifact-query.js';
 import { createUniversalConversionAdmissionRecord } from './universal-conversion-admission-record.js';
+import { createUniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence-receipt.js';
 import {
   routeAdmissionMetadata,
   routeAdmissionStatus,
@@ -28,11 +29,13 @@ export function createUniversalConversionArtifacts(input = {}, options = {}) {
   const routeArtifacts = routes.map((route) => createRouteArtifact(route, {
     generatedAt,
     planId: options.planId ?? plan?.id ?? route.mergeRefs?.planId,
+    evidence: options.evidence ?? input?.evidence,
     metadata: options.metadata
   }));
   const historyRecords = routeArtifacts.map((artifact) => artifact.history);
   const patchBundleRecords = routeArtifacts.map((artifact) => artifact.patchBundle);
   const admissionRecords = routeArtifacts.map((artifact) => artifact.admissionRecord);
+  const evidenceReceipts = routeArtifacts.map((artifact) => artifact.evidenceReceipt);
   const index = artifactIndex(routeArtifacts);
   return {
     kind: 'frontier.lang.universalConversionArtifacts',
@@ -45,11 +48,13 @@ export function createUniversalConversionArtifacts(input = {}, options = {}) {
     historyRecords,
     patchBundleRecords,
     admissionRecords,
+    evidenceReceipts,
     index,
     summary: universalConversionArtifactSummary(routeArtifacts, {
       historyRecords,
       patchBundleRecords,
-      admissionRecords
+      admissionRecords,
+      evidenceReceipts
     }),
     metadata: {
       ...options.metadata,
@@ -71,6 +76,7 @@ function createRouteArtifact(route, options) {
   const recordMetadata = routeRecordMetadata(route, planId, options.metadata);
   const admissionStatus = routeAdmissionStatus(route);
   const reasonCodes = routeReasonCodes(route);
+  const evidenceReceipt = createUniversalConversionRouteEvidenceReceipt(route, { evidence: options.evidence });
   const historyId = refs.historyIds?.[0] ?? `history_${route.id}`;
   const patchBundleId = refs.patchBundleIds?.[0] ?? `semantic_patch_bundle_${route.id}`;
   const history = createSemanticHistoryRecord({
@@ -125,6 +131,7 @@ function createRouteArtifact(route, options) {
     patchBundleIds: [patchBundle.id],
     sourceMapLinkIds: patchBundle.index.sourceMapLinkIds,
     semanticOperationIds: semanticOperations.operations.map((operation) => operation.id),
+    evidenceReceiptIds: [evidenceReceipt.id],
     evidenceIds: history.evidenceIds,
     proofIds: history.proofIds,
     autoMergeClaim: false,
@@ -167,6 +174,7 @@ function createRouteArtifact(route, options) {
     history,
     patchBundle,
     admissionRecord,
+    evidenceReceipt,
     semanticOperations,
     materialization,
     mergeScore: route.mergeScore,
