@@ -5,9 +5,10 @@ const DependencySections = ['dependencies', 'devDependencies', 'optionalDependen
 const PeerSections = ['peerDependencies', 'peerDependenciesMeta'];
 const PublicSurfaceFields = ['exports', 'types', 'typings', 'main', 'module', 'bin'];
 const WorkspaceFields = ['workspaces'];
+const ResolutionOverrideFields = ['overrides', 'resolutions', 'pnpm'];
 const InstallScripts = new Set(['preinstall', 'install', 'postinstall', 'prepare', 'prepublish', 'prepublishOnly']);
-const KnownFields = new Set([...DependencySections, ...PeerSections, 'scripts', 'engines', ...PublicSurfaceFields, ...WorkspaceFields, 'packageManager']);
-const GuardedProofLevels = { publicSurface: 'package-public-surface-proof', workspace: 'package-workspace-proof', packageManagerMigration: 'package-manager-migration-proof' };
+const KnownFields = new Set([...DependencySections, ...PeerSections, 'scripts', 'engines', ...PublicSurfaceFields, ...WorkspaceFields, ...ResolutionOverrideFields, 'packageManager']);
+const GuardedProofLevels = { publicSurface: 'package-public-surface-proof', workspace: 'package-workspace-proof', packageManagerMigration: 'package-manager-migration-proof', resolutionOverride: 'package-resolution-override-proof' };
 
 function packageManagementLanguageForPath(sourcePath) {
   const path = stripQuery(sourcePath).toLowerCase();
@@ -46,6 +47,7 @@ function mergePackageJsonFile(file, input, projectId, context, base, worker, hea
   mergeScripts(output, parsed, conflicts, input, file.sourcePath, { base, worker, head }, proofs);
   for (const field of PublicSurfaceFields) mergeGuardedField(output, field, parsed, conflicts, input, file.sourcePath, 'publicSurface', 'package-public-surface-proof-missing', proofs, { base, worker, head });
   for (const field of WorkspaceFields) mergeGuardedField(output, field, parsed, conflicts, input, file.sourcePath, 'workspace', 'package-workspace-proof-missing', proofs, { base, worker, head });
+  for (const field of ResolutionOverrideFields) mergeGuardedField(output, field, parsed, conflicts, input, file.sourcePath, 'resolutionOverride', 'package-resolution-override-proof-missing', proofs, { base, worker, head });
   mergeGuardedField(output, 'packageManager', parsed, conflicts, input, file.sourcePath, 'packageManagerMigration', 'package-manager-migration-proof-missing', proofs, { base, worker, head });
   for (const field of uniqueStrings([...Object.keys(parsed.base), ...Object.keys(parsed.worker), ...Object.keys(parsed.head)])) {
     if (!KnownFields.has(field)) mergeJsonField(output, field, parsed, conflicts, 'package-field-conflict');
@@ -161,6 +163,7 @@ const ProofInputKeys = {
   lockfileRegeneration: ['packageLockfileRegenerationProof', 'packageLockfileProof'],
   publicSurface: ['packagePublicSurfaceProof'],
   peerResolution: ['packagePeerDependencyProof', 'packagePeerResolutionProof'],
+  resolutionOverride: ['packageResolutionOverrideProof', 'packageOverrideProof', 'packageDependencyResolutionProof'],
   packageManagerMigration: ['packageManagerMigrationProof'],
   workspace: ['packageWorkspaceProof'],
   installScript: ['packageInstallScriptProof']
@@ -200,7 +203,7 @@ function parsePackageJsonSides(sourcePath, base, worker, head) {
 }
 
 function createPackageGraphEvidence(sourcePath, output, parsed, proofs) {
-  return { kind: 'frontier.lang.packageGraphEvidence', version: 1, sourcePath, packageName: output.name, packageManager: output.packageManager, dependencySections: DependencySections.filter((section) => output[section]), peerDependencySections: PeerSections.filter((section) => output[section]), publicSurfaceFields: PublicSurfaceFields.filter((field) => output[field] !== undefined), workspaceFields: WorkspaceFields.filter((field) => output[field] !== undefined), proofIds: proofs.map((proof) => proof.id).filter(Boolean), baseHash: hashText(stringifyPackageJson(parsed.base)), workerHash: hashText(stringifyPackageJson(parsed.worker)), headHash: hashText(stringifyPackageJson(parsed.head)), outputHash: hashText(stringifyPackageJson(output)), packageInstallEquivalenceClaim: false };
+  return { kind: 'frontier.lang.packageGraphEvidence', version: 1, sourcePath, packageName: output.name, packageManager: output.packageManager, dependencySections: DependencySections.filter((section) => output[section]), peerDependencySections: PeerSections.filter((section) => output[section]), publicSurfaceFields: PublicSurfaceFields.filter((field) => output[field] !== undefined), workspaceFields: WorkspaceFields.filter((field) => output[field] !== undefined), resolutionOverrideFields: ResolutionOverrideFields.filter((field) => output[field] !== undefined), proofIds: proofs.map((proof) => proof.id).filter(Boolean), baseHash: hashText(stringifyPackageJson(parsed.base)), workerHash: hashText(stringifyPackageJson(parsed.worker)), headHash: hashText(stringifyPackageJson(parsed.head)), outputHash: hashText(stringifyPackageJson(output)), packageInstallEquivalenceClaim: false };
 }
 
 function proofRecord(proof, proofLevel, sourcePath, extra = {}) { return compactRecord({ id: proof.id, kind: proof.kind, status: 'passed', proofLevel, sourcePath, command: firstString(proof.command, proof.installCommand, proof.packageManagerCommand, proof.runtimeCommand), evidenceHash: firstString(proof.evidenceHash, proof.runtimeEvidenceHash, proof.packageGraphHash, proof.lockfileRegenerationHash, proof.installProofHash), outputSourceHash: proof.outputSourceHash ?? proof.sourceHashes?.output, ...extra, autoMergeClaim: false, semanticEquivalenceClaim: false, packageInstallEquivalenceClaim: false }); }

@@ -109,6 +109,46 @@ assert.equal(publicSurfaceProvenProject.status, 'merged');
 assert.equal(publicSurfaceProvenProject.summary.packagePublicSurfaceProofs, 1);
 assert.equal(matrixSurface(publicSurfaceProvenProject, 'package-public-surface-proof').proofStatuses['package-public-surface-proof'], 'passed');
 
+const overrideBase = json({
+  name: '@demo/app',
+  version: '1.0.0',
+  dependencies: { leftpad: '^1.0.0' }
+});
+const overrideWorker = json({
+  name: '@demo/app',
+  version: '1.0.0',
+  dependencies: { leftpad: '^1.0.0' },
+  overrides: { leftpad: '1.0.1' }
+});
+const overrideBlockedProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_package_resolution_override_blocked',
+  files: [{ sourcePath: 'package.json', baseSourceText: overrideBase, workerSourceText: overrideWorker, headSourceText: overrideBase }]
+});
+assert.equal(overrideBlockedProject.status, 'blocked');
+assert.equal(overrideBlockedProject.summary.packageResolutionOverrideBlockedFiles, 1);
+assert.equal(overrideBlockedProject.conflicts.some((conflict) => conflict.code === 'package-resolution-override-proof-missing'), true);
+assert.equal(matrixSurface(overrideBlockedProject, 'package-resolution-override-proof').proofStatuses['package-resolution-override-proof'], 'failed');
+
+const overrideProvenProject = safeMergeJsTsProject({
+  id: 'js_ts_safe_project_merge_package_resolution_override_proven',
+  packageResolutionOverrideProofsByPath: {
+    'package.json': [sourceProof({
+      id: 'package_resolution_override',
+      sourcePath: 'package.json',
+      base: overrideBase,
+      worker: overrideWorker,
+      head: overrideBase,
+      output: overrideWorker,
+      extra: { packageResolutionHash: 'override:hash', command: 'npm install --package-lock-only', evidenceHash: 'override:evidence' }
+    })]
+  },
+  files: [{ sourcePath: 'package.json', baseSourceText: overrideBase, workerSourceText: overrideWorker, headSourceText: overrideBase }]
+});
+assert.equal(overrideProvenProject.status, 'merged');
+assert.equal(overrideProvenProject.summary.packageResolutionOverrideProofs, 1);
+assert.equal(overrideProvenProject.files[0].result.packageGraphEvidence.resolutionOverrideFields.includes('overrides'), true);
+assert.equal(matrixSurface(overrideProvenProject, 'package-resolution-override-proof').proofStatuses['package-resolution-override-proof'], 'passed');
+
 const lockBase = json({ lockfileVersion: 3, packages: { '': { dependencies: { react: '^18.2.0' } } } });
 const lockWorker = json({ lockfileVersion: 3, packages: { '': { dependencies: { react: '^18.2.0', zod: '^3.23.0' } } } });
 const lockBlockedProject = safeMergeJsTsProject({
