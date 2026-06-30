@@ -24,6 +24,7 @@ import type {
 } from '@shapeshift-labs/frontier-lang-kernel';
 import type { SemanticImportSidecarAdmission, SemanticImportSidecarQuality, SemanticImportSidecarQualityRecord } from './semantic-sidecar-admission.js';
 import type { SemanticGraphLayerSummary } from './semantic-graph-layers.js';
+import type { SemanticResourceGraph } from './semantic-resource-graph.js';
 import type { SemanticMergeCandidateAdmissionRecord, SemanticMergeCandidateProjectionRisk } from './semantic-merge-candidates.js';
 import type { SemanticMergeConflictClass, SemanticMergeConflictSummary } from './semantic-merge-conflicts.js';
 import type { SemanticImportImpactSummary } from './semantic-impact.js';
@@ -262,6 +263,7 @@ export interface SemanticImportSidecar {
   readonly proofSpec: SemanticImportSidecarProofSpecSummary;
   readonly paradigmSemantics: SemanticImportSidecarParadigmSemanticsSummary;
   readonly dependencies: SemanticImportDependencySummary; readonly semanticImpact: SemanticImportImpactSummary;
+  readonly resourceGraph: SemanticResourceGraph;
   readonly graphLayers: SemanticGraphLayerSummary;
   readonly patchHints: readonly SemanticImportPatchHint[];
   readonly quality: SemanticImportSidecarQuality;
@@ -282,12 +284,8 @@ export interface SemanticImportSidecar {
     readonly operationCount: number;
   }[];
   readonly losses: {
-    readonly total: number;
-    readonly byKind: Readonly<Record<string, number>>;
-    readonly bySeverity: Readonly<Record<string, number>>;
-    readonly categories: readonly NativeImportTaxonomyKind[];
-    readonly blockingLossIds: readonly string[];
-    readonly reviewLossIds: readonly string[];
+    readonly total: number; readonly byKind: Readonly<Record<string, number>>; readonly bySeverity: Readonly<Record<string, number>>;
+    readonly categories: readonly NativeImportTaxonomyKind[]; readonly blockingLossIds: readonly string[]; readonly reviewLossIds: readonly string[];
   };
   readonly regionTaxonomy: SemanticImportRegionTaxonomySummary;
   readonly evidence: { readonly total: number; readonly failed: readonly string[]; readonly ids: readonly string[] };
@@ -306,6 +304,7 @@ export interface SemanticImportSidecar {
     readonly paradigmSemanticsRecords: number;
     readonly paradigmSemanticsGroups: number;
     readonly paradigmSemanticsLoweringRecords: number;
+    readonly resourceGraphRecords: number; readonly resourceGraphResources: number; readonly resourceGraphLoans: number; readonly resourceGraphAliases: number; readonly resourceGraphMoves: number; readonly resourceGraphDrops: number; readonly resourceGraphLifetimeRegions: number; readonly resourceGraphUnsafeBoundaries: number; readonly resourceGraphConflicts: number;
     readonly dependencyRelations: number; readonly dependencyPredicates: readonly string[];
     readonly graphLayers: number; readonly graphLayersUsable: number; readonly graphLayerStatus: SemanticGraphLayerSummary['status'];
     readonly semanticImpactRecords: number; readonly semanticImpactHighRiskRecords: number; readonly semanticImpactRequiredVerificationSteps: number;

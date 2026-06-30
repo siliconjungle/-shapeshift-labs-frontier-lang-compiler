@@ -1,5 +1,6 @@
 import { countBy, uniqueStrings } from './native-import-utils.js';
 import { summarizeImportSourcePreservation } from './semantic-import-source-preservation.js';
+import { createSemanticResourceGraph } from './semantic-resource-graph.js';
 
 export const SemanticGraphLayerKinds = Object.freeze([
   'parser-source-span-trivia',
@@ -7,6 +8,7 @@ export const SemanticGraphLayerKinds = Object.freeze([
   'module-export-import',
   'type-public-api',
   'control-flow-effect',
+  'resource-alias-lifetime',
   'generic-semantic-edit-admission'
 ]);
 
@@ -20,12 +22,20 @@ export function createSemanticGraphLayerSummary(input = {}) {
   const sourcePreservationDetails = input.sourcePreservationDetails
     ?? (imports.length ? summarizeImportSourcePreservation(input.importResult, imports) : emptySourcePreservationDetails());
   const sourcePreservation = input.sourcePreservation ?? {};
+  const resourceGraph = input.resourceGraph ?? createSemanticResourceGraph({
+    id: input.resourceGraphId,
+    imports,
+    ownershipRegions,
+    paradigmSemantics: input.paradigmSemantics,
+    evidence: input.evidence
+  });
   const layers = {
     parserSourceSpanTrivia: parserSourceSpanTriviaLayer({ sourcePreservation, sourcePreservationDetails, sourceMapMappings, sourceMaps, universalAstLayers: input.universalAstLayers }),
     scopeUseDef: scopeUseDefLayer({ symbols, dependencies, paradigmSemantics: input.paradigmSemantics }),
     moduleExportImport: moduleExportImportLayer({ symbols, dependencies }),
     typePublicApi: typePublicApiLayer({ symbols, ownershipRegions, proofSpec: input.proofSpec }),
     controlFlowEffect: controlFlowEffectLayer({ ownershipRegions, dependencies, paradigmSemantics: input.paradigmSemantics, semanticImpact: input.semanticImpact }),
+    resourceAliasLifetime: resourceAliasLifetimeLayer({ resourceGraph, paradigmSemantics: input.paradigmSemantics }),
     genericSemanticEditAdmission: genericSemanticEditAdmissionLayer({ patchHints: input.patchHints, quality: input.quality, admission: input.admission, mergeCandidates: input.mergeCandidates, readiness: input.readiness })
   };
   const layerList = Object.values(layers);
@@ -150,6 +160,40 @@ function controlFlowEffectLayer(input) {
       ...(!effectRegions ? ['missing-effect-graph'] : [])
     ],
     evidenceIds: input.semanticImpact?.evidenceIds
+  });
+}
+
+function resourceAliasLifetimeLayer(input) {
+  const graph = input.resourceGraph ?? createSemanticResourceGraph();
+  const memoryLocations = input.paradigmSemantics?.memoryLocations ?? 0;
+  const blocked = graph.status === 'blocked';
+  const hasRecords = graph.summary.records > 0 || memoryLocations > 0;
+  return graphLayer({
+    id: 'resource-alias-lifetime',
+    title: 'Resource, alias, and lifetime graph evidence',
+    status: blocked ? 'blocked' : hasRecords ? 'partial' : 'missing',
+    summary: {
+      resources: graph.summary.resources,
+      owners: graph.summary.owners,
+      loans: graph.summary.loans,
+      aliases: graph.summary.aliases,
+      moves: graph.summary.moves,
+      drops: graph.summary.drops,
+      lifetimeRegions: graph.summary.lifetimeRegions,
+      unsafeBoundaries: graph.summary.unsafeBoundaries,
+      unsafeBoundariesWithoutProof: graph.summary.unsafeBoundariesWithoutProof,
+      conflicts: graph.summary.conflicts,
+      proofObligations: graph.summary.proofObligations,
+      memoryLocations,
+      borrowCheckerClaim: graph.claims?.borrowCheckerClaim === true,
+      aliasSafetyClaim: graph.claims?.aliasSafetyClaim === true,
+      lifetimeSoundnessClaim: graph.claims?.lifetimeSoundnessClaim === true
+    },
+    reasonCodes: [
+      ...graph.summary.reasonCodes,
+      'borrow-checker-equivalence-not-claimed'
+    ],
+    evidenceIds: graph.evidenceIds
   });
 }
 

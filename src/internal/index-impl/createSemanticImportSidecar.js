@@ -1,4 +1,4 @@
-import{idFragment,maxSemanticMergeReadiness,uniqueRecordsById}from'../../native-import-utils.js';import{summarizeSemanticImportDependencies}from'../../semantic-import-dependencies.js';import{createSemanticGraphLayerSummary}from'../../semantic-import-graph-layers.js';import{createSemanticImportImpact}from'../../semantic-import-impact.js';import{summarizeSemanticImportSidecarParadigmSemantics,summarizeSemanticImportSidecarProofSpec,summarizeSemanticImportSidecarUniversalAstLayers}from'../../semantic-import-layers.js';import{semanticPatchHintForRegion,summarizeSemanticImportRegionTaxonomy}from'../../semantic-import-regions.js';import{semanticImportSidecarEntry}from'../../semantic-import-sidecar-entry.js';import{summarizeKernelSourcePreservation}from'../../semantic-import-source-preservation.js';
+import{idFragment,maxSemanticMergeReadiness,uniqueRecordsById}from'../../native-import-utils.js';import{summarizeSemanticImportDependencies}from'../../semantic-import-dependencies.js';import{createSemanticGraphLayerSummary}from'../../semantic-import-graph-layers.js';import{createSemanticImportImpact}from'../../semantic-import-impact.js';import{summarizeSemanticImportSidecarParadigmSemantics,summarizeSemanticImportSidecarProofSpec,summarizeSemanticImportSidecarUniversalAstLayers}from'../../semantic-import-layers.js';import{semanticPatchHintForRegion,summarizeSemanticImportRegionTaxonomy}from'../../semantic-import-regions.js';import{createSemanticResourceGraph}from'../../semantic-resource-graph.js';import{semanticImportSidecarEntry}from'../../semantic-import-sidecar-entry.js';import{summarizeKernelSourcePreservation}from'../../semantic-import-source-preservation.js';
 import{createSemanticImportSidecarAdmission,createSemanticImportSidecarQuality}from'./createSemanticImportSidecarAdmission.js';
 import{summarizeNativeImportLosses}from'./summarizeNativeImportLosses.js';
 export function createSemanticImportSidecar(importResult, options = {}) {
@@ -18,6 +18,14 @@ export function createSemanticImportSidecar(importResult, options = {}) {
   const proofSpec = summarizeSemanticImportSidecarProofSpec(importEntries);
   const paradigmSemantics = summarizeSemanticImportSidecarParadigmSemantics(importEntries);
   const dependencies = summarizeSemanticImportDependencies(imports);
+  const resourceGraph = createSemanticResourceGraph({
+    id: `resource_graph_${idFragment(importResult?.id ?? importResult?.projectRoot ?? imports[0]?.sourcePath ?? imports[0]?.language ?? 'source')}`,
+    language: importResult?.language ?? (imports.length === 1 ? imports[0]?.language : 'mixed'),
+    imports,
+    ownershipRegions,
+    paradigmSemantics,
+    evidence
+  });
   const entryReadiness = importEntries.reduce(
     (current, entry) => maxSemanticMergeReadiness(current, entry.readiness),
     lossSummary.semanticMergeReadiness
@@ -69,6 +77,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     paradigmSemantics,
     dependencies,
     semanticImpact,
+    resourceGraph,
     patchHints,
     quality,
     admission,
@@ -97,6 +106,7 @@ export function createSemanticImportSidecar(importResult, options = {}) {
     proofSpec,
     paradigmSemantics,
     dependencies,
+    resourceGraph,
     graphLayers,
     semanticImpact,
     patchHints,
@@ -146,6 +156,15 @@ export function createSemanticImportSidecar(importResult, options = {}) {
       paradigmSemanticsRecords: paradigmSemantics.total,
       paradigmSemanticsGroups: paradigmSemantics.groups.length,
       paradigmSemanticsLoweringRecords: paradigmSemantics.loweringRecords,
+      resourceGraphRecords: resourceGraph.summary.records,
+      resourceGraphResources: resourceGraph.summary.resources,
+      resourceGraphLoans: resourceGraph.summary.loans,
+      resourceGraphAliases: resourceGraph.summary.aliases,
+      resourceGraphMoves: resourceGraph.summary.moves,
+      resourceGraphDrops: resourceGraph.summary.drops,
+      resourceGraphLifetimeRegions: resourceGraph.summary.lifetimeRegions,
+      resourceGraphUnsafeBoundaries: resourceGraph.summary.unsafeBoundaries,
+      resourceGraphConflicts: resourceGraph.summary.conflicts,
       dependencyRelations: dependencies.total,
       dependencyPredicates: dependencies.predicates,
       graphLayers: graphLayers.summary.total,

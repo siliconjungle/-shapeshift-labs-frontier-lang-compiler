@@ -34,6 +34,7 @@
     "./public-api-js-ts-type-proof-surface-types.ts",
     "./public-api-parser-trivia-types.ts",
     "./public-api-semantic-slice-types.ts",
+    "./public-api-semantic-resource-graph-types.ts",
     "./public-api-semantic-edit-types.ts",
     "./public-api-transform-types.ts"
   ]

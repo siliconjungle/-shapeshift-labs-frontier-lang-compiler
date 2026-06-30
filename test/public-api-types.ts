@@ -3,7 +3,7 @@ import './public-api-native-fixtures.js';
 import './public-api-adapter-fixtures.js';
 import './public-api-bundle-types.js';
 import './public-api-transform-types.js';
-import './public-api-universal-conversion-receipt-types.js';
+import './public-api-universal-conversion-receipt-types.js'; import './public-api-semantic-resource-graph-types.js';
 
 type Expect<T extends true> = T;
 type Equal<A, B> =
@@ -41,6 +41,7 @@ type ExpectedPublicRuntimeExport =
   | 'SemanticPatchBundleAdmissionStatuses' | 'SemanticPatchBundleOverlapKinds' | 'SemanticPatchBundleOverlapStatuses'
   | 'SemanticEditBundleAdmissionStatuses'
   | 'SemanticEditScriptAdmissionStatuses' | 'SemanticGraphLayerKinds'
+  | 'SemanticResourceGraphRecordKinds' | 'SemanticResourceLoanModes'
   | 'SemanticHistoryAdmissionStatuses'
   | 'SemanticHistoryConflictReasons'
   | 'SemanticLineageEventKinds'
@@ -77,7 +78,7 @@ type ExpectedPublicRuntimeExport =
   | 'createSemanticLineageMap'
   | 'createSemanticMergeCandidateAdmissionRecord'
   | 'createSemanticEditBundleAdmission'
-  | 'createSemanticEditScript' | 'createSemanticGraphLayerSummary'
+  | 'createSemanticEditScript' | 'createSemanticGraphLayerSummary' | 'createSemanticResourceGraph'
   | 'createSemanticPatchBundleRecord' | 'compareSemanticPatchBundleRecords' | 'composeSemanticPatchBundleProjections'
   | 'createSemanticTransformIdentityRecord' | 'deriveSemanticTransformIdentityRecords'
   | 'createUniversalCapabilityMatrix' | 'createUniversalConversionArtifacts' | 'createUniversalConversionPlan' | 'createUniversalConversionRouteEvidenceReceipt' | 'createUniversalConversionWorklist'
@@ -120,6 +121,7 @@ type ExpectedPublicRuntimeExport =
   | 'querySemanticHistoryRecordOverlaps'
   | 'querySemanticLineageEvents'
   | 'querySemanticMergeCandidateAdmissionOverlaps'
+  | 'querySemanticResourceGraph'
   | 'querySemanticPatchBundleRecords' | 'querySemanticPatchBundleOverlaps' | 'querySvgReferenceGraph'
   | 'querySemanticMergeConflictClasses'
   | 'queryUniversalConversionArtifacts' | 'queryUniversalConversionPlan' | 'queryUniversalConversionWorklist' | 'queryUniversalRuntimeCapabilityMatrix' | 'UniversalConversionWorkItemKinds'
@@ -158,6 +160,7 @@ type ExpectedPublicRuntimeExport =
   | 'sortSemanticMergeCandidatesByConflictRisk' | 'summarizeJsxSemanticTree'
   | 'summarizeLanguageAdapterPackageContracts' | 'summarizeJsTsSemanticConflictSidecars'
   | 'summarizeSemanticMergeConflicts'
+  | 'summarizeSemanticResourceGraph'
   | 'summarizeNativeImportFeatureEvidence'
   | 'summarizeNativeImportLosses' | 'summarizeSvgSemanticTree' | 'summarizePackageManifestSemanticTree' | 'summarizeRustSemanticTree'
   | 'summarizeUniversalDialectRegistry'

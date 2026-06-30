@@ -25,6 +25,7 @@ export { createPythonAstNativeImporterAdapter } from './internal/index-impl/crea
 export { createRustSynNativeImporterAdapter } from './internal/index-impl/createRustSynNativeImporterAdapter.js';
 export { createSemanticImportSidecar } from './internal/index-impl/createSemanticImportSidecar.js';
 export { createSemanticGraphLayerSummary, SemanticGraphLayerKinds } from './semantic-import-graph-layers.js';
+export { createSemanticResourceGraph, querySemanticResourceGraph, summarizeSemanticResourceGraph, SemanticResourceGraphRecordKinds, SemanticResourceLoanModes } from './semantic-resource-graph.js';
 export { compactSemanticSidecarExample } from './semantic-sidecar-example.js';
 export * from './js-ts-semantic-merge.js';
 export { createJsTsProjectMergeDeclarationEmitParityProof } from './js-ts-safe-project-merge-declaration-emit-parity.js';

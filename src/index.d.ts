@@ -34,6 +34,7 @@ export * from './declarations/bidirectional-target-change.js';
 export * from './declarations/bidirectional-target-change-source-edit.js';
 export * from './declarations/semantic-impact.js';
 export * from './declarations/semantic-graph-layers.js';
+export * from './declarations/semantic-resource-graph.js';
 export * from './declarations/semantic-sidecar.js';
 export * from './declarations/semantic-sidecar-example.js';
 export * from './declarations/js-ts-semantic-merge.js';

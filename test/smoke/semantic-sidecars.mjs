@@ -32,9 +32,10 @@ const graphLevelRegions = graphLevelSourceSidecar.ownershipRegions.filter((regio
 assert.equal(graphLevelSourceSidecar.summary.symbols, 2);
 assert.equal(graphLevelSourceSidecar.summary.ownershipRegions, 2);
 assert.equal(graphLevelSourceSidecar.graphLayers.kind, 'frontier.lang.semanticGraphLayers');
-assert.equal(graphLevelSourceSidecar.graphLayers.layerKinds.length, 6);
+assert.equal(graphLevelSourceSidecar.graphLayers.layerKinds.length, 7);
 assert.equal(graphLevelSourceSidecar.graphLayers.layers.genericSemanticEditAdmission.id, 'generic-semantic-edit-admission');
-assert.equal(graphLevelSourceSidecar.summary.graphLayers, 6);
+assert.equal(graphLevelSourceSidecar.graphLayers.layers.resourceAliasLifetime.id, 'resource-alias-lifetime');
+assert.equal(graphLevelSourceSidecar.summary.graphLayers, 7);
 assert.equal(graphLevelSourceSidecar.summary.graphLayersUsable >= 1, true);
 assert.equal(graphLevelSourceSidecar.summary.emptySemanticIndex, false);
 assert.equal(graphLevelRegions.length, 2);

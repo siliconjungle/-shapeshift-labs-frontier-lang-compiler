@@ -142,6 +142,34 @@ console.log(importedIndex.readiness.readiness); // "ready-with-losses" or review
 
 External semantic-index imports create Frontier `SemanticIndexRecord`, `SourceMapRecord`, evidence, losses, ownership facts, first-class `ownershipRegions`, and a universal AST envelope. They are a bridge from existing language servers/indexers into semantic merge tooling; they do not claim full parser AST coverage, macro expansion, type checking, comments/trivia preservation, or lossless cross-language code generation by themselves.
 
+Model resource, alias, and lifetime evidence explicitly when a source language or
+host tool can provide ownership-style facts:
+
+```js
+import { createSemanticResourceGraph } from '@shapeshift-labs/frontier-lang-compiler';
+
+const resourceGraph = createSemanticResourceGraph({
+  language: 'rust',
+  sourcePath: 'src/lib.rs',
+  resources: [{ id: 'resource_buffer', resourceKind: 'heap-buffer', ownerId: 'owner_parse' }],
+  owners: [{ id: 'owner_parse', ownerKind: 'function' }],
+  lifetimeRegions: [{ id: 'life_header', startLine: 3, endLine: 8 }],
+  loans: [{ id: 'loan_header', resourceId: 'resource_buffer', ownerId: 'owner_parse', lifetimeRegionId: 'life_header', mode: 'shared' }],
+  unsafeBoundaries: [{ id: 'unsafe_ffi', resourceId: 'resource_buffer', proofStatus: 'missing' }]
+});
+
+console.log(resourceGraph.status); // "blocked" until unsafe alias/lifetime proof is attached
+console.log(resourceGraph.claims.borrowCheckerClaim); // false
+```
+
+This is the slot for borrow-checker-shaped information in the universal graph:
+resources, owners, shared/mutable/exclusive loans, aliases, moves, drops,
+lifetime regions, unsafe boundaries, conflicts, and proof obligations. The
+record is runtime-neutral and does not pretend to be Rust's borrow checker.
+Rust, C/C++, Swift, GPU/canvas resource lifetimes, DOM mutation, and JS object
+aliasing can all attach evidence to the same shape, while semantic merge still
+fails closed when alias/lifetime proof is missing.
+
 Native imports include source maps, semantic merge candidates, and a loss summary for admission queues and dashboards. Informational losses produce `ready-with-losses`, warning losses produce `needs-review`, and error losses or failed import evidence produce `blocked`:
 
 ```js

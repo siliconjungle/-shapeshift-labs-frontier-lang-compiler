@@ -1,6 +1,7 @@
 import type { SemanticMergeReadiness, SourceMapMappingRecord, SourceMapRecord } from '@shapeshift-labs/frontier-lang-kernel';
 import type { SemanticImportSidecarAdmission, SemanticImportSidecarQuality } from './semantic-sidecar-admission.js';
 import type { SemanticImportImpactSummary } from './semantic-impact.js';
+import type { SemanticResourceGraph } from './semantic-resource-graph.js';
 import type {
   SemanticImportDependencySummary,
   SemanticImportOwnershipRegion,
@@ -18,6 +19,7 @@ export type SemanticGraphLayerKind =
   | 'module-export-import'
   | 'type-public-api'
   | 'control-flow-effect'
+  | 'resource-alias-lifetime'
   | 'generic-semantic-edit-admission';
 export type SemanticGraphLayerStatus = 'strong' | 'partial' | 'missing' | 'blocked';
 export interface SemanticGraphLayerRecord {
@@ -42,6 +44,7 @@ export interface SemanticGraphLayerSummary {
     readonly moduleExportImport: SemanticGraphLayerRecord;
     readonly typePublicApi: SemanticGraphLayerRecord;
     readonly controlFlowEffect: SemanticGraphLayerRecord;
+    readonly resourceAliasLifetime: SemanticGraphLayerRecord;
     readonly genericSemanticEditAdmission: SemanticGraphLayerRecord;
   };
   readonly summary: {
@@ -69,6 +72,9 @@ export interface SemanticGraphLayerSummaryInput {
   readonly paradigmSemantics?: SemanticImportSidecarParadigmSemanticsSummary;
   readonly dependencies?: SemanticImportDependencySummary;
   readonly semanticImpact?: SemanticImportImpactSummary;
+  readonly resourceGraph?: SemanticResourceGraph;
+  readonly resourceGraphId?: string;
+  readonly evidence?: readonly { readonly id?: string }[];
   readonly patchHints?: readonly SemanticImportPatchHint[];
   readonly quality?: SemanticImportSidecarQuality;
   readonly admission?: SemanticImportSidecarAdmission;
