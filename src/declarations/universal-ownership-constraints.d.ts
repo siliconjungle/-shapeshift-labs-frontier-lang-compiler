@@ -28,6 +28,8 @@ export interface UniversalOwnershipConstraintModel {
   readonly hasExclusiveBorrow: boolean;
   readonly hasRawAccess: boolean;
   readonly hasLifetimeBoundLoans: boolean;
+  readonly hasCallArgumentTransfer: boolean;
+  readonly hasReturnTransfer: boolean;
 }
 
 export interface UniversalOwnershipConstraintSide {

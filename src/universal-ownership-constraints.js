@@ -89,7 +89,9 @@ function constraintModel(graph = {}, summary = {}) {
     hasSharedBorrow: loanModes.includes('shared'),
     hasExclusiveBorrow: loanModes.includes('mutable') || loanModes.includes('exclusive'),
     hasRawAccess: loanModes.includes('raw') || summary.unsafeBoundaries > 0,
-    hasLifetimeBoundLoans: (graph.loans ?? []).some((record) => record.lifetimeRegionId)
+    hasLifetimeBoundLoans: (graph.loans ?? []).some((record) => record.lifetimeRegionId),
+    hasCallArgumentTransfer: (graph.moves ?? []).some((record) => String(record.moveKind ?? '').includes('call-argument')),
+    hasReturnTransfer: (graph.moves ?? []).some((record) => String(record.moveKind ?? '').includes('return'))
   };
 }
 
@@ -100,6 +102,8 @@ function requiredConstraintKinds(model, summary) {
     ...(model.hasExclusiveBorrow ? ['exclusive-borrow'] : []),
     ...(summary.aliases ? ['alias-control'] : []),
     ...(summary.moves ? ['move-invalidates-source'] : []),
+    ...(model.hasCallArgumentTransfer ? ['call-argument-ownership-transfer'] : []),
+    ...(model.hasReturnTransfer ? ['return-ownership-transfer'] : []),
     ...(summary.drops ? ['drop-order'] : []),
     ...(summary.lifetimeRegions || model.hasLifetimeBoundLoans ? ['lifetime-bound'] : []),
     ...(model.hasRawAccess ? ['raw-access-boundary'] : []),
@@ -115,6 +119,8 @@ function representedConstraintKinds(requiredKinds, model, summary, options) {
     if (kind === 'exclusive-borrow') return model.hasExclusiveBorrow;
     if (kind === 'alias-control') return summary.aliases > 0;
     if (kind === 'move-invalidates-source') return summary.moves > 0;
+    if (kind === 'call-argument-ownership-transfer') return model.hasCallArgumentTransfer;
+    if (kind === 'return-ownership-transfer') return model.hasReturnTransfer;
     if (kind === 'drop-order') return summary.drops > 0;
     if (kind === 'lifetime-bound') return summary.lifetimeRegions > 0 || model.hasLifetimeBoundLoans;
     if (kind === 'raw-access-boundary') return model.hasRawAccess;
@@ -149,6 +155,8 @@ function constraintReview(missingKinds, sourceModel, targetModel, input) {
   return uniqueStrings([
     ...(missingKinds.length ? [`Ownership constraints are missing target evidence for: ${missingKinds.join(', ')}.`] : []),
     ...(sourceModel.hasExclusiveBorrow && !targetModel.hasExclusiveBorrow ? ['Source exclusive borrow constraints are not represented in the target graph.'] : []),
+    ...(sourceModel.hasCallArgumentTransfer && !targetModel.hasCallArgumentTransfer ? ['Source call-argument ownership transfers are not represented in the target graph.'] : []),
+    ...(sourceModel.hasReturnTransfer && !targetModel.hasReturnTransfer ? ['Source return ownership transfers are not represented in the target graph.'] : []),
     ...(sourceModel.dropKinds.length && !targetModel.dropKinds.length ? ['Source drop-order constraints are not represented in the target graph.'] : []),
     ...(input.review ?? [])
   ]);
@@ -179,14 +187,14 @@ function constraintRecord(kind, sourceModel, targetModel, representedKinds) {
     status: representedKinds.includes(kind) ? 'represented' : 'missing',
     source: valuesForConstraint(kind, sourceModel),
     target: valuesForConstraint(kind, targetModel),
-    severity: kind === 'exclusive-borrow' || kind === 'unsafe-boundary-proof' || kind === 'raw-access-boundary' ? 'error' : 'warning'
+    severity: ['exclusive-borrow', 'unsafe-boundary-proof', 'raw-access-boundary', 'call-argument-ownership-transfer', 'return-ownership-transfer'].includes(kind) ? 'error' : 'warning'
   };
 }
 
 function valuesForConstraint(kind, model) {
   if (kind.endsWith('borrow')) return model.loanModes;
   if (kind === 'alias-control') return model.aliasKinds;
-  if (kind === 'move-invalidates-source') return model.moveKinds;
+  if (kind === 'move-invalidates-source' || kind.includes('ownership-transfer')) return model.moveKinds;
   if (kind === 'drop-order') return model.dropKinds;
   if (kind === 'lifetime-bound') return model.lifetimeKinds;
   if (kind.includes('unsafe') || kind.includes('raw')) return model.unsafeBoundaryKinds;

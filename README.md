@@ -177,8 +177,9 @@ fails closed when alias/lifetime proof is missing.
 Rust native imports also feed this graph automatically when source-preservation
 text or Rust semantic merge evidence is available. The compiler derives
 source-region resources, shared or mutable loans from reference parameters, raw
-pointer aliases, local `let` ownership resources, shared/mutable borrow
-bindings, possible lexical moves, explicit `drop(...)` calls, lexical-drop
+pointer aliases, owned value parameters, local `let` ownership resources,
+shared/mutable borrow bindings, possible lexical moves, call-argument ownership
+transfers, return ownership transfers, explicit `drop(...)` calls, lexical-drop
 evidence, returned-borrow escape records, named lifetime/reference/return
 bindings, explicit outlives relations such as `'long: 'short`, lifetime-region
 spans, source-bound borrow-scope obligations for async borrows, branch joins,

@@ -1,6 +1,7 @@
 import { assert } from './helpers.mjs';
 import {
   createSemanticImportSidecar,
+  createUniversalOwnershipConstraintEvidence,
   createUniversalBorrowScopeConstraintEvidence,
   createUniversalLifetimeConstraintEvidence,
   importNativeSource,
@@ -78,3 +79,37 @@ assert.equal(rustAsyncBorrowConstraint.requiredKinds.includes('exclusive-borrow-
 assert.equal(rustAsyncBorrowConstraint.requiredKinds.includes('no-escape-flow'), true);
 assert.equal(rustAsyncBorrowConstraint.missingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 assert.equal(rustAsyncBorrowConstraint.claims.borrowCheckerClaim, false);
+
+const rustMoveTransferImport = importNativeSource({
+  language: 'rust',
+  sourcePath: 'src/move_transfer.rs',
+  sourceText: [
+    'pub fn consume(value: String) -> String {',
+    '  let local = value;',
+    '  audit(local);',
+    '  let output = String::new();',
+    '  output',
+    '}',
+    ''
+  ].join('\n')
+});
+const rustMoveTransferSidecar = createSemanticImportSidecar(rustMoveTransferImport, { generatedAt: 141.9 });
+const rustMoveTransferGraph = rustMoveTransferSidecar.resourceGraph;
+const rustMoveTransfers = querySemanticResourceGraph(rustMoveTransferGraph, { kind: 'move' });
+const rustMoveKinds = rustMoveTransfers.map((record) => record.moveKind);
+
+assert.equal(rustMoveKinds.includes('rust-call-argument-move'), true);
+assert.equal(rustMoveKinds.includes('rust-return-move'), true);
+assert.equal(rustMoveTransferGraph.summary.moves >= 3, true);
+assert.equal(rustMoveTransferSidecar.summary.resourceGraphMoves, rustMoveTransferGraph.summary.moves);
+
+const rustMoveTransferConstraint = createUniversalOwnershipConstraintEvidence({
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  sourceGraph: rustMoveTransferGraph
+});
+
+assert.equal(rustMoveTransferConstraint.requiredKinds.includes('call-argument-ownership-transfer'), true);
+assert.equal(rustMoveTransferConstraint.requiredKinds.includes('return-ownership-transfer'), true);
+assert.equal(rustMoveTransferConstraint.missingEvidence.includes('translation-ownership-constraint:call-argument-ownership-transfer'), true);
+assert.equal(rustMoveTransferConstraint.missingEvidence.includes('translation-ownership-constraint:return-ownership-transfer'), true);
