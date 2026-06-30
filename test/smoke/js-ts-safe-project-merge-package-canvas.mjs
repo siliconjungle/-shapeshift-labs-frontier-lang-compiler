@@ -42,7 +42,7 @@ const packageWorker = json({
 const packageHead = json({
   name: '@demo/app',
   version: '1.0.0',
-  scripts: { test: 'node test.mjs', build: 'vite build' },
+  scripts: { test: 'node test.mjs', lint: 'eslint .' },
   dependencies: { react: '^18.2.0' },
   devDependencies: { vitest: '^2.0.0' }
 });
@@ -58,7 +58,7 @@ assert.equal(packageProject.summary.packageGraphEvidenceFiles, 1);
 assert.equal(packageProject.outputFiles[0].language, 'package-json');
 assert.match(packageProject.outputFiles[0].sourceText, /"zod": "\^3\.23\.0"/);
 assert.match(packageProject.outputFiles[0].sourceText, /"vitest": "\^2\.0\.0"/);
-assert.match(packageProject.outputFiles[0].sourceText, /"build": "vite build"/);
+assert.match(packageProject.outputFiles[0].sourceText, /"lint": "eslint \."/);
 assert.equal(packageProject.files[0].result.admission.packageInstallEquivalenceClaim, false);
 assert.equal(matrixSurface(packageProject, 'package-management-intent-merge').proofStatuses['package-management-intent'], 'passed');
 

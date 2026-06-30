@@ -1,5 +1,6 @@
 import { compactRecord } from './js-ts-safe-merge-context.js';
 import { hashText, safeId, uniqueStrings } from './js-ts-safe-project-merge-core.js';
+import { packageCommandExecutionPhase, packageManagerCommandExecutionRecord, proofHasPackageCommandExecutionCapsule, scriptCommandBinding } from './js-ts-safe-project-merge-package-command-execution-proof.js';
 
 const DependencySections = ['dependencies', 'devDependencies', 'optionalDependencies'];
 const PeerSections = ['peerDependencies', 'peerDependenciesMeta'];
@@ -7,6 +8,7 @@ const PublicSurfaceFields = ['exports', 'types', 'typings', 'main', 'module', 'b
 const WorkspaceFields = ['workspaces'];
 const ResolutionOverrideFields = ['overrides', 'resolutions', 'pnpm'];
 const InstallScripts = new Set(['preinstall', 'install', 'postinstall', 'prepare', 'prepublish', 'prepublishOnly']);
+const PackageCommandExecutionScripts = new Set(['build', 'prebuild', 'postbuild', 'test', 'pretest', 'posttest']);
 const KnownFields = new Set([...DependencySections, ...PeerSections, 'scripts', 'engines', ...PublicSurfaceFields, ...WorkspaceFields, ...ResolutionOverrideFields, 'packageManager']);
 const GuardedProofLevels = { publicSurface: 'package-public-surface-proof', workspace: 'package-workspace-proof', packageManagerMigration: 'package-manager-migration-proof', resolutionOverride: 'package-resolution-override-proof' };
 
@@ -88,13 +90,20 @@ function mergeStringMap(output, section, parsed, conflicts, reasonCode) {
 function mergeScripts(output, parsed, conflicts, input, sourcePath, binding, proofs) {
   const result = cloneJson(parsed.base.scripts ?? {});
   for (const key of uniqueStrings([...keys(parsed.base.scripts), ...keys(parsed.worker.scripts), ...keys(parsed.head.scripts)])) {
-    const changedInstall = InstallScripts.has(key) && (changed(parsed.base.scripts?.[key], parsed.worker.scripts?.[key]) || changed(parsed.base.scripts?.[key], parsed.head.scripts?.[key]));
-    if (changedInstall) {
-      const proof = validProof(input, sourcePath, 'installScript', binding);
-      if (!proof) conflicts.push(packageConflict(sourcePath, 'package-install-script-change-blocked', { script: key }));
-      else proofs.push(proofRecord(proof, 'package-install-script-proof', sourcePath, { script: key }));
-    }
     const merged = mergeValue(parsed.base.scripts?.[key], parsed.worker.scripts?.[key], parsed.head.scripts?.[key]);
+    const scriptChanged = changed(parsed.base.scripts?.[key], parsed.worker.scripts?.[key]) || changed(parsed.base.scripts?.[key], parsed.head.scripts?.[key]);
+    const scriptBinding = scriptCommandBinding(parsed, key, merged.value);
+    if (InstallScripts.has(key) && scriptChanged && !merged.conflict) {
+      const proof = validProof(input, sourcePath, 'installScript', binding, { requirePackageCommandExecution: true, executionPhase: 'lifecycle-script', script: key, scriptBinding });
+      if (!proof) conflicts.push(packageConflict(sourcePath, 'package-install-script-change-blocked', { script: key }));
+      else proofs.push(proofRecord(proof, 'package-install-script-proof', sourcePath, { script: key, ...packageManagerCommandExecutionRecord(proof) }));
+    }
+    if (PackageCommandExecutionScripts.has(key) && scriptChanged && !merged.conflict) {
+      const executionPhase = packageCommandExecutionPhase(key);
+      const proof = validProof(input, sourcePath, 'packageManagerCommandExecution', binding, { requirePackageCommandExecution: true, executionPhase, script: key, scriptBinding });
+      if (!proof) conflicts.push(packageConflict(sourcePath, 'package-manager-command-execution-proof-missing', { script: key, executionPhase }));
+      else proofs.push(proofRecord(proof, 'package-manager-command-execution-proof', sourcePath, { script: key, executionPhase, ...packageManagerCommandExecutionRecord(proof) }));
+    }
     if (merged.conflict) conflicts.push(packageConflict(sourcePath, 'package-script-conflict', { script: key }));
     else if (merged.value === undefined) delete result[key];
     else result[key] = merged.value;
@@ -136,6 +145,7 @@ function proofValid(proof, sourcePath, binding, options) {
     proofSourceMatches(proof, 'base', binding.base) && proofSourceMatches(proof, 'worker', binding.worker) && proofSourceMatches(proof, 'head', binding.head) &&
     !proof.autoMergeClaim && !proof.semanticEquivalenceClaim && !proof.packageInstallEquivalenceClaim &&
     (!options.requireCommand || firstString(proof.command, proof.installCommand, proof.packageManagerCommand, proof.runtimeCommand)) &&
+    (!options.requirePackageCommandExecution || proofHasPackageCommandExecutionCapsule(proof, options)) &&
     firstString(proof.evidenceHash, proof.runtimeEvidenceHash, proof.packageGraphHash, proof.lockfileRegenerationHash, proof.installProofHash);
 }
 
@@ -166,7 +176,8 @@ const ProofInputKeys = {
   resolutionOverride: ['packageResolutionOverrideProof', 'packageOverrideProof', 'packageDependencyResolutionProof'],
   packageManagerMigration: ['packageManagerMigrationProof'],
   workspace: ['packageWorkspaceProof'],
-  installScript: ['packageInstallScriptProof']
+  installScript: ['packageInstallScriptProof', 'packageManagerCommandExecutionProof'],
+  packageManagerCommandExecution: ['packageManagerCommandExecutionProof', 'packageCommandExecutionProof']
 };
 
 function packageFile(file, context, result) {
@@ -206,7 +217,7 @@ function createPackageGraphEvidence(sourcePath, output, parsed, proofs) {
   return { kind: 'frontier.lang.packageGraphEvidence', version: 1, sourcePath, packageName: output.name, packageManager: output.packageManager, dependencySections: DependencySections.filter((section) => output[section]), peerDependencySections: PeerSections.filter((section) => output[section]), publicSurfaceFields: PublicSurfaceFields.filter((field) => output[field] !== undefined), workspaceFields: WorkspaceFields.filter((field) => output[field] !== undefined), resolutionOverrideFields: ResolutionOverrideFields.filter((field) => output[field] !== undefined), proofIds: proofs.map((proof) => proof.id).filter(Boolean), baseHash: hashText(stringifyPackageJson(parsed.base)), workerHash: hashText(stringifyPackageJson(parsed.worker)), headHash: hashText(stringifyPackageJson(parsed.head)), outputHash: hashText(stringifyPackageJson(output)), packageInstallEquivalenceClaim: false };
 }
 
-function proofRecord(proof, proofLevel, sourcePath, extra = {}) { return compactRecord({ id: proof.id, kind: proof.kind, status: 'passed', proofLevel, sourcePath, command: firstString(proof.command, proof.installCommand, proof.packageManagerCommand, proof.runtimeCommand), evidenceHash: firstString(proof.evidenceHash, proof.runtimeEvidenceHash, proof.packageGraphHash, proof.lockfileRegenerationHash, proof.installProofHash), outputSourceHash: proof.outputSourceHash ?? proof.sourceHashes?.output, ...extra, autoMergeClaim: false, semanticEquivalenceClaim: false, packageInstallEquivalenceClaim: false }); }
+function proofRecord(proof, proofLevel, sourcePath, extra = {}) { return compactRecord({ id: proof.id, kind: proof.kind, status: 'passed', proofLevel, sourcePath, command: firstString(proof.command, proof.installCommand, proof.packageManagerCommand, proof.runtimeCommand), evidenceHash: firstString(proof.evidenceHash, proof.runtimeEvidenceHash, proof.packageGraphHash, proof.lockfileRegenerationHash, proof.installProofHash, proof.commandExecutionEvidenceHash), outputSourceHash: proof.outputSourceHash ?? proof.sourceHashes?.output, ...extra, autoMergeClaim: false, semanticEquivalenceClaim: false, packageInstallEquivalenceClaim: false }); }
 function lockfileOutputFromProof(proof, worker, head, base) { return firstString(proof.outputSourceText, proof.lockfileSourceText, proof.generatedLockfileSourceText) ?? (worker === head ? worker : worker !== base && head === base ? worker : head !== base && worker === base ? head : proof.outputSourceHash === hashText(worker) ? worker : proof.outputSourceHash === hashText(head) ? head : undefined); }
 function parsePackageJson(text) { return JSON.parse(text); }
 function stringifyPackageJson(value) { return `${JSON.stringify(orderPackageJson(value), null, 2)}\n`; }

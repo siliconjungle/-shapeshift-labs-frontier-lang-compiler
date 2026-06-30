@@ -145,7 +145,7 @@ const smokeModules = [
   './smoke/js-ts-safe-project-merge-html-runtime-proof-admission-framework-navigation.mjs',
   './smoke/js-ts-safe-project-merge-html-resource-runtime-boundary.mjs',
   './smoke/js-ts-safe-project-merge-html-structural-runtime-boundary.mjs',
-  './smoke/js-ts-safe-project-merge-package-canvas.mjs',
+  './smoke/js-ts-safe-project-merge-package-canvas.mjs', './smoke/js-ts-safe-project-merge-package-command-execution.mjs',
   './smoke/js-ts-safe-project-merge-html-css-dependencies.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-use-sites.mjs',
   './smoke/js-ts-safe-project-merge-css-modules-bounded-dynamic.mjs',

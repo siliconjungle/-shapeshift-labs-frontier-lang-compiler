@@ -5,6 +5,7 @@ const PackageCanvasProjectMergeMissingSignals = Object.freeze({
   packagePeerResolution: 'package-peer-resolution-proof-missing',
   packageResolutionOverride: 'package-resolution-override-proof-missing',
   packageInstallScript: 'package-install-script-proof-missing',
+  packageManagerCommandExecution: 'package-manager-command-execution-proof-missing',
   packageWorkspace: 'package-workspace-proof-missing',
   packageManagerMigration: 'package-manager-migration-proof-missing',
   canvasStaticElement: 'canvas-static-element-evidence-missing',
@@ -20,6 +21,7 @@ function packageCanvasProjectMergeMissingEvidenceRoutes(route, signals) {
     [signals.packagePeerResolution]: route('prove-package-peer-resolution', 'package-manager', 'supply-peer-dependency-resolution-proof'),
     [signals.packageResolutionOverride]: route('prove-package-resolution-overrides', 'package-manager', 'supply-overrides-resolutions-and-pnpm-resolution-proof'),
     [signals.packageInstallScript]: route('prove-package-install-script', 'package-manager', 'supply-install-time-script-behavior-proof'),
+    [signals.packageManagerCommandExecution]: route('prove-package-manager-command-execution', 'package-manager', 'supply-bounded-package-manager-command-execution-proof'),
     [signals.packageWorkspace]: route('prove-package-workspace-graph', 'package-workspace', 'supply-workspace-boundary-local-link-and-hoist-proof'),
     [signals.packageManagerMigration]: route('prove-package-manager-migration', 'package-manager', 'supply-package-manager-migration-proof'),
     [signals.canvasStaticElement]: route('admit-canvas-static-element', 'canvas-markup', 'prove-canvas-element-identity-attributes-and-fallback-children'),
@@ -36,6 +38,7 @@ function packageCanvasProjectMergeAdmissionMatrixRows(matrixRow, signals) {
     matrixRow('package-peer-resolution-proof', 'bounded-evidence', ['package-peer-resolution-proof'], [signals.packagePeerResolution]),
     matrixRow('package-resolution-override-proof', 'bounded-evidence', ['package-resolution-override-proof'], [signals.packageResolutionOverride]),
     matrixRow('package-install-script-proof', 'bounded-evidence', ['package-install-script-proof'], [signals.packageInstallScript]),
+    matrixRow('package-manager-command-execution-proof', 'bounded-evidence', ['package-manager-command-execution-proof'], [signals.packageManagerCommandExecution]),
     matrixRow('package-workspace-graph-proof', 'bounded-evidence', ['package-workspace-proof'], [signals.packageWorkspace]),
     matrixRow('package-manager-migration-proof', 'bounded-evidence', ['package-manager-migration-proof'], [signals.packageManagerMigration]),
     matrixRow('canvas-static-element-merge', 'partial', ['canvas-static-element'], [signals.canvasStaticElement]),
@@ -52,6 +55,7 @@ function packageCanvasProjectMergeMissingEvidenceItems(summary, signals, missing
   if (summary.packagePeerResolutionBlockedFiles) items.push(missingEvidenceItem({ code: signals.packagePeerResolution, scope: 'package-manager', kind: 'package-peer-resolution-proof', proofLevel: 'package-peer-resolution-proof', action: 'review', summary: `Peer dependency resolution changes are blocked in ${summary.packagePeerResolutionBlockedFiles} file(s); require peer resolution evidence before admission.`, suggestedInput: { packagePeerResolutionProofsByPath: true } }));
   if (summary.packageResolutionOverrideBlockedFiles) items.push(missingEvidenceItem({ code: signals.packageResolutionOverride, scope: 'package-manager', kind: 'package-resolution-override-proof', proofLevel: 'package-resolution-override-proof', action: 'review', summary: `Package dependency override/resolution changes are blocked in ${summary.packageResolutionOverrideBlockedFiles} file(s); require package-manager resolution proof before admission.`, suggestedInput: { packageResolutionOverrideProofsByPath: true } }));
   if (summary.packageInstallScriptBlockedFiles) items.push(missingEvidenceItem({ code: signals.packageInstallScript, scope: 'package-manager', kind: 'package-install-script-proof', proofLevel: 'package-install-script-proof', action: 'review', summary: `Install-time script changes are blocked in ${summary.packageInstallScriptBlockedFiles} file(s); require behavior proof for preinstall/install/postinstall/prepare changes.`, suggestedInput: { packageInstallScriptProofsByPath: true } }));
+  if (summary.packageManagerCommandExecutionBlockedFiles) items.push(missingEvidenceItem({ code: signals.packageManagerCommandExecution, scope: 'package-manager', kind: 'package-manager-command-execution-proof', proofLevel: 'package-manager-command-execution-proof', action: 'review', summary: `Package-manager build/test command changes are blocked in ${summary.packageManagerCommandExecutionBlockedFiles} file(s); require source-bound command argv, package-manager identity, exit/timing/output hashes, env/network policy, and default-off dependency install evidence.`, suggestedInput: { packageManagerCommandExecutionProofsByPath: true } }));
   if (summary.packageWorkspaceBlockedFiles) items.push(missingEvidenceItem({ code: signals.packageWorkspace, scope: 'package-workspace', kind: 'package-workspace-proof', proofLevel: 'package-workspace-proof', action: 'review', summary: `Workspace graph changes are blocked in ${summary.packageWorkspaceBlockedFiles} file(s); require workspace boundary/local-link/hoist proof before admission.`, suggestedInput: { packageWorkspaceProofsByPath: true } }));
   if (summary.packageManagerMigrationBlockedFiles) items.push(missingEvidenceItem({ code: signals.packageManagerMigration, scope: 'package-manager', kind: 'package-manager-migration-proof', proofLevel: 'package-manager-migration-proof', action: 'review', summary: `Package manager changes are blocked in ${summary.packageManagerMigrationBlockedFiles} file(s); require package-manager migration proof before admission.`, suggestedInput: { packageManagerMigrationProofsByPath: true } }));
   if (summary.htmlCanvasElementFiles && summary.htmlCanvasStaticMergedFiles !== summary.htmlCanvasElementFiles) items.push(missingEvidenceItem({ code: signals.canvasStaticElement, scope: 'canvas-markup', kind: 'canvas-static-element', proofLevel: 'canvas-static-element', action: 'review', summary: `Canvas static element merge has ${summary.htmlCanvasStaticMergedFiles}/${summary.htmlCanvasElementFiles} HTML canvas file(s) merged; require stable canvas DOM identity, bounded width/height/aria/fallback-child evidence, and separate runtime proof for handlers or drawing behavior.` }));
@@ -67,6 +71,7 @@ function packageCanvasProjectMergeMatrixProofStatus(level, summary) {
   if (level === 'package-peer-resolution-proof') return summary.packagePeerResolutionBlockedFiles ? 'failed' : summary.packagePeerResolutionProofs ? 'passed' : 'absent';
   if (level === 'package-resolution-override-proof') return summary.packageResolutionOverrideBlockedFiles ? 'failed' : summary.packageResolutionOverrideProofs ? 'passed' : 'absent';
   if (level === 'package-install-script-proof') return summary.packageInstallScriptBlockedFiles ? 'failed' : summary.packageInstallScriptProofs ? 'passed' : 'absent';
+  if (level === 'package-manager-command-execution-proof') return summary.packageManagerCommandExecutionBlockedFiles ? 'failed' : summary.packageManagerCommandExecutionProofs ? 'passed' : 'absent';
   if (level === 'package-workspace-proof') return summary.packageWorkspaceBlockedFiles ? 'failed' : summary.packageWorkspaceProofs ? 'passed' : 'absent';
   if (level === 'package-manager-migration-proof') return summary.packageManagerMigrationBlockedFiles ? 'failed' : summary.packageManagerMigrationProofs ? 'passed' : 'absent';
   if (level === 'canvas-static-element') return summary.htmlCanvasElementFiles ? (summary.htmlCanvasStaticMergedFiles === summary.htmlCanvasElementFiles ? 'passed' : 'failed') : 'absent';
