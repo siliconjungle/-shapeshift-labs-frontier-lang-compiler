@@ -10,6 +10,7 @@ import type { UniversalConversionArtifactCompactCounts } from './universal-conve
 import type { UniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence.js';
 import type { UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalResourceTransferEvidence } from './universal-resource-transfer.js';
+import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
 import type {
   UniversalConversionAdmissionAction,
   UniversalConversionPlan,
@@ -69,6 +70,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly interlinguaLoweringDisposition?: string;
   readonly resourceTransferStatus?: string;
   readonly resourceTransferAction?: string;
+  readonly effectConstraintStatus?: string;
+  readonly effectConstraintAction?: string;
   readonly readiness: SemanticMergeReadiness | string;
   readonly risk: UniversalConversionRisk | string;
   readonly score: {
@@ -123,6 +126,15 @@ export interface UniversalConversionAdmissionRecord {
       readonly missingEvidence: readonly string[];
     };
   };
+  readonly effectConstraint: {
+    readonly id?: string;
+    readonly status?: string;
+    readonly action?: string;
+    readonly requiredKinds: readonly string[];
+    readonly representedKinds: readonly string[];
+    readonly missingKinds: readonly string[];
+    readonly missingEvidence: readonly string[];
+  };
   readonly ownership: {
     readonly keys: readonly string[];
     readonly conflictKeys: readonly string[];
@@ -169,6 +181,7 @@ export interface UniversalConversionRouteArtifact {
   readonly translationAdmission?: UniversalTranslationAdmission;
   readonly interlingua?: UniversalInterlinguaRecord;
   readonly resourceTransfer?: UniversalResourceTransferEvidence;
+  readonly effectConstraint?: UniversalEffectConstraintEvidence;
   readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
   readonly reviewRequired: true;
   readonly history: SemanticHistoryRecord;

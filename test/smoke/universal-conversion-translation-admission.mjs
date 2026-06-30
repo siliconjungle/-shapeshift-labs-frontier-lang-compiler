@@ -2,6 +2,7 @@ import { assert } from './helpers.mjs';
 import {
   createSemanticResourceGraph,
   createUniversalConversionArtifacts,
+  createUniversalEffectConstraintEvidence,
   createUniversalConversionPlan,
   createUniversalOwnershipConstraintEvidence,
   createUniversalResourceTransferEvidence,
@@ -89,6 +90,18 @@ assert.equal(degradedOwnershipConstraints.missingKinds.includes('exclusive-borro
 assert.equal(degradedOwnershipConstraints.missingEvidence.includes('translation-ownership-constraint:exclusive-borrow'), true);
 assert.equal(degradedOwnershipConstraints.claims.borrowCheckerClaim, false);
 
+const degradedEffectConstraints = createUniversalEffectConstraintEvidence({
+  routeId: 'javascript_to_rust_effects',
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  sourceEffects: [{ id: 'effect_fetch', kind: 'network' }, { id: 'effect_await', kind: 'async' }],
+  targetEffects: [{ id: 'effect_rust_async', kind: 'async' }]
+});
+assert.equal(degradedEffectConstraints.status, 'degraded');
+assert.equal(degradedEffectConstraints.missingKinds.includes('network-io'), true);
+assert.equal(degradedEffectConstraints.missingEvidence.includes('translation-effect-constraint:network-io'), true);
+assert.equal(degradedEffectConstraints.claims.effectEquivalenceClaim, false);
+
 const degradedResourcePlan = conversionPlan({
   evidence: [routeProof('resource_transfer')],
   imports: [sourceImport()],
@@ -109,6 +122,24 @@ assert.equal(degradedResourceRoute.translationAdmission.resourceTransferStatus, 
 assert.equal(degradedResourceRoute.translationAdmission.resourceTransfer.missingKinds.includes('loan'), true);
 assert.equal(degradedResourceRoute.resourceTransfer.ownershipConstraints.status, 'degraded');
 assert.equal(degradedResourceRoute.missingEvidence.includes('translation-resource-transfer-proof'), true);
+
+const degradedEffectPlan = conversionPlan({
+  evidence: [routeProof('effect_constraint')],
+  imports: [sourceImport()],
+  effectConstraints: [{
+    sourceLanguage: 'javascript',
+    target: 'rust',
+    sourceEffects: [{ id: 'source_fetch', kind: 'network' }, { id: 'source_async', kind: 'async' }],
+    targetEffects: [{ id: 'target_async', kind: 'async' }]
+  }]
+});
+const degradedEffectRoute = queryUniversalConversionPlan(degradedEffectPlan, {
+  effectConstraintStatus: 'degraded',
+  effectConstraintMissingKind: 'network-io'
+}).bestRoute;
+assert.equal(degradedEffectRoute.translationAdmission.status, 'needs-evidence');
+assert.equal(degradedEffectRoute.effectConstraint.missingEvidence.includes('translation-effect-constraint:network-io'), true);
+assert.equal(degradedEffectRoute.missingEvidence.includes('translation-effect-constraint-proof'), true);
 
 const artifacts = createUniversalConversionArtifacts(admittablePlan, { routeId: admittableRoute.id, generatedAt: 796 });
 const artifact = queryUniversalConversionArtifacts(artifacts, {
@@ -144,6 +175,14 @@ assert.equal(degradedResourceArtifacts.index.ownershipConstraintMissingKinds.inc
 assert.equal(degradedResourceArtifacts.summary.compactCounts.resourceTransfer.missingKinds.loan, 1);
 assert.equal(degradedResourceArtifacts.summary.compactCounts.resourceTransfer.ownershipConstraintMissingKinds['exclusive-borrow'], 1);
 
+const degradedEffectArtifacts = createUniversalConversionArtifacts(degradedEffectPlan, { routeId: degradedEffectRoute.id, generatedAt: 798 });
+const degradedEffectArtifact = queryUniversalConversionArtifacts(degradedEffectArtifacts, {
+  effectConstraintMissingEvidence: 'translation-effect-constraint:network-io'
+})[0];
+assert.equal(degradedEffectArtifact.admissionRecord.effectConstraint.missingKinds.includes('network-io'), true);
+assert.equal(degradedEffectArtifacts.index.effectConstraintMissingKinds.includes('network-io'), true);
+assert.equal(degradedEffectArtifacts.summary.compactCounts.effectConstraint.missingKinds['network-io'], 1);
+
 function conversionPlan(options = {}) {
   return createUniversalConversionPlan({
     generatedAt: 795,
@@ -152,6 +191,7 @@ function conversionPlan(options = {}) {
     imports: options.imports ?? [],
     evidence: options.evidence ?? [],
     resourceTransfers: options.resourceTransfers ?? [],
+    effectConstraints: options.effectConstraints ?? [],
     runtimeRequirements: options.runtimeRequirements ?? []
   });
 }

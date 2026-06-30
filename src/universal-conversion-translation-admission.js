@@ -1,5 +1,6 @@
 import { uniqueStrings } from './native-import-utils.js';
 import { resourceTransferMatches } from './universal-resource-transfer.js';
+import { effectConstraintMatches } from './universal-effect-constraints.js';
 
 export const UniversalTranslationAdmissionStatuses = Object.freeze([
   'blocked',
@@ -24,8 +25,8 @@ export function createUniversalTranslationAdmission(input = {}) {
   const evidenceIds = uniqueStrings([...(input.mergeRefs?.evidenceIds ?? []), ...(input.routeEvidence ?? []).map((record) => record?.id)]);
   const proofEvidenceIds = uniqueStrings([...(input.mergeRefs?.proofIds ?? []), ...proofEvidenceIdsFor(input.routeEvidence)]);
   const missingEvidence = translationMissingEvidence(input, missingConstructKinds);
-  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? [])]);
-  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? [])]);
+  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.effectConstraint?.blockers ?? [])]);
+  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.effectConstraint?.review ?? [])]);
   const status = translationAdmissionStatus(input, missingEvidence, blockers);
   return {
     status,
@@ -46,6 +47,10 @@ export function createUniversalTranslationAdmission(input = {}) {
     resourceTransferStatus: input.resourceTransfer?.status,
     resourceTransferAction: input.resourceTransfer?.action,
     resourceTransferMissingEvidence: input.resourceTransfer?.missingEvidence ?? [],
+    effectConstraint: effectConstraintSummary(input.effectConstraint),
+    effectConstraintStatus: input.effectConstraint?.status,
+    effectConstraintAction: input.effectConstraint?.action,
+    effectConstraintMissingEvidence: input.effectConstraint?.missingEvidence ?? [],
     targetAdapterId: input.targetCell?.adapter,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
@@ -60,6 +65,7 @@ export function conversionRouteMatchesTranslationAdmissionQuery(route, query = {
     && match(query.translationEvidenceId, admission.evidenceIds)
     && match(query.translationProofEvidenceId, admission.proofEvidenceIds)
     && resourceTransferMatches(route?.resourceTransfer ?? admission.resourceTransfer, query)
+    && effectConstraintMatches(route?.effectConstraint ?? admission.effectConstraint, query)
     && match(query.requiredTranslationConstructKind, admission.requiredConstructKinds)
     && match(query.representedTranslationConstructKind, admission.representedConstructKinds)
     && match(query.targetAdapterId, [admission.targetAdapterId, route?.adapter]);
@@ -95,7 +101,8 @@ function translationMissingEvidence(input, missingConstructKinds) {
     ...(missingConstructKinds.includes('semantic-ownership') ? ['translation-semantic-ownership'] : []),
     ...(runtimeAdapterRequirements.length && !hasPassedRuntimeAdapterProof(input.routeEvidence) ? ['translation-runtime-adapter-proof'] : []),
     ...(dialectMissing.includes('dialect-projection-evidence') ? ['translation-dialect-projection-evidence'] : []),
-    ...(input.resourceTransfer?.missingEvidence ?? [])
+    ...(input.resourceTransfer?.missingEvidence ?? []),
+    ...(input.effectConstraint?.missingEvidence ?? [])
   ]);
 }
 
@@ -150,6 +157,19 @@ function resourceTransferSummary(resourceTransfer) {
 }
 
 function ownershipConstraintSummary(evidence) {
+  if (!evidence) return undefined;
+  return {
+    id: evidence.id,
+    status: evidence.status,
+    action: evidence.action,
+    requiredKinds: evidence.requiredKinds ?? [],
+    representedKinds: evidence.representedKinds ?? [],
+    missingKinds: evidence.missingKinds ?? [],
+    missingEvidence: evidence.missingEvidence ?? []
+  };
+}
+
+function effectConstraintSummary(evidence) {
   if (!evidence) return undefined;
   return {
     id: evidence.id,

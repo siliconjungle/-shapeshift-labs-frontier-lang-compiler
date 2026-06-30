@@ -19,6 +19,7 @@ import type {
 import type { UniversalRepresentationCoverageQuery } from './universal-representation-coverage.js';
 import type { UniversalInterlinguaQuery } from './universal-interlingua.js';
 import type { UniversalResourceTransferQuery } from './universal-resource-transfer.js';
+import type { UniversalEffectConstraintQuery } from './universal-effect-constraints.js';
 
 export interface UniversalConversionArtifactIndex {
   readonly routeIds: readonly string[];
@@ -108,6 +109,10 @@ export interface UniversalConversionArtifactIndex {
   readonly ownershipConstraintActions: readonly string[];
   readonly ownershipConstraintMissingEvidence: readonly string[];
   readonly ownershipConstraintMissingKinds: readonly string[];
+  readonly effectConstraintStatuses: readonly string[];
+  readonly effectConstraintActions: readonly string[];
+  readonly effectConstraintMissingEvidence: readonly string[];
+  readonly effectConstraintMissingKinds: readonly string[];
   readonly interlinguaRecordIds: readonly string[];
   readonly interlinguaLayerKinds: readonly string[];
   readonly interlinguaRepresentedLayerKinds: readonly string[];
@@ -120,7 +125,7 @@ export interface UniversalConversionArtifactIndex {
   readonly transformIdentityHashes: readonly string[];
 }
 
-export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery {
+export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalEffectConstraintQuery {
   readonly routeId?: string | readonly string[];
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];

@@ -54,6 +54,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     interlinguaLoweringDisposition: route.interlingua?.lowering?.disposition,
     resourceTransferStatus: route.resourceTransfer?.status,
     resourceTransferAction: route.resourceTransfer?.action,
+    effectConstraintStatus: route.effectConstraint?.status,
+    effectConstraintAction: route.effectConstraint?.action,
     reviewRequired: true,
     readiness: route.readiness,
     risk: score.risk ?? riskForRoute(route, input.admissionStatus),
@@ -109,6 +111,15 @@ export function createUniversalConversionAdmissionRecord(input) {
         missingEvidence: route.resourceTransfer?.ownershipConstraints?.missingEvidence ?? []
       }
     },
+    effectConstraint: {
+      id: route.effectConstraint?.id,
+      status: route.effectConstraint?.status,
+      action: route.effectConstraint?.action,
+      requiredKinds: route.effectConstraint?.requiredKinds ?? [],
+      representedKinds: route.effectConstraint?.representedKinds ?? [],
+      missingKinds: route.effectConstraint?.missingKinds ?? [],
+      missingEvidence: route.effectConstraint?.missingEvidence ?? []
+    },
     ownership: {
       keys: uniqueStrings(input.history?.index?.ownershipKeys ?? input.patchBundle?.index?.ownershipKeys ?? []),
       conflictKeys: uniqueStrings(input.history?.index?.conflictKeys ?? input.patchBundle?.index?.conflictKeys ?? [])
@@ -142,6 +153,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       translationAdmission: route.translationAdmission,
       interlingua: route.interlingua,
       resourceTransfer: route.resourceTransfer,
+      effectConstraint: route.effectConstraint,
       note: 'Admission records are sortable merge-review evidence, not proof of target semantic equivalence.'
     }
   };

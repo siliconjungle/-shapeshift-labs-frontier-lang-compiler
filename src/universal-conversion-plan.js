@@ -12,6 +12,7 @@ import { createUniversalRepresentationCoverage, representationCoverageMatches } 
 import { createUniversalTranslationAdmission, conversionRouteMatchesTranslationAdmissionQuery } from './universal-conversion-translation-admission.js';
 import { createUniversalInterlinguaRecord, interlinguaRecordMatches } from './universal-interlingua-record.js';
 import { resourceTransferForConversionRoute } from './universal-resource-transfer.js';
+import { effectConstraintForConversionRoute } from './universal-effect-constraints.js';
 
 export function createUniversalConversionPlan(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
@@ -29,7 +30,7 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
       targets
     }, context);
   const evidence = input.evidence ?? [];
-  const routeInput = { dialectRegistries: conversionDialectRegistries(input), evidence, generatedAt, imports: input.imports ?? [], matrix, resourceTransfer: input.resourceTransfer, resourceTransfers: input.resourceTransfers ?? [], translationResourceTransfer: input.translationResourceTransfer, runtimeMatrix };
+  const routeInput = { dialectRegistries: conversionDialectRegistries(input), effectConstraint: input.effectConstraint, effectConstraints: input.effectConstraints ?? [], evidence, generatedAt, imports: input.imports ?? [], matrix, resourceTransfer: input.resourceTransfer, resourceTransfers: input.resourceTransfers ?? [], translationEffectConstraint: input.translationEffectConstraint, translationResourceTransfer: input.translationResourceTransfer, runtimeMatrix };
   const routes = (matrix.languages ?? []).flatMap((language) => targets.flatMap((target) => {
     const runtimeRoutes = conversionRuntimeRoutes(runtimeMatrix, language, target);
     return runtimeRoutes.map((runtimeRoute) => conversionRoute(language, target, {
@@ -115,6 +116,7 @@ function conversionRoute(language, target, input, planId) {
   const routeEvidence = conversionRouteEvidence(input.evidence, language, target, id);
   const routeImports = importsForConversionLanguage(input.imports, language);
   const resourceTransfer = resourceTransferForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence);
+  const effectConstraint = effectConstraintForConversionRoute(input, { id, sourceLanguage: language.language, target, mode }, routeImports, routeEvidence, runtime);
   const mergeRefs = conversionMergeRefs({
     planId,
     routeId: id,
@@ -135,8 +137,8 @@ function conversionRoute(language, target, input, planId) {
   const components = conversionScoreComponents(language, targetCell, readiness, mode, routeEvidence, representation);
   const mergeScore = conversionMergeScore({ readiness, mode, components, blockers, review });
   const admissionStatus = mergeScore.action;
-  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect, resourceTransfer);
-  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, resourceTransfer, blockers, review });
+  const missingEvidence = conversionMissingEvidence(language, targetCell, mode, routeEvidence, runtime, dialect, resourceTransfer, effectConstraint);
+  const translationAdmission = createUniversalTranslationAdmission({ language, target, targetCell, mode, readiness, runtime, dialect, representation, routeEvidence, mergeRefs, resourceTransfer, effectConstraint, blockers, review });
   const route = {
     id,
     sourceLanguage: language.language,
@@ -160,6 +162,7 @@ function conversionRoute(language, target, input, planId) {
     missingEvidence,
     translationAdmission,
     resourceTransfer,
+    effectConstraint,
     blockers,
     review,
     tasks: conversionTasks(language, target, mode, blockers, review, runtime, dialect),
@@ -280,7 +283,7 @@ function conversionEvidence(language, targetCell) {
   };
 }
 
-function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, effectConstraint) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -294,6 +297,7 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...((runtime.adapterRequirements ?? []).length ? ['runtime-adapter-proof'] : []),
     ...(dialect.missingEvidence ?? []),
     ...(resourceTransfer?.missingEvidence ?? []),
+    ...(effectConstraint?.missingEvidence ?? []),
     ...(hasPassedRouteEvidence(evidence) ? [] : ['proof-or-replay-evidence'])
   ]);
 }

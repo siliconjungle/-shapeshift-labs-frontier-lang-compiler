@@ -53,6 +53,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const evidenceReceipts = routeArtifacts.map((artifact) => artifact.evidenceReceipt ?? {});
   const interlinguaRecords = routeArtifacts.map((artifact) => artifact.interlingua ?? artifact.metadata?.interlingua ?? artifact.admissionRecord?.metadata?.interlingua ?? {});
   const resourceTransfers = routeArtifacts.map((artifact) => artifact.resourceTransfer ?? artifact.metadata?.resourceTransfer ?? artifact.admissionRecord?.metadata?.resourceTransfer ?? {});
+  const effectConstraints = routeArtifacts.map((artifact) => artifact.effectConstraint ?? artifact.metadata?.effectConstraint ?? artifact.admissionRecord?.metadata?.effectConstraint ?? {});
   const semanticOperationInterlinguaRecords = semanticOperations.map((operation) => operation.metadata?.interlingua ?? {});
   return {
     representationConstructs: {
@@ -77,6 +78,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     },
     translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
     resourceTransfer: compactResourceTransferCounts(resourceTransfers),
+    effectConstraint: compactEffectConstraintCounts(effectConstraints),
     evidenceReceipts: compactEvidenceReceiptCounts(evidenceReceipts),
     interlingua: compactInterlinguaCounts(interlinguaRecords),
     semanticOperationInterlingua: {
@@ -100,6 +102,17 @@ function compactResourceTransferCounts(transfers) {
     ownershipConstraintStatuses: countBy(constraints.map((record) => record.status)),
     ownershipConstraintMissingKinds: countBy(constraints.flatMap((record) => record.missingKinds ?? [])),
     ownershipConstraintMissingEvidence: countBy(constraints.flatMap((record) => record.missingEvidence ?? []))
+  };
+}
+
+function compactEffectConstraintCounts(records) {
+  return {
+    byStatus: countBy(records.map((record) => record.status)),
+    byAction: countBy(records.map((record) => record.action)),
+    requiredKinds: countBy(records.flatMap((record) => record.requiredKinds ?? [])),
+    representedKinds: countBy(records.flatMap((record) => record.representedKinds ?? [])),
+    missingKinds: countBy(records.flatMap((record) => record.missingKinds ?? [])),
+    missingEvidence: countBy(records.flatMap((record) => record.missingEvidence ?? []))
   };
 }
 

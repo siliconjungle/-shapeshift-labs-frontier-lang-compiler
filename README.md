@@ -779,6 +779,7 @@ import {
   createUniversalConversionPlan,
   createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
+  createUniversalEffectConstraintEvidence,
   createUniversalOwnershipConstraintEvidence,
   createUniversalResourceTransferEvidence,
   queryUniversalCapabilityMatrix,
@@ -851,6 +852,15 @@ const resourceTransfer = createUniversalResourceTransferEvidence({
 console.log(resourceTransfer.status); // "preserved", "degraded", "needs-evidence", etc.
 console.log(resourceTransfer.missingEvidence); // resource semantics that need proof before admission
 console.log(resourceTransfer.ownershipConstraints.missingKinds); // borrow/lifetime/drop constraints lost by target lowering
+
+const effectConstraints = createUniversalEffectConstraintEvidence({
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  sourceEffects: [{ kind: 'network' }, { kind: 'async' }],
+  targetEffects: [{ kind: 'async' }]
+});
+console.log(effectConstraints.missingKinds); // ["network-io"]
+console.log(effectConstraints.claims.effectEquivalenceClaim); // false without executable proof
 
 const ownershipConstraints = createUniversalOwnershipConstraintEvidence({
   sourceLanguage: 'rust',
@@ -950,6 +960,17 @@ queries such as `ownershipConstraintMissingKind: "exclusive-borrow"` let a
 coordinator distinguish "target resource identity is present" from "target
 lowering lost the exclusive-borrow obligation." This is still evidence and loss
 accounting, not a claim that the target language enforces Rust's borrow checker.
+
+Routes can also carry `effectConstraint`, an observable-effect admission record
+for source effects such as network I/O, storage, filesystem access, timers,
+DOM/browser effects, async suspension, concurrency, FFI boundaries, mutation,
+exceptions, control flow, allocation, and host effects. It can be derived from
+semantic effect regions, explicit effect records, or runtime capability routes.
+Effect queries such as `effectConstraintMissingKind: "network-io"` let a
+coordinator separate "target code shape exists" from "target execution preserves
+the source effect boundary." The record remains conservative: runtime,
+effect-equivalence, semantic-equivalence, and auto-merge claims stay false unless
+separate proof is attached.
 
 Each route also carries `interlingua`, a first-class superset-language route record. It binds the source lift (`sourcePaths`, hashes, source maps, ownership keys, evidence/proof IDs), represented/missing/review/blocked semantic layers, and target lowering disposition: `exact-source`, `target-adapter`, `declaration-stub`, `semantic-index-only`, `lossy-review`, or `blocked`. The record is queryable through `interlinguaLayerKind`, `interlinguaRepresentedLayerKind`, `interlinguaMissingLayerKind`, `interlinguaLoweringDisposition`, `interlinguaMissingEvidence`, `interlinguaProofEvidenceId`, and `interlinguaTargetAdapterId`. It is loss accounting for source -> interlingua -> target lowering, not a target semantic-equivalence proof.
 
