@@ -170,6 +170,13 @@ Rust, C/C++, Swift, GPU/canvas resource lifetimes, DOM mutation, and JS object
 aliasing can all attach evidence to the same shape, while semantic merge still
 fails closed when alias/lifetime proof is missing.
 
+Rust native imports also feed this graph automatically when source-preservation
+text or Rust semantic merge evidence is available. The compiler derives
+source-region resources, shared or mutable loans from reference parameters, raw
+pointer aliases, lifetime-region spans, and unsafe-boundary proof obligations.
+That makes Rust borrow-checker-shaped evidence visible in the universal sidecar
+without claiming borrow-checker equivalence.
+
 Native imports include source maps, semantic merge candidates, and a loss summary for admission queues and dashboards. Informational losses produce `ready-with-losses`, warning losses produce `needs-review`, and error losses or failed import evidence produce `blocked`:
 
 ```js

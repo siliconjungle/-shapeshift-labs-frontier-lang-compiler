@@ -99,3 +99,28 @@ assert.equal(explicitResourceSidecar.resourceGraph.summary.drops >= 1, true);
 assert.equal(explicitResourceSidecar.graphLayers.layers.resourceAliasLifetime.status !== 'missing', true);
 assert.equal(explicitResourceSidecar.summary.resourceGraphResources, explicitResourceSidecar.resourceGraph.summary.resources);
 assert.equal(explicitResourceSidecar.summary.graphLayers, 7);
+
+const rustResourceImport = importNativeSource({
+  language: 'rust',
+  sourcePath: 'src/lib.rs',
+  sourceText: [
+    'pub unsafe fn from_raw(buffer: &mut Buffer, ptr: *const u8) -> usize {',
+    '  unsafe { *ptr as usize }',
+    '}',
+    'pub struct Buffer;',
+    ''
+  ].join('\n')
+});
+const rustResourceSidecar = createSemanticImportSidecar(rustResourceImport, { generatedAt: 141 });
+const rustResourceGraph = rustResourceSidecar.resourceGraph;
+
+assert.equal(rustResourceGraph.status, 'blocked');
+assert.equal(rustResourceGraph.summary.resources >= 3, true);
+assert.equal(rustResourceGraph.summary.loans >= 1, true);
+assert.equal(rustResourceGraph.summary.aliases >= 1, true);
+assert.equal(rustResourceGraph.summary.unsafeBoundaries >= 2, true);
+assert.equal(rustResourceGraph.summary.unsafeBoundariesWithoutProof >= 2, true);
+assert.equal(rustResourceGraph.claims.borrowCheckerClaim, false);
+assert.equal(querySemanticResourceGraph(rustResourceGraph, { kind: 'loan', resourceId: rustResourceGraph.loans[0].resourceId }).length, 1);
+assert.equal(querySemanticResourceGraph(rustResourceGraph, { unsafe: true }).length >= 2, true);
+assert.equal(rustResourceSidecar.graphLayers.layers.resourceAliasLifetime.status, 'blocked');
