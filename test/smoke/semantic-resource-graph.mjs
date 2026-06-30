@@ -182,3 +182,62 @@ assert.equal(cppResourceGraph.resources.some((record) => record.resourceKind ===
 assert.equal(cppResourceGraph.drops.some((record) => record.dropKind === 'cpp-delete'), true);
 assert.equal(querySemanticResourceGraph(cppResourceGraph, { unsafe: true }).length >= 4, true);
 assert.equal(cppResourceSidecar.graphLayers.layers.resourceAliasLifetime.status, 'blocked');
+
+const javaResourceImport = importNativeSource({
+  language: 'java',
+  sourcePath: 'src/Reader.java',
+  sourceText: [
+    'class Reader {',
+    '  void read(Path path) throws Exception {',
+    '    try (BufferedReader reader = Files.newBufferedReader(path)) {',
+    '      reader.readLine();',
+    '    }',
+    '  }',
+    '}',
+    ''
+  ].join('\n')
+});
+const javaResourceGraph = createSemanticImportSidecar(javaResourceImport, { generatedAt: 144 }).resourceGraph;
+
+assert.equal(javaResourceGraph.status, 'partial');
+assert.equal(javaResourceGraph.summary.resources >= 1, true);
+assert.equal(javaResourceGraph.summary.drops >= 1, true);
+assert.equal(javaResourceGraph.drops.some((record) => record.dropKind === 'java-auto-close'), true);
+assert.equal(querySemanticResourceGraph(javaResourceGraph, { kind: 'drop' }).length >= 1, true);
+
+const managedProjectGraph = createSemanticResourceGraph({
+  imports: [
+    importNativeSource({ language: 'csharp', sourcePath: 'src/Reader.cs', sourceText: 'using var reader = File.OpenText(path);\nreader.ReadLine();\n' }),
+    importNativeSource({ language: 'go', sourcePath: 'reader.go', sourceText: 'func read(file *os.File) {\n  defer file.Close()\n}\n' }),
+    importNativeSource({ language: 'kotlin', sourcePath: 'Reader.kt', sourceText: 'fun read(path: Path) {\n  inputStream.use { stream -> stream.read() }\n}\n' })
+  ]
+});
+
+assert.equal(managedProjectGraph.status, 'partial');
+assert.equal(managedProjectGraph.summary.resources >= 3, true);
+assert.equal(managedProjectGraph.summary.drops >= 3, true);
+assert.equal(managedProjectGraph.drops.some((record) => record.dropKind === 'csharp-dispose'), true);
+assert.equal(managedProjectGraph.drops.some((record) => record.dropKind === 'go-defer-close'), true);
+assert.equal(managedProjectGraph.drops.some((record) => record.dropKind === 'kotlin-auto-close'), true);
+
+const swiftResourceImport = importNativeSource({
+  language: 'swift',
+  sourcePath: 'Sources/Native.swift',
+  sourceText: [
+    'func read(file: FileHandle) {',
+    '  defer { file.close() }',
+    '  let pointer: UnsafePointer<Int> = buffer.baseAddress!',
+    '  _ = pointer.pointee',
+    '}',
+    ''
+  ].join('\n')
+});
+const swiftResourceGraph = createSemanticImportSidecar(swiftResourceImport, { generatedAt: 145 }).resourceGraph;
+
+assert.equal(swiftResourceGraph.status, 'blocked');
+assert.equal(swiftResourceGraph.summary.resources >= 2, true);
+assert.equal(swiftResourceGraph.summary.drops >= 1, true);
+assert.equal(swiftResourceGraph.summary.aliases >= 1, true);
+assert.equal(swiftResourceGraph.summary.unsafeBoundariesWithoutProof >= 1, true);
+assert.equal(swiftResourceGraph.drops.some((record) => record.dropKind === 'swift-defer-close'), true);
+assert.equal(swiftResourceGraph.resources.some((record) => record.resourceKind === 'swift-unsafe-pointer-resource'), true);

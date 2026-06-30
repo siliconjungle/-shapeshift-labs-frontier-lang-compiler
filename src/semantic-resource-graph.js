@@ -11,6 +11,7 @@ import {
 import { rustResourceGraphRecordsFromInput } from './internal/index-impl/semanticResourceGraphRust.js';
 import { cLikeResourceGraphRecordsFromInput } from './internal/index-impl/semanticResourceGraphCLike.js';
 import { cppResourceGraphRecordsFromInput } from './internal/index-impl/semanticResourceGraphCpp.js';
+import { managedResourceGraphRecordsFromInput } from './internal/index-impl/semanticResourceGraphManaged.js';
 import {
   aliasRecord,
   allRecords,
@@ -58,6 +59,7 @@ export function createSemanticResourceGraph(input = {}) {
   const rustRecords = rustResourceGraphRecordsFromInput(input);
   const cLikeRecords = cLikeResourceGraphRecordsFromInput(input);
   const cppRecords = cppResourceGraphRecordsFromInput(input);
+  const managedRecords = managedResourceGraphRecordsFromInput(input);
   const evidenceIds = uniqueStrings([
     ...(input.evidenceIds ?? []),
     ...(input.evidence ?? []).map((record) => record?.id),
@@ -70,7 +72,8 @@ export function createSemanticResourceGraph(input = {}) {
     ...resourcesFromOwnershipRegions(input),
     ...rustRecords.resources,
     ...cLikeRecords.resources,
-    ...cppRecords.resources
+    ...cppRecords.resources,
+    ...managedRecords.resources
   ].map((record, index) => resourceRecord(record, index, input, evidenceIds)));
   const owners = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.owners ?? []),
@@ -79,7 +82,8 @@ export function createSemanticResourceGraph(input = {}) {
     ...ownersFromOwnershipRegions(input),
     ...rustRecords.owners,
     ...cLikeRecords.owners,
-    ...cppRecords.owners
+    ...cppRecords.owners,
+    ...managedRecords.owners
   ].map((record, index) => ownerRecord(record, index, input, evidenceIds)));
   const lifetimeRegions = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.lifetimeRegions ?? []),
@@ -87,7 +91,8 @@ export function createSemanticResourceGraph(input = {}) {
     ...lifetimeRegionsFromOwnershipRegions(input),
     ...rustRecords.lifetimeRegions,
     ...cLikeRecords.lifetimeRegions,
-    ...cppRecords.lifetimeRegions
+    ...cppRecords.lifetimeRegions,
+    ...managedRecords.lifetimeRegions
   ].map((record, index) => lifetimeRegionRecord(record, index, input, evidenceIds)));
   const loans = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.loans ?? []),
@@ -100,7 +105,8 @@ export function createSemanticResourceGraph(input = {}) {
     ...(input.aliases ?? []),
     ...rustRecords.aliases,
     ...cLikeRecords.aliases,
-    ...cppRecords.aliases
+    ...cppRecords.aliases,
+    ...managedRecords.aliases
   ].map((record, index) => aliasRecord(record, index, input, evidenceIds)));
   const moves = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.moves ?? []),
@@ -111,14 +117,16 @@ export function createSemanticResourceGraph(input = {}) {
     ...(input.drops ?? []),
     ...dropsFromOwnershipRegions(input),
     ...cLikeRecords.drops,
-    ...cppRecords.drops
+    ...cppRecords.drops,
+    ...managedRecords.drops
   ].map((record, index) => dropRecord(record, index, input, evidenceIds)));
   const unsafeBoundaries = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.unsafeBoundaries ?? []),
     ...(input.unsafeBoundaries ?? []),
     ...rustRecords.unsafeBoundaries,
     ...cLikeRecords.unsafeBoundaries,
-    ...cppRecords.unsafeBoundaries
+    ...cppRecords.unsafeBoundaries,
+    ...managedRecords.unsafeBoundaries
   ].map((record, index) => unsafeBoundaryRecord(record, index, input, evidenceIds)));
   const conflicts = uniqueRecordsById([
     ...graphs.flatMap((graph) => graph.conflicts ?? []),
