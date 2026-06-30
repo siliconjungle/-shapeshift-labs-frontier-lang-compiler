@@ -44,6 +44,9 @@ function countAdmissionRisk(records, risk) {
 function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperations) {
   const constructKinds = routeArtifacts.flatMap((artifact) => artifact.metadata?.representation?.constructKinds ?? []);
   const missingConstructs = routeArtifacts.flatMap((artifact) => artifact.metadata?.representation?.missing ?? []);
+  const translationAdmissions = routeArtifacts.map((artifact) => artifact.translationAdmission ?? artifact.metadata?.translationAdmission ?? {});
+  const interlinguaRecords = routeArtifacts.map((artifact) => artifact.interlingua ?? artifact.metadata?.interlingua ?? artifact.admissionRecord?.metadata?.interlingua ?? {});
+  const semanticOperationInterlinguaRecords = semanticOperations.map((operation) => operation.metadata?.interlingua ?? {});
   return {
     representationConstructs: {
       total: constructKinds.length,
@@ -64,6 +67,71 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
       byBucket: countBy(admissionRecords.map((record) => record.admissionBucket)),
       byAction: countBy(admissionRecords.map((record) => record.admissionAction)),
       byRisk: countBy(admissionRecords.map((record) => record.risk))
+    },
+    translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
+    interlingua: compactInterlinguaCounts(interlinguaRecords),
+    semanticOperationInterlingua: {
+      operations: semanticOperations.length,
+      operationRecords: semanticOperationInterlinguaRecords.filter((record) => record.id || record.loweringDisposition).length,
+      ...compactOperationInterlinguaCounts(semanticOperationInterlinguaRecords)
     }
   };
+}
+
+function compactTranslationAdmissionCounts(admissions) {
+  return {
+    byStatus: countBy(admissions.map((admission) => admission.status)),
+    byAction: countBy(admissions.map((admission) => admission.action)),
+    missingEvidence: countBy(admissions.flatMap((admission) => admission.missingEvidence ?? [])),
+    proofEvidenceIds: countBy(admissions.flatMap((admission) => admission.proofEvidenceIds ?? [])),
+    runtimeReadiness: countBy(admissions.map((admission) => admission.runtimeReadiness)),
+    dialectReadiness: countBy(admissions.map((admission) => admission.dialectReadiness))
+  };
+}
+
+function compactInterlinguaCounts(records) {
+  return {
+    byLoweringDisposition: countBy(records.map(interlinguaLoweringDisposition)),
+    layerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'layerKinds'))),
+    representedLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'representedLayerKinds'))),
+    missingLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'missingLayerKinds'))),
+    reviewLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'reviewLayerKinds'))),
+    blockedLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'blockedLayerKinds'))),
+    missingEvidence: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'missingEvidence'))),
+    proofEvidenceIds: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'proofEvidenceIds')))
+  };
+}
+
+function compactOperationInterlinguaCounts(records) {
+  return {
+    byLoweringDisposition: countBy(records.map((record) => record.loweringDisposition)),
+    layerKinds: countBy(records.flatMap((record) => record.layerKinds ?? [])),
+    representedLayerKinds: countBy(records.flatMap((record) => record.representedLayerKinds ?? [])),
+    missingLayerKinds: countBy(records.flatMap((record) => record.missingLayerKinds ?? [])),
+    reviewLayerKinds: countBy(records.flatMap((record) => record.reviewLayerKinds ?? [])),
+    blockedLayerKinds: countBy(records.flatMap((record) => record.blockedLayerKinds ?? [])),
+    missingEvidence: countBy(records.flatMap((record) => record.missingEvidence ?? [])),
+    proofEvidenceIds: countBy(records.flatMap((record) => record.proofEvidenceIds ?? []))
+  };
+}
+
+function interlinguaLoweringDisposition(record) {
+  return record?.lowering?.disposition ?? record?.query?.loweringDisposition;
+}
+
+function interlinguaQueryList(record, key) {
+  return record?.query?.[key] ?? record?.layers?.[layerSummaryKey(key)] ?? [];
+}
+
+function interlinguaLoweringList(record, key) {
+  return record?.lowering?.[key] ?? record?.query?.[key] ?? [];
+}
+
+function layerSummaryKey(queryKey) {
+  if (queryKey === 'layerKinds') return 'kinds';
+  if (queryKey === 'representedLayerKinds') return 'representedKinds';
+  if (queryKey === 'missingLayerKinds') return 'missingKinds';
+  if (queryKey === 'reviewLayerKinds') return 'reviewKinds';
+  if (queryKey === 'blockedLayerKinds') return 'blockedKinds';
+  return queryKey;
 }

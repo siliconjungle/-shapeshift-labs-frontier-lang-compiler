@@ -48,6 +48,8 @@ export function conversionPlanSummary(routes) {
 function compactRouteCounts(routes) {
   const constructs = routes.flatMap((route) => route.representation?.constructs ?? []);
   const missingConstructs = routes.flatMap((route) => route.representation?.missing ?? []);
+  const translationAdmissions = routes.map((route) => route.translationAdmission ?? {});
+  const interlinguaRecords = routes.map((route) => route.interlingua ?? {});
   return {
     representationConstructs: {
       total: constructs.length,
@@ -67,6 +69,53 @@ function compactRouteCounts(routes) {
       byAction: countBy(routes.map((route) => route.admissionAction)),
       byRouteStatus: countBy(routes.map((route) => route.mergeRefs?.admissionStatus ?? route.admissionAction)),
       byRisk: countBy(routes.map((route) => route.mergeScore?.risk))
-    }
+    },
+    translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
+    interlingua: compactInterlinguaCounts(interlinguaRecords)
   };
+}
+
+function compactTranslationAdmissionCounts(admissions) {
+  return {
+    byStatus: countBy(admissions.map((admission) => admission.status)),
+    byAction: countBy(admissions.map((admission) => admission.action)),
+    missingEvidence: countBy(admissions.flatMap((admission) => admission.missingEvidence ?? [])),
+    proofEvidenceIds: countBy(admissions.flatMap((admission) => admission.proofEvidenceIds ?? [])),
+    runtimeReadiness: countBy(admissions.map((admission) => admission.runtimeReadiness)),
+    dialectReadiness: countBy(admissions.map((admission) => admission.dialectReadiness))
+  };
+}
+
+function compactInterlinguaCounts(records) {
+  return {
+    byLoweringDisposition: countBy(records.map(interlinguaLoweringDisposition)),
+    layerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'layerKinds'))),
+    representedLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'representedLayerKinds'))),
+    missingLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'missingLayerKinds'))),
+    reviewLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'reviewLayerKinds'))),
+    blockedLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'blockedLayerKinds'))),
+    missingEvidence: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'missingEvidence'))),
+    proofEvidenceIds: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'proofEvidenceIds')))
+  };
+}
+
+function interlinguaLoweringDisposition(record) {
+  return record?.lowering?.disposition ?? record?.query?.loweringDisposition;
+}
+
+function interlinguaQueryList(record, key) {
+  return record?.query?.[key] ?? record?.layers?.[layerSummaryKey(key)] ?? [];
+}
+
+function interlinguaLoweringList(record, key) {
+  return record?.lowering?.[key] ?? record?.query?.[key] ?? [];
+}
+
+function layerSummaryKey(queryKey) {
+  if (queryKey === 'layerKinds') return 'kinds';
+  if (queryKey === 'representedLayerKinds') return 'representedKinds';
+  if (queryKey === 'missingLayerKinds') return 'missingKinds';
+  if (queryKey === 'reviewLayerKinds') return 'reviewKinds';
+  if (queryKey === 'blockedLayerKinds') return 'blockedKinds';
+  return queryKey;
 }

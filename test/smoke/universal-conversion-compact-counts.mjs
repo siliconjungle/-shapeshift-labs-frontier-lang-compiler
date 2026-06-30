@@ -42,6 +42,13 @@ assert.equal(planCounts.missingConstructs.byKind['proof-evidence'] >= 1, true);
 assert.equal(sumCounts(planCounts.semanticEditReadiness.routes), plan.summary.routes);
 assert.equal(planCounts.semanticEditReadiness.routes.blocked >= 1, true);
 assert.equal(planCounts.admissionStatuses.byAction.reject >= 1, true);
+assert.equal(sumCounts(planCounts.translationAdmission.byStatus), plan.summary.routes);
+assert.equal(planCounts.translationAdmission.byStatus.blocked >= 1, true);
+assert.equal(planCounts.translationAdmission.missingEvidence['translation-target-adapter'] >= 1, true);
+assert.equal(sumCounts(planCounts.interlingua.byLoweringDisposition), plan.summary.routes);
+assert.equal(planCounts.interlingua.byLoweringDisposition.blocked >= 1, true);
+assert.equal(planCounts.interlingua.representedLayerKinds['target-adapter'] >= 1, true);
+assert.equal(planCounts.interlingua.missingEvidence['translation-target-adapter'] >= 1, true);
 
 const artifacts = createUniversalConversionArtifacts(plan, { generatedAt: 781 });
 const artifactCounts = artifacts.summary.compactCounts;
@@ -53,6 +60,15 @@ assert.equal(artifactCounts.semanticEditReadiness.routeArtifacts.blocked >= 1, t
 assert.equal(artifactCounts.semanticEditReadiness.semanticOperations.blocked >= 1, true);
 assert.equal(artifactCounts.admissionStatuses.byStatus.blocked >= 1, true);
 assert.equal(artifactCounts.admissionStatuses.byBucket.blocked >= 1, true);
+assert.equal(sumCounts(artifactCounts.translationAdmission.byStatus), artifacts.summary.routes);
+assert.equal(artifactCounts.translationAdmission.byStatus.blocked >= 1, true);
+assert.equal(sumCounts(artifactCounts.interlingua.byLoweringDisposition), artifacts.summary.routes);
+assert.equal(artifactCounts.interlingua.byLoweringDisposition.blocked >= 1, true);
+assert.equal(artifactCounts.interlingua.representedLayerKinds['target-adapter'] >= 1, true);
+assert.equal(artifactCounts.semanticOperationInterlingua.operations, artifacts.summary.semanticOperations);
+assert.equal(artifactCounts.semanticOperationInterlingua.operationRecords, artifacts.summary.semanticOperations);
+assert.equal(sumCounts(artifactCounts.semanticOperationInterlingua.byLoweringDisposition), artifacts.summary.semanticOperations);
+assert.equal(artifactCounts.semanticOperationInterlingua.byLoweringDisposition.blocked >= 1, true);
 
 function sumCounts(counts) {
   return Object.values(counts).reduce((sum, count) => sum + count, 0);
