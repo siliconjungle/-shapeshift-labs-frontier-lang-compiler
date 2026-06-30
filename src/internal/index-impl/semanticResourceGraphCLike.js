@@ -218,6 +218,8 @@ function pointerLike(param) {
 }
 
 function pointerMode(param) {
+  if (/&/.test(param) && /\bconst\b/.test(param)) return 'const-reference';
+  if (/&/.test(param)) return 'mutable-reference';
   if (/\bconst\b/.test(param)) return 'const-pointer';
   if (/\[[^\]]*\]/.test(param)) return 'array-decay-pointer';
   return 'raw-pointer';

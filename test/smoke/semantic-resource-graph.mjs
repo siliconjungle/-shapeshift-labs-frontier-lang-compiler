@@ -150,3 +150,35 @@ assert.equal(cResourceGraph.summary.unsafeBoundariesWithoutProof >= 3, true);
 assert.equal(querySemanticResourceGraph(cResourceGraph, { kind: 'drop' }).length >= 1, true);
 assert.equal(querySemanticResourceGraph(cResourceGraph, { unsafe: true }).length >= 3, true);
 assert.equal(cResourceSidecar.graphLayers.layers.resourceAliasLifetime.status, 'blocked');
+
+const cppResourceImport = importNativeSource({
+  language: 'cpp',
+  sourcePath: 'src/native.cpp',
+  sourceText: [
+    '#include <memory>',
+    '#include <mutex>',
+    'void process(Buffer& input, const Buffer& readOnly) {',
+    '  std::unique_ptr<Buffer> owned = std::make_unique<Buffer>();',
+    '  std::shared_ptr<Buffer> shared = std::make_shared<Buffer>();',
+    '  Buffer* raw = new Buffer();',
+    '  std::lock_guard<std::mutex> lock(globalMutex);',
+    '  delete raw;',
+    '}',
+    ''
+  ].join('\n')
+});
+const cppResourceSidecar = createSemanticImportSidecar(cppResourceImport, { generatedAt: 143 });
+const cppResourceGraph = cppResourceSidecar.resourceGraph;
+
+assert.equal(cppResourceGraph.status, 'blocked');
+assert.equal(cppResourceGraph.summary.resources >= 7, true);
+assert.equal(cppResourceGraph.summary.loans >= 1, true);
+assert.equal(cppResourceGraph.summary.aliases >= 3, true);
+assert.equal(cppResourceGraph.summary.drops >= 4, true);
+assert.equal(cppResourceGraph.summary.unsafeBoundaries >= 4, true);
+assert.equal(cppResourceGraph.summary.unsafeBoundariesWithoutProof >= 4, true);
+assert.equal(cppResourceGraph.resources.some((record) => record.resourceKind === 'cpp-unique-owner-resource'), true);
+assert.equal(cppResourceGraph.resources.some((record) => record.resourceKind === 'cpp-raii-local-resource'), true);
+assert.equal(cppResourceGraph.drops.some((record) => record.dropKind === 'cpp-delete'), true);
+assert.equal(querySemanticResourceGraph(cppResourceGraph, { unsafe: true }).length >= 4, true);
+assert.equal(cppResourceSidecar.graphLayers.layers.resourceAliasLifetime.status, 'blocked');

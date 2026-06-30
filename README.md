@@ -180,9 +180,11 @@ without claiming borrow-checker equivalence.
 C/C++ native imports feed the same graph conservatively from source-preservation
 text. Pointer and array parameters become alias evidence, `malloc`, `calloc`,
 `realloc`, and `aligned_alloc` become heap resources, and `free` becomes drop
-evidence. Those records always fail closed with manual-memory proof obligations
-until a host tool or reviewer attaches stronger alias, lifetime, and ownership
-proof.
+evidence. C++ imports also expose `std::unique_ptr`, `std::shared_ptr`,
+`std::weak_ptr`, known RAII locals such as lock guards and streams, raw `new`,
+and `delete` as ownership, alias, lifetime, drop, and manual-memory records.
+Those records fail closed with manual-memory proof obligations when raw
+allocation/deletion or other unsafe alias/lifetime proof is missing.
 
 Native imports include source maps, semantic merge candidates, and a loss summary for admission queues and dashboards. Informational losses produce `ready-with-losses`, warning losses produce `needs-review`, and error losses or failed import evidence produce `blocked`:
 
