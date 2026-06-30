@@ -38,6 +38,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'error-model'
   | 'evaluation-model'
   | 'memory-model'
+  | 'metaprogramming'
   | 'effect'
   | 'module'
   | 'object-model'

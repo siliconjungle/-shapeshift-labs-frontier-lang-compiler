@@ -63,6 +63,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const errorModelConstraints = routeArtifacts.map((artifact) => artifact.errorModelConstraint ?? artifact.metadata?.errorModelConstraint ?? artifact.admissionRecord?.metadata?.errorModelConstraint ?? {});
   const evaluationModelConstraints = routeArtifacts.map((artifact) => artifact.evaluationModelConstraint ?? artifact.metadata?.evaluationModelConstraint ?? artifact.admissionRecord?.metadata?.evaluationModelConstraint ?? {});
   const memoryModelConstraints = routeArtifacts.map((artifact) => artifact.memoryModelConstraint ?? artifact.metadata?.memoryModelConstraint ?? artifact.admissionRecord?.metadata?.memoryModelConstraint ?? {});
+  const metaprogrammingConstraints = routeArtifacts.map((artifact) => artifact.metaprogrammingConstraint ?? artifact.metadata?.metaprogrammingConstraint ?? artifact.admissionRecord?.metadata?.metaprogrammingConstraint ?? {});
   const moduleConstraints = routeArtifacts.map((artifact) => artifact.moduleConstraint ?? artifact.metadata?.moduleConstraint ?? artifact.admissionRecord?.metadata?.moduleConstraint ?? {});
   const objectModelConstraints = routeArtifacts.map((artifact) => artifact.objectModelConstraint ?? artifact.metadata?.objectModelConstraint ?? artifact.admissionRecord?.metadata?.objectModelConstraint ?? {});
   const typeConstraints = routeArtifacts.map((artifact) => artifact.typeConstraint ?? artifact.metadata?.typeConstraint ?? artifact.admissionRecord?.metadata?.typeConstraint ?? {});
@@ -100,6 +101,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     errorModelConstraint: compactConstraintCounts(errorModelConstraints),
     evaluationModelConstraint: compactConstraintCounts(evaluationModelConstraints),
     memoryModelConstraint: compactConstraintCounts(memoryModelConstraints),
+    metaprogrammingConstraint: compactConstraintCounts(metaprogrammingConstraints),
     moduleConstraint: compactConstraintCounts(moduleConstraints),
     objectModelConstraint: compactConstraintCounts(objectModelConstraints),
     typeConstraint: compactConstraintCounts(typeConstraints),

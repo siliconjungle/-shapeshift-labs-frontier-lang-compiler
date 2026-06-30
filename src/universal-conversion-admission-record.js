@@ -74,6 +74,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     evaluationModelConstraintAction: route.evaluationModelConstraint?.action,
     memoryModelConstraintStatus: route.memoryModelConstraint?.status,
     memoryModelConstraintAction: route.memoryModelConstraint?.action,
+    metaprogrammingConstraintStatus: route.metaprogrammingConstraint?.status,
+    metaprogrammingConstraintAction: route.metaprogrammingConstraint?.action,
     moduleConstraintStatus: route.moduleConstraint?.status,
     moduleConstraintAction: route.moduleConstraint?.action,
     objectModelConstraintStatus: route.objectModelConstraint?.status,
@@ -217,6 +219,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       missingKinds: route.memoryModelConstraint?.missingKinds ?? [],
       missingEvidence: route.memoryModelConstraint?.missingEvidence ?? []
     },
+    metaprogrammingConstraint: { id: route.metaprogrammingConstraint?.id, status: route.metaprogrammingConstraint?.status, action: route.metaprogrammingConstraint?.action, requiredKinds: route.metaprogrammingConstraint?.requiredKinds ?? [], representedKinds: route.metaprogrammingConstraint?.representedKinds ?? [], missingKinds: route.metaprogrammingConstraint?.missingKinds ?? [], missingEvidence: route.metaprogrammingConstraint?.missingEvidence ?? [] },
     moduleConstraint: {
       id: route.moduleConstraint?.id,
       status: route.moduleConstraint?.status,
@@ -287,6 +290,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       errorModelConstraint: route.errorModelConstraint,
       evaluationModelConstraint: route.evaluationModelConstraint,
       memoryModelConstraint: route.memoryModelConstraint,
+      metaprogrammingConstraint: route.metaprogrammingConstraint,
       moduleConstraint: route.moduleConstraint,
       objectModelConstraint: route.objectModelConstraint,
       typeConstraint: route.typeConstraint,
