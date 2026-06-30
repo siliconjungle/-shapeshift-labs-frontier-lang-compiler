@@ -12,7 +12,7 @@ import type { UniversalRuntimeAdapterRequirement, UniversalRuntimeCapabilityKind
 import type { UniversalBorrowCheckerConstraintEvidence as BcEv, UniversalBorrowCheckerConstraintInput as BcIn, UniversalBorrowCheckerConstraintQuery as BcQ } from './universal-borrow-checker-constraints.js';
 import type { UniversalBorrowScopeConstraintEvidence as BsEv, UniversalBorrowScopeConstraintInput as BsIn, UniversalBorrowScopeConstraintQuery as BsQ } from './universal-borrow-scope-constraints.js';
 import type { UniversalControlFlowConstraintEvidence as CfEv, UniversalControlFlowConstraintInput as CfIn, UniversalControlFlowConstraintQuery as CfQ } from './universal-control-flow-constraints.js';
-import type { UniversalEffectConstraintEvidence as EfEv, UniversalEffectConstraintInput as EfIn, UniversalEffectConstraintQuery as EfQ } from './universal-effect-constraints.js'; import type { UniversalConcurrencyModelConstraintEvidence as ConEv, UniversalConcurrencyModelConstraintInput as ConIn, UniversalConcurrencyModelConstraintQuery as ConQ } from './universal-concurrency-model-constraints.js'; import type { UniversalErrorModelConstraintEvidence as ErrEv, UniversalErrorModelConstraintInput as ErrIn, UniversalErrorModelConstraintQuery as ErrQ } from './universal-error-model-constraints.js'; import type { UniversalEvaluationModelConstraintEvidence as EvalEv, UniversalEvaluationModelConstraintInput as EvalIn, UniversalEvaluationModelConstraintQuery as EvalQ } from './universal-evaluation-model-constraints.js'; import type { UniversalObjectModelConstraintEvidence as ObjEv, UniversalObjectModelConstraintInput as ObjIn, UniversalObjectModelConstraintQuery as ObjQ } from './universal-object-model-constraints.js';
+import type { UniversalEffectConstraintEvidence as EfEv, UniversalEffectConstraintInput as EfIn, UniversalEffectConstraintQuery as EfQ } from './universal-effect-constraints.js'; import type { UniversalConcurrencyModelConstraintEvidence as ConEv, UniversalConcurrencyModelConstraintInput as ConIn, UniversalConcurrencyModelConstraintQuery as ConQ } from './universal-concurrency-model-constraints.js'; import type { UniversalDataLayoutConstraintEvidence as DlEv, UniversalDataLayoutConstraintInput as DlIn, UniversalDataLayoutConstraintQuery as DlQ } from './universal-data-layout-constraints.js'; import type { UniversalErrorModelConstraintEvidence as ErrEv, UniversalErrorModelConstraintInput as ErrIn, UniversalErrorModelConstraintQuery as ErrQ } from './universal-error-model-constraints.js'; import type { UniversalEvaluationModelConstraintEvidence as EvalEv, UniversalEvaluationModelConstraintInput as EvalIn, UniversalEvaluationModelConstraintQuery as EvalQ } from './universal-evaluation-model-constraints.js'; import type { UniversalObjectModelConstraintEvidence as ObjEv, UniversalObjectModelConstraintInput as ObjIn, UniversalObjectModelConstraintQuery as ObjQ } from './universal-object-model-constraints.js';
 import type { UniversalLifetimeConstraintEvidence as LtEv, UniversalLifetimeConstraintInput as LtIn, UniversalLifetimeConstraintQuery as LtQ } from './universal-lifetime-constraints.js'; import type { UniversalMemoryModelConstraintEvidence as MemEv, UniversalMemoryModelConstraintInput as MemIn, UniversalMemoryModelConstraintQuery as MemQ } from './universal-memory-model-constraints.js';
 import type { UniversalModuleConstraintEvidence as ModEv, UniversalModuleConstraintInput as ModIn, UniversalModuleConstraintQuery as ModQ } from './universal-module-constraints.js';
 import type { UniversalTypeConstraintEvidence as TyEv, UniversalTypeConstraintInput as TyIn, UniversalTypeConstraintQuery as TyQ } from './universal-type-constraints.js';
@@ -79,21 +79,21 @@ export interface UniversalConversionRouteEvidence {
   readonly targetAdapter?: string;
   readonly targetLossKinds: readonly NativeImportKnownLossKind[];
 }
-export interface UniversalTranslationConstraintSummary { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: readonly string[]; readonly representedKinds: readonly string[]; readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[]; } type TCS = UniversalTranslationConstraintSummary;
+export interface UniversalTranslationConstraintSummary { readonly id?: string; readonly status?: string; readonly action?: string; readonly requiredKinds: RO<string>; readonly representedKinds: RO<string>; readonly missingKinds: RO<string>; readonly missingEvidence: RO<string>; } type TCS = UniversalTranslationConstraintSummary; type RO<T> = readonly T[]; type Rdy = SemanticMergeReadiness | string;
 export interface UniversalTranslationAdmission {
   readonly status: UniversalTranslationAdmissionStatus; readonly action: UniversalTranslationAdmissionAction;
-  readonly requiredConstructKinds: readonly string[]; readonly representedConstructKinds: readonly string[]; readonly missingConstructKinds: readonly string[]; readonly missingEvidence: readonly string[];
-  readonly blockers: readonly string[]; readonly review: readonly string[]; readonly evidenceIds: readonly string[]; readonly proofEvidenceIds: readonly string[];
-  readonly runtimeReadiness: SemanticMergeReadiness | string; readonly runtimeAdapterRequirementIds: readonly string[]; readonly dialectReadiness: SemanticMergeReadiness | string; readonly dialectRecordIds: readonly string[];
-  readonly resourceTransfer?: Omit<TCS, 'missingEvidence'> & { readonly losses: readonly string[]; readonly ownershipConstraints?: TCS };
-  readonly resourceTransferStatus?: string; readonly resourceTransferAction?: string; readonly resourceTransferMissingEvidence: readonly string[];
-  readonly lifetimeConstraint?: TCS; readonly lifetimeConstraintStatus?: string; readonly lifetimeConstraintAction?: string; readonly lifetimeConstraintMissingEvidence: readonly string[];
-  readonly controlFlowConstraint?: TCS; readonly controlFlowConstraintStatus?: string; readonly controlFlowConstraintAction?: string; readonly controlFlowConstraintMissingEvidence: readonly string[];
-  readonly borrowScopeConstraint?: TCS; readonly borrowScopeConstraintStatus?: string; readonly borrowScopeConstraintAction?: string; readonly borrowScopeConstraintMissingEvidence: readonly string[];
-  readonly borrowCheckerConstraint?: TCS; readonly borrowCheckerConstraintStatus?: string; readonly borrowCheckerConstraintAction?: string; readonly borrowCheckerConstraintMissingEvidence: readonly string[];
-  readonly effectConstraint?: TCS; readonly effectConstraintStatus?: string; readonly effectConstraintAction?: string; readonly effectConstraintMissingEvidence: readonly string[]; readonly concurrencyModelConstraint?: TCS; readonly concurrencyModelConstraintStatus?: string; readonly concurrencyModelConstraintAction?: string; readonly concurrencyModelConstraintMissingEvidence: readonly string[]; readonly errorModelConstraint?: TCS; readonly errorModelConstraintStatus?: string; readonly errorModelConstraintAction?: string; readonly errorModelConstraintMissingEvidence: readonly string[]; readonly evaluationModelConstraint?: TCS; readonly evaluationModelConstraintStatus?: string; readonly evaluationModelConstraintAction?: string; readonly evaluationModelConstraintMissingEvidence: readonly string[]; readonly memoryModelConstraint?: TCS; readonly memoryModelConstraintStatus?: string; readonly memoryModelConstraintAction?: string; readonly memoryModelConstraintMissingEvidence: readonly string[];
-  readonly moduleConstraint?: TCS; readonly moduleConstraintStatus?: string; readonly moduleConstraintAction?: string; readonly moduleConstraintMissingEvidence: readonly string[]; readonly objectModelConstraint?: TCS; readonly objectModelConstraintStatus?: string; readonly objectModelConstraintAction?: string; readonly objectModelConstraintMissingEvidence: readonly string[];
-  readonly typeConstraint?: TCS; readonly typeConstraintStatus?: string; readonly typeConstraintAction?: string; readonly typeConstraintMissingEvidence: readonly string[];
+  readonly requiredConstructKinds: RO<string>; readonly representedConstructKinds: RO<string>; readonly missingConstructKinds: RO<string>; readonly missingEvidence: RO<string>;
+  readonly blockers: RO<string>; readonly review: RO<string>; readonly evidenceIds: RO<string>; readonly proofEvidenceIds: RO<string>;
+  readonly runtimeReadiness: Rdy; readonly runtimeAdapterRequirementIds: RO<string>; readonly dialectReadiness: Rdy; readonly dialectRecordIds: RO<string>;
+  readonly resourceTransfer?: Omit<TCS, 'missingEvidence'> & { readonly losses: RO<string>; readonly ownershipConstraints?: TCS };
+  readonly resourceTransferStatus?: string; readonly resourceTransferAction?: string; readonly resourceTransferMissingEvidence: RO<string>;
+  readonly lifetimeConstraint?: TCS; readonly lifetimeConstraintStatus?: string; readonly lifetimeConstraintAction?: string; readonly lifetimeConstraintMissingEvidence: RO<string>;
+  readonly controlFlowConstraint?: TCS; readonly controlFlowConstraintStatus?: string; readonly controlFlowConstraintAction?: string; readonly controlFlowConstraintMissingEvidence: RO<string>;
+  readonly borrowScopeConstraint?: TCS; readonly borrowScopeConstraintStatus?: string; readonly borrowScopeConstraintAction?: string; readonly borrowScopeConstraintMissingEvidence: RO<string>;
+  readonly borrowCheckerConstraint?: TCS; readonly borrowCheckerConstraintStatus?: string; readonly borrowCheckerConstraintAction?: string; readonly borrowCheckerConstraintMissingEvidence: RO<string>; readonly dataLayoutConstraint?: TCS; readonly dataLayoutConstraintStatus?: string; readonly dataLayoutConstraintAction?: string; readonly dataLayoutConstraintMissingEvidence: RO<string>;
+  readonly effectConstraint?: TCS; readonly effectConstraintStatus?: string; readonly effectConstraintAction?: string; readonly effectConstraintMissingEvidence: RO<string>; readonly concurrencyModelConstraint?: TCS; readonly concurrencyModelConstraintStatus?: string; readonly concurrencyModelConstraintAction?: string; readonly concurrencyModelConstraintMissingEvidence: RO<string>; readonly errorModelConstraint?: TCS; readonly errorModelConstraintStatus?: string; readonly errorModelConstraintAction?: string; readonly errorModelConstraintMissingEvidence: RO<string>; readonly evaluationModelConstraint?: TCS; readonly evaluationModelConstraintStatus?: string; readonly evaluationModelConstraintAction?: string; readonly evaluationModelConstraintMissingEvidence: RO<string>; readonly memoryModelConstraint?: TCS; readonly memoryModelConstraintStatus?: string; readonly memoryModelConstraintAction?: string; readonly memoryModelConstraintMissingEvidence: RO<string>;
+  readonly moduleConstraint?: TCS; readonly moduleConstraintStatus?: string; readonly moduleConstraintAction?: string; readonly moduleConstraintMissingEvidence: RO<string>; readonly objectModelConstraint?: TCS; readonly objectModelConstraintStatus?: string; readonly objectModelConstraintAction?: string; readonly objectModelConstraintMissingEvidence: RO<string>;
+  readonly typeConstraint?: TCS; readonly typeConstraintStatus?: string; readonly typeConstraintAction?: string; readonly typeConstraintMissingEvidence: RO<string>;
   readonly targetAdapterId?: string; readonly autoMergeClaim: false; readonly semanticEquivalenceClaim: false;
 }
 export type { UniversalInterlinguaRecord } from './universal-interlingua.js';
@@ -106,35 +106,35 @@ export interface UniversalConversionRouteRuntime {
   readonly adapterRequirements: readonly UniversalRuntimeAdapterRequirement[];
   readonly missingCapabilities: readonly UniversalRuntimeCapabilityKind[];
   readonly readiness: SemanticMergeReadiness;
-  readonly blockers: readonly string[];
-  readonly review: readonly string[];
+  readonly blockers: RO<string>;
+  readonly review: RO<string>;
 }
 export interface UniversalConversionRouteDialect {
-  readonly registryIds: readonly string[];
-  readonly recordIds: readonly string[];
+  readonly registryIds: RO<string>;
+  readonly recordIds: RO<string>;
   readonly constructKinds: readonly UniversalDialectConstructKind[];
-  readonly externKinds: readonly string[];
+  readonly externKinds: RO<string>;
   readonly projectionDispositions: readonly UniversalDialectProjectionDisposition[];
-  readonly evidenceIds: readonly string[];
-  readonly lossIds: readonly string[];
+  readonly evidenceIds: RO<string>;
+  readonly lossIds: RO<string>;
   readonly readiness: SemanticMergeReadiness;
   readonly records: readonly Record<string, unknown>[];
-  readonly blockers: readonly string[];
-  readonly review: readonly string[];
-  readonly missingEvidence: readonly string[];
-  readonly tasks: readonly string[];
+  readonly blockers: RO<string>;
+  readonly review: RO<string>;
+  readonly missingEvidence: RO<string>;
+  readonly tasks: RO<string>;
 }
 
 export interface UniversalConversionRouteMergeRefs {
   readonly planId: string;
   readonly routeId: string;
-  readonly historyIds: readonly string[];
-  readonly patchBundleIds: readonly string[];
-  readonly patchIds: readonly string[];
-  readonly mergeCandidateIds: readonly string[];
+  readonly historyIds: RO<string>;
+  readonly patchBundleIds: RO<string>;
+  readonly patchIds: RO<string>;
+  readonly mergeCandidateIds: RO<string>;
   readonly replayLinks: readonly unknown[];
-  readonly evidenceIds: readonly string[];
-  readonly proofIds: readonly string[];
+  readonly evidenceIds: RO<string>;
+  readonly proofIds: RO<string>;
   readonly sources: readonly {
     readonly sourceId?: string;
     readonly importId?: string;
@@ -143,11 +143,11 @@ export interface UniversalConversionRouteMergeRefs {
     readonly baseHash?: string;
     readonly targetHash?: string;
   }[];
-  readonly semanticOwnershipKeys: readonly string[];
-  readonly conflictKeys: readonly string[];
-  readonly sourceMapIds: readonly string[];
-  readonly sourceMapMappingIds: readonly string[];
-  readonly sourceMapLinkIds: readonly string[];
+  readonly semanticOwnershipKeys: RO<string>;
+  readonly conflictKeys: RO<string>;
+  readonly sourceMapIds: RO<string>;
+  readonly sourceMapMappingIds: RO<string>;
+  readonly sourceMapLinkIds: RO<string>;
   readonly readiness: SemanticMergeReadiness;
   readonly admissionStatus: UniversalConversionAdmissionAction;
   readonly metadata: Record<string, unknown>;
@@ -156,7 +156,7 @@ export interface UniversalConversionRouteMergeRefs {
 export interface UniversalConversionRoute {
   readonly id: string;
   readonly sourceLanguage: FrontierSourceLanguage | string;
-  readonly languageIds: readonly string[];
+  readonly languageIds: RO<string>;
   readonly target: FrontierCompileTarget | string;
   readonly mode: UniversalConversionRouteMode;
   readonly routeAction: UniversalConversionRouteAction;
@@ -177,12 +177,12 @@ export interface UniversalConversionRoute {
   readonly evidence: UniversalConversionRouteEvidence;
   readonly representation: UniversalRepresentationCoverage;
   readonly interlingua: UniversalInterlinguaRecord;
-  readonly resourceTransfer?: ResEv; readonly lifetimeConstraint?: LtEv; readonly controlFlowConstraint?: CfEv; readonly borrowScopeConstraint?: BsEv; readonly borrowCheckerConstraint?: BcEv; readonly effectConstraint?: EfEv; readonly concurrencyModelConstraint?: ConEv; readonly errorModelConstraint?: ErrEv; readonly evaluationModelConstraint?: EvalEv; readonly memoryModelConstraint?: MemEv; readonly moduleConstraint?: ModEv; readonly objectModelConstraint?: ObjEv; readonly typeConstraint?: TyEv;
-  readonly missingEvidence: readonly string[];
+  readonly resourceTransfer?: ResEv; readonly lifetimeConstraint?: LtEv; readonly controlFlowConstraint?: CfEv; readonly borrowScopeConstraint?: BsEv; readonly borrowCheckerConstraint?: BcEv; readonly dataLayoutConstraint?: DlEv; readonly effectConstraint?: EfEv; readonly concurrencyModelConstraint?: ConEv; readonly errorModelConstraint?: ErrEv; readonly evaluationModelConstraint?: EvalEv; readonly memoryModelConstraint?: MemEv; readonly moduleConstraint?: ModEv; readonly objectModelConstraint?: ObjEv; readonly typeConstraint?: TyEv;
+  readonly missingEvidence: RO<string>;
   readonly translationAdmission: UniversalTranslationAdmission;
-  readonly blockers: readonly string[];
-  readonly review: readonly string[];
-  readonly tasks: readonly string[];
+  readonly blockers: RO<string>;
+  readonly review: RO<string>;
+  readonly tasks: RO<string>;
   readonly mergeScore: UniversalConversionMergeScore;
   readonly mergeRefs: UniversalConversionRouteMergeRefs;
   readonly autoMergeClaim: false;
@@ -253,7 +253,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly controlFlowConstraint?: CfIn | CfEv; readonly translationControlFlowConstraint?: CfIn | CfEv; readonly controlFlowConstraints?: readonly (CfIn | CfEv)[];
   readonly borrowScopeConstraint?: BsIn | BsEv; readonly translationBorrowScopeConstraint?: BsIn | BsEv; readonly borrowScopeConstraints?: readonly (BsIn | BsEv)[];
   readonly borrowCheckerConstraint?: BcIn | BcEv; readonly translationBorrowCheckerConstraint?: BcIn | BcEv; readonly borrowCheckerConstraints?: readonly (BcIn | BcEv)[];
-  readonly effectConstraint?: EfIn | EfEv; readonly translationEffectConstraint?: EfIn | EfEv; readonly effectConstraints?: readonly (EfIn | EfEv)[]; readonly concurrencyModelConstraint?: ConIn | ConEv; readonly translationConcurrencyModelConstraint?: ConIn | ConEv; readonly concurrencyModelConstraints?: readonly (ConIn | ConEv)[]; readonly errorModelConstraint?: ErrIn | ErrEv; readonly translationErrorModelConstraint?: ErrIn | ErrEv; readonly errorModelConstraints?: readonly (ErrIn | ErrEv)[]; readonly evaluationModelConstraint?: EvalIn | EvalEv; readonly translationEvaluationModelConstraint?: EvalIn | EvalEv; readonly evaluationModelConstraints?: readonly (EvalIn | EvalEv)[]; readonly memoryModelConstraint?: MemIn | MemEv; readonly translationMemoryModelConstraint?: MemIn | MemEv; readonly memoryModelConstraints?: readonly (MemIn | MemEv)[];
+  readonly dataLayoutConstraint?: DlIn | DlEv; readonly translationDataLayoutConstraint?: DlIn | DlEv; readonly dataLayoutConstraints?: readonly (DlIn | DlEv)[]; readonly effectConstraint?: EfIn | EfEv; readonly translationEffectConstraint?: EfIn | EfEv; readonly effectConstraints?: readonly (EfIn | EfEv)[]; readonly concurrencyModelConstraint?: ConIn | ConEv; readonly translationConcurrencyModelConstraint?: ConIn | ConEv; readonly concurrencyModelConstraints?: readonly (ConIn | ConEv)[]; readonly errorModelConstraint?: ErrIn | ErrEv; readonly translationErrorModelConstraint?: ErrIn | ErrEv; readonly errorModelConstraints?: readonly (ErrIn | ErrEv)[]; readonly evaluationModelConstraint?: EvalIn | EvalEv; readonly translationEvaluationModelConstraint?: EvalIn | EvalEv; readonly evaluationModelConstraints?: readonly (EvalIn | EvalEv)[]; readonly memoryModelConstraint?: MemIn | MemEv; readonly translationMemoryModelConstraint?: MemIn | MemEv; readonly memoryModelConstraints?: readonly (MemIn | MemEv)[];
   readonly moduleConstraint?: ModIn | ModEv; readonly translationModuleConstraint?: ModIn | ModEv; readonly moduleConstraints?: readonly (ModIn | ModEv)[]; readonly objectModelConstraint?: ObjIn | ObjEv; readonly translationObjectModelConstraint?: ObjIn | ObjEv; readonly objectModelConstraints?: readonly (ObjIn | ObjEv)[];
   readonly typeConstraint?: TyIn | TyEv; readonly translationTypeConstraint?: TyIn | TyEv; readonly typeConstraints?: readonly (TyIn | TyEv)[];
   readonly runtimeRequirements?: readonly (
@@ -281,7 +281,7 @@ export interface UniversalConversionPlanOptions extends UniversalCapabilityMatri
   readonly effects?: UniversalConversionPlanOptions['runtimeRequirements'];
   readonly evidence?: readonly EvidenceRecord[];
 }
-export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, ResQ, LtQ, CfQ, BsQ, BcQ, EfQ, ConQ, ErrQ, EvalQ, MemQ, ModQ, ObjQ, TyQ {
+export interface UniversalConversionPlanQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, ResQ, LtQ, CfQ, BsQ, BcQ, DlQ, EfQ, ConQ, ErrQ, EvalQ, MemQ, ModQ, ObjQ, TyQ {
   readonly sourceLanguage?: FrontierSourceLanguage | string;
   readonly language?: FrontierSourceLanguage | string;
   readonly target?: FrontierCompileTarget | string;

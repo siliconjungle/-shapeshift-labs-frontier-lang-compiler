@@ -4,6 +4,7 @@ import { borrowCheckerConstraintMatches } from './universal-borrow-checker-const
 import { borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
 import { concurrencyModelConstraintMatches } from './universal-concurrency-model-constraints.js';
 import { controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
+import { dataLayoutConstraintMatches } from './universal-data-layout-constraints.js';
 import { effectConstraintMatches } from './universal-effect-constraints.js';
 import { errorModelConstraintMatches } from './universal-error-model-constraints.js';
 import { evaluationModelConstraintMatches } from './universal-evaluation-model-constraints.js';
@@ -25,6 +26,7 @@ export function artifactConstraintIndex(records = []) {
     ...constraintIndex('controlFlowConstraint', records.map(ctrl)),
     ...constraintIndex('borrowScopeConstraint', records.map(bscope)),
     ...constraintIndex('borrowCheckerConstraint', records.map(bchecker)),
+    ...constraintIndex('dataLayoutConstraint', records.map(layout)),
     ...constraintIndex('effectConstraint', records.map(effect)),
     ...constraintIndex('concurrencyModelConstraint', records.map(conc)),
     ...constraintIndex('errorModelConstraint', records.map(err)),
@@ -42,6 +44,7 @@ export function artifactConstraintsMatch(record, query = {}) {
     && controlFlowConstraintMatches(ctrl(record), query)
     && borrowScopeConstraintMatches(bscope(record), query)
     && borrowCheckerConstraintMatches(bchecker(record), query)
+    && dataLayoutConstraintMatches(layout(record), query)
     && effectConstraintMatches(effect(record), query)
     && concurrencyModelConstraintMatches(conc(record), query)
     && errorModelConstraintMatches(err(record), query)
@@ -58,6 +61,7 @@ function life(record) { return record.lifetimeConstraint ?? metaConstraint(recor
 function ctrl(record) { return record.controlFlowConstraint ?? metaConstraint(record, 'controlFlowConstraint'); }
 function bscope(record) { return record.borrowScopeConstraint ?? metaConstraint(record, 'borrowScopeConstraint'); }
 function bchecker(record) { return record.borrowCheckerConstraint ?? metaConstraint(record, 'borrowCheckerConstraint'); }
+function layout(record) { return record.dataLayoutConstraint ?? metaConstraint(record, 'dataLayoutConstraint'); }
 function effect(record) { return record.effectConstraint ?? metaConstraint(record, 'effectConstraint'); }
 function conc(record) { return record.concurrencyModelConstraint ?? metaConstraint(record, 'concurrencyModelConstraint'); }
 function err(record) { return record.errorModelConstraint ?? metaConstraint(record, 'errorModelConstraint'); }

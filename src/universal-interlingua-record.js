@@ -30,6 +30,7 @@ export const UniversalInterlinguaConstraintEdgeKinds = Object.freeze([
   'control-flow',
   'borrow-scope',
   'borrow-checker',
+  'data-layout',
   'concurrency-model',
   'error-model',
   'evaluation-model',
@@ -167,6 +168,7 @@ export function interlinguaConstraintSummary(route = {}) {
     constraintEdge('control-flow', route.controlFlowConstraint, 'runtime-capability', route),
     constraintEdge('borrow-scope', route.borrowScopeConstraint, 'semantic-ownership', route),
     constraintEdge('borrow-checker', route.borrowCheckerConstraint, 'semantic-ownership', route),
+    constraintEdge('data-layout', route.dataLayoutConstraint, 'runtime-capability', route),
     constraintEdge('concurrency-model', route.concurrencyModelConstraint, 'runtime-capability', route),
     constraintEdge('error-model', route.errorModelConstraint, 'runtime-capability', route),
     constraintEdge('evaluation-model', route.evaluationModelConstraint, 'runtime-capability', route),
@@ -254,7 +256,7 @@ function constraintObligations(family, evidence, edgeId) {
 }
 
 function constraintRecords(evidence = {}) {
-  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.memoryModelConstraints ?? evidence.moduleConstraints ?? evidence.objectModelConstraints ?? evidence.typeConstraints ?? [];
+  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.memoryModelConstraints ?? evidence.moduleConstraints ?? evidence.objectModelConstraints ?? evidence.typeConstraints ?? [];
 }
 
 function nodeIds(record = {}, prefix) {

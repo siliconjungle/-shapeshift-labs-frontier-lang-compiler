@@ -16,6 +16,7 @@ export * from './declarations/universal-runtime-capabilities.js';
 export * from './declarations/universal-borrow-checker-constraints.js';
 export * from './declarations/universal-borrow-scope-constraints.js';
 export * from './declarations/universal-control-flow-constraints.js';
+export * from './declarations/universal-data-layout-constraints.js';
 export * from './declarations/universal-concurrency-model-constraints.js';
 export * from './declarations/universal-effect-constraints.js';
 export * from './declarations/universal-error-model-constraints.js';

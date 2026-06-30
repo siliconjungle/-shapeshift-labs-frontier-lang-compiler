@@ -57,6 +57,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const controlFlowConstraints = routeArtifacts.map((artifact) => artifact.controlFlowConstraint ?? artifact.metadata?.controlFlowConstraint ?? artifact.admissionRecord?.metadata?.controlFlowConstraint ?? {});
   const borrowScopeConstraints = routeArtifacts.map((artifact) => artifact.borrowScopeConstraint ?? artifact.metadata?.borrowScopeConstraint ?? artifact.admissionRecord?.metadata?.borrowScopeConstraint ?? {});
   const borrowCheckerConstraints = routeArtifacts.map((artifact) => artifact.borrowCheckerConstraint ?? artifact.metadata?.borrowCheckerConstraint ?? artifact.admissionRecord?.metadata?.borrowCheckerConstraint ?? {});
+  const dataLayoutConstraints = routeArtifacts.map((artifact) => artifact.dataLayoutConstraint ?? artifact.metadata?.dataLayoutConstraint ?? artifact.admissionRecord?.metadata?.dataLayoutConstraint ?? {});
   const effectConstraints = routeArtifacts.map((artifact) => artifact.effectConstraint ?? artifact.metadata?.effectConstraint ?? artifact.admissionRecord?.metadata?.effectConstraint ?? {});
   const concurrencyModelConstraints = routeArtifacts.map((artifact) => artifact.concurrencyModelConstraint ?? artifact.metadata?.concurrencyModelConstraint ?? artifact.admissionRecord?.metadata?.concurrencyModelConstraint ?? {});
   const errorModelConstraints = routeArtifacts.map((artifact) => artifact.errorModelConstraint ?? artifact.metadata?.errorModelConstraint ?? artifact.admissionRecord?.metadata?.errorModelConstraint ?? {});
@@ -93,6 +94,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     controlFlowConstraint: compactConstraintCounts(controlFlowConstraints),
     borrowScopeConstraint: compactConstraintCounts(borrowScopeConstraints),
     borrowCheckerConstraint: compactConstraintCounts(borrowCheckerConstraints),
+    dataLayoutConstraint: compactConstraintCounts(dataLayoutConstraints),
     effectConstraint: compactEffectConstraintCounts(effectConstraints),
     concurrencyModelConstraint: compactConstraintCounts(concurrencyModelConstraints),
     errorModelConstraint: compactConstraintCounts(errorModelConstraints),

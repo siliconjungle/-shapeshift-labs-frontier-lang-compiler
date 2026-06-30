@@ -14,11 +14,10 @@ import type { UniversalLifetimeConstraintEvidence } from './universal-lifetime-c
 import type { UniversalControlFlowConstraintEvidence } from './universal-control-flow-constraints.js';
 import type { UniversalBorrowScopeConstraintEvidence } from './universal-borrow-scope-constraints.js';
 import type { UniversalBorrowCheckerConstraintEvidence } from './universal-borrow-checker-constraints.js';
-import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
+import type { UniversalDataLayoutConstraintEvidence } from './universal-data-layout-constraints.js'; import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
 import type { UniversalConcurrencyModelConstraintEvidence } from './universal-concurrency-model-constraints.js';
 import type { UniversalErrorModelConstraintEvidence } from './universal-error-model-constraints.js'; import type { UniversalEvaluationModelConstraintEvidence } from './universal-evaluation-model-constraints.js';
-import type { UniversalMemoryModelConstraintEvidence } from './universal-memory-model-constraints.js';
-import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js'; import type { UniversalObjectModelConstraintEvidence } from './universal-object-model-constraints.js';
+import type { UniversalMemoryModelConstraintEvidence } from './universal-memory-model-constraints.js'; import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js'; import type { UniversalObjectModelConstraintEvidence } from './universal-object-model-constraints.js';
 import type { UniversalTypeConstraintEvidence } from './universal-type-constraints.js';
 import type {
   UniversalConversionAdmissionAction,
@@ -91,7 +90,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly borrowScopeConstraintStatus?: string;
   readonly borrowScopeConstraintAction?: string;
   readonly borrowCheckerConstraintStatus?: string;
-  readonly borrowCheckerConstraintAction?: string;
+  readonly borrowCheckerConstraintAction?: string; readonly dataLayoutConstraintStatus?: string; readonly dataLayoutConstraintAction?: string;
   readonly effectConstraintStatus?: string;
   readonly effectConstraintAction?: string;
   readonly concurrencyModelConstraintStatus?: string; readonly concurrencyModelConstraintAction?: string;
@@ -161,7 +160,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly lifetimeConstraint: UniversalConversionConstraintSummary;
   readonly controlFlowConstraint: UniversalConversionConstraintSummary;
   readonly borrowScopeConstraint: UniversalConversionConstraintSummary;
-  readonly borrowCheckerConstraint: UniversalConversionConstraintSummary;
+  readonly borrowCheckerConstraint: UniversalConversionConstraintSummary; readonly dataLayoutConstraint: UniversalConversionConstraintSummary;
   readonly moduleConstraint: UniversalConversionConstraintSummary;
   readonly errorModelConstraint: UniversalConversionConstraintSummary;
   readonly evaluationModelConstraint: UniversalConversionConstraintSummary;
@@ -217,6 +216,7 @@ export interface UniversalConversionRouteArtifact {
   readonly controlFlowConstraint?: UniversalControlFlowConstraintEvidence;
   readonly borrowScopeConstraint?: UniversalBorrowScopeConstraintEvidence;
   readonly borrowCheckerConstraint?: UniversalBorrowCheckerConstraintEvidence;
+  readonly dataLayoutConstraint?: UniversalDataLayoutConstraintEvidence;
   readonly effectConstraint?: UniversalEffectConstraintEvidence;
   readonly concurrencyModelConstraint?: UniversalConcurrencyModelConstraintEvidence;
   readonly errorModelConstraint?: UniversalErrorModelConstraintEvidence;

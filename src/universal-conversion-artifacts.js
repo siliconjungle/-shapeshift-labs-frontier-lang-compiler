@@ -174,6 +174,7 @@ function createRouteArtifact(route, options) {
     controlFlowConstraint: route.controlFlowConstraint,
     borrowScopeConstraint: route.borrowScopeConstraint,
     borrowCheckerConstraint: route.borrowCheckerConstraint,
+    dataLayoutConstraint: route.dataLayoutConstraint,
     effectConstraint: route.effectConstraint,
     concurrencyModelConstraint: route.concurrencyModelConstraint,
     errorModelConstraint: route.errorModelConstraint,
@@ -194,7 +195,7 @@ function createRouteArtifact(route, options) {
     admissionBucket: admissionRecord.admissionBucket,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
-    metadata: { ...recordMetadata, materialization, resourceTransfer: route.resourceTransfer, lifetimeConstraint: route.lifetimeConstraint, controlFlowConstraint: route.controlFlowConstraint, borrowScopeConstraint: route.borrowScopeConstraint, borrowCheckerConstraint: route.borrowCheckerConstraint, effectConstraint: route.effectConstraint, concurrencyModelConstraint: route.concurrencyModelConstraint, errorModelConstraint: route.errorModelConstraint, evaluationModelConstraint: route.evaluationModelConstraint, memoryModelConstraint: route.memoryModelConstraint, moduleConstraint: route.moduleConstraint, objectModelConstraint: route.objectModelConstraint, typeConstraint: route.typeConstraint }
+    metadata: { ...recordMetadata, materialization, resourceTransfer: route.resourceTransfer, lifetimeConstraint: route.lifetimeConstraint, controlFlowConstraint: route.controlFlowConstraint, borrowScopeConstraint: route.borrowScopeConstraint, borrowCheckerConstraint: route.borrowCheckerConstraint, dataLayoutConstraint: route.dataLayoutConstraint, effectConstraint: route.effectConstraint, concurrencyModelConstraint: route.concurrencyModelConstraint, errorModelConstraint: route.errorModelConstraint, evaluationModelConstraint: route.evaluationModelConstraint, memoryModelConstraint: route.memoryModelConstraint, moduleConstraint: route.moduleConstraint, objectModelConstraint: route.objectModelConstraint, typeConstraint: route.typeConstraint }
   };
 }
 

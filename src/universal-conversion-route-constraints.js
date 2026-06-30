@@ -2,6 +2,7 @@ import { borrowCheckerConstraintForConversionRoute, borrowCheckerConstraintMatch
 import { borrowScopeConstraintForConversionRoute, borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
 import { concurrencyModelConstraintForConversionRoute, concurrencyModelConstraintMatches } from './universal-concurrency-model-constraints.js';
 import { controlFlowConstraintForConversionRoute, controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
+import { dataLayoutConstraintForConversionRoute, dataLayoutConstraintMatches } from './universal-data-layout-constraints.js';
 import { effectConstraintForConversionRoute, effectConstraintMatches } from './universal-effect-constraints.js';
 import { errorModelConstraintForConversionRoute, errorModelConstraintMatches } from './universal-error-model-constraints.js';
 import { evaluationModelConstraintForConversionRoute, evaluationModelConstraintMatches } from './universal-evaluation-model-constraints.js';
@@ -17,6 +18,7 @@ const families = [
   ['borrowScopeConstraint', 'borrowScopeConstraints', 'translationBorrowScopeConstraint'],
   ['concurrencyModelConstraint', 'concurrencyModelConstraints', 'translationConcurrencyModelConstraint'],
   ['controlFlowConstraint', 'controlFlowConstraints', 'translationControlFlowConstraint'],
+  ['dataLayoutConstraint', 'dataLayoutConstraints', 'translationDataLayoutConstraint'],
   ['effectConstraint', 'effectConstraints', 'translationEffectConstraint'],
   ['errorModelConstraint', 'errorModelConstraints', 'translationErrorModelConstraint'],
   ['evaluationModelConstraint', 'evaluationModelConstraints', 'translationEvaluationModelConstraint'],
@@ -57,6 +59,7 @@ export function createConversionRouteConstraints(input = {}, route = {}, routeIm
     controlFlowConstraint,
     borrowScopeConstraint,
     borrowCheckerConstraint,
+    dataLayoutConstraint: dataLayoutConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     effectConstraint: effectConstraintForConversionRoute(input, route, routeImports, routeEvidence, runtime),
     concurrencyModelConstraint: concurrencyModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     errorModelConstraint: errorModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
@@ -74,6 +77,7 @@ export function conversionRouteMatchesConstraintQuery(route = {}, query = {}) {
     && controlFlowConstraintMatches(route.controlFlowConstraint, query)
     && borrowScopeConstraintMatches(route.borrowScopeConstraint, query)
     && borrowCheckerConstraintMatches(route.borrowCheckerConstraint, query)
+    && dataLayoutConstraintMatches(route.dataLayoutConstraint, query)
     && effectConstraintMatches(route.effectConstraint, query)
     && concurrencyModelConstraintMatches(route.concurrencyModelConstraint, query)
     && errorModelConstraintMatches(route.errorModelConstraint, query)

@@ -62,6 +62,8 @@ export function createUniversalConversionAdmissionRecord(input) {
     borrowScopeConstraintAction: route.borrowScopeConstraint?.action,
     borrowCheckerConstraintStatus: route.borrowCheckerConstraint?.status,
     borrowCheckerConstraintAction: route.borrowCheckerConstraint?.action,
+    dataLayoutConstraintStatus: route.dataLayoutConstraint?.status,
+    dataLayoutConstraintAction: route.dataLayoutConstraint?.action,
     effectConstraintStatus: route.effectConstraint?.status,
     effectConstraintAction: route.effectConstraint?.action,
     concurrencyModelConstraintStatus: route.concurrencyModelConstraint?.status,
@@ -169,6 +171,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       missingKinds: route.borrowCheckerConstraint?.missingKinds ?? [],
       missingEvidence: route.borrowCheckerConstraint?.missingEvidence ?? []
     },
+    dataLayoutConstraint: { id: route.dataLayoutConstraint?.id, status: route.dataLayoutConstraint?.status, action: route.dataLayoutConstraint?.action, requiredKinds: route.dataLayoutConstraint?.requiredKinds ?? [], representedKinds: route.dataLayoutConstraint?.representedKinds ?? [], missingKinds: route.dataLayoutConstraint?.missingKinds ?? [], missingEvidence: route.dataLayoutConstraint?.missingEvidence ?? [] },
     effectConstraint: {
       id: route.effectConstraint?.id,
       status: route.effectConstraint?.status,
@@ -278,6 +281,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       controlFlowConstraint: route.controlFlowConstraint,
       borrowScopeConstraint: route.borrowScopeConstraint,
       borrowCheckerConstraint: route.borrowCheckerConstraint,
+      dataLayoutConstraint: route.dataLayoutConstraint,
       effectConstraint: route.effectConstraint,
       concurrencyModelConstraint: route.concurrencyModelConstraint,
       errorModelConstraint: route.errorModelConstraint,
