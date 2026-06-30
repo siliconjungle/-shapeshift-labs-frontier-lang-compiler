@@ -49,7 +49,7 @@ type ExpectedPublicRuntimeExport =
   | 'SemanticHistoryOverlapKinds'
   | 'SemanticHistoryReviewerStatuses'
   | 'UniversalDialectConstructKinds' | 'UniversalDialectProjectionDispositions' | 'UniversalBorrowScopeConstraintStatuses' | 'UniversalControlFlowConstraintStatuses' | 'UniversalEffectConstraintStatuses' | 'UniversalLifetimeConstraintStatuses' | 'UniversalModuleConstraintStatuses' | 'UniversalTypeConstraintStatuses'
-  | 'UniversalInterlinguaLayerKinds' | 'UniversalInterlinguaLoweringDispositions'
+  | 'UniversalInterlinguaConstraintEdgeKinds' | 'UniversalInterlinguaLayerKinds' | 'UniversalInterlinguaLoweringDispositions'
   | 'UniversalRepresentationConstructKinds' | 'UniversalOwnershipConstraintStatuses' | 'UniversalResourceTransferStatuses' | 'UniversalRuntimeCapabilityKinds'
   | 'UniversalRuntimeHostProfiles'
   | 'ExternalSemanticIndexFormats'

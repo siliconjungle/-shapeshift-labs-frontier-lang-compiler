@@ -26,6 +26,17 @@ export type UniversalInterlinguaLoweringDisposition =
   | 'lossy-review'
   | 'blocked';
 
+export type UniversalInterlinguaConstraintEdgeKind =
+  | 'resource-transfer'
+  | 'ownership'
+  | 'lifetime'
+  | 'control-flow'
+  | 'borrow-scope'
+  | 'effect'
+  | 'module'
+  | 'type'
+  | string;
+
 export interface UniversalInterlinguaLayerSummary {
   readonly kinds: readonly UniversalInterlinguaLayerKind[];
   readonly representedKinds: readonly UniversalInterlinguaLayerKind[];
@@ -37,6 +48,39 @@ export interface UniversalInterlinguaLayerSummary {
   readonly missingCount: number;
   readonly reviewCount: number;
   readonly blockedCount: number;
+}
+
+export interface UniversalInterlinguaConstraintEdge {
+  readonly id: string;
+  readonly family: UniversalInterlinguaConstraintEdgeKind;
+  readonly layerKind: UniversalInterlinguaLayerKind;
+  readonly sourceId?: string;
+  readonly status?: string;
+  readonly action?: string;
+  readonly requiredKinds: readonly string[];
+  readonly representedKinds: readonly string[];
+  readonly missingKinds: readonly string[];
+  readonly missingEvidence: readonly string[];
+  readonly blockers: readonly string[];
+  readonly review: readonly string[];
+  readonly severity: 'info' | 'warning' | 'error' | string;
+  readonly autoMergeClaim: false;
+  readonly semanticEquivalenceClaim: false;
+}
+
+export interface UniversalInterlinguaConstraintSummary {
+  readonly edges: readonly UniversalInterlinguaConstraintEdge[];
+  readonly edgeCount: number;
+  readonly families: readonly UniversalInterlinguaConstraintEdgeKind[];
+  readonly statuses: readonly string[];
+  readonly actions: readonly string[];
+  readonly sourceIds: readonly string[];
+  readonly requiredKinds: readonly string[];
+  readonly representedKinds: readonly string[];
+  readonly missingKinds: readonly string[];
+  readonly missingEvidence: readonly string[];
+  readonly blockers: readonly string[];
+  readonly review: readonly string[];
 }
 
 export interface UniversalInterlinguaRecord {
@@ -59,6 +103,7 @@ export interface UniversalInterlinguaRecord {
     readonly proofIds: readonly string[];
   };
   readonly layers: UniversalInterlinguaLayerSummary;
+  readonly constraints: UniversalInterlinguaConstraintSummary;
   readonly lowering: {
     readonly disposition: UniversalInterlinguaLoweringDisposition;
     readonly mode?: string;
@@ -97,6 +142,14 @@ export interface UniversalInterlinguaRecord {
     readonly missingLayerKinds: readonly UniversalInterlinguaLayerKind[];
     readonly reviewLayerKinds: readonly UniversalInterlinguaLayerKind[];
     readonly blockedLayerKinds: readonly UniversalInterlinguaLayerKind[];
+    readonly constraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[];
+    readonly constraintStatuses: readonly string[];
+    readonly constraintActions: readonly string[];
+    readonly constraintSourceIds: readonly string[];
+    readonly constraintRequiredKinds: readonly string[];
+    readonly constraintRepresentedKinds: readonly string[];
+    readonly constraintMissingKinds: readonly string[];
+    readonly constraintMissingEvidence: readonly string[];
     readonly loweringDisposition: UniversalInterlinguaLoweringDisposition;
     readonly missingEvidence: readonly string[];
     readonly proofEvidenceIds: readonly string[];
@@ -112,6 +165,14 @@ export interface UniversalInterlinguaQuery {
   readonly interlinguaMissingLayerKind?: UniversalInterlinguaLayerKind | readonly UniversalInterlinguaLayerKind[];
   readonly interlinguaReviewLayerKind?: UniversalInterlinguaLayerKind | readonly UniversalInterlinguaLayerKind[];
   readonly interlinguaBlockedLayerKind?: UniversalInterlinguaLayerKind | readonly UniversalInterlinguaLayerKind[];
+  readonly interlinguaConstraintFamily?: UniversalInterlinguaConstraintEdgeKind | readonly UniversalInterlinguaConstraintEdgeKind[];
+  readonly interlinguaConstraintStatus?: string | readonly string[];
+  readonly interlinguaConstraintAction?: string | readonly string[];
+  readonly interlinguaConstraintSourceId?: string | readonly string[];
+  readonly interlinguaConstraintRequiredKind?: string | readonly string[];
+  readonly interlinguaConstraintRepresentedKind?: string | readonly string[];
+  readonly interlinguaConstraintMissingKind?: string | readonly string[];
+  readonly interlinguaConstraintMissingEvidence?: string | readonly string[];
   readonly interlinguaLoweringDisposition?: UniversalInterlinguaLoweringDisposition | readonly UniversalInterlinguaLoweringDisposition[];
   readonly interlinguaMissingEvidence?: string | readonly string[];
   readonly interlinguaProofEvidenceId?: string | readonly string[];
@@ -120,6 +181,7 @@ export interface UniversalInterlinguaQuery {
 
 export declare const UniversalInterlinguaLayerKinds: readonly UniversalInterlinguaLayerKind[];
 export declare const UniversalInterlinguaLoweringDispositions: readonly UniversalInterlinguaLoweringDisposition[];
+export declare const UniversalInterlinguaConstraintEdgeKinds: readonly UniversalInterlinguaConstraintEdgeKind[];
 export declare function createUniversalInterlinguaRecord(input?: Record<string, unknown>): UniversalInterlinguaRecord;
 export declare function interlinguaRecordMatches(
   record?: UniversalInterlinguaRecord,

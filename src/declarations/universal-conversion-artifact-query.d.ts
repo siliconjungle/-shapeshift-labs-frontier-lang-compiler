@@ -147,6 +147,11 @@ export interface UniversalConversionArtifactIndex {
   readonly interlinguaLoweringDispositions: readonly string[];
   readonly interlinguaMissingEvidence: readonly string[];
   readonly interlinguaProofEvidenceIds: readonly string[];
+  readonly interlinguaConstraintFamilies: readonly string[];
+  readonly interlinguaConstraintStatuses: readonly string[];
+  readonly interlinguaConstraintMissingKinds: readonly string[];
+  readonly interlinguaConstraintMissingEvidence: readonly string[];
+  readonly interlinguaConstraintSourceIds: readonly string[];
   readonly transformIdentityHashes: readonly string[];
 }
 

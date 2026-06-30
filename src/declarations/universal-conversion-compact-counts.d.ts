@@ -50,6 +50,10 @@ export interface UniversalConversionInterlinguaCompactCounts {
   readonly missingLayerKinds: Readonly<Record<string, number>>;
   readonly reviewLayerKinds: Readonly<Record<string, number>>;
   readonly blockedLayerKinds: Readonly<Record<string, number>>;
+  readonly constraintFamilies: Readonly<Record<string, number>>;
+  readonly constraintStatuses: Readonly<Record<string, number>>;
+  readonly constraintMissingKinds: Readonly<Record<string, number>>;
+  readonly constraintMissingEvidence: Readonly<Record<string, number>>;
   readonly missingEvidence: Readonly<Record<string, number>>;
   readonly proofEvidenceIds: Readonly<Record<string, number>>;
 }

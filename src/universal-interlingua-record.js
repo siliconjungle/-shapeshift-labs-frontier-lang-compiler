@@ -23,6 +23,17 @@ export const UniversalInterlinguaLoweringDispositions = Object.freeze([
   'blocked'
 ]);
 
+export const UniversalInterlinguaConstraintEdgeKinds = Object.freeze([
+  'resource-transfer',
+  'ownership',
+  'lifetime',
+  'control-flow',
+  'borrow-scope',
+  'effect',
+  'module',
+  'type'
+]);
+
 export function createUniversalInterlinguaRecord(input = {}) {
   const route = input.route ?? input;
   const representation = input.representation ?? route.representation ?? {};
@@ -31,6 +42,7 @@ export function createUniversalInterlinguaRecord(input = {}) {
   const runtime = input.runtime ?? route.runtime ?? {};
   const dialect = input.dialect ?? route.dialect ?? {};
   const layerSummary = interlinguaLayerSummary(representation);
+  const constraints = interlinguaConstraintSummary(route);
   const disposition = loweringDisposition(route);
   const missingEvidence = uniqueStrings([
     ...(route.missingEvidence ?? []),
@@ -58,6 +70,7 @@ export function createUniversalInterlinguaRecord(input = {}) {
       proofIds: mergeRefs.proofIds ?? []
     },
     layers: layerSummary,
+    constraints,
     lowering: {
       disposition,
       mode: route.mode,
@@ -96,6 +109,14 @@ export function createUniversalInterlinguaRecord(input = {}) {
       missingLayerKinds: layerSummary.missingKinds,
       reviewLayerKinds: layerSummary.reviewKinds,
       blockedLayerKinds: layerSummary.blockedKinds,
+      constraintFamilies: constraints.families,
+      constraintStatuses: constraints.statuses,
+      constraintActions: constraints.actions,
+      constraintSourceIds: constraints.sourceIds,
+      constraintRequiredKinds: constraints.requiredKinds,
+      constraintRepresentedKinds: constraints.representedKinds,
+      constraintMissingKinds: constraints.missingKinds,
+      constraintMissingEvidence: constraints.missingEvidence,
       loweringDisposition: disposition,
       missingEvidence,
       proofEvidenceIds: translationAdmission.proofEvidenceIds ?? mergeRefs.proofIds ?? [],
@@ -112,10 +133,75 @@ export function interlinguaRecordMatches(record, query = {}) {
     && match(query.interlinguaMissingLayerKind, record?.query?.missingLayerKinds)
     && match(query.interlinguaReviewLayerKind, record?.query?.reviewLayerKinds)
     && match(query.interlinguaBlockedLayerKind, record?.query?.blockedLayerKinds)
+    && match(query.interlinguaConstraintFamily, record?.query?.constraintFamilies)
+    && match(query.interlinguaConstraintStatus, record?.query?.constraintStatuses)
+    && match(query.interlinguaConstraintAction, record?.query?.constraintActions)
+    && match(query.interlinguaConstraintSourceId, record?.query?.constraintSourceIds)
+    && match(query.interlinguaConstraintRequiredKind, record?.query?.constraintRequiredKinds)
+    && match(query.interlinguaConstraintRepresentedKind, record?.query?.constraintRepresentedKinds)
+    && match(query.interlinguaConstraintMissingKind, record?.query?.constraintMissingKinds)
+    && match(query.interlinguaConstraintMissingEvidence, record?.query?.constraintMissingEvidence)
     && match(query.interlinguaLoweringDisposition, [record?.query?.loweringDisposition])
     && match(query.interlinguaMissingEvidence, record?.query?.missingEvidence)
     && match(query.interlinguaProofEvidenceId, record?.query?.proofEvidenceIds)
     && match(query.interlinguaTargetAdapterId, [record?.query?.targetAdapterId]);
+}
+
+export function interlinguaConstraintSummary(route = {}) {
+  const edges = [
+    constraintEdge('resource-transfer', route.resourceTransfer, 'semantic-ownership', route),
+    constraintEdge('ownership', route.resourceTransfer?.ownershipConstraints, 'semantic-ownership', route),
+    constraintEdge('lifetime', route.lifetimeConstraint, 'semantic-ownership', route),
+    constraintEdge('control-flow', route.controlFlowConstraint, 'runtime-capability', route),
+    constraintEdge('borrow-scope', route.borrowScopeConstraint, 'semantic-ownership', route),
+    constraintEdge('effect', route.effectConstraint, 'runtime-capability', route),
+    constraintEdge('module', route.moduleConstraint, 'source-import', route),
+    constraintEdge('type', route.typeConstraint, 'semantic-symbol', route)
+  ].filter(Boolean);
+  return {
+    edges,
+    edgeCount: edges.length,
+    families: uniqueStrings(edges.map((edge) => edge.family)),
+    statuses: uniqueStrings(edges.map((edge) => edge.status)),
+    actions: uniqueStrings(edges.map((edge) => edge.action)),
+    sourceIds: uniqueStrings(edges.map((edge) => edge.sourceId)),
+    requiredKinds: uniqueStrings(edges.flatMap((edge) => edge.requiredKinds)),
+    representedKinds: uniqueStrings(edges.flatMap((edge) => edge.representedKinds)),
+    missingKinds: uniqueStrings(edges.flatMap((edge) => edge.missingKinds)),
+    missingEvidence: uniqueStrings(edges.flatMap((edge) => edge.missingEvidence)),
+    blockers: uniqueStrings(edges.flatMap((edge) => edge.blockers)),
+    review: uniqueStrings(edges.flatMap((edge) => edge.review))
+  };
+}
+
+function constraintEdge(family, evidence, layerKind, route) {
+  if (!evidence?.id && !evidence?.status && !(evidence?.missingKinds ?? []).length) return undefined;
+  const missingKinds = evidence.missingKinds ?? [];
+  const missingEvidence = evidence.missingEvidence ?? [];
+  return {
+    id: `interlingua_constraint_${idFragment([route.id, family, evidence.id, evidence.status, missingKinds.join('_')].join('_'))}`,
+    family,
+    layerKind,
+    sourceId: evidence.id,
+    status: evidence.status,
+    action: evidence.action,
+    requiredKinds: evidence.requiredKinds ?? [],
+    representedKinds: evidence.representedKinds ?? [],
+    missingKinds,
+    missingEvidence,
+    blockers: evidence.blockers ?? [],
+    review: evidence.review ?? [],
+    severity: constraintSeverity(evidence.status, missingKinds),
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false
+  };
+}
+
+function constraintSeverity(status, missingKinds) {
+  if (status === 'blocked') return 'error';
+  if ((missingKinds ?? []).length) return 'warning';
+  if (status === 'degraded' || status === 'needs-evidence') return 'warning';
+  return 'info';
 }
 
 export function interlinguaLayerSummary(representation = {}) {

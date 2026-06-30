@@ -127,6 +127,11 @@ export function artifactIndex(a) {
     interlinguaLoweringDispositions: uniqueStrings(iRecords.map((r) => r.query?.loweringDisposition)),
     interlinguaMissingEvidence: uniqueStrings(iRecords.flatMap((r) => r.query?.missingEvidence ?? [])),
     interlinguaProofEvidenceIds: uniqueStrings(iRecords.flatMap((r) => r.query?.proofEvidenceIds ?? [])),
+    interlinguaConstraintFamilies: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintFamilies ?? [])),
+    interlinguaConstraintStatuses: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintStatuses ?? [])),
+    interlinguaConstraintMissingKinds: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintMissingKinds ?? [])),
+    interlinguaConstraintMissingEvidence: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintMissingEvidence ?? [])),
+    interlinguaConstraintSourceIds: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintSourceIds ?? [])),
     transformIdentityHashes: uniqueStrings(a.flatMap(tHashes))
   };
 }

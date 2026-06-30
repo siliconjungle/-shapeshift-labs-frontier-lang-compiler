@@ -161,6 +161,10 @@ function compactInterlinguaCounts(records) {
     missingLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'missingLayerKinds'))),
     reviewLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'reviewLayerKinds'))),
     blockedLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'blockedLayerKinds'))),
+    constraintFamilies: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'families'))),
+    constraintStatuses: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'statuses'))),
+    constraintMissingKinds: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'missingKinds'))),
+    constraintMissingEvidence: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'missingEvidence'))),
     missingEvidence: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'missingEvidence'))),
     proofEvidenceIds: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'proofEvidenceIds')))
   };
@@ -189,6 +193,11 @@ function interlinguaQueryList(record, key) {
 
 function interlinguaLoweringList(record, key) {
   return record?.lowering?.[key] ?? record?.query?.[key] ?? [];
+}
+
+function interlinguaConstraintList(record, key) {
+  const queryKey = `constraint${key[0].toUpperCase()}${key.slice(1)}`;
+  return record?.constraints?.[key] ?? record?.query?.[queryKey] ?? [];
 }
 
 function layerSummaryKey(queryKey) {

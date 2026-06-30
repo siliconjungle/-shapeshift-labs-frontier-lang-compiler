@@ -43,6 +43,7 @@ for (const requiredExport of [
   'UniversalModuleConstraintStatuses',
   'UniversalTypeConstraintStatuses',
   'UniversalConversionWorkItemKinds',
+  'UniversalInterlinguaConstraintEdgeKinds',
   'UniversalRepresentationConstructKinds',
   'UniversalOwnershipConstraintStatuses',
   'UniversalResourceTransferStatuses',

@@ -79,6 +79,7 @@ export {
   UniversalModuleConstraintStatuses,
   UniversalTypeConstraintStatuses,
   UniversalConversionWorkItemKinds,
+  UniversalInterlinguaConstraintEdgeKinds,
   UniversalInterlinguaLayerKinds,
   UniversalInterlinguaLoweringDispositions,
   UniversalOwnershipConstraintStatuses,

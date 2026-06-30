@@ -6,12 +6,14 @@ import {
   interlinguaRecordMatches,
   queryUniversalConversionArtifacts,
   queryUniversalConversionPlan,
+  UniversalInterlinguaConstraintEdgeKinds,
   UniversalInterlinguaLayerKinds,
   UniversalInterlinguaLoweringDispositions
 } from './compiler-api.mjs';
 
 assert.equal(UniversalInterlinguaLayerKinds.includes('semantic-symbol'), true);
 assert.equal(UniversalInterlinguaLoweringDispositions.includes('lossy-review'), true);
+assert.equal(UniversalInterlinguaConstraintEdgeKinds.includes('borrow-scope'), true);
 
 const adapterPlan = conversionPlan({
   evidence: [routeProof('adapter')],
@@ -94,6 +96,31 @@ const blockedRoute = queryUniversalConversionPlan(conversionPlan({
 assert.equal(blockedRoute.readiness, 'blocked');
 assert.equal(blockedRoute.interlingua.claims.blocked, true);
 
+const constraintPlan = conversionPlan({
+  evidence: [routeProof('interlingua_constraints')],
+  imports: [sourceImport()],
+  resourceTransfers: [{ sourceLanguage: 'javascript', target: 'rust', sourceResourceGraph: sourceResourceGraph(), targetResourceGraph: targetResourceGraph() }],
+  lifetimeConstraints: [{ sourceLanguage: 'javascript', target: 'rust', sourceLifetimeConstraints: [{ kind: 'lifetime-region' }, { kind: 'loan borrow region' }, { kind: 'move region bound' }], targetLifetimeConstraints: [{ kind: 'lifetime-region' }, { kind: 'loan borrow region' }] }],
+  controlFlowConstraints: [{ sourceLanguage: 'javascript', target: 'rust', sourceControlFlows: [{ id: 'branch', kind: 'branch condition' }, { id: 'await', kind: 'await-order promise chain' }, { id: 'return', kind: 'early-return' }], targetControlFlows: [{ id: 'rust_branch', kind: 'branch condition' }] }],
+  borrowScopeConstraints: [{ sourceLanguage: 'javascript', target: 'rust', targetBorrowScopes: [{ id: 'rust_scope', kind: 'loan scope boundary' }] }]
+});
+const constraintRoute = queryUniversalConversionPlan(constraintPlan, {
+  interlinguaConstraintFamily: 'borrow-scope',
+  interlinguaConstraintMissingKind: 'borrow-across-await',
+  interlinguaConstraintMissingEvidence: 'translation-borrow-scope:borrow-across-await'
+}).bestRoute;
+assert.equal(constraintRoute.interlingua.constraints.families.includes('borrow-scope'), true);
+assert.equal(constraintRoute.interlingua.constraints.missingKinds.includes('borrow-across-await'), true);
+assert.equal(constraintRoute.interlingua.constraints.edges.some((edge) => edge.family === 'borrow-scope' && edge.semanticEquivalenceClaim === false), true);
+const constraintArtifacts = createUniversalConversionArtifacts(constraintPlan, { routeId: constraintRoute.id, generatedAt: 800 });
+assert.equal(constraintArtifacts.index.interlinguaConstraintFamilies.includes('borrow-scope'), true);
+assert.equal(constraintArtifacts.index.interlinguaConstraintMissingKinds.includes('borrow-across-await'), true);
+assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintFamilies['borrow-scope'], 1);
+assert.equal(queryUniversalConversionArtifacts(constraintArtifacts, {
+  interlinguaConstraintFamily: 'borrow-scope',
+  interlinguaConstraintMissingKind: 'borrow-across-await'
+})[0].routeId, constraintRoute.id);
+
 const artifacts = createUniversalConversionArtifacts(adapterPlan, { routeId: adapterRoute.id, generatedAt: 797 });
 assert.equal(artifacts.index.interlinguaLoweringDispositions.includes('target-adapter'), true);
 assert.equal(artifacts.index.interlinguaRepresentedLayerKinds.includes('proof-evidence'), true);
@@ -145,6 +172,10 @@ function conversionPlan(options = {}) {
     targets: options.targets ?? ['rust'],
     imports: options.imports ?? [],
     evidence: options.evidence ?? [],
+    resourceTransfers: options.resourceTransfers ?? [],
+    lifetimeConstraints: options.lifetimeConstraints ?? [],
+    controlFlowConstraints: options.controlFlowConstraints ?? [],
+    borrowScopeConstraints: options.borrowScopeConstraints ?? [],
     runtimeRequirements: options.runtimeRequirements ?? []
   });
 }
@@ -198,6 +229,33 @@ function sourceImport() {
     evidence: [{ id: 'native_import_interlingua_evidence', kind: 'proof', status: 'passed' }],
     mergeCandidates: [{ id: 'candidate_interlingua_symbol', ownershipKeys: ['symbol.interlingua'], conflictKeys: ['symbol.interlingua'] }],
     sourceMaps: [{ id: 'source_map_interlingua', mappings: [{ id: 'source_map_mapping_interlingua', ownershipRegionKey: 'symbol.interlingua', sourceSpan: { path: 'src/interlingua.js' } }] }]
+  };
+}
+
+function graphSummary(overrides = {}) {
+  return { records: 4, resources: 1, owners: 1, loans: 1, aliases: 0, moves: 0, drops: 0, lifetimeRegions: 1, unsafeBoundaries: 0, conflicts: 0, proofObligations: 0, unsafeBoundariesWithoutProof: 0, reasonCodes: [], ...overrides };
+}
+
+function sourceResourceGraph() {
+  return {
+    id: 'source_interlingua_constraints_graph',
+    summary: graphSummary({ moves: 1 }),
+    resources: [{ id: 'user', resourceKind: 'object' }],
+    owners: [{ id: 'user_owner', ownerKind: 'single' }],
+    loans: [{ id: 'user_mut_loan', mode: 'mutable', lifetimeRegionId: 'lt_user' }],
+    moves: [{ id: 'user_move', moveKind: 'move', lifetimeRegionId: 'lt_user' }],
+    lifetimeRegions: [{ id: 'lt_user', lifetimeKind: 'lexical' }]
+  };
+}
+
+function targetResourceGraph() {
+  return {
+    id: 'target_interlingua_constraints_graph',
+    summary: graphSummary(),
+    resources: [{ id: 'user', resourceKind: 'object' }],
+    owners: [{ id: 'user_owner', ownerKind: 'single' }],
+    loans: [{ id: 'user_mut_loan', mode: 'mutable', lifetimeRegionId: 'lt_user' }],
+    lifetimeRegions: [{ id: 'lt_user', lifetimeKind: 'lexical' }]
   };
 }
 
