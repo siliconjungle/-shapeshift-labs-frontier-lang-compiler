@@ -15,6 +15,7 @@ import { memoryModelConstraintMatches } from './universal-memory-model-constrain
 import { metaprogrammingConstraintMatches } from './universal-metaprogramming-constraints.js';
 import { moduleConstraintMatches } from './universal-module-constraints.js';
 import { numericSemanticsConstraintMatches } from './universal-numeric-semantics-constraints.js';
+import { textSemanticsConstraintMatches } from './universal-text-semantics-constraints.js';
 import { objectModelConstraintMatches } from './universal-object-model-constraints.js';
 import { protocolConstraintMatches } from './universal-protocol-constraints.js';
 import { scopeBindingConstraintMatches } from './universal-scope-binding-constraints.js';
@@ -44,6 +45,7 @@ export function artifactConstraintIndex(records = []) {
     ...constraintIndex('scopeBindingConstraint', records.map(scope)),
     ...constraintIndex('moduleConstraint', records.map(mods)),
     ...constraintIndex('numericSemanticsConstraint', records.map(num)),
+    ...constraintIndex('textSemanticsConstraint', records.map(text)),
     ...constraintIndex('objectModelConstraint', records.map(obj)),
     ...constraintIndex('protocolConstraint', records.map(proto)),
     ...constraintIndex('typeConstraint', records.map(types))
@@ -68,6 +70,7 @@ export function artifactConstraintsMatch(record, query = {}) {
     && scopeBindingConstraintMatches(scope(record), query)
     && moduleConstraintMatches(mods(record), query)
     && numericSemanticsConstraintMatches(num(record), query)
+    && textSemanticsConstraintMatches(text(record), query)
     && objectModelConstraintMatches(obj(record), query)
     && protocolConstraintMatches(proto(record), query)
     && typeConstraintMatches(types(record), query);
@@ -91,6 +94,7 @@ function meta(record) { return record.metaprogrammingConstraint ?? metaConstrain
 function scope(record) { return record.scopeBindingConstraint ?? metaConstraint(record, 'scopeBindingConstraint'); }
 function mods(record) { return record.moduleConstraint ?? metaConstraint(record, 'moduleConstraint'); }
 function num(record) { return record.numericSemanticsConstraint ?? metaConstraint(record, 'numericSemanticsConstraint'); }
+function text(record) { return record.textSemanticsConstraint ?? metaConstraint(record, 'textSemanticsConstraint'); }
 function obj(record) { return record.objectModelConstraint ?? metaConstraint(record, 'objectModelConstraint'); }
 function proto(record) { return record.protocolConstraint ?? metaConstraint(record, 'protocolConstraint'); }
 function types(record) { return record.typeConstraint ?? metaConstraint(record, 'typeConstraint'); }

@@ -68,6 +68,7 @@ export { createUniversalMetaprogrammingConstraintEvidence, metaprogrammingConstr
 export { createUniversalScopeBindingConstraintEvidence, scopeBindingConstraintMatches, UniversalScopeBindingConstraintStatuses } from './universal-scope-binding-constraints.js';
 export { createUniversalModuleConstraintEvidence, moduleConstraintMatches, UniversalModuleConstraintStatuses } from './universal-module-constraints.js';
 export { createUniversalNumericSemanticsConstraintEvidence, numericSemanticsConstraintMatches, UniversalNumericSemanticsConstraintStatuses } from './universal-numeric-semantics-constraints.js';
+export { createUniversalTextSemanticsConstraintEvidence, textSemanticsConstraintMatches, UniversalTextSemanticsConstraintStatuses } from './universal-text-semantics-constraints.js';
 export { createUniversalObjectModelConstraintEvidence, objectModelConstraintMatches, UniversalObjectModelConstraintStatuses } from './universal-object-model-constraints.js';
 export { createUniversalProtocolConstraintEvidence, protocolConstraintMatches, UniversalProtocolConstraintStatuses } from './universal-protocol-constraints.js';
 export { createUniversalTypeConstraintEvidence, typeConstraintMatches, UniversalTypeConstraintStatuses } from './universal-type-constraints.js';

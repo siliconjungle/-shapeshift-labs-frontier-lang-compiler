@@ -13,6 +13,7 @@ import { memoryModelConstraintForConversionRoute, memoryModelConstraintMatches }
 import { metaprogrammingConstraintForConversionRoute, metaprogrammingConstraintMatches } from './universal-metaprogramming-constraints.js';
 import { moduleConstraintForConversionRoute, moduleConstraintMatches } from './universal-module-constraints.js';
 import { numericSemanticsConstraintForConversionRoute, numericSemanticsConstraintMatches } from './universal-numeric-semantics-constraints.js';
+import { textSemanticsConstraintForConversionRoute, textSemanticsConstraintMatches } from './universal-text-semantics-constraints.js';
 import { objectModelConstraintForConversionRoute, objectModelConstraintMatches } from './universal-object-model-constraints.js';
 import { protocolConstraintForConversionRoute, protocolConstraintMatches } from './universal-protocol-constraints.js';
 import { resourceTransferForConversionRoute, resourceTransferMatches } from './universal-resource-transfer.js';
@@ -36,6 +37,7 @@ const families = [
   ['scopeBindingConstraint', 'scopeBindingConstraints', 'translationScopeBindingConstraint'],
   ['moduleConstraint', 'moduleConstraints', 'translationModuleConstraint'],
   ['numericSemanticsConstraint', 'numericSemanticsConstraints', 'translationNumericSemanticsConstraint'],
+  ['textSemanticsConstraint', 'textSemanticsConstraints', 'translationTextSemanticsConstraint'],
   ['objectModelConstraint', 'objectModelConstraints', 'translationObjectModelConstraint'],
   ['protocolConstraint', 'protocolConstraints', 'translationProtocolConstraint'],
   ['resourceTransfer', 'resourceTransfers', 'translationResourceTransfer'],
@@ -83,6 +85,7 @@ export function createConversionRouteConstraints(input = {}, route = {}, routeIm
     scopeBindingConstraint: scopeBindingConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     moduleConstraint: moduleConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     numericSemanticsConstraint: numericSemanticsConstraintForConversionRoute(input, route, routeImports, routeEvidence),
+    textSemanticsConstraint: textSemanticsConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     objectModelConstraint: objectModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     protocolConstraint: protocolConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     typeConstraint: typeConstraintForConversionRoute(input, route, routeImports, routeEvidence)
@@ -107,6 +110,7 @@ export function conversionRouteMatchesConstraintQuery(route = {}, query = {}) {
     && scopeBindingConstraintMatches(route.scopeBindingConstraint, query)
     && moduleConstraintMatches(route.moduleConstraint, query)
     && numericSemanticsConstraintMatches(route.numericSemanticsConstraint, query)
+    && textSemanticsConstraintMatches(route.textSemanticsConstraint, query)
     && objectModelConstraintMatches(route.objectModelConstraint, query)
     && protocolConstraintMatches(route.protocolConstraint, query)
     && typeConstraintMatches(route.typeConstraint, query);

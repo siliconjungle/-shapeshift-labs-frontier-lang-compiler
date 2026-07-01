@@ -69,6 +69,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const scopeBindingConstraints = routeArtifacts.map((artifact) => artifact.scopeBindingConstraint ?? artifact.metadata?.scopeBindingConstraint ?? artifact.admissionRecord?.metadata?.scopeBindingConstraint ?? {});
   const moduleConstraints = routeArtifacts.map((artifact) => artifact.moduleConstraint ?? artifact.metadata?.moduleConstraint ?? artifact.admissionRecord?.metadata?.moduleConstraint ?? {});
   const numericSemanticsConstraints = routeArtifacts.map((artifact) => artifact.numericSemanticsConstraint ?? artifact.metadata?.numericSemanticsConstraint ?? artifact.admissionRecord?.metadata?.numericSemanticsConstraint ?? {});
+  const textSemanticsConstraints = routeArtifacts.map((artifact) => artifact.textSemanticsConstraint ?? artifact.metadata?.textSemanticsConstraint ?? artifact.admissionRecord?.metadata?.textSemanticsConstraint ?? {});
   const objectModelConstraints = routeArtifacts.map((artifact) => artifact.objectModelConstraint ?? artifact.metadata?.objectModelConstraint ?? artifact.admissionRecord?.metadata?.objectModelConstraint ?? {});
   const protocolConstraints = routeArtifacts.map((artifact) => artifact.protocolConstraint ?? artifact.metadata?.protocolConstraint ?? artifact.admissionRecord?.metadata?.protocolConstraint ?? {});
   const typeConstraints = routeArtifacts.map((artifact) => artifact.typeConstraint ?? artifact.metadata?.typeConstraint ?? artifact.admissionRecord?.metadata?.typeConstraint ?? {});
@@ -112,6 +113,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     scopeBindingConstraint: compactConstraintCounts(scopeBindingConstraints),
     moduleConstraint: compactConstraintCounts(moduleConstraints),
     numericSemanticsConstraint: compactConstraintCounts(numericSemanticsConstraints),
+    textSemanticsConstraint: compactConstraintCounts(textSemanticsConstraints),
     objectModelConstraint: compactConstraintCounts(objectModelConstraints),
     protocolConstraint: compactConstraintCounts(protocolConstraints),
     typeConstraint: compactConstraintCounts(typeConstraints),
