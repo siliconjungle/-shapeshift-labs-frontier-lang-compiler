@@ -101,24 +101,36 @@ receiptArtifact?.materialization.evidenceReceiptIds satisfies readonly string[] 
 const receiptWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(receiptPlan);
 const receiptWorklistQuery = queryUniversalConversionWorklist(receiptWorklist, { target: 'javascript' });
 const receiptWorklistEdgeQuery = queryUniversalConversionWorklist(receiptWorklist, {
+  interlinguaConstraintStatus: 'degraded',
   interlinguaConstraintAction: 'review-borrow-scope-constraint-loss',
   interlinguaConstraintSourceId: 'borrow_scope_constraints_conversion_javascript_to_rust',
   interlinguaConstraintRequiredKind: ['borrow-across-await'],
-  interlinguaConstraintRepresentedKind: 'loan-scope-boundary'
+  interlinguaConstraintRepresentedKind: 'loan-scope-boundary',
+  interlinguaConstraintMissingKind: 'borrow-across-await',
+  interlinguaConstraintMissingEvidence: 'translation-borrow-scope:borrow-across-await',
+  interlinguaConstraintObligationEvidenceId: 'worklist_obligation_proof'
 });
 receiptWorklist.metadata.semanticEquivalenceClaim satisfies false;
 receiptWorklist.summary.autoMergeClaims satisfies 0;
 receiptWorklist.summary.semanticEquivalenceClaims satisfies 0;
 receiptWorklist.summary.interlinguaConstraintFamilies satisfies readonly string[];
+receiptWorklist.summary.interlinguaConstraintStatuses satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintActions satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintSourceIds satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintRequiredKinds satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintRepresentedKinds satisfies readonly string[];
+receiptWorklist.summary.interlinguaConstraintMissingKinds satisfies readonly string[];
+receiptWorklist.summary.interlinguaConstraintMissingEvidence satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintObligationStatuses satisfies readonly string[];
+receiptWorklist.summary.interlinguaConstraintObligationEvidenceIds satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintObligationMissingEvidence satisfies readonly string[];
 receiptWorklistQuery.bestItem?.autoMergeClaim satisfies false | undefined;
+receiptWorklistQuery.bestItem?.interlinguaConstraintStatuses satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintActions satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintRequiredKinds satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintRepresentedKinds satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.interlinguaConstraintMissingKinds satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.interlinguaConstraintMissingEvidence satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.interlinguaConstraintObligationEvidenceIds satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintObligationMissingEvidence satisfies readonly string[] | undefined;
 receiptWorklistEdgeQuery.found satisfies boolean;

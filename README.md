@@ -1123,12 +1123,15 @@ const proofWork = queryUniversalConversionWorklist(conversionWorklist, {
 console.log(proofWork.bestItem?.routeIds); // route refs ready to refill a proof worker queue
 const obligationWork = queryUniversalConversionWorklist(conversionWorklist, {
   kind: 'collect-interlingua-obligation-proof',
+  interlinguaConstraintStatus: 'degraded',
   interlinguaConstraintAction: 'review-borrow-scope-constraint-loss',
   interlinguaConstraintRequiredKind: 'borrow-across-await',
+  interlinguaConstraintMissingKind: 'borrow-across-await',
   interlinguaConstraintObligationStatus: 'missing'
 });
 console.log(obligationWork.bestItem?.interlinguaConstraintObligationKinds); // missing source-bound proof obligations
 console.log(obligationWork.bestItem?.interlinguaConstraintRequiredKinds); // edge semantics used to route proof work
+console.log(obligationWork.bestItem?.interlinguaConstraintMissingEvidence); // exact proof gaps for the worker
 
 const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan);
 console.log(conversionArtifacts.historyRecords[0].kind); // "frontier.lang.semanticHistoryRecord"
@@ -1163,7 +1166,7 @@ The projection target matrix separates five runtime/API classes:
 
 `createUniversalConversionRouteEvidenceReceipt` turns one route plus optional raw evidence records into a compact route-evidence receipt. It records route-bound evidence IDs, passed proof IDs, rejected unscoped or mismatched evidence, missing proof/source evidence, sources, ownership keys, conflict keys, blockers, and review reasons. This gives distributed workers a durable answer to "which evidence actually backs this conversion route?" without promoting a passed replay into a broad semantic-equivalence or auto-merge claim.
 
-`createUniversalConversionWorklist` derives queue-ready next work from those routes: add a target adapter, collect translation proof, prove runtime adapters, collect dialect projection evidence, collect source/parser/source-map evidence, collect missing interlingua obligation proof, review a route, or unblock a blocked route. Worklist items are grouped by source language, target, route IDs, evidence keys, missing evidence, blockers, review reasons, interlingua constraint family/action/source/required/represented/obligation fields, and tasks so coordinators can refill swarms without re-scanning every route. `queryUniversalConversionWorklist` filters those items by kind, priority, route, language, target, readiness, action, evidence key, missing evidence, blocker, review reason, runtime adapter requirement, dialect record, target adapter ID, interlingua constraint family/action/source id/required kind/represented kind, or interlingua obligation kind/status/missing evidence. The worklist is still conservative route evidence: it keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
+`createUniversalConversionWorklist` derives queue-ready next work from those routes: add a target adapter, collect translation proof, prove runtime adapters, collect dialect projection evidence, collect source/parser/source-map evidence, collect missing interlingua obligation proof, review a route, or unblock a blocked route. Worklist items are grouped by source language, target, route IDs, evidence keys, missing evidence, blockers, review reasons, interlingua constraint family/status/action/source/required/represented/missing/obligation fields, and tasks so coordinators can refill swarms without re-scanning every route. `queryUniversalConversionWorklist` filters those items by kind, priority, route, language, target, readiness, action, evidence key, missing evidence, blocker, review reason, runtime adapter requirement, dialect record, target adapter ID, interlingua constraint family/status/action/source id/required kind/represented kind/missing kind/missing evidence, or interlingua obligation kind/status/evidence id/missing evidence. The worklist is still conservative route evidence: it keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
 Each route also carries `translationAdmission`, an explicit cross-language review contract with status/action pairs: `blocked`/`reject`, `needs-adapter`/`add-target-adapter`, `needs-evidence`/`collect-translation-evidence`, `needs-review`/`review-target-adapter`, or `admittable-for-review`/`materialize-review-record`. It records required and represented construct kinds, missing translation evidence, bound evidence IDs, runtime adapter requirements, dialect records, and the target adapter ID while keeping `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 

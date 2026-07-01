@@ -3,15 +3,8 @@ import { normalizeProjectionMatrixTargets } from './coverage-matrix-profiles.js'
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
 
 export const UniversalConversionWorkItemKinds = Object.freeze([
-  'add-target-adapter',
-  'collect-translation-proof',
-  'prove-runtime-adapter',
-  'collect-runtime-proof-signal',
-  'collect-dialect-evidence',
-  'collect-interlingua-obligation-proof',
-  'collect-source-evidence',
-  'review-route',
-  'unblock-route'
+  'add-target-adapter', 'collect-translation-proof', 'prove-runtime-adapter', 'collect-runtime-proof-signal', 'collect-dialect-evidence',
+  'collect-interlingua-obligation-proof', 'collect-source-evidence', 'review-route', 'unblock-route'
 ]);
 
 export function createUniversalConversionWorklist(planOrInput = {}, options = {}, context = {}) {
@@ -76,14 +69,12 @@ function addInterlinguaObligationItems(items, route) {
       || (edge.family === obligation.family && edge.sourceId === obligation.sourceId));
     addWorkItem(items, route, 'collect-interlingua-obligation-proof', key, obligation.severity === 'error' ? 'high' : 'normal', {
       constraintFamilies: [obligation.family],
-      constraintActions: obligationEdges.map((edge) => edge.action),
-      constraintRequiredKinds: obligationEdges.flatMap((edge) => edge.requiredKinds ?? []),
-      constraintRepresentedKinds: obligationEdges.flatMap((edge) => edge.representedKinds ?? []),
-      constraintObligationKinds: [obligation.kind],
-      constraintObligationStatuses: [obligation.status],
-      constraintObligationMissingEvidence: obligation.missingEvidence ?? [],
-      constraintSourceIds: [obligation.sourceId],
-      missingEvidence: obligation.missingEvidence ?? []
+      constraintStatuses: obligationEdges.map((edge) => edge.status), constraintActions: obligationEdges.map((edge) => edge.action),
+      constraintRequiredKinds: obligationEdges.flatMap((edge) => edge.requiredKinds ?? []), constraintRepresentedKinds: obligationEdges.flatMap((edge) => edge.representedKinds ?? []),
+      constraintMissingKinds: obligationEdges.flatMap((edge) => edge.missingKinds ?? []), constraintMissingEvidence: obligationEdges.flatMap((edge) => edge.missingEvidence ?? []),
+      constraintObligationKinds: [obligation.kind], constraintObligationStatuses: [obligation.status],
+      constraintObligationEvidenceIds: obligation.evidenceIds ?? [], constraintObligationMissingEvidence: obligation.missingEvidence ?? [],
+      constraintSourceIds: [obligation.sourceId], missingEvidence: obligation.missingEvidence ?? []
     });
   }
 }
@@ -133,12 +124,16 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     dialectRecordIds: route.dialect?.recordIds ?? [],
     targetAdapterIds: uniqueStrings([route.adapter, route.translationAdmission?.targetAdapterId]),
     interlinguaConstraintFamilies: uniqueStrings(details.constraintFamilies ?? []),
+    interlinguaConstraintStatuses: uniqueStrings(details.constraintStatuses ?? []),
     interlinguaConstraintActions: uniqueStrings(details.constraintActions ?? []),
     interlinguaConstraintSourceIds: uniqueStrings(details.constraintSourceIds ?? []),
     interlinguaConstraintRequiredKinds: uniqueStrings(details.constraintRequiredKinds ?? []),
     interlinguaConstraintRepresentedKinds: uniqueStrings(details.constraintRepresentedKinds ?? []),
+    interlinguaConstraintMissingKinds: uniqueStrings(details.constraintMissingKinds ?? []),
+    interlinguaConstraintMissingEvidence: uniqueStrings(details.constraintMissingEvidence ?? []),
     interlinguaConstraintObligationKinds: uniqueStrings(details.constraintObligationKinds ?? []),
     interlinguaConstraintObligationStatuses: uniqueStrings(details.constraintObligationStatuses ?? []),
+    interlinguaConstraintObligationEvidenceIds: uniqueStrings(details.constraintObligationEvidenceIds ?? []),
     interlinguaConstraintObligationMissingEvidence: uniqueStrings(details.constraintObligationMissingEvidence ?? []),
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
@@ -172,12 +167,16 @@ function mergeWorkItems(left, right) {
     dialectRecordIds: uniqueStrings([...left.dialectRecordIds, ...right.dialectRecordIds]),
     targetAdapterIds: uniqueStrings([...left.targetAdapterIds, ...right.targetAdapterIds]),
     interlinguaConstraintFamilies: uniqueStrings([...left.interlinguaConstraintFamilies, ...right.interlinguaConstraintFamilies]),
+    interlinguaConstraintStatuses: uniqueStrings([...left.interlinguaConstraintStatuses, ...right.interlinguaConstraintStatuses]),
     interlinguaConstraintActions: uniqueStrings([...left.interlinguaConstraintActions, ...right.interlinguaConstraintActions]),
     interlinguaConstraintSourceIds: uniqueStrings([...left.interlinguaConstraintSourceIds, ...right.interlinguaConstraintSourceIds]),
     interlinguaConstraintRequiredKinds: uniqueStrings([...left.interlinguaConstraintRequiredKinds, ...right.interlinguaConstraintRequiredKinds]),
     interlinguaConstraintRepresentedKinds: uniqueStrings([...left.interlinguaConstraintRepresentedKinds, ...right.interlinguaConstraintRepresentedKinds]),
+    interlinguaConstraintMissingKinds: uniqueStrings([...left.interlinguaConstraintMissingKinds, ...right.interlinguaConstraintMissingKinds]),
+    interlinguaConstraintMissingEvidence: uniqueStrings([...left.interlinguaConstraintMissingEvidence, ...right.interlinguaConstraintMissingEvidence]),
     interlinguaConstraintObligationKinds: uniqueStrings([...left.interlinguaConstraintObligationKinds, ...right.interlinguaConstraintObligationKinds]),
     interlinguaConstraintObligationStatuses: uniqueStrings([...left.interlinguaConstraintObligationStatuses, ...right.interlinguaConstraintObligationStatuses]),
+    interlinguaConstraintObligationEvidenceIds: uniqueStrings([...left.interlinguaConstraintObligationEvidenceIds, ...right.interlinguaConstraintObligationEvidenceIds]),
     interlinguaConstraintObligationMissingEvidence: uniqueStrings([...left.interlinguaConstraintObligationMissingEvidence, ...right.interlinguaConstraintObligationMissingEvidence])
   };
 }
@@ -223,12 +222,16 @@ function worklistSummary(items) {
     runtimeProofProvidedSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofProvidedSignals ?? [])),
     runtimeProofMissingSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofMissingSignals ?? [])),
     interlinguaConstraintFamilies: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintFamilies ?? [])),
+    interlinguaConstraintStatuses: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintStatuses ?? [])),
     interlinguaConstraintActions: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintActions ?? [])),
     interlinguaConstraintSourceIds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintSourceIds ?? [])),
     interlinguaConstraintRequiredKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintRequiredKinds ?? [])),
     interlinguaConstraintRepresentedKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintRepresentedKinds ?? [])),
+    interlinguaConstraintMissingKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintMissingKinds ?? [])),
+    interlinguaConstraintMissingEvidence: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintMissingEvidence ?? [])),
     interlinguaConstraintObligationKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintObligationKinds ?? [])),
     interlinguaConstraintObligationStatuses: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintObligationStatuses ?? [])),
+    interlinguaConstraintObligationEvidenceIds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintObligationEvidenceIds ?? [])),
     interlinguaConstraintObligationMissingEvidence: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintObligationMissingEvidence ?? [])),
     blockers: items.reduce((total, item) => total + item.blockers.length, 0),
     reviewReasons: items.reduce((total, item) => total + item.review.length, 0),
@@ -281,12 +284,16 @@ function workItemMatchesQuery(item, query) {
     && match(query.dialectRecordId, item.dialectRecordIds)
     && match(query.targetAdapterId, item.targetAdapterIds)
     && match(query.interlinguaConstraintFamily, item.interlinguaConstraintFamilies)
+    && match(query.interlinguaConstraintStatus, item.interlinguaConstraintStatuses)
     && match(query.interlinguaConstraintAction, item.interlinguaConstraintActions)
     && match(query.interlinguaConstraintSourceId, item.interlinguaConstraintSourceIds)
     && match(query.interlinguaConstraintRequiredKind, item.interlinguaConstraintRequiredKinds)
     && match(query.interlinguaConstraintRepresentedKind, item.interlinguaConstraintRepresentedKinds)
+    && match(query.interlinguaConstraintMissingKind, item.interlinguaConstraintMissingKinds)
+    && match(query.interlinguaConstraintMissingEvidence, item.interlinguaConstraintMissingEvidence)
     && match(query.interlinguaConstraintObligationKind, item.interlinguaConstraintObligationKinds)
     && match(query.interlinguaConstraintObligationStatus, item.interlinguaConstraintObligationStatuses)
+    && match(query.interlinguaConstraintObligationEvidenceId, item.interlinguaConstraintObligationEvidenceIds)
     && match(query.interlinguaConstraintObligationMissingEvidence, item.interlinguaConstraintObligationMissingEvidence);
 }
 

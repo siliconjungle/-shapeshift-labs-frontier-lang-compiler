@@ -120,22 +120,30 @@ const obligationPlan = createUniversalConversionPlan({
 const obligationWorklist = createUniversalConversionWorklist(obligationPlan);
 assert.equal(obligationWorklist.summary.interlinguaObligationGaps >= 1, true);
 assert.equal(obligationWorklist.summary.interlinguaConstraintFamilies.includes('borrow-scope'), true);
+assert.equal(obligationWorklist.summary.interlinguaConstraintStatuses.includes('degraded'), true);
 assert.equal(obligationWorklist.summary.interlinguaConstraintActions.includes('review-borrow-scope-constraint-loss'), true);
 assert.equal(obligationWorklist.summary.interlinguaConstraintSourceIds.includes('borrow_scope_constraints_conversion_javascript_to_rust'), true);
 assert.equal(obligationWorklist.summary.interlinguaConstraintRequiredKinds.includes('borrow-across-await'), true);
 assert.equal(obligationWorklist.summary.interlinguaConstraintRepresentedKinds.includes('loan-scope-boundary'), true);
+assert.equal(obligationWorklist.summary.interlinguaConstraintMissingKinds.includes('borrow-across-await'), true);
+assert.equal(obligationWorklist.summary.interlinguaConstraintMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 assert.equal(obligationWorklist.summary.interlinguaConstraintObligationKinds.includes('borrow-across-await'), true);
 assert.equal(obligationWorklist.summary.interlinguaConstraintObligationStatuses.includes('missing'), true);
+assert.equal(obligationWorklist.summary.interlinguaConstraintObligationEvidenceIds.includes('worklist_obligation_proof'), true);
 assert.equal(obligationWorklist.summary.interlinguaConstraintObligationMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 assert.equal(obligationWorklist.summary.missingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 assert.equal(obligationWorklist.items.some((item) => item.kind === 'collect-interlingua-obligation-proof'
   && item.interlinguaConstraintFamilies.includes('borrow-scope')
+  && item.interlinguaConstraintStatuses.includes('degraded')
   && item.interlinguaConstraintActions.includes('review-borrow-scope-constraint-loss')
   && item.interlinguaConstraintSourceIds.includes('borrow_scope_constraints_conversion_javascript_to_rust')
   && item.interlinguaConstraintRequiredKinds.includes('borrow-across-await')
   && item.interlinguaConstraintRepresentedKinds.includes('loan-scope-boundary')
+  && item.interlinguaConstraintMissingKinds.includes('borrow-across-await')
+  && item.interlinguaConstraintMissingEvidence.includes('translation-borrow-scope:borrow-across-await')
   && item.interlinguaConstraintObligationKinds.includes('borrow-across-await')
   && item.interlinguaConstraintObligationStatuses.includes('missing')
+  && item.interlinguaConstraintObligationEvidenceIds.includes('worklist_obligation_proof')
   && item.interlinguaConstraintObligationMissingEvidence.includes('translation-borrow-scope:borrow-across-await')
   && item.missingEvidence.includes('translation-borrow-scope:borrow-across-await')), true);
 const mergedObligationItem = obligationWorklist.items.find((item) => item.kind === 'collect-interlingua-obligation-proof'
@@ -143,6 +151,7 @@ const mergedObligationItem = obligationWorklist.items.find((item) => item.kind =
 assert.equal(Boolean(mergedObligationItem), true);
 assert.equal(mergedObligationItem.interlinguaConstraintFamilies.includes('borrow-scope'), true);
 assert.equal(mergedObligationItem.interlinguaConstraintFamilies.includes('borrow-checker'), true);
+assert.equal(mergedObligationItem.interlinguaConstraintStatuses.includes('degraded'), true);
 assert.equal(mergedObligationItem.interlinguaConstraintActions.includes('review-borrow-scope-constraint-loss'), true);
 assert.equal(mergedObligationItem.interlinguaConstraintActions.includes('review-borrow-checker-loss'), true);
 assert.equal(mergedObligationItem.interlinguaConstraintSourceIds.includes('borrow_scope_constraints_conversion_javascript_to_rust'), true);
@@ -151,20 +160,30 @@ assert.equal(mergedObligationItem.interlinguaConstraintRequiredKinds.includes('b
 assert.equal(mergedObligationItem.interlinguaConstraintRequiredKinds.includes('borrow-scope:borrow-across-await'), true);
 assert.equal(mergedObligationItem.interlinguaConstraintRepresentedKinds.includes('loan-scope-boundary'), true);
 assert.equal(mergedObligationItem.interlinguaConstraintRepresentedKinds.includes('borrow-scope:loan-scope-boundary'), true);
+assert.equal(mergedObligationItem.interlinguaConstraintMissingKinds.includes('borrow-across-await'), true);
+assert.equal(mergedObligationItem.interlinguaConstraintMissingKinds.includes('borrow-scope:borrow-across-await'), true);
+assert.equal(mergedObligationItem.interlinguaConstraintMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
+assert.equal(mergedObligationItem.interlinguaConstraintObligationEvidenceIds.includes('worklist_obligation_proof'), true);
 const obligationQuery = queryUniversalConversionWorklist(obligationWorklist, {
   kind: 'collect-interlingua-obligation-proof',
   interlinguaConstraintFamily: 'borrow-scope',
+  interlinguaConstraintStatus: 'degraded',
   interlinguaConstraintAction: 'review-borrow-scope-constraint-loss',
   interlinguaConstraintSourceId: 'borrow_scope_constraints_conversion_javascript_to_rust',
   interlinguaConstraintRequiredKind: 'borrow-across-await',
   interlinguaConstraintRepresentedKind: 'loan-scope-boundary',
+  interlinguaConstraintMissingKind: 'borrow-across-await',
+  interlinguaConstraintMissingEvidence: 'translation-borrow-scope:borrow-across-await',
   interlinguaConstraintObligationKind: 'borrow-across-await',
   interlinguaConstraintObligationStatus: 'missing',
+  interlinguaConstraintObligationEvidenceId: 'worklist_obligation_proof',
   interlinguaConstraintObligationMissingEvidence: 'translation-borrow-scope:borrow-across-await'
 });
 assert.equal(obligationQuery.found, true);
 assert.equal(obligationQuery.bestItem.action, 'collect-interlingua-obligation-evidence');
 assert.equal(obligationQuery.bestItem.tasks.some((task) => task.includes('borrow-across-await')), true);
+assert.equal(obligationQuery.summary.interlinguaConstraintMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
+assert.equal(obligationQuery.summary.interlinguaConstraintObligationEvidenceIds.includes('worklist_obligation_proof'), true);
 assert.equal(obligationQuery.summary.interlinguaConstraintObligationMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 const missQuery = queryUniversalConversionWorklist(adapterGapWorklist, { target: 'python' });
 assert.equal(missQuery.found, false);
