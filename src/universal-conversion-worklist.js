@@ -1,9 +1,10 @@
-import { countBy, idFragment, normalizeNativeLanguageId, uniqueStrings } from './native-import-utils.js';
-import { normalizeProjectionMatrixTargets } from './coverage-matrix-profiles.js';
-import { createUniversalConversionPlan } from './universal-conversion-plan.js';
-import { mergeWorkItemRuntimeRouteDenominators, workItemRuntimeRouteDenominators, workItemRuntimeRouteMatches, worklistRuntimeRouteSummary } from './universal-conversion-artifact-runtime-routes.js';
-import { mergeWorkItemSourceMapDenominators, workItemSourceMapDenominators, workItemSourceMapMatches, worklistSourceMapSummary } from './universal-conversion-artifact-source-maps.js';
-import { mergeWorkItemSemanticEditDenominators, workItemSemanticEditDenominators, workItemSemanticEditMatches, worklistSemanticEditSummary } from './universal-conversion-artifact-semantic-edit.js';
+import{countBy,idFragment,normalizeNativeLanguageId,uniqueStrings}from './native-import-utils.js';
+import{normalizeProjectionMatrixTargets}from './coverage-matrix-profiles.js';
+import{createUniversalConversionPlan}from './universal-conversion-plan.js';
+import{mergeWorkItemRuntimeRouteDenominators,workItemRuntimeRouteDenominators,workItemRuntimeRouteMatches,worklistRuntimeRouteSummary}from './universal-conversion-artifact-runtime-routes.js';
+import{mergeWorkItemSourceMapDenominators,workItemSourceMapDenominators,workItemSourceMapMatches,worklistSourceMapSummary}from './universal-conversion-artifact-source-maps.js';
+import{mergeWorkItemSemanticEditDenominators,workItemSemanticEditDenominators,workItemSemanticEditMatches,worklistSemanticEditSummary}from './universal-conversion-artifact-semantic-edit.js';
+import{mergeTranslationAdmissionDenominators as mtad,translationAdmissionDenominatorMatches as tadm,translationAdmissionDenominatorSummary as tads,translationAdmissionDenominatorsForRoute as tadfr}from './universal-conversion-translation-admission-denominators.js';
 
 export const UniversalConversionWorkItemKinds = Object.freeze(['add-target-adapter', 'collect-translation-proof', 'prove-runtime-adapter', 'collect-runtime-proof-signal', 'collect-dialect-evidence', 'collect-interlingua-obligation-proof', 'collect-source-evidence', 'review-route', 'unblock-route']);
 
@@ -124,6 +125,7 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     runtimeProofProvidedSignals: uniqueStrings((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.providedSignals ?? [])),
     runtimeProofMissingSignals: uniqueStrings((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? [])),
     dialectRecordIds: route.dialect?.recordIds ?? [],
+    ...tadfr(route),
     targetAdapterIds: uniqueStrings([route.adapter, route.translationAdmission?.targetAdapterId]),
     interlinguaConstraintFamilies: uniqueStrings(details.constraintFamilies ?? []),
     interlinguaConstraintStatuses: uniqueStrings(details.constraintStatuses ?? []),
@@ -168,6 +170,7 @@ function mergeWorkItems(left, right) {
     runtimeProofProvidedSignals: uniqueStrings([...left.runtimeProofProvidedSignals, ...right.runtimeProofProvidedSignals]),
     runtimeProofMissingSignals: uniqueStrings([...left.runtimeProofMissingSignals, ...right.runtimeProofMissingSignals]),
     dialectRecordIds: uniqueStrings([...left.dialectRecordIds, ...right.dialectRecordIds]),
+    ...mtad(left, right),
     targetAdapterIds: uniqueStrings([...left.targetAdapterIds, ...right.targetAdapterIds]),
     interlinguaConstraintFamilies: uniqueStrings([...left.interlinguaConstraintFamilies, ...right.interlinguaConstraintFamilies]),
     interlinguaConstraintStatuses: uniqueStrings([...left.interlinguaConstraintStatuses, ...right.interlinguaConstraintStatuses]),
@@ -225,6 +228,7 @@ function worklistSummary(items) {
     runtimeProofRequiredSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofRequiredSignals ?? [])),
     runtimeProofProvidedSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofProvidedSignals ?? [])),
     runtimeProofMissingSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofMissingSignals ?? [])),
+    ...tads(items),
     interlinguaConstraintFamilies: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintFamilies ?? [])),
     interlinguaConstraintStatuses: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintStatuses ?? [])),
     interlinguaConstraintActions: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintActions ?? [])),
@@ -283,6 +287,7 @@ function workItemMatchesQuery(item, query) {
     && match(query.runtimeProofRequiredSignal, item.runtimeProofRequiredSignals)
     && match(query.runtimeProofProvidedSignal, item.runtimeProofProvidedSignals)
     && match(query.runtimeProofMissingSignal, item.runtimeProofMissingSignals)
+    && tadm(item, query, match)
     && match(query.blocker, item.blockers)
     && match(query.reviewReason, item.review)
     && match(query.task, item.tasks)
@@ -306,9 +311,7 @@ function workItemMatchesQuery(item, query) {
 function sortWorkItems(items) { return items.sort((left, right) => priorityRank(right.priority) - priorityRank(left.priority) || String(left.kind).localeCompare(String(right.kind)) || String(left.id).localeCompare(String(right.id))); }
 
 function higherPriority(left, right) { return priorityRank(right) > priorityRank(left) ? right : left; }
-
 function priorityRank(priority) { return { low: 0, normal: 1, high: 2, blocker: 3 }[priority] ?? 1; }
-
 function match(filter, values) {
   const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];
   if (!filters.length) return true;

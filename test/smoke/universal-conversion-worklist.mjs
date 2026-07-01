@@ -103,6 +103,10 @@ const runtimeFilteredWorklist = createUniversalConversionWorklist(runtimePlan, {
 assert.equal(runtimeFilteredWorklist.items.length >= 1, true);
 assert.equal(runtimeFilteredWorklist.summary.sourceHostIds.includes(runtimeRoute.runtime.source.id), true);
 assert.equal(runtimeWorklist.summary.runtimeProofSignalGaps >= 1, true);
+assert.equal(runtimeWorklist.summary.translationRuntimeReadinesses.includes(runtimeRoute.translationAdmission.runtimeReadiness), true);
+assert.equal(runtimeWorklist.summary.translationRuntimeAdapterRequirementIds.includes(runtimeRoute.translationAdmission.runtimeAdapterRequirementIds[0]), true);
+assert.equal(runtimeWorklist.summary.translationRuntimeProofObligationIds.includes(runtimeRoute.translationAdmission.runtimeProofObligationIds[0]), true);
+assert.equal(runtimeWorklist.summary.translationRuntimeProofMissingSignals.includes('network-trace-hash'), true);
 assert.equal(runtimeWorklist.items.some((item) => item.kind === 'collect-runtime-proof-signal'
   && item.runtimeProofMissingSignals.includes('network-trace-hash')), true);
 assert.equal(runtimeWorklist.items.some((item) => item.runtimeProofCapabilities.includes('fetch')
@@ -118,6 +122,15 @@ const runtimeSignalQuery = queryUniversalConversionWorklist(runtimePlan, {
 assert.equal(runtimeSignalQuery.found, true);
 assert.equal(runtimeSignalQuery.bestItem.action, 'collect-runtime-proof-signals');
 assert.equal(runtimeSignalQuery.summary.runtimeProofMissingSignals.includes('network-trace-hash'), true);
+const translationRuntimeSignalQuery = queryUniversalConversionWorklist(runtimePlan, {
+  kind: 'collect-runtime-proof-signal',
+  translationRuntimeReadiness: runtimeRoute.translationAdmission.runtimeReadiness,
+  translationRuntimeAdapterRequirementId: runtimeRoute.translationAdmission.runtimeAdapterRequirementIds[0],
+  translationRuntimeProofObligationId: runtimeRoute.translationAdmission.runtimeProofObligationIds[0],
+  translationRuntimeProofMissingSignal: 'network-trace-hash'
+});
+assert.equal(translationRuntimeSignalQuery.found, true);
+assert.equal(translationRuntimeSignalQuery.summary.translationRuntimeProofMissingSignals.includes('network-trace-hash'), true);
 const satisfiedRuntimePlan = createUniversalConversionPlan({
   generatedAt: 804,
   universalCapabilityMatrix: readyCapabilityMatrix(),

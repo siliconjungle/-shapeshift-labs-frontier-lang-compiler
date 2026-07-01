@@ -1,15 +1,5 @@
 import { assert } from './helpers.mjs';
-import {
-  createSemanticResourceGraph,
-  createUniversalConversionArtifacts,
-  createUniversalEffectConstraintEvidence,
-  createUniversalConversionPlan,
-  createUniversalLifetimeConstraintEvidence,
-  createUniversalOwnershipConstraintEvidence,
-  createUniversalResourceTransferEvidence,
-  queryUniversalConversionArtifacts,
-  queryUniversalConversionPlan
-} from './compiler-api.mjs';
+import { createSemanticResourceGraph, createUniversalConversionArtifacts, createUniversalEffectConstraintEvidence, createUniversalConversionPlan, createUniversalConversionWorklist, createUniversalLifetimeConstraintEvidence, createUniversalOwnershipConstraintEvidence, createUniversalResourceTransferEvidence, queryUniversalConversionArtifacts, queryUniversalConversionPlan, queryUniversalConversionWorklist } from './compiler-api.mjs';
 
 const admittablePlan = conversionPlan({
   evidence: [routeProof('admittable')],
@@ -46,14 +36,15 @@ assert.equal(missingAdapterRoute.mode, 'semantic-index-only');
 assert.equal(missingAdapterRoute.translationAdmission.action, 'add-target-adapter');
 assert.equal(missingAdapterRoute.translationAdmission.missingEvidence.includes('translation-target-adapter'), true);
 
-const runtimeReviewRoute = queryUniversalConversionPlan(conversionPlan({
+const runtimeReviewPlan = conversionPlan({
   evidence: [routeProof('runtime_review', 'conversion-runtime-proof')],
   imports: [sourceImport()],
   runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'fetch' }]
-}), { translationAdmissionStatus: 'needs-evidence', runtimeProofMissingSignal: 'network-trace-hash' }).bestRoute;
-assert.equal(runtimeReviewRoute.translationAdmission.action, 'collect-translation-evidence');
-assert.equal(runtimeReviewRoute.translationAdmission.runtimeAdapterRequirementIds.length, 1);
+});
+const runtimeReviewRoute = queryUniversalConversionPlan(runtimeReviewPlan, { translationAdmissionStatus: 'needs-evidence', translationRuntimeProofMissingSignal: 'network-trace-hash' }).bestRoute;
+assert.equal(runtimeReviewRoute.translationAdmission.action, 'collect-translation-evidence'); assert.equal(runtimeReviewRoute.translationAdmission.runtimeAdapterRequirementIds.length, 1); assert.equal(runtimeReviewRoute.translationAdmission.runtimeProofObligationIds.length, 1);
 assert.equal(runtimeReviewRoute.translationAdmission.missingEvidence.includes('translation-runtime-adapter-proof'), false); assert.equal(runtimeReviewRoute.translationAdmission.runtimeProofMissingSignals.includes('network-trace-hash'), true);
+assert.equal(queryUniversalConversionPlan(runtimeReviewPlan, { translationRuntimeReadiness: runtimeReviewRoute.translationAdmission.runtimeReadiness, translationRuntimeAdapterRequirementId: runtimeReviewRoute.translationAdmission.runtimeAdapterRequirementIds[0], translationRuntimeProofObligationId: runtimeReviewRoute.translationAdmission.runtimeProofObligationIds[0] }).bestRoute.id, runtimeReviewRoute.id);
 
 const blockedRoute = queryUniversalConversionPlan(conversionPlan({
   evidence: [routeProof('runtime_blocked')],
@@ -188,6 +179,16 @@ assert.equal(artifacts.index.translationAdmissionStatuses.includes('admittable-f
 assert.equal(artifacts.index.requiredTranslationConstructKinds.includes('proof-evidence'), true);
 assert.equal(artifacts.index.evidenceReceiptIds.includes(artifact.evidenceReceipt.id), true);
 assert.equal(artifacts.index.evidenceReceiptProofEvidenceIds.includes('evidence_admittable_translation_proof'), true);
+
+const runtimeReviewArtifacts = createUniversalConversionArtifacts(runtimeReviewPlan, { routeId: runtimeReviewRoute.id, generatedAt: 799 });
+const runtimeReviewArtifact = queryUniversalConversionArtifacts(runtimeReviewArtifacts, { translationRuntimeProofMissingSignal: 'network-trace-hash', translationRuntimeAdapterRequirementId: runtimeReviewRoute.translationAdmission.runtimeAdapterRequirementIds[0], translationRuntimeProofObligationId: runtimeReviewRoute.translationAdmission.runtimeProofObligationIds[0] })[0];
+assert.equal(runtimeReviewArtifact.routeId, runtimeReviewRoute.id); assert.equal(runtimeReviewArtifacts.index.translationRuntimeReadinesses.includes(runtimeReviewRoute.translationAdmission.runtimeReadiness), true); assert.equal(runtimeReviewArtifacts.index.translationRuntimeAdapterRequirementIds.includes(runtimeReviewRoute.translationAdmission.runtimeAdapterRequirementIds[0]), true);
+assert.equal(runtimeReviewArtifacts.index.translationRuntimeProofObligationIds.includes(runtimeReviewRoute.translationAdmission.runtimeProofObligationIds[0]), true); assert.equal(runtimeReviewArtifacts.index.translationRuntimeProofMissingSignals.includes('network-trace-hash'), true);
+assert.equal(runtimeReviewArtifacts.summary.compactCounts.translationAdmission.runtimeAdapterRequirementIds[runtimeReviewRoute.translationAdmission.runtimeAdapterRequirementIds[0]], 1); assert.equal(runtimeReviewArtifacts.summary.compactCounts.translationAdmission.runtimeProofObligationIds[runtimeReviewRoute.translationAdmission.runtimeProofObligationIds[0]], 1); assert.equal(runtimeReviewArtifacts.summary.compactCounts.translationAdmission.runtimeProofMissingSignals['network-trace-hash'], 1);
+const runtimeReviewWorklist = createUniversalConversionWorklist(runtimeReviewPlan, { routeId: runtimeReviewRoute.id });
+const translationRuntimeWorkItem = queryUniversalConversionWorklist(runtimeReviewWorklist, { translationRuntimeProofMissingSignal: 'network-trace-hash', translationRuntimeAdapterRequirementId: runtimeReviewRoute.translationAdmission.runtimeAdapterRequirementIds[0] }).bestItem;
+assert.equal(Boolean(translationRuntimeWorkItem), true); assert.equal(runtimeReviewWorklist.summary.translationRuntimeProofMissingSignals.includes('network-trace-hash'), true);
+assert.equal(runtimeReviewWorklist.summary.translationRuntimeAdapterRequirementIds.includes(runtimeReviewRoute.translationAdmission.runtimeAdapterRequirementIds[0]), true);
 
 const degradedResourceArtifacts = createUniversalConversionArtifacts(degradedResourcePlan, { routeId: degradedResourceRoute.id, generatedAt: 797 });
 const degradedResourceArtifact = queryUniversalConversionArtifacts(degradedResourceArtifacts, {

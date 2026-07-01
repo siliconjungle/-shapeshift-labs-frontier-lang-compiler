@@ -30,37 +30,15 @@ import type { UniversalRuntimeCapabilityKind as URK, UniversalRuntimeProofSignal
 export type UniversalConversionSemanticEditIndexKey='semanticEditStatuses'|'semanticEditScriptIds'|'semanticEditProjectionIds'|'semanticEditReplayIds'|'semanticEditReplayStatuses'|'semanticEditReplayActions'|'semanticEditAdmissionStatuses'|'semanticEditAdmissionActions'|'semanticEditAdmissionReadinesses'|'semanticEditReplayCurrentHashes'|'semanticEditReplayOutputHashes'|'semanticEditKeys'|'semanticEditHashes'|'semanticIdentityHashes'|'sourceIdentityHashes'|'operationContentHashes'|'editContentHashes'|'sourceBackprojectionModes'|'semanticTransformIds'|'semanticTransformKeys'|'semanticTransformIdentityHashes'|'semanticTransformContentHashes'|'projectionIdentityHashes'|'semanticTransformReadinesses'|'semanticTransformEvidenceIds'|'transformSourceLanguages'|'transformTargetLanguages'|'transformSourcePaths'|'transformTargetPaths'|'transformCrossLanguages'|'transformSourceMapIds'|'transformSourceMapLinkIds'|'transformSourceMapMappingIds'|'transformBaseHashes'|'transformTargetHashes'|'targetPortabilityStatuses'|'targetPortabilityActions'|'targetPortabilityReasonCodes'|'semanticEditSidecarWarningCodes'|'semanticEditSidecarZeroRecordWarningCodes';
 export type UniversalConversionSemanticEditMetricKey='semanticEditSidecarQualityRecords'|'semanticEditSidecarSymbolCount'|'semanticEditSidecarOwnershipRegionCount'|'semanticEditSidecarPatchHintCount'|'semanticEditSidecarWarningCount'|'semanticEditSidecarZeroRecordWarningCount';
 type USEQK='semanticEditStatus'|'semanticEditStatuses'|'semanticEditScriptId'|'semanticEditScriptIds'|'semanticEditProjectionId'|'semanticEditProjectionIds'|'semanticEditReplayId'|'semanticEditReplayIds'|'semanticEditReplayStatus'|'semanticEditReplayStatuses'|'semanticEditReplayAction'|'semanticEditReplayActions'|'semanticEditAdmission'|'semanticEditAdmissionStatus'|'semanticEditAdmissionStatuses'|'semanticEditAdmissionAction'|'semanticEditAdmissionActions'|'semanticEditAdmissionReadiness'|'semanticEditAdmissionReadinesses'|'semanticEditReplayCurrentHash'|'semanticEditReplayCurrentHashes'|'semanticEditReplayOutputHash'|'semanticEditReplayOutputHashes'|'semanticEditKey'|'semanticEditKeys'|'semanticEditHash'|'semanticEditHashes'|'semanticIdentityHash'|'semanticIdentityHashes'|'sourceIdentityHash'|'sourceIdentityHashes'|'operationContentHash'|'operationContentHashes'|'editContentHash'|'editContentHashes'|'sourceBackprojectionMode'|'sourceBackprojectionModes'|'semanticTransformId'|'semanticTransformIds'|'semanticTransformKey'|'semanticTransformKeys'|'semanticTransformIdentityHash'|'semanticTransformIdentityHashes'|'semanticTransformContentHash'|'semanticTransformContentHashes'|'projectionIdentityHash'|'projectionIdentityHashes'|'semanticTransformReadiness'|'semanticTransformReadinesses'|'semanticTransformEvidenceId'|'semanticTransformEvidenceIds'|'transformSourceLanguage'|'transformSourceLanguages'|'transformTargetLanguage'|'transformTargetLanguages'|'transformSourcePath'|'transformSourcePaths'|'transformTargetPath'|'transformTargetPaths'|'transformCrossLanguage'|'transformCrossLanguages'|'transformSourceMapId'|'transformSourceMapIds'|'transformSourceMapLinkId'|'transformSourceMapLinkIds'|'transformSourceMapMappingId'|'transformSourceMapMappingIds'|'transformBaseHash'|'transformBaseHashes'|'transformTargetHash'|'transformTargetHashes'|'targetPortabilityStatus'|'targetPortabilityStatuses'|'targetPortabilityAction'|'targetPortabilityActions'|'targetPortabilityReasonCode'|'targetPortabilityReasonCodes'|'semanticEditSidecarWarningCode'|'semanticEditSidecarWarningCodes'|'semanticEditSidecarZeroRecordWarningCode'|'semanticEditSidecarZeroRecordWarningCodes';
+type UCAIK='routeIds'|'historyIds'|'patchBundleIds'|'admissionRecordIds'|'evidenceReceiptIds'|'languages'|'targets'|'modes'|'lossClasses'|'adapterIds'|'adapterKinds'|'routeMissingEvidence'|'runtimeAdapterRequirementIds'|'runtimeProofObligationIds'|'runtimeProofStatuses'|'blockers'|'reviewReasons'|'readinesses'|'admissionStatuses'|'admissionBuckets'|'admissionRisks'|'sourcePaths'|'sourceHashes'|'ownershipKeys'|'conflictKeys'|'evidenceIds'|'proofIds'|'evidenceReceiptEvidenceIds'|'evidenceReceiptProofEvidenceIds'|'evidenceReceiptMissingEvidence'|'evidenceReceiptRejectedReasons'|'evidenceReceiptRejectedIds';
+type UTAIK='translationAdmissionStatuses'|'translationAdmissionActions'|'missingTranslationEvidence'|'translationEvidenceIds'|'translationProofEvidenceIds'|'translationRuntimeReadinesses'|'translationRuntimeAdapterRequirementIds'|'translationRuntimeProofObligationIds'|'translationRuntimeProofMissingSignals'|'translationDialectReadinesses'|'translationDialectRecordIds'|'requiredTranslationConstructKinds'|'representedTranslationConstructKinds'|'targetAdapterIds';
+type UTDQK='translationRuntimeReadiness'|'translationRuntimeAdapterRequirementId'|'translationRuntimeProofObligationId'|'translationRuntimeProofMissingSignal'|'translationDialectReadiness'|'translationDialectRecordId';
 
-export interface UniversalConversionArtifactIndex extends USMI, URRI, Readonly<Record<UniversalConversionSemanticEditIndexKey, RS>>, Readonly<Record<UniversalConversionSemanticEditMetricKey, number>> {
-  readonly routeIds: RS;
-  readonly historyIds: RS;
-  readonly patchBundleIds: RS;
-  readonly admissionRecordIds: RS;
-  readonly evidenceReceiptIds: RS;
-  readonly languages: RS;
-  readonly targets: RS;
-  readonly modes: RS;
-  readonly lossClasses: RS;
-  readonly adapterIds: RS;
-  readonly adapterKinds: RS;
-  readonly routeMissingEvidence: RS; readonly runtimeAdapterRequirementIds: RS;
-  readonly runtimeProofObligationIds: RS; readonly runtimeProofCapabilities: readonly URK[]; readonly runtimeProofStatuses: RS; readonly runtimeProofRequiredSignals: readonly UPS[]; readonly runtimeProofProvidedSignals: readonly UPS[]; readonly runtimeProofMissingSignals: readonly UPS[];
-  readonly blockers: RS; readonly reviewReasons: RS;
-  readonly readinesses: RS;
-  readonly admissionStatuses: RS;
-  readonly admissionBuckets: RS;
-  readonly admissionRisks: RS;
+export interface UniversalConversionArtifactIndex extends USMI, URRI, Readonly<Record<UniversalConversionSemanticEditIndexKey|UCAIK|UTAIK, RS>>, Readonly<Record<UniversalConversionSemanticEditMetricKey, number>> {
+  readonly runtimeProofCapabilities: readonly URK[]; readonly runtimeProofRequiredSignals: readonly UPS[]; readonly runtimeProofProvidedSignals: readonly UPS[]; readonly runtimeProofMissingSignals: readonly UPS[];
   readonly admissionRecordInterlinguaRecordIds: RS; readonly admissionRecordInterlinguaLoweringDispositions: RS;
   readonly admissionRecordInterlinguaConstraintFamilies: RS; readonly admissionRecordInterlinguaConstraintStatuses: RS; readonly admissionRecordInterlinguaConstraintActions: RS; readonly admissionRecordInterlinguaConstraintSourceIds: RS; readonly admissionRecordInterlinguaConstraintEvidenceIds: RS;
   readonly admissionRecordInterlinguaConstraintRequiredKinds: RS; readonly admissionRecordInterlinguaConstraintRepresentedKinds: RS; readonly admissionRecordInterlinguaConstraintMissingKinds: RS; readonly admissionRecordInterlinguaConstraintMissingEvidence: RS; readonly admissionRecordInterlinguaConstraintObligationKinds: RS; readonly admissionRecordInterlinguaConstraintObligationStatuses: RS; readonly admissionRecordInterlinguaConstraintObligationEvidenceIds: RS; readonly admissionRecordInterlinguaConstraintObligationMissingEvidence: RS;
-  readonly sourcePaths: RS;
-  readonly sourceHashes: RS;
-  readonly ownershipKeys: RS;
-  readonly conflictKeys: RS;
-  readonly evidenceIds: RS;
-  readonly proofIds: RS;
-  readonly evidenceReceiptEvidenceIds: RS; readonly evidenceReceiptProofEvidenceIds: RS; readonly evidenceReceiptMissingEvidence: RS;
-  readonly evidenceReceiptRejectedReasons: RS; readonly evidenceReceiptRejectedIds: RS;
   readonly evidenceReceiptInterlinguaRecordIds: RS; readonly evidenceReceiptInterlinguaLoweringDispositions: RS; readonly evidenceReceiptInterlinguaConstraintFamilies: RS; readonly evidenceReceiptInterlinguaConstraintStatuses: RS; readonly evidenceReceiptInterlinguaConstraintActions: RS; readonly evidenceReceiptInterlinguaConstraintSourceIds: RS; readonly evidenceReceiptInterlinguaConstraintEvidenceIds: RS; readonly evidenceReceiptInterlinguaConstraintRequiredKinds: RS; readonly evidenceReceiptInterlinguaConstraintRepresentedKinds: RS; readonly evidenceReceiptInterlinguaConstraintMissingKinds: RS; readonly evidenceReceiptInterlinguaConstraintMissingEvidence: RS; readonly evidenceReceiptInterlinguaConstraintObligationKinds: RS; readonly evidenceReceiptInterlinguaConstraintObligationStatuses: RS; readonly evidenceReceiptInterlinguaConstraintObligationEvidenceIds: RS; readonly evidenceReceiptInterlinguaConstraintObligationMissingEvidence: RS;
   readonly semanticOperationIds: RS; readonly semanticOperationKinds: RS;
   readonly semanticOperationInterlinguaRecordIds: RS; readonly semanticOperationInterlinguaLoweringDispositions: RS; readonly semanticOperationInterlinguaMissingEvidence: RS; readonly semanticOperationInterlinguaProofEvidenceIds: RS;
@@ -68,14 +46,6 @@ export interface UniversalConversionArtifactIndex extends USMI, URRI, Readonly<R
   readonly representationConstructKinds: RS;
   readonly runtimeCapabilities: RS;
   readonly sourceMapPrecisions: RS;
-  readonly translationAdmissionStatuses: RS;
-  readonly translationAdmissionActions: RS;
-  readonly missingTranslationEvidence: RS;
-  readonly translationEvidenceIds: RS;
-  readonly translationProofEvidenceIds: RS;
-  readonly requiredTranslationConstructKinds: RS;
-  readonly representedTranslationConstructKinds: RS;
-  readonly targetAdapterIds: RS;
   readonly resourceTransferStatuses: RS;
   readonly resourceTransferActions: RS;
   readonly resourceTransferMissingEvidence: RS;
@@ -163,7 +133,7 @@ export interface UniversalConversionArtifactIndex extends USMI, URRI, Readonly<R
   readonly transformIdentityHashes: RS;
 }
 
-export interface UniversalConversionArtifactQuery extends USMQ, URRQ, UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalCallableBoundaryConstraintQuery, UniversalAdtPatternConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalHostEnvironmentConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalNumericSemanticsConstraintQuery, UniversalTextSemanticsConstraintQuery, UniversalCollectionSemanticsConstraintQuery, UniversalSerializationSemanticsConstraintQuery, UniversalDependencySemanticsConstraintQuery, UniversalObjectModelConstraintQuery, UniversalProtocolConstraintQuery, UniversalTypeConstraintQuery, Readonly<Partial<Record<USEQK, QS|boolean>>> {
+export interface UniversalConversionArtifactQuery extends USMQ, URRQ, UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalCallableBoundaryConstraintQuery, UniversalAdtPatternConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalHostEnvironmentConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalNumericSemanticsConstraintQuery, UniversalTextSemanticsConstraintQuery, UniversalCollectionSemanticsConstraintQuery, UniversalSerializationSemanticsConstraintQuery, UniversalDependencySemanticsConstraintQuery, UniversalObjectModelConstraintQuery, UniversalProtocolConstraintQuery, UniversalTypeConstraintQuery, Readonly<Partial<Record<USEQK, QS|boolean>>>, Readonly<Partial<Record<UTDQK, QS>>> {
   readonly routeId?: QS;
   readonly historyId?: QS;
   readonly patchBundleId?: QS;

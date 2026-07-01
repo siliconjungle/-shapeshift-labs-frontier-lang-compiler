@@ -1,5 +1,6 @@
 import { countBy } from './native-import-utils.js';
 import { artifactSourceMapCounts as smc } from './universal-conversion-artifact-source-maps.js'; import { artifactRuntimeRouteCounts as rrc } from './universal-conversion-artifact-runtime-routes.js'; import { semanticEditRecordsCounts as sec } from './universal-conversion-artifact-semantic-edit.js';
+import { compactTranslationAdmissionCounts } from './universal-conversion-translation-admission-denominators.js';
 
 const aiKeys = 'Families Statuses Actions SourceIds EvidenceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationEvidenceIds ObligationMissingEvidence'.split(' ');
 
@@ -220,17 +221,6 @@ function compactRuntimeProofCounts(routeArtifacts, receipts) {
     receiptRecords: receiptRecords.length,
     receiptByStatus: countBy(receiptRecords.map((record) => record.status)),
     receiptMissingEvidence: countBy(receiptRecords.flatMap((record) => record.missingEvidence ?? []))
-  };
-}
-
-function compactTranslationAdmissionCounts(admissions) {
-  return {
-    byStatus: countBy(admissions.map((admission) => admission.status)),
-    byAction: countBy(admissions.map((admission) => admission.action)),
-    missingEvidence: countBy(admissions.flatMap((admission) => admission.missingEvidence ?? [])),
-    proofEvidenceIds: countBy(admissions.flatMap((admission) => admission.proofEvidenceIds ?? [])),
-    runtimeReadiness: countBy(admissions.map((admission) => admission.runtimeReadiness)),
-    dialectReadiness: countBy(admissions.map((admission) => admission.dialectReadiness))
   };
 }
 

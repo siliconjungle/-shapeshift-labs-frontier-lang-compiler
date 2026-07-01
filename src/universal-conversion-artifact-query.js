@@ -3,6 +3,7 @@ import{artifactSemanticEditIndex as esi,mergeSemanticEditIndexes as mse,workItem
 import{artifactSourceMapIndex as smi,artifactSourceMapMatches as smm}from './universal-conversion-artifact-source-maps.js';
 import{rri,rrm}from './universal-conversion-artifact-runtime-routes.js';
 import{artifactConstraintIndex as aci,artifactConstraintsMatch as acm}from './universal-conversion-artifact-constraints.js';
+import{translationAdmissionDenominatorIndex as tadi,translationAdmissionDenominatorMatches as tadm}from './universal-conversion-translation-admission-denominators.js';
 import{interlinguaRecordMatches as irm}from './universal-interlingua-record.js';
 const ai='admissionRecordInterlingua',eri='evidenceReceiptInterlingua',soi='semanticOperationInterlingua';
 const aiFields=[['ConstraintFamilies','ConstraintFamily','interlinguaConstraintFamilies'],['ConstraintStatuses','ConstraintStatus','interlinguaConstraintStatuses'],['ConstraintActions','ConstraintAction','interlinguaConstraintActions'],['ConstraintSourceIds','ConstraintSourceId','interlinguaConstraintSourceIds'],['ConstraintEvidenceIds','ConstraintEvidenceId','interlinguaConstraintEvidenceIds'],['ConstraintRequiredKinds','ConstraintRequiredKind','interlinguaConstraintRequiredKinds'],['ConstraintRepresentedKinds','ConstraintRepresentedKind','interlinguaConstraintRepresentedKinds'],['ConstraintMissingKinds','ConstraintMissingKind','interlinguaConstraintMissingKinds'],['ConstraintMissingEvidence','ConstraintMissingEvidence','interlinguaConstraintMissingEvidence'],['ConstraintObligationKinds','ConstraintObligationKind','interlinguaConstraintObligationKinds'],['ConstraintObligationStatuses','ConstraintObligationStatus','interlinguaConstraintObligationStatuses'],['ConstraintObligationEvidenceIds','ConstraintObligationEvidenceId','interlinguaConstraintObligationEvidenceIds'],['ConstraintObligationMissingEvidence','ConstraintObligationMissingEvidence','interlinguaConstraintObligationMissingEvidence']];
@@ -77,6 +78,7 @@ export function artifactIndex(a) {
     missingTranslationEvidence: u(tAdmissions.flatMap((r) => r.missingEvidence ?? [])),
     translationEvidenceIds: u(tAdmissions.flatMap((r) => r.evidenceIds ?? [])),
     translationProofEvidenceIds: u(tAdmissions.flatMap((r) => r.proofEvidenceIds ?? [])),
+    ...tadi(tAdmissions),
     requiredTranslationConstructKinds: u(tAdmissions.flatMap((r) => r.requiredConstructKinds ?? [])),
     representedTranslationConstructKinds: u(tAdmissions.flatMap((r) => r.representedConstructKinds ?? [])),
     targetAdapterIds: u(tAdmissions.map((r) => r.targetAdapterId)),
@@ -151,6 +153,7 @@ function matchesArtifact(record, query) {
     && match(query.missingTranslationEvidence, tAdm(record).missingEvidence)
     && match(query.translationEvidenceId, tAdm(record).evidenceIds)
     && match(query.translationProofEvidenceId, tAdm(record).proofEvidenceIds)
+    && tadm(tadi([tAdm(record)]), query, match)
     && match(query.requiredTranslationConstructKind, tAdm(record).requiredConstructKinds)
     && match(query.representedTranslationConstructKind, tAdm(record).representedConstructKinds)
     && match(query.targetAdapterId, [tAdm(record).targetAdapterId])

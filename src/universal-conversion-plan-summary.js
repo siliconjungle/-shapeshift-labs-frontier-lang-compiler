@@ -1,4 +1,5 @@
 import { countBy } from './native-import-utils.js';
+import { compactTranslationAdmissionCounts } from './universal-conversion-translation-admission-denominators.js';
 
 const interlinguaCountKeys = 'Families Statuses Actions SourceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationMissingEvidence'.split(' ');
 
@@ -76,18 +77,6 @@ function compactRouteCounts(routes) {
     },
     translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
     interlingua: compactInterlinguaCounts(interlinguaRecords)
-  };
-}
-
-function compactTranslationAdmissionCounts(admissions) {
-  return {
-    byStatus: countBy(admissions.map((admission) => admission.status)),
-    byAction: countBy(admissions.map((admission) => admission.action)),
-    missingEvidence: countBy(admissions.flatMap((admission) => admission.missingEvidence ?? [])),
-    proofEvidenceIds: countBy(admissions.flatMap((admission) => admission.proofEvidenceIds ?? [])),
-    runtimeReadiness: countBy(admissions.map((admission) => admission.runtimeReadiness)),
-    runtimeProofMissingSignals: countBy(admissions.flatMap((admission) => admission.runtimeProofMissingSignals ?? [])),
-    dialectReadiness: countBy(admissions.map((admission) => admission.dialectReadiness))
   };
 }
 

@@ -1,8 +1,12 @@
 import { assert } from './helpers.mjs';
 import {
+  createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  createUniversalConversionWorklist,
   createUniversalDialectRegistry,
-  queryUniversalConversionPlan
+  queryUniversalConversionArtifacts,
+  queryUniversalConversionPlan,
+  queryUniversalConversionWorklist
 } from './compiler-api.mjs';
 
 const blockedRegistry = createUniversalDialectRegistry({
@@ -35,6 +39,29 @@ assert.equal(blockedRoute.representation.surfaces.dialect.recordIds.includes('di
 assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectReadiness: 'blocked' }).bestRoute.id, blockedRoute.id);
 assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectConstructKind: 'runtime' }).bestRoute.id, blockedRoute.id);
 assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectRecordId: 'dialect_js_process_env_to_rust' }).bestRoute.id, blockedRoute.id);
+assert.equal(blockedRoute.translationAdmission.dialectReadiness, 'blocked');
+assert.equal(blockedRoute.translationAdmission.dialectRecordIds.includes('dialect_js_process_env_to_rust'), true);
+assert.equal(queryUniversalConversionPlan(blockedPlan, {
+  translationDialectReadiness: 'blocked',
+  translationDialectRecordId: 'dialect_js_process_env_to_rust'
+}).bestRoute.id, blockedRoute.id);
+const blockedArtifacts = createUniversalConversionArtifacts(blockedPlan, { routeId: blockedRoute.id, generatedAt: 794 });
+const blockedArtifact = queryUniversalConversionArtifacts(blockedArtifacts, {
+  translationDialectReadiness: 'blocked',
+  translationDialectRecordId: 'dialect_js_process_env_to_rust'
+})[0];
+assert.equal(blockedArtifact.routeId, blockedRoute.id);
+assert.equal(blockedArtifacts.index.translationDialectReadinesses.includes('blocked'), true);
+assert.equal(blockedArtifacts.index.translationDialectRecordIds.includes('dialect_js_process_env_to_rust'), true);
+assert.equal(blockedArtifacts.summary.compactCounts.translationAdmission.dialectRecordIds.dialect_js_process_env_to_rust, 1);
+const blockedWorklist = createUniversalConversionWorklist(blockedPlan, { routeId: blockedRoute.id });
+const blockedDialectItem = queryUniversalConversionWorklist(blockedWorklist, {
+  translationDialectReadiness: 'blocked',
+  translationDialectRecordId: 'dialect_js_process_env_to_rust'
+}).bestItem;
+assert.equal(Boolean(blockedDialectItem), true);
+assert.equal(blockedWorklist.summary.translationDialectReadinesses.includes('blocked'), true);
+assert.equal(blockedWorklist.summary.translationDialectRecordIds.includes('dialect_js_process_env_to_rust'), true);
 
 const reviewRegistry = createUniversalDialectRegistry({
   id: 'dialect_registry_review_js_generator',
