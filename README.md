@@ -1107,6 +1107,7 @@ const loweringGaps = queryUniversalConversionPlan(conversionPlan, {
   interlinguaMissingEvidence: 'translation-target-adapter'
 });
 console.log(loweringGaps.routes.map((route) => route.interlingua.id));
+console.log(conversionPlan.summary.compactCounts.interlingua.constraintObligationMissingEvidence); // plan-level interlingua proof gaps
 
 const conversionWorklist = createUniversalConversionWorklist(conversionPlan, {
   target: 'rust'

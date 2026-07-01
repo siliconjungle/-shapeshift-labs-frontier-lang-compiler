@@ -116,6 +116,10 @@ const borrowAwaitObligation = constraintRoute.interlingua.constraints.obligation
 assert.equal(borrowAwaitObligation.status, 'missing');
 assert.equal(borrowAwaitObligation.family, 'borrow-scope');
 assert.equal(borrowAwaitObligation.missingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
+assert.equal(constraintPlan.summary.compactCounts.interlingua.constraintFamilies['borrow-scope'], 1);
+assert.equal(constraintPlan.summary.compactCounts.interlingua.constraintMissingKinds['borrow-across-await'], 1);
+assert.equal(constraintPlan.summary.compactCounts.interlingua.constraintObligationStatuses.missing, 1);
+assert.equal(constraintPlan.summary.compactCounts.interlingua.constraintObligationMissingEvidence['translation-borrow-scope:borrow-across-await'], 1);
 const constraintArtifacts = createUniversalConversionArtifacts(constraintPlan, { routeId: constraintRoute.id, generatedAt: 800 });
 assert.equal(constraintArtifacts.index.interlinguaConstraintFamilies.includes('borrow-scope'), true);
 assert.equal(constraintArtifacts.index.interlinguaConstraintMissingKinds.includes('borrow-across-await'), true);
