@@ -48,6 +48,7 @@ export interface UniversalConversionEvidenceReceiptCompactCounts {
   readonly interlinguaConstraintByStatus: Readonly<Record<string, number>>;
   readonly interlinguaConstraintActions: Readonly<Record<string, number>>;
   readonly interlinguaConstraintSourceIds: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintEvidenceIds: Readonly<Record<string, number>>;
   readonly interlinguaConstraintRequiredKinds: Readonly<Record<string, number>>;
   readonly interlinguaConstraintRepresentedKinds: Readonly<Record<string, number>>;
   readonly interlinguaConstraintMissingKinds: Readonly<Record<string, number>>;
@@ -85,6 +86,7 @@ export interface UniversalConversionInterlinguaCompactCounts {
   readonly constraintStatuses: Readonly<Record<string, number>>;
   readonly constraintActions: Readonly<Record<string, number>>;
   readonly constraintSourceIds: Readonly<Record<string, number>>;
+  readonly constraintEvidenceIds: Readonly<Record<string, number>>;
   readonly constraintRequiredKinds: Readonly<Record<string, number>>;
   readonly constraintRepresentedKinds: Readonly<Record<string, number>>;
   readonly constraintMissingKinds: Readonly<Record<string, number>>;
@@ -105,6 +107,7 @@ export interface UniversalConversionAdmissionRecordInterlinguaCompactCounts {
   readonly constraintStatuses: Readonly<Record<string, number>>;
   readonly constraintActions: Readonly<Record<string, number>>;
   readonly constraintSourceIds: Readonly<Record<string, number>>;
+  readonly constraintEvidenceIds: Readonly<Record<string, number>>;
   readonly constraintRequiredKinds: Readonly<Record<string, number>>;
   readonly constraintRepresentedKinds: Readonly<Record<string, number>>;
   readonly constraintMissingKinds: Readonly<Record<string, number>>;

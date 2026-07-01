@@ -1,44 +1,30 @@
-import type {
-  FrontierSourceLanguage,
-  SemanticMergeReadiness
-} from '@shapeshift-labs/frontier-lang-kernel';
+import type { FrontierSourceLanguage, SemanticMergeReadiness } from '@shapeshift-labs/frontier-lang-kernel';
 import type { FrontierCompileTarget } from './compile.js';
-import type {
-  UniversalConversionAdmissionAction,
-  UniversalConversionPriority,
-  UniversalConversionRouteAction,
-  UniversalConversionRouteMode,
-  UniversalConversionRisk,
-  UniversalTranslationAdmissionAction,
-  UniversalTranslationAdmissionStatus
-} from './universal-conversion-plan.js';
-import type {
-  UniversalConversionArtifactAdmissionBucket,
-  UniversalConversionArtifactAdmissionStatus
-} from './universal-conversion-artifacts.js';
-import type { UniversalRepresentationCoverageQuery } from './universal-representation-coverage.js';
-import type { UniversalInterlinguaQuery } from './universal-interlingua.js';
-import type { UniversalResourceTransferQuery } from './universal-resource-transfer.js';
-import type { UniversalLifetimeConstraintQuery } from './universal-lifetime-constraints.js';
-import type { UniversalControlFlowConstraintQuery } from './universal-control-flow-constraints.js';
-import type { UniversalCallableBoundaryConstraintQuery } from './universal-callable-boundary-constraints.js';
-import type { UniversalAdtPatternConstraintQuery } from './universal-adt-pattern-constraints.js';
-import type { UniversalBorrowScopeConstraintQuery } from './universal-borrow-scope-constraints.js';
-import type { UniversalBorrowCheckerConstraintQuery } from './universal-borrow-checker-constraints.js';
-import type { UniversalDataLayoutConstraintQuery } from './universal-data-layout-constraints.js';
-import type { UniversalEffectConstraintQuery } from './universal-effect-constraints.js';
-import type { UniversalConcurrencyModelConstraintQuery } from './universal-concurrency-model-constraints.js';
-import type { UniversalErrorModelConstraintQuery } from './universal-error-model-constraints.js';
-import type { UniversalEvaluationModelConstraintQuery } from './universal-evaluation-model-constraints.js';
-import type { UniversalHostEnvironmentConstraintQuery } from './universal-host-environment-constraints.js';
-import type { UniversalMemoryModelConstraintQuery } from './universal-memory-model-constraints.js';
-import type { UniversalMetaprogrammingConstraintQuery } from './universal-metaprogramming-constraints.js';
-import type { UniversalScopeBindingConstraintQuery } from './universal-scope-binding-constraints.js';
+import type { UniversalConversionAdmissionAction, UniversalConversionPriority, UniversalConversionRouteAction, UniversalConversionRouteMode, UniversalConversionRisk, UniversalTranslationAdmissionAction, UniversalTranslationAdmissionStatus } from './universal-conversion-plan.js';
+import type { UniversalConversionArtifactAdmissionBucket, UniversalConversionArtifactAdmissionStatus } from './universal-conversion-artifacts.js';
+import type{UniversalRepresentationCoverageQuery}from './universal-representation-coverage.js';
+import type{UniversalInterlinguaQuery}from './universal-interlingua.js';
+import type{UniversalResourceTransferQuery}from './universal-resource-transfer.js';
+import type{UniversalLifetimeConstraintQuery}from './universal-lifetime-constraints.js';
+import type{UniversalControlFlowConstraintQuery}from './universal-control-flow-constraints.js';
+import type{UniversalCallableBoundaryConstraintQuery}from './universal-callable-boundary-constraints.js';
+import type{UniversalAdtPatternConstraintQuery}from './universal-adt-pattern-constraints.js';
+import type{UniversalBorrowScopeConstraintQuery}from './universal-borrow-scope-constraints.js';
+import type{UniversalBorrowCheckerConstraintQuery}from './universal-borrow-checker-constraints.js';
+import type{UniversalDataLayoutConstraintQuery}from './universal-data-layout-constraints.js';
+import type{UniversalEffectConstraintQuery}from './universal-effect-constraints.js';
+import type{UniversalConcurrencyModelConstraintQuery}from './universal-concurrency-model-constraints.js';
+import type{UniversalErrorModelConstraintQuery}from './universal-error-model-constraints.js';
+import type{UniversalEvaluationModelConstraintQuery}from './universal-evaluation-model-constraints.js';
+import type{UniversalHostEnvironmentConstraintQuery}from './universal-host-environment-constraints.js';
+import type{UniversalMemoryModelConstraintQuery}from './universal-memory-model-constraints.js';
+import type{UniversalMetaprogrammingConstraintQuery}from './universal-metaprogramming-constraints.js';
+import type{UniversalScopeBindingConstraintQuery}from './universal-scope-binding-constraints.js';
 import type { UniversalModuleConstraintQuery } from './universal-module-constraints.js'; import type { UniversalNumericSemanticsConstraintQuery } from './universal-numeric-semantics-constraints.js'; import type { UniversalTextSemanticsConstraintQuery } from './universal-text-semantics-constraints.js'; import type { UniversalCollectionSemanticsConstraintQuery } from './universal-collection-semantics-constraints.js'; import type { UniversalSerializationSemanticsConstraintQuery } from './universal-serialization-semantics-constraints.js'; import type { UniversalDependencySemanticsConstraintQuery } from './universal-dependency-semantics-constraints.js';
 import type { UniversalObjectModelConstraintQuery } from './universal-object-model-constraints.js';
 import type { UniversalProtocolConstraintQuery } from './universal-protocol-constraints.js';
 import type { UniversalTypeConstraintQuery } from './universal-type-constraints.js';
-import type { UniversalRuntimeCapabilityKind as URK, UniversalRuntimeProofSignalKind as UPS } from './universal-runtime-capabilities.js'; type RS = readonly string[]; type QS = string | RS;
+import type { UniversalRuntimeCapabilityKind as URK, UniversalRuntimeProofSignalKind as UPS } from './universal-runtime-capabilities.js'; type RS=readonly string[]; type QS=string|RS;
 
 export interface UniversalConversionArtifactIndex {
   readonly routeIds: RS;
@@ -60,7 +46,7 @@ export interface UniversalConversionArtifactIndex {
   readonly admissionBuckets: RS;
   readonly admissionRisks: RS;
   readonly admissionRecordInterlinguaRecordIds: RS; readonly admissionRecordInterlinguaLoweringDispositions: RS;
-  readonly admissionRecordInterlinguaConstraintFamilies: RS; readonly admissionRecordInterlinguaConstraintStatuses: RS; readonly admissionRecordInterlinguaConstraintActions: RS; readonly admissionRecordInterlinguaConstraintSourceIds: RS;
+  readonly admissionRecordInterlinguaConstraintFamilies: RS; readonly admissionRecordInterlinguaConstraintStatuses: RS; readonly admissionRecordInterlinguaConstraintActions: RS; readonly admissionRecordInterlinguaConstraintSourceIds: RS; readonly admissionRecordInterlinguaConstraintEvidenceIds: RS;
   readonly admissionRecordInterlinguaConstraintRequiredKinds: RS; readonly admissionRecordInterlinguaConstraintRepresentedKinds: RS; readonly admissionRecordInterlinguaConstraintMissingKinds: RS; readonly admissionRecordInterlinguaConstraintMissingEvidence: RS; readonly admissionRecordInterlinguaConstraintObligationKinds: RS; readonly admissionRecordInterlinguaConstraintObligationStatuses: RS; readonly admissionRecordInterlinguaConstraintObligationEvidenceIds: RS; readonly admissionRecordInterlinguaConstraintObligationMissingEvidence: RS;
   readonly sourcePaths: RS;
   readonly sourceHashes: RS;
@@ -70,7 +56,7 @@ export interface UniversalConversionArtifactIndex {
   readonly proofIds: RS;
   readonly evidenceReceiptEvidenceIds: RS; readonly evidenceReceiptProofEvidenceIds: RS; readonly evidenceReceiptMissingEvidence: RS;
   readonly evidenceReceiptRejectedReasons: RS; readonly evidenceReceiptRejectedIds: RS;
-  readonly evidenceReceiptInterlinguaRecordIds: RS; readonly evidenceReceiptInterlinguaLoweringDispositions: RS; readonly evidenceReceiptInterlinguaConstraintFamilies: RS; readonly evidenceReceiptInterlinguaConstraintStatuses: RS; readonly evidenceReceiptInterlinguaConstraintActions: RS; readonly evidenceReceiptInterlinguaConstraintSourceIds: RS; readonly evidenceReceiptInterlinguaConstraintRequiredKinds: RS; readonly evidenceReceiptInterlinguaConstraintRepresentedKinds: RS; readonly evidenceReceiptInterlinguaConstraintMissingKinds: RS; readonly evidenceReceiptInterlinguaConstraintMissingEvidence: RS; readonly evidenceReceiptInterlinguaConstraintObligationKinds: RS; readonly evidenceReceiptInterlinguaConstraintObligationStatuses: RS; readonly evidenceReceiptInterlinguaConstraintObligationEvidenceIds: RS; readonly evidenceReceiptInterlinguaConstraintObligationMissingEvidence: RS;
+  readonly evidenceReceiptInterlinguaRecordIds: RS; readonly evidenceReceiptInterlinguaLoweringDispositions: RS; readonly evidenceReceiptInterlinguaConstraintFamilies: RS; readonly evidenceReceiptInterlinguaConstraintStatuses: RS; readonly evidenceReceiptInterlinguaConstraintActions: RS; readonly evidenceReceiptInterlinguaConstraintSourceIds: RS; readonly evidenceReceiptInterlinguaConstraintEvidenceIds: RS; readonly evidenceReceiptInterlinguaConstraintRequiredKinds: RS; readonly evidenceReceiptInterlinguaConstraintRepresentedKinds: RS; readonly evidenceReceiptInterlinguaConstraintMissingKinds: RS; readonly evidenceReceiptInterlinguaConstraintMissingEvidence: RS; readonly evidenceReceiptInterlinguaConstraintObligationKinds: RS; readonly evidenceReceiptInterlinguaConstraintObligationStatuses: RS; readonly evidenceReceiptInterlinguaConstraintObligationEvidenceIds: RS; readonly evidenceReceiptInterlinguaConstraintObligationMissingEvidence: RS;
   readonly semanticOperationIds: RS; readonly semanticOperationKinds: RS;
   readonly semanticOperationInterlinguaRecordIds: RS; readonly semanticOperationInterlinguaLoweringDispositions: RS; readonly semanticOperationInterlinguaMissingEvidence: RS; readonly semanticOperationInterlinguaProofEvidenceIds: RS;
   readonly semanticOperationInterlinguaConstraintActions: RS; readonly semanticOperationInterlinguaConstraintSourceIds: RS; readonly semanticOperationInterlinguaConstraintRequiredKinds: RS; readonly semanticOperationInterlinguaConstraintRepresentedKinds: RS;
@@ -200,52 +186,52 @@ export interface UniversalConversionArtifactIndex {
   readonly interlinguaConstraintRepresentedKinds: RS;
   readonly interlinguaConstraintMissingKinds: RS;
   readonly interlinguaConstraintMissingEvidence: RS;
-  readonly interlinguaConstraintSourceIds: RS; readonly interlinguaConstraintObligationKinds: RS; readonly interlinguaConstraintObligationStatuses: RS; readonly interlinguaConstraintObligationMissingEvidence: RS;
+  readonly interlinguaConstraintSourceIds: RS; readonly interlinguaConstraintEvidenceIds: RS; readonly interlinguaConstraintObligationKinds: RS; readonly interlinguaConstraintObligationStatuses: RS; readonly interlinguaConstraintObligationEvidenceIds: RS; readonly interlinguaConstraintObligationMissingEvidence: RS;
   readonly transformIdentityHashes: RS;
 }
 
 export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalCallableBoundaryConstraintQuery, UniversalAdtPatternConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalHostEnvironmentConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalNumericSemanticsConstraintQuery, UniversalTextSemanticsConstraintQuery, UniversalCollectionSemanticsConstraintQuery, UniversalSerializationSemanticsConstraintQuery, UniversalDependencySemanticsConstraintQuery, UniversalObjectModelConstraintQuery, UniversalProtocolConstraintQuery, UniversalTypeConstraintQuery {
-  readonly routeId?: string | RS;
-  readonly historyId?: string | RS;
-  readonly patchBundleId?: string | RS;
-  readonly admissionRecordId?: string | RS;
-  readonly evidenceReceiptId?: string | RS;
+  readonly routeId?: QS;
+  readonly historyId?: QS;
+  readonly patchBundleId?: QS;
+  readonly admissionRecordId?: QS;
+  readonly evidenceReceiptId?: QS;
   readonly sourceLanguage?: FrontierSourceLanguage | string | RS;
   readonly target?: FrontierCompileTarget | string | RS;
   readonly mode?: UniversalConversionRouteMode | RS;
-  readonly lossClass?: string | RS;
-  readonly adapterId?: string | RS;
-  readonly adapterKind?: string | RS;
-  readonly routeMissingEvidence?: string | RS; readonly runtimeAdapterRequirementId?: string | RS;
-  readonly runtimeProofObligationId?: string | RS; readonly runtimeProofCapability?: URK | readonly URK[]; readonly runtimeProofStatus?: string | RS; readonly runtimeProofRequiredSignal?: UPS | readonly UPS[]; readonly runtimeProofProvidedSignal?: UPS | readonly UPS[]; readonly runtimeProofMissingSignal?: UPS | readonly UPS[];
-  readonly blocker?: string | RS;
-  readonly reviewReason?: string | RS;
+  readonly lossClass?: QS;
+  readonly adapterId?: QS;
+  readonly adapterKind?: QS;
+  readonly routeMissingEvidence?: QS; readonly runtimeAdapterRequirementId?: QS;
+  readonly runtimeProofObligationId?: QS; readonly runtimeProofCapability?: URK | readonly URK[]; readonly runtimeProofStatus?: QS; readonly runtimeProofRequiredSignal?: UPS | readonly UPS[]; readonly runtimeProofProvidedSignal?: UPS | readonly UPS[]; readonly runtimeProofMissingSignal?: UPS | readonly UPS[];
+  readonly blocker?: QS;
+  readonly reviewReason?: QS;
   readonly readiness?: SemanticMergeReadiness | string | RS;
   readonly admissionAction?: UniversalConversionAdmissionAction | RS;
   readonly admissionStatus?: UniversalConversionArtifactAdmissionStatus | RS;
   readonly admissionBucket?: UniversalConversionArtifactAdmissionBucket | RS;
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus | RS;
   readonly translationAdmissionAction?: UniversalTranslationAdmissionAction | RS;
-  readonly missingTranslationEvidence?: string | RS;
-  readonly translationEvidenceId?: string | RS;
-  readonly translationProofEvidenceId?: string | RS;
-  readonly requiredTranslationConstructKind?: string | RS;
-  readonly representedTranslationConstructKind?: string | RS;
-  readonly targetAdapterId?: string | RS;
-  readonly risk?: UniversalConversionRisk | string | RS;
+  readonly missingTranslationEvidence?: QS;
+  readonly translationEvidenceId?: QS;
+  readonly translationProofEvidenceId?: QS;
+  readonly requiredTranslationConstructKind?: QS;
+  readonly representedTranslationConstructKind?: QS;
+  readonly targetAdapterId?: QS;
+  readonly risk?: UniversalConversionRisk | QS;
   readonly priority?: UniversalConversionPriority | RS;
   readonly routeAction?: UniversalConversionRouteAction | RS;
-  readonly sourcePath?: string | RS;
-  readonly sourceHash?: string | RS;
-  readonly ownershipKey?: string | RS;
-  readonly conflictKey?: string | RS;
-  readonly evidenceId?: string | RS;
-  readonly proofId?: string | RS;
-  readonly evidenceReceiptEvidenceId?: string | RS; readonly evidenceReceiptProofEvidenceId?: string | RS; readonly evidenceReceiptMissingEvidence?: string | RS;
-  readonly evidenceReceiptRejectedReason?: string | RS; readonly evidenceReceiptRejectedId?: string | RS;
-  readonly evidenceReceiptInterlinguaRecordId?: QS; readonly evidenceReceiptInterlinguaLoweringDisposition?: QS; readonly evidenceReceiptInterlinguaConstraintFamily?: QS; readonly evidenceReceiptInterlinguaConstraintStatus?: QS; readonly evidenceReceiptInterlinguaConstraintAction?: QS; readonly evidenceReceiptInterlinguaConstraintSourceId?: QS; readonly evidenceReceiptInterlinguaConstraintRequiredKind?: QS; readonly evidenceReceiptInterlinguaConstraintRepresentedKind?: QS; readonly evidenceReceiptInterlinguaConstraintMissingKind?: QS; readonly evidenceReceiptInterlinguaConstraintMissingEvidence?: QS; readonly evidenceReceiptInterlinguaConstraintObligationKind?: QS; readonly evidenceReceiptInterlinguaConstraintObligationStatus?: QS; readonly evidenceReceiptInterlinguaConstraintObligationEvidenceId?: QS; readonly evidenceReceiptInterlinguaConstraintObligationMissingEvidence?: QS;
+  readonly sourcePath?: QS;
+  readonly sourceHash?: QS;
+  readonly ownershipKey?: QS;
+  readonly conflictKey?: QS;
+  readonly evidenceId?: QS;
+  readonly proofId?: QS;
+  readonly evidenceReceiptEvidenceId?: QS; readonly evidenceReceiptProofEvidenceId?: QS; readonly evidenceReceiptMissingEvidence?: QS;
+  readonly evidenceReceiptRejectedReason?: QS; readonly evidenceReceiptRejectedId?: QS;
+  readonly evidenceReceiptInterlinguaRecordId?: QS; readonly evidenceReceiptInterlinguaLoweringDisposition?: QS; readonly evidenceReceiptInterlinguaConstraintFamily?: QS; readonly evidenceReceiptInterlinguaConstraintStatus?: QS; readonly evidenceReceiptInterlinguaConstraintAction?: QS; readonly evidenceReceiptInterlinguaConstraintSourceId?: QS; readonly evidenceReceiptInterlinguaConstraintEvidenceId?: QS; readonly evidenceReceiptInterlinguaConstraintRequiredKind?: QS; readonly evidenceReceiptInterlinguaConstraintRepresentedKind?: QS; readonly evidenceReceiptInterlinguaConstraintMissingKind?: QS; readonly evidenceReceiptInterlinguaConstraintMissingEvidence?: QS; readonly evidenceReceiptInterlinguaConstraintObligationKind?: QS; readonly evidenceReceiptInterlinguaConstraintObligationStatus?: QS; readonly evidenceReceiptInterlinguaConstraintObligationEvidenceId?: QS; readonly evidenceReceiptInterlinguaConstraintObligationMissingEvidence?: QS;
   readonly admissionRecordInterlinguaRecordId?: QS; readonly admissionRecordInterlinguaLoweringDisposition?: QS;
-  readonly admissionRecordInterlinguaConstraintFamily?: QS; readonly admissionRecordInterlinguaConstraintStatus?: QS; readonly admissionRecordInterlinguaConstraintAction?: QS; readonly admissionRecordInterlinguaConstraintSourceId?: QS; readonly admissionRecordInterlinguaConstraintRequiredKind?: QS; readonly admissionRecordInterlinguaConstraintRepresentedKind?: QS; readonly admissionRecordInterlinguaConstraintMissingKind?: QS; readonly admissionRecordInterlinguaConstraintMissingEvidence?: QS; readonly admissionRecordInterlinguaConstraintObligationKind?: QS; readonly admissionRecordInterlinguaConstraintObligationStatus?: QS; readonly admissionRecordInterlinguaConstraintObligationEvidenceId?: QS; readonly admissionRecordInterlinguaConstraintObligationMissingEvidence?: QS;
+  readonly admissionRecordInterlinguaConstraintFamily?: QS; readonly admissionRecordInterlinguaConstraintStatus?: QS; readonly admissionRecordInterlinguaConstraintAction?: QS; readonly admissionRecordInterlinguaConstraintSourceId?: QS; readonly admissionRecordInterlinguaConstraintEvidenceId?: QS; readonly admissionRecordInterlinguaConstraintRequiredKind?: QS; readonly admissionRecordInterlinguaConstraintRepresentedKind?: QS; readonly admissionRecordInterlinguaConstraintMissingKind?: QS; readonly admissionRecordInterlinguaConstraintMissingEvidence?: QS; readonly admissionRecordInterlinguaConstraintObligationKind?: QS; readonly admissionRecordInterlinguaConstraintObligationStatus?: QS; readonly admissionRecordInterlinguaConstraintObligationEvidenceId?: QS; readonly admissionRecordInterlinguaConstraintObligationMissingEvidence?: QS;
   readonly semanticOperationId?: string | RS;
   readonly semanticOperationKind?: string | RS;
   readonly semanticOperationInterlinguaRecordId?: string | RS;

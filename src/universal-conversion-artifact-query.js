@@ -1,29 +1,13 @@
-import { uniqueStrings } from './native-import-utils.js';
-import { artifactSemanticEditIndex } from './universal-conversion-artifact-semantic-edit.js';
-import { artifactConstraintIndex, artifactConstraintsMatch } from './universal-conversion-artifact-constraints.js';
-import { interlinguaRecordMatches } from './universal-interlingua-record.js';
-const u = uniqueStrings, ai = 'admissionRecordInterlingua', eri = 'evidenceReceiptInterlingua', soi = 'semanticOperationInterlingua';
-const aiFields = [
-  ['ConstraintFamilies', 'ConstraintFamily', 'interlinguaConstraintFamilies'],
-  ['ConstraintStatuses', 'ConstraintStatus', 'interlinguaConstraintStatuses'],
-  ['ConstraintActions', 'ConstraintAction', 'interlinguaConstraintActions'],
-  ['ConstraintSourceIds', 'ConstraintSourceId', 'interlinguaConstraintSourceIds'],
-  ['ConstraintRequiredKinds', 'ConstraintRequiredKind', 'interlinguaConstraintRequiredKinds'],
-  ['ConstraintRepresentedKinds', 'ConstraintRepresentedKind', 'interlinguaConstraintRepresentedKinds'],
-  ['ConstraintMissingKinds', 'ConstraintMissingKind', 'interlinguaConstraintMissingKinds'],
-  ['ConstraintMissingEvidence', 'ConstraintMissingEvidence', 'interlinguaConstraintMissingEvidence'],
-  ['ConstraintObligationKinds', 'ConstraintObligationKind', 'interlinguaConstraintObligationKinds'],
-  ['ConstraintObligationStatuses', 'ConstraintObligationStatus', 'interlinguaConstraintObligationStatuses'],
-  ['ConstraintObligationEvidenceIds', 'ConstraintObligationEvidenceId', 'interlinguaConstraintObligationEvidenceIds'],
-  ['ConstraintObligationMissingEvidence', 'ConstraintObligationMissingEvidence', 'interlinguaConstraintObligationMissingEvidence']
-];
-const iFields = [
-  ['LayerKinds', 'layerKinds'], ['RepresentedLayerKinds', 'representedLayerKinds'], ['MissingLayerKinds', 'missingLayerKinds'], ['ReviewLayerKinds', 'reviewLayerKinds'], ['BlockedLayerKinds', 'blockedLayerKinds'],
-  ['MissingEvidence', 'missingEvidence'], ['ProofEvidenceIds', 'proofEvidenceIds'], ['ConstraintFamilies', 'constraintFamilies'], ['ConstraintStatuses', 'constraintStatuses'], ['ConstraintActions', 'constraintActions'], ['ConstraintRequiredKinds', 'constraintRequiredKinds'], ['ConstraintRepresentedKinds', 'constraintRepresentedKinds'],
-  ['ConstraintMissingKinds', 'constraintMissingKinds'], ['ConstraintMissingEvidence', 'constraintMissingEvidence'], ['ConstraintSourceIds', 'constraintSourceIds'], ['ConstraintObligationKinds', 'constraintObligationKinds'], ['ConstraintObligationStatuses', 'constraintObligationStatuses'], ['ConstraintObligationMissingEvidence', 'constraintObligationMissingEvidence']
-];
-const eriFields = [['RecordId', 'RecordIds', 'interlinguaRecordId'], ['LoweringDisposition', 'LoweringDispositions', 'interlinguaLoweringDisposition'], ['ConstraintFamily', 'ConstraintFamilies', 'interlinguaConstraintFamilies'], ['ConstraintStatus', 'ConstraintStatuses', 'interlinguaConstraintStatuses'], ['ConstraintAction', 'ConstraintActions', 'interlinguaConstraintActions'], ['ConstraintRequiredKind', 'ConstraintRequiredKinds', 'interlinguaConstraintRequiredKinds'], ['ConstraintRepresentedKind', 'ConstraintRepresentedKinds', 'interlinguaConstraintRepresentedKinds'], ['ConstraintMissingKind', 'ConstraintMissingKinds', 'interlinguaConstraintMissingKinds'], ['ConstraintMissingEvidence', 'ConstraintMissingEvidence', 'interlinguaConstraintMissingEvidence']];
-const soiFields = [['RecordId', 'RecordIds', 'id'], ['LoweringDisposition', 'LoweringDispositions', 'loweringDisposition'], ['MissingEvidence', 'MissingEvidence', 'missingEvidence'], ['ProofEvidenceId', 'ProofEvidenceIds', 'proofEvidenceIds'], ['ConstraintAction', 'ConstraintActions', 'constraintActions'], ['ConstraintSourceId', 'ConstraintSourceIds', 'constraintSourceIds'], ['ConstraintRequiredKind', 'ConstraintRequiredKinds', 'constraintRequiredKinds'], ['ConstraintRepresentedKind', 'ConstraintRepresentedKinds', 'constraintRepresentedKinds']];
+import{uniqueStrings as u}from './native-import-utils.js';
+import{artifactSemanticEditIndex as esi}from './universal-conversion-artifact-semantic-edit.js';
+import{artifactConstraintIndex as aci,artifactConstraintsMatch as acm}from './universal-conversion-artifact-constraints.js';
+import{interlinguaRecordMatches as irm}from './universal-interlingua-record.js';
+const ai='admissionRecordInterlingua',eri='evidenceReceiptInterlingua',soi='semanticOperationInterlingua';
+const aiFields=[['ConstraintFamilies','ConstraintFamily','interlinguaConstraintFamilies'],['ConstraintStatuses','ConstraintStatus','interlinguaConstraintStatuses'],['ConstraintActions','ConstraintAction','interlinguaConstraintActions'],['ConstraintSourceIds','ConstraintSourceId','interlinguaConstraintSourceIds'],['ConstraintEvidenceIds','ConstraintEvidenceId','interlinguaConstraintEvidenceIds'],['ConstraintRequiredKinds','ConstraintRequiredKind','interlinguaConstraintRequiredKinds'],['ConstraintRepresentedKinds','ConstraintRepresentedKind','interlinguaConstraintRepresentedKinds'],['ConstraintMissingKinds','ConstraintMissingKind','interlinguaConstraintMissingKinds'],['ConstraintMissingEvidence','ConstraintMissingEvidence','interlinguaConstraintMissingEvidence'],['ConstraintObligationKinds','ConstraintObligationKind','interlinguaConstraintObligationKinds'],['ConstraintObligationStatuses','ConstraintObligationStatus','interlinguaConstraintObligationStatuses'],['ConstraintObligationEvidenceIds','ConstraintObligationEvidenceId','interlinguaConstraintObligationEvidenceIds'],['ConstraintObligationMissingEvidence','ConstraintObligationMissingEvidence','interlinguaConstraintObligationMissingEvidence']];
+const cKeys='Families Statuses Actions EvidenceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence SourceIds ObligationKinds ObligationStatuses ObligationEvidenceIds ObligationMissingEvidence'.split(' ');
+const iFields=[['LayerKinds','layerKinds'],['RepresentedLayerKinds','representedLayerKinds'],['MissingLayerKinds','missingLayerKinds'],['ReviewLayerKinds','reviewLayerKinds'],['BlockedLayerKinds','blockedLayerKinds'],['MissingEvidence','missingEvidence'],['ProofEvidenceIds','proofEvidenceIds'],...cKeys.map((k)=>[`Constraint${k}`,`constraint${k}`])];
+const eriFields=[['RecordId','RecordIds','interlinguaRecordId'],['LoweringDisposition','LoweringDispositions','interlinguaLoweringDisposition'],['ConstraintFamily','ConstraintFamilies','interlinguaConstraintFamilies'],['ConstraintStatus','ConstraintStatuses','interlinguaConstraintStatuses'],['ConstraintAction','ConstraintActions','interlinguaConstraintActions'],['ConstraintEvidenceId','ConstraintEvidenceIds','interlinguaConstraintEvidenceIds'],['ConstraintRequiredKind','ConstraintRequiredKinds','interlinguaConstraintRequiredKinds'],['ConstraintRepresentedKind','ConstraintRepresentedKinds','interlinguaConstraintRepresentedKinds'],['ConstraintMissingKind','ConstraintMissingKinds','interlinguaConstraintMissingKinds'],['ConstraintMissingEvidence','ConstraintMissingEvidence','interlinguaConstraintMissingEvidence']];
+const soiFields=[['RecordId','RecordIds','id'],['LoweringDisposition','LoweringDispositions','loweringDisposition'],['MissingEvidence','MissingEvidence','missingEvidence'],['ProofEvidenceId','ProofEvidenceIds','proofEvidenceIds'],['ConstraintAction','ConstraintActions','constraintActions'],['ConstraintSourceId','ConstraintSourceIds','constraintSourceIds'],['ConstraintRequiredKind','ConstraintRequiredKinds','constraintRequiredKinds'],['ConstraintRepresentedKind','ConstraintRepresentedKinds','constraintRepresentedKinds']];
 export function queryUniversalConversionArtifacts(records, query = {}) {
   return artifactRecords(records)
     .filter((record) => matchesArtifact(record, query))
@@ -31,7 +15,7 @@ export function queryUniversalConversionArtifacts(records, query = {}) {
       || String(left.routeId).localeCompare(String(right.routeId)));
 }
 export function artifactIndex(a) {
-  const edits = a.map(artifactSemanticEditIndex);
+  const edits = a.map(esi);
   const opList = a.flatMap(ops);
   const tAdmissions = a.map(tAdm);
   const iRecords = a.map(intl);
@@ -123,7 +107,7 @@ export function artifactIndex(a) {
     requiredTranslationConstructKinds: u(tAdmissions.flatMap((r) => r.requiredConstructKinds ?? [])),
     representedTranslationConstructKinds: u(tAdmissions.flatMap((r) => r.representedConstructKinds ?? [])),
     targetAdapterIds: u(tAdmissions.map((r) => r.targetAdapterId)),
-    ...artifactConstraintIndex(a),
+    ...aci(a),
     ...interlinguaIndex(iRecords),
     transformIdentityHashes: u(a.flatMap(tHashes))
   };
@@ -135,7 +119,7 @@ function artifactRecords(records) {
   return [];
 }
 function matchesArtifact(record, query) {
-  const editIndex = artifactSemanticEditIndex(record);
+  const editIndex = esi(record);
   const operations = ops(record);
   const receipt = iReceipt(record);
   const rObs = receipt.records?.interlinguaObligations ?? [];
@@ -226,8 +210,8 @@ function matchesArtifact(record, query) {
     && match(query.requiredTranslationConstructKind, tAdm(record).requiredConstructKinds)
     && match(query.representedTranslationConstructKind, tAdm(record).representedConstructKinds)
     && match(query.targetAdapterId, [tAdm(record).targetAdapterId])
-    && artifactConstraintsMatch(record, query)
-    && interlinguaRecordMatches(intl(record), query)
+    && acm(record, query)
+    && irm(intl(record), query)
     && match(query.transformIdentityHash, tHashes(record));
 }
 function ops(record) { return record.semanticOperations?.operations ?? []; }
@@ -268,7 +252,7 @@ function eriIndex(rs, obs) {
     [`${eri}ConstraintSourceIds`]: u([...rs.flatMap((r) => r.interlinguaConstraintSourceIds ?? []), ...obs.map((r) => r.sourceId)]),
     [`${eri}ConstraintObligationKinds`]: u([...rs.flatMap((r) => r.interlinguaConstraintObligationKinds ?? []), ...obs.map((r) => r.kind)]),
     [`${eri}ConstraintObligationStatuses`]: u([...rs.flatMap((r) => r.interlinguaConstraintObligationStatuses ?? []), ...obs.map((r) => r.status)]),
-    [`${eri}ConstraintObligationEvidenceIds`]: u(obs.flatMap((r) => r.evidenceIds ?? [])),
+    [`${eri}ConstraintObligationEvidenceIds`]: u([...rs.flatMap((r) => r.interlinguaConstraintObligationEvidenceIds ?? []), ...obs.flatMap((r) => r.evidenceIds ?? [])]),
     [`${eri}ConstraintObligationMissingEvidence`]: u([...rs.flatMap((r) => r.interlinguaConstraintObligationMissingEvidence ?? []), ...obs.flatMap((r) => r.missingEvidence ?? [])])
   };
 }
@@ -277,7 +261,7 @@ function eriMatches(r, obs, q) {
     && match(q[`${eri}ConstraintSourceId`], [...(r.interlinguaConstraintSourceIds ?? []), ...obs.map((e) => e.sourceId)])
     && match(q[`${eri}ConstraintObligationKind`], [...(r.interlinguaConstraintObligationKinds ?? []), ...obs.map((e) => e.kind)])
     && match(q[`${eri}ConstraintObligationStatus`], [...(r.interlinguaConstraintObligationStatuses ?? []), ...obs.map((e) => e.status)])
-    && match(q[`${eri}ConstraintObligationEvidenceId`], obs.flatMap((e) => e.evidenceIds ?? []))
+    && match(q[`${eri}ConstraintObligationEvidenceId`], [...(r.interlinguaConstraintObligationEvidenceIds ?? []), ...obs.flatMap((e) => e.evidenceIds ?? [])])
     && match(q[`${eri}ConstraintObligationMissingEvidence`], [...(r.interlinguaConstraintObligationMissingEvidence ?? []), ...obs.flatMap((e) => e.missingEvidence ?? [])]);
 }
 function soiIndex(operations) {

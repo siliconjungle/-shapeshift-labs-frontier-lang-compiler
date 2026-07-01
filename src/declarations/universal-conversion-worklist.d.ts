@@ -64,6 +64,7 @@ export interface UniversalConversionWorkItem {
   readonly interlinguaConstraintStatuses: readonly string[];
   readonly interlinguaConstraintActions: readonly string[];
   readonly interlinguaConstraintSourceIds: readonly string[];
+  readonly interlinguaConstraintEvidenceIds: readonly string[];
   readonly interlinguaConstraintRequiredKinds: readonly string[];
   readonly interlinguaConstraintRepresentedKinds: readonly string[];
   readonly interlinguaConstraintMissingKinds: readonly string[];
@@ -114,6 +115,7 @@ export interface UniversalConversionWorklistQuery extends UniversalConversionWor
   readonly interlinguaConstraintStatus?: string | readonly string[];
   readonly interlinguaConstraintAction?: string | readonly string[];
   readonly interlinguaConstraintSourceId?: string | readonly string[];
+  readonly interlinguaConstraintEvidenceId?: string | readonly string[];
   readonly interlinguaConstraintRequiredKind?: string | readonly string[];
   readonly interlinguaConstraintRepresentedKind?: string | readonly string[];
   readonly interlinguaConstraintMissingKind?: string | readonly string[];
@@ -148,6 +150,7 @@ export interface UniversalConversionWorklist {
     readonly interlinguaConstraintStatuses: readonly string[];
     readonly interlinguaConstraintActions: readonly string[];
     readonly interlinguaConstraintSourceIds: readonly string[];
+    readonly interlinguaConstraintEvidenceIds: readonly string[];
     readonly interlinguaConstraintRequiredKinds: readonly string[];
     readonly interlinguaConstraintRepresentedKinds: readonly string[];
     readonly interlinguaConstraintMissingKinds: readonly string[];

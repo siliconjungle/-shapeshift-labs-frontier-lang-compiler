@@ -20,6 +20,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
   const interlinguaQuery = interlingua.query ?? {};
   const interlinguaObligationRecords = (interlingua.constraints?.obligations ?? []).map(interlinguaObligationRecordSummary);
   const interlinguaObligationMissingEvidence = interlinguaObligationRecords.flatMap((record) => record.missingEvidence);
+  const interlinguaConstraintEvidenceIds = interlinguaQuery.constraintEvidenceIds ?? [];
   const interlinguaConstraintObligationEvidenceIds = uniqueStrings([...(interlinguaQuery.constraintObligationEvidenceIds ?? []), ...interlinguaObligationRecords.flatMap((record) => record.evidenceIds ?? [])]);
   const interlinguaMissingEvidence = uniqueStrings([
     ...(interlinguaQuery.constraintMissingEvidence ?? []),
@@ -83,6 +84,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     interlinguaConstraintStatuses: interlinguaQuery.constraintStatuses ?? [],
     interlinguaConstraintActions: interlinguaQuery.constraintActions ?? [],
     interlinguaConstraintSourceIds: interlinguaQuery.constraintSourceIds ?? [],
+    interlinguaConstraintEvidenceIds,
     interlinguaConstraintRequiredKinds: interlinguaQuery.constraintRequiredKinds ?? [],
     interlinguaConstraintRepresentedKinds: interlinguaQuery.constraintRepresentedKinds ?? [],
     interlinguaConstraintMissingKinds: interlinguaQuery.constraintMissingKinds ?? [],
@@ -120,6 +122,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       interlinguaConstraintByStatus: countBy(interlinguaObligationRecords.map((record) => record.status)),
       interlinguaConstraintActions: countBy(interlinguaQuery.constraintActions ?? []),
       interlinguaConstraintSourceIds: countBy([...(interlinguaQuery.constraintSourceIds ?? []), ...interlinguaObligationRecords.map((record) => record.sourceId)]),
+      interlinguaConstraintEvidenceIds: countBy(interlinguaConstraintEvidenceIds),
       interlinguaConstraintRequiredKinds: countBy(interlinguaQuery.constraintRequiredKinds ?? []),
       interlinguaConstraintRepresentedKinds: countBy(interlinguaQuery.constraintRepresentedKinds ?? []),
       interlinguaConstraintMissingKinds: countBy(interlinguaQuery.constraintMissingKinds ?? []),

@@ -17,6 +17,10 @@ export function createUniversalConversionAdmissionRecord(input) {
   ]);
   const runtimeProof = runtimeProofIndex(route.runtime?.proofObligations ?? []);
   const interlinguaQuery = route.interlingua?.query ?? {};
+  const interlinguaObligationRecords = route.interlingua?.constraints?.obligations ?? [];
+  const interlinguaConstraintObligationEvidenceIds = uniqueStrings([
+    ...(interlinguaQuery.constraintObligationEvidenceIds ?? []), ...interlinguaObligationRecords.flatMap((record) => record.evidenceIds ?? [])
+  ]);
   const score = route.mergeScore ?? {};
   const hasBoundEvidence = evidenceIds.length > 0 || proofIds.length > 0;
   const missingEvidence = uniqueStrings([
@@ -58,13 +62,14 @@ export function createUniversalConversionAdmissionRecord(input) {
     interlinguaConstraintStatuses: interlinguaQuery.constraintStatuses ?? [],
     interlinguaConstraintActions: interlinguaQuery.constraintActions ?? [],
     interlinguaConstraintSourceIds: interlinguaQuery.constraintSourceIds ?? [],
+    interlinguaConstraintEvidenceIds: interlinguaQuery.constraintEvidenceIds ?? [],
     interlinguaConstraintRequiredKinds: interlinguaQuery.constraintRequiredKinds ?? [],
     interlinguaConstraintRepresentedKinds: interlinguaQuery.constraintRepresentedKinds ?? [],
     interlinguaConstraintMissingKinds: interlinguaQuery.constraintMissingKinds ?? [],
     interlinguaConstraintMissingEvidence: interlinguaQuery.constraintMissingEvidence ?? [],
     interlinguaConstraintObligationKinds: interlinguaQuery.constraintObligationKinds ?? [],
     interlinguaConstraintObligationStatuses: interlinguaQuery.constraintObligationStatuses ?? [],
-    interlinguaConstraintObligationEvidenceIds: interlinguaQuery.constraintObligationEvidenceIds ?? [],
+    interlinguaConstraintObligationEvidenceIds,
     interlinguaConstraintObligationMissingEvidence: interlinguaQuery.constraintObligationMissingEvidence ?? [],
     resourceTransferStatus: route.resourceTransfer?.status,
     resourceTransferAction: route.resourceTransfer?.action,
@@ -159,13 +164,14 @@ export function createUniversalConversionAdmissionRecord(input) {
       constraintStatuses: interlinguaQuery.constraintStatuses ?? [],
       constraintActions: interlinguaQuery.constraintActions ?? [],
       constraintSourceIds: interlinguaQuery.constraintSourceIds ?? [],
+      constraintEvidenceIds: interlinguaQuery.constraintEvidenceIds ?? [],
       constraintRequiredKinds: interlinguaQuery.constraintRequiredKinds ?? [],
       constraintRepresentedKinds: interlinguaQuery.constraintRepresentedKinds ?? [],
       constraintMissingKinds: interlinguaQuery.constraintMissingKinds ?? [],
       constraintMissingEvidence: interlinguaQuery.constraintMissingEvidence ?? [],
       constraintObligationKinds: interlinguaQuery.constraintObligationKinds ?? [],
       constraintObligationStatuses: interlinguaQuery.constraintObligationStatuses ?? [],
-      constraintObligationEvidenceIds: interlinguaQuery.constraintObligationEvidenceIds ?? [],
+      constraintObligationEvidenceIds: interlinguaConstraintObligationEvidenceIds,
       constraintObligationMissingEvidence: interlinguaQuery.constraintObligationMissingEvidence ?? [],
       lossIds: route.interlingua?.lowering?.lossIds ?? [],
       missingEvidence: route.interlingua?.lowering?.missingEvidence ?? []

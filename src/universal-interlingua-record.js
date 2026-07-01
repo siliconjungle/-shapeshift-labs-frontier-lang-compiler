@@ -126,7 +126,7 @@ export function createUniversalInterlinguaRecord(input = {}) {
       constraintFamilies: constraints.families,
       constraintStatuses: constraints.statuses,
       constraintActions: constraints.actions,
-      constraintSourceIds: constraints.sourceIds,
+      constraintSourceIds: constraints.sourceIds, constraintEvidenceIds: constraints.evidenceIds,
       constraintRequiredKinds: constraints.requiredKinds,
       constraintRepresentedKinds: constraints.representedKinds,
       constraintMissingKinds: constraints.missingKinds,
@@ -153,7 +153,7 @@ export function interlinguaRecordMatches(record, query = {}) {
     && match(query.interlinguaConstraintFamily, record?.query?.constraintFamilies)
     && match(query.interlinguaConstraintStatus, record?.query?.constraintStatuses)
     && match(query.interlinguaConstraintAction, record?.query?.constraintActions)
-    && match(query.interlinguaConstraintSourceId, record?.query?.constraintSourceIds)
+    && match(query.interlinguaConstraintSourceId, record?.query?.constraintSourceIds) && match(query.interlinguaConstraintEvidenceId, record?.query?.constraintEvidenceIds)
     && match(query.interlinguaConstraintRequiredKind, record?.query?.constraintRequiredKinds)
     && match(query.interlinguaConstraintRepresentedKind, record?.query?.constraintRepresentedKinds)
     && match(query.interlinguaConstraintMissingKind, record?.query?.constraintMissingKinds)
@@ -200,7 +200,7 @@ export function interlinguaConstraintSummary(route = {}) {
     families: uniqueStrings(edges.map((edge) => edge.family)),
     statuses: uniqueStrings(edges.map((edge) => edge.status)),
     actions: uniqueStrings(edges.map((edge) => edge.action)),
-    sourceIds: uniqueStrings(edges.map((edge) => edge.sourceId)),
+    sourceIds: uniqueStrings(edges.map((edge) => edge.sourceId)), evidenceIds: uniqueStrings(edges.flatMap((edge) => edge.evidenceIds ?? [])),
     requiredKinds: uniqueStrings(edges.flatMap((edge) => edge.requiredKinds)),
     representedKinds: uniqueStrings(edges.flatMap((edge) => edge.representedKinds)),
     missingKinds: uniqueStrings(edges.flatMap((edge) => edge.missingKinds)),
@@ -223,7 +223,7 @@ function constraintEdge(family, evidence, layerKind, route) {
     id,
     family,
     layerKind,
-    sourceId: evidence.id,
+    sourceId: evidence.id, evidenceIds: evidence.evidenceIds ?? [],
     status: evidence.status,
     action: evidence.action,
     requiredKinds: evidence.requiredKinds ?? [],
@@ -259,7 +259,7 @@ function constraintObligations(family, evidence, edgeId) {
       sourceId: evidence.id,
       sourceNodeIds: nodeIds(record, 'source'),
       targetNodeIds: nodeIds(record, 'target'),
-      evidenceIds: evidence.evidenceIds ?? [],
+      evidenceIds: uniqueStrings(record.evidenceIds ?? []),
       missingEvidence: status === 'missing' ? missingEvidenceForKind(kind, evidence.missingEvidence ?? []) : [],
       severity: record.severity ?? constraintSeverity(status, status === 'missing' ? [kind] : []),
       autoMergeClaim: false,

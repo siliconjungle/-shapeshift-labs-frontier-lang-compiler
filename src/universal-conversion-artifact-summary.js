@@ -1,6 +1,6 @@
 import { countBy } from './native-import-utils.js';
 
-const aiKeys = 'Families Statuses Actions SourceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationEvidenceIds ObligationMissingEvidence'.split(' ');
+const aiKeys = 'Families Statuses Actions SourceIds EvidenceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationEvidenceIds ObligationMissingEvidence'.split(' ');
 
 export function universalConversionArtifactSummary(routeArtifacts, records) {
   const admissionRecords = records.admissionRecords;
@@ -184,13 +184,14 @@ function compactEvidenceReceiptCounts(receipts) {
     interlinguaConstraintByStatus: countBy(interlinguaObligationRecords.map((record) => record.status)),
     interlinguaConstraintActions: countBy(receipts.flatMap((receipt) => receipt.interlinguaConstraintActions ?? [])),
     interlinguaConstraintSourceIds: countBy([...receipts.flatMap((receipt) => receipt.interlinguaConstraintSourceIds ?? []), ...interlinguaObligationRecords.map((record) => record.sourceId)]),
+    interlinguaConstraintEvidenceIds: countBy(receipts.flatMap((receipt) => receipt.interlinguaConstraintEvidenceIds ?? [])),
     interlinguaConstraintRequiredKinds: countBy(receipts.flatMap((receipt) => receipt.interlinguaConstraintRequiredKinds ?? [])),
     interlinguaConstraintRepresentedKinds: countBy(receipts.flatMap((receipt) => receipt.interlinguaConstraintRepresentedKinds ?? [])),
     interlinguaConstraintMissingKinds: countBy(receipts.flatMap((receipt) => receipt.interlinguaConstraintMissingKinds ?? [])),
     interlinguaConstraintMissingEvidence: countBy([...receipts.flatMap((receipt) => receipt.interlinguaConstraintMissingEvidence ?? []), ...interlinguaObligationRecords.flatMap((record) => record.missingEvidence ?? [])]),
     interlinguaConstraintObligationKinds: countBy([...receipts.flatMap((receipt) => receipt.interlinguaConstraintObligationKinds ?? []), ...interlinguaObligationRecords.map((record) => record.kind)]),
     interlinguaConstraintObligationStatuses: countBy([...receipts.flatMap((receipt) => receipt.interlinguaConstraintObligationStatuses ?? []), ...interlinguaObligationRecords.map((record) => record.status)]),
-    interlinguaConstraintObligationEvidenceIds: countBy(interlinguaObligationRecords.flatMap((record) => record.evidenceIds ?? [])),
+    interlinguaConstraintObligationEvidenceIds: countBy([...receipts.flatMap((receipt) => receipt.interlinguaConstraintObligationEvidenceIds ?? []), ...interlinguaObligationRecords.flatMap((record) => record.evidenceIds ?? [])]),
     interlinguaConstraintObligationMissingEvidence: countBy([...receipts.flatMap((receipt) => receipt.interlinguaConstraintObligationMissingEvidence ?? []), ...interlinguaObligationRecords.flatMap((record) => record.missingEvidence ?? [])]),
     missingEvidence: countBy(receipts.flatMap((receipt) => receipt.missingEvidence ?? [])),
     proofEvidenceIds: countBy(receipts.flatMap((receipt) => receipt.proofEvidenceIds ?? [])),

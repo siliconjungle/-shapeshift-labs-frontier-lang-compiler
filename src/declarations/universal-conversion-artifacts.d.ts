@@ -73,7 +73,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus; readonly translationAdmissionAction?: UniversalTranslationAdmissionAction; readonly reviewRequired: true;
   readonly interlinguaRecordId?: string;
   readonly interlinguaLoweringDisposition?: UniversalInterlinguaLoweringDisposition;
-  readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[]; readonly interlinguaConstraintStatuses: readonly string[]; readonly interlinguaConstraintActions: readonly string[]; readonly interlinguaConstraintSourceIds: readonly string[];
+  readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[]; readonly interlinguaConstraintStatuses: readonly string[]; readonly interlinguaConstraintActions: readonly string[]; readonly interlinguaConstraintSourceIds: readonly string[]; readonly interlinguaConstraintEvidenceIds: readonly string[];
   readonly interlinguaConstraintRequiredKinds: readonly string[]; readonly interlinguaConstraintRepresentedKinds: readonly string[]; readonly interlinguaConstraintMissingKinds: readonly string[]; readonly interlinguaConstraintMissingEvidence: readonly string[];
   readonly interlinguaConstraintObligationKinds: readonly string[]; readonly interlinguaConstraintObligationStatuses: readonly string[]; readonly interlinguaConstraintObligationEvidenceIds: readonly string[]; readonly interlinguaConstraintObligationMissingEvidence: readonly string[];
   readonly resourceTransferStatus?: string;
@@ -130,7 +130,7 @@ export interface UniversalConversionAdmissionRecord {
     readonly id?: string;
     readonly loweringDisposition?: UniversalInterlinguaLoweringDisposition;
     readonly representedLayerKinds: readonly UniversalInterlinguaLayerKind[]; readonly missingLayerKinds: readonly UniversalInterlinguaLayerKind[]; readonly reviewLayerKinds: readonly UniversalInterlinguaLayerKind[]; readonly blockedLayerKinds: readonly UniversalInterlinguaLayerKind[];
-    readonly constraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[]; readonly constraintStatuses: readonly string[]; readonly constraintActions: readonly string[]; readonly constraintSourceIds: readonly string[];
+    readonly constraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[]; readonly constraintStatuses: readonly string[]; readonly constraintActions: readonly string[]; readonly constraintSourceIds: readonly string[]; readonly constraintEvidenceIds: readonly string[];
     readonly constraintRequiredKinds: readonly string[]; readonly constraintRepresentedKinds: readonly string[]; readonly constraintMissingKinds: readonly string[]; readonly constraintMissingEvidence: readonly string[];
     readonly constraintObligationKinds: readonly string[]; readonly constraintObligationStatuses: readonly string[]; readonly constraintObligationEvidenceIds: readonly string[]; readonly constraintObligationMissingEvidence: readonly string[];
     readonly lossIds: readonly string[];

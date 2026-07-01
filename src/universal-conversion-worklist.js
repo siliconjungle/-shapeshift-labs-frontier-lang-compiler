@@ -70,6 +70,7 @@ function addInterlinguaObligationItems(items, route) {
     addWorkItem(items, route, 'collect-interlingua-obligation-proof', key, obligation.severity === 'error' ? 'high' : 'normal', {
       constraintFamilies: [obligation.family],
       constraintStatuses: obligationEdges.map((edge) => edge.status), constraintActions: obligationEdges.map((edge) => edge.action),
+      constraintEvidenceIds: obligationEdges.flatMap((edge) => edge.evidenceIds ?? []),
       constraintRequiredKinds: obligationEdges.flatMap((edge) => edge.requiredKinds ?? []), constraintRepresentedKinds: obligationEdges.flatMap((edge) => edge.representedKinds ?? []),
       constraintMissingKinds: obligationEdges.flatMap((edge) => edge.missingKinds ?? []), constraintMissingEvidence: obligationEdges.flatMap((edge) => edge.missingEvidence ?? []),
       constraintObligationKinds: [obligation.kind], constraintObligationStatuses: [obligation.status],
@@ -126,7 +127,7 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     interlinguaConstraintFamilies: uniqueStrings(details.constraintFamilies ?? []),
     interlinguaConstraintStatuses: uniqueStrings(details.constraintStatuses ?? []),
     interlinguaConstraintActions: uniqueStrings(details.constraintActions ?? []),
-    interlinguaConstraintSourceIds: uniqueStrings(details.constraintSourceIds ?? []),
+    interlinguaConstraintSourceIds: uniqueStrings(details.constraintSourceIds ?? []), interlinguaConstraintEvidenceIds: uniqueStrings(details.constraintEvidenceIds ?? []),
     interlinguaConstraintRequiredKinds: uniqueStrings(details.constraintRequiredKinds ?? []),
     interlinguaConstraintRepresentedKinds: uniqueStrings(details.constraintRepresentedKinds ?? []),
     interlinguaConstraintMissingKinds: uniqueStrings(details.constraintMissingKinds ?? []),
@@ -169,7 +170,7 @@ function mergeWorkItems(left, right) {
     interlinguaConstraintFamilies: uniqueStrings([...left.interlinguaConstraintFamilies, ...right.interlinguaConstraintFamilies]),
     interlinguaConstraintStatuses: uniqueStrings([...left.interlinguaConstraintStatuses, ...right.interlinguaConstraintStatuses]),
     interlinguaConstraintActions: uniqueStrings([...left.interlinguaConstraintActions, ...right.interlinguaConstraintActions]),
-    interlinguaConstraintSourceIds: uniqueStrings([...left.interlinguaConstraintSourceIds, ...right.interlinguaConstraintSourceIds]),
+    interlinguaConstraintSourceIds: uniqueStrings([...left.interlinguaConstraintSourceIds, ...right.interlinguaConstraintSourceIds]), interlinguaConstraintEvidenceIds: uniqueStrings([...left.interlinguaConstraintEvidenceIds, ...right.interlinguaConstraintEvidenceIds]),
     interlinguaConstraintRequiredKinds: uniqueStrings([...left.interlinguaConstraintRequiredKinds, ...right.interlinguaConstraintRequiredKinds]),
     interlinguaConstraintRepresentedKinds: uniqueStrings([...left.interlinguaConstraintRepresentedKinds, ...right.interlinguaConstraintRepresentedKinds]),
     interlinguaConstraintMissingKinds: uniqueStrings([...left.interlinguaConstraintMissingKinds, ...right.interlinguaConstraintMissingKinds]),
@@ -224,7 +225,7 @@ function worklistSummary(items) {
     interlinguaConstraintFamilies: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintFamilies ?? [])),
     interlinguaConstraintStatuses: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintStatuses ?? [])),
     interlinguaConstraintActions: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintActions ?? [])),
-    interlinguaConstraintSourceIds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintSourceIds ?? [])),
+    interlinguaConstraintSourceIds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintSourceIds ?? [])), interlinguaConstraintEvidenceIds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintEvidenceIds ?? [])),
     interlinguaConstraintRequiredKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintRequiredKinds ?? [])),
     interlinguaConstraintRepresentedKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintRepresentedKinds ?? [])),
     interlinguaConstraintMissingKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintMissingKinds ?? [])),
@@ -286,7 +287,7 @@ function workItemMatchesQuery(item, query) {
     && match(query.interlinguaConstraintFamily, item.interlinguaConstraintFamilies)
     && match(query.interlinguaConstraintStatus, item.interlinguaConstraintStatuses)
     && match(query.interlinguaConstraintAction, item.interlinguaConstraintActions)
-    && match(query.interlinguaConstraintSourceId, item.interlinguaConstraintSourceIds)
+    && match(query.interlinguaConstraintSourceId, item.interlinguaConstraintSourceIds) && match(query.interlinguaConstraintEvidenceId, item.interlinguaConstraintEvidenceIds)
     && match(query.interlinguaConstraintRequiredKind, item.interlinguaConstraintRequiredKinds)
     && match(query.interlinguaConstraintRepresentedKind, item.interlinguaConstraintRepresentedKinds)
     && match(query.interlinguaConstraintMissingKind, item.interlinguaConstraintMissingKinds)
