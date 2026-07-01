@@ -1,7 +1,7 @@
 import { idFragment, uniqueStrings } from './native-import-utils.js';
 import { universalConversionArtifactSummary } from './universal-conversion-artifact-summary.js';
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
-import { artifactIndex } from './universal-conversion-artifact-query.js';
+import { artifactIndex } from './universal-conversion-artifact-query.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js';
 import { createUniversalConversionAdmissionRecord } from './universal-conversion-admission-record.js';
 import { createUniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence-receipt.js';
 import {
@@ -77,7 +77,7 @@ function createRouteArtifact(route, options) {
   const admissionStatus = routeAdmissionStatus(route);
   const reasonCodes = routeReasonCodes(route);
   const evidenceReceipt = createUniversalConversionRouteEvidenceReceipt({ ...route, mergeRefs: { ...refs, sourceMapLinkIds: sourceMapLinks.map((link) => link.id) } }, { evidence: options.evidence });
-  const runtimeProof = routeRuntimeProofIndex(route);
+  const runtimeProof = routeRuntimeProofIndex(route), runtimeRoute = routeRuntimeDenominators(route);
   const historyId = refs.historyIds?.[0] ?? `history_${route.id}`;
   const patchBundleId = refs.patchBundleIds?.[0] ?? `semantic_patch_bundle_${route.id}`;
   const history = createSemanticHistoryRecord({
@@ -163,7 +163,7 @@ function createRouteArtifact(route, options) {
     lossClass: route.lossClass,
     adapter: route.adapter,
     adapterKind: route.adapterKind,
-    missingEvidence: route.missingEvidence ?? [],
+    missingEvidence: route.missingEvidence ?? [], ...runtimeRoute,
     runtimeAdapterRequirementIds: (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
     runtimeProofObligationIds: runtimeProof.obligationIds,
     runtimeProofCapabilities: runtimeProof.capabilities,

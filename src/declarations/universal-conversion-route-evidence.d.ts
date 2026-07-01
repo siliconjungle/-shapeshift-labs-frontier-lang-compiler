@@ -1,6 +1,7 @@
 import type { EvidenceRecord, FrontierSourceLanguage, SemanticMergeReadiness } from '@shapeshift-labs/frontier-lang-kernel';
 import type { FrontierCompileTarget } from './compile.js';
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
+import type { UniversalConversionRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
 import type { UniversalInterlinguaConstraintEdgeKind, UniversalInterlinguaLoweringDisposition } from './universal-interlingua.js';
 import type {
   UniversalConversionAdmissionAction,
@@ -79,6 +80,15 @@ export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly mode?: UniversalConversionRouteMode;
   readonly readiness?: SemanticMergeReadiness | string;
   readonly admissionAction?: UniversalConversionAdmissionAction;
+  readonly runtimeRouteId?: string;
+  readonly sourceHostId?: string;
+  readonly targetHostId?: string;
+  readonly sourceRuntime?: string;
+  readonly runtime?: string;
+  readonly targetRuntime?: string;
+  readonly runtimeReadiness?: SemanticMergeReadiness | string;
+  readonly missingRuntimeCapability?: UniversalRuntimeCapabilityKind;
+  readonly runtimeAdapterRequirementId?: string;
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus;
   readonly translationAdmissionAction?: UniversalTranslationAdmissionAction;
   readonly targetAdapterId?: string;
@@ -86,7 +96,7 @@ export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly includeRejectedEvidence?: boolean;
 }
 
-export interface UniversalConversionRouteEvidenceReceipt {
+export interface UniversalConversionRouteEvidenceReceipt extends UniversalConversionRuntimeRouteFields {
   readonly kind: 'frontier.lang.universalConversionRouteEvidenceReceipt';
   readonly version: 1;
   readonly schema: 'frontier.lang.universalConversionRouteEvidenceReceipt.v1';

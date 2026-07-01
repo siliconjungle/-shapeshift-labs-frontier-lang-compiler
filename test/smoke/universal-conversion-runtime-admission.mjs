@@ -23,6 +23,13 @@ assert.equal(missingDomRoute.blockers.includes('Runtime capability is missing: d
 assert.equal(missingDomRoute.missingEvidence.includes('runtime-capability:dom'), true);
 assert.equal(missingDomRoute.missingEvidence.includes('runtime-adapter-proof'), true);
 assert.equal(missingDomRoute.mergeScore.risk, 'high');
+const domArtifacts = createUniversalConversionArtifacts(conversionPlanForRequirement('dom'), { routeId: missingDomRoute.id });
+const domArtifact = domArtifacts.routeArtifacts[0];
+assert.equal(domArtifact.requiredRuntimeCapabilities.includes('dom'), true);
+assert.equal(domArtifact.missingRuntimeCapabilities.includes('dom'), true);
+assert.equal(domArtifact.admissionRecord.missingRuntimeCapabilities.includes('dom'), true);
+assert.equal(domArtifact.evidenceReceipt.missingRuntimeCapabilities.includes('dom'), true);
+assert.equal(queryUniversalConversionArtifacts(domArtifacts, { missingRuntimeCapability: 'dom' })[0].routeId, missingDomRoute.id);
 
 const fetchAdapterRoute = conversionRouteForRequirement('fetch');
 assert.equal(fetchAdapterRoute.runtime.readiness, 'needs-review');
@@ -151,6 +158,34 @@ assert.equal(nodeHostRoute.admissionAction, 'prioritize');
 assert.equal(hostQuery.bestRoute.id, nodeHostRoute.id);
 assert.equal(queryUniversalConversionPlan(hostPlan, { runtimeReadiness: 'blocked' }).bestRoute.id, webHostRoute.id);
 assert.equal(queryUniversalConversionPlan(hostPlan, { runtimeAdapterRequirementId: nodeHostRoute.runtimeAdapterRequirements[0].id }).bestRoute.id, nodeHostRoute.id);
+const hostArtifacts = createUniversalConversionArtifacts(hostPlan);
+const webHostArtifact = queryUniversalConversionArtifacts(hostArtifacts, { sourceHostId: 'javascript:web', target: 'rust' })[0];
+const nodeHostArtifact = queryUniversalConversionArtifacts(hostArtifacts, { sourceRuntime: 'node', target: 'rust' })[0];
+assert.equal(webHostArtifact.runtimeRouteId, webHostRoute.runtime.routeId);
+assert.equal(webHostArtifact.sourceHostId, 'javascript:web');
+assert.equal(webHostArtifact.targetHostId, 'rust:cli');
+assert.equal(webHostArtifact.sourceRuntime, 'web');
+assert.equal(webHostArtifact.runtimeReadiness, 'blocked');
+assert.equal(nodeHostArtifact.runtimeRouteId, nodeHostRoute.runtime.routeId);
+assert.equal(nodeHostArtifact.sourceRuntime, 'node');
+assert.equal(nodeHostArtifact.runtimeReadiness, 'needs-review');
+assert.equal(nodeHostArtifact.requiredRuntimeCapabilities.includes('filesystem'), true);
+assert.equal(queryUniversalConversionArtifacts(hostArtifacts, { runtimeRouteId: webHostRoute.runtime.routeId })[0].routeId, webHostRoute.id);
+assert.equal(queryUniversalConversionArtifacts(hostArtifacts, { runtimeReadiness: 'blocked' })[0].runtimeRouteId, webHostRoute.runtime.routeId);
+assert.equal(queryUniversalConversionArtifacts(hostArtifacts, { requiredRuntimeCapability: 'filesystem' }).length, 2);
+assert.equal(hostArtifacts.index.runtimeRouteIds.includes(webHostRoute.runtime.routeId), true);
+assert.equal(hostArtifacts.index.sourceHostIds.includes('javascript:node'), true);
+assert.equal(hostArtifacts.index.targetHostIds.includes('rust:cli'), true);
+assert.equal(hostArtifacts.index.sourceRuntimes.includes('web'), true);
+assert.equal(hostArtifacts.index.targetRuntimes.includes('cli'), true);
+assert.equal(hostArtifacts.index.requiredRuntimeCapabilities.includes('filesystem'), true);
+assert.equal(hostArtifacts.summary.compactCounts.runtimeRoutes.bySourceHost['javascript:web'], 1);
+assert.equal(hostArtifacts.summary.compactCounts.runtimeRoutes.byReadiness.blocked, 1);
+assert.equal(hostArtifacts.summary.compactCounts.runtimeRoutes.requiredCapabilities.filesystem, 2);
+assert.equal(webHostArtifact.evidenceReceipt.runtimeRouteId, webHostRoute.runtime.routeId);
+assert.equal(nodeHostArtifact.admissionRecord.ids.runtimeRouteId, nodeHostRoute.runtime.routeId);
+assert.equal(nodeHostArtifact.admissionRecord.sourceHostId, 'javascript:node');
+assert.equal(nodeHostArtifact.admissionRecord.requiredRuntimeCapabilities.includes('filesystem'), true);
 
 function conversionRouteForRequirement(capability) {
   return queryUniversalConversionPlan(conversionPlanForRequirement(capability), {

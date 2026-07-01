@@ -1,6 +1,7 @@
 import { countBy, normalizeNativeLanguageId, uniqueStrings } from './native-import-utils.js';
 import { createUniversalConversionPlan, queryUniversalConversionPlan } from './universal-conversion-plan.js';
 import { conversionRouteEvidence } from './universal-conversion-route-evidence.js';
+import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js';
 import { summarizeRuntimeProofObligations } from './universal-runtime-proof-obligations.js';
 
 export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {}, options = {}, context = {}) {
@@ -13,6 +14,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
   const boundRecords = suppliedEvidence.length ? conversionRouteEvidence(suppliedEvidence, routeLanguage(route), route.target, route.id) : [];
   const boundRecordIds = uniqueStrings(boundRecords.map((record) => record.id));
   const runtimeProofObligations = route.runtime?.proofObligations ?? [];
+  const runtimeRoute = routeRuntimeDenominators(route);
   const runtimeProofRecords = runtimeProofObligations.map(runtimeProofRecordSummary);
   const runtimeProofEvidenceIds = uniqueStrings(runtimeProofObligations.flatMap((record) => record.evidenceIds ?? []));
   const runtimeProofSummary = summarizeRuntimeProofObligations(runtimeProofObligations);
@@ -74,6 +76,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     admissionAction: route.admissionAction,
     translationAdmissionStatus: route.translationAdmission?.status,
     translationAdmissionAction: route.translationAdmission?.action,
+    ...runtimeRoute,
     runtimeAdapterRequirementIds: uniqueStrings((route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability)),
     runtimeProofObligationIds: uniqueStrings(runtimeProofObligations.map((record) => record.id)),
     runtimeProofCapabilities: uniqueStrings(runtimeProofObligations.map((record) => record.capability)),
@@ -171,6 +174,14 @@ function selectRoute(routeOrInput, options, context) {
     mode: options.mode,
     readiness: options.readiness,
     admissionAction: options.admissionAction,
+    runtimeRouteId: options.runtimeRouteId,
+    sourceHostId: options.sourceHostId,
+    targetHostId: options.targetHostId,
+    sourceRuntime: options.sourceRuntime ?? options.runtime,
+    targetRuntime: options.targetRuntime,
+    runtimeReadiness: options.runtimeReadiness,
+    missingRuntimeCapability: options.missingRuntimeCapability,
+    runtimeAdapterRequirementId: options.runtimeAdapterRequirementId,
     translationAdmissionStatus: options.translationAdmissionStatus,
     translationAdmissionAction: options.translationAdmissionAction,
     targetAdapterId: options.targetAdapterId

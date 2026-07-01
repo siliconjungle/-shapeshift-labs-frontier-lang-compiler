@@ -9,6 +9,7 @@ export * from './declarations/universal-capability.js';
 export * from './declarations/universal-representation-coverage.js';
 export * from './declarations/universal-interlingua.js';
 export * from './declarations/universal-conversion-artifacts.js';
+export * from './declarations/universal-conversion-artifact-runtime-routes.js';
 export * from './declarations/universal-conversion-compact-counts.js';
 export * from './declarations/universal-conversion-constraint-families.js';
 export * from './declarations/universal-conversion-plan-constraints.js';

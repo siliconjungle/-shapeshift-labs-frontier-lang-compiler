@@ -212,6 +212,13 @@ const runtimeReceipt = createUniversalConversionRouteEvidenceReceipt({
   mergeRefs: { planId: 'runtime_receipt_plan', evidenceIds: [], proofIds: [], sources: [], semanticOwnershipKeys: [], conflictKeys: [] },
   runtimeAdapterRequirements: [{ id: 'runtime_adapter_canvas', capability: 'canvas' }],
   runtime: {
+    routeId: 'runtime_javascript_web_to_rust_cli_canvas',
+    source: { id: 'javascript:web', runtime: 'web' },
+    target: { id: 'rust:cli', runtime: 'cli' },
+    requiredCapabilities: ['canvas'],
+    satisfiedCapabilities: [],
+    missingCapabilities: [],
+    readiness: 'needs-review',
     proofObligations: [{
       id: 'runtime_proof_canvas',
       capability: 'canvas',
@@ -228,6 +235,13 @@ const runtimeReceipt = createUniversalConversionRouteEvidenceReceipt({
     }]
   }
 }, { evidence: [runtimeEvidenceRecord] });
+assert.equal(runtimeReceipt.runtimeRouteId, 'runtime_javascript_web_to_rust_cli_canvas');
+assert.equal(runtimeReceipt.sourceHostId, 'javascript:web');
+assert.equal(runtimeReceipt.targetHostId, 'rust:cli');
+assert.equal(runtimeReceipt.sourceRuntime, 'web');
+assert.equal(runtimeReceipt.targetRuntime, 'cli');
+assert.equal(runtimeReceipt.runtimeReadiness, 'needs-review');
+assert.equal(runtimeReceipt.requiredRuntimeCapabilities.includes('canvas'), true);
 assert.equal(runtimeReceipt.runtimeAdapterRequirementIds.includes('runtime_adapter_canvas'), true);
 assert.equal(runtimeReceipt.runtimeProofObligationIds.includes('runtime_proof_canvas'), true);
 assert.equal(runtimeReceipt.runtimeProofCapabilities.includes('canvas'), true);
@@ -236,3 +250,32 @@ assert.equal(runtimeReceipt.proofEvidenceIds.includes('canvas_runtime_proof'), t
 assert.equal(runtimeReceipt.records.rejected.some((record) => record.id === 'canvas_runtime_proof'), false);
 assert.equal(runtimeReceipt.records.runtimeProof[0].runtimeEquivalenceClaim, false);
 assert.equal(runtimeReceipt.summary.runtimeProofByStatus.satisfied, 1);
+
+const proofFreeRuntimeReceipt = createUniversalConversionRouteEvidenceReceipt({
+  id: 'conversion_javascript_to_rust_fetch_runtime',
+  sourceLanguage: 'javascript',
+  languageIds: ['javascript'],
+  target: 'rust',
+  mode: 'target-adapter',
+  readiness: 'ready',
+  admissionAction: 'prioritize',
+  mergeRefs: { planId: 'runtime_receipt_plan', evidenceIds: [], proofIds: [], sources: [], semanticOwnershipKeys: [], conflictKeys: [] },
+  runtimeAdapterRequirements: [],
+  runtime: {
+    routeId: 'runtime_javascript_node_to_rust_cli_fetch',
+    source: { id: 'javascript:node', runtime: 'node' },
+    target: { id: 'rust:cli', runtime: 'cli' },
+    requiredCapabilities: ['fetch'],
+    satisfiedCapabilities: ['fetch'],
+    missingCapabilities: [],
+    readiness: 'ready',
+    proofObligations: []
+  }
+});
+assert.equal(proofFreeRuntimeReceipt.runtimeRouteId, 'runtime_javascript_node_to_rust_cli_fetch');
+assert.equal(proofFreeRuntimeReceipt.sourceHostId, 'javascript:node');
+assert.equal(proofFreeRuntimeReceipt.targetHostId, 'rust:cli');
+assert.equal(proofFreeRuntimeReceipt.requiredRuntimeCapabilities.includes('fetch'), true);
+assert.equal(proofFreeRuntimeReceipt.runtimeProofObligationIds.length, 0);
+assert.equal(proofFreeRuntimeReceipt.runtimeProofCapabilities.length, 0);
+assert.equal(proofFreeRuntimeReceipt.records.runtimeProof.length, 0);

@@ -3,6 +3,7 @@ import type { FrontierCompileTarget } from './compile.js';
 import type{UniversalConversionAdmissionAction,UniversalConversionPriority,UniversalConversionRouteAction,UniversalConversionRouteMode,UniversalConversionRisk,UniversalTranslationAdmissionAction,UniversalTranslationAdmissionStatus}from './universal-conversion-plan.js';
 import type { UniversalConversionArtifactAdmissionBucket, UniversalConversionArtifactAdmissionStatus } from './universal-conversion-artifacts.js';
 import type{UniversalConversionArtifactSourceMapIndex as USMI,UniversalConversionArtifactSourceMapQuery as USMQ}from './universal-conversion-artifact-source-maps.js';
+import type{UniversalConversionArtifactRuntimeRouteIndex as URRI,UniversalConversionArtifactRuntimeRouteQuery as URRQ}from './universal-conversion-artifact-runtime-routes.js';
 import type{UniversalRepresentationCoverageQuery}from './universal-representation-coverage.js';
 import type{UniversalInterlinguaQuery}from './universal-interlingua.js';
 import type{UniversalResourceTransferQuery}from './universal-resource-transfer.js';
@@ -27,7 +28,7 @@ import type { UniversalProtocolConstraintQuery } from './universal-protocol-cons
 import type { UniversalTypeConstraintQuery } from './universal-type-constraints.js';
 import type { UniversalRuntimeCapabilityKind as URK, UniversalRuntimeProofSignalKind as UPS } from './universal-runtime-capabilities.js'; type RS=readonly string[]; type QS=string|RS;
 
-export interface UniversalConversionArtifactIndex extends USMI {
+export interface UniversalConversionArtifactIndex extends USMI, URRI {
   readonly routeIds: RS;
   readonly historyIds: RS;
   readonly patchBundleIds: RS;
@@ -191,7 +192,7 @@ export interface UniversalConversionArtifactIndex extends USMI {
   readonly transformIdentityHashes: RS;
 }
 
-export interface UniversalConversionArtifactQuery extends USMQ, UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalCallableBoundaryConstraintQuery, UniversalAdtPatternConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalHostEnvironmentConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalNumericSemanticsConstraintQuery, UniversalTextSemanticsConstraintQuery, UniversalCollectionSemanticsConstraintQuery, UniversalSerializationSemanticsConstraintQuery, UniversalDependencySemanticsConstraintQuery, UniversalObjectModelConstraintQuery, UniversalProtocolConstraintQuery, UniversalTypeConstraintQuery {
+export interface UniversalConversionArtifactQuery extends USMQ, URRQ, UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalCallableBoundaryConstraintQuery, UniversalAdtPatternConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalHostEnvironmentConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalNumericSemanticsConstraintQuery, UniversalTextSemanticsConstraintQuery, UniversalCollectionSemanticsConstraintQuery, UniversalSerializationSemanticsConstraintQuery, UniversalDependencySemanticsConstraintQuery, UniversalObjectModelConstraintQuery, UniversalProtocolConstraintQuery, UniversalTypeConstraintQuery {
   readonly routeId?: QS;
   readonly historyId?: QS;
   readonly patchBundleId?: QS;

@@ -1,5 +1,5 @@
 import { createUniversalConversionArtifacts, createUniversalConversionPlan, createUniversalConversionRouteEvidenceReceipt, createUniversalConversionWorklist, importNativeSource, queryUniversalConversionArtifacts, queryUniversalConversionPlan, queryUniversalConversionWorklist } from '../src/index.js';
-import type { UniversalConversionArtifacts, UniversalConversionRouteArtifact, UniversalConversionRouteEvidenceReceipt, UniversalConversionWorklist } from '../src/index.js';
+import type { UniversalConversionArtifacts, UniversalConversionRouteArtifact, UniversalConversionRouteEvidenceReceipt, UniversalConversionRuntimeRouteFields, UniversalConversionWorklist } from '../src/index.js';
 
 const receiptImport = importNativeSource({
   language: 'javascript',
@@ -27,6 +27,13 @@ receipt.records.interlinguaObligations[0]?.missingEvidence satisfies readonly st
 receipt.sourceMapIds satisfies readonly string[];
 receipt.sourceMapMappingIds satisfies readonly string[];
 receipt.sourceMapLinkIds satisfies readonly string[];
+receipt.runtimeRouteId satisfies string | undefined;
+receipt.sourceHostId satisfies string | undefined;
+receipt.targetHostId satisfies string | undefined;
+receipt.sourceRuntime satisfies string | undefined;
+receipt.targetRuntime satisfies string | undefined;
+receipt.requiredRuntimeCapabilities satisfies readonly string[];
+receipt.missingRuntimeCapabilities satisfies readonly string[];
 receipt.summary.sourceMapIds satisfies Readonly<Record<string, number>>;
 receipt.summary.sourceMapMappingIds satisfies Readonly<Record<string, number>>;
 receipt.summary.sourceMapLinkIds satisfies Readonly<Record<string, number>>;
@@ -68,6 +75,9 @@ const receiptArtifacts: UniversalConversionArtifacts = createUniversalConversion
   ]
 });
 const receiptArtifact: UniversalConversionRouteArtifact | undefined = queryUniversalConversionArtifacts(receiptArtifacts, {
+  runtimeRouteId: receiptArtifacts.routeArtifacts[0]?.runtimeRouteId,
+  sourceRuntime: receiptArtifacts.routeArtifacts[0]?.sourceRuntime,
+  runtimeReadiness: receiptArtifacts.routeArtifacts[0]?.runtimeReadiness,
   sourceMapId: receiptRoute?.mergeRefs.sourceMapIds[0],
   routeSourceMapMappingId: receiptRoute?.mergeRefs.sourceMapMappingIds[0],
   admissionRecordSourceMapId: receiptRoute?.mergeRefs.sourceMapIds[0],
@@ -93,6 +103,13 @@ receiptArtifacts.index.admissionRecordSourceMapLinkIds satisfies readonly string
 receiptArtifacts.index.evidenceReceiptSourceMapIds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptSourceMapMappingIds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptSourceMapLinkIds satisfies readonly string[];
+receiptArtifacts.index.runtimeRouteIds satisfies readonly string[];
+receiptArtifacts.index.sourceHostIds satisfies readonly string[];
+receiptArtifacts.index.targetHostIds satisfies readonly string[];
+receiptArtifacts.index.sourceRuntimes satisfies readonly string[];
+receiptArtifacts.index.targetRuntimes satisfies readonly string[];
+receiptArtifacts.index.requiredRuntimeCapabilities satisfies readonly string[];
+receiptArtifacts.index.missingRuntimeCapabilities satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintSourceIds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintEvidenceIds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintObligationMissingEvidence satisfies readonly string[];
@@ -113,6 +130,9 @@ receiptArtifacts.summary.compactCounts.evidenceReceipts.sourceMapLinkIds satisfi
 receiptArtifacts.summary.compactCounts.sourceMaps.ids satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.sourceMaps.mappingIds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.sourceMaps.linkIds satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.runtimeRoutes.bySourceHost satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.runtimeRoutes.byReadiness satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.runtimeRoutes.requiredCapabilities satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintActions satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintSourceIds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintEvidenceIds satisfies Readonly<Record<string, number>>;
@@ -137,6 +157,9 @@ receiptArtifacts.admissionRecords[0]?.interlinguaConstraintActions satisfies rea
 receiptArtifacts.admissionRecords[0]?.ids.sourceMapIds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.ids.sourceMapMappingIds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.ids.sourceMapLinkIds satisfies readonly string[] | undefined;
+receiptArtifacts.admissionRecords[0]?.ids.runtimeRouteId satisfies string | undefined;
+receiptArtifacts.admissionRecords[0]?.sourceHostId satisfies string | undefined;
+receiptArtifacts.admissionRecords[0]?.requiredRuntimeCapabilities satisfies readonly string[] | undefined;
 receiptArtifacts.routeArtifacts[0]?.materialization.sourceMapIds satisfies readonly string[] | undefined;
 receiptArtifacts.routeArtifacts[0]?.materialization.sourceMapMappingIds satisfies readonly string[] | undefined;
 receiptArtifacts.routeArtifacts[0]?.materialization.sourceMapLinkIds satisfies readonly string[] | undefined;
@@ -151,7 +174,11 @@ receiptArtifacts.admissionRecords[0]?.interlingua.constraintRequiredKinds satisf
 receiptArtifacts.admissionRecords[0]?.interlingua.constraintRepresentedKinds satisfies readonly string[] | undefined;
 receiptArtifact?.evidenceReceipt.autoMergeClaim satisfies false | undefined;
 receiptArtifact?.evidenceReceipt.semanticEquivalenceClaim satisfies false | undefined;
+receiptArtifact?.runtimeRouteId satisfies string | undefined;
+receiptArtifact?.runtimeReadiness satisfies string | undefined;
 receiptArtifact?.materialization.evidenceReceiptIds satisfies readonly string[] | undefined;
+const receiptRuntimeFields: UniversalConversionRuntimeRouteFields | undefined = receiptArtifact;
+receiptRuntimeFields?.runtimeRouteId satisfies string | undefined;
 
 const receiptWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(receiptPlan);
 const receiptWorklistQuery = queryUniversalConversionWorklist(receiptWorklist, { target: 'javascript' });

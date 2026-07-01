@@ -8,6 +8,7 @@ import type { SemanticHistoryRecord } from './semantic-history.js';
 import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
 import type { UniversalConversionArtifactCompactCounts } from './universal-conversion-compact-counts.js';
 import type { UniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence.js';
+import type { UniversalConversionRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
 import type { UniversalInterlinguaConstraintEdgeKind, UniversalInterlinguaLayerKind, UniversalInterlinguaLoweringDisposition, UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalConversionRouteConstraintFields } from './universal-conversion-plan-constraints.js';
 import type {
@@ -56,7 +57,7 @@ export interface UniversalConversionConstraintSummary {
   readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[];
 }
 
-export interface UniversalConversionAdmissionRecord {
+export interface UniversalConversionAdmissionRecord extends UniversalConversionRuntimeRouteFields {
   readonly kind: 'frontier.lang.universalConversionAdmissionRecord';
   readonly version: 1;
   readonly schema: 'frontier.lang.universalConversionAdmissionRecord.v1';
@@ -115,6 +116,7 @@ export interface UniversalConversionAdmissionRecord {
     readonly patchBundleId?: string;
     readonly semanticOperationIds: readonly string[];
     readonly sourceMapIds: readonly string[]; readonly sourceMapMappingIds: readonly string[]; readonly sourceMapLinkIds: readonly string[];
+    readonly runtimeRouteId?: string; readonly sourceHostId?: string; readonly targetHostId?: string;
     readonly runtimeProofObligationIds: readonly string[];
     readonly evidenceIds: readonly string[];
     readonly proofIds: readonly string[];
@@ -192,7 +194,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly metadata: Record<string, unknown>;
 }
 
-export interface UniversalConversionRouteArtifact extends UniversalConversionRouteConstraintFields {
+export interface UniversalConversionRouteArtifact extends UniversalConversionRouteConstraintFields, UniversalConversionRuntimeRouteFields {
   readonly kind: 'frontier.lang.universalConversionRouteArtifact';
   readonly version: 1;
   readonly schema: 'frontier.lang.universalConversionRouteArtifact.v1';

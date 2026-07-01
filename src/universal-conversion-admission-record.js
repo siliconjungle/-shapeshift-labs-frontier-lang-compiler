@@ -1,4 +1,4 @@
-import { countBy, idFragment, uniqueStrings } from './native-import-utils.js';
+import { countBy, idFragment, uniqueStrings } from './native-import-utils.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js';
 
 export function createUniversalConversionAdmissionRecord(input) {
   const route = input.route;
@@ -15,7 +15,7 @@ export function createUniversalConversionAdmissionRecord(input) {
     ...(input.patchBundle?.proofIds ?? []),
     ...(input.materialization?.proofIds ?? [])
   ]);
-  const runtimeProof = runtimeProofIndex(route.runtime?.proofObligations ?? []);
+  const runtimeProof = runtimeProofIndex(route.runtime?.proofObligations ?? []), runtimeRoute = routeRuntimeDenominators(route);
   const interlinguaQuery = route.interlingua?.query ?? {};
   const interlinguaObligationRecords = route.interlingua?.constraints?.obligations ?? [];
   const interlinguaConstraintObligationEvidenceIds = uniqueStrings([
@@ -73,6 +73,7 @@ export function createUniversalConversionAdmissionRecord(input) {
     interlinguaConstraintObligationMissingEvidence: interlinguaQuery.constraintObligationMissingEvidence ?? [],
     resourceTransferStatus: route.resourceTransfer?.status,
     resourceTransferAction: route.resourceTransfer?.action,
+    ...runtimeRoute,
     runtimeProofObligationIds: runtimeProof.obligationIds,
     runtimeProofCapabilities: runtimeProof.capabilities,
     runtimeProofStatuses: runtimeProof.statuses,
@@ -142,6 +143,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       patchBundleId: input.patchBundle?.id,
       semanticOperationIds: operations.map((operation) => operation.id),
       sourceMapIds: input.materialization?.sourceMapIds ?? [], sourceMapMappingIds: input.materialization?.sourceMapMappingIds ?? [], sourceMapLinkIds: input.materialization?.sourceMapLinkIds ?? [],
+      runtimeRouteId: runtimeRoute.runtimeRouteId, sourceHostId: runtimeRoute.sourceHostId, targetHostId: runtimeRoute.targetHostId,
       runtimeProofObligationIds: runtimeProof.obligationIds,
       evidenceIds,
       proofIds
@@ -252,6 +254,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       routeId: route.id,
       planId: input.planId,
       mergeScoreSchema: score.schema,
+      runtimeRoute,
       translationAdmission: route.translationAdmission,
       interlingua: route.interlingua,
       resourceTransfer: route.resourceTransfer,

@@ -1,6 +1,7 @@
 import{uniqueStrings as u}from './native-import-utils.js';
 import{artifactSemanticEditIndex as esi}from './universal-conversion-artifact-semantic-edit.js';
 import{artifactSourceMapIndex as smi,artifactSourceMapMatches as smm}from './universal-conversion-artifact-source-maps.js';
+import{rri,rrm}from './universal-conversion-artifact-runtime-routes.js';
 import{artifactConstraintIndex as aci,artifactConstraintsMatch as acm}from './universal-conversion-artifact-constraints.js';
 import{interlinguaRecordMatches as irm}from './universal-interlingua-record.js';
 const ai='admissionRecordInterlingua',eri='evidenceReceiptInterlingua',soi='semanticOperationInterlingua';
@@ -36,6 +37,7 @@ export function artifactIndex(a) {
     adapterIds: u(a.map((a) => a.adapter)),
     adapterKinds: u(a.map((a) => a.adapterKind)),
     routeMissingEvidence: u(a.flatMap((a) => a.missingEvidence ?? [])),
+    ...rri(a),
     runtimeAdapterRequirementIds: u(a.flatMap((a) => a.runtimeAdapterRequirementIds ?? [])),
     runtimeProofObligationIds: u(a.flatMap((a) => a.runtimeProofObligationIds ?? [])),
     runtimeProofCapabilities: u(a.flatMap((a) => a.runtimeProofCapabilities ?? [])),
@@ -138,6 +140,7 @@ function matchesArtifact(record, query) {
     && match(query.adapterId, [record.adapter])
     && match(query.adapterKind, [record.adapterKind])
     && match(query.routeMissingEvidence, record.missingEvidence)
+    && rrm(record, query)
     && match(query.runtimeAdapterRequirementId, record.runtimeAdapterRequirementIds)
     && match(query.runtimeProofObligationId, record.runtimeProofObligationIds)
     && match(query.runtimeProofCapability, record.runtimeProofCapabilities)

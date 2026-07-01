@@ -1,4 +1,5 @@
 import type { UniversalConversionArtifactSourceMapCompactCounts } from './universal-conversion-artifact-source-maps.js';
+import type { UniversalConversionRuntimeRouteCompactCounts } from './universal-conversion-artifact-runtime-routes.js';
 
 export interface UniversalConversionRepresentationCompactCounts {
   readonly total: number;
@@ -201,6 +202,7 @@ export interface UniversalConversionArtifactCompactCounts {
     readonly byRisk: Readonly<Record<string, number>>;
   };
   readonly sourceMaps: UniversalConversionArtifactSourceMapCompactCounts;
+  readonly runtimeRoutes: UniversalConversionRuntimeRouteCompactCounts;
   readonly translationAdmission: UniversalConversionTranslationAdmissionCompactCounts;
   readonly runtimeProof: UniversalConversionRuntimeProofCompactCounts;
   readonly resourceTransfer: UniversalConversionResourceTransferCompactCounts;
