@@ -31,6 +31,7 @@ export * from './declarations/universal-scope-binding-constraints.js';
 export * from './declarations/universal-module-constraints.js';
 export * from './declarations/universal-numeric-semantics-constraints.js';
 export * from './declarations/universal-text-semantics-constraints.js';
+export * from './declarations/universal-collection-semantics-constraints.js';
 export * from './declarations/universal-object-model-constraints.js';
 export * from './declarations/universal-protocol-constraints.js';
 export * from './declarations/universal-type-constraints.js';

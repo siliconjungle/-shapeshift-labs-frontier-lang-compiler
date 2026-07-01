@@ -18,6 +18,7 @@ export type UniversalInterlinguaLayerKind =
   | 'adt-pattern-contract'
   | 'numeric-semantics-contract'
   | 'text-semantics-contract'
+  | 'collection-semantics-contract'
   | 'protocol-contract'
   | 'proof-evidence'
   | string;
@@ -50,6 +51,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'module'
   | 'numeric-semantics'
   | 'text-semantics'
+  | 'collection-semantics'
   | 'object-model'
   | 'protocol'
   | 'type'

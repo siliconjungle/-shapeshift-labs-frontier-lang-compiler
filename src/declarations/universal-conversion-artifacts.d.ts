@@ -17,7 +17,7 @@ import type { UniversalBorrowCheckerConstraintEvidence } from './universal-borro
 import type { UniversalDataLayoutConstraintEvidence } from './universal-data-layout-constraints.js'; import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
 import type { UniversalConcurrencyModelConstraintEvidence } from './universal-concurrency-model-constraints.js';
 import type { UniversalErrorModelConstraintEvidence } from './universal-error-model-constraints.js'; import type { UniversalEvaluationModelConstraintEvidence } from './universal-evaluation-model-constraints.js'; import type { UniversalHostEnvironmentConstraintEvidence } from './universal-host-environment-constraints.js';
-import type { UniversalMemoryModelConstraintEvidence } from './universal-memory-model-constraints.js'; import type { UniversalMetaprogrammingConstraintEvidence } from './universal-metaprogramming-constraints.js'; import type { UniversalScopeBindingConstraintEvidence } from './universal-scope-binding-constraints.js'; import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js'; import type { UniversalNumericSemanticsConstraintEvidence } from './universal-numeric-semantics-constraints.js'; import type { UniversalTextSemanticsConstraintEvidence } from './universal-text-semantics-constraints.js'; import type { UniversalObjectModelConstraintEvidence } from './universal-object-model-constraints.js';
+import type { UniversalMemoryModelConstraintEvidence } from './universal-memory-model-constraints.js'; import type { UniversalMetaprogrammingConstraintEvidence } from './universal-metaprogramming-constraints.js'; import type { UniversalScopeBindingConstraintEvidence } from './universal-scope-binding-constraints.js'; import type { UniversalModuleConstraintEvidence } from './universal-module-constraints.js'; import type { UniversalNumericSemanticsConstraintEvidence } from './universal-numeric-semantics-constraints.js'; import type { UniversalTextSemanticsConstraintEvidence } from './universal-text-semantics-constraints.js'; import type { UniversalCollectionSemanticsConstraintEvidence } from './universal-collection-semantics-constraints.js'; import type { UniversalObjectModelConstraintEvidence } from './universal-object-model-constraints.js';
 import type { UniversalProtocolConstraintEvidence } from './universal-protocol-constraints.js';
 import type { UniversalTypeConstraintEvidence } from './universal-type-constraints.js';
 import type {
@@ -99,8 +99,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly evaluationModelConstraintStatus?: string; readonly evaluationModelConstraintAction?: string; readonly hostEnvironmentConstraintStatus?: string; readonly hostEnvironmentConstraintAction?: string;
   readonly memoryModelConstraintStatus?: string;
   readonly memoryModelConstraintAction?: string; readonly metaprogrammingConstraintStatus?: string; readonly metaprogrammingConstraintAction?: string; readonly scopeBindingConstraintStatus?: string; readonly scopeBindingConstraintAction?: string;
-  readonly moduleConstraintStatus?: string; readonly numericSemanticsConstraintStatus?: string; readonly textSemanticsConstraintStatus?: string; readonly objectModelConstraintStatus?: string; readonly protocolConstraintStatus?: string;
-  readonly moduleConstraintAction?: string; readonly numericSemanticsConstraintAction?: string; readonly textSemanticsConstraintAction?: string; readonly objectModelConstraintAction?: string; readonly protocolConstraintAction?: string;
+  readonly moduleConstraintStatus?: string; readonly numericSemanticsConstraintStatus?: string; readonly textSemanticsConstraintStatus?: string; readonly collectionSemanticsConstraintStatus?: string; readonly objectModelConstraintStatus?: string; readonly protocolConstraintStatus?: string;
+  readonly moduleConstraintAction?: string; readonly numericSemanticsConstraintAction?: string; readonly textSemanticsConstraintAction?: string; readonly collectionSemanticsConstraintAction?: string; readonly objectModelConstraintAction?: string; readonly protocolConstraintAction?: string;
   readonly typeConstraintStatus?: string; readonly typeConstraintAction?: string;
   readonly readiness: SemanticMergeReadiness | string;
   readonly risk: UniversalConversionRisk | string;
@@ -162,7 +162,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly borrowScopeConstraint: UniversalConversionConstraintSummary;
   readonly borrowCheckerConstraint: UniversalConversionConstraintSummary; readonly dataLayoutConstraint: UniversalConversionConstraintSummary;
   readonly moduleConstraint: UniversalConversionConstraintSummary;
-  readonly numericSemanticsConstraint: UniversalConversionConstraintSummary; readonly textSemanticsConstraint: UniversalConversionConstraintSummary;
+  readonly numericSemanticsConstraint: UniversalConversionConstraintSummary; readonly textSemanticsConstraint: UniversalConversionConstraintSummary; readonly collectionSemanticsConstraint: UniversalConversionConstraintSummary;
   readonly errorModelConstraint: UniversalConversionConstraintSummary;
   readonly evaluationModelConstraint: UniversalConversionConstraintSummary; readonly hostEnvironmentConstraint: UniversalConversionConstraintSummary;
   readonly memoryModelConstraint: UniversalConversionConstraintSummary; readonly metaprogrammingConstraint: UniversalConversionConstraintSummary; readonly scopeBindingConstraint: UniversalConversionConstraintSummary; readonly objectModelConstraint: UniversalConversionConstraintSummary; readonly protocolConstraint: UniversalConversionConstraintSummary; readonly typeConstraint: UniversalConversionConstraintSummary;
@@ -222,7 +222,7 @@ export interface UniversalConversionRouteArtifact {
   readonly errorModelConstraint?: UniversalErrorModelConstraintEvidence;
   readonly evaluationModelConstraint?: UniversalEvaluationModelConstraintEvidence; readonly hostEnvironmentConstraint?: UniversalHostEnvironmentConstraintEvidence;
   readonly memoryModelConstraint?: UniversalMemoryModelConstraintEvidence; readonly metaprogrammingConstraint?: UniversalMetaprogrammingConstraintEvidence; readonly scopeBindingConstraint?: UniversalScopeBindingConstraintEvidence;
-  readonly moduleConstraint?: UniversalModuleConstraintEvidence; readonly numericSemanticsConstraint?: UniversalNumericSemanticsConstraintEvidence; readonly textSemanticsConstraint?: UniversalTextSemanticsConstraintEvidence; readonly objectModelConstraint?: UniversalObjectModelConstraintEvidence; readonly protocolConstraint?: UniversalProtocolConstraintEvidence; readonly typeConstraint?: UniversalTypeConstraintEvidence;
+  readonly moduleConstraint?: UniversalModuleConstraintEvidence; readonly numericSemanticsConstraint?: UniversalNumericSemanticsConstraintEvidence; readonly textSemanticsConstraint?: UniversalTextSemanticsConstraintEvidence; readonly collectionSemanticsConstraint?: UniversalCollectionSemanticsConstraintEvidence; readonly objectModelConstraint?: UniversalObjectModelConstraintEvidence; readonly protocolConstraint?: UniversalProtocolConstraintEvidence; readonly typeConstraint?: UniversalTypeConstraintEvidence;
   readonly admissionStatus: UniversalConversionArtifactAdmissionStatus;
   readonly reviewRequired: true;
   readonly history: SemanticHistoryRecord;
