@@ -15,6 +15,7 @@ import { moduleConstraintForConversionRoute, moduleConstraintMatches } from './u
 import { numericSemanticsConstraintForConversionRoute, numericSemanticsConstraintMatches } from './universal-numeric-semantics-constraints.js';
 import { textSemanticsConstraintForConversionRoute, textSemanticsConstraintMatches } from './universal-text-semantics-constraints.js';
 import { collectionSemanticsConstraintForConversionRoute, collectionSemanticsConstraintMatches } from './universal-collection-semantics-constraints.js';
+import { serializationSemanticsConstraintForConversionRoute, serializationSemanticsConstraintMatches } from './universal-serialization-semantics-constraints.js';
 import { objectModelConstraintForConversionRoute, objectModelConstraintMatches } from './universal-object-model-constraints.js';
 import { protocolConstraintForConversionRoute, protocolConstraintMatches } from './universal-protocol-constraints.js';
 import { resourceTransferForConversionRoute, resourceTransferMatches } from './universal-resource-transfer.js';
@@ -40,6 +41,7 @@ const families = [
   ['numericSemanticsConstraint', 'numericSemanticsConstraints', 'translationNumericSemanticsConstraint'],
   ['textSemanticsConstraint', 'textSemanticsConstraints', 'translationTextSemanticsConstraint'],
   ['collectionSemanticsConstraint', 'collectionSemanticsConstraints', 'translationCollectionSemanticsConstraint'],
+  ['serializationSemanticsConstraint', 'serializationSemanticsConstraints', 'translationSerializationSemanticsConstraint'],
   ['objectModelConstraint', 'objectModelConstraints', 'translationObjectModelConstraint'],
   ['protocolConstraint', 'protocolConstraints', 'translationProtocolConstraint'],
   ['resourceTransfer', 'resourceTransfers', 'translationResourceTransfer'],
@@ -89,6 +91,7 @@ export function createConversionRouteConstraints(input = {}, route = {}, routeIm
     numericSemanticsConstraint: numericSemanticsConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     textSemanticsConstraint: textSemanticsConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     collectionSemanticsConstraint: collectionSemanticsConstraintForConversionRoute(input, route, routeImports, routeEvidence),
+    serializationSemanticsConstraint: serializationSemanticsConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     objectModelConstraint: objectModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     protocolConstraint: protocolConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     typeConstraint: typeConstraintForConversionRoute(input, route, routeImports, routeEvidence)
@@ -115,6 +118,7 @@ export function conversionRouteMatchesConstraintQuery(route = {}, query = {}) {
     && numericSemanticsConstraintMatches(route.numericSemanticsConstraint, query)
     && textSemanticsConstraintMatches(route.textSemanticsConstraint, query)
     && collectionSemanticsConstraintMatches(route.collectionSemanticsConstraint, query)
+    && serializationSemanticsConstraintMatches(route.serializationSemanticsConstraint, query)
     && objectModelConstraintMatches(route.objectModelConstraint, query)
     && protocolConstraintMatches(route.protocolConstraint, query)
     && typeConstraintMatches(route.typeConstraint, query);

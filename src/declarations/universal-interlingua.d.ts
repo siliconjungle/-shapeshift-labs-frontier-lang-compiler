@@ -19,6 +19,7 @@ export type UniversalInterlinguaLayerKind =
   | 'numeric-semantics-contract'
   | 'text-semantics-contract'
   | 'collection-semantics-contract'
+  | 'serialization-semantics-contract'
   | 'protocol-contract'
   | 'proof-evidence'
   | string;
@@ -52,6 +53,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'numeric-semantics'
   | 'text-semantics'
   | 'collection-semantics'
+  | 'serialization-semantics'
   | 'object-model'
   | 'protocol'
   | 'type'

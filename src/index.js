@@ -70,6 +70,7 @@ export { createUniversalModuleConstraintEvidence, moduleConstraintMatches, Unive
 export { createUniversalNumericSemanticsConstraintEvidence, numericSemanticsConstraintMatches, UniversalNumericSemanticsConstraintStatuses } from './universal-numeric-semantics-constraints.js';
 export { createUniversalTextSemanticsConstraintEvidence, textSemanticsConstraintMatches, UniversalTextSemanticsConstraintStatuses } from './universal-text-semantics-constraints.js';
 export { createUniversalCollectionSemanticsConstraintEvidence, collectionSemanticsConstraintMatches, UniversalCollectionSemanticsConstraintStatuses } from './universal-collection-semantics-constraints.js';
+export { createUniversalSerializationSemanticsConstraintEvidence, serializationSemanticsConstraintMatches, UniversalSerializationSemanticsConstraintStatuses } from './universal-serialization-semantics-constraints.js';
 export { createUniversalObjectModelConstraintEvidence, objectModelConstraintMatches, UniversalObjectModelConstraintStatuses } from './universal-object-model-constraints.js';
 export { createUniversalProtocolConstraintEvidence, protocolConstraintMatches, UniversalProtocolConstraintStatuses } from './universal-protocol-constraints.js';
 export { createUniversalTypeConstraintEvidence, typeConstraintMatches, UniversalTypeConstraintStatuses } from './universal-type-constraints.js';
