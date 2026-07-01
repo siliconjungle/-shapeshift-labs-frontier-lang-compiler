@@ -292,12 +292,12 @@ export interface CreateUniversalConversionArtifactsOptions {
   readonly id?: string;
   readonly planId?: string;
   readonly generatedAt?: number | string;
-  readonly routeId?: string;
-  readonly sourceLanguage?: FrontierSourceLanguage | string;
-  readonly target?: FrontierCompileTarget | string;
-  readonly mode?: UniversalConversionRouteMode;
-  readonly readiness?: SemanticMergeReadiness | string;
-  readonly admissionAction?: UniversalConversionAdmissionAction;
+  readonly routeId?: string | readonly string[];
+  readonly sourceLanguage?: FrontierSourceLanguage | string | readonly (FrontierSourceLanguage | string)[];
+  readonly target?: FrontierCompileTarget | string | readonly (FrontierCompileTarget | string)[];
+  readonly mode?: UniversalConversionRouteMode | readonly UniversalConversionRouteMode[];
+  readonly readiness?: SemanticMergeReadiness | string | readonly (SemanticMergeReadiness | string)[];
+  readonly admissionAction?: UniversalConversionAdmissionAction | readonly UniversalConversionAdmissionAction[];
   readonly translationRuntimeReadiness?: string | readonly string[]; readonly translationRuntimeAdapterRequirementId?: string | readonly string[]; readonly translationRuntimeProofObligationId?: string | readonly string[]; readonly translationRuntimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[]; readonly translationDialectReadiness?: string | readonly string[]; readonly translationDialectRecordId?: string | readonly string[];
   readonly maxRoutes?: number;
   readonly evidence?: readonly Record<string, unknown>[];

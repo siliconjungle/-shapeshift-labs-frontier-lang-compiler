@@ -65,6 +65,7 @@ assert.equal(jsToJs.mergeRefs.sourceMapIds.length >= 1, true);
 assert.equal(jsToJs.mergeRefs.semanticOwnershipKeys.length >= 1, true);
 assert.equal(jsToJs.mergeScore.schema, 'frontier.lang.semanticMergeScore.v1');
 assert.equal(jsToJs.mergeScore.components.projectionPath.status, 'strong');
+assert.equal(queryUniversalConversionPlan(conversionPlan, { routeId: ['missing-route', jsToJs.id], sourceLanguage: ['typescript', 'javascript'], target: ['python', 'javascript'], mode: ['target-adapter', 'preserve-source'], readiness: ['blocked', jsToJs.readiness], admissionAction: ['reject', jsToJs.admissionAction] }).bestRoute.id, jsToJs.id);
 
 const conversionArtifacts = createUniversalConversionArtifacts(conversionPlan, { generatedAt: 778 });
 assert.equal(conversionArtifacts.kind, 'frontier.lang.universalConversionArtifacts');
@@ -80,6 +81,7 @@ assert.equal(conversionArtifacts.summary.highRisk >= 1, true);
 assert.equal(conversionArtifacts.summary.reasonCodes >= conversionArtifacts.summary.routes, true);
 assert.equal(conversionArtifacts.summary.autoMergeClaims, 0);
 assert.equal(conversionArtifacts.summary.semanticEquivalenceClaims, 0);
+const arrayFilteredArtifacts = createUniversalConversionArtifacts(conversionPlan, { routeId: ['missing-route', jsToJs.id], sourceLanguage: ['typescript', 'javascript'], target: ['python', 'javascript'], mode: ['target-adapter', 'preserve-source'], readiness: ['blocked', jsToJs.readiness], admissionAction: ['reject', jsToJs.admissionAction] }); assert.equal(arrayFilteredArtifacts.routeArtifacts[0].routeId, jsToJs.id);
 
 const directConversionArtifacts = createUniversalConversionArtifacts({
   imports: [scannedJsImport],
@@ -120,9 +122,7 @@ assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, { sourcePath
 assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, {
   semanticOperationKind: 'sourcePreservation'
 }).some((artifact) => artifact.routeId === jsToJs.id), true);
-assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, {
-  admissionBucket: 'blocked'
-}).some((artifact) => artifact.routeId === jsToJs.id), true);
+assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, { language: ['typescript', 'javascript'], admissionAction: [jsToJs.admissionAction], admissionBucket: 'blocked' }).some((artifact) => artifact.routeId === jsToJs.id), true);
 assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, {
   admissionRecordId: jsArtifact.admissionRecord.id,
   risk: 'high'

@@ -86,13 +86,13 @@ export interface UniversalConversionTranslationAdmissionDenominatorFields {
 }
 
 export interface UniversalConversionRouteEvidenceReceiptOptions {
-  readonly routeId?: string;
-  readonly sourceLanguage?: FrontierSourceLanguage | string;
-  readonly language?: FrontierSourceLanguage | string;
-  readonly target?: FrontierCompileTarget | string;
-  readonly mode?: UniversalConversionRouteMode;
-  readonly readiness?: SemanticMergeReadiness | string;
-  readonly admissionAction?: UniversalConversionAdmissionAction;
+  readonly routeId?: string | readonly string[];
+  readonly sourceLanguage?: FrontierSourceLanguage | string | readonly (FrontierSourceLanguage | string)[];
+  readonly language?: FrontierSourceLanguage | string | readonly (FrontierSourceLanguage | string)[];
+  readonly target?: FrontierCompileTarget | string | readonly (FrontierCompileTarget | string)[];
+  readonly mode?: UniversalConversionRouteMode | readonly UniversalConversionRouteMode[];
+  readonly readiness?: SemanticMergeReadiness | string | readonly (SemanticMergeReadiness | string)[];
+  readonly admissionAction?: UniversalConversionAdmissionAction | readonly UniversalConversionAdmissionAction[];
   readonly runtimeRouteId?: string | readonly string[];
   readonly sourceHostId?: string | readonly string[];
   readonly targetHostId?: string | readonly string[];

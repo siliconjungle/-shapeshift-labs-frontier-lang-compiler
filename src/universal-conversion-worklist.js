@@ -255,25 +255,25 @@ function worklistSummary(items) {
 }
 
 function routeMatchesWorklistOptions(route,options) {
-  const source=normalizeNativeLanguageId(options.sourceLanguage??options.language);
-  const target=normalizeProjectionMatrixTargets(options.target?[options.target]:[])[0];
-  return (!source || route.languageIds.includes(source))
-    && (!target || route.target === target)
+  const ss=q(options.sourceLanguage??options.language).filter(Boolean).map(normalizeNativeLanguageId);
+  const ts=normalizeProjectionMatrixTargets(q(options.target));
+  return (!ss.length || route.languageIds.some((id)=>ss.includes(id)))
+    && (!ts.length || ts.includes(route.target))
     && workItemRuntimeRouteMatches(workItemRuntimeRouteDenominators(route), options) && workItemSourceMapMatches(workItemSourceMapDenominators(route), options) && workItemSemanticEditMatches(workItemSemanticEditDenominators(route), options) && tadm(tadfr(route), options, match)
     && match(options.routeId, [route.id]);
 }
 
 function workItemMatchesQuery(item, query) {
-  const source = normalizeNativeLanguageId(query.sourceLanguage ?? query.language);
-  const target = normalizeProjectionMatrixTargets(query.target ? [query.target] : [])[0];
+  const ss = q(query.sourceLanguage ?? query.language).filter(Boolean).map(normalizeNativeLanguageId), ls = [...item.languageIds, ...(item.sourceLanguages ?? []).map(normalizeNativeLanguageId)];
+  const ts = normalizeProjectionMatrixTargets(q(query.target));
   return match(query.itemId ?? query.id, [item.id])
     && match(query.kind, [item.kind])
     && match(query.action, [item.action])
     && match(query.priority, [item.priority])
     && match(query.routeId, item.routeIds)
-    && (!source || item.languageIds.includes(source) || item.sourceLanguages.map(normalizeNativeLanguageId).includes(source))
+    && (!ss.length || ss.some((s) => ls.includes(s)))
     && match(query.languageId, item.languageIds)
-    && (!target || item.targets.includes(target))
+    && (!ts.length || ts.some((t) => item.targets.includes(t)))
     && match(query.mode, item.modes)
     && match(query.readiness, item.readinesses)
     && match(query.admissionAction, item.admissionActions)
@@ -312,9 +312,9 @@ function sortWorkItems(items) { return items.sort((left, right) => priorityRank(
 
 function higherPriority(left, right) { return priorityRank(right) > priorityRank(left) ? right : left; }
 function priorityRank(priority) { return { low: 0, normal: 1, high: 2, blocker: 3 }[priority] ?? 1; }
-function match(filter, values) {
-  const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];
-  if (!filters.length) return true;
-  const valueSet = new Set((values ?? []).map(String));
-  return filters.some((item) => valueSet.has(String(item)));
+function q(v){return Array.isArray(v)?v:v===undefined?[]:[v];} function match(f, values) {
+  const fs=q(f);
+  if (!fs.length) return true;
+  const vs=new Set((values ?? []).map(String));
+  return fs.some((item) => vs.has(String(item)));
 }

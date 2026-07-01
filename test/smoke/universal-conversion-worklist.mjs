@@ -40,7 +40,7 @@ const sourceMapQuery = queryUniversalConversionWorklist(adapterGapWorklist, {
 });
 assert.equal(sourceMapQuery.found, true);
 assert.equal(sourceMapQuery.bestItem.sourceMapIds.includes(adapterSourceMapId), true);
-const proofQuery = queryUniversalConversionWorklist(adapterGapWorklist, {
+const proofQuery = queryUniversalConversionWorklist(adapterGapWorklist, { sourceLanguage: ['typescript', 'javascript'], target: ['python', 'rust'],
   kind: 'collect-translation-proof',
   evidenceKey: 'translation-proof-or-replay'
 });
@@ -50,8 +50,8 @@ assert.equal(proofQuery.bestItem.kind, 'collect-translation-proof');
 assert.equal(proofQuery.summary.proofEvidenceGaps >= 1, true);
 
 const filteredWorklist = createUniversalConversionWorklist(adapterGapPlan, {
-  sourceLanguage: 'javascript',
-  target: 'rust',
+  sourceLanguage: ['typescript', 'javascript'],
+  target: ['python', 'rust'],
   kind: 'add-target-adapter'
 });
 assert.equal(filteredWorklist.items.length >= 1, true);

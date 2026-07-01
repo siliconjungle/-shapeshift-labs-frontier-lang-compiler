@@ -20,6 +20,7 @@ import type {
   UniversalExternRecordInput
 } from './universal-dialects.js';
 type UniversalConversionPlanRepresentationQuery = Omit<URCQ, 'dialectReadiness'>;
+type QueryFilter<T> = T | readonly T[];
 export type UniversalConversionRouteMode =
   | 'preserve-source'
   | 'target-adapter'
@@ -242,12 +243,13 @@ export interface UniversalConversionPlanOptions extends UCO, UniversalConversion
   readonly evidence?: readonly EvidenceRecord[];
 }
 export interface UniversalConversionPlanQuery extends UniversalConversionPlanRepresentationQuery, UniversalInterlinguaQuery, UniversalConversionPlanConstraintQuery {
-  readonly sourceLanguage?: SL | string;
-  readonly language?: SL | string;
-  readonly target?: CT | string;
-  readonly mode?: UniversalConversionRouteMode;
-  readonly readiness?: SMR;
-  readonly admissionAction?: UniversalConversionAdmissionAction;
+  readonly routeId?: QueryFilter<string>;
+  readonly sourceLanguage?: QueryFilter<SL | string>;
+  readonly language?: QueryFilter<SL | string>;
+  readonly target?: QueryFilter<CT | string>;
+  readonly mode?: QueryFilter<UniversalConversionRouteMode>;
+  readonly readiness?: QueryFilter<SMR>;
+  readonly admissionAction?: QueryFilter<UniversalConversionAdmissionAction>;
   readonly runtimeRouteId?: string | readonly string[];
   readonly sourceHostId?: string | readonly string[];
   readonly targetHostId?: string | readonly string[];

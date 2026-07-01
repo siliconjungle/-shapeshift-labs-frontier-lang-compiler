@@ -1,4 +1,4 @@
-import { idFragment, normalizeStringList, uniqueStrings } from './native-import-utils.js';
+import { idFragment, normalizeNativeLanguageId, normalizeStringList, uniqueStrings } from './native-import-utils.js'; import { normalizeProjectionMatrixTargets } from './coverage-matrix-profiles.js';
 import { universalConversionArtifactSummary } from './universal-conversion-artifact-summary.js';
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
 import { artifactIndex } from './universal-conversion-artifact-query.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js'; import { artifactSemanticEditIndex as esi } from './universal-conversion-artifact-semantic-edit.js'; import{translationAdmissionDenominatorMatches as tadm,translationAdmissionDenominatorsForRoute as tadfr}from './universal-conversion-translation-admission-denominators.js';
@@ -209,13 +209,13 @@ function routeRuntimeProofIndex(route) {
 }
 
 function selectRoutes(routes, options) {
-  const selected = (routes ?? []).filter((route) => {
-    if (options.routeId && route.id !== options.routeId) return false;
-    if (options.sourceLanguage && route.sourceLanguage !== options.sourceLanguage) return false;
-    if (options.target && route.target !== options.target) return false;
-    if (options.mode && route.mode !== options.mode) return false;
-    if (options.readiness && route.readiness !== options.readiness) return false;
-    if (options.admissionAction && route.admissionAction !== options.admissionAction) return false; if (!tadm(tadfr(route), options, (f,v)=>{const a=normalizeStringList(f);return!a.length||a.some((x)=>normalizeStringList(v).includes(x));})) return false;
+  const selected = (routes ?? []).filter((route) => { const m=(f,v)=>{const a=normalizeStringList(f);return!a.length||a.some((x)=>normalizeStringList(v).includes(x));}, langs=normalizeStringList(options.sourceLanguage??options.language).map(normalizeNativeLanguageId), targets=normalizeProjectionMatrixTargets(normalizeStringList(options.target));
+    if (!m(options.routeId, [route.id])) return false;
+    if (langs.length && !langs.includes(normalizeNativeLanguageId(route.sourceLanguage))) return false;
+    if (targets.length && !targets.includes(route.target)) return false;
+    if (!m(options.mode, [route.mode])) return false;
+    if (!m(options.readiness, [route.readiness])) return false;
+    if (!m(options.admissionAction, [route.admissionAction])) return false; if (!tadm(tadfr(route), options, m)) return false;
     return true;
   });
   return Number.isFinite(options.maxRoutes) ? selected.slice(0, Math.max(0, Number(options.maxRoutes))) : selected;

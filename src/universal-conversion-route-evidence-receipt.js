@@ -193,9 +193,7 @@ function selectRoute(routeOrInput, options, context) {
     targetAdapterId: options.targetAdapterId
   };
   const queried = queryUniversalConversionPlan(plan, query, context);
-  const route = options.routeId
-    ? queried.routes.find((entry) => entry.id === options.routeId)
-    : queried.bestRoute;
+  const route = queried.bestRoute;
   if (!route) throw new Error(`No conversion route matched routeId=${options.routeId ?? '*'} source=${options.sourceLanguage ?? options.language ?? '*'} target=${options.target ?? '*'}.`);
   return route;
 }

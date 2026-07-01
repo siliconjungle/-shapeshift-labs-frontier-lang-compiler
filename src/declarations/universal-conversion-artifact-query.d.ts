@@ -140,6 +140,7 @@ export interface UniversalConversionArtifactQuery extends USMQ, URRQ, UniversalR
   readonly admissionRecordId?: QS;
   readonly evidenceReceiptId?: QS;
   readonly sourceLanguage?: FrontierSourceLanguage | QS;
+  readonly language?: FrontierSourceLanguage | QS;
   readonly target?: FrontierCompileTarget | QS;
   readonly mode?: UniversalConversionRouteMode | RS;
   readonly lossClass?: QS;

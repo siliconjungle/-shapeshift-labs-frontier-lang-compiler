@@ -144,9 +144,9 @@ export interface UniversalConversionWorkItem extends UniversalConversionWorklist
 export interface UniversalConversionWorklistOptions extends UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionArtifactSourceMapQuery, UniversalConversionWorklistSemanticEditQuery {
   readonly generatedAt?: number;
   readonly routeId?: string | readonly string[];
-  readonly sourceLanguage?: FrontierSourceLanguage | string;
-  readonly language?: FrontierSourceLanguage | string;
-  readonly target?: FrontierCompileTarget | string;
+  readonly sourceLanguage?: FrontierSourceLanguage | string | readonly (FrontierSourceLanguage | string)[];
+  readonly language?: FrontierSourceLanguage | string | readonly (FrontierSourceLanguage | string)[];
+  readonly target?: FrontierCompileTarget | string | readonly (FrontierCompileTarget | string)[];
   readonly kind?: UniversalConversionWorkItemKind | readonly UniversalConversionWorkItemKind[];
   readonly includeReviewItems?: boolean;
   readonly translationRuntimeReadiness?: string | readonly string[];

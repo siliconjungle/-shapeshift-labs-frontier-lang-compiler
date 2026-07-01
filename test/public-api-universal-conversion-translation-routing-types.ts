@@ -6,6 +6,12 @@ const routingPlan: UniversalConversionPlan = createUniversalConversionPlan({
   runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'fetch' }]
 });
 const routingRoute = queryUniversalConversionPlan(routingPlan, {
+  routeId: ['conversion_javascript_to_rust'],
+  sourceLanguage: ['javascript'],
+  target: ['rust'],
+  mode: ['target-adapter'],
+  readiness: ['ready'],
+  admissionAction: ['prioritize'],
   translationRuntimeReadiness: ['ready'],
   translationRuntimeAdapterRequirementId: ['runtime_adapter'],
   translationRuntimeProofObligationId: ['runtime_proof'],
@@ -18,8 +24,14 @@ routingRoute?.translationAdmission.runtimeProofObligationIds satisfies readonly 
 routingRoute?.translationAdmission.runtimeProofMissingSignals satisfies readonly string[] | undefined;
 routingRoute?.translationAdmission.dialectRecordIds satisfies readonly string[] | undefined;
 
-const routingArtifacts: UniversalConversionArtifacts = createUniversalConversionArtifacts(routingPlan, { translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
+const routingArtifacts: UniversalConversionArtifacts = createUniversalConversionArtifacts(routingPlan, { routeId: ['conversion_javascript_to_rust'], sourceLanguage: ['javascript'], target: ['rust'], mode: ['target-adapter'], readiness: ['ready'], admissionAction: ['prioritize'], translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
 queryUniversalConversionArtifacts(routingArtifacts, {
+  language: ['javascript'],
+  sourceLanguage: ['javascript'],
+  target: ['rust'],
+  mode: ['target-adapter'],
+  readiness: ['ready'],
+  admissionAction: ['prioritize'],
   translationRuntimeReadiness: 'ready',
   translationRuntimeProofMissingSignal: 'network-trace-hash',
   translationDialectRecordId: 'dialect_record'
@@ -37,6 +49,12 @@ routingArtifacts.admissionRecords[0]?.translationRuntimeProofMissingSignals sati
 routingArtifacts.evidenceReceipts[0]?.translationDialectRecordIds satisfies readonly string[] | undefined;
 
 const routingReceipt: UniversalConversionRouteEvidenceReceipt = createUniversalConversionRouteEvidenceReceipt(routingPlan, {
+  routeId: ['conversion_javascript_to_rust'],
+  sourceLanguage: ['javascript'],
+  target: ['rust'],
+  mode: ['target-adapter'],
+  readiness: ['ready'],
+  admissionAction: ['prioritize'],
   dialectReadiness: ['ready'],
   dialectRegistryId: ['dialect_registry'],
   dialectRecordId: ['dialect_record'],
@@ -53,8 +71,13 @@ routingReceipt.translationDialectReadinesses satisfies readonly string[];
 routingReceipt.translationDialectRecordIds satisfies readonly string[];
 routingReceipt.summary.translationAdmission.runtimeProofMissingSignals satisfies Readonly<Record<string, number>>;
 
-const routingWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(routingPlan, { translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
+const routingWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(routingPlan, { sourceLanguage: ['javascript'], target: ['rust'], translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
 const routingWorklistQuery = queryUniversalConversionWorklist(routingWorklist, {
+  sourceLanguage: ['javascript'],
+  target: ['rust'],
+  mode: ['target-adapter'],
+  readiness: ['ready'],
+  admissionAction: ['prioritize'],
   translationRuntimeReadiness: 'ready',
   translationRuntimeAdapterRequirementId: 'runtime_adapter',
   translationRuntimeProofObligationId: 'runtime_proof',

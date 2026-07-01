@@ -48,14 +48,15 @@ export function queryUniversalConversionPlan(planOrInput = {}, query = {}, conte
   const plan = planOrInput?.kind === 'frontier.lang.universalConversionPlan'
     ? planOrInput
     : createUniversalConversionPlan(planOrInput, context);
-  const sourceLanguage = normalizeNativeLanguageId(query.sourceLanguage ?? query.language);
-  const target = normalizeProjectionMatrixTargets(query.target ? [query.target] : [])[0];
+  const sourceLanguages = queryList(query.sourceLanguage ?? query.language, normalizeNativeLanguageId);
+  const targets = queryTargets(query.target);
   const routes = (plan.routes ?? []).filter((route) => {
-    if (sourceLanguage && !route.languageIds.includes(sourceLanguage)) return false;
-    if (target && route.target !== target) return false;
-    if (query.mode && route.mode !== query.mode) return false;
-    if (query.readiness && route.readiness !== query.readiness) return false;
-    if (query.admissionAction && route.admissionAction !== query.admissionAction) return false;
+    if (!match(query.routeId, [route.id])) return false;
+    if (sourceLanguages.length && !route.languageIds.some((id) => sourceLanguages.includes(id))) return false;
+    if (targets.length && !targets.includes(route.target)) return false;
+    if (!match(query.mode, [route.mode])) return false;
+    if (!match(query.readiness, [route.readiness])) return false;
+    if (!match(query.admissionAction, [route.admissionAction])) return false;
     if (!conversionRouteMatchesDialectQuery(route, query)) return false;
     if (!conversionRouteMatchesRuntimeQuery(route, query)) return false;
     if (!conversionRouteMatchesTranslationAdmissionQuery(route, query)) return false;
@@ -71,6 +72,17 @@ export function queryUniversalConversionPlan(planOrInput = {}, query = {}, conte
     bestRoute: routes.slice().sort((a, b) => b.mergeScore.sortKey - a.mergeScore.sortKey)[0],
     reasons: routes.length ? [] : [`No conversion route matched source=${query.sourceLanguage ?? query.language ?? '*'} target=${query.target ?? '*'}.`]
   };
+}
+function queryList(value, normalize = String) {
+  const values = Array.isArray(value) ? value : value === undefined ? [] : [value];
+  return uniqueStrings(values.map((item) => normalize(item)).filter(Boolean));
+}
+function queryTargets(value) { return normalizeProjectionMatrixTargets(Array.isArray(value) ? value : value ? [value] : []); }
+function match(filter, values) {
+  const filters = queryList(filter);
+  if (!filters.length) return true;
+  const valueSet = new Set((values ?? []).filter(Boolean).map(String));
+  return filters.some((item) => valueSet.has(String(item)));
 }
 function conversionTargets(input, matrix, context) {
   const explicit = normalizeProjectionMatrixTargets(input.targets ?? []);
