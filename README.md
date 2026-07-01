@@ -1310,6 +1310,12 @@ non-claiming `runtimeProof` record list. Artifact queries can now ask for
 coordinator separate "proof exists for canvas" from "bitmap evidence is still
 missing" without treating either as semantic-equivalence proof.
 
+Conversion plan and worklist queries use the same runtime proof vocabulary. A
+coordinator can find routes or tasks by proof capability, proof status, required
+signal, provided signal, or missing signal, then route only the remaining proof
+collection work. These predicates are routing evidence, not auto-merge or
+semantic-equivalence claims.
+
 Routes can also carry `concurrencyModelConstraint`, an async/task/thread/actor
 admission record for structured concurrency, async tasks, thread and worker
 boundaries, event-loop or scheduler semantics, scheduler affinity, actor

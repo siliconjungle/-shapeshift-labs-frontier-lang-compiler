@@ -258,6 +258,9 @@ export interface UniversalConversionPlanQuery extends URCQ, UniversalInterlingua
   readonly runtimeAdapterRequirementId?: string;
   readonly runtimeProofObligationId?: string;
   readonly runtimeProofCapability?: URK;
+  readonly runtimeProofStatus?: string;
+  readonly runtimeProofRequiredSignal?: UPS;
+  readonly runtimeProofProvidedSignal?: UPS;
   readonly runtimeProofMissingSignal?: UPS;
   readonly dialectReadiness?: SMR;
   readonly dialectRegistryId?: string;

@@ -8,6 +8,7 @@ import type {
   UniversalConversionRouteAction,
   UniversalConversionRouteMode
 } from './universal-conversion-plan.js';
+import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 
 export type UniversalConversionWorkItemKind =
   | 'add-target-adapter'
@@ -51,7 +52,11 @@ export interface UniversalConversionWorkItem {
   readonly tasks: readonly string[];
   readonly runtimeAdapterRequirementIds: readonly string[];
   readonly runtimeProofObligationIds: readonly string[];
-  readonly runtimeProofMissingSignals: readonly string[];
+  readonly runtimeProofCapabilities: readonly UniversalRuntimeCapabilityKind[];
+  readonly runtimeProofStatuses: readonly string[];
+  readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly dialectRecordIds: readonly string[];
   readonly targetAdapterIds: readonly string[];
   readonly interlinguaConstraintFamilies: readonly string[];
@@ -90,7 +95,11 @@ export interface UniversalConversionWorklistQuery extends UniversalConversionWor
   readonly task?: string | readonly string[];
   readonly runtimeAdapterRequirementId?: string | readonly string[];
   readonly runtimeProofObligationId?: string | readonly string[];
-  readonly runtimeProofMissingSignal?: string | readonly string[];
+  readonly runtimeProofCapability?: UniversalRuntimeCapabilityKind | readonly UniversalRuntimeCapabilityKind[];
+  readonly runtimeProofStatus?: string | readonly string[];
+  readonly runtimeProofRequiredSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofProvidedSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
   readonly dialectRecordId?: string | readonly string[];
   readonly targetAdapterId?: string | readonly string[];
   readonly interlinguaConstraintFamily?: string | readonly string[];
@@ -115,6 +124,11 @@ export interface UniversalConversionWorklist {
     readonly targets: readonly string[];
     readonly evidenceKeys: readonly string[];
     readonly missingEvidence: readonly string[];
+    readonly runtimeProofCapabilities: readonly UniversalRuntimeCapabilityKind[];
+    readonly runtimeProofStatuses: readonly string[];
+    readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
+    readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
+    readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly blockers: number;
     readonly reviewReasons: number;
     readonly targetAdapterGaps: number;

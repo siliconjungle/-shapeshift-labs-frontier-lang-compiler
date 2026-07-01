@@ -119,6 +119,10 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     tasks: workItemTasks(kind, route, evidenceKey, details),
     runtimeAdapterRequirementIds: (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
     runtimeProofObligationIds: (route.runtime?.proofObligations ?? []).map((entry) => entry.id).filter(Boolean),
+    runtimeProofCapabilities: uniqueStrings((route.runtime?.proofObligations ?? []).map((entry) => entry.capability)),
+    runtimeProofStatuses: uniqueStrings((route.runtime?.proofObligations ?? []).map((entry) => entry.status)),
+    runtimeProofRequiredSignals: uniqueStrings((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.requiredSignals ?? [])),
+    runtimeProofProvidedSignals: uniqueStrings((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.providedSignals ?? [])),
     runtimeProofMissingSignals: uniqueStrings((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? [])),
     dialectRecordIds: route.dialect?.recordIds ?? [],
     targetAdapterIds: uniqueStrings([route.adapter, route.translationAdmission?.targetAdapterId]),
@@ -151,6 +155,10 @@ function mergeWorkItems(left, right) {
     tasks: uniqueStrings([...left.tasks, ...right.tasks]),
     runtimeAdapterRequirementIds: uniqueStrings([...left.runtimeAdapterRequirementIds, ...right.runtimeAdapterRequirementIds]),
     runtimeProofObligationIds: uniqueStrings([...left.runtimeProofObligationIds, ...right.runtimeProofObligationIds]),
+    runtimeProofCapabilities: uniqueStrings([...left.runtimeProofCapabilities, ...right.runtimeProofCapabilities]),
+    runtimeProofStatuses: uniqueStrings([...left.runtimeProofStatuses, ...right.runtimeProofStatuses]),
+    runtimeProofRequiredSignals: uniqueStrings([...left.runtimeProofRequiredSignals, ...right.runtimeProofRequiredSignals]),
+    runtimeProofProvidedSignals: uniqueStrings([...left.runtimeProofProvidedSignals, ...right.runtimeProofProvidedSignals]),
     runtimeProofMissingSignals: uniqueStrings([...left.runtimeProofMissingSignals, ...right.runtimeProofMissingSignals]),
     dialectRecordIds: uniqueStrings([...left.dialectRecordIds, ...right.dialectRecordIds]),
     targetAdapterIds: uniqueStrings([...left.targetAdapterIds, ...right.targetAdapterIds]),
@@ -197,6 +205,11 @@ function worklistSummary(items) {
     targets: uniqueStrings(items.flatMap((item) => item.targets)),
     evidenceKeys: uniqueStrings(items.flatMap((item) => item.evidenceKeys)),
     missingEvidence: uniqueStrings(items.flatMap((item) => item.missingEvidence)),
+    runtimeProofCapabilities: uniqueStrings(items.flatMap((item) => item.runtimeProofCapabilities ?? [])),
+    runtimeProofStatuses: uniqueStrings(items.flatMap((item) => item.runtimeProofStatuses ?? [])),
+    runtimeProofRequiredSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofRequiredSignals ?? [])),
+    runtimeProofProvidedSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofProvidedSignals ?? [])),
+    runtimeProofMissingSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofMissingSignals ?? [])),
     blockers: items.reduce((total, item) => total + item.blockers.length, 0),
     reviewReasons: items.reduce((total, item) => total + item.review.length, 0),
     targetAdapterGaps: items.filter((item) => item.kind === 'add-target-adapter').length,
@@ -236,6 +249,10 @@ function workItemMatchesQuery(item, query) {
     && match(query.evidenceKey, item.evidenceKeys)
     && match(query.missingEvidence, item.missingEvidence)
     && match(query.runtimeProofObligationId, item.runtimeProofObligationIds)
+    && match(query.runtimeProofCapability, item.runtimeProofCapabilities)
+    && match(query.runtimeProofStatus, item.runtimeProofStatuses)
+    && match(query.runtimeProofRequiredSignal, item.runtimeProofRequiredSignals)
+    && match(query.runtimeProofProvidedSignal, item.runtimeProofProvidedSignals)
     && match(query.runtimeProofMissingSignal, item.runtimeProofMissingSignals)
     && match(query.blocker, item.blockers)
     && match(query.reviewReason, item.review)

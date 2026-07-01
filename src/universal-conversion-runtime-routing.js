@@ -25,8 +25,11 @@ export function conversionRouteMatchesRuntimeQuery(route, query = {}) {
   if (query.missingRuntimeCapability && !(route.runtime?.missingCapabilities ?? []).includes(query.missingRuntimeCapability)) return false;
   if (query.runtimeAdapterRequirementId && !(route.runtimeAdapterRequirements ?? []).some((entry) => entry.id === query.runtimeAdapterRequirementId)) return false;
   if (query.runtimeProofObligationId && !(route.runtime?.proofObligations ?? []).some((entry) => entry.id === query.runtimeProofObligationId)) return false;
-  if (query.runtimeProofMissingSignal && !(route.runtime?.proofObligations ?? []).some((entry) => (entry.missingSignals ?? []).includes(query.runtimeProofMissingSignal))) return false;
   if (query.runtimeProofCapability && !(route.runtime?.proofObligations ?? []).some((entry) => entry.capability === query.runtimeProofCapability)) return false;
+  if (query.runtimeProofStatus && !(route.runtime?.proofObligations ?? []).some((entry) => entry.status === query.runtimeProofStatus)) return false;
+  if (query.runtimeProofRequiredSignal && !(route.runtime?.proofObligations ?? []).some((entry) => (entry.requiredSignals ?? []).includes(query.runtimeProofRequiredSignal))) return false;
+  if (query.runtimeProofProvidedSignal && !(route.runtime?.proofObligations ?? []).some((entry) => (entry.providedSignals ?? []).includes(query.runtimeProofProvidedSignal))) return false;
+  if (query.runtimeProofMissingSignal && !(route.runtime?.proofObligations ?? []).some((entry) => (entry.missingSignals ?? []).includes(query.runtimeProofMissingSignal))) return false;
   return true;
 }
 

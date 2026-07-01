@@ -5,6 +5,7 @@ import {
   createUniversalConversionWorklist,
   queryUniversalConversionPlan,
   queryUniversalConversionWorklist,
+  runtimeProofSignalsForCapability,
   UniversalConversionWorkItemKinds
 } from './compiler-api.mjs';
 
@@ -71,12 +72,40 @@ assert.equal(runtimeQuery.bestItem.routeIds.includes(runtimeRoute.id), true);
 assert.equal(runtimeWorklist.summary.runtimeProofSignalGaps >= 1, true);
 assert.equal(runtimeWorklist.items.some((item) => item.kind === 'collect-runtime-proof-signal'
   && item.runtimeProofMissingSignals.includes('network-trace-hash')), true);
+assert.equal(runtimeWorklist.items.some((item) => item.runtimeProofCapabilities.includes('fetch')
+  && item.runtimeProofStatuses.includes('needs-evidence')
+  && item.runtimeProofRequiredSignals.includes('network-trace-hash')), true);
 const runtimeSignalQuery = queryUniversalConversionWorklist(runtimePlan, {
   kind: 'collect-runtime-proof-signal',
+  runtimeProofCapability: 'fetch',
+  runtimeProofStatus: 'needs-evidence',
+  runtimeProofRequiredSignal: 'network-trace-hash',
   runtimeProofMissingSignal: 'network-trace-hash'
 });
 assert.equal(runtimeSignalQuery.found, true);
 assert.equal(runtimeSignalQuery.bestItem.action, 'collect-runtime-proof-signals');
+assert.equal(runtimeSignalQuery.summary.runtimeProofMissingSignals.includes('network-trace-hash'), true);
+const satisfiedRuntimePlan = createUniversalConversionPlan({
+  generatedAt: 804,
+  universalCapabilityMatrix: readyCapabilityMatrix(),
+  targets: ['rust'],
+  runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'fetch' }],
+  evidence: [routeProof('runtime_satisfied'), {
+    id: 'runtime_fetch_signal_bundle',
+    kind: 'conversion-runtime-proof',
+    status: 'passed',
+    capability: 'fetch',
+    runtimeProofSignals: runtimeProofSignalsForCapability('fetch')
+  }]
+});
+const providedSignalQuery = queryUniversalConversionWorklist(satisfiedRuntimePlan, {
+  kind: 'prove-runtime-adapter',
+  runtimeProofCapability: 'fetch',
+  runtimeProofStatus: 'satisfied',
+  runtimeProofProvidedSignal: 'network-trace-hash'
+});
+assert.equal(providedSignalQuery.found, true);
+assert.equal(providedSignalQuery.bestItem.runtimeProofProvidedSignals.includes('network-trace-hash'), true);
 const obligationPlan = createUniversalConversionPlan({
   generatedAt: 803,
   universalCapabilityMatrix: readyCapabilityMatrix(),
