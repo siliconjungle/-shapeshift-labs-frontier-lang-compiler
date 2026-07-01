@@ -1,5 +1,4 @@
-import { countBy, idFragment, uniqueStrings } from './native-import-utils.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js';
-
+import { countBy, idFragment, uniqueStrings } from './native-import-utils.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js'; import { translationAdmissionDenominatorsForRoute } from './universal-conversion-translation-admission-denominators.js';
 export function createUniversalConversionAdmissionRecord(input) {
   const route = input.route;
   const operations = input.semanticOperations?.operations ?? [];
@@ -56,6 +55,7 @@ export function createUniversalConversionAdmissionRecord(input) {
     admissionBucket: bucket,
     translationAdmissionStatus: route.translationAdmission?.status,
     translationAdmissionAction: route.translationAdmission?.action,
+    ...translationAdmissionDenominatorsForRoute(route),
     interlinguaRecordId: route.interlingua?.id,
     interlinguaLoweringDisposition: route.interlingua?.lowering?.disposition,
     interlinguaConstraintFamilies: interlinguaQuery.constraintFamilies ?? [],

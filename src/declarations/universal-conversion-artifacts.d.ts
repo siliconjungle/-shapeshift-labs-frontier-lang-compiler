@@ -7,7 +7,7 @@ import type { FrontierCompileTarget } from './compile.js';
 import type { SemanticHistoryRecord } from './semantic-history.js';
 import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
 import type { UniversalConversionArtifactCompactCounts } from './universal-conversion-compact-counts.js';
-import type { UniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence.js';
+import type { UniversalConversionRouteEvidenceReceipt, UniversalConversionTranslationAdmissionDenominatorFields } from './universal-conversion-route-evidence.js';
 import type { UniversalConversionRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
 import type { UniversalInterlinguaConstraintEdgeKind, UniversalInterlinguaLayerKind, UniversalInterlinguaLoweringDisposition, UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalConversionRouteConstraintFields } from './universal-conversion-plan-constraints.js';
@@ -57,7 +57,7 @@ export interface UniversalConversionConstraintSummary {
   readonly missingKinds: readonly string[]; readonly missingEvidence: readonly string[];
 }
 
-export interface UniversalConversionAdmissionRecord extends UniversalConversionRuntimeRouteFields {
+export interface UniversalConversionAdmissionRecord extends UniversalConversionRuntimeRouteFields, UniversalConversionTranslationAdmissionDenominatorFields {
   readonly kind: 'frontier.lang.universalConversionAdmissionRecord';
   readonly version: 1;
   readonly schema: 'frontier.lang.universalConversionAdmissionRecord.v1';

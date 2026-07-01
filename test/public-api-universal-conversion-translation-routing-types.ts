@@ -1,5 +1,5 @@
-import { createUniversalConversionArtifacts, createUniversalConversionPlan, createUniversalConversionWorklist, queryUniversalConversionArtifacts, queryUniversalConversionPlan, queryUniversalConversionWorklist } from '../src/index.js';
-import type { UniversalConversionArtifacts, UniversalConversionPlan, UniversalConversionWorklist } from '../src/index.js';
+import { createUniversalConversionArtifacts, createUniversalConversionPlan, createUniversalConversionRouteEvidenceReceipt, createUniversalConversionWorklist, queryUniversalConversionArtifacts, queryUniversalConversionPlan, queryUniversalConversionWorklist } from '../src/index.js';
+import type { UniversalConversionArtifacts, UniversalConversionPlan, UniversalConversionRouteEvidenceReceipt, UniversalConversionWorklist } from '../src/index.js';
 
 const routingPlan: UniversalConversionPlan = createUniversalConversionPlan({
   targets: ['rust'],
@@ -33,6 +33,20 @@ routingArtifacts.index.translationDialectRecordIds satisfies readonly string[];
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeAdapterRequirementIds satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeProofMissingSignals satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.dialectRecordIds satisfies Readonly<Record<string, number>>;
+routingArtifacts.admissionRecords[0]?.translationRuntimeProofMissingSignals satisfies readonly string[] | undefined;
+routingArtifacts.evidenceReceipts[0]?.translationDialectRecordIds satisfies readonly string[] | undefined;
+
+const routingReceipt: UniversalConversionRouteEvidenceReceipt = createUniversalConversionRouteEvidenceReceipt(routingPlan, {
+  translationRuntimeProofMissingSignal: 'network-trace-hash',
+  translationDialectReadiness: 'ready'
+});
+routingReceipt.translationRuntimeReadinesses satisfies readonly string[];
+routingReceipt.translationRuntimeAdapterRequirementIds satisfies readonly string[];
+routingReceipt.translationRuntimeProofObligationIds satisfies readonly string[];
+routingReceipt.translationRuntimeProofMissingSignals satisfies readonly string[];
+routingReceipt.translationDialectReadinesses satisfies readonly string[];
+routingReceipt.translationDialectRecordIds satisfies readonly string[];
+routingReceipt.summary.translationAdmission.runtimeProofMissingSignals satisfies Readonly<Record<string, number>>;
 
 const routingWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(routingPlan);
 const routingWorklistQuery = queryUniversalConversionWorklist(routingWorklist, {

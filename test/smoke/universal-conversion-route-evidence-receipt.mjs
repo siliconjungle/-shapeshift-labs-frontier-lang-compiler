@@ -60,6 +60,27 @@ assert.equal(receipt.summary.rejectedByReason['target-mismatch'], 1);
 assert.equal(receipt.autoMergeClaim, false);
 assert.equal(receipt.semanticEquivalenceClaim, false);
 
+const translationDenominatorRoute = {
+  id: 'translation_denominator_route',
+  sourceLanguage: 'javascript',
+  languageIds: ['javascript'],
+  target: 'rust',
+  mode: 'target-adapter',
+  readiness: 'needs-evidence',
+  admissionAction: 'prioritize',
+  mergeRefs: { planId: 'translation_denominator_plan', evidenceIds: [], proofIds: [], sources: [], semanticOwnershipKeys: [], conflictKeys: [] },
+  translationAdmission: { status: 'needs-evidence', action: 'collect-translation-evidence', missingEvidence: [], evidenceIds: [], proofEvidenceIds: [], runtimeReadiness: 'needs-review', runtimeAdapterRequirementIds: ['runtime_adapter_fetch'], runtimeProofObligationIds: ['runtime_proof_fetch'], runtimeProofMissingSignals: ['network-trace-hash'], dialectReadiness: 'blocked', dialectRecordIds: ['dialect_node_process_env'] }
+};
+const translationDenominatorReceipt = createUniversalConversionRouteEvidenceReceipt(translationDenominatorRoute);
+assert.equal(translationDenominatorReceipt.translationRuntimeReadinesses.includes('needs-review'), true);
+assert.equal(translationDenominatorReceipt.translationRuntimeAdapterRequirementIds.includes('runtime_adapter_fetch'), true);
+assert.equal(translationDenominatorReceipt.translationRuntimeProofObligationIds.includes('runtime_proof_fetch'), true);
+assert.equal(translationDenominatorReceipt.translationRuntimeProofMissingSignals.includes('network-trace-hash'), true);
+assert.equal(translationDenominatorReceipt.translationDialectReadinesses.includes('blocked'), true);
+assert.equal(translationDenominatorReceipt.translationDialectRecordIds.includes('dialect_node_process_env'), true);
+assert.equal(translationDenominatorReceipt.summary.translationAdmission.runtimeProofMissingSignals['network-trace-hash'], 1);
+assert.equal(translationDenominatorReceipt.summary.translationAdmission.dialectRecordIds.dialect_node_process_env, 1);
+
 const artifactsWithReceipts = createUniversalConversionArtifacts(plan, {
   routeId: route.id,
   evidence: [scopedEvidence, unscopedEvidence, wrongTargetEvidence]
@@ -87,6 +108,9 @@ const rejectedArtifact = queryUniversalConversionArtifacts(artifactsWithReceipts
 assert.equal(rejectedArtifact.evidenceReceipt.records.rejected.length, 2);
 assert.equal(artifactsWithReceipts.summary.receiptRejectedEvidence, 2);
 assert.equal(artifactsWithReceipts.summary.compactCounts.evidenceReceipts.rejectedByReason['target-mismatch'], 1);
+const denominatorArtifacts = createUniversalConversionArtifacts(translationDenominatorRoute);
+assert.equal(denominatorArtifacts.routeArtifacts[0].admissionRecord.translationRuntimeProofMissingSignals.includes('network-trace-hash'), true);
+assert.equal(denominatorArtifacts.routeArtifacts[0].evidenceReceipt.translationDialectRecordIds.includes('dialect_node_process_env'), true);
 
 const routeReceipt = createUniversalConversionRouteEvidenceReceipt(route);
 assert.equal(routeReceipt.routeId, route.id);

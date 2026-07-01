@@ -1,9 +1,6 @@
-import { countBy, normalizeNativeLanguageId, uniqueStrings } from './native-import-utils.js';
-import { createUniversalConversionPlan, queryUniversalConversionPlan } from './universal-conversion-plan.js';
-import { conversionRouteEvidence } from './universal-conversion-route-evidence.js';
-import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js';
-import { artifactSemanticEditIndex, semanticEditIndexCounts } from './universal-conversion-artifact-semantic-edit.js';
-import { summarizeRuntimeProofObligations } from './universal-runtime-proof-obligations.js';
+import{countBy,normalizeNativeLanguageId,uniqueStrings}from './native-import-utils.js'; import{createUniversalConversionPlan,queryUniversalConversionPlan}from './universal-conversion-plan.js';
+import{conversionRouteEvidence}from './universal-conversion-route-evidence.js'; import{routeRuntimeDenominators}from './universal-conversion-artifact-runtime-routes.js'; import{artifactSemanticEditIndex,semanticEditIndexCounts}from './universal-conversion-artifact-semantic-edit.js';
+import{compactTranslationAdmissionCounts,translationAdmissionDenominatorsForRoute}from './universal-conversion-translation-admission-denominators.js'; import{summarizeRuntimeProofObligations}from './universal-runtime-proof-obligations.js';
 
 export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {}, options = {}, context = {}) {
   const route = selectRoute(routeOrInput, options, context);
@@ -78,6 +75,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     admissionAction: route.admissionAction,
     translationAdmissionStatus: route.translationAdmission?.status,
     translationAdmissionAction: route.translationAdmission?.action,
+    ...translationAdmissionDenominatorsForRoute(route),
     ...runtimeRoute,
     runtimeAdapterRequirementIds: uniqueStrings((route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability)),
     runtimeProofObligationIds: uniqueStrings(runtimeProofObligations.map((record) => record.id)),
@@ -128,6 +126,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       sourceMapLinkIds: countBy(sourceMapLinkIds),
       semanticEdit: semanticEditIndexCounts(semanticEdit),
       missingEvidence: missingEvidence.length,
+      translationAdmission: compactTranslationAdmissionCounts([route.translationAdmission ?? {}]),
       runtimeProofObligations: runtimeProofSummary.obligations,
       runtimeProofByStatus: runtimeProofSummary.byStatus,
       runtimeProofByCapability: runtimeProofSummary.byCapability,
@@ -187,6 +186,7 @@ function selectRoute(routeOrInput, options, context) {
     runtimeReadiness: options.runtimeReadiness,
     missingRuntimeCapability: options.missingRuntimeCapability,
     runtimeAdapterRequirementId: options.runtimeAdapterRequirementId,
+    translationRuntimeReadiness: options.translationRuntimeReadiness, translationRuntimeAdapterRequirementId: options.translationRuntimeAdapterRequirementId, translationRuntimeProofObligationId: options.translationRuntimeProofObligationId, translationRuntimeProofMissingSignal: options.translationRuntimeProofMissingSignal, translationDialectReadiness: options.translationDialectReadiness, translationDialectRecordId: options.translationDialectRecordId,
     translationAdmissionStatus: options.translationAdmissionStatus,
     translationAdmissionAction: options.translationAdmissionAction,
     targetAdapterId: options.targetAdapterId
