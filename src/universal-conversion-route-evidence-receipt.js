@@ -16,6 +16,14 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
   const runtimeProofRecords = runtimeProofObligations.map(runtimeProofRecordSummary);
   const runtimeProofEvidenceIds = uniqueStrings(runtimeProofObligations.flatMap((record) => record.evidenceIds ?? []));
   const runtimeProofSummary = summarizeRuntimeProofObligations(runtimeProofObligations);
+  const interlingua = route.interlingua ?? {};
+  const interlinguaQuery = interlingua.query ?? {};
+  const interlinguaObligationRecords = (interlingua.constraints?.obligations ?? []).map(interlinguaObligationRecordSummary);
+  const interlinguaMissingEvidence = uniqueStrings([
+    ...(interlinguaQuery.constraintMissingEvidence ?? []),
+    ...(interlinguaQuery.constraintObligationMissingEvidence ?? []),
+    ...(interlingua.lowering?.missingEvidence ?? [])
+  ]);
   const acceptedEvidenceIds = uniqueStrings([...boundRecordIds, ...runtimeProofEvidenceIds]);
   const rejectedRecords = options.includeRejectedEvidence === false
     ? []
@@ -36,6 +44,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     ...(route.missingEvidence ?? []),
     ...(route.translationAdmission?.missingEvidence ?? []),
     ...runtimeProofObligations.flatMap((record) => record.missingEvidence ?? []),
+    ...interlinguaMissingEvidence,
     ...(evidenceIds.length ? [] : ['route-bound-evidence']),
     ...(proofEvidenceIds.length ? [] : ['route-bound-proof-evidence'])
   ]);
@@ -66,6 +75,15 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     runtimeProofRequiredSignals: uniqueStrings(runtimeProofObligations.flatMap((record) => record.requiredSignals ?? [])),
     runtimeProofProvidedSignals: uniqueStrings(runtimeProofObligations.flatMap((record) => record.providedSignals ?? [])),
     runtimeProofMissingSignals: uniqueStrings(runtimeProofObligations.flatMap((record) => record.missingSignals ?? [])),
+    interlinguaRecordId: interlingua.id,
+    interlinguaLoweringDisposition: interlingua.lowering?.disposition,
+    interlinguaConstraintFamilies: interlinguaQuery.constraintFamilies ?? [],
+    interlinguaConstraintStatuses: interlinguaQuery.constraintStatuses ?? [],
+    interlinguaConstraintMissingKinds: interlinguaQuery.constraintMissingKinds ?? [],
+    interlinguaConstraintMissingEvidence: interlinguaQuery.constraintMissingEvidence ?? [],
+    interlinguaConstraintObligationKinds: interlinguaQuery.constraintObligationKinds ?? [],
+    interlinguaConstraintObligationStatuses: interlinguaQuery.constraintObligationStatuses ?? [],
+    interlinguaConstraintObligationMissingEvidence: interlinguaQuery.constraintObligationMissingEvidence ?? [],
     evidenceIds,
     proofEvidenceIds,
     missingEvidence,
@@ -77,7 +95,8 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     records: {
       bound: boundSummaries,
       rejected: rejectedSummaries,
-      runtimeProof: runtimeProofRecords
+      runtimeProof: runtimeProofRecords,
+      interlinguaObligations: interlinguaObligationRecords
     },
     summary: {
       boundEvidence: boundSummaries.length,
@@ -89,6 +108,10 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       runtimeProofByCapability: runtimeProofSummary.byCapability,
       runtimeProofMissingSignals: runtimeProofSummary.missingSignals,
       runtimeProofProvidedSignals: runtimeProofSummary.providedSignals,
+      interlinguaConstraintObligations: interlinguaObligationRecords.length,
+      interlinguaConstraintByFamily: countBy(interlinguaObligationRecords.map((record) => record.family)),
+      interlinguaConstraintByStatus: countBy(interlinguaObligationRecords.map((record) => record.status)),
+      interlinguaConstraintMissingEvidence: countBy(interlinguaObligationRecords.flatMap((record) => record.missingEvidence)),
       blockers: route.blockers?.length ?? 0,
       reviewReasons: route.review?.length ?? 0,
       byKind: countBy(boundSummaries.map((record) => record.kind)),
@@ -102,6 +125,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     metadata: {
       routeEvidenceRequired: true,
       runtimeProofRequired: runtimeProofObligations.length > 0,
+      interlinguaConstraintsRequired: interlinguaObligationRecords.length > 0,
       sourceBound: route.mergeRefs?.sources?.length ? true : false,
       note: 'Route evidence receipts bind scoped evidence to one conversion route. They are admission receipts, not semantic-equivalence proof.'
     }
@@ -196,6 +220,24 @@ function runtimeProofRecordSummary(record) {
     renderEquivalenceClaim: false,
     semanticEquivalenceClaim: false,
     autoMergeClaim: false
+  };
+}
+
+function interlinguaObligationRecordSummary(record) {
+  return {
+    id: record.id,
+    edgeId: record.edgeId,
+    family: record.family,
+    kind: record.kind,
+    status: record.status ?? 'unknown',
+    sourceId: record.sourceId,
+    sourceNodeIds: record.sourceNodeIds ?? [],
+    targetNodeIds: record.targetNodeIds ?? [],
+    evidenceIds: record.evidenceIds ?? [],
+    missingEvidence: record.missingEvidence ?? [],
+    severity: record.severity ?? 'unknown',
+    autoMergeClaim: false,
+    semanticEquivalenceClaim: false
   };
 }
 

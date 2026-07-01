@@ -1316,6 +1316,13 @@ signal, provided signal, or missing signal, then route only the remaining proof
 collection work. These predicates are routing evidence, not auto-merge or
 semantic-equivalence claims.
 
+Route evidence receipts also expose interlingua constraint obligations. A
+receipt can now name the interlingua record, lowering disposition, constraint
+families, missing kinds, missing evidence, obligation kinds, and obligation
+statuses that still need proof. Worklist summaries project the same obligation
+fields, so coordinators can route borrow/type/effect/object-model proof tasks
+without treating a receipt as a semantic-equivalence claim.
+
 Routes can also carry `concurrencyModelConstraint`, an async/task/thread/actor
 admission record for structured concurrency, async tasks, thread and worker
 boundaries, event-loop or scheduler semantics, scheduler affinity, actor

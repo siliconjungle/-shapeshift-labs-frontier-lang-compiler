@@ -129,6 +129,11 @@ export interface UniversalConversionWorklist {
     readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
+    readonly interlinguaConstraintFamilies: readonly string[];
+    readonly interlinguaConstraintSourceIds: readonly string[];
+    readonly interlinguaConstraintObligationKinds: readonly string[];
+    readonly interlinguaConstraintObligationStatuses: readonly string[];
+    readonly interlinguaConstraintObligationMissingEvidence: readonly string[];
     readonly blockers: number;
     readonly reviewReasons: number;
     readonly targetAdapterGaps: number;

@@ -119,6 +119,10 @@ const obligationPlan = createUniversalConversionPlan({
 });
 const obligationWorklist = createUniversalConversionWorklist(obligationPlan);
 assert.equal(obligationWorklist.summary.interlinguaObligationGaps >= 1, true);
+assert.equal(obligationWorklist.summary.interlinguaConstraintFamilies.includes('borrow-scope'), true);
+assert.equal(obligationWorklist.summary.interlinguaConstraintObligationKinds.includes('borrow-across-await'), true);
+assert.equal(obligationWorklist.summary.interlinguaConstraintObligationStatuses.includes('missing'), true);
+assert.equal(obligationWorklist.summary.interlinguaConstraintObligationMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 assert.equal(obligationWorklist.items.some((item) => item.kind === 'collect-interlingua-obligation-proof'
   && item.interlinguaConstraintFamilies.includes('borrow-scope')
   && item.interlinguaConstraintObligationKinds.includes('borrow-across-await')), true);

@@ -82,6 +82,46 @@ const missingReceipt = createUniversalConversionRouteEvidenceReceipt(createUnive
 assert.equal(missingReceipt.missingEvidence.includes('route-bound-proof-evidence'), true);
 assert.equal(missingReceipt.summary.missingEvidence >= 1, true);
 
+const interlinguaConstraintPlan = createUniversalConversionPlan({
+  generatedAt: 805,
+  imports: [scannedJsImport],
+  targets: ['rust'],
+  adtPatternConstraints: [{
+    sourceLanguage: 'javascript',
+    target: 'rust',
+    sourceAdtPatternRecords: [{
+      id: 'receipt_result_union',
+      kind: 'sum type enum variant payload tagged switch match exhaustive',
+      name: 'Result',
+      variantNames: ['Ok', 'Err'],
+      payloadFieldNames: ['value', 'error'],
+      tagFieldNames: ['kind'],
+      matchArmNames: ['Ok', 'Err'],
+      constraintKinds: ['payload-shape', 'exhaustiveness']
+    }]
+  }]
+});
+const interlinguaConstraintRoute = queryUniversalConversionPlan(interlinguaConstraintPlan, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  interlinguaConstraintFamily: 'adt-pattern',
+  interlinguaConstraintObligationStatus: 'missing'
+}).bestRoute;
+const interlinguaReceipt = createUniversalConversionRouteEvidenceReceipt(interlinguaConstraintRoute);
+assert.equal(interlinguaReceipt.interlinguaRecordId, interlinguaConstraintRoute.interlingua.id);
+assert.equal(interlinguaReceipt.interlinguaLoweringDisposition, interlinguaConstraintRoute.interlingua.lowering.disposition);
+assert.equal(interlinguaReceipt.interlinguaConstraintFamilies.includes('adt-pattern'), true);
+assert.equal(interlinguaReceipt.interlinguaConstraintObligationKinds.includes('exhaustiveness'), true);
+assert.equal(interlinguaReceipt.interlinguaConstraintObligationStatuses.includes('missing'), true);
+assert.equal(interlinguaReceipt.interlinguaConstraintObligationMissingEvidence.includes('translation-adt-pattern:exhaustiveness'), true);
+assert.equal(interlinguaReceipt.records.interlinguaObligations.some((record) => record.family === 'adt-pattern'
+  && record.kind === 'exhaustiveness'
+  && record.status === 'missing'
+  && record.semanticEquivalenceClaim === false), true);
+assert.equal(interlinguaReceipt.summary.interlinguaConstraintByFamily['adt-pattern'] >= 1, true);
+assert.equal(interlinguaReceipt.summary.interlinguaConstraintByStatus.missing >= 1, true);
+assert.equal(interlinguaReceipt.metadata.interlinguaConstraintsRequired, true);
+
 const runtimeEvidenceRecord = {
   id: 'canvas_runtime_proof',
   kind: 'conversion-runtime-proof',

@@ -1,6 +1,7 @@
 import type { EvidenceRecord, FrontierSourceLanguage, SemanticMergeReadiness } from '@shapeshift-labs/frontier-lang-kernel';
 import type { FrontierCompileTarget } from './compile.js';
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
+import type { UniversalInterlinguaConstraintEdgeKind, UniversalInterlinguaLoweringDisposition } from './universal-interlingua.js';
 import type {
   UniversalConversionAdmissionAction,
   UniversalConversionPlan,
@@ -54,6 +55,22 @@ export interface UniversalConversionRouteRuntimeProofReceiptRecord {
   readonly semanticEquivalenceClaim: false;
 }
 
+export interface UniversalConversionRouteInterlinguaObligationReceiptRecord {
+  readonly id: string;
+  readonly edgeId: string;
+  readonly family: UniversalInterlinguaConstraintEdgeKind;
+  readonly kind: string;
+  readonly status: string;
+  readonly sourceId?: string;
+  readonly sourceNodeIds: readonly string[];
+  readonly targetNodeIds: readonly string[];
+  readonly evidenceIds: readonly string[];
+  readonly missingEvidence: readonly string[];
+  readonly severity: string;
+  readonly autoMergeClaim: false;
+  readonly semanticEquivalenceClaim: false;
+}
+
 export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly routeId?: string;
   readonly sourceLanguage?: FrontierSourceLanguage | string;
@@ -91,6 +108,15 @@ export interface UniversalConversionRouteEvidenceReceipt {
   readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly interlinguaRecordId?: string;
+  readonly interlinguaLoweringDisposition?: UniversalInterlinguaLoweringDisposition;
+  readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[];
+  readonly interlinguaConstraintStatuses: readonly string[];
+  readonly interlinguaConstraintMissingKinds: readonly string[];
+  readonly interlinguaConstraintMissingEvidence: readonly string[];
+  readonly interlinguaConstraintObligationKinds: readonly string[];
+  readonly interlinguaConstraintObligationStatuses: readonly string[];
+  readonly interlinguaConstraintObligationMissingEvidence: readonly string[];
   readonly evidenceIds: readonly string[];
   readonly proofEvidenceIds: readonly string[];
   readonly missingEvidence: readonly string[];
@@ -103,6 +129,7 @@ export interface UniversalConversionRouteEvidenceReceipt {
     readonly bound: readonly UniversalConversionRouteEvidenceReceiptRecord[];
     readonly rejected: readonly UniversalConversionRouteEvidenceReceiptRecord[];
     readonly runtimeProof: readonly UniversalConversionRouteRuntimeProofReceiptRecord[];
+    readonly interlinguaObligations: readonly UniversalConversionRouteInterlinguaObligationReceiptRecord[];
   };
   readonly summary: {
     readonly boundEvidence: number;
@@ -114,6 +141,10 @@ export interface UniversalConversionRouteEvidenceReceipt {
     readonly runtimeProofByCapability: Readonly<Record<string, number>>;
     readonly runtimeProofMissingSignals: Readonly<Record<string, number>>;
     readonly runtimeProofProvidedSignals: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintObligations: number;
+    readonly interlinguaConstraintByFamily: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintByStatus: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintMissingEvidence: Readonly<Record<string, number>>;
     readonly blockers: number;
     readonly reviewReasons: number;
     readonly byKind: Readonly<Record<string, number>>;
@@ -127,6 +158,7 @@ export interface UniversalConversionRouteEvidenceReceipt {
   readonly metadata: {
     readonly routeEvidenceRequired: true;
     readonly runtimeProofRequired: boolean;
+    readonly interlinguaConstraintsRequired: boolean;
     readonly sourceBound: boolean;
     readonly note: string;
   };
