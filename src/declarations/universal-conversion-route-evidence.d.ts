@@ -218,6 +218,8 @@ export interface UniversalConversionRouteEvidenceReceipt extends UniversalConver
     readonly interlinguaConstraintRepresentedKinds: Readonly<Record<string, number>>;
     readonly interlinguaConstraintMissingKinds: Readonly<Record<string, number>>;
     readonly interlinguaConstraintMissingEvidence: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintObligationKinds: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintObligationStatuses: Readonly<Record<string, number>>;
     readonly interlinguaConstraintObligationEvidenceIds: Readonly<Record<string, number>>;
     readonly interlinguaConstraintObligationMissingEvidence: Readonly<Record<string, number>>;
     readonly blockers: number;

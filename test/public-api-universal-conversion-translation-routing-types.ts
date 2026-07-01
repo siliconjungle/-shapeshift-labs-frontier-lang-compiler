@@ -98,6 +98,8 @@ routingReceipt.summary.translationAdmission.evidenceIds satisfies Readonly<Recor
 routingReceipt.summary.translationAdmission.requiredConstructKinds satisfies Readonly<Record<string, number>>;
 routingReceipt.summary.translationAdmission.representedConstructKinds satisfies Readonly<Record<string, number>>;
 routingReceipt.summary.translationAdmission.targetAdapterIds satisfies Readonly<Record<string, number>>;
+routingReceipt.summary.interlinguaConstraintObligationKinds satisfies Readonly<Record<string, number>>;
+routingReceipt.summary.interlinguaConstraintObligationStatuses satisfies Readonly<Record<string, number>>;
 
 const routingWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(routingPlan, { sourceLanguage: ['javascript'], target: ['rust'], translationAdmissionStatus: ['needs-evidence'], translationAdmissionAction: ['collect-translation-evidence'], missingTranslationEvidence: ['translation-proof-or-replay'], translationEvidenceId: ['evidence_admittable_translation_proof'], translationProofEvidenceId: ['evidence_admittable_translation_proof'], requiredTranslationConstructKind: ['target-adapter'], representedTranslationConstructKind: ['target-adapter'], targetAdapterId: ['fixture-js-rust'], translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
 const routingWorklistQuery = queryUniversalConversionWorklist(routingWorklist, {

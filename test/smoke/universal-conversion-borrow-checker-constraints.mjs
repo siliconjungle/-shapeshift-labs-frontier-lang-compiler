@@ -6,6 +6,7 @@ import {
   createUniversalBorrowCheckerConstraintEvidence,
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
   importNativeSource,
   queryUniversalConversionArtifacts,
@@ -101,6 +102,10 @@ assert.equal(artifacts.index.interlinguaConstraintObligationKinds.includes('borr
 assert.equal(artifacts.summary.compactCounts.borrowCheckerConstraint.missingKinds['borrow-scope:shared-borrow-compatible'], 1);
 assert.equal(artifacts.summary.compactCounts.interlingua.constraintFamilies['borrow-checker'], 1);
 assert.equal(artifact.admissionRecord.borrowCheckerConstraint.status, 'needs-evidence');
+
+const receipt = createUniversalConversionRouteEvidenceReceipt(routePlan, { routeId: route.id });
+assert.equal(receipt.summary.interlinguaConstraintObligationKinds['borrow-scope:shared-borrow-compatible'], 1);
+assert.equal(receipt.summary.interlinguaConstraintObligationStatuses.missing >= 1, true);
 
 const worklist = createUniversalConversionWorklist(routePlan, { routeId: route.id });
 const obligationWork = queryUniversalConversionWorklist(worklist, {
