@@ -168,12 +168,22 @@ function normalizeRuntimeRequirementRecord(record, hostProfiles) {
 export function normalizeRuntimeCapabilityKind(value) {
   if (!value) return '';
   const text = String(value).trim().toLowerCase();
-  if (text === 'http' || text === 'network' || text === 'networking') return 'fetch';
-  if (text === 'timer' || text === 'clock' || text === 'scheduler') return 'timers';
+  if (text === 'http' || text === 'http-client') return 'fetch';
+  if (text === 'networking' || text === 'socket' || text === 'sockets') return 'network';
+  if (text === 'timer' || text === 'scheduler') return 'timers';
+  if (text === 'time' || text === 'date' || text === 'now') return 'clock';
+  if (text === 'random' || text === 'rng' || text === 'uuid') return 'randomness';
+  if (text === 'secret' || text === 'credentials' || text === 'credential') return 'secrets';
+  if (text === 'env' || text === 'environment-variable' || text === 'variables') return 'environment';
+  if (text === 'processes' || text === 'child_process' || text === 'child-process') return 'process';
+  if (text === 'command' || text === 'commands' || text === 'exec') return 'shell';
+  if (text === 'db' || text === 'sql' || text === 'sqlite' || text === 'postgres' || text === 'mysql') return 'database';
+  if (text === 'gpu' || text === 'webgpu' || text === 'webgl' || text === 'opengl' || text === 'vulkan' || text === 'metal') return 'gpu';
+  if (text === 'webassembly') return 'wasm';
   if (text === 'localstorage' || text === 'local-storage' || text === 'persistence') return 'storage';
   if (text === 'file' || text === 'files' || text === 'fs') return 'filesystem';
   if (text === 'threads' || text === 'workers' || text === 'worker') return 'threading';
-  if (text === 'browser-dom' || text === 'document') return 'dom';
+  if (text === 'browser-dom' || text === 'document' || text === 'window') return 'dom';
   if (text === 'promise' || text === 'promises' || text === 'await') return 'async';
   if (text === 'native-ffi' || text === 'abi') return 'ffi';
   return text;

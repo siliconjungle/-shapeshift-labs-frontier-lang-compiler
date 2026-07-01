@@ -1,7 +1,9 @@
 import { assert } from './helpers.mjs';
 import {
   createUniversalConversionPlan,
-  queryUniversalConversionPlan
+  queryUniversalConversionPlan,
+  createUniversalRuntimeCapabilityMatrix,
+  queryUniversalRuntimeCapabilityMatrix
 } from './compiler-api.mjs';
 
 const missingDomRoute = conversionRouteForRequirement('dom');
@@ -24,6 +26,30 @@ assert.equal(fetchAdapterRoute.admissionAction, 'prioritize');
 assert.equal(fetchAdapterRoute.missingEvidence.includes('runtime-adapter-proof'), true);
 assert.equal(fetchAdapterRoute.review.some((reason) => reason.includes('Runtime adapter evidence is required for fetch.')), true);
 assert.equal(fetchAdapterRoute.mergeScore.risk, 'medium');
+
+const canvasAdapterRoute = conversionRouteForRequirement('canvas');
+assert.equal(canvasAdapterRoute.runtime.readiness, 'needs-review');
+assert.equal(canvasAdapterRoute.runtime.missingCapabilities.length, 0);
+assert.equal(canvasAdapterRoute.runtime.adapterRequirements[0].capability, 'canvas');
+assert.equal(canvasAdapterRoute.missingEvidence.includes('runtime-adapter-proof'), true);
+assert.equal(canvasAdapterRoute.review.some((reason) => reason.includes('Runtime adapter evidence is required for canvas.')), true);
+
+const secretRoute = conversionRouteForRequirement('secrets');
+assert.equal(secretRoute.runtime.readiness, 'blocked');
+assert.equal(secretRoute.readiness, 'blocked');
+assert.equal(secretRoute.admissionAction, 'reject');
+assert.equal(secretRoute.blockers.some((reason) => reason.includes('javascript:web does not declare required runtime capability secrets')), true);
+
+const shellRuntimeMatrix = createUniversalRuntimeCapabilityMatrix({
+  generatedAt: 792,
+  sourceHosts: ['javascript:node'],
+  targetHosts: ['javascript:web'],
+  runtimeRequirements: [{ sourceHost: 'javascript:node', targetHost: 'javascript:web', capability: 'shell' }]
+});
+const shellRuntimeRoute = queryUniversalRuntimeCapabilityMatrix(shellRuntimeMatrix, { sourceRuntime: 'node', targetRuntime: 'web', capability: 'shell' }).bestRoute;
+assert.equal(shellRuntimeRoute.requiredCapabilities.includes('shell'), true);
+assert.equal(shellRuntimeRoute.missingCapabilities.includes('shell'), true);
+assert.equal(shellRuntimeRoute.adapterRequirements[0].adapterKind, 'node-shell-to-web-shell');
 
 const hostPlan = createUniversalConversionPlan({
   generatedAt: 791,

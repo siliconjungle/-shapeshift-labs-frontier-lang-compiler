@@ -1283,6 +1283,14 @@ runtime/permission contract." The record remains conservative: host,
 permission, environment, semantic-equivalence, and auto-merge claims stay false
 unless separate proof is attached.
 
+The runtime capability matrix routes the same boundary at host-profile level:
+`network`, `fetch`, `timers`, `clock`, `randomness`, `crypto`, `storage`,
+`database`, `filesystem`, `process`, `environment`, `shell`, `threading`, `dom`,
+`clipboard`, `canvas`, `gpu`, `wasm`, `sandbox`, `secrets`, `async`, and `ffi`
+can each produce satisfied, adapter-required, or missing capability evidence for
+translation admission. A canvas or GPU route, for example, is runtime evidence
+about host support and adapter obligations; it is not a render-equivalence proof.
+
 Routes can also carry `concurrencyModelConstraint`, an async/task/thread/actor
 admission record for structured concurrency, async tasks, thread and worker
 boundaries, event-loop or scheduler semantics, scheduler affinity, actor

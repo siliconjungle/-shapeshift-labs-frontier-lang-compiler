@@ -104,17 +104,31 @@ function runtimeHostSummary(host) {
 }
 
 function runtimeAdapterKind(capability, sourceHost, targetHost) {
+  if (capability === 'network') return `${sourceHost.runtime}-network-to-${targetHost.runtime}-network`;
   if (capability === 'fetch' && sourceHost.runtime === 'web' && targetHost.runtime === 'cli') return 'browser-fetch-to-cli-http-client';
   if (capability === 'fetch' && sourceHost.runtime === 'cli' && targetHost.runtime === 'web') return 'cli-http-client-to-browser-fetch';
   if (capability === 'timers') return `${sourceHost.runtime}-timers-to-${targetHost.runtime}-timers`;
+  if (capability === 'clock') return `${sourceHost.runtime}-clock-to-${targetHost.runtime}-clock`;
+  if (capability === 'randomness') return `${sourceHost.runtime}-randomness-to-${targetHost.runtime}-randomness`;
+  if (capability === 'crypto') return `${sourceHost.runtime}-crypto-to-${targetHost.runtime}-crypto`;
   if (capability === 'storage' && targetHost.runtime === 'cli') return 'browser-storage-to-cli-persistence';
   if (capability === 'storage' && targetHost.runtime === 'web') return 'cli-storage-to-browser-storage';
+  if (capability === 'database') return `${sourceHost.runtime}-database-to-${targetHost.runtime}-database`;
   if (capability === 'filesystem' && targetHost.runtime === 'web') return 'filesystem-to-browser-storage';
   if (capability === 'filesystem') return `${sourceHost.runtime}-filesystem-to-${targetHost.runtime}-filesystem`;
+  if (capability === 'process') return `${sourceHost.runtime}-process-to-${targetHost.runtime}-process`;
+  if (capability === 'environment') return `${sourceHost.runtime}-environment-to-${targetHost.runtime}-environment`;
+  if (capability === 'shell') return `${sourceHost.runtime}-shell-to-${targetHost.runtime}-shell`;
   if (capability === 'threading' && targetHost.runtime === 'web') return 'native-threading-to-web-workers';
   if (capability === 'threading') return `${sourceHost.runtime}-threading-to-${targetHost.runtime}-threading`;
   if (capability === 'dom' && targetHost.runtime === 'cli') return 'dom-to-headless-host';
   if (capability === 'dom') return `${sourceHost.runtime}-dom-to-${targetHost.runtime}-dom`;
+  if (capability === 'clipboard') return `${sourceHost.runtime}-clipboard-to-${targetHost.runtime}-clipboard`;
+  if (capability === 'canvas') return `${sourceHost.runtime}-canvas-to-${targetHost.runtime}-canvas`;
+  if (capability === 'gpu') return `${sourceHost.runtime}-gpu-to-${targetHost.runtime}-gpu`;
+  if (capability === 'wasm') return `${sourceHost.runtime}-wasm-to-${targetHost.runtime}-wasm`;
+  if (capability === 'sandbox') return `${sourceHost.runtime}-sandbox-to-${targetHost.runtime}-sandbox`;
+  if (capability === 'secrets') return `${sourceHost.runtime}-secrets-to-${targetHost.runtime}-secrets`;
   if (capability === 'async') return `${sourceHost.runtime}-async-to-${targetHost.runtime}-async`;
   if (capability === 'ffi' && targetHost.runtime === 'web') return 'native-ffi-to-web-boundary';
   if (capability === 'ffi') return `${sourceHost.runtime}-ffi-to-${targetHost.runtime}-ffi`;

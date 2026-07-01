@@ -7,12 +7,26 @@ import type { NativeImportLanguageProfile } from './native-import-losses.js';
 import type { NativeSourceImportResult } from './import-adapter-core.js';
 
 export type UniversalRuntimeCapabilityKind =
+  | 'network'
   | 'fetch'
   | 'timers'
+  | 'clock'
+  | 'randomness'
+  | 'crypto'
   | 'storage'
+  | 'database'
   | 'filesystem'
+  | 'process'
+  | 'environment'
+  | 'shell'
   | 'threading'
   | 'dom'
+  | 'clipboard'
+  | 'canvas'
+  | 'gpu'
+  | 'wasm'
+  | 'sandbox'
+  | 'secrets'
   | 'async'
   | 'ffi'
   | string;

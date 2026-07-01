@@ -35,6 +35,8 @@ export {
   createUniversalConversionPlan,
   createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
+  createUniversalRuntimeCapabilityMatrix,
+  queryUniversalRuntimeCapabilityMatrix,
   createUniversalBorrowCheckerConstraintEvidence,
   createUniversalBorrowScopeConstraintEvidence,
   createUniversalControlFlowConstraintEvidence,

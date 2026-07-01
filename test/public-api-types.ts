@@ -164,8 +164,9 @@ type PublicRuntimeExportsMatchDeclarations = Expect<Equal<keyof typeof compilerA
 type RoundtripRouteAuditBuckets = Expect<Equal<keyof compilerApi.NativeRoundtripRoutePathsAudit, 'reversible' | 'preservedSource' | 'stubOnly' | 'adapterProjected'>>;
 type RoundtripSemanticEquivalenceClaimStaysFalse = Expect<Equal<compilerApi.NativeRoundtripSemanticEquivalenceAudit['claimed'], false>>;
 type RoundtripRouteSourceMapPrecisionIsTyped = compilerApi.NativeRoundtripRouteSourceMapsAudit['output']['precision'];
+const runtimeCapabilityKinds: readonly compilerApi.UniversalRuntimeCapabilityKind[] = compilerApi.UniversalRuntimeCapabilityKinds; const runtimeCapabilityCanvas: compilerApi.UniversalRuntimeCapabilityKind = 'canvas'; const runtimeCapabilitySecret: compilerApi.UniversalRuntimeCapabilityKind = 'secrets';
 
-void (null as unknown as PublicRuntimeExportsMatchDeclarations); void (null as unknown as RoundtripRouteAuditBuckets); void (null as unknown as RoundtripSemanticEquivalenceClaimStaysFalse); void (null as unknown as RoundtripRouteSourceMapPrecisionIsTyped);
+void (null as unknown as PublicRuntimeExportsMatchDeclarations); void (null as unknown as RoundtripRouteAuditBuckets); void (null as unknown as RoundtripSemanticEquivalenceClaimStaysFalse); void (null as unknown as RoundtripRouteSourceMapPrecisionIsTyped); runtimeCapabilityKinds.includes(runtimeCapabilityCanvas); runtimeCapabilityKinds.includes(runtimeCapabilitySecret);
 type RustBorrowPrimitiveModelFields = Expect<Equal<compilerApi.UniversalOwnershipConstraintModel['hasReborrow'] | compilerApi.UniversalOwnershipConstraintModel['hasTwoPhaseBorrow'] | compilerApi.UniversalOwnershipConstraintModel['hasInteriorMutability'] | compilerApi.UniversalOwnershipConstraintModel['hasPinnedResource'] | compilerApi.UniversalLifetimeConstraintModel['hasNonLexicalLifetime'] | compilerApi.UniversalLifetimeConstraintModel['hasHigherRankedLifetime'] | compilerApi.UniversalBorrowScopeConstraintModel['hasPinProjection'], boolean>>;
 void (null as unknown as RustBorrowPrimitiveModelFields);
 const typedNumericSemantics = compilerApi.createUniversalNumericSemanticsConstraintEvidence({
