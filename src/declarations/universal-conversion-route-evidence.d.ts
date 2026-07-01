@@ -101,12 +101,12 @@ export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly runtimeReadiness?: SemanticMergeReadiness | string;
   readonly missingRuntimeCapability?: UniversalRuntimeCapabilityKind;
   readonly runtimeAdapterRequirementId?: string;
-  readonly translationRuntimeReadiness?: SemanticMergeReadiness | string;
-  readonly translationRuntimeAdapterRequirementId?: string;
-  readonly translationRuntimeProofObligationId?: string;
-  readonly translationRuntimeProofMissingSignal?: UniversalRuntimeProofSignalKind;
-  readonly translationDialectReadiness?: SemanticMergeReadiness | string;
-  readonly translationDialectRecordId?: string;
+  readonly translationRuntimeReadiness?: SemanticMergeReadiness | string | readonly (SemanticMergeReadiness | string)[];
+  readonly translationRuntimeAdapterRequirementId?: string | readonly string[];
+  readonly translationRuntimeProofObligationId?: string | readonly string[];
+  readonly translationRuntimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
+  readonly translationDialectReadiness?: SemanticMergeReadiness | string | readonly (SemanticMergeReadiness | string)[];
+  readonly translationDialectRecordId?: string | readonly string[];
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus;
   readonly translationAdmissionAction?: UniversalTranslationAdmissionAction;
   readonly targetAdapterId?: string;

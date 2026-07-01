@@ -269,12 +269,12 @@ export interface UniversalConversionPlanQuery extends URCQ, UniversalInterlingua
   readonly dialectDisposition?: UniversalDialectProjectionDisposition;
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus; readonly translationAdmissionAction?: UniversalTranslationAdmissionAction;
   readonly missingTranslationEvidence?: string; readonly translationEvidenceId?: string; readonly translationProofEvidenceId?: string;
-  readonly translationRuntimeReadiness?: SMR;
-  readonly translationRuntimeAdapterRequirementId?: string;
-  readonly translationRuntimeProofObligationId?: string;
-  readonly translationRuntimeProofMissingSignal?: UPS;
-  readonly translationDialectReadiness?: SMR;
-  readonly translationDialectRecordId?: string;
+  readonly translationRuntimeReadiness?: SMR | readonly SMR[];
+  readonly translationRuntimeAdapterRequirementId?: string | readonly string[];
+  readonly translationRuntimeProofObligationId?: string | readonly string[];
+  readonly translationRuntimeProofMissingSignal?: UPS | readonly UPS[];
+  readonly translationDialectReadiness?: SMR | readonly SMR[];
+  readonly translationDialectRecordId?: string | readonly string[];
   readonly requiredTranslationConstructKind?: string; readonly representedTranslationConstructKind?: string; readonly targetAdapterId?: string;
 }
 

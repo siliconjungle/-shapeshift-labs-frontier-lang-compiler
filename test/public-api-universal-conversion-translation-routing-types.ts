@@ -6,12 +6,12 @@ const routingPlan: UniversalConversionPlan = createUniversalConversionPlan({
   runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'fetch' }]
 });
 const routingRoute = queryUniversalConversionPlan(routingPlan, {
-  translationRuntimeReadiness: 'ready',
-  translationRuntimeAdapterRequirementId: 'runtime_adapter',
-  translationRuntimeProofObligationId: 'runtime_proof',
-  translationRuntimeProofMissingSignal: 'network-trace-hash',
-  translationDialectReadiness: 'ready',
-  translationDialectRecordId: 'dialect_record'
+  translationRuntimeReadiness: ['ready'],
+  translationRuntimeAdapterRequirementId: ['runtime_adapter'],
+  translationRuntimeProofObligationId: ['runtime_proof'],
+  translationRuntimeProofMissingSignal: ['network-trace-hash'],
+  translationDialectReadiness: ['ready'],
+  translationDialectRecordId: ['dialect_record']
 }).bestRoute;
 routingRoute?.translationAdmission.runtimeAdapterRequirementIds satisfies readonly string[] | undefined;
 routingRoute?.translationAdmission.runtimeProofObligationIds satisfies readonly string[] | undefined;
@@ -37,8 +37,8 @@ routingArtifacts.admissionRecords[0]?.translationRuntimeProofMissingSignals sati
 routingArtifacts.evidenceReceipts[0]?.translationDialectRecordIds satisfies readonly string[] | undefined;
 
 const routingReceipt: UniversalConversionRouteEvidenceReceipt = createUniversalConversionRouteEvidenceReceipt(routingPlan, {
-  translationRuntimeProofMissingSignal: 'network-trace-hash',
-  translationDialectReadiness: 'ready'
+  translationRuntimeProofMissingSignal: ['network-trace-hash'],
+  translationDialectReadiness: ['ready']
 });
 routingReceipt.translationRuntimeReadinesses satisfies readonly string[];
 routingReceipt.translationRuntimeAdapterRequirementIds satisfies readonly string[];
