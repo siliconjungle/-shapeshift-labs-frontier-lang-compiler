@@ -76,7 +76,7 @@ function createRouteArtifact(route, options) {
   const recordMetadata = routeRecordMetadata(route, planId, options.metadata);
   const admissionStatus = routeAdmissionStatus(route);
   const reasonCodes = routeReasonCodes(route);
-  const evidenceReceipt = createUniversalConversionRouteEvidenceReceipt(route, { evidence: options.evidence });
+  const evidenceReceipt = createUniversalConversionRouteEvidenceReceipt({ ...route, mergeRefs: { ...refs, sourceMapLinkIds: sourceMapLinks.map((link) => link.id) } }, { evidence: options.evidence });
   const runtimeProof = routeRuntimeProofIndex(route);
   const historyId = refs.historyIds?.[0] ?? `history_${route.id}`;
   const patchBundleId = refs.patchBundleIds?.[0] ?? `semantic_patch_bundle_${route.id}`;
@@ -130,7 +130,7 @@ function createRouteArtifact(route, options) {
     plannedHistoryIds: refs.historyIds ?? [],
     materializedHistoryIds: [history.id],
     patchBundleIds: [patchBundle.id],
-    sourceMapLinkIds: patchBundle.index.sourceMapLinkIds,
+    sourceMapIds: patchBundle.index.sourceMapIds, sourceMapMappingIds: patchBundle.index.sourceMapMappingIds, sourceMapLinkIds: patchBundle.index.sourceMapLinkIds,
     semanticOperationIds: semanticOperations.operations.map((operation) => operation.id),
     evidenceReceiptIds: [evidenceReceipt.id],
     evidenceIds: history.evidenceIds,
@@ -273,7 +273,7 @@ function routeRegions(route, refs, sources) {
 
 function routeSourceMapLinks(route, refs, sources, regions) {
   const source = sources[0] ?? {};
-  const max = Math.max(refs.sourceMapIds?.length ?? 0, refs.sourceMapMappingIds?.length ?? 0);
+  const max = Math.max(refs.sourceMapIds?.length ?? 0, refs.sourceMapMappingIds?.length ?? 0, refs.sourceMapLinkIds?.length ?? 0);
   const targetPaths = refs.generatedTargetPaths ?? refs.targetPaths ?? refs.sourceMapTargetPaths ?? refs.sourceMapTargets ?? [];
   return Array.from({ length: max }, (_, index) => ({
     id: refs.sourceMapLinkIds?.[index] ?? `route_source_map_link_${idFragment(route.id)}_${index + 1}`,

@@ -131,6 +131,9 @@ export interface UniversalConversionRouteEvidenceReceipt {
   readonly sources: UniversalConversionRoute['mergeRefs']['sources'];
   readonly ownershipKeys: readonly string[];
   readonly conflictKeys: readonly string[];
+  readonly sourceMapIds: readonly string[];
+  readonly sourceMapMappingIds: readonly string[];
+  readonly sourceMapLinkIds: readonly string[];
   readonly records: {
     readonly bound: readonly UniversalConversionRouteEvidenceReceiptRecord[];
     readonly rejected: readonly UniversalConversionRouteEvidenceReceiptRecord[];
@@ -141,6 +144,9 @@ export interface UniversalConversionRouteEvidenceReceipt {
     readonly boundEvidence: number;
     readonly rejectedEvidence: number;
     readonly proofEvidence: number;
+    readonly sourceMapIds: Readonly<Record<string, number>>;
+    readonly sourceMapMappingIds: Readonly<Record<string, number>>;
+    readonly sourceMapLinkIds: Readonly<Record<string, number>>;
     readonly missingEvidence: number;
     readonly runtimeProofObligations: number;
     readonly runtimeProofByStatus: Readonly<Record<string, number>>;
@@ -174,6 +180,7 @@ export interface UniversalConversionRouteEvidenceReceipt {
     readonly runtimeProofRequired: boolean;
     readonly interlinguaConstraintsRequired: boolean;
     readonly sourceBound: boolean;
+    readonly sourceMapped: boolean;
     readonly note: string;
   };
 }

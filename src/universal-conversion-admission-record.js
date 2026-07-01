@@ -141,7 +141,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       historyId: input.history?.id,
       patchBundleId: input.patchBundle?.id,
       semanticOperationIds: operations.map((operation) => operation.id),
-      sourceMapLinkIds: input.materialization?.sourceMapLinkIds ?? [],
+      sourceMapIds: input.materialization?.sourceMapIds ?? [], sourceMapMappingIds: input.materialization?.sourceMapMappingIds ?? [], sourceMapLinkIds: input.materialization?.sourceMapLinkIds ?? [],
       runtimeProofObligationIds: runtimeProof.obligationIds,
       evidenceIds,
       proofIds

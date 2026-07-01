@@ -1,5 +1,6 @@
 import{uniqueStrings as u}from './native-import-utils.js';
 import{artifactSemanticEditIndex as esi}from './universal-conversion-artifact-semantic-edit.js';
+import{artifactSourceMapIndex as smi,artifactSourceMapMatches as smm}from './universal-conversion-artifact-source-maps.js';
 import{artifactConstraintIndex as aci,artifactConstraintsMatch as acm}from './universal-conversion-artifact-constraints.js';
 import{interlinguaRecordMatches as irm}from './universal-interlingua-record.js';
 const ai='admissionRecordInterlingua',eri='evidenceReceiptInterlingua',soi='semanticOperationInterlingua';
@@ -53,6 +54,7 @@ export function artifactIndex(a) {
     sourceHashes: u(a.flatMap((a) => a.history.index.sourceHashes)),
     ownershipKeys: u(a.flatMap((a) => a.history.index.ownershipKeys)),
     conflictKeys: u(a.flatMap((a) => a.history.index.conflictKeys)),
+    ...smi(a),
     evidenceIds: u(a.flatMap((a) => a.history.evidenceIds)),
     proofIds: u(a.flatMap((a) => a.history.proofIds)),
     evidenceReceiptEvidenceIds: u(a.flatMap((a) => a.evidenceReceipt?.evidenceIds ?? [])),
@@ -158,6 +160,7 @@ function matchesArtifact(record, query) {
     && match(query.conflictKey, record.history.index.conflictKeys)
     && match(query.evidenceId, record.history.evidenceIds)
     && match(query.proofId, record.history.proofIds)
+    && smm(record, query)
     && match(query.evidenceReceiptEvidenceId, record.evidenceReceipt?.evidenceIds ?? [])
     && match(query.evidenceReceiptProofEvidenceId, record.evidenceReceipt?.proofEvidenceIds ?? [])
     && match(query.evidenceReceiptMissingEvidence, record.evidenceReceipt?.missingEvidence ?? [])

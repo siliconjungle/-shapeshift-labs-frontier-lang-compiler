@@ -108,6 +108,12 @@ assert.equal(jsArtifact.materialization.semanticOperationIds.includes(jsArtifact
 assert.equal(jsArtifact.materialization.status, 'materialized');
 assert.equal(jsArtifact.materialization.plannedHistoryIds.includes(jsToJs.mergeRefs.historyIds[0]), true);
 assert.equal(jsArtifact.materialization.materializedHistoryIds.includes(jsArtifact.history.id), true);
+const jsSourceMapId = jsToJs.mergeRefs.sourceMapIds[0], jsSourceMapMappingId = jsToJs.mergeRefs.sourceMapMappingIds[0], jsSourceMapLinkId = jsArtifact.materialization.sourceMapLinkIds[0];
+assert.equal(jsArtifact.materialization.sourceMapIds.includes(jsSourceMapId), true);
+assert.equal(jsArtifact.admissionRecord.ids.sourceMapIds.includes(jsSourceMapId), true);
+assert.equal(conversionArtifacts.index.sourceMapIds.includes(jsSourceMapId), true);
+assert.equal(conversionArtifacts.summary.compactCounts.sourceMaps.mappingIds[jsSourceMapMappingId] >= 1, true);
+assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, { sourceMapId: jsSourceMapId, sourceMapMappingId: jsSourceMapMappingId, sourceMapLinkId: jsSourceMapLinkId })[0].routeId, jsToJs.id);
 assert.equal(jsArtifact.autoMergeClaim, false);
 assert.equal(jsArtifact.semanticEquivalenceClaim, false);
 assert.equal(queryUniversalConversionArtifacts(conversionArtifacts, { sourcePath: scannedJsImport.sourcePath }).length >= 1, true);

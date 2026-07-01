@@ -44,6 +44,11 @@ assert.equal(receipt.id, `evidence_receipt_${route.id}`);
 assert.equal(receipt.routeId, route.id);
 assert.equal(receipt.evidenceIds.includes('receipt_scoped_translation_proof'), true);
 assert.equal(receipt.proofEvidenceIds.includes('receipt_scoped_translation_proof'), true);
+assert.equal(receipt.sourceMapIds.length >= 1, true);
+assert.equal(receipt.sourceMapMappingIds.length >= 1, true);
+assert.equal(receipt.summary.sourceMapIds[receipt.sourceMapIds[0]] >= 1, true);
+assert.equal(receipt.summary.sourceMapMappingIds[receipt.sourceMapMappingIds[0]] >= 1, true);
+assert.equal(receipt.metadata.sourceMapped, true);
 assert.equal(receipt.records.bound.length, 1);
 assert.equal(receipt.records.bound[0].binding, 'bound');
 assert.equal(receipt.records.bound[0].proof, true);
@@ -59,6 +64,22 @@ const artifactsWithReceipts = createUniversalConversionArtifacts(plan, {
   routeId: route.id,
   evidence: [scopedEvidence, unscopedEvidence, wrongTargetEvidence]
 });
+const routeSourceMapId = route.mergeRefs.sourceMapIds[0];
+const routeSourceMapMappingId = route.mergeRefs.sourceMapMappingIds[0];
+const materializedSourceMapLinkId = artifactsWithReceipts.routeArtifacts[0].materialization.sourceMapLinkIds[0];
+assert.equal(artifactsWithReceipts.routeArtifacts[0].materialization.sourceMapIds.includes(routeSourceMapId), true);
+assert.equal(artifactsWithReceipts.routeArtifacts[0].admissionRecord.ids.sourceMapMappingIds.includes(routeSourceMapMappingId), true);
+assert.equal(artifactsWithReceipts.routeArtifacts[0].evidenceReceipt.sourceMapLinkIds.includes(materializedSourceMapLinkId), true);
+assert.equal(artifactsWithReceipts.index.routeSourceMapIds.includes(routeSourceMapId), true);
+assert.equal(artifactsWithReceipts.index.admissionRecordSourceMapMappingIds.includes(routeSourceMapMappingId), true);
+assert.equal(artifactsWithReceipts.index.evidenceReceiptSourceMapLinkIds.includes(materializedSourceMapLinkId), true);
+assert.equal(artifactsWithReceipts.summary.compactCounts.evidenceReceipts.sourceMapIds[routeSourceMapId] >= 1, true);
+assert.equal(artifactsWithReceipts.summary.compactCounts.sourceMaps.ids[routeSourceMapId] >= 1 && artifactsWithReceipts.summary.compactCounts.sourceMaps.mappingIds[routeSourceMapMappingId] >= 1 && artifactsWithReceipts.summary.compactCounts.sourceMaps.linkIds[materializedSourceMapLinkId] >= 1, true);
+assert.equal(queryUniversalConversionArtifacts(artifactsWithReceipts, {
+  routeSourceMapId,
+  admissionRecordSourceMapMappingId: routeSourceMapMappingId,
+  evidenceReceiptSourceMapLinkId: materializedSourceMapLinkId
+})[0].routeId, route.id);
 const rejectedArtifact = queryUniversalConversionArtifacts(artifactsWithReceipts, {
   evidenceReceiptRejectedReason: 'unscoped-evidence',
   evidenceReceiptRejectedId: 'receipt_unscoped_translation_proof'

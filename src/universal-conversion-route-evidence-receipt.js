@@ -43,6 +43,9 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     ...runtimeProofEvidenceIds,
     ...proofIdsForEvidence(boundRecords)
   ]);
+  const sourceMapIds = uniqueStrings(route.mergeRefs?.sourceMapIds ?? []);
+  const sourceMapMappingIds = uniqueStrings(route.mergeRefs?.sourceMapMappingIds ?? []);
+  const sourceMapLinkIds = uniqueStrings(route.mergeRefs?.sourceMapLinkIds ?? []);
   const missingEvidence = uniqueStrings([
     ...(route.missingEvidence ?? []),
     ...(route.translationAdmission?.missingEvidence ?? []),
@@ -101,6 +104,9 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     sources: route.mergeRefs?.sources ?? [],
     ownershipKeys: route.mergeRefs?.semanticOwnershipKeys ?? [],
     conflictKeys: route.mergeRefs?.conflictKeys ?? [],
+    sourceMapIds,
+    sourceMapMappingIds,
+    sourceMapLinkIds,
     records: {
       bound: boundSummaries,
       rejected: rejectedSummaries,
@@ -111,6 +117,9 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       boundEvidence: boundSummaries.length,
       rejectedEvidence: rejectedSummaries.length,
       proofEvidence: proofEvidenceIds.length,
+      sourceMapIds: countBy(sourceMapIds),
+      sourceMapMappingIds: countBy(sourceMapMappingIds),
+      sourceMapLinkIds: countBy(sourceMapLinkIds),
       missingEvidence: missingEvidence.length,
       runtimeProofObligations: runtimeProofSummary.obligations,
       runtimeProofByStatus: runtimeProofSummary.byStatus,
@@ -144,6 +153,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       runtimeProofRequired: runtimeProofObligations.length > 0,
       interlinguaConstraintsRequired: interlinguaObligationRecords.length > 0,
       sourceBound: route.mergeRefs?.sources?.length ? true : false,
+      sourceMapped: sourceMapIds.length > 0 || sourceMapMappingIds.length > 0 || sourceMapLinkIds.length > 0,
       note: 'Route evidence receipts bind scoped evidence to one conversion route. They are admission receipts, not semantic-equivalence proof.'
     }
   };

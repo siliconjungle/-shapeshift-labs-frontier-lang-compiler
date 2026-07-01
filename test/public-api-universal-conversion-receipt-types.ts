@@ -24,6 +24,13 @@ receipt.id satisfies string;
 receipt.records.rejected[0]?.reason satisfies string | undefined;
 receipt.records.bound[0]?.proof satisfies boolean | undefined;
 receipt.records.interlinguaObligations[0]?.missingEvidence satisfies readonly string[] | undefined;
+receipt.sourceMapIds satisfies readonly string[];
+receipt.sourceMapMappingIds satisfies readonly string[];
+receipt.sourceMapLinkIds satisfies readonly string[];
+receipt.summary.sourceMapIds satisfies Readonly<Record<string, number>>;
+receipt.summary.sourceMapMappingIds satisfies Readonly<Record<string, number>>;
+receipt.summary.sourceMapLinkIds satisfies Readonly<Record<string, number>>;
+receipt.metadata.sourceMapped satisfies boolean;
 receipt.interlinguaRecordId satisfies string | undefined;
 receipt.interlinguaConstraintFamilies satisfies readonly string[];
 receipt.interlinguaConstraintActions satisfies readonly string[];
@@ -61,6 +68,10 @@ const receiptArtifacts: UniversalConversionArtifacts = createUniversalConversion
   ]
 });
 const receiptArtifact: UniversalConversionRouteArtifact | undefined = queryUniversalConversionArtifacts(receiptArtifacts, {
+  sourceMapId: receiptRoute?.mergeRefs.sourceMapIds[0],
+  routeSourceMapMappingId: receiptRoute?.mergeRefs.sourceMapMappingIds[0],
+  admissionRecordSourceMapId: receiptRoute?.mergeRefs.sourceMapIds[0],
+  evidenceReceiptSourceMapLinkId: receiptArtifacts.routeArtifacts[0]?.materialization.sourceMapLinkIds[0],
   evidenceReceiptRejectedReason: 'unscoped-evidence',
   evidenceReceiptInterlinguaConstraintEvidenceId: 'receipt_type_edge_proof',
   evidenceReceiptInterlinguaConstraintObligationMissingEvidence: 'translation-adt-pattern:exhaustiveness',
@@ -70,6 +81,18 @@ const receiptArtifact: UniversalConversionRouteArtifact | undefined = queryUnive
 })[0];
 receiptArtifacts.evidenceReceipts[0]?.id satisfies string | undefined;
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintActions satisfies readonly string[];
+receiptArtifacts.index.sourceMapIds satisfies readonly string[];
+receiptArtifacts.index.sourceMapMappingIds satisfies readonly string[];
+receiptArtifacts.index.sourceMapLinkIds satisfies readonly string[];
+receiptArtifacts.index.routeSourceMapIds satisfies readonly string[];
+receiptArtifacts.index.routeSourceMapMappingIds satisfies readonly string[];
+receiptArtifacts.index.routeSourceMapLinkIds satisfies readonly string[];
+receiptArtifacts.index.admissionRecordSourceMapIds satisfies readonly string[];
+receiptArtifacts.index.admissionRecordSourceMapMappingIds satisfies readonly string[];
+receiptArtifacts.index.admissionRecordSourceMapLinkIds satisfies readonly string[];
+receiptArtifacts.index.evidenceReceiptSourceMapIds satisfies readonly string[];
+receiptArtifacts.index.evidenceReceiptSourceMapMappingIds satisfies readonly string[];
+receiptArtifacts.index.evidenceReceiptSourceMapLinkIds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintSourceIds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintEvidenceIds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintObligationMissingEvidence satisfies readonly string[];
@@ -84,6 +107,12 @@ receiptArtifacts.index.admissionRecordInterlinguaConstraintEvidenceIds satisfies
 receiptArtifacts.summary.evidenceReceipts satisfies number;
 receiptArtifacts.summary.receiptProofEvidence satisfies number;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.missingEvidence satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.evidenceReceipts.sourceMapIds satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.evidenceReceipts.sourceMapMappingIds satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.evidenceReceipts.sourceMapLinkIds satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.sourceMaps.ids satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.sourceMaps.mappingIds satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.sourceMaps.linkIds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintActions satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintSourceIds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintEvidenceIds satisfies Readonly<Record<string, number>>;
@@ -105,6 +134,12 @@ receiptArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintMiss
 receiptArtifacts.admissionRecords[0]?.interlinguaConstraintObligationMissingEvidence satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlinguaConstraintObligationEvidenceIds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlinguaConstraintActions satisfies readonly string[] | undefined;
+receiptArtifacts.admissionRecords[0]?.ids.sourceMapIds satisfies readonly string[] | undefined;
+receiptArtifacts.admissionRecords[0]?.ids.sourceMapMappingIds satisfies readonly string[] | undefined;
+receiptArtifacts.admissionRecords[0]?.ids.sourceMapLinkIds satisfies readonly string[] | undefined;
+receiptArtifacts.routeArtifacts[0]?.materialization.sourceMapIds satisfies readonly string[] | undefined;
+receiptArtifacts.routeArtifacts[0]?.materialization.sourceMapMappingIds satisfies readonly string[] | undefined;
+receiptArtifacts.routeArtifacts[0]?.materialization.sourceMapLinkIds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlinguaConstraintEvidenceIds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlinguaConstraintRequiredKinds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlinguaConstraintRepresentedKinds satisfies readonly string[] | undefined;

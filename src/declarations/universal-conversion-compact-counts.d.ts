@@ -1,3 +1,5 @@
+import type { UniversalConversionArtifactSourceMapCompactCounts } from './universal-conversion-artifact-source-maps.js';
+
 export interface UniversalConversionRepresentationCompactCounts {
   readonly total: number;
   readonly byKind: Readonly<Record<string, number>>;
@@ -38,6 +40,9 @@ export interface UniversalConversionEvidenceReceiptCompactCounts {
   readonly boundEvidence: number;
   readonly rejectedEvidence: number;
   readonly proofEvidence: number;
+  readonly sourceMapIds: Readonly<Record<string, number>>;
+  readonly sourceMapMappingIds: Readonly<Record<string, number>>;
+  readonly sourceMapLinkIds: Readonly<Record<string, number>>;
   readonly runtimeProofObligations: number;
   readonly runtimeProofByStatus: Readonly<Record<string, number>>;
   readonly runtimeProofByCapability: Readonly<Record<string, number>>;
@@ -195,6 +200,7 @@ export interface UniversalConversionArtifactCompactCounts {
     readonly byAction: Readonly<Record<string, number>>;
     readonly byRisk: Readonly<Record<string, number>>;
   };
+  readonly sourceMaps: UniversalConversionArtifactSourceMapCompactCounts;
   readonly translationAdmission: UniversalConversionTranslationAdmissionCompactCounts;
   readonly runtimeProof: UniversalConversionRuntimeProofCompactCounts;
   readonly resourceTransfer: UniversalConversionResourceTransferCompactCounts;

@@ -42,7 +42,7 @@ export interface UniversalConversionArtifactMaterialization {
   readonly plannedHistoryIds: readonly string[];
   readonly materializedHistoryIds: readonly string[];
   readonly patchBundleIds: readonly string[];
-  readonly sourceMapLinkIds: readonly string[];
+  readonly sourceMapIds: readonly string[]; readonly sourceMapMappingIds: readonly string[]; readonly sourceMapLinkIds: readonly string[];
   readonly semanticOperationIds: readonly string[];
   readonly evidenceReceiptIds: readonly string[];
   readonly evidenceIds: readonly string[];
@@ -114,7 +114,7 @@ export interface UniversalConversionAdmissionRecord {
     readonly historyId?: string;
     readonly patchBundleId?: string;
     readonly semanticOperationIds: readonly string[];
-    readonly sourceMapLinkIds: readonly string[];
+    readonly sourceMapIds: readonly string[]; readonly sourceMapMappingIds: readonly string[]; readonly sourceMapLinkIds: readonly string[];
     readonly runtimeProofObligationIds: readonly string[];
     readonly evidenceIds: readonly string[];
     readonly proofIds: readonly string[];
