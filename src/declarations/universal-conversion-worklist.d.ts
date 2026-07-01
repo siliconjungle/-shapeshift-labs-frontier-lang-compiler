@@ -61,7 +61,10 @@ export interface UniversalConversionWorkItem {
   readonly dialectRecordIds: readonly string[];
   readonly targetAdapterIds: readonly string[];
   readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[];
+  readonly interlinguaConstraintActions: readonly string[];
   readonly interlinguaConstraintSourceIds: readonly string[];
+  readonly interlinguaConstraintRequiredKinds: readonly string[];
+  readonly interlinguaConstraintRepresentedKinds: readonly string[];
   readonly interlinguaConstraintObligationKinds: readonly string[];
   readonly interlinguaConstraintObligationStatuses: readonly string[];
   readonly interlinguaConstraintObligationMissingEvidence: readonly string[];
@@ -104,7 +107,10 @@ export interface UniversalConversionWorklistQuery extends UniversalConversionWor
   readonly dialectRecordId?: string | readonly string[];
   readonly targetAdapterId?: string | readonly string[];
   readonly interlinguaConstraintFamily?: string | readonly string[];
+  readonly interlinguaConstraintAction?: string | readonly string[];
   readonly interlinguaConstraintSourceId?: string | readonly string[];
+  readonly interlinguaConstraintRequiredKind?: string | readonly string[];
+  readonly interlinguaConstraintRepresentedKind?: string | readonly string[];
   readonly interlinguaConstraintObligationKind?: string | readonly string[];
   readonly interlinguaConstraintObligationStatus?: string | readonly string[];
   readonly interlinguaConstraintObligationMissingEvidence?: string | readonly string[];
@@ -131,7 +137,10 @@ export interface UniversalConversionWorklist {
     readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[];
+    readonly interlinguaConstraintActions: readonly string[];
     readonly interlinguaConstraintSourceIds: readonly string[];
+    readonly interlinguaConstraintRequiredKinds: readonly string[];
+    readonly interlinguaConstraintRepresentedKinds: readonly string[];
     readonly interlinguaConstraintObligationKinds: readonly string[];
     readonly interlinguaConstraintObligationStatuses: readonly string[];
     readonly interlinguaConstraintObligationMissingEvidence: readonly string[];
