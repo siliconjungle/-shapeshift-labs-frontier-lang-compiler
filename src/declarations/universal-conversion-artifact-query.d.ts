@@ -65,17 +65,11 @@ export interface UniversalConversionArtifactIndex {
   readonly conflictKeys: RS;
   readonly evidenceIds: RS;
   readonly proofIds: RS;
-  readonly evidenceReceiptEvidenceIds: RS;
-  readonly evidenceReceiptProofEvidenceIds: RS;
-  readonly evidenceReceiptMissingEvidence: RS;
-  readonly evidenceReceiptRejectedReasons: RS;
-  readonly evidenceReceiptRejectedIds: RS;
-  readonly semanticOperationIds: RS;
-  readonly semanticOperationKinds: RS;
-  readonly semanticOperationInterlinguaRecordIds: RS;
-  readonly semanticOperationInterlinguaLoweringDispositions: RS;
-  readonly semanticOperationInterlinguaMissingEvidence: RS;
-  readonly semanticOperationInterlinguaProofEvidenceIds: RS;
+  readonly evidenceReceiptEvidenceIds: RS; readonly evidenceReceiptProofEvidenceIds: RS; readonly evidenceReceiptMissingEvidence: RS;
+  readonly evidenceReceiptRejectedReasons: RS; readonly evidenceReceiptRejectedIds: RS;
+  readonly evidenceReceiptInterlinguaRecordIds: RS; readonly evidenceReceiptInterlinguaLoweringDispositions: RS; readonly evidenceReceiptInterlinguaConstraintFamilies: RS; readonly evidenceReceiptInterlinguaConstraintStatuses: RS; readonly evidenceReceiptInterlinguaConstraintMissingKinds: RS; readonly evidenceReceiptInterlinguaConstraintMissingEvidence: RS; readonly evidenceReceiptInterlinguaConstraintSourceIds: RS; readonly evidenceReceiptInterlinguaConstraintObligationKinds: RS; readonly evidenceReceiptInterlinguaConstraintObligationStatuses: RS; readonly evidenceReceiptInterlinguaConstraintObligationEvidenceIds: RS; readonly evidenceReceiptInterlinguaConstraintObligationMissingEvidence: RS;
+  readonly semanticOperationIds: RS; readonly semanticOperationKinds: RS;
+  readonly semanticOperationInterlinguaRecordIds: RS; readonly semanticOperationInterlinguaLoweringDispositions: RS; readonly semanticOperationInterlinguaMissingEvidence: RS; readonly semanticOperationInterlinguaProofEvidenceIds: RS;
   readonly semanticEditStatuses: RS;
   readonly semanticEditScriptIds: RS;
   readonly semanticEditProjectionIds: RS;
@@ -199,9 +193,7 @@ export interface UniversalConversionArtifactIndex {
   readonly interlinguaConstraintStatuses: RS;
   readonly interlinguaConstraintMissingKinds: RS;
   readonly interlinguaConstraintMissingEvidence: RS;
-  readonly interlinguaConstraintSourceIds: RS;
-  readonly interlinguaConstraintObligationKinds: RS;
-  readonly interlinguaConstraintObligationStatuses: RS;
+  readonly interlinguaConstraintSourceIds: RS; readonly interlinguaConstraintObligationKinds: RS; readonly interlinguaConstraintObligationStatuses: RS; readonly interlinguaConstraintObligationMissingEvidence: RS;
   readonly transformIdentityHashes: RS;
 }
 
@@ -242,11 +234,9 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly conflictKey?: string | RS;
   readonly evidenceId?: string | RS;
   readonly proofId?: string | RS;
-  readonly evidenceReceiptEvidenceId?: string | RS;
-  readonly evidenceReceiptProofEvidenceId?: string | RS;
-  readonly evidenceReceiptMissingEvidence?: string | RS;
-  readonly evidenceReceiptRejectedReason?: string | RS;
-  readonly evidenceReceiptRejectedId?: string | RS;
+  readonly evidenceReceiptEvidenceId?: string | RS; readonly evidenceReceiptProofEvidenceId?: string | RS; readonly evidenceReceiptMissingEvidence?: string | RS;
+  readonly evidenceReceiptRejectedReason?: string | RS; readonly evidenceReceiptRejectedId?: string | RS;
+  readonly evidenceReceiptInterlinguaRecordId?: string | RS; readonly evidenceReceiptInterlinguaLoweringDisposition?: string | RS; readonly evidenceReceiptInterlinguaConstraintFamily?: string | RS; readonly evidenceReceiptInterlinguaConstraintStatus?: string | RS; readonly evidenceReceiptInterlinguaConstraintMissingKind?: string | RS; readonly evidenceReceiptInterlinguaConstraintMissingEvidence?: string | RS; readonly evidenceReceiptInterlinguaConstraintSourceId?: string | RS; readonly evidenceReceiptInterlinguaConstraintObligationKind?: string | RS; readonly evidenceReceiptInterlinguaConstraintObligationStatus?: string | RS; readonly evidenceReceiptInterlinguaConstraintObligationEvidenceId?: string | RS; readonly evidenceReceiptInterlinguaConstraintObligationMissingEvidence?: string | RS;
   readonly semanticOperationId?: string | RS;
   readonly semanticOperationKind?: string | RS;
   readonly semanticOperationInterlinguaRecordId?: string | RS;

@@ -122,6 +122,23 @@ assert.equal(interlinguaReceipt.summary.interlinguaConstraintByFamily['adt-patte
 assert.equal(interlinguaReceipt.summary.interlinguaConstraintByStatus.missing >= 1, true);
 assert.equal(interlinguaReceipt.metadata.interlinguaConstraintsRequired, true);
 
+const interlinguaArtifacts = createUniversalConversionArtifacts(interlinguaConstraintPlan, {
+  routeId: interlinguaConstraintRoute.id
+});
+assert.equal(interlinguaArtifacts.index.evidenceReceiptInterlinguaRecordIds.includes(interlinguaConstraintRoute.interlingua.id), true);
+assert.equal(interlinguaArtifacts.index.evidenceReceiptInterlinguaConstraintFamilies.includes('adt-pattern'), true);
+assert.equal(interlinguaArtifacts.index.evidenceReceiptInterlinguaConstraintObligationKinds.includes('exhaustiveness'), true);
+assert.equal(interlinguaArtifacts.index.evidenceReceiptInterlinguaConstraintObligationStatuses.includes('missing'), true);
+assert.equal(interlinguaArtifacts.index.evidenceReceiptInterlinguaConstraintObligationMissingEvidence.includes('translation-adt-pattern:exhaustiveness'), true);
+assert.equal(interlinguaArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintByFamily['adt-pattern'] >= 1, true);
+assert.equal(interlinguaArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintObligationKinds.exhaustiveness >= 1, true);
+assert.equal(queryUniversalConversionArtifacts(interlinguaArtifacts, {
+  evidenceReceiptInterlinguaConstraintFamily: 'adt-pattern',
+  evidenceReceiptInterlinguaConstraintObligationKind: 'exhaustiveness',
+  evidenceReceiptInterlinguaConstraintObligationStatus: 'missing',
+  evidenceReceiptInterlinguaConstraintObligationMissingEvidence: 'translation-adt-pattern:exhaustiveness'
+})[0].routeId, interlinguaConstraintRoute.id);
+
 const runtimeEvidenceRecord = {
   id: 'canvas_runtime_proof',
   kind: 'conversion-runtime-proof',

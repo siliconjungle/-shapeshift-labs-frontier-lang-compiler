@@ -43,6 +43,15 @@ export interface UniversalConversionEvidenceReceiptCompactCounts {
   readonly runtimeProofByCapability: Readonly<Record<string, number>>;
   readonly runtimeProofMissingSignals: Readonly<Record<string, number>>;
   readonly runtimeProofProvidedSignals: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintObligations: number;
+  readonly interlinguaConstraintByFamily: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintByStatus: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintMissingKinds: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintMissingEvidence: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintObligationKinds: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintObligationStatuses: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintObligationEvidenceIds: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintObligationMissingEvidence: Readonly<Record<string, number>>;
   readonly missingEvidence: Readonly<Record<string, number>>;
   readonly proofEvidenceIds: Readonly<Record<string, number>>;
   readonly rejectedByReason: Readonly<Record<string, number>>;
@@ -74,6 +83,7 @@ export interface UniversalConversionInterlinguaCompactCounts {
   readonly constraintMissingEvidence: Readonly<Record<string, number>>;
   readonly constraintObligationKinds: Readonly<Record<string, number>>;
   readonly constraintObligationStatuses: Readonly<Record<string, number>>;
+  readonly constraintObligationMissingEvidence: Readonly<Record<string, number>>;
   readonly missingEvidence: Readonly<Record<string, number>>;
   readonly proofEvidenceIds: Readonly<Record<string, number>>;
 }

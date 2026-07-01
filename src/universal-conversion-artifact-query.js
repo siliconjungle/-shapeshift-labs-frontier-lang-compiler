@@ -13,6 +13,8 @@ export function artifactIndex(a) {
   const opList = a.flatMap(ops);
   const tAdmissions = a.map(tAdm);
   const iRecords = a.map(intl);
+  const iRs = a.map(iReceipt);
+  const iRO = iRs.flatMap((r) => r.records?.interlinguaObligations ?? []);
   return {
     routeIds: uniqueStrings(a.map((a) => a.routeId)),
     historyIds: uniqueStrings(a.map((a) => a.history.id)),
@@ -50,6 +52,17 @@ export function artifactIndex(a) {
     evidenceReceiptMissingEvidence: uniqueStrings(a.flatMap((a) => a.evidenceReceipt?.missingEvidence ?? [])),
     evidenceReceiptRejectedReasons: uniqueStrings(a.flatMap((artifact) => (artifact.evidenceReceipt?.records?.rejected ?? []).map((r) => r.reason))),
     evidenceReceiptRejectedIds: uniqueStrings(a.flatMap((artifact) => (artifact.evidenceReceipt?.records?.rejected ?? []).map((r) => r.id))),
+    evidenceReceiptInterlinguaRecordIds: uniqueStrings(iRs.map((r) => r.interlinguaRecordId)),
+    evidenceReceiptInterlinguaLoweringDispositions: uniqueStrings(iRs.map((r) => r.interlinguaLoweringDisposition)),
+    evidenceReceiptInterlinguaConstraintFamilies: uniqueStrings(iRs.flatMap((r) => r.interlinguaConstraintFamilies ?? [])),
+    evidenceReceiptInterlinguaConstraintStatuses: uniqueStrings(iRs.flatMap((r) => r.interlinguaConstraintStatuses ?? [])),
+    evidenceReceiptInterlinguaConstraintMissingKinds: uniqueStrings(iRs.flatMap((r) => r.interlinguaConstraintMissingKinds ?? [])),
+    evidenceReceiptInterlinguaConstraintMissingEvidence: uniqueStrings(iRs.flatMap((r) => r.interlinguaConstraintMissingEvidence ?? [])),
+    evidenceReceiptInterlinguaConstraintSourceIds: uniqueStrings(iRO.map((r) => r.sourceId)),
+    evidenceReceiptInterlinguaConstraintObligationKinds: uniqueStrings([...iRs.flatMap((r) => r.interlinguaConstraintObligationKinds ?? []), ...iRO.map((r) => r.kind)]),
+    evidenceReceiptInterlinguaConstraintObligationStatuses: uniqueStrings([...iRs.flatMap((r) => r.interlinguaConstraintObligationStatuses ?? []), ...iRO.map((r) => r.status)]),
+    evidenceReceiptInterlinguaConstraintObligationEvidenceIds: uniqueStrings(iRO.flatMap((r) => r.evidenceIds ?? [])),
+    evidenceReceiptInterlinguaConstraintObligationMissingEvidence: uniqueStrings([...iRs.flatMap((r) => r.interlinguaConstraintObligationMissingEvidence ?? []), ...iRO.flatMap((r) => r.missingEvidence ?? [])]),
     semanticOperationIds: uniqueStrings(opList.map((o) => o.id)),
     semanticOperationKinds: uniqueStrings(opList.map((o) => o.operationKind)),
     semanticOperationInterlinguaRecordIds: uniqueStrings(opList.map((o) => o.metadata?.interlingua?.id)),
@@ -116,6 +129,7 @@ export function artifactIndex(a) {
     interlinguaConstraintSourceIds: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintSourceIds ?? [])),
     interlinguaConstraintObligationKinds: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintObligationKinds ?? [])),
     interlinguaConstraintObligationStatuses: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintObligationStatuses ?? [])),
+    interlinguaConstraintObligationMissingEvidence: uniqueStrings(iRecords.flatMap((r) => r.query?.constraintObligationMissingEvidence ?? [])),
     transformIdentityHashes: uniqueStrings(a.flatMap(tHashes))
   };
 }
@@ -128,6 +142,8 @@ function artifactRecords(records) {
 function matchesArtifact(record, query) {
   const editIndex = artifactSemanticEditIndex(record);
   const operations = ops(record);
+  const receipt = iReceipt(record);
+  const rObs = receipt.records?.interlinguaObligations ?? [];
   return match(query.routeId, [record.routeId])
     && match(query.historyId, [record.history.id])
     && match(query.patchBundleId, [record.patchBundle.id])
@@ -166,6 +182,17 @@ function matchesArtifact(record, query) {
     && match(query.evidenceReceiptMissingEvidence, record.evidenceReceipt?.missingEvidence ?? [])
     && match(query.evidenceReceiptRejectedReason, (record.evidenceReceipt?.records?.rejected ?? []).map((e) => e.reason))
     && match(query.evidenceReceiptRejectedId, (record.evidenceReceipt?.records?.rejected ?? []).map((e) => e.id))
+    && match(query.evidenceReceiptInterlinguaRecordId, [receipt.interlinguaRecordId])
+    && match(query.evidenceReceiptInterlinguaLoweringDisposition, [receipt.interlinguaLoweringDisposition])
+    && match(query.evidenceReceiptInterlinguaConstraintFamily, receipt.interlinguaConstraintFamilies ?? [])
+    && match(query.evidenceReceiptInterlinguaConstraintStatus, receipt.interlinguaConstraintStatuses ?? [])
+    && match(query.evidenceReceiptInterlinguaConstraintMissingKind, receipt.interlinguaConstraintMissingKinds ?? [])
+    && match(query.evidenceReceiptInterlinguaConstraintMissingEvidence, receipt.interlinguaConstraintMissingEvidence ?? [])
+    && match(query.evidenceReceiptInterlinguaConstraintSourceId, rObs.map((e) => e.sourceId))
+    && match(query.evidenceReceiptInterlinguaConstraintObligationKind, [...(receipt.interlinguaConstraintObligationKinds ?? []), ...rObs.map((e) => e.kind)])
+    && match(query.evidenceReceiptInterlinguaConstraintObligationStatus, [...(receipt.interlinguaConstraintObligationStatuses ?? []), ...rObs.map((e) => e.status)])
+    && match(query.evidenceReceiptInterlinguaConstraintObligationEvidenceId, rObs.flatMap((e) => e.evidenceIds ?? []))
+    && match(query.evidenceReceiptInterlinguaConstraintObligationMissingEvidence, [...(receipt.interlinguaConstraintObligationMissingEvidence ?? []), ...rObs.flatMap((e) => e.missingEvidence ?? [])])
     && match(query.semanticOperationId, operations.map((o) => o.id))
     && match(query.semanticOperationKind, operations.map((o) => o.operationKind))
     && match(query.semanticOperationInterlinguaRecordId, operations.map((o) => o.metadata?.interlingua?.id))
@@ -226,6 +253,7 @@ function sMapPrecisions(record) { return uniqueStrings([...(record.metadata?.rep
 function tHashes(record) { return uniqueStrings([...(record.metadata?.representation?.transformIdentityHashes ?? []), ...(record.patchBundle?.index?.transformIdentityHashes ?? []), ...(record.history?.index?.transformIdentityHashes ?? [])]); }
 function tAdm(record) { return record.translationAdmission ?? record.metadata?.translationAdmission ?? record.admissionRecord?.metadata?.translationAdmission ?? {}; }
 function intl(record) { return record.interlingua ?? record.metadata?.interlingua ?? record.admissionRecord?.metadata?.interlingua ?? {}; }
+function iReceipt(record) { return record.evidenceReceipt ?? {}; }
 function match(f, values) {
   const filters = Array.isArray(f) ? f : f === undefined ? [] : [f];
   if (!filters.length) return true;
