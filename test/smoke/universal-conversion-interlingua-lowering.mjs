@@ -38,6 +38,7 @@ const manualRecord = createUniversalInterlinguaRecord({ route: adapterRoute });
 assert.equal(manualRecord.lowering.disposition, 'target-adapter');
 assert.equal(interlinguaRecordMatches(manualRecord, { interlinguaLayerKind: 'semantic-symbol' }), true);
 assert.equal(interlinguaRecordMatches(manualRecord, { interlinguaLoweringDisposition: 'blocked' }), false);
+const manualObligationRecord = createUniversalInterlinguaRecord({ route: { id: 'manual_obligation_route', sourceLanguage: 'javascript', target: 'rust', mode: 'target-adapter', readiness: 'needs-evidence', borrowScopeConstraint: { id: 'manual_borrow_scope', status: 'needs-evidence', missingKinds: ['borrow-across-await'], evidenceIds: ['manual_obligation_proof'] } } }); assert.equal(interlinguaRecordMatches(manualObligationRecord, { interlinguaConstraintObligationEvidenceId: 'manual_obligation_proof' }), true);
 
 const sameLanguageRoute = queryUniversalConversionPlan(conversionPlan({
   targets: ['javascript'],

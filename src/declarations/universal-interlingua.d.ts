@@ -126,6 +126,7 @@ export interface UniversalInterlinguaConstraintSummary {
   readonly missingEvidence: readonly string[];
   readonly obligationKinds: readonly string[];
   readonly obligationStatuses: readonly string[];
+  readonly obligationEvidenceIds: readonly string[];
   readonly obligationMissingEvidence: readonly string[];
   readonly blockers: readonly string[];
   readonly review: readonly string[];
@@ -200,6 +201,7 @@ export interface UniversalInterlinguaRecord {
     readonly constraintMissingEvidence: readonly string[];
     readonly constraintObligationKinds: readonly string[];
     readonly constraintObligationStatuses: readonly string[];
+    readonly constraintObligationEvidenceIds: readonly string[];
     readonly constraintObligationMissingEvidence: readonly string[];
     readonly loweringDisposition: UniversalInterlinguaLoweringDisposition;
     readonly missingEvidence: readonly string[];
@@ -226,6 +228,7 @@ export interface UniversalInterlinguaQuery {
   readonly interlinguaConstraintMissingEvidence?: string | readonly string[];
   readonly interlinguaConstraintObligationKind?: string | readonly string[];
   readonly interlinguaConstraintObligationStatus?: string | readonly string[];
+  readonly interlinguaConstraintObligationEvidenceId?: string | readonly string[];
   readonly interlinguaConstraintObligationMissingEvidence?: string | readonly string[];
   readonly interlinguaLoweringDisposition?: UniversalInterlinguaLoweringDisposition | readonly UniversalInterlinguaLoweringDisposition[];
   readonly interlinguaMissingEvidence?: string | readonly string[];

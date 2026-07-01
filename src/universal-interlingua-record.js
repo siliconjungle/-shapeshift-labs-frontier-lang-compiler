@@ -133,7 +133,7 @@ export function createUniversalInterlinguaRecord(input = {}) {
       constraintMissingEvidence: constraints.missingEvidence,
       constraintObligationKinds: constraints.obligationKinds,
       constraintObligationStatuses: constraints.obligationStatuses,
-      constraintObligationMissingEvidence: constraints.obligationMissingEvidence,
+      constraintObligationEvidenceIds: constraints.obligationEvidenceIds, constraintObligationMissingEvidence: constraints.obligationMissingEvidence,
       loweringDisposition: disposition,
       missingEvidence,
       proofEvidenceIds: translationAdmission.proofEvidenceIds ?? mergeRefs.proofIds ?? [],
@@ -160,7 +160,7 @@ export function interlinguaRecordMatches(record, query = {}) {
     && match(query.interlinguaConstraintMissingEvidence, record?.query?.constraintMissingEvidence)
     && match(query.interlinguaConstraintObligationKind, record?.query?.constraintObligationKinds)
     && match(query.interlinguaConstraintObligationStatus, record?.query?.constraintObligationStatuses)
-    && match(query.interlinguaConstraintObligationMissingEvidence, record?.query?.constraintObligationMissingEvidence)
+    && match(query.interlinguaConstraintObligationEvidenceId, record?.query?.constraintObligationEvidenceIds) && match(query.interlinguaConstraintObligationMissingEvidence, record?.query?.constraintObligationMissingEvidence)
     && match(query.interlinguaLoweringDisposition, [record?.query?.loweringDisposition])
     && match(query.interlinguaMissingEvidence, record?.query?.missingEvidence)
     && match(query.interlinguaProofEvidenceId, record?.query?.proofEvidenceIds)
@@ -207,7 +207,7 @@ export function interlinguaConstraintSummary(route = {}) {
     missingEvidence: uniqueStrings(edges.flatMap((edge) => edge.missingEvidence)),
     obligationKinds: uniqueStrings(obligations.map((obligation) => obligation.kind)),
     obligationStatuses: uniqueStrings(obligations.map((obligation) => obligation.status)),
-    obligationMissingEvidence: uniqueStrings(obligations.flatMap((obligation) => obligation.missingEvidence)),
+    obligationEvidenceIds: uniqueStrings(obligations.flatMap((obligation) => obligation.evidenceIds ?? [])), obligationMissingEvidence: uniqueStrings(obligations.flatMap((obligation) => obligation.missingEvidence)),
     blockers: uniqueStrings(edges.flatMap((edge) => edge.blockers)),
     review: uniqueStrings(edges.flatMap((edge) => edge.review))
   };

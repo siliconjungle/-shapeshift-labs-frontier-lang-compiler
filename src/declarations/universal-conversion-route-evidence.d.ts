@@ -120,6 +120,7 @@ export interface UniversalConversionRouteEvidenceReceipt {
   readonly interlinguaConstraintMissingEvidence: readonly string[];
   readonly interlinguaConstraintObligationKinds: readonly string[];
   readonly interlinguaConstraintObligationStatuses: readonly string[];
+  readonly interlinguaConstraintObligationEvidenceIds: readonly string[];
   readonly interlinguaConstraintObligationMissingEvidence: readonly string[];
   readonly evidenceIds: readonly string[];
   readonly proofEvidenceIds: readonly string[];
@@ -152,7 +153,9 @@ export interface UniversalConversionRouteEvidenceReceipt {
     readonly interlinguaConstraintSourceIds: Readonly<Record<string, number>>;
     readonly interlinguaConstraintRequiredKinds: Readonly<Record<string, number>>;
     readonly interlinguaConstraintRepresentedKinds: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintMissingKinds: Readonly<Record<string, number>>;
     readonly interlinguaConstraintMissingEvidence: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintObligationEvidenceIds: Readonly<Record<string, number>>;
     readonly interlinguaConstraintObligationMissingEvidence: Readonly<Record<string, number>>;
     readonly blockers: number;
     readonly reviewReasons: number;

@@ -1,6 +1,6 @@
 import { countBy } from './native-import-utils.js';
 
-const aiKeys = 'Families Statuses Actions SourceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationMissingEvidence'.split(' ');
+const aiKeys = 'Families Statuses Actions SourceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationEvidenceIds ObligationMissingEvidence'.split(' ');
 
 export function universalConversionArtifactSummary(routeArtifacts, records) {
   const admissionRecords = records.admissionRecords;

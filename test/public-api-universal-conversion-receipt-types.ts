@@ -34,11 +34,14 @@ receipt.interlinguaConstraintMissingKinds satisfies readonly string[];
 receipt.interlinguaConstraintMissingEvidence satisfies readonly string[];
 receipt.interlinguaConstraintObligationKinds satisfies readonly string[];
 receipt.interlinguaConstraintObligationStatuses satisfies readonly string[];
+receipt.interlinguaConstraintObligationEvidenceIds satisfies readonly string[];
 receipt.interlinguaConstraintObligationMissingEvidence satisfies readonly string[];
 receipt.summary.interlinguaConstraintActions satisfies Readonly<Record<string, number>>;
 receipt.summary.interlinguaConstraintSourceIds satisfies Readonly<Record<string, number>>;
 receipt.summary.interlinguaConstraintRepresentedKinds satisfies Readonly<Record<string, number>>;
+receipt.summary.interlinguaConstraintMissingKinds satisfies Readonly<Record<string, number>>;
 receipt.summary.interlinguaConstraintMissingEvidence satisfies Readonly<Record<string, number>>;
+receipt.summary.interlinguaConstraintObligationEvidenceIds satisfies Readonly<Record<string, number>>;
 receipt.summary.interlinguaConstraintObligationMissingEvidence satisfies Readonly<Record<string, number>>;
 receipt.autoMergeClaim satisfies false;
 receipt.semanticEquivalenceClaim satisfies false;
@@ -58,28 +61,33 @@ const receiptArtifacts: UniversalConversionArtifacts = createUniversalConversion
 const receiptArtifact: UniversalConversionRouteArtifact | undefined = queryUniversalConversionArtifacts(receiptArtifacts, {
   evidenceReceiptRejectedReason: 'unscoped-evidence',
   evidenceReceiptInterlinguaConstraintObligationMissingEvidence: 'translation-adt-pattern:exhaustiveness',
+  admissionRecordInterlinguaConstraintObligationEvidenceId: 'receipt_type_obligation_proof',
   admissionRecordInterlinguaConstraintObligationMissingEvidence: 'translation-adt-pattern:exhaustiveness'
 })[0];
 receiptArtifacts.evidenceReceipts[0]?.id satisfies string | undefined;
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintActions satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintSourceIds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintObligationMissingEvidence satisfies readonly string[];
+receiptArtifacts.index.evidenceReceiptInterlinguaConstraintObligationEvidenceIds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintRequiredKinds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintRepresentedKinds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintMissingKinds satisfies readonly string[];
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintMissingEvidence satisfies readonly string[];
 receiptArtifacts.index.admissionRecordInterlinguaConstraintObligationMissingEvidence satisfies readonly string[];
+receiptArtifacts.index.admissionRecordInterlinguaConstraintObligationEvidenceIds satisfies readonly string[];
 receiptArtifacts.summary.evidenceReceipts satisfies number;
 receiptArtifacts.summary.receiptProofEvidence satisfies number;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.missingEvidence satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintActions satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintSourceIds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintObligationMissingEvidence satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintObligationEvidenceIds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintRequiredKinds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintRepresentedKinds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintMissingKinds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintMissingEvidence satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintObligationMissingEvidence satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintObligationEvidenceIds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintActions satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintSourceIds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintRequiredKinds satisfies Readonly<Record<string, number>>;
@@ -87,10 +95,12 @@ receiptArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintRepr
 receiptArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintMissingKinds satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintMissingEvidence satisfies Readonly<Record<string, number>>;
 receiptArtifacts.admissionRecords[0]?.interlinguaConstraintObligationMissingEvidence satisfies readonly string[] | undefined;
+receiptArtifacts.admissionRecords[0]?.interlinguaConstraintObligationEvidenceIds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlinguaConstraintActions satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlinguaConstraintRequiredKinds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlinguaConstraintRepresentedKinds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlingua.constraintObligationMissingEvidence satisfies readonly string[] | undefined;
+receiptArtifacts.admissionRecords[0]?.interlingua.constraintObligationEvidenceIds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlingua.constraintActions satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlingua.constraintRequiredKinds satisfies readonly string[] | undefined;
 receiptArtifacts.admissionRecords[0]?.interlingua.constraintRepresentedKinds satisfies readonly string[] | undefined;

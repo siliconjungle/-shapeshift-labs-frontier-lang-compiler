@@ -64,6 +64,7 @@ export function createUniversalConversionAdmissionRecord(input) {
     interlinguaConstraintMissingEvidence: interlinguaQuery.constraintMissingEvidence ?? [],
     interlinguaConstraintObligationKinds: interlinguaQuery.constraintObligationKinds ?? [],
     interlinguaConstraintObligationStatuses: interlinguaQuery.constraintObligationStatuses ?? [],
+    interlinguaConstraintObligationEvidenceIds: interlinguaQuery.constraintObligationEvidenceIds ?? [],
     interlinguaConstraintObligationMissingEvidence: interlinguaQuery.constraintObligationMissingEvidence ?? [],
     resourceTransferStatus: route.resourceTransfer?.status,
     resourceTransferAction: route.resourceTransfer?.action,
@@ -164,6 +165,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       constraintMissingEvidence: interlinguaQuery.constraintMissingEvidence ?? [],
       constraintObligationKinds: interlinguaQuery.constraintObligationKinds ?? [],
       constraintObligationStatuses: interlinguaQuery.constraintObligationStatuses ?? [],
+      constraintObligationEvidenceIds: interlinguaQuery.constraintObligationEvidenceIds ?? [],
       constraintObligationMissingEvidence: interlinguaQuery.constraintObligationMissingEvidence ?? [],
       lossIds: route.interlingua?.lowering?.lossIds ?? [],
       missingEvidence: route.interlingua?.lowering?.missingEvidence ?? []

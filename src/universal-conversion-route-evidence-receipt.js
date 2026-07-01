@@ -20,6 +20,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
   const interlinguaQuery = interlingua.query ?? {};
   const interlinguaObligationRecords = (interlingua.constraints?.obligations ?? []).map(interlinguaObligationRecordSummary);
   const interlinguaObligationMissingEvidence = interlinguaObligationRecords.flatMap((record) => record.missingEvidence);
+  const interlinguaConstraintObligationEvidenceIds = uniqueStrings([...(interlinguaQuery.constraintObligationEvidenceIds ?? []), ...interlinguaObligationRecords.flatMap((record) => record.evidenceIds ?? [])]);
   const interlinguaMissingEvidence = uniqueStrings([
     ...(interlinguaQuery.constraintMissingEvidence ?? []),
     ...(interlinguaQuery.constraintObligationMissingEvidence ?? []),
@@ -88,6 +89,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     interlinguaConstraintMissingEvidence: interlinguaQuery.constraintMissingEvidence ?? [],
     interlinguaConstraintObligationKinds: interlinguaQuery.constraintObligationKinds ?? [],
     interlinguaConstraintObligationStatuses: interlinguaQuery.constraintObligationStatuses ?? [],
+    interlinguaConstraintObligationEvidenceIds,
     interlinguaConstraintObligationMissingEvidence: interlinguaQuery.constraintObligationMissingEvidence ?? [],
     evidenceIds,
     proofEvidenceIds,
@@ -120,7 +122,9 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       interlinguaConstraintSourceIds: countBy([...(interlinguaQuery.constraintSourceIds ?? []), ...interlinguaObligationRecords.map((record) => record.sourceId)]),
       interlinguaConstraintRequiredKinds: countBy(interlinguaQuery.constraintRequiredKinds ?? []),
       interlinguaConstraintRepresentedKinds: countBy(interlinguaQuery.constraintRepresentedKinds ?? []),
+      interlinguaConstraintMissingKinds: countBy(interlinguaQuery.constraintMissingKinds ?? []),
       interlinguaConstraintMissingEvidence: countBy([...(interlinguaQuery.constraintMissingEvidence ?? []), ...interlinguaObligationMissingEvidence]),
+      interlinguaConstraintObligationEvidenceIds: countBy(interlinguaConstraintObligationEvidenceIds),
       interlinguaConstraintObligationMissingEvidence: countBy(interlinguaObligationMissingEvidence),
       blockers: route.blockers?.length ?? 0,
       reviewReasons: route.review?.length ?? 0,

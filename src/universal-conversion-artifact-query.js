@@ -2,10 +2,7 @@ import { uniqueStrings } from './native-import-utils.js';
 import { artifactSemanticEditIndex } from './universal-conversion-artifact-semantic-edit.js';
 import { artifactConstraintIndex, artifactConstraintsMatch } from './universal-conversion-artifact-constraints.js';
 import { interlinguaRecordMatches } from './universal-interlingua-record.js';
-const u = uniqueStrings;
-const ai = 'admissionRecordInterlingua';
-const eri = 'evidenceReceiptInterlingua';
-const soi = 'semanticOperationInterlingua';
+const u = uniqueStrings, ai = 'admissionRecordInterlingua', eri = 'evidenceReceiptInterlingua', soi = 'semanticOperationInterlingua';
 const aiFields = [
   ['ConstraintFamilies', 'ConstraintFamily', 'interlinguaConstraintFamilies'],
   ['ConstraintStatuses', 'ConstraintStatus', 'interlinguaConstraintStatuses'],
@@ -17,6 +14,7 @@ const aiFields = [
   ['ConstraintMissingEvidence', 'ConstraintMissingEvidence', 'interlinguaConstraintMissingEvidence'],
   ['ConstraintObligationKinds', 'ConstraintObligationKind', 'interlinguaConstraintObligationKinds'],
   ['ConstraintObligationStatuses', 'ConstraintObligationStatus', 'interlinguaConstraintObligationStatuses'],
+  ['ConstraintObligationEvidenceIds', 'ConstraintObligationEvidenceId', 'interlinguaConstraintObligationEvidenceIds'],
   ['ConstraintObligationMissingEvidence', 'ConstraintObligationMissingEvidence', 'interlinguaConstraintObligationMissingEvidence']
 ];
 const iFields = [
@@ -244,7 +242,7 @@ function iReceipt(record) { return record.evidenceReceipt ?? {}; }
 function eFlat(records, key) { return u(records.flatMap((r) => r[key])); }
 function qFlat(records, key) { return u(records.flatMap((r) => r.query?.[key] ?? [])); }
 function rFlat(records, key) { return u(records.flatMap((r) => r[key] ?? [])); }
-function list(value) { return Array.isArray(value) ? value : value === undefined || value === null ? [] : [value]; }
+function list(value) { return Array.isArray(value) ? value : value == null ? [] : [value]; }
 function interlinguaIndex(records) {
   return Object.fromEntries([
     ['interlinguaRecordIds', u(records.map((r) => r.id))],

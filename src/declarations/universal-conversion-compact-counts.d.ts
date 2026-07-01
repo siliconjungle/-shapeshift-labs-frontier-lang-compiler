@@ -91,6 +91,7 @@ export interface UniversalConversionInterlinguaCompactCounts {
   readonly constraintMissingEvidence: Readonly<Record<string, number>>;
   readonly constraintObligationKinds: Readonly<Record<string, number>>;
   readonly constraintObligationStatuses: Readonly<Record<string, number>>;
+  readonly constraintObligationEvidenceIds: Readonly<Record<string, number>>;
   readonly constraintObligationMissingEvidence: Readonly<Record<string, number>>;
   readonly missingEvidence: Readonly<Record<string, number>>;
   readonly proofEvidenceIds: Readonly<Record<string, number>>;
@@ -110,6 +111,7 @@ export interface UniversalConversionAdmissionRecordInterlinguaCompactCounts {
   readonly constraintMissingEvidence: Readonly<Record<string, number>>;
   readonly constraintObligationKinds: Readonly<Record<string, number>>;
   readonly constraintObligationStatuses: Readonly<Record<string, number>>;
+  readonly constraintObligationEvidenceIds: Readonly<Record<string, number>>;
   readonly constraintObligationMissingEvidence: Readonly<Record<string, number>>;
 }
 
