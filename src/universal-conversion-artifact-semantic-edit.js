@@ -1,6 +1,17 @@
 import { uniqueStrings } from './native-import-utils.js';
 import { semanticEditRecordIndex } from './internal/index-impl/semanticEditBundleIndex.js';
 
+const indexKeys = [
+  'semanticEditStatuses', 'semanticEditScriptIds', 'semanticEditProjectionIds', 'semanticEditReplayIds',
+  'semanticEditReplayStatuses', 'semanticEditReplayActions', 'semanticEditAdmissionStatuses', 'semanticEditAdmissionActions',
+  'semanticEditAdmissionReadinesses', 'semanticEditReplayCurrentHashes', 'semanticEditReplayOutputHashes',
+  'semanticEditKeys', 'semanticEditHashes', 'semanticIdentityHashes', 'sourceIdentityHashes', 'operationContentHashes',
+  'editContentHashes', 'sourceBackprojectionModes', 'semanticTransformReadinesses', 'transformSourceLanguages',
+  'transformTargetLanguages', 'transformSourcePaths', 'transformTargetPaths', 'transformCrossLanguages',
+  'transformSourceMapIds', 'transformSourceMapLinkIds', 'transformSourceMapMappingIds', 'transformBaseHashes',
+  'transformTargetHashes', 'targetPortabilityStatuses', 'targetPortabilityActions', 'targetPortabilityReasonCodes'
+];
+
 export function artifactSemanticEditIndex(record) {
   const patchIndex = record.patchBundle?.index ?? {};
   const scripts = semanticEditRecords(record, 'semanticEditScript', 'semanticEditScripts', 'script', 'scripts');
@@ -48,7 +59,7 @@ export function artifactSemanticEditIndex(record) {
     sourceIdentityHashes: editIndex.sourceIdentityHashes,
     operationContentHashes: editIndex.operationContentHashes,
     editContentHashes: editIndex.editContentHashes,
-    sourceBackprojectionModes: strings(patchIndex.sourceBackprojectionModes),
+    sourceBackprojectionModes: uniqueStrings([...strings(patchIndex.sourceBackprojectionModes), ...editIndex.sourceBackprojectionModes]),
     semanticTransformReadinesses: strings(patchIndex.semanticTransformReadinesses),
     transformSourceLanguages: strings(patchIndex.transformSourceLanguages),
     transformTargetLanguages: strings(patchIndex.transformTargetLanguages),
@@ -66,8 +77,56 @@ export function artifactSemanticEditIndex(record) {
   };
 }
 
+export function workItemSemanticEditDenominators(route = {}) {
+  return artifactSemanticEditIndex(route);
+}
+
+export function mergeWorkItemSemanticEditDenominators(left = {}, right = {}) {
+  return Object.fromEntries(indexKeys.map((key) => [key, uniqueStrings([...(left[key] ?? []), ...(right[key] ?? [])])]));
+}
+
+export function worklistSemanticEditSummary(items = []) {
+  return Object.fromEntries(indexKeys.map((key) => [key, uniqueStrings(items.flatMap((item) => item[key] ?? []))]));
+}
+
+export function workItemSemanticEditMatches(item = {}, query = {}) {
+  return match(query.semanticEditStatus ?? query.semanticEditStatuses, item.semanticEditStatuses)
+    && match(query.semanticEditScriptId ?? query.semanticEditScriptIds, item.semanticEditScriptIds)
+    && match(query.semanticEditProjectionId ?? query.semanticEditProjectionIds, item.semanticEditProjectionIds)
+    && match(query.semanticEditReplayId ?? query.semanticEditReplayIds, item.semanticEditReplayIds)
+    && match(query.semanticEditReplayStatus ?? query.semanticEditReplayStatuses, item.semanticEditReplayStatuses)
+    && match(query.semanticEditReplayAction ?? query.semanticEditReplayActions, item.semanticEditReplayActions)
+    && match(query.semanticEditAdmission ?? query.semanticEditAdmissionStatus ?? query.semanticEditAdmissionStatuses, item.semanticEditAdmissionStatuses)
+    && match(query.semanticEditAdmissionAction ?? query.semanticEditAdmissionActions, item.semanticEditAdmissionActions)
+    && match(query.semanticEditAdmissionReadiness ?? query.semanticEditAdmissionReadinesses, item.semanticEditAdmissionReadinesses)
+    && match(query.semanticEditReplayCurrentHash ?? query.semanticEditReplayCurrentHashes, item.semanticEditReplayCurrentHashes)
+    && match(query.semanticEditReplayOutputHash ?? query.semanticEditReplayOutputHashes, item.semanticEditReplayOutputHashes)
+    && match(query.semanticEditKey ?? query.semanticEditKeys, item.semanticEditKeys)
+    && match(query.semanticEditHash ?? query.semanticEditHashes, item.semanticEditHashes)
+    && match(query.semanticIdentityHash ?? query.semanticIdentityHashes, item.semanticIdentityHashes)
+    && match(query.sourceIdentityHash ?? query.sourceIdentityHashes, item.sourceIdentityHashes)
+    && match(query.operationContentHash ?? query.operationContentHashes, item.operationContentHashes)
+    && match(query.editContentHash ?? query.editContentHashes, item.editContentHashes)
+    && match(query.sourceBackprojectionMode ?? query.sourceBackprojectionModes, item.sourceBackprojectionModes)
+    && match(query.semanticTransformReadiness ?? query.semanticTransformReadinesses, item.semanticTransformReadinesses)
+    && match(query.transformSourceLanguage ?? query.transformSourceLanguages, item.transformSourceLanguages)
+    && match(query.transformTargetLanguage ?? query.transformTargetLanguages, item.transformTargetLanguages)
+    && match(query.transformSourcePath ?? query.transformSourcePaths, item.transformSourcePaths)
+    && match(query.transformTargetPath ?? query.transformTargetPaths, item.transformTargetPaths)
+    && match(query.transformCrossLanguage ?? query.transformCrossLanguages, item.transformCrossLanguages)
+    && match(query.transformSourceMapId ?? query.transformSourceMapIds, item.transformSourceMapIds)
+    && match(query.transformSourceMapLinkId ?? query.transformSourceMapLinkIds, item.transformSourceMapLinkIds)
+    && match(query.transformSourceMapMappingId ?? query.transformSourceMapMappingIds, item.transformSourceMapMappingIds)
+    && match(query.transformBaseHash ?? query.transformBaseHashes, item.transformBaseHashes)
+    && match(query.transformTargetHash ?? query.transformTargetHashes, item.transformTargetHashes)
+    && match(query.targetPortabilityStatus ?? query.targetPortabilityStatuses, item.targetPortabilityStatuses)
+    && match(query.targetPortabilityAction ?? query.targetPortabilityActions, item.targetPortabilityActions)
+    && match(query.targetPortabilityReasonCode ?? query.targetPortabilityReasonCodes, item.targetPortabilityReasonCodes);
+}
+
 function semanticEditAdmissions(record) {
   return [
+    record.semanticEditAdmission,
     record.patchBundle?.admission?.semanticEditAdmission,
     record.patchBundle?.metadata?.semanticEditAdmission,
     record.metadata?.semanticEditAdmission,
@@ -115,4 +174,11 @@ function array(value) {
 
 function strings(value) {
   return array(value).map((entry) => String(entry ?? '')).filter(Boolean);
+}
+
+function match(filter, values) {
+  const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];
+  if (!filters.length) return true;
+  const valueSet = new Set((values ?? []).map(String));
+  return filters.some((item) => valueSet.has(String(item)));
 }

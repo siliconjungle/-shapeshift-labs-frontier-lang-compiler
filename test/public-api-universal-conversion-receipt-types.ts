@@ -217,6 +217,17 @@ receiptWorklist.summary.admissionRecordSourceMapLinkIds satisfies readonly strin
 receiptWorklist.summary.evidenceReceiptSourceMapIds satisfies readonly string[];
 receiptWorklist.summary.evidenceReceiptSourceMapMappingIds satisfies readonly string[];
 receiptWorklist.summary.evidenceReceiptSourceMapLinkIds satisfies readonly string[];
+receiptWorklist.summary.semanticEditStatuses satisfies readonly string[];
+receiptWorklist.summary.semanticEditScriptIds satisfies readonly string[];
+receiptWorklist.summary.semanticEditReplayStatuses satisfies readonly string[];
+receiptWorklist.summary.semanticEditReplayActions satisfies readonly string[];
+receiptWorklist.summary.semanticEditAdmissionStatuses satisfies readonly string[];
+receiptWorklist.summary.semanticEditAdmissionActions satisfies readonly string[];
+receiptWorklist.summary.semanticEditReplayOutputHashes satisfies readonly string[];
+receiptWorklist.summary.semanticEditKeys satisfies readonly string[];
+receiptWorklist.summary.sourceBackprojectionModes satisfies readonly string[];
+receiptWorklist.summary.semanticTransformReadinesses satisfies readonly string[];
+receiptWorklist.summary.transformTargetLanguages satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintFamilies satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintStatuses satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintActions satisfies readonly string[];
@@ -248,6 +259,17 @@ const receiptWorklistSourceMapQuery = queryUniversalConversionWorklist(receiptWo
   evidenceReceiptSourceMapLinkId: receiptWorklistQuery.bestItem?.evidenceReceiptSourceMapLinkIds[0]
 });
 receiptWorklistSourceMapQuery.found satisfies boolean;
+const receiptWorklistSemanticEditQuery = queryUniversalConversionWorklist(receiptWorklist, {
+  semanticEditScriptId: receiptWorklistQuery.bestItem?.semanticEditScriptIds[0],
+  semanticEditReplayStatus: receiptWorklistQuery.bestItem?.semanticEditReplayStatuses[0],
+  semanticEditAdmissionStatus: receiptWorklistQuery.bestItem?.semanticEditAdmissionStatuses[0],
+  semanticEditReplayOutputHash: receiptWorklistQuery.bestItem?.semanticEditReplayOutputHashes[0],
+  sourceBackprojectionMode: receiptWorklistQuery.bestItem?.sourceBackprojectionModes[0],
+  semanticTransformReadiness: receiptWorklistQuery.bestItem?.semanticTransformReadinesses[0],
+  transformTargetLanguage: receiptWorklistQuery.bestItem?.transformTargetLanguages[0],
+  targetPortabilityStatus: receiptWorklistQuery.bestItem?.targetPortabilityStatuses[0]
+});
+receiptWorklistSemanticEditQuery.found satisfies boolean;
 receiptWorklistQuery.bestItem?.interlinguaConstraintStatuses satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintActions satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintEvidenceIds satisfies readonly string[] | undefined;
@@ -257,4 +279,8 @@ receiptWorklistQuery.bestItem?.interlinguaConstraintMissingKinds satisfies reado
 receiptWorklistQuery.bestItem?.interlinguaConstraintMissingEvidence satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintObligationEvidenceIds satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintObligationMissingEvidence satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.semanticEditScriptIds satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.semanticEditReplayOutputHashes satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.sourceBackprojectionModes satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.semanticTransformReadinesses satisfies readonly string[] | undefined;
 receiptWorklistEdgeQuery.found satisfies boolean;

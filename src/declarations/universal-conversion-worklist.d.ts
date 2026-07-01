@@ -12,6 +12,48 @@ import type { UniversalInterlinguaConstraintEdgeKind } from './universal-interli
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 import type { UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionWorklistRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
 import type { UniversalConversionArtifactSourceMapQuery, UniversalConversionWorklistSourceMapFields } from './universal-conversion-artifact-source-maps.js';
+import type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery } from './universal-conversion-artifact-query.js';
+
+type UniversalConversionWorklistSemanticEditFieldKey =
+  | 'semanticEditStatuses' | 'semanticEditScriptIds' | 'semanticEditProjectionIds' | 'semanticEditReplayIds'
+  | 'semanticEditReplayStatuses' | 'semanticEditReplayActions' | 'semanticEditAdmissionStatuses'
+  | 'semanticEditAdmissionActions' | 'semanticEditAdmissionReadinesses'
+  | 'semanticEditReplayCurrentHashes' | 'semanticEditReplayOutputHashes'
+  | 'semanticEditKeys' | 'semanticEditHashes' | 'semanticIdentityHashes' | 'sourceIdentityHashes'
+  | 'operationContentHashes' | 'editContentHashes' | 'sourceBackprojectionModes'
+  | 'semanticTransformReadinesses' | 'transformSourceLanguages' | 'transformTargetLanguages'
+  | 'transformSourcePaths' | 'transformTargetPaths' | 'transformCrossLanguages'
+  | 'transformSourceMapIds' | 'transformSourceMapLinkIds' | 'transformSourceMapMappingIds'
+  | 'transformBaseHashes' | 'transformTargetHashes'
+  | 'targetPortabilityStatuses' | 'targetPortabilityActions' | 'targetPortabilityReasonCodes';
+
+type UniversalConversionWorklistSemanticEditQueryKey =
+  | 'semanticEditStatus' | 'semanticEditStatuses' | 'semanticEditScriptId' | 'semanticEditScriptIds'
+  | 'semanticEditProjectionId' | 'semanticEditProjectionIds' | 'semanticEditReplayId' | 'semanticEditReplayIds'
+  | 'semanticEditReplayStatus' | 'semanticEditReplayStatuses' | 'semanticEditReplayAction' | 'semanticEditReplayActions'
+  | 'semanticEditAdmission' | 'semanticEditAdmissionStatus' | 'semanticEditAdmissionStatuses'
+  | 'semanticEditAdmissionAction' | 'semanticEditAdmissionActions'
+  | 'semanticEditAdmissionReadiness' | 'semanticEditAdmissionReadinesses'
+  | 'semanticEditReplayCurrentHash' | 'semanticEditReplayCurrentHashes'
+  | 'semanticEditReplayOutputHash' | 'semanticEditReplayOutputHashes'
+  | 'semanticEditKey' | 'semanticEditKeys' | 'semanticEditHash' | 'semanticEditHashes'
+  | 'semanticIdentityHash' | 'semanticIdentityHashes' | 'sourceIdentityHash' | 'sourceIdentityHashes'
+  | 'operationContentHash' | 'operationContentHashes' | 'editContentHash' | 'editContentHashes'
+  | 'sourceBackprojectionMode' | 'sourceBackprojectionModes'
+  | 'semanticTransformReadiness' | 'semanticTransformReadinesses'
+  | 'transformSourceLanguage' | 'transformSourceLanguages' | 'transformTargetLanguage' | 'transformTargetLanguages'
+  | 'transformSourcePath' | 'transformSourcePaths' | 'transformTargetPath' | 'transformTargetPaths'
+  | 'transformCrossLanguage' | 'transformCrossLanguages'
+  | 'transformSourceMapId' | 'transformSourceMapIds' | 'transformSourceMapLinkId' | 'transformSourceMapLinkIds'
+  | 'transformSourceMapMappingId' | 'transformSourceMapMappingIds'
+  | 'transformBaseHash' | 'transformBaseHashes' | 'transformTargetHash' | 'transformTargetHashes'
+  | 'targetPortabilityStatus' | 'targetPortabilityStatuses'
+  | 'targetPortabilityAction' | 'targetPortabilityActions'
+  | 'targetPortabilityReasonCode' | 'targetPortabilityReasonCodes';
+
+export interface UniversalConversionWorklistSemanticEditFields extends Pick<UniversalConversionArtifactIndex, UniversalConversionWorklistSemanticEditFieldKey> {}
+
+export interface UniversalConversionWorklistSemanticEditQuery extends Pick<UniversalConversionArtifactQuery, UniversalConversionWorklistSemanticEditQueryKey> {}
 
 export type UniversalConversionWorkItemKind =
   | 'add-target-adapter'
@@ -35,7 +77,7 @@ export type UniversalConversionWorkItemAction =
   | 'review-conversion-route'
   | 'resolve-blocker';
 
-export interface UniversalConversionWorkItem extends UniversalConversionWorklistRuntimeRouteFields, UniversalConversionWorklistSourceMapFields {
+export interface UniversalConversionWorkItem extends UniversalConversionWorklistRuntimeRouteFields, UniversalConversionWorklistSourceMapFields, UniversalConversionWorklistSemanticEditFields {
   readonly id: string;
   readonly kind: UniversalConversionWorkItemKind;
   readonly action: UniversalConversionWorkItemAction;
@@ -79,7 +121,7 @@ export interface UniversalConversionWorkItem extends UniversalConversionWorklist
   readonly semanticEquivalenceClaim: false;
 }
 
-export interface UniversalConversionWorklistOptions extends UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionArtifactSourceMapQuery {
+export interface UniversalConversionWorklistOptions extends UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionArtifactSourceMapQuery, UniversalConversionWorklistSemanticEditQuery {
   readonly generatedAt?: number;
   readonly routeId?: string | readonly string[];
   readonly sourceLanguage?: FrontierSourceLanguage | string;
@@ -134,7 +176,7 @@ export interface UniversalConversionWorklist {
   readonly generatedAt: number;
   readonly planId: string;
   readonly items: readonly UniversalConversionWorkItem[];
-  readonly summary: {
+  readonly summary: UniversalConversionWorklistSemanticEditFields & {
     readonly items: number;
     readonly byKind: Readonly<Record<string, number>>;
     readonly byPriority: Readonly<Record<string, number>>;
