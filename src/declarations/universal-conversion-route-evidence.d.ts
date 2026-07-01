@@ -2,7 +2,7 @@ import type { EvidenceRecord, FrontierSourceLanguage, SemanticMergeReadiness } f
 import type { FrontierCompileTarget } from './compile.js';
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 import type { UniversalConversionRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
-import type { UniversalConversionArtifactIndex } from './universal-conversion-artifact-query.js';
+import type { UniversalConversionArtifactIndex, UniversalConversionSemanticEditMetricKey } from './universal-conversion-artifact-query.js';
 import type { UniversalConversionSemanticEditCompactCounts, UniversalConversionSemanticEditCompactCountKey } from './universal-conversion-compact-counts.js';
 import type { UniversalInterlinguaConstraintEdgeKind, UniversalInterlinguaLoweringDisposition } from './universal-interlingua.js';
 import type {
@@ -16,7 +16,7 @@ import type {
 } from './universal-conversion-plan.js';
 
 export type UniversalConversionRouteEvidenceBinding = 'bound' | 'rejected';
-export interface UniversalConversionRouteEvidenceReceiptSemanticEditFields extends Pick<UniversalConversionArtifactIndex, UniversalConversionSemanticEditCompactCountKey> {}
+export interface UniversalConversionRouteEvidenceReceiptSemanticEditFields extends Pick<UniversalConversionArtifactIndex, UniversalConversionSemanticEditCompactCountKey | UniversalConversionSemanticEditMetricKey> {}
 export type UniversalConversionRouteEvidenceRejectionReason =
   | 'unscoped-evidence'
   | 'route-id-mismatch'

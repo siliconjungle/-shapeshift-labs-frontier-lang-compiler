@@ -30,6 +30,13 @@ const semanticReceipt: UniversalConversionRouteEvidenceReceipt = createUniversal
     metadata: {}
   },
   metadata: {
+    semanticSidecarQuality: {
+      schema: 'frontier.lang.semanticSidecarQuality.v1',
+      imported: true,
+      eligible: false,
+      counts: { symbols: 1, ownershipRegions: 1, patchHints: 0 },
+      warnings: [{ code: 'missing-patch-hints' }]
+    },
     semanticTransformIdentity: {
       id: 'semantic_transform_type',
       transformKey: 'semantic-transform:javascript->typescript:type',
@@ -66,22 +73,35 @@ semanticReceipt.projectionIdentityHashes satisfies readonly string[];
 semanticReceipt.transformTargetLanguages satisfies readonly string[];
 semanticReceipt.semanticTransformEvidenceIds satisfies readonly string[];
 semanticReceipt.targetPortabilityStatuses satisfies readonly string[];
+semanticReceipt.semanticEditSidecarQualityRecords satisfies number;
+semanticReceipt.semanticEditSidecarSymbolCount satisfies number;
+semanticReceipt.semanticEditSidecarOwnershipRegionCount satisfies number;
+semanticReceipt.semanticEditSidecarPatchHintCount satisfies number;
+semanticReceipt.semanticEditSidecarWarningCount satisfies number;
+semanticReceipt.semanticEditSidecarZeroRecordWarningCount satisfies number;
+semanticReceipt.semanticEditSidecarWarningCodes satisfies readonly string[];
+semanticReceipt.semanticEditSidecarZeroRecordWarningCodes satisfies readonly string[];
 semanticReceipt.summary.semanticEdit.semanticEditScriptIds satisfies Readonly<Record<string, number>>;
 semanticReceipt.summary.semanticEdit.semanticTransformContentHashes satisfies Readonly<Record<string, number>>;
 semanticReceipt.summary.semanticEdit.semanticEditReplayOutputHashes satisfies Readonly<Record<string, number>>;
+semanticReceipt.summary.semanticEdit.semanticEditSidecarWarningCodes satisfies Readonly<Record<string, number>>;
 semanticReceipt.metadata.semanticEditEvidenceRequired satisfies boolean;
 
 declare const semanticArtifacts: UniversalConversionArtifacts;
 semanticArtifacts.routeArtifacts[0]?.semanticTransformIds satisfies readonly string[] | undefined;
+semanticArtifacts.routeArtifacts[0]?.semanticEditSidecarQualityRecords satisfies number | undefined;
 semanticArtifacts.summary.compactCounts.semanticEdit.semanticEditScriptIds satisfies Readonly<Record<string, number>>;
 semanticArtifacts.summary.compactCounts.semanticEdit.semanticTransformIds satisfies Readonly<Record<string, number>>;
 semanticArtifacts.summary.compactCounts.semanticEdit.projectionIdentityHashes satisfies Readonly<Record<string, number>>;
 semanticArtifacts.summary.compactCounts.semanticEdit.sourceBackprojectionModes satisfies Readonly<Record<string, number>>;
+semanticArtifacts.summary.compactCounts.semanticEdit.semanticEditSidecarWarningCodes satisfies Readonly<Record<string, number>>;
 semanticArtifacts.summary.compactCounts.evidenceReceipts.semanticEdit.semanticEditReplayStatuses satisfies Readonly<Record<string, number>>;
 
 const semanticArtifactQuery: UniversalConversionArtifactQuery = {
   semanticTransformId: 'semantic_transform_type',
   semanticTransformIdentityHash: 'transform_identity_hash_type',
+  semanticEditSidecarWarningCode: 'missing-patch-hints',
   transformIdentityHashes: ['transform_identity_hash_type']
 };
 semanticArtifactQuery.semanticTransformId satisfies string | readonly string[] | boolean | undefined;
+semanticArtifactQuery.semanticEditSidecarWarningCode satisfies string | readonly string[] | boolean | undefined;

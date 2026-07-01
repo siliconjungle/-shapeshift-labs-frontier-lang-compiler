@@ -1,6 +1,14 @@
 import { assert } from './helpers.mjs';
 import { createUniversalConversionWorklist, queryUniversalConversionWorklist } from './compiler-api.mjs';
 
+const semanticSidecarQuality = {
+  schema: 'frontier.lang.semanticSidecarQuality.v1',
+  imported: true,
+  eligible: false,
+  counts: { symbols: 3, ownershipRegions: 2, patchHints: 0 },
+  warnings: [{ code: 'missing-patch-hints' }]
+};
+
 const semanticEditPlan = {
   kind: 'frontier.lang.universalConversionPlan',
   version: 1,
@@ -80,6 +88,7 @@ const semanticEditPlan = {
       }
     },
     metadata: {
+      semanticSidecarQuality,
       semanticEditSummary: {
         sourceBackprojectionModes: ['exact-source'],
         semanticEditReplayOutputHashes: ['output_hash_worklist']
@@ -107,6 +116,14 @@ assert.equal(semanticEditWorklist.summary.semanticTransformReadinesses.includes(
 assert.equal(semanticEditWorklist.summary.semanticTransformEvidenceIds.includes('worklist_transform_evidence'), true);
 assert.equal(semanticEditWorklist.summary.transformTargetLanguages.includes('typescript'), true);
 assert.equal(semanticEditWorklist.summary.targetPortabilityStatuses.includes('portable'), true);
+assert.equal(semanticEditWorklist.summary.semanticEditSidecarQualityRecords, 1);
+assert.equal(semanticEditWorklist.summary.semanticEditSidecarSymbolCount, 3);
+assert.equal(semanticEditWorklist.summary.semanticEditSidecarOwnershipRegionCount, 2);
+assert.equal(semanticEditWorklist.summary.semanticEditSidecarPatchHintCount, 0);
+assert.equal(semanticEditWorklist.summary.semanticEditSidecarWarningCount, 1);
+assert.equal(semanticEditWorklist.summary.semanticEditSidecarZeroRecordWarningCount, 1);
+assert.equal(semanticEditWorklist.summary.semanticEditSidecarWarningCodes.includes('missing-patch-hints'), true);
+assert.equal(semanticEditWorklist.summary.semanticEditSidecarZeroRecordWarningCodes.includes('missing-patch-hints'), true);
 
 const semanticEditQuery = queryUniversalConversionWorklist(semanticEditWorklist, {
   kind: 'collect-translation-proof',
@@ -125,20 +142,26 @@ const semanticEditQuery = queryUniversalConversionWorklist(semanticEditWorklist,
   semanticTransformReadiness: 'ready',
   transformTargetLanguage: 'typescript',
   transformSourceMapId: 'semantic_edit_source_map',
+  semanticEditSidecarWarningCode: 'missing-patch-hints',
+  semanticEditSidecarZeroRecordWarningCode: 'missing-patch-hints',
   targetPortabilityStatus: 'portable'
 });
 assert.equal(semanticEditQuery.found, true);
 assert.equal(semanticEditQuery.bestItem.semanticTransformIds.includes('worklist_semantic_transform'), true);
 assert.equal(semanticEditQuery.bestItem.semanticEditReplayOutputHashes.includes('output_hash_worklist'), true);
+assert.equal(semanticEditQuery.bestItem.semanticEditSidecarSymbolCount, 3);
+assert.equal(semanticEditQuery.bestItem.semanticEditSidecarWarningCodes.includes('missing-patch-hints'), true);
 
 const filtered = createUniversalConversionWorklist(semanticEditPlan, {
   semanticEditAdmissionStatus: 'ready',
   semanticTransformKey: 'semantic-transform:javascript->typescript:function:renameUser',
   semanticEditReplayOutputHash: 'output_hash_worklist',
+  semanticEditSidecarWarningCode: 'missing-patch-hints',
   sourceBackprojectionMode: 'exact-source'
 });
 assert.equal(filtered.items.length, 1);
 assert.equal(filtered.summary.semanticEditReplayOutputHashes.includes('output_hash_worklist'), true);
+assert.equal(filtered.summary.semanticEditSidecarWarningCodes.includes('missing-patch-hints'), true);
 
 function semanticEdit(editContentHash) {
   return {

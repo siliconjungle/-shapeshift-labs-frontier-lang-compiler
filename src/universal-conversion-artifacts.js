@@ -175,7 +175,7 @@ function createRouteArtifact(route, options) {
     review: route.review ?? [],
     admissionAction: route.admissionAction,
     translationAdmission: route.translationAdmission,
-    interlingua: route.interlingua,
+    interlingua: route.interlingua, ...semanticEditDenominators,
     ...routeConstraintFields(route),
     admissionStatus,
     reviewRequired: true,

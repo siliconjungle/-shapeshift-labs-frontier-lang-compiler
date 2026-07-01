@@ -17,6 +17,7 @@ export type UniversalConversionSemanticEditCompactCountKey = keyof Pick<Universa
   | 'transformSourceMapIds' | 'transformSourceMapLinkIds' | 'transformSourceMapMappingIds'
   | 'transformBaseHashes' | 'transformTargetHashes'
   | 'targetPortabilityStatuses' | 'targetPortabilityActions' | 'targetPortabilityReasonCodes'
+  | 'semanticEditSidecarWarningCodes' | 'semanticEditSidecarZeroRecordWarningCodes'
 >;
 
 export type UniversalConversionSemanticEditCompactCounts = {

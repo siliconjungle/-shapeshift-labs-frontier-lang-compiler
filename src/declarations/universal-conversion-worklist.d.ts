@@ -28,7 +28,11 @@ type UniversalConversionWorklistSemanticEditFieldKey =
   | 'transformSourcePaths' | 'transformTargetPaths' | 'transformCrossLanguages'
   | 'transformSourceMapIds' | 'transformSourceMapLinkIds' | 'transformSourceMapMappingIds'
   | 'transformBaseHashes' | 'transformTargetHashes'
-  | 'targetPortabilityStatuses' | 'targetPortabilityActions' | 'targetPortabilityReasonCodes';
+  | 'targetPortabilityStatuses' | 'targetPortabilityActions' | 'targetPortabilityReasonCodes'
+  | 'semanticEditSidecarQualityRecords' | 'semanticEditSidecarSymbolCount'
+  | 'semanticEditSidecarOwnershipRegionCount' | 'semanticEditSidecarPatchHintCount'
+  | 'semanticEditSidecarWarningCount' | 'semanticEditSidecarZeroRecordWarningCount'
+  | 'semanticEditSidecarWarningCodes' | 'semanticEditSidecarZeroRecordWarningCodes';
 
 type UniversalConversionWorklistSemanticEditQueryKey =
   | 'semanticEditStatus' | 'semanticEditStatuses' | 'semanticEditScriptId' | 'semanticEditScriptIds'
@@ -57,7 +61,9 @@ type UniversalConversionWorklistSemanticEditQueryKey =
   | 'transformBaseHash' | 'transformBaseHashes' | 'transformTargetHash' | 'transformTargetHashes'
   | 'targetPortabilityStatus' | 'targetPortabilityStatuses'
   | 'targetPortabilityAction' | 'targetPortabilityActions'
-  | 'targetPortabilityReasonCode' | 'targetPortabilityReasonCodes';
+  | 'targetPortabilityReasonCode' | 'targetPortabilityReasonCodes'
+  | 'semanticEditSidecarWarningCode' | 'semanticEditSidecarWarningCodes'
+  | 'semanticEditSidecarZeroRecordWarningCode' | 'semanticEditSidecarZeroRecordWarningCodes';
 
 export interface UniversalConversionWorklistSemanticEditFields extends Pick<UniversalConversionArtifactIndex, UniversalConversionWorklistSemanticEditFieldKey> {}
 

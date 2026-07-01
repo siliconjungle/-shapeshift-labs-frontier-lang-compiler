@@ -12,7 +12,17 @@ export const semanticEditIndexKeys = Object.freeze([
   'semanticTransformReadinesses', 'semanticTransformEvidenceIds', 'transformSourceLanguages',
   'transformTargetLanguages', 'transformSourcePaths', 'transformTargetPaths', 'transformCrossLanguages',
   'transformSourceMapIds', 'transformSourceMapLinkIds', 'transformSourceMapMappingIds', 'transformBaseHashes',
-  'transformTargetHashes', 'targetPortabilityStatuses', 'targetPortabilityActions', 'targetPortabilityReasonCodes'
+  'transformTargetHashes', 'targetPortabilityStatuses', 'targetPortabilityActions', 'targetPortabilityReasonCodes',
+  'semanticEditSidecarWarningCodes', 'semanticEditSidecarZeroRecordWarningCodes'
+]);
+
+export const semanticEditMetricKeys = Object.freeze([
+  'semanticEditSidecarQualityRecords',
+  'semanticEditSidecarSymbolCount',
+  'semanticEditSidecarOwnershipRegionCount',
+  'semanticEditSidecarPatchHintCount',
+  'semanticEditSidecarWarningCount',
+  'semanticEditSidecarZeroRecordWarningCount'
 ]);
 
 export function artifactSemanticEditIndex(record) {
@@ -28,7 +38,12 @@ export function artifactSemanticEditIndex(record) {
   const editIndex = semanticEditRecordIndex(scripts, projections, replays, {
     ...record,
     index: patchIndex,
-    metadata: { semanticEditSummary: record.patchBundle?.metadata?.semanticEditSummary ?? record.metadata?.semanticEditSummary }
+    metadata: {
+      ...record.metadata,
+      semanticEditSummary: record.patchBundle?.metadata?.semanticEditSummary ?? record.metadata?.semanticEditSummary,
+      semanticSidecarQuality: record.patchBundle?.metadata?.semanticSidecarQuality ?? record.metadata?.semanticSidecarQuality,
+      semanticSidecarAdmission: record.patchBundle?.metadata?.semanticSidecarAdmission ?? record.metadata?.semanticSidecarAdmission
+    }
   });
   const admissions = semanticEditAdmissions(record);
   const admissionStatuses = uniqueStrings([...strings(record.semanticEditAdmissionStatuses), ...strings(patchIndex.semanticEditAdmissionStatuses), ...admissions.map((admission) => admission.status)]);
@@ -91,7 +106,15 @@ export function artifactSemanticEditIndex(record) {
     transformTargetHashes: transformIndex.transformTargetHashes,
     targetPortabilityStatuses: uniqueStrings([...strings(record.targetPortabilityStatuses), ...strings(patchIndex.targetPortabilityStatuses)]),
     targetPortabilityActions: uniqueStrings([...strings(record.targetPortabilityActions), ...strings(patchIndex.targetPortabilityActions)]),
-    targetPortabilityReasonCodes: uniqueStrings([...strings(record.targetPortabilityReasonCodes), ...strings(patchIndex.targetPortabilityReasonCodes)])
+    targetPortabilityReasonCodes: uniqueStrings([...strings(record.targetPortabilityReasonCodes), ...strings(patchIndex.targetPortabilityReasonCodes)]),
+    semanticEditSidecarQualityRecords: editIndex.semanticEditSidecarQualityRecords,
+    semanticEditSidecarSymbolCount: editIndex.semanticEditSidecarSymbolCount,
+    semanticEditSidecarOwnershipRegionCount: editIndex.semanticEditSidecarOwnershipRegionCount,
+    semanticEditSidecarPatchHintCount: editIndex.semanticEditSidecarPatchHintCount,
+    semanticEditSidecarWarningCount: editIndex.semanticEditSidecarWarningCount,
+    semanticEditSidecarZeroRecordWarningCount: editIndex.semanticEditSidecarZeroRecordWarningCount,
+    semanticEditSidecarWarningCodes: editIndex.semanticEditSidecarWarningCodes,
+    semanticEditSidecarZeroRecordWarningCodes: editIndex.semanticEditSidecarZeroRecordWarningCodes
   };
 }
 
@@ -108,7 +131,14 @@ export function worklistSemanticEditSummary(items = []) {
 }
 
 export function mergeSemanticEditIndexes(...records) {
-  return Object.fromEntries(semanticEditIndexKeys.map((key) => [key, uniqueStrings(records.flatMap((record) => record[key] ?? []))]));
+  return {
+    ...Object.fromEntries(semanticEditIndexKeys.map((key) => [key, uniqueStrings(records.flatMap((record) => record[key] ?? []))])),
+    ...mergeSemanticEditMetrics(...records)
+  };
+}
+
+export function mergeSemanticEditMetrics(...records) {
+  return Object.fromEntries(semanticEditMetricKeys.map((key) => [key, maxCount(...records.map((record) => record[key]))]));
 }
 
 export function semanticEditIndexCounts(index = {}) {
@@ -157,7 +187,9 @@ export function workItemSemanticEditMatches(item = {}, query = {}) {
     && match(query.transformTargetHash ?? query.transformTargetHashes, item.transformTargetHashes)
     && match(query.targetPortabilityStatus ?? query.targetPortabilityStatuses, item.targetPortabilityStatuses)
     && match(query.targetPortabilityAction ?? query.targetPortabilityActions, item.targetPortabilityActions)
-    && match(query.targetPortabilityReasonCode ?? query.targetPortabilityReasonCodes, item.targetPortabilityReasonCodes);
+    && match(query.targetPortabilityReasonCode ?? query.targetPortabilityReasonCodes, item.targetPortabilityReasonCodes)
+    && match(query.semanticEditSidecarWarningCode ?? query.semanticEditSidecarWarningCodes, item.semanticEditSidecarWarningCodes)
+    && match(query.semanticEditSidecarZeroRecordWarningCode ?? query.semanticEditSidecarZeroRecordWarningCodes, item.semanticEditSidecarZeroRecordWarningCodes);
 }
 
 function semanticEditAdmissions(record) {
@@ -225,6 +257,13 @@ function array(value) {
 
 function strings(value) {
   return array(value).map((entry) => String(entry ?? '')).filter(Boolean);
+}
+
+function maxCount(...values) {
+  return Math.max(0, ...values.map((value) => {
+    const count = Number(value ?? 0);
+    return Number.isFinite(count) ? count : 0;
+  }));
 }
 
 function match(filter, values) {

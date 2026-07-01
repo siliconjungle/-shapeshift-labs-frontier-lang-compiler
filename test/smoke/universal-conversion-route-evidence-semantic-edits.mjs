@@ -5,6 +5,14 @@ import {
   queryUniversalConversionArtifacts
 } from './compiler-api.mjs';
 
+const semanticSidecarQuality = {
+  schema: 'frontier.lang.semanticSidecarQuality.v1',
+  imported: true,
+  eligible: false,
+  counts: { symbols: 2, ownershipRegions: 1, patchHints: 0 },
+  warnings: [{ code: 'missing-patch-hints' }]
+};
+
 const route = {
   id: 'conversion_javascript_to_typescript_receipt_semantic_edit',
   sourceLanguage: 'javascript',
@@ -79,6 +87,7 @@ const route = {
     }
   },
   metadata: {
+    semanticSidecarQuality,
     semanticEditSummary: {
       sourceBackprojectionModes: ['exact-source'],
       semanticEditReplayOutputHashes: ['receipt_output_hash']
@@ -100,19 +109,36 @@ assert.equal(receipt.projectionIdentityHashes.includes('receipt_projection_ident
 assert.equal(receipt.semanticTransformEvidenceIds.includes('receipt_transform_evidence'), true);
 assert.equal(receipt.transformTargetLanguages.includes('typescript'), true);
 assert.equal(receipt.targetPortabilityStatuses.includes('portable'), true);
+assert.equal(receipt.semanticEditSidecarQualityRecords, 1);
+assert.equal(receipt.semanticEditSidecarSymbolCount, 2);
+assert.equal(receipt.semanticEditSidecarOwnershipRegionCount, 1);
+assert.equal(receipt.semanticEditSidecarPatchHintCount, 0);
+assert.equal(receipt.semanticEditSidecarWarningCount, 1);
+assert.equal(receipt.semanticEditSidecarZeroRecordWarningCount, 1);
+assert.equal(receipt.semanticEditSidecarWarningCodes.includes('missing-patch-hints'), true);
+assert.equal(receipt.semanticEditSidecarZeroRecordWarningCodes.includes('missing-patch-hints'), true);
 assert.equal(receipt.summary.semanticEdit.semanticEditScriptIds.receipt_semantic_edit_script, 1);
 assert.equal(receipt.summary.semanticEdit.semanticEditReplayOutputHashes.receipt_output_hash, 1);
 assert.equal(receipt.summary.semanticEdit.sourceBackprojectionModes['exact-source'], 1);
 assert.equal(receipt.summary.semanticEdit.semanticTransformIds.receipt_semantic_transform, 1);
+assert.equal(receipt.summary.semanticEdit.semanticEditSidecarWarningCodes['missing-patch-hints'], 1);
+assert.equal(receipt.summary.semanticEdit.semanticEditSidecarZeroRecordWarningCodes['missing-patch-hints'], 1);
 assert.equal(receipt.metadata.semanticEditEvidenceRequired, true);
 
 const artifacts = createUniversalConversionArtifacts(route, { generatedAt: 806 });
+assert.equal(artifacts.index.semanticEditSidecarSymbolCount, 2);
+assert.equal(artifacts.index.semanticEditSidecarWarningCodes.includes('missing-patch-hints'), true);
+assert.equal(artifacts.routeArtifacts[0].semanticEditSidecarQualityRecords, 1);
+assert.equal(artifacts.routeArtifacts[0].semanticEditSidecarWarningCodes.includes('missing-patch-hints'), true);
 assert.equal(artifacts.summary.compactCounts.semanticEdit.semanticEditScriptIds.receipt_semantic_edit_script, 1);
 assert.equal(artifacts.summary.compactCounts.semanticEdit.semanticEditReplayOutputHashes.receipt_output_hash, 1);
 assert.equal(artifacts.summary.compactCounts.semanticEdit.semanticTransformContentHashes.receipt_transform_content_hash, 1);
+assert.equal(artifacts.summary.compactCounts.semanticEdit.semanticEditSidecarWarningCodes['missing-patch-hints'], 1);
+assert.equal(artifacts.summary.compactCounts.semanticEdit.semanticEditSidecarZeroRecordWarningCodes['missing-patch-hints'], 1);
 assert.equal(artifacts.summary.compactCounts.evidenceReceipts.semanticEdit.semanticEditScriptIds.receipt_semantic_edit_script, 1);
 assert.equal(artifacts.summary.compactCounts.evidenceReceipts.semanticEdit.semanticTransformEvidenceIds.receipt_transform_evidence, 1);
 assert.equal(artifacts.summary.compactCounts.evidenceReceipts.semanticEdit.targetPortabilityStatuses.portable, 1);
+assert.equal(artifacts.summary.compactCounts.evidenceReceipts.semanticEdit.semanticEditSidecarWarningCodes['missing-patch-hints'], 1);
 assert.equal(queryUniversalConversionArtifacts(artifacts, {
   semanticEditScriptId: 'receipt_semantic_edit_script',
   semanticEditReplayStatus: 'accepted-clean',
@@ -122,6 +148,8 @@ assert.equal(queryUniversalConversionArtifacts(artifacts, {
   semanticTransformContentHash: 'receipt_transform_content_hash',
   projectionIdentityHash: 'receipt_projection_identity_hash',
   semanticTransformEvidenceId: 'receipt_transform_evidence',
+  semanticEditSidecarWarningCode: 'missing-patch-hints',
+  semanticEditSidecarZeroRecordWarningCode: 'missing-patch-hints',
   sourceBackprojectionMode: 'exact-source'
 })[0].routeId, route.id);
 
