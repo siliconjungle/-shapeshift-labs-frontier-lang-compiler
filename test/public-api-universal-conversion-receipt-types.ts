@@ -46,5 +46,7 @@ receiptArtifacts.summary.evidenceReceipts satisfies number;
 receiptArtifacts.summary.receiptProofEvidence satisfies number;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.missingEvidence satisfies Readonly<Record<string, number>>;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintObligationMissingEvidence satisfies Readonly<Record<string, number>>;
+receiptArtifacts.admissionRecords[0]?.interlinguaConstraintObligationMissingEvidence satisfies readonly string[] | undefined;
+receiptArtifacts.admissionRecords[0]?.interlingua.constraintObligationMissingEvidence satisfies readonly string[] | undefined;
 receiptArtifact?.evidenceReceipt.autoMergeClaim satisfies false | undefined;
 receiptArtifact?.materialization.evidenceReceiptIds satisfies readonly string[] | undefined;

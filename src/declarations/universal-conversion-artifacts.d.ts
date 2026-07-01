@@ -8,7 +8,7 @@ import type { SemanticHistoryRecord } from './semantic-history.js';
 import type { SemanticPatchBundleRecord } from './semantic-patch-bundle.js';
 import type { UniversalConversionArtifactCompactCounts } from './universal-conversion-compact-counts.js';
 import type { UniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence.js';
-import type { UniversalInterlinguaRecord } from './universal-interlingua.js';
+import type { UniversalInterlinguaConstraintEdgeKind, UniversalInterlinguaLayerKind, UniversalInterlinguaLoweringDisposition, UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalConversionRouteConstraintFields } from './universal-conversion-plan-constraints.js';
 import type {
   UniversalConversionAdmissionAction,
@@ -72,15 +72,15 @@ export interface UniversalConversionAdmissionRecord {
   readonly admissionBucket: UniversalConversionArtifactAdmissionBucket;
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus; readonly translationAdmissionAction?: UniversalTranslationAdmissionAction; readonly reviewRequired: true;
   readonly interlinguaRecordId?: string;
-  readonly interlinguaLoweringDisposition?: string;
+  readonly interlinguaLoweringDisposition?: UniversalInterlinguaLoweringDisposition;
+  readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[]; readonly interlinguaConstraintStatuses: readonly string[]; readonly interlinguaConstraintActions: readonly string[]; readonly interlinguaConstraintSourceIds: readonly string[];
+  readonly interlinguaConstraintRequiredKinds: readonly string[]; readonly interlinguaConstraintRepresentedKinds: readonly string[]; readonly interlinguaConstraintMissingKinds: readonly string[]; readonly interlinguaConstraintMissingEvidence: readonly string[];
+  readonly interlinguaConstraintObligationKinds: readonly string[]; readonly interlinguaConstraintObligationStatuses: readonly string[]; readonly interlinguaConstraintObligationMissingEvidence: readonly string[];
   readonly resourceTransferStatus?: string;
   readonly resourceTransferAction?: string;
-  readonly runtimeProofObligationIds: readonly string[];
-  readonly runtimeProofCapabilities: readonly UniversalRuntimeCapabilityKind[];
-  readonly runtimeProofStatuses: readonly string[];
-  readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
-  readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
-  readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofObligationIds: readonly string[]; readonly runtimeProofCapabilities: readonly UniversalRuntimeCapabilityKind[];
+  readonly runtimeProofStatuses: readonly string[]; readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[]; readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly lifetimeConstraintStatus?: string;
   readonly lifetimeConstraintAction?: string;
   readonly controlFlowConstraintStatus?: string; readonly controlFlowConstraintAction?: string;
@@ -128,11 +128,11 @@ export interface UniversalConversionAdmissionRecord {
   };
   readonly interlingua: {
     readonly id?: string;
-    readonly loweringDisposition?: string;
-    readonly representedLayerKinds: readonly string[];
-    readonly missingLayerKinds: readonly string[];
-    readonly reviewLayerKinds: readonly string[];
-    readonly blockedLayerKinds: readonly string[];
+    readonly loweringDisposition?: UniversalInterlinguaLoweringDisposition;
+    readonly representedLayerKinds: readonly UniversalInterlinguaLayerKind[]; readonly missingLayerKinds: readonly UniversalInterlinguaLayerKind[]; readonly reviewLayerKinds: readonly UniversalInterlinguaLayerKind[]; readonly blockedLayerKinds: readonly UniversalInterlinguaLayerKind[];
+    readonly constraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[]; readonly constraintStatuses: readonly string[]; readonly constraintActions: readonly string[]; readonly constraintSourceIds: readonly string[];
+    readonly constraintRequiredKinds: readonly string[]; readonly constraintRepresentedKinds: readonly string[]; readonly constraintMissingKinds: readonly string[]; readonly constraintMissingEvidence: readonly string[];
+    readonly constraintObligationKinds: readonly string[]; readonly constraintObligationStatuses: readonly string[]; readonly constraintObligationMissingEvidence: readonly string[];
     readonly lossIds: readonly string[];
     readonly missingEvidence: readonly string[];
   };

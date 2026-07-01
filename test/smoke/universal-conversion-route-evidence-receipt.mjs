@@ -133,6 +133,11 @@ assert.equal(interlinguaArtifacts.index.evidenceReceiptInterlinguaConstraintObli
 assert.equal(interlinguaArtifacts.index.evidenceReceiptInterlinguaConstraintObligationMissingEvidence.includes('translation-adt-pattern:exhaustiveness'), true);
 assert.equal(interlinguaArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintByFamily['adt-pattern'] >= 1, true);
 assert.equal(interlinguaArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintObligationKinds.exhaustiveness >= 1, true);
+assert.equal(interlinguaArtifacts.admissionRecords[0].interlinguaConstraintFamilies.includes('adt-pattern'), true);
+assert.equal(interlinguaArtifacts.admissionRecords[0].interlinguaConstraintObligationKinds.includes('exhaustiveness'), true);
+assert.equal(interlinguaArtifacts.admissionRecords[0].interlinguaConstraintObligationStatuses.includes('missing'), true);
+assert.equal(interlinguaArtifacts.admissionRecords[0].interlinguaConstraintObligationMissingEvidence.includes('translation-adt-pattern:exhaustiveness'), true);
+assert.equal(interlinguaArtifacts.admissionRecords[0].interlingua.constraintObligationMissingEvidence.includes('translation-adt-pattern:exhaustiveness'), true);
 assert.equal(queryUniversalConversionArtifacts(interlinguaArtifacts, {
   evidenceReceiptInterlinguaConstraintFamily: 'adt-pattern',
   evidenceReceiptInterlinguaConstraintObligationKind: 'exhaustiveness',

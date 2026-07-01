@@ -16,6 +16,7 @@ export function createUniversalConversionAdmissionRecord(input) {
     ...(input.materialization?.proofIds ?? [])
   ]);
   const runtimeProof = runtimeProofIndex(route.runtime?.proofObligations ?? []);
+  const interlinguaQuery = route.interlingua?.query ?? {};
   const score = route.mergeScore ?? {};
   const hasBoundEvidence = evidenceIds.length > 0 || proofIds.length > 0;
   const missingEvidence = uniqueStrings([
@@ -53,6 +54,17 @@ export function createUniversalConversionAdmissionRecord(input) {
     translationAdmissionAction: route.translationAdmission?.action,
     interlinguaRecordId: route.interlingua?.id,
     interlinguaLoweringDisposition: route.interlingua?.lowering?.disposition,
+    interlinguaConstraintFamilies: interlinguaQuery.constraintFamilies ?? [],
+    interlinguaConstraintStatuses: interlinguaQuery.constraintStatuses ?? [],
+    interlinguaConstraintActions: interlinguaQuery.constraintActions ?? [],
+    interlinguaConstraintSourceIds: interlinguaQuery.constraintSourceIds ?? [],
+    interlinguaConstraintRequiredKinds: interlinguaQuery.constraintRequiredKinds ?? [],
+    interlinguaConstraintRepresentedKinds: interlinguaQuery.constraintRepresentedKinds ?? [],
+    interlinguaConstraintMissingKinds: interlinguaQuery.constraintMissingKinds ?? [],
+    interlinguaConstraintMissingEvidence: interlinguaQuery.constraintMissingEvidence ?? [],
+    interlinguaConstraintObligationKinds: interlinguaQuery.constraintObligationKinds ?? [],
+    interlinguaConstraintObligationStatuses: interlinguaQuery.constraintObligationStatuses ?? [],
+    interlinguaConstraintObligationMissingEvidence: interlinguaQuery.constraintObligationMissingEvidence ?? [],
     resourceTransferStatus: route.resourceTransfer?.status,
     resourceTransferAction: route.resourceTransfer?.action,
     runtimeProofObligationIds: runtimeProof.obligationIds,
@@ -142,6 +154,17 @@ export function createUniversalConversionAdmissionRecord(input) {
       missingLayerKinds: route.interlingua?.layers?.missingKinds ?? [],
       reviewLayerKinds: route.interlingua?.layers?.reviewKinds ?? [],
       blockedLayerKinds: route.interlingua?.layers?.blockedKinds ?? [],
+      constraintFamilies: interlinguaQuery.constraintFamilies ?? [],
+      constraintStatuses: interlinguaQuery.constraintStatuses ?? [],
+      constraintActions: interlinguaQuery.constraintActions ?? [],
+      constraintSourceIds: interlinguaQuery.constraintSourceIds ?? [],
+      constraintRequiredKinds: interlinguaQuery.constraintRequiredKinds ?? [],
+      constraintRepresentedKinds: interlinguaQuery.constraintRepresentedKinds ?? [],
+      constraintMissingKinds: interlinguaQuery.constraintMissingKinds ?? [],
+      constraintMissingEvidence: interlinguaQuery.constraintMissingEvidence ?? [],
+      constraintObligationKinds: interlinguaQuery.constraintObligationKinds ?? [],
+      constraintObligationStatuses: interlinguaQuery.constraintObligationStatuses ?? [],
+      constraintObligationMissingEvidence: interlinguaQuery.constraintObligationMissingEvidence ?? [],
       lossIds: route.interlingua?.lowering?.lossIds ?? [],
       missingEvidence: route.interlingua?.lowering?.missingEvidence ?? []
     },
