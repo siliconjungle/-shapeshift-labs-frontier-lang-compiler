@@ -119,9 +119,9 @@ export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly translationRuntimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
   readonly translationDialectReadiness?: SemanticMergeReadiness | string | readonly (SemanticMergeReadiness | string)[];
   readonly translationDialectRecordId?: string | readonly string[];
-  readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus;
-  readonly translationAdmissionAction?: UniversalTranslationAdmissionAction;
-  readonly targetAdapterId?: string;
+  readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus | readonly UniversalTranslationAdmissionStatus[];
+  readonly translationAdmissionAction?: UniversalTranslationAdmissionAction | readonly UniversalTranslationAdmissionAction[];
+  readonly targetAdapterId?: string | readonly string[];
   readonly evidence?: readonly EvidenceRecord[] | readonly Record<string, unknown>[];
   readonly includeRejectedEvidence?: boolean;
 }

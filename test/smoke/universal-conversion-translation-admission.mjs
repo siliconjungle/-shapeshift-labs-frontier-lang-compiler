@@ -16,13 +16,14 @@ assert.equal(admittableRoute.translationAdmission.representedConstructKinds.incl
 assert.equal(admittableRoute.translationAdmission.proofEvidenceIds.includes('evidence_admittable_translation_proof'), true);
 assert.equal(admittableRoute.translationAdmission.autoMergeClaim, false);
 assert.equal(admittableRoute.translationAdmission.semanticEquivalenceClaim, false);
+assert.equal(queryUniversalConversionPlan(admittablePlan, { translationAdmissionStatus: ['needs-evidence', 'admittable-for-review'], translationAdmissionAction: ['collect-translation-evidence', 'materialize-review-record'], translationEvidenceId: ['missing-evidence', 'evidence_admittable_translation_proof'], translationProofEvidenceId: ['missing-proof', 'evidence_admittable_translation_proof'], requiredTranslationConstructKind: ['missing-kind', 'proof-evidence'], representedTranslationConstructKind: ['missing-kind', 'target-adapter'], targetAdapterId: ['missing-adapter', 'fixture-js-rust'] }).bestRoute.id, admittableRoute.id);
 
 const needsEvidenceRoute = queryUniversalConversionPlan(conversionPlan({ imports: [sourceImport()] }), {
   translationAdmissionStatus: 'needs-evidence',
   missingTranslationEvidence: 'translation-proof-or-replay'
 }).bestRoute;
-assert.equal(needsEvidenceRoute.translationAdmission.action, 'collect-translation-evidence');
-assert.equal(needsEvidenceRoute.translationAdmission.missingEvidence.includes('translation-proof-or-replay'), true);
+assert.equal(needsEvidenceRoute.translationAdmission.action, 'collect-translation-evidence'); assert.equal(needsEvidenceRoute.translationAdmission.missingEvidence.includes('translation-proof-or-replay'), true);
+assert.equal(queryUniversalConversionPlan(conversionPlan({ imports: [sourceImport()] }), { translationAdmissionStatus: ['blocked', 'needs-evidence'], translationAdmissionAction: ['reject', 'collect-translation-evidence'], missingTranslationEvidence: ['missing-evidence', 'translation-proof-or-replay'] }).bestRoute.id, needsEvidenceRoute.id);
 
 const missingAdapterRoute = queryUniversalConversionPlan(conversionPlan({
   universalCapabilityMatrix: capabilityMatrix({ adapter: undefined, lossClass: 'missingAdapter', supported: false }),
@@ -32,8 +33,7 @@ const missingAdapterRoute = queryUniversalConversionPlan(conversionPlan({
   translationAdmissionStatus: 'needs-adapter',
   requiredTranslationConstructKind: 'target-adapter'
 }).bestRoute;
-assert.equal(missingAdapterRoute.mode, 'semantic-index-only');
-assert.equal(missingAdapterRoute.translationAdmission.action, 'add-target-adapter');
+assert.equal(missingAdapterRoute.mode, 'semantic-index-only'); assert.equal(missingAdapterRoute.translationAdmission.action, 'add-target-adapter');
 assert.equal(missingAdapterRoute.translationAdmission.missingEvidence.includes('translation-target-adapter'), true);
 
 const runtimeReviewPlan = conversionPlan({

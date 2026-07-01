@@ -270,15 +270,15 @@ export interface UniversalConversionPlanQuery extends UniversalConversionPlanRep
   readonly dialectRecordId?: string | readonly string[];
   readonly dialectConstructKind?: UniversalDialectConstructKind | readonly UniversalDialectConstructKind[];
   readonly dialectDisposition?: UniversalDialectProjectionDisposition | readonly UniversalDialectProjectionDisposition[];
-  readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus; readonly translationAdmissionAction?: UniversalTranslationAdmissionAction;
-  readonly missingTranslationEvidence?: string; readonly translationEvidenceId?: string; readonly translationProofEvidenceId?: string;
+  readonly translationAdmissionStatus?: QueryFilter<UniversalTranslationAdmissionStatus>; readonly translationAdmissionAction?: QueryFilter<UniversalTranslationAdmissionAction>;
+  readonly missingTranslationEvidence?: QueryFilter<string>; readonly translationEvidenceId?: QueryFilter<string>; readonly translationProofEvidenceId?: QueryFilter<string>;
   readonly translationRuntimeReadiness?: SMR | readonly SMR[];
   readonly translationRuntimeAdapterRequirementId?: string | readonly string[];
   readonly translationRuntimeProofObligationId?: string | readonly string[];
   readonly translationRuntimeProofMissingSignal?: UPS | readonly UPS[];
   readonly translationDialectReadiness?: SMR | readonly SMR[];
   readonly translationDialectRecordId?: string | readonly string[];
-  readonly requiredTranslationConstructKind?: string; readonly representedTranslationConstructKind?: string; readonly targetAdapterId?: string;
+  readonly requiredTranslationConstructKind?: QueryFilter<string>; readonly representedTranslationConstructKind?: QueryFilter<string>; readonly targetAdapterId?: QueryFilter<string>;
 }
 
 export interface UniversalConversionPlanQueryResult {
