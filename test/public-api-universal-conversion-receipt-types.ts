@@ -38,10 +38,12 @@ const receiptArtifacts: UniversalConversionArtifacts = createUniversalConversion
 });
 const receiptArtifact: UniversalConversionRouteArtifact | undefined = queryUniversalConversionArtifacts(receiptArtifacts, {
   evidenceReceiptRejectedReason: 'unscoped-evidence',
-  evidenceReceiptInterlinguaConstraintObligationMissingEvidence: 'translation-adt-pattern:exhaustiveness'
+  evidenceReceiptInterlinguaConstraintObligationMissingEvidence: 'translation-adt-pattern:exhaustiveness',
+  admissionRecordInterlinguaConstraintObligationMissingEvidence: 'translation-adt-pattern:exhaustiveness'
 })[0];
 receiptArtifacts.evidenceReceipts[0]?.id satisfies string | undefined;
 receiptArtifacts.index.evidenceReceiptInterlinguaConstraintObligationMissingEvidence satisfies readonly string[];
+receiptArtifacts.index.admissionRecordInterlinguaConstraintObligationMissingEvidence satisfies readonly string[];
 receiptArtifacts.summary.evidenceReceipts satisfies number;
 receiptArtifacts.summary.receiptProofEvidence satisfies number;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.missingEvidence satisfies Readonly<Record<string, number>>;

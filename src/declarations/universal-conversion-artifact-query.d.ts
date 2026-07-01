@@ -59,6 +59,9 @@ export interface UniversalConversionArtifactIndex {
   readonly admissionStatuses: RS;
   readonly admissionBuckets: RS;
   readonly admissionRisks: RS;
+  readonly admissionRecordInterlinguaRecordIds: RS; readonly admissionRecordInterlinguaLoweringDispositions: RS;
+  readonly admissionRecordInterlinguaConstraintFamilies: RS; readonly admissionRecordInterlinguaConstraintStatuses: RS; readonly admissionRecordInterlinguaConstraintActions: RS; readonly admissionRecordInterlinguaConstraintSourceIds: RS;
+  readonly admissionRecordInterlinguaConstraintRequiredKinds: RS; readonly admissionRecordInterlinguaConstraintRepresentedKinds: RS; readonly admissionRecordInterlinguaConstraintMissingKinds: RS; readonly admissionRecordInterlinguaConstraintMissingEvidence: RS; readonly admissionRecordInterlinguaConstraintObligationKinds: RS; readonly admissionRecordInterlinguaConstraintObligationStatuses: RS; readonly admissionRecordInterlinguaConstraintObligationMissingEvidence: RS;
   readonly sourcePaths: RS;
   readonly sourceHashes: RS;
   readonly ownershipKeys: RS;
@@ -191,6 +194,9 @@ export interface UniversalConversionArtifactIndex {
   readonly interlinguaProofEvidenceIds: RS;
   readonly interlinguaConstraintFamilies: RS;
   readonly interlinguaConstraintStatuses: RS;
+  readonly interlinguaConstraintActions: RS;
+  readonly interlinguaConstraintRequiredKinds: RS;
+  readonly interlinguaConstraintRepresentedKinds: RS;
   readonly interlinguaConstraintMissingKinds: RS;
   readonly interlinguaConstraintMissingEvidence: RS;
   readonly interlinguaConstraintSourceIds: RS; readonly interlinguaConstraintObligationKinds: RS; readonly interlinguaConstraintObligationStatuses: RS; readonly interlinguaConstraintObligationMissingEvidence: RS;
@@ -237,6 +243,8 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly evidenceReceiptEvidenceId?: string | RS; readonly evidenceReceiptProofEvidenceId?: string | RS; readonly evidenceReceiptMissingEvidence?: string | RS;
   readonly evidenceReceiptRejectedReason?: string | RS; readonly evidenceReceiptRejectedId?: string | RS;
   readonly evidenceReceiptInterlinguaRecordId?: string | RS; readonly evidenceReceiptInterlinguaLoweringDisposition?: string | RS; readonly evidenceReceiptInterlinguaConstraintFamily?: string | RS; readonly evidenceReceiptInterlinguaConstraintStatus?: string | RS; readonly evidenceReceiptInterlinguaConstraintMissingKind?: string | RS; readonly evidenceReceiptInterlinguaConstraintMissingEvidence?: string | RS; readonly evidenceReceiptInterlinguaConstraintSourceId?: string | RS; readonly evidenceReceiptInterlinguaConstraintObligationKind?: string | RS; readonly evidenceReceiptInterlinguaConstraintObligationStatus?: string | RS; readonly evidenceReceiptInterlinguaConstraintObligationEvidenceId?: string | RS; readonly evidenceReceiptInterlinguaConstraintObligationMissingEvidence?: string | RS;
+  readonly admissionRecordInterlinguaRecordId?: string | RS; readonly admissionRecordInterlinguaLoweringDisposition?: string | RS;
+  readonly admissionRecordInterlinguaConstraintFamily?: string | RS; readonly admissionRecordInterlinguaConstraintStatus?: string | RS; readonly admissionRecordInterlinguaConstraintAction?: string | RS; readonly admissionRecordInterlinguaConstraintSourceId?: string | RS; readonly admissionRecordInterlinguaConstraintRequiredKind?: string | RS; readonly admissionRecordInterlinguaConstraintRepresentedKind?: string | RS; readonly admissionRecordInterlinguaConstraintMissingKind?: string | RS; readonly admissionRecordInterlinguaConstraintMissingEvidence?: string | RS; readonly admissionRecordInterlinguaConstraintObligationKind?: string | RS; readonly admissionRecordInterlinguaConstraintObligationStatus?: string | RS; readonly admissionRecordInterlinguaConstraintObligationMissingEvidence?: string | RS;
   readonly semanticOperationId?: string | RS;
   readonly semanticOperationKind?: string | RS;
   readonly semanticOperationInterlinguaRecordId?: string | RS;

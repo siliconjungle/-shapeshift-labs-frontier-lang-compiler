@@ -122,6 +122,12 @@ assert.equal(constraintArtifacts.index.interlinguaConstraintMissingKinds.include
 assert.equal(constraintArtifacts.index.interlinguaConstraintObligationKinds.includes('borrow-across-await'), true);
 assert.equal(constraintArtifacts.index.interlinguaConstraintObligationStatuses.includes('missing'), true);
 assert.equal(constraintArtifacts.index.interlinguaConstraintObligationMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
+assert.equal(constraintRoute.interlingua.query.constraintActions.every((action) => constraintArtifacts.index.interlinguaConstraintActions.includes(action)), true);
+assert.equal(constraintRoute.interlingua.query.constraintRequiredKinds.every((kind) => constraintArtifacts.index.interlinguaConstraintRequiredKinds.includes(kind)), true);
+assert.equal(constraintRoute.interlingua.query.constraintRepresentedKinds.every((kind) => constraintArtifacts.index.interlinguaConstraintRepresentedKinds.includes(kind)), true);
+assert.equal(constraintArtifacts.index.admissionRecordInterlinguaConstraintFamilies.includes('borrow-scope'), true);
+assert.equal(constraintArtifacts.index.admissionRecordInterlinguaConstraintObligationKinds.includes('borrow-across-await'), true);
+assert.equal(constraintArtifacts.index.admissionRecordInterlinguaConstraintObligationMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintFamilies['borrow-scope'], 1);
 assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintObligationKinds['borrow-across-await'], 1);
 assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintObligationMissingEvidence['translation-borrow-scope:borrow-across-await'], 1);
@@ -135,8 +141,15 @@ assert.equal(queryUniversalConversionArtifacts(constraintArtifacts, {
   interlinguaConstraintMissingKind: 'borrow-across-await',
   interlinguaConstraintObligationKind: 'borrow-across-await',
   interlinguaConstraintObligationStatus: 'missing',
+  admissionRecordInterlinguaConstraintFamily: 'borrow-scope',
+  admissionRecordInterlinguaConstraintObligationKind: 'borrow-across-await',
+  admissionRecordInterlinguaConstraintObligationStatus: 'missing',
+  admissionRecordInterlinguaConstraintObligationMissingEvidence: 'translation-borrow-scope:borrow-across-await',
   interlinguaConstraintObligationMissingEvidence: 'translation-borrow-scope:borrow-across-await'
 })[0].routeId, constraintRoute.id);
+assert.equal(queryUniversalConversionArtifacts(constraintArtifacts, {
+  admissionRecordInterlinguaConstraintFamily: 'not-a-family'
+}).length, 0);
 
 const artifacts = createUniversalConversionArtifacts(adapterPlan, { routeId: adapterRoute.id, generatedAt: 797 });
 assert.equal(artifacts.index.interlinguaLoweringDispositions.includes('target-adapter'), true);
