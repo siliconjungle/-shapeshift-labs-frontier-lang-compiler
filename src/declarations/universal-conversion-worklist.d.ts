@@ -71,6 +71,11 @@ export interface UniversalConversionWorklistSemanticEditFields extends Pick<Univ
 
 export interface UniversalConversionWorklistSemanticEditQuery extends Pick<UniversalConversionArtifactQuery, UniversalConversionWorklistSemanticEditQueryKey> {}
 
+type UniversalConversionWorklistRouteDialectQueryKey='dialectReadiness'|'dialectRegistryId'|'dialectRecordId'|'dialectConstructKind'|'dialectExternKind'|'dialectDisposition'|'dialectEvidenceId'|'dialectLossId';
+type UniversalConversionRouteDialectFieldKey='dialectReadinesses'|'dialectRegistryIds'|'dialectRecordIds'|'dialectConstructKinds'|'dialectExternKinds'|'dialectDispositions'|'dialectEvidenceIds'|'dialectLossIds';
+export interface UniversalConversionWorklistRouteDialectQuery extends Pick<UniversalConversionArtifactQuery, UniversalConversionWorklistRouteDialectQueryKey> {}
+export interface UniversalConversionRouteDialectFields extends Readonly<Record<UniversalConversionRouteDialectFieldKey, readonly string[]>> {}
+
 export type UniversalConversionWorkItemKind =
   | 'add-target-adapter'
   | 'collect-translation-proof'
@@ -93,7 +98,7 @@ export type UniversalConversionWorkItemAction =
   | 'review-conversion-route'
   | 'resolve-blocker';
 
-export interface UniversalConversionWorkItem extends UniversalConversionWorklistRuntimeRouteFields, UniversalConversionWorklistSourceMapFields, UniversalConversionWorklistSemanticEditFields {
+export interface UniversalConversionWorkItem extends UniversalConversionWorklistRuntimeRouteFields, UniversalConversionWorklistSourceMapFields, UniversalConversionWorklistSemanticEditFields, UniversalConversionRouteDialectFields {
   readonly id: string;
   readonly kind: UniversalConversionWorkItemKind;
   readonly action: UniversalConversionWorkItemAction;
@@ -115,7 +120,6 @@ export interface UniversalConversionWorkItem extends UniversalConversionWorklist
   readonly runtimeProofObligationIds: readonly string[];
   readonly runtimeProofCapabilities: readonly URK[]; readonly runtimeProofStatuses: readonly string[];
   readonly runtimeProofRequiredSignals: readonly UPS[]; readonly runtimeProofProvidedSignals: readonly UPS[]; readonly runtimeProofMissingSignals: readonly UPS[];
-  readonly dialectRecordIds: readonly string[];
   readonly translationAdmissionStatuses: readonly string[]; readonly translationAdmissionActions: readonly string[]; readonly missingTranslationEvidence: readonly string[]; readonly translationEvidenceIds: readonly string[]; readonly translationProofEvidenceIds: readonly string[];
   readonly translationRuntimeReadinesses: readonly string[];
   readonly translationRuntimeAdapterRequirementIds: readonly string[];
@@ -144,7 +148,7 @@ export interface UniversalConversionWorkItem extends UniversalConversionWorklist
   readonly semanticEquivalenceClaim: false;
 }
 
-export interface UniversalConversionWorklistOptions extends UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionArtifactSourceMapQuery, UniversalConversionWorklistSemanticEditQuery {
+export interface UniversalConversionWorklistOptions extends UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionArtifactSourceMapQuery, UniversalConversionWorklistSemanticEditQuery, UniversalConversionWorklistRouteDialectQuery {
   readonly generatedAt?: number;
   readonly routeId?: string | readonly string[];
   readonly sourceLanguage?: FrontierSourceLanguage | string | readonly (FrontierSourceLanguage | string)[];
@@ -194,7 +198,6 @@ export interface UniversalConversionWorklistQuery extends UniversalConversionWor
   readonly runtimeProofRequiredSignal?: UPS | readonly UPS[];
   readonly runtimeProofProvidedSignal?: UPS | readonly UPS[];
   readonly runtimeProofMissingSignal?: UPS | readonly UPS[];
-  readonly dialectRecordId?: string | readonly string[];
   readonly targetAdapterId?: string | readonly string[];
   readonly interlinguaConstraintFamily?: string | readonly string[];
   readonly interlinguaConstraintStatus?: string | readonly string[];
@@ -217,7 +220,7 @@ export interface UniversalConversionWorklist {
   readonly generatedAt: number;
   readonly planId: string;
   readonly items: readonly UniversalConversionWorkItem[];
-  readonly summary: UniversalConversionWorklistSemanticEditFields & {
+  readonly summary: UniversalConversionWorklistSemanticEditFields & UniversalConversionRouteDialectFields & {
     readonly items: number;
     readonly byKind: Readonly<Record<string, number>>;
     readonly byPriority: Readonly<Record<string, number>>;

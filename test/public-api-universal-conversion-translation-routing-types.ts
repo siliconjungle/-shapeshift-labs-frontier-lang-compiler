@@ -45,6 +45,8 @@ const runtimeProofQuery = { runtimeProofObligationId: ['runtime_proof'], runtime
 runtimeProofObligationMatches(runtimeMatrix.routes[0]?.proofObligations[0], runtimeProofQuery) satisfies boolean;
 
 const routingArtifacts: UniversalConversionArtifacts = createUniversalConversionArtifacts(routingPlan, { routeId: ['conversion_javascript_to_rust'], sourceLanguage: ['javascript'], target: ['rust'], mode: ['target-adapter'], readiness: ['ready'], admissionAction: ['prioritize'], translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofCapability: 'fetch', translationRuntimeProofStatus: 'needs-evidence', translationRuntimeProofRequiredSignal: 'network-trace-hash', translationRuntimeProofProvidedSignal: 'telemetry-hash', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
+createUniversalConversionArtifacts(routingPlan, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'dialect_evidence', dialectLossId: 'dialect_loss' }) satisfies UniversalConversionArtifacts;
+createUniversalConversionArtifacts(routingPlan, { dialectReadiness: 'ready', dialectRegistryId: 'dialect_registry', dialectRecordId: 'dialect_record', dialectConstructKind: 'runtime', dialectDisposition: 'runtime-required' }) satisfies UniversalConversionArtifacts;
 queryUniversalConversionArtifacts(routingArtifacts, {
   language: ['javascript'],
   sourceLanguage: ['javascript'],
@@ -58,7 +60,10 @@ queryUniversalConversionArtifacts(routingArtifacts, {
   translationRuntimeProofRequiredSignal: 'network-trace-hash',
   translationRuntimeProofProvidedSignal: 'telemetry-hash',
   translationRuntimeProofMissingSignal: 'network-trace-hash',
-  translationDialectRecordId: 'dialect_record'
+  translationDialectRecordId: 'dialect_record',
+  dialectExternKind: 'generatorArtifact',
+  dialectEvidenceId: 'dialect_evidence',
+  dialectLossId: 'dialect_loss'
 });
 routingArtifacts.index.translationRuntimeReadinesses satisfies readonly string[];
 routingArtifacts.index.translationRuntimeAdapterRequirementIds satisfies readonly string[];
@@ -70,6 +75,14 @@ routingArtifacts.index.translationRuntimeProofProvidedSignals satisfies readonly
 routingArtifacts.index.translationRuntimeProofMissingSignals satisfies readonly string[];
 routingArtifacts.index.translationDialectReadinesses satisfies readonly string[];
 routingArtifacts.index.translationDialectRecordIds satisfies readonly string[];
+routingArtifacts.index.dialectReadinesses satisfies readonly string[];
+routingArtifacts.index.dialectRegistryIds satisfies readonly string[];
+routingArtifacts.index.dialectRecordIds satisfies readonly string[];
+routingArtifacts.index.dialectConstructKinds satisfies readonly string[];
+routingArtifacts.index.dialectExternKinds satisfies readonly string[];
+routingArtifacts.index.dialectDispositions satisfies readonly string[];
+routingArtifacts.index.dialectEvidenceIds satisfies readonly string[];
+routingArtifacts.index.dialectLossIds satisfies readonly string[];
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeAdapterRequirementIds satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeProofCapabilities satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeProofStatuses satisfies Readonly<Record<string, number>>;
@@ -143,6 +156,8 @@ routingReceipt.summary.interlinguaConstraintObligationKinds satisfies Readonly<R
 routingReceipt.summary.interlinguaConstraintObligationStatuses satisfies Readonly<Record<string, number>>;
 
 const routingWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(routingPlan, { sourceLanguage: ['javascript'], target: ['rust'], translationAdmissionStatus: ['needs-evidence'], translationAdmissionAction: ['collect-translation-evidence'], missingTranslationEvidence: ['translation-proof-or-replay'], translationEvidenceId: ['evidence_admittable_translation_proof'], translationProofEvidenceId: ['evidence_admittable_translation_proof'], requiredTranslationConstructKind: ['target-adapter'], representedTranslationConstructKind: ['target-adapter'], targetAdapterId: ['fixture-js-rust'], translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofCapability: 'fetch', translationRuntimeProofStatus: 'needs-evidence', translationRuntimeProofRequiredSignal: 'network-trace-hash', translationRuntimeProofProvidedSignal: 'telemetry-hash', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
+createUniversalConversionWorklist(routingPlan, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'dialect_evidence', dialectLossId: 'dialect_loss' }) satisfies UniversalConversionWorklist;
+createUniversalConversionWorklist(routingPlan, { dialectReadiness: 'ready', dialectRegistryId: 'dialect_registry', dialectRecordId: 'dialect_record', dialectConstructKind: 'runtime', dialectDisposition: 'runtime-required' }) satisfies UniversalConversionWorklist;
 const routingWorklistQuery = queryUniversalConversionWorklist(routingWorklist, {
   sourceLanguage: ['javascript'],
   target: ['rust'],
@@ -166,7 +181,10 @@ const routingWorklistQuery = queryUniversalConversionWorklist(routingWorklist, {
   translationRuntimeProofProvidedSignal: 'telemetry-hash',
   translationRuntimeProofMissingSignal: 'network-trace-hash',
   translationDialectReadiness: 'ready',
-  translationDialectRecordId: 'dialect_record'
+  translationDialectRecordId: 'dialect_record',
+  dialectExternKind: 'generatorArtifact',
+  dialectEvidenceId: 'dialect_evidence',
+  dialectLossId: 'dialect_loss'
 });
 routingWorklist.summary.translationAdmissionStatuses satisfies readonly string[];
 routingWorklist.summary.translationAdmissionActions satisfies readonly string[];
@@ -183,6 +201,9 @@ routingWorklist.summary.translationRuntimeProofProvidedSignals satisfies readonl
 routingWorklist.summary.translationRuntimeProofMissingSignals satisfies readonly string[];
 routingWorklist.summary.translationDialectReadinesses satisfies readonly string[];
 routingWorklist.summary.translationDialectRecordIds satisfies readonly string[];
+routingWorklist.summary.dialectExternKinds satisfies readonly string[];
+routingWorklist.summary.dialectEvidenceIds satisfies readonly string[];
+routingWorklist.summary.dialectLossIds satisfies readonly string[];
 routingWorklist.summary.requiredTranslationConstructKinds satisfies readonly string[];
 routingWorklist.summary.representedTranslationConstructKinds satisfies readonly string[];
 routingWorklist.summary.targetAdapterIds satisfies readonly string[];
@@ -194,3 +215,6 @@ routingWorklistQuery.bestItem?.translationRuntimeProofStatuses satisfies readonl
 routingWorklistQuery.bestItem?.translationRuntimeProofRequiredSignals satisfies readonly string[] | undefined;
 routingWorklistQuery.bestItem?.translationRuntimeProofProvidedSignals satisfies readonly string[] | undefined;
 routingWorklistQuery.bestItem?.translationRuntimeProofMissingSignals satisfies readonly string[] | undefined;
+routingWorklistQuery.bestItem?.dialectExternKinds satisfies readonly string[] | undefined;
+routingWorklistQuery.bestItem?.dialectEvidenceIds satisfies readonly string[] | undefined;
+routingWorklistQuery.bestItem?.dialectLossIds satisfies readonly string[] | undefined;

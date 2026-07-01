@@ -45,6 +45,61 @@ export function conversionRouteMatchesDialectQuery(route, query = {}) {
   return true;
 }
 
+export function routeDialectDenominators(route = {}) {
+  const dialect = route.dialect ?? {};
+  return {
+    dialectReadiness: dialect.readiness,
+    dialectRegistryIds: uniqueStrings(dialect.registryIds ?? []),
+    dialectRecordIds: uniqueStrings(dialect.recordIds ?? []),
+    dialectConstructKinds: uniqueStrings(dialect.constructKinds ?? []),
+    dialectExternKinds: uniqueStrings(dialect.externKinds ?? []),
+    dialectDispositions: uniqueStrings(dialect.projectionDispositions ?? []),
+    dialectEvidenceIds: uniqueStrings(dialect.evidenceIds ?? []),
+    dialectLossIds: uniqueStrings(dialect.lossIds ?? [])
+  };
+}
+
+export function dialectDenominatorIndex(records = []) {
+  const rows = records.map(dialectFields);
+  return {
+    dialectReadinesses: uniqueStrings(rows.flatMap((record) => record.dialectReadinesses ?? [])),
+    dialectRegistryIds: uniqueStrings(rows.flatMap((record) => record.dialectRegistryIds ?? [])),
+    dialectRecordIds: uniqueStrings(rows.flatMap((record) => record.dialectRecordIds ?? [])),
+    dialectConstructKinds: uniqueStrings(rows.flatMap((record) => record.dialectConstructKinds ?? [])),
+    dialectExternKinds: uniqueStrings(rows.flatMap((record) => record.dialectExternKinds ?? [])),
+    dialectDispositions: uniqueStrings(rows.flatMap((record) => record.dialectDispositions ?? [])),
+    dialectEvidenceIds: uniqueStrings(rows.flatMap((record) => record.dialectEvidenceIds ?? [])),
+    dialectLossIds: uniqueStrings(rows.flatMap((record) => record.dialectLossIds ?? []))
+  };
+}
+
+export function dialectDenominatorMatches(record, query = {}) {
+  const row = dialectFields(record);
+  return match(query.dialectReadiness, row.dialectReadinesses)
+    && match(query.dialectRegistryId, row.dialectRegistryIds)
+    && match(query.dialectRecordId, row.dialectRecordIds)
+    && match(query.dialectConstructKind, row.dialectConstructKinds)
+    && match(query.dialectExternKind, row.dialectExternKinds)
+    && match(query.dialectDisposition, row.dialectDispositions)
+    && match(query.dialectEvidenceId, row.dialectEvidenceIds)
+    && match(query.dialectLossId, row.dialectLossIds);
+}
+
+function dialectFields(record = {}) {
+  if (record.dialectRegistryIds || record.dialectRecordIds || record.dialectReadinesses) return {
+    dialectReadinesses: uniqueStrings([record.dialectReadiness, ...(record.dialectReadinesses ?? [])]),
+    dialectRegistryIds: uniqueStrings(record.dialectRegistryIds ?? []),
+    dialectRecordIds: uniqueStrings(record.dialectRecordIds ?? []),
+    dialectConstructKinds: uniqueStrings(record.dialectConstructKinds ?? []),
+    dialectExternKinds: uniqueStrings(record.dialectExternKinds ?? []),
+    dialectDispositions: uniqueStrings(record.dialectDispositions ?? []),
+    dialectEvidenceIds: uniqueStrings(record.dialectEvidenceIds ?? []),
+    dialectLossIds: uniqueStrings(record.dialectLossIds ?? [])
+  };
+  const row = routeDialectDenominators(record);
+  return { ...row, dialectReadinesses: uniqueStrings([row.dialectReadiness]) };
+}
+
 function match(filter, values) {
   const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];
   if (!filters.length) return true;

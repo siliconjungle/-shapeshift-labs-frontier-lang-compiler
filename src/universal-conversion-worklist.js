@@ -1,10 +1,10 @@
-import{countBy,idFragment,normalizeNativeLanguageId,uniqueStrings}from './native-import-utils.js';
+import{countBy,idFragment,normalizeNativeLanguageId,uniqueStrings as u}from './native-import-utils.js';
 import{normalizeProjectionMatrixTargets}from './coverage-matrix-profiles.js';
 import{createUniversalConversionPlan}from './universal-conversion-plan.js';
 import{mergeWorkItemRuntimeRouteDenominators,workItemRuntimeRouteDenominators,workItemRuntimeRouteMatches,worklistRuntimeRouteSummary}from './universal-conversion-artifact-runtime-routes.js';
 import{mergeWorkItemSourceMapDenominators,workItemSourceMapDenominators,workItemSourceMapMatches,worklistSourceMapSummary}from './universal-conversion-artifact-source-maps.js';
 import{mergeWorkItemSemanticEditDenominators,workItemSemanticEditDenominators,workItemSemanticEditMatches,worklistSemanticEditSummary}from './universal-conversion-artifact-semantic-edit.js';
-import{mergeTranslationAdmissionDenominators as mtad,translationAdmissionDenominatorMatches as tadm,translationAdmissionDenominatorSummary as tads,translationAdmissionDenominatorsForRoute as tadfr}from './universal-conversion-translation-admission-denominators.js';
+import{mergeTranslationAdmissionDenominators as mtad,translationAdmissionDenominatorMatches as tadm,translationAdmissionDenominatorSummary as tads,translationAdmissionDenominatorsForRoute as tadfr}from './universal-conversion-translation-admission-denominators.js'; import{conversionRouteMatchesDialectQuery as cdq,dialectDenominatorIndex as ddi,dialectDenominatorMatches as ddm}from './universal-conversion-dialect-routing.js';
 
 export const UniversalConversionWorkItemKinds = Object.freeze(['add-target-adapter', 'collect-translation-proof', 'prove-runtime-adapter', 'collect-runtime-proof-signal', 'collect-dialect-evidence', 'collect-interlingua-obligation-proof', 'collect-source-evidence', 'review-route', 'unblock-route']);
 
@@ -112,33 +112,33 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     admissionActions: [route.admissionAction],
     routeActions: [route.routeAction],
     evidenceKeys: [evidenceKey],
-    missingEvidence: uniqueStrings([...(route.missingEvidence ?? []), ...(route.translationAdmission?.missingEvidence ?? []), ...(details.missingEvidence ?? [])]),
+    missingEvidence: u([...(route.missingEvidence ?? []), ...(route.translationAdmission?.missingEvidence ?? []), ...(details.missingEvidence ?? [])]),
     blockers: route.blockers ?? [],
     review: route.review ?? [],
     tasks: workItemTasks(kind, route, evidenceKey, details),
     ...workItemRuntimeRouteDenominators(route), ...workItemSourceMapDenominators(route), ...workItemSemanticEditDenominators(route),
     runtimeAdapterRequirementIds: (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
     runtimeProofObligationIds: (route.runtime?.proofObligations ?? []).map((entry) => entry.id).filter(Boolean),
-    runtimeProofCapabilities: uniqueStrings((route.runtime?.proofObligations ?? []).map((entry) => entry.capability)),
-    runtimeProofStatuses: uniqueStrings((route.runtime?.proofObligations ?? []).map((entry) => entry.status)),
-    runtimeProofRequiredSignals: uniqueStrings((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.requiredSignals ?? [])),
-    runtimeProofProvidedSignals: uniqueStrings((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.providedSignals ?? [])),
-    runtimeProofMissingSignals: uniqueStrings((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? [])),
-    dialectRecordIds: route.dialect?.recordIds ?? [],
+    runtimeProofCapabilities: u((route.runtime?.proofObligations ?? []).map((entry) => entry.capability)),
+    runtimeProofStatuses: u((route.runtime?.proofObligations ?? []).map((entry) => entry.status)),
+    runtimeProofRequiredSignals: u((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.requiredSignals ?? [])),
+    runtimeProofProvidedSignals: u((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.providedSignals ?? [])),
+    runtimeProofMissingSignals: u((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? [])),
+    ...ddi([route]),
     ...tadfr(route),
-    targetAdapterIds: uniqueStrings([route.adapter, route.translationAdmission?.targetAdapterId]),
-    interlinguaConstraintFamilies: uniqueStrings(details.constraintFamilies ?? []),
-    interlinguaConstraintStatuses: uniqueStrings(details.constraintStatuses ?? []),
-    interlinguaConstraintActions: uniqueStrings(details.constraintActions ?? []),
-    interlinguaConstraintSourceIds: uniqueStrings(details.constraintSourceIds ?? []), interlinguaConstraintEvidenceIds: uniqueStrings(details.constraintEvidenceIds ?? []),
-    interlinguaConstraintRequiredKinds: uniqueStrings(details.constraintRequiredKinds ?? []),
-    interlinguaConstraintRepresentedKinds: uniqueStrings(details.constraintRepresentedKinds ?? []),
-    interlinguaConstraintMissingKinds: uniqueStrings(details.constraintMissingKinds ?? []),
-    interlinguaConstraintMissingEvidence: uniqueStrings(details.constraintMissingEvidence ?? []),
-    interlinguaConstraintObligationKinds: uniqueStrings(details.constraintObligationKinds ?? []),
-    interlinguaConstraintObligationStatuses: uniqueStrings(details.constraintObligationStatuses ?? []),
-    interlinguaConstraintObligationEvidenceIds: uniqueStrings(details.constraintObligationEvidenceIds ?? []),
-    interlinguaConstraintObligationMissingEvidence: uniqueStrings(details.constraintObligationMissingEvidence ?? []),
+    targetAdapterIds: u([route.adapter, route.translationAdmission?.targetAdapterId]),
+    interlinguaConstraintFamilies: u(details.constraintFamilies ?? []),
+    interlinguaConstraintStatuses: u(details.constraintStatuses ?? []),
+    interlinguaConstraintActions: u(details.constraintActions ?? []),
+    interlinguaConstraintSourceIds: u(details.constraintSourceIds ?? []), interlinguaConstraintEvidenceIds: u(details.constraintEvidenceIds ?? []),
+    interlinguaConstraintRequiredKinds: u(details.constraintRequiredKinds ?? []),
+    interlinguaConstraintRepresentedKinds: u(details.constraintRepresentedKinds ?? []),
+    interlinguaConstraintMissingKinds: u(details.constraintMissingKinds ?? []),
+    interlinguaConstraintMissingEvidence: u(details.constraintMissingEvidence ?? []),
+    interlinguaConstraintObligationKinds: u(details.constraintObligationKinds ?? []),
+    interlinguaConstraintObligationStatuses: u(details.constraintObligationStatuses ?? []),
+    interlinguaConstraintObligationEvidenceIds: u(details.constraintObligationEvidenceIds ?? []),
+    interlinguaConstraintObligationMissingEvidence: u(details.constraintObligationMissingEvidence ?? []),
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   };
@@ -148,42 +148,42 @@ function mergeWorkItems(left, right) {
   return {
     ...left,
     priority: higherPriority(left.priority, right.priority),
-    routeIds: uniqueStrings([...left.routeIds, ...right.routeIds]),
-    sourceLanguages: uniqueStrings([...left.sourceLanguages, ...right.sourceLanguages]),
-    languageIds: uniqueStrings([...left.languageIds, ...right.languageIds]),
-    targets: uniqueStrings([...left.targets, ...right.targets]),
-    modes: uniqueStrings([...left.modes, ...right.modes]),
-    readinesses: uniqueStrings([...left.readinesses, ...right.readinesses]),
-    admissionActions: uniqueStrings([...left.admissionActions, ...right.admissionActions]),
-    routeActions: uniqueStrings([...left.routeActions, ...right.routeActions]),
-    evidenceKeys: uniqueStrings([...left.evidenceKeys, ...right.evidenceKeys]),
-    missingEvidence: uniqueStrings([...left.missingEvidence, ...right.missingEvidence]),
-    blockers: uniqueStrings([...left.blockers, ...right.blockers]),
-    review: uniqueStrings([...left.review, ...right.review]),
-    tasks: uniqueStrings([...left.tasks, ...right.tasks]),
+    routeIds: u([...left.routeIds, ...right.routeIds]),
+    sourceLanguages: u([...left.sourceLanguages, ...right.sourceLanguages]),
+    languageIds: u([...left.languageIds, ...right.languageIds]),
+    targets: u([...left.targets, ...right.targets]),
+    modes: u([...left.modes, ...right.modes]),
+    readinesses: u([...left.readinesses, ...right.readinesses]),
+    admissionActions: u([...left.admissionActions, ...right.admissionActions]),
+    routeActions: u([...left.routeActions, ...right.routeActions]),
+    evidenceKeys: u([...left.evidenceKeys, ...right.evidenceKeys]),
+    missingEvidence: u([...left.missingEvidence, ...right.missingEvidence]),
+    blockers: u([...left.blockers, ...right.blockers]),
+    review: u([...left.review, ...right.review]),
+    tasks: u([...left.tasks, ...right.tasks]),
     ...mergeWorkItemRuntimeRouteDenominators(left, right), ...mergeWorkItemSourceMapDenominators(left, right), ...mergeWorkItemSemanticEditDenominators(left, right),
-    runtimeAdapterRequirementIds: uniqueStrings([...left.runtimeAdapterRequirementIds, ...right.runtimeAdapterRequirementIds]),
-    runtimeProofObligationIds: uniqueStrings([...left.runtimeProofObligationIds, ...right.runtimeProofObligationIds]),
-    runtimeProofCapabilities: uniqueStrings([...left.runtimeProofCapabilities, ...right.runtimeProofCapabilities]),
-    runtimeProofStatuses: uniqueStrings([...left.runtimeProofStatuses, ...right.runtimeProofStatuses]),
-    runtimeProofRequiredSignals: uniqueStrings([...left.runtimeProofRequiredSignals, ...right.runtimeProofRequiredSignals]),
-    runtimeProofProvidedSignals: uniqueStrings([...left.runtimeProofProvidedSignals, ...right.runtimeProofProvidedSignals]),
-    runtimeProofMissingSignals: uniqueStrings([...left.runtimeProofMissingSignals, ...right.runtimeProofMissingSignals]),
-    dialectRecordIds: uniqueStrings([...left.dialectRecordIds, ...right.dialectRecordIds]),
+    runtimeAdapterRequirementIds: u([...left.runtimeAdapterRequirementIds, ...right.runtimeAdapterRequirementIds]),
+    runtimeProofObligationIds: u([...left.runtimeProofObligationIds, ...right.runtimeProofObligationIds]),
+    runtimeProofCapabilities: u([...left.runtimeProofCapabilities, ...right.runtimeProofCapabilities]),
+    runtimeProofStatuses: u([...left.runtimeProofStatuses, ...right.runtimeProofStatuses]),
+    runtimeProofRequiredSignals: u([...left.runtimeProofRequiredSignals, ...right.runtimeProofRequiredSignals]),
+    runtimeProofProvidedSignals: u([...left.runtimeProofProvidedSignals, ...right.runtimeProofProvidedSignals]),
+    runtimeProofMissingSignals: u([...left.runtimeProofMissingSignals, ...right.runtimeProofMissingSignals]),
+    ...ddi([left, right]),
     ...mtad(left, right),
-    targetAdapterIds: uniqueStrings([...left.targetAdapterIds, ...right.targetAdapterIds]),
-    interlinguaConstraintFamilies: uniqueStrings([...left.interlinguaConstraintFamilies, ...right.interlinguaConstraintFamilies]),
-    interlinguaConstraintStatuses: uniqueStrings([...left.interlinguaConstraintStatuses, ...right.interlinguaConstraintStatuses]),
-    interlinguaConstraintActions: uniqueStrings([...left.interlinguaConstraintActions, ...right.interlinguaConstraintActions]),
-    interlinguaConstraintSourceIds: uniqueStrings([...left.interlinguaConstraintSourceIds, ...right.interlinguaConstraintSourceIds]), interlinguaConstraintEvidenceIds: uniqueStrings([...left.interlinguaConstraintEvidenceIds, ...right.interlinguaConstraintEvidenceIds]),
-    interlinguaConstraintRequiredKinds: uniqueStrings([...left.interlinguaConstraintRequiredKinds, ...right.interlinguaConstraintRequiredKinds]),
-    interlinguaConstraintRepresentedKinds: uniqueStrings([...left.interlinguaConstraintRepresentedKinds, ...right.interlinguaConstraintRepresentedKinds]),
-    interlinguaConstraintMissingKinds: uniqueStrings([...left.interlinguaConstraintMissingKinds, ...right.interlinguaConstraintMissingKinds]),
-    interlinguaConstraintMissingEvidence: uniqueStrings([...left.interlinguaConstraintMissingEvidence, ...right.interlinguaConstraintMissingEvidence]),
-    interlinguaConstraintObligationKinds: uniqueStrings([...left.interlinguaConstraintObligationKinds, ...right.interlinguaConstraintObligationKinds]),
-    interlinguaConstraintObligationStatuses: uniqueStrings([...left.interlinguaConstraintObligationStatuses, ...right.interlinguaConstraintObligationStatuses]),
-    interlinguaConstraintObligationEvidenceIds: uniqueStrings([...left.interlinguaConstraintObligationEvidenceIds, ...right.interlinguaConstraintObligationEvidenceIds]),
-    interlinguaConstraintObligationMissingEvidence: uniqueStrings([...left.interlinguaConstraintObligationMissingEvidence, ...right.interlinguaConstraintObligationMissingEvidence])
+    targetAdapterIds: u([...left.targetAdapterIds, ...right.targetAdapterIds]),
+    interlinguaConstraintFamilies: u([...left.interlinguaConstraintFamilies, ...right.interlinguaConstraintFamilies]),
+    interlinguaConstraintStatuses: u([...left.interlinguaConstraintStatuses, ...right.interlinguaConstraintStatuses]),
+    interlinguaConstraintActions: u([...left.interlinguaConstraintActions, ...right.interlinguaConstraintActions]),
+    interlinguaConstraintSourceIds: u([...left.interlinguaConstraintSourceIds, ...right.interlinguaConstraintSourceIds]), interlinguaConstraintEvidenceIds: u([...left.interlinguaConstraintEvidenceIds, ...right.interlinguaConstraintEvidenceIds]),
+    interlinguaConstraintRequiredKinds: u([...left.interlinguaConstraintRequiredKinds, ...right.interlinguaConstraintRequiredKinds]),
+    interlinguaConstraintRepresentedKinds: u([...left.interlinguaConstraintRepresentedKinds, ...right.interlinguaConstraintRepresentedKinds]),
+    interlinguaConstraintMissingKinds: u([...left.interlinguaConstraintMissingKinds, ...right.interlinguaConstraintMissingKinds]),
+    interlinguaConstraintMissingEvidence: u([...left.interlinguaConstraintMissingEvidence, ...right.interlinguaConstraintMissingEvidence]),
+    interlinguaConstraintObligationKinds: u([...left.interlinguaConstraintObligationKinds, ...right.interlinguaConstraintObligationKinds]),
+    interlinguaConstraintObligationStatuses: u([...left.interlinguaConstraintObligationStatuses, ...right.interlinguaConstraintObligationStatuses]),
+    interlinguaConstraintObligationEvidenceIds: u([...left.interlinguaConstraintObligationEvidenceIds, ...right.interlinguaConstraintObligationEvidenceIds]),
+    interlinguaConstraintObligationMissingEvidence: u([...left.interlinguaConstraintObligationMissingEvidence, ...right.interlinguaConstraintObligationMissingEvidence])
   };
 }
 
@@ -204,7 +204,7 @@ function workItemAction(kind) {
 }
 
 function workItemTasks(kind, route, evidenceKey, details = {}) {
-  return uniqueStrings([
+  return u([
     `${workItemAction(kind)} for ${route.sourceLanguage} to ${route.target}`,
     ...(details.constraintObligationKinds ?? []).map((kind) => `satisfy interlingua obligation ${kind}`),
     evidenceKey ? `satisfy evidence key ${evidenceKey}` : undefined,
@@ -217,30 +217,31 @@ function worklistSummary(items) {
     items: items.length,
     byKind: countBy(items.map((item) => item.kind)),
     byPriority: countBy(items.map((item) => item.priority)),
-    routeIds: uniqueStrings(items.flatMap((item) => item.routeIds)),
-    sourceLanguages: uniqueStrings(items.flatMap((item) => item.sourceLanguages)),
-    targets: uniqueStrings(items.flatMap((item) => item.targets)),
-    evidenceKeys: uniqueStrings(items.flatMap((item) => item.evidenceKeys)),
-    missingEvidence: uniqueStrings(items.flatMap((item) => item.missingEvidence)),
+    routeIds: u(items.flatMap((item) => item.routeIds)),
+    sourceLanguages: u(items.flatMap((item) => item.sourceLanguages)),
+    targets: u(items.flatMap((item) => item.targets)),
+    evidenceKeys: u(items.flatMap((item) => item.evidenceKeys)),
+    missingEvidence: u(items.flatMap((item) => item.missingEvidence)),
+    ...ddi(items),
     ...worklistRuntimeRouteSummary(items), ...worklistSourceMapSummary(items), ...worklistSemanticEditSummary(items),
-    runtimeProofCapabilities: uniqueStrings(items.flatMap((item) => item.runtimeProofCapabilities ?? [])),
-    runtimeProofStatuses: uniqueStrings(items.flatMap((item) => item.runtimeProofStatuses ?? [])),
-    runtimeProofRequiredSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofRequiredSignals ?? [])),
-    runtimeProofProvidedSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofProvidedSignals ?? [])),
-    runtimeProofMissingSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofMissingSignals ?? [])),
+    runtimeProofCapabilities: u(items.flatMap((item) => item.runtimeProofCapabilities ?? [])),
+    runtimeProofStatuses: u(items.flatMap((item) => item.runtimeProofStatuses ?? [])),
+    runtimeProofRequiredSignals: u(items.flatMap((item) => item.runtimeProofRequiredSignals ?? [])),
+    runtimeProofProvidedSignals: u(items.flatMap((item) => item.runtimeProofProvidedSignals ?? [])),
+    runtimeProofMissingSignals: u(items.flatMap((item) => item.runtimeProofMissingSignals ?? [])),
     ...tads(items),
-    interlinguaConstraintFamilies: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintFamilies ?? [])),
-    interlinguaConstraintStatuses: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintStatuses ?? [])),
-    interlinguaConstraintActions: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintActions ?? [])),
-    interlinguaConstraintSourceIds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintSourceIds ?? [])), interlinguaConstraintEvidenceIds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintEvidenceIds ?? [])),
-    interlinguaConstraintRequiredKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintRequiredKinds ?? [])),
-    interlinguaConstraintRepresentedKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintRepresentedKinds ?? [])),
-    interlinguaConstraintMissingKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintMissingKinds ?? [])),
-    interlinguaConstraintMissingEvidence: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintMissingEvidence ?? [])),
-    interlinguaConstraintObligationKinds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintObligationKinds ?? [])),
-    interlinguaConstraintObligationStatuses: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintObligationStatuses ?? [])),
-    interlinguaConstraintObligationEvidenceIds: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintObligationEvidenceIds ?? [])),
-    interlinguaConstraintObligationMissingEvidence: uniqueStrings(items.flatMap((item) => item.interlinguaConstraintObligationMissingEvidence ?? [])),
+    interlinguaConstraintFamilies: u(items.flatMap((item) => item.interlinguaConstraintFamilies ?? [])),
+    interlinguaConstraintStatuses: u(items.flatMap((item) => item.interlinguaConstraintStatuses ?? [])),
+    interlinguaConstraintActions: u(items.flatMap((item) => item.interlinguaConstraintActions ?? [])),
+    interlinguaConstraintSourceIds: u(items.flatMap((item) => item.interlinguaConstraintSourceIds ?? [])), interlinguaConstraintEvidenceIds: u(items.flatMap((item) => item.interlinguaConstraintEvidenceIds ?? [])),
+    interlinguaConstraintRequiredKinds: u(items.flatMap((item) => item.interlinguaConstraintRequiredKinds ?? [])),
+    interlinguaConstraintRepresentedKinds: u(items.flatMap((item) => item.interlinguaConstraintRepresentedKinds ?? [])),
+    interlinguaConstraintMissingKinds: u(items.flatMap((item) => item.interlinguaConstraintMissingKinds ?? [])),
+    interlinguaConstraintMissingEvidence: u(items.flatMap((item) => item.interlinguaConstraintMissingEvidence ?? [])),
+    interlinguaConstraintObligationKinds: u(items.flatMap((item) => item.interlinguaConstraintObligationKinds ?? [])),
+    interlinguaConstraintObligationStatuses: u(items.flatMap((item) => item.interlinguaConstraintObligationStatuses ?? [])),
+    interlinguaConstraintObligationEvidenceIds: u(items.flatMap((item) => item.interlinguaConstraintObligationEvidenceIds ?? [])),
+    interlinguaConstraintObligationMissingEvidence: u(items.flatMap((item) => item.interlinguaConstraintObligationMissingEvidence ?? [])),
     blockers: items.reduce((total, item) => total + item.blockers.length, 0),
     reviewReasons: items.reduce((total, item) => total + item.review.length, 0),
     targetAdapterGaps: items.filter((item) => item.kind === 'add-target-adapter').length,
@@ -255,11 +256,10 @@ function worklistSummary(items) {
 }
 
 function routeMatchesWorklistOptions(route,options) {
-  const ss=q(options.sourceLanguage??options.language).filter(Boolean).map(normalizeNativeLanguageId);
-  const ts=normalizeProjectionMatrixTargets(q(options.target));
+  const ss=q(options.sourceLanguage??options.language).filter(Boolean).map(normalizeNativeLanguageId), ts=normalizeProjectionMatrixTargets(q(options.target));
   return (!ss.length || route.languageIds.some((id)=>ss.includes(id)))
     && (!ts.length || ts.includes(route.target))
-    && workItemRuntimeRouteMatches(workItemRuntimeRouteDenominators(route), options) && workItemSourceMapMatches(workItemSourceMapDenominators(route), options) && workItemSemanticEditMatches(workItemSemanticEditDenominators(route), options) && tadm(tadfr(route), options, match)
+    && cdq(route,options) && workItemRuntimeRouteMatches(workItemRuntimeRouteDenominators(route), options) && workItemSourceMapMatches(workItemSourceMapDenominators(route), options) && workItemSemanticEditMatches(workItemSemanticEditDenominators(route), options) && tadm(tadfr(route), options, match)
     && match(options.routeId, [route.id]);
 }
 
@@ -288,11 +288,11 @@ function workItemMatchesQuery(item, query) {
     && match(query.runtimeProofProvidedSignal, item.runtimeProofProvidedSignals)
     && match(query.runtimeProofMissingSignal, item.runtimeProofMissingSignals)
     && tadm(item, query, match)
+    && ddm(item, query)
     && match(query.blocker, item.blockers)
     && match(query.reviewReason, item.review)
     && match(query.task, item.tasks)
     && match(query.runtimeAdapterRequirementId, item.runtimeAdapterRequirementIds)
-    && match(query.dialectRecordId, item.dialectRecordIds)
     && match(query.targetAdapterId, item.targetAdapterIds)
     && match(query.interlinguaConstraintFamily, item.interlinguaConstraintFamilies)
     && match(query.interlinguaConstraintStatus, item.interlinguaConstraintStatuses)

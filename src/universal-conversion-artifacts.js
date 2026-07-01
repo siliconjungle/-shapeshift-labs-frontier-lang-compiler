@@ -1,7 +1,7 @@
 import { idFragment, normalizeNativeLanguageId, normalizeStringList, uniqueStrings } from './native-import-utils.js'; import { normalizeProjectionMatrixTargets } from './coverage-matrix-profiles.js';
 import { universalConversionArtifactSummary } from './universal-conversion-artifact-summary.js';
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
-import { artifactIndex } from './universal-conversion-artifact-query.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js'; import { artifactSemanticEditIndex as esi } from './universal-conversion-artifact-semantic-edit.js'; import{translationAdmissionDenominatorMatches as tadm,translationAdmissionDenominatorsForRoute as tadfr}from './universal-conversion-translation-admission-denominators.js';
+import { artifactIndex } from './universal-conversion-artifact-query.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js'; import { artifactSemanticEditIndex as esi } from './universal-conversion-artifact-semantic-edit.js'; import{translationAdmissionDenominatorMatches as tadm,translationAdmissionDenominatorsForRoute as tadfr}from './universal-conversion-translation-admission-denominators.js'; import { conversionRouteMatchesDialectQuery as cdq, routeDialectDenominators as rdd } from './universal-conversion-dialect-routing.js';
 import { createUniversalConversionAdmissionRecord } from './universal-conversion-admission-record.js';
 import { createUniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence-receipt.js';
 import {
@@ -163,7 +163,7 @@ function createRouteArtifact(route, options) {
     lossClass: route.lossClass,
     adapter: route.adapter,
     adapterKind: route.adapterKind,
-    missingEvidence: route.missingEvidence ?? [], ...runtimeRoute,
+    missingEvidence: route.missingEvidence ?? [], ...rdd(route), ...runtimeRoute,
     runtimeAdapterRequirementIds: (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
     runtimeProofObligationIds: runtimeProof.obligationIds,
     runtimeProofCapabilities: runtimeProof.capabilities,
@@ -213,7 +213,7 @@ function selectRoutes(routes, options) {
     if (!m(options.routeId, [route.id])) return false;
     if (langs.length && !langs.includes(normalizeNativeLanguageId(route.sourceLanguage))) return false;
     if (targets.length && !targets.includes(route.target)) return false;
-    if (!m(options.mode, [route.mode])) return false;
+    if (!m(options.mode, [route.mode])) return false; if (!cdq(route, options)) return false;
     if (!m(options.readiness, [route.readiness])) return false;
     if (!m(options.admissionAction, [route.admissionAction])) return false; if (!tadm(tadfr(route), options, m)) return false;
     return true;

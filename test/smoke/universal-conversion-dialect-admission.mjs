@@ -60,6 +60,10 @@ assert.equal(blockedArtifact.routeId, blockedRoute.id);
 assert.equal(blockedArtifacts.index.translationDialectReadinesses.includes('blocked'), true);
 assert.equal(blockedArtifacts.index.translationDialectRecordIds.includes('dialect_js_process_env_to_rust'), true);
 assert.equal(blockedArtifacts.summary.compactCounts.translationAdmission.dialectRecordIds.dialect_js_process_env_to_rust, 1);
+const blockedLossArtifacts = createUniversalConversionArtifacts(blockedPlan, { dialectLossId: 'loss_node_process_env_projection' });
+assert.equal(blockedLossArtifacts.index.dialectLossIds.includes('loss_node_process_env_projection'), true);
+assert.equal(queryUniversalConversionArtifacts(blockedLossArtifacts, { dialectLossId: 'loss_node_process_env_projection' })[0].routeId, blockedRoute.id);
+assert.equal(createUniversalConversionArtifacts(blockedPlan, { dialectLossId: 'missing_loss' }).routeArtifacts.length, 0);
 const blockedWorklist = createUniversalConversionWorklist(blockedPlan, { routeId: blockedRoute.id });
 const blockedDialectItem = queryUniversalConversionWorklist(blockedWorklist, {
   translationDialectReadiness: 'blocked',
@@ -68,6 +72,11 @@ const blockedDialectItem = queryUniversalConversionWorklist(blockedWorklist, {
 assert.equal(Boolean(blockedDialectItem), true);
 assert.equal(blockedWorklist.summary.translationDialectReadinesses.includes('blocked'), true);
 assert.equal(blockedWorklist.summary.translationDialectRecordIds.includes('dialect_js_process_env_to_rust'), true);
+const blockedLossWorklist = createUniversalConversionWorklist(blockedPlan, { dialectLossId: 'loss_node_process_env_projection' });
+assert.equal(blockedLossWorklist.items.length > 0, true);
+assert.equal(queryUniversalConversionWorklist(blockedLossWorklist, { dialectLossId: 'loss_node_process_env_projection' }).found, true);
+assert.equal(createUniversalConversionWorklist(blockedPlan, { dialectLossId: 'missing_loss' }).items.length, 0);
+assert.equal(queryUniversalConversionWorklist(blockedLossWorklist, { dialectLossId: 'missing_loss' }).found, false);
 
 const reviewRegistry = createUniversalDialectRegistry({
   id: 'dialect_registry_review_js_generator',
@@ -107,6 +116,18 @@ assert.equal(queryUniversalConversionPlan(reviewPlan, { dialectExternKind: 'gene
 assert.equal(queryUniversalConversionPlan(reviewPlan, { dialectExternKind: 'macroExpansion' }).found, false);
 assert.equal(queryUniversalConversionPlan(reviewPlan, { dialectRegistryId: ['missing_registry', reviewRegistry.id], dialectDisposition: ['unsupported', 'runtime-required'], dialectEvidenceId: ['missing_evidence', 'evidence_vite_routes_manifest'] }).bestRoute.id, reviewRoute.id);
 assert.equal(createUniversalConversionRouteEvidenceReceipt(reviewPlan, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'evidence_vite_routes_manifest' }).routeId, reviewRoute.id);
+const reviewArtifacts = createUniversalConversionArtifacts(reviewPlan, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'evidence_vite_routes_manifest' });
+assert.equal(reviewArtifacts.index.dialectExternKinds.includes('generatorArtifact'), true);
+assert.equal(reviewArtifacts.index.dialectEvidenceIds.includes('evidence_vite_routes_manifest'), true);
+assert.equal(queryUniversalConversionArtifacts(reviewArtifacts, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'evidence_vite_routes_manifest' })[0].routeId, reviewRoute.id);
+assert.equal(createUniversalConversionArtifacts(reviewPlan, { dialectExternKind: 'macroExpansion' }).routeArtifacts.length, 0);
+const reviewWorklist = createUniversalConversionWorklist(reviewPlan, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'evidence_vite_routes_manifest' });
+assert.equal(reviewWorklist.items.length > 0, true);
+assert.equal(reviewWorklist.summary.dialectExternKinds.includes('generatorArtifact'), true);
+assert.equal(reviewWorklist.summary.dialectEvidenceIds.includes('evidence_vite_routes_manifest'), true);
+assert.equal(queryUniversalConversionWorklist(reviewWorklist, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'evidence_vite_routes_manifest' }).bestItem.routeIds.includes(reviewRoute.id), true);
+assert.equal(queryUniversalConversionWorklist(reviewWorklist, { dialectExternKind: 'macroExpansion' }).found, false);
+assert.equal(createUniversalConversionWorklist(reviewPlan, { dialectEvidenceId: 'missing_evidence' }).items.length, 0);
 
 function routeProof(id) {
   return {

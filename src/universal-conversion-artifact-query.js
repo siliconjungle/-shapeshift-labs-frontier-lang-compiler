@@ -5,6 +5,7 @@ import{rri,rrm}from './universal-conversion-artifact-runtime-routes.js';
 import{artifactConstraintIndex as aci,artifactConstraintsMatch as acm}from './universal-conversion-artifact-constraints.js';
 import{translationAdmissionDenominatorIndex as tadi,translationAdmissionDenominatorMatches as tadm}from './universal-conversion-translation-admission-denominators.js';
 import{interlinguaRecordMatches as irm}from './universal-interlingua-record.js';
+import{dialectDenominatorIndex as ddi,dialectDenominatorMatches as ddm}from './universal-conversion-dialect-routing.js';
 const ai='admissionRecordInterlingua',eri='evidenceReceiptInterlingua',soi='semanticOperationInterlingua';
 const aiFields=[['ConstraintFamilies','ConstraintFamily','interlinguaConstraintFamilies'],['ConstraintStatuses','ConstraintStatus','interlinguaConstraintStatuses'],['ConstraintActions','ConstraintAction','interlinguaConstraintActions'],['ConstraintSourceIds','ConstraintSourceId','interlinguaConstraintSourceIds'],['ConstraintEvidenceIds','ConstraintEvidenceId','interlinguaConstraintEvidenceIds'],['ConstraintRequiredKinds','ConstraintRequiredKind','interlinguaConstraintRequiredKinds'],['ConstraintRepresentedKinds','ConstraintRepresentedKind','interlinguaConstraintRepresentedKinds'],['ConstraintMissingKinds','ConstraintMissingKind','interlinguaConstraintMissingKinds'],['ConstraintMissingEvidence','ConstraintMissingEvidence','interlinguaConstraintMissingEvidence'],['ConstraintObligationKinds','ConstraintObligationKind','interlinguaConstraintObligationKinds'],['ConstraintObligationStatuses','ConstraintObligationStatus','interlinguaConstraintObligationStatuses'],['ConstraintObligationEvidenceIds','ConstraintObligationEvidenceId','interlinguaConstraintObligationEvidenceIds'],['ConstraintObligationMissingEvidence','ConstraintObligationMissingEvidence','interlinguaConstraintObligationMissingEvidence']];
 const cKeys='Families Statuses Actions EvidenceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence SourceIds ObligationKinds ObligationStatuses ObligationEvidenceIds ObligationMissingEvidence'.split(' ');
@@ -38,6 +39,7 @@ export function artifactIndex(a) {
     adapterIds: u(a.map((a) => a.adapter)),
     adapterKinds: u(a.map((a) => a.adapterKind)),
     routeMissingEvidence: u(a.flatMap((a) => a.missingEvidence ?? [])),
+    ...ddi(a),
     ...rri(a),
     runtimeAdapterRequirementIds: u(a.flatMap((a) => a.runtimeAdapterRequirementIds ?? [])),
     runtimeProofObligationIds: u(a.flatMap((a) => a.runtimeProofObligationIds ?? [])),
@@ -111,6 +113,7 @@ function matchesArtifact(record, query) {
     && match(query.adapterId, [record.adapter])
     && match(query.adapterKind, [record.adapterKind])
     && match(query.routeMissingEvidence, record.missingEvidence)
+    && ddm(record, query)
     && rrm(record, query)
     && match(query.runtimeAdapterRequirementId, record.runtimeAdapterRequirementIds)
     && match(query.runtimeProofObligationId, record.runtimeProofObligationIds)

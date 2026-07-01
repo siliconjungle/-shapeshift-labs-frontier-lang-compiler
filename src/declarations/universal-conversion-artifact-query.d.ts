@@ -4,28 +4,28 @@ import type{UniversalConversionAdmissionAction as UCAA,UniversalConversionPriori
 import type{UniversalConversionArtifactAdmissionBucket as UCAB,UniversalConversionArtifactAdmissionStatus as UCAS}from './universal-conversion-artifacts.js';
 import type{UniversalConversionArtifactSourceMapIndex as USMI,UniversalConversionArtifactSourceMapQuery as USMQ}from './universal-conversion-artifact-source-maps.js';
 import type{UniversalConversionArtifactRuntimeRouteIndex as URRI,UniversalConversionArtifactRuntimeRouteQuery as URRQ}from './universal-conversion-artifact-runtime-routes.js';
-import type{UniversalRepresentationCoverageQuery}from './universal-representation-coverage.js';
-import type{UniversalInterlinguaQuery}from './universal-interlingua.js';
-import type{UniversalResourceTransferQuery}from './universal-resource-transfer.js';
-import type{UniversalLifetimeConstraintQuery}from './universal-lifetime-constraints.js';
-import type{UniversalControlFlowConstraintQuery}from './universal-control-flow-constraints.js';
-import type{UniversalCallableBoundaryConstraintQuery}from './universal-callable-boundary-constraints.js';
-import type{UniversalAdtPatternConstraintQuery}from './universal-adt-pattern-constraints.js';
-import type{UniversalBorrowScopeConstraintQuery}from './universal-borrow-scope-constraints.js';
-import type{UniversalBorrowCheckerConstraintQuery}from './universal-borrow-checker-constraints.js';
-import type{UniversalDataLayoutConstraintQuery}from './universal-data-layout-constraints.js';
-import type{UniversalEffectConstraintQuery}from './universal-effect-constraints.js';
-import type{UniversalConcurrencyModelConstraintQuery}from './universal-concurrency-model-constraints.js';
-import type{UniversalErrorModelConstraintQuery}from './universal-error-model-constraints.js';
-import type{UniversalEvaluationModelConstraintQuery}from './universal-evaluation-model-constraints.js';
-import type{UniversalHostEnvironmentConstraintQuery}from './universal-host-environment-constraints.js';
-import type{UniversalMemoryModelConstraintQuery}from './universal-memory-model-constraints.js';
-import type{UniversalMetaprogrammingConstraintQuery}from './universal-metaprogramming-constraints.js';
-import type{UniversalScopeBindingConstraintQuery}from './universal-scope-binding-constraints.js';
-import type { UniversalModuleConstraintQuery } from './universal-module-constraints.js'; import type { UniversalNumericSemanticsConstraintQuery } from './universal-numeric-semantics-constraints.js'; import type { UniversalTextSemanticsConstraintQuery } from './universal-text-semantics-constraints.js'; import type { UniversalCollectionSemanticsConstraintQuery } from './universal-collection-semantics-constraints.js'; import type { UniversalSerializationSemanticsConstraintQuery } from './universal-serialization-semantics-constraints.js'; import type { UniversalDependencySemanticsConstraintQuery } from './universal-dependency-semantics-constraints.js';
-import type { UniversalObjectModelConstraintQuery } from './universal-object-model-constraints.js';
-import type { UniversalProtocolConstraintQuery } from './universal-protocol-constraints.js';
-import type { UniversalTypeConstraintQuery } from './universal-type-constraints.js';
+import type{UniversalRepresentationCoverageQuery as URCQ}from './universal-representation-coverage.js';
+import type{UniversalInterlinguaQuery as UIQ}from './universal-interlingua.js';
+import type{UniversalResourceTransferQuery as URTQ}from './universal-resource-transfer.js';
+import type{UniversalLifetimeConstraintQuery as ULCQ}from './universal-lifetime-constraints.js';
+import type{UniversalControlFlowConstraintQuery as UCFQ}from './universal-control-flow-constraints.js';
+import type{UniversalCallableBoundaryConstraintQuery as UCBCQ}from './universal-callable-boundary-constraints.js';
+import type{UniversalAdtPatternConstraintQuery as UAPQ}from './universal-adt-pattern-constraints.js';
+import type{UniversalBorrowScopeConstraintQuery as UBSQ}from './universal-borrow-scope-constraints.js';
+import type{UniversalBorrowCheckerConstraintQuery as UBCQ}from './universal-borrow-checker-constraints.js';
+import type{UniversalDataLayoutConstraintQuery as UDLCQ}from './universal-data-layout-constraints.js';
+import type{UniversalEffectConstraintQuery as UECQ}from './universal-effect-constraints.js';
+import type{UniversalConcurrencyModelConstraintQuery as UCMCQ}from './universal-concurrency-model-constraints.js';
+import type{UniversalErrorModelConstraintQuery as UEMCQ}from './universal-error-model-constraints.js';
+import type{UniversalEvaluationModelConstraintQuery as UEVQ}from './universal-evaluation-model-constraints.js';
+import type{UniversalHostEnvironmentConstraintQuery as UHEQ}from './universal-host-environment-constraints.js';
+import type{UniversalMemoryModelConstraintQuery as UMMQ}from './universal-memory-model-constraints.js';
+import type{UniversalMetaprogrammingConstraintQuery as UMPQ}from './universal-metaprogramming-constraints.js';
+import type{UniversalScopeBindingConstraintQuery as USBQ}from './universal-scope-binding-constraints.js';
+import type { UniversalModuleConstraintQuery as UMQ } from './universal-module-constraints.js'; import type { UniversalNumericSemanticsConstraintQuery as UNSQ } from './universal-numeric-semantics-constraints.js'; import type { UniversalTextSemanticsConstraintQuery as UTSQ } from './universal-text-semantics-constraints.js'; import type { UniversalCollectionSemanticsConstraintQuery as UCSQ } from './universal-collection-semantics-constraints.js'; import type { UniversalSerializationSemanticsConstraintQuery as USSQ } from './universal-serialization-semantics-constraints.js'; import type { UniversalDependencySemanticsConstraintQuery as UDSQ } from './universal-dependency-semantics-constraints.js';
+import type { UniversalObjectModelConstraintQuery as UOMQ } from './universal-object-model-constraints.js';
+import type { UniversalProtocolConstraintQuery as UPQ } from './universal-protocol-constraints.js';
+import type { UniversalTypeConstraintQuery as UTQ } from './universal-type-constraints.js';
 import type{UniversalRuntimeCapabilityKind as URK,UniversalRuntimeProofSignalKind as UPS}from './universal-runtime-capabilities.js'; type RS=readonly string[]; type QS=string|RS; type QR<T>=T|readonly T[];
 export type UniversalConversionSemanticEditIndexKey='semanticEditStatuses'|'semanticEditScriptIds'|'semanticEditProjectionIds'|'semanticEditReplayIds'|'semanticEditReplayStatuses'|'semanticEditReplayActions'|'semanticEditAdmissionStatuses'|'semanticEditAdmissionActions'|'semanticEditAdmissionReadinesses'|'semanticEditReplayCurrentHashes'|'semanticEditReplayOutputHashes'|'semanticEditKeys'|'semanticEditHashes'|'semanticIdentityHashes'|'sourceIdentityHashes'|'operationContentHashes'|'editContentHashes'|'sourceBackprojectionModes'|'semanticTransformIds'|'semanticTransformKeys'|'semanticTransformIdentityHashes'|'semanticTransformContentHashes'|'projectionIdentityHashes'|'semanticTransformReadinesses'|'semanticTransformEvidenceIds'|'transformSourceLanguages'|'transformTargetLanguages'|'transformSourcePaths'|'transformTargetPaths'|'transformCrossLanguages'|'transformSourceMapIds'|'transformSourceMapLinkIds'|'transformSourceMapMappingIds'|'transformBaseHashes'|'transformTargetHashes'|'targetPortabilityStatuses'|'targetPortabilityActions'|'targetPortabilityReasonCodes'|'semanticEditSidecarWarningCodes'|'semanticEditSidecarZeroRecordWarningCodes';
 export type UniversalConversionSemanticEditMetricKey='semanticEditSidecarQualityRecords'|'semanticEditSidecarSymbolCount'|'semanticEditSidecarOwnershipRegionCount'|'semanticEditSidecarPatchHintCount'|'semanticEditSidecarWarningCount'|'semanticEditSidecarZeroRecordWarningCount';
@@ -33,8 +33,9 @@ type USEQK='semanticEditStatus'|'semanticEditStatuses'|'semanticEditScriptId'|'s
 type UCAIK='routeIds'|'historyIds'|'patchBundleIds'|'admissionRecordIds'|'evidenceReceiptIds'|'languages'|'targets'|'modes'|'lossClasses'|'adapterIds'|'adapterKinds'|'routeMissingEvidence'|'runtimeAdapterRequirementIds'|'runtimeProofObligationIds'|'runtimeProofStatuses'|'blockers'|'reviewReasons'|'readinesses'|'admissionStatuses'|'admissionBuckets'|'admissionRisks'|'sourcePaths'|'sourceHashes'|'ownershipKeys'|'conflictKeys'|'evidenceIds'|'proofIds'|'evidenceReceiptEvidenceIds'|'evidenceReceiptProofEvidenceIds'|'evidenceReceiptMissingEvidence'|'evidenceReceiptRejectedReasons'|'evidenceReceiptRejectedIds';
 type UTAIK='translationAdmissionStatuses'|'translationAdmissionActions'|'missingTranslationEvidence'|'translationEvidenceIds'|'translationProofEvidenceIds'|'translationRuntimeReadinesses'|'translationRuntimeAdapterRequirementIds'|'translationRuntimeProofObligationIds'|'translationRuntimeProofCapabilities'|'translationRuntimeProofStatuses'|'translationRuntimeProofRequiredSignals'|'translationRuntimeProofProvidedSignals'|'translationRuntimeProofMissingSignals'|'translationDialectReadinesses'|'translationDialectRecordIds'|'requiredTranslationConstructKinds'|'representedTranslationConstructKinds'|'targetAdapterIds';
 type UTDQK='translationRuntimeReadiness'|'translationRuntimeAdapterRequirementId'|'translationRuntimeProofObligationId'|'translationRuntimeProofCapability'|'translationRuntimeProofStatus'|'translationRuntimeProofRequiredSignal'|'translationRuntimeProofProvidedSignal'|'translationRuntimeProofMissingSignal'|'translationDialectReadiness'|'translationDialectRecordId';
+type UDK='dialectReadinesses'|'dialectRegistryIds'|'dialectRecordIds'|'dialectConstructKinds'|'dialectExternKinds'|'dialectDispositions'|'dialectEvidenceIds'|'dialectLossIds'; type UDQK='dialectReadiness'|'dialectRegistryId'|'dialectRecordId'|'dialectConstructKind'|'dialectExternKind'|'dialectDisposition'|'dialectEvidenceId'|'dialectLossId';
 
-export interface UniversalConversionArtifactIndex extends USMI, URRI, Readonly<Record<UniversalConversionSemanticEditIndexKey|UCAIK|UTAIK, RS>>, Readonly<Record<UniversalConversionSemanticEditMetricKey, number>> {
+export interface UniversalConversionArtifactIndex extends USMI, URRI, Readonly<Record<UniversalConversionSemanticEditIndexKey|UCAIK|UTAIK|UDK, RS>>, Readonly<Record<UniversalConversionSemanticEditMetricKey, number>> {
   readonly runtimeProofCapabilities: readonly URK[]; readonly runtimeProofRequiredSignals: readonly UPS[]; readonly runtimeProofProvidedSignals: readonly UPS[]; readonly runtimeProofMissingSignals: readonly UPS[];
   readonly admissionRecordInterlinguaRecordIds: RS; readonly admissionRecordInterlinguaLoweringDispositions: RS;
   readonly admissionRecordInterlinguaConstraintFamilies: RS; readonly admissionRecordInterlinguaConstraintStatuses: RS; readonly admissionRecordInterlinguaConstraintActions: RS; readonly admissionRecordInterlinguaConstraintSourceIds: RS; readonly admissionRecordInterlinguaConstraintEvidenceIds: RS;
@@ -133,7 +134,7 @@ export interface UniversalConversionArtifactIndex extends USMI, URRI, Readonly<R
   readonly transformIdentityHashes: RS;
 }
 
-export interface UniversalConversionArtifactQuery extends USMQ, URRQ, UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalCallableBoundaryConstraintQuery, UniversalAdtPatternConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalHostEnvironmentConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalNumericSemanticsConstraintQuery, UniversalTextSemanticsConstraintQuery, UniversalCollectionSemanticsConstraintQuery, UniversalSerializationSemanticsConstraintQuery, UniversalDependencySemanticsConstraintQuery, UniversalObjectModelConstraintQuery, UniversalProtocolConstraintQuery, UniversalTypeConstraintQuery, Readonly<Partial<Record<USEQK, QS|boolean>>>, Readonly<Partial<Record<UTDQK, QS>>> {
+export interface UniversalConversionArtifactQuery extends USMQ, URRQ, URCQ, UIQ, URTQ, ULCQ, UCFQ, UCBCQ, UAPQ, UBSQ, UBCQ, UDLCQ, UECQ, UCMCQ, UEMCQ, UEVQ, UHEQ, UMMQ, UMPQ, USBQ, UMQ, UNSQ, UTSQ, UCSQ, USSQ, UDSQ, UOMQ, UPQ, UTQ, Readonly<Partial<Record<USEQK, QS|boolean>>>, Readonly<Partial<Record<UTDQK|UDQK, QS>>> {
   readonly routeId?: QS;
   readonly historyId?: QS;
   readonly patchBundleId?: QS;

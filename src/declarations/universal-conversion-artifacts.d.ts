@@ -27,6 +27,7 @@ import type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 
 export type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery, UniversalConversionSemanticEditIndexKey, UniversalConversionSemanticEditMetricKey } from './universal-conversion-artifact-query.js';
+type UniversalConversionRouteDialectQueryKey='dialectReadiness'|'dialectRegistryId'|'dialectRecordId'|'dialectConstructKind'|'dialectExternKind'|'dialectDisposition'|'dialectEvidenceId'|'dialectLossId'; export interface UniversalConversionRouteDialectQuery extends Pick<UniversalConversionArtifactQuery, UniversalConversionRouteDialectQueryKey> {}
 
 export type UniversalConversionArtifactAdmissionStatus = 'queued' | 'needs-review' | 'blocked' | string;
 export type UniversalConversionArtifactAdmissionBucket =
@@ -209,7 +210,7 @@ export interface UniversalConversionRouteArtifact extends UniversalConversionRou
   readonly lossClass?: string;
   readonly adapter?: string;
   readonly adapterKind?: string;
-  readonly missingEvidence: readonly string[];
+  readonly missingEvidence: readonly string[]; readonly dialectReadiness?: string; readonly dialectRegistryIds: readonly string[]; readonly dialectRecordIds: readonly string[]; readonly dialectConstructKinds: readonly string[]; readonly dialectExternKinds: readonly string[]; readonly dialectDispositions: readonly string[]; readonly dialectEvidenceIds: readonly string[]; readonly dialectLossIds: readonly string[];
   readonly runtimeAdapterRequirementIds: readonly string[];
   readonly runtimeProofObligationIds: readonly string[];
   readonly runtimeProofCapabilities: readonly UniversalRuntimeCapabilityKind[];
@@ -288,7 +289,7 @@ export interface UniversalConversionArtifacts {
   } & Record<string, unknown>;
 }
 
-export interface CreateUniversalConversionArtifactsOptions {
+export interface CreateUniversalConversionArtifactsOptions extends UniversalConversionRouteDialectQuery {
   readonly id?: string;
   readonly planId?: string;
   readonly generatedAt?: number | string;
