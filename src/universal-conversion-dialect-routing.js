@@ -34,12 +34,19 @@ export function conversionDialectCoverage(registries = [], language = {}, target
 }
 
 export function conversionRouteMatchesDialectQuery(route, query = {}) {
-  if (query.dialectReadiness && route.dialect?.readiness !== query.dialectReadiness) return false;
-  if (query.dialectRegistryId && !(route.dialect?.registryIds ?? []).includes(query.dialectRegistryId)) return false;
-  if (query.dialectRecordId && !(route.dialect?.recordIds ?? []).includes(query.dialectRecordId)) return false;
-  if (query.dialectConstructKind && !(route.dialect?.constructKinds ?? []).includes(query.dialectConstructKind)) return false;
-  if (query.dialectDisposition && !(route.dialect?.projectionDispositions ?? []).includes(query.dialectDisposition)) return false;
+  if (!match(query.dialectReadiness, [route.dialect?.readiness])) return false;
+  if (!match(query.dialectRegistryId, route.dialect?.registryIds ?? [])) return false;
+  if (!match(query.dialectRecordId, route.dialect?.recordIds ?? [])) return false;
+  if (!match(query.dialectConstructKind, route.dialect?.constructKinds ?? [])) return false;
+  if (!match(query.dialectDisposition, route.dialect?.projectionDispositions ?? [])) return false;
   return true;
+}
+
+function match(filter, values) {
+  const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];
+  if (!filters.length) return true;
+  const valueSet = new Set((values ?? []).filter(Boolean).map(String));
+  return filters.some((item) => valueSet.has(String(item)));
 }
 
 function addRegistry(registries, value) {

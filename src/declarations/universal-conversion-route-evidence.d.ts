@@ -4,6 +4,7 @@ import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } 
 import type { UniversalConversionRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
 import type { UniversalConversionArtifactIndex, UniversalConversionSemanticEditMetricKey } from './universal-conversion-artifact-query.js';
 import type { UniversalConversionSemanticEditCompactCounts, UniversalConversionSemanticEditCompactCountKey, UniversalConversionTranslationAdmissionCompactCounts } from './universal-conversion-compact-counts.js';
+import type { UniversalDialectConstructKind, UniversalDialectProjectionDisposition } from './universal-dialects.js';
 import type { UniversalInterlinguaConstraintEdgeKind, UniversalInterlinguaLoweringDisposition } from './universal-interlingua.js';
 import type {
   UniversalConversionAdmissionAction,
@@ -107,6 +108,11 @@ export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly runtimeProofRequiredSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
   readonly runtimeProofProvidedSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
   readonly runtimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
+  readonly dialectReadiness?: SemanticMergeReadiness | string | readonly (SemanticMergeReadiness | string)[];
+  readonly dialectRegistryId?: string | readonly string[];
+  readonly dialectRecordId?: string | readonly string[];
+  readonly dialectConstructKind?: UniversalDialectConstructKind | readonly UniversalDialectConstructKind[];
+  readonly dialectDisposition?: UniversalDialectProjectionDisposition | readonly UniversalDialectProjectionDisposition[];
   readonly translationRuntimeReadiness?: SemanticMergeReadiness | string | readonly (SemanticMergeReadiness | string)[];
   readonly translationRuntimeAdapterRequirementId?: string | readonly string[];
   readonly translationRuntimeProofObligationId?: string | readonly string[];

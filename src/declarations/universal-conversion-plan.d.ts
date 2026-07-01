@@ -19,6 +19,7 @@ import type {
   UniversalDialectRegistryInput,
   UniversalExternRecordInput
 } from './universal-dialects.js';
+type UniversalConversionPlanRepresentationQuery = Omit<URCQ, 'dialectReadiness'>;
 export type UniversalConversionRouteMode =
   | 'preserve-source'
   | 'target-adapter'
@@ -240,7 +241,7 @@ export interface UniversalConversionPlanOptions extends UCO, UniversalConversion
   readonly effects?: UniversalConversionPlanOptions['runtimeRequirements'];
   readonly evidence?: readonly EvidenceRecord[];
 }
-export interface UniversalConversionPlanQuery extends URCQ, UniversalInterlinguaQuery, UniversalConversionPlanConstraintQuery {
+export interface UniversalConversionPlanQuery extends UniversalConversionPlanRepresentationQuery, UniversalInterlinguaQuery, UniversalConversionPlanConstraintQuery {
   readonly sourceLanguage?: SL | string;
   readonly language?: SL | string;
   readonly target?: CT | string;
@@ -262,11 +263,11 @@ export interface UniversalConversionPlanQuery extends URCQ, UniversalInterlingua
   readonly runtimeProofRequiredSignal?: UPS | readonly UPS[];
   readonly runtimeProofProvidedSignal?: UPS | readonly UPS[];
   readonly runtimeProofMissingSignal?: UPS | readonly UPS[];
-  readonly dialectReadiness?: SMR;
-  readonly dialectRegistryId?: string;
-  readonly dialectRecordId?: string;
-  readonly dialectConstructKind?: UniversalDialectConstructKind;
-  readonly dialectDisposition?: UniversalDialectProjectionDisposition;
+  readonly dialectReadiness?: SMR | readonly SMR[];
+  readonly dialectRegistryId?: string | readonly string[];
+  readonly dialectRecordId?: string | readonly string[];
+  readonly dialectConstructKind?: UniversalDialectConstructKind | readonly UniversalDialectConstructKind[];
+  readonly dialectDisposition?: UniversalDialectProjectionDisposition | readonly UniversalDialectProjectionDisposition[];
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus; readonly translationAdmissionAction?: UniversalTranslationAdmissionAction;
   readonly missingTranslationEvidence?: string; readonly translationEvidenceId?: string; readonly translationProofEvidenceId?: string;
   readonly translationRuntimeReadiness?: SMR | readonly SMR[];

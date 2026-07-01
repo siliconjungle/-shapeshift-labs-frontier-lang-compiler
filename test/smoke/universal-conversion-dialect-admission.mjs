@@ -2,6 +2,7 @@ import { assert } from './helpers.mjs';
 import {
   createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
   createUniversalDialectRegistry,
   queryUniversalConversionArtifacts,
@@ -39,6 +40,8 @@ assert.equal(blockedRoute.representation.surfaces.dialect.recordIds.includes('di
 assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectReadiness: 'blocked' }).bestRoute.id, blockedRoute.id);
 assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectConstructKind: 'runtime' }).bestRoute.id, blockedRoute.id);
 assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectRecordId: 'dialect_js_process_env_to_rust' }).bestRoute.id, blockedRoute.id);
+assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectReadiness: ['ready', 'blocked'], dialectRegistryId: ['missing_registry', blockedRegistry.id], dialectConstructKind: ['extern', 'runtime'], dialectRecordId: ['missing_record', 'dialect_js_process_env_to_rust'] }).bestRoute.id, blockedRoute.id);
+assert.equal(createUniversalConversionRouteEvidenceReceipt(blockedPlan, { dialectReadiness: ['ready', 'blocked'], dialectRecordId: ['missing_record', 'dialect_js_process_env_to_rust'] }).routeId, blockedRoute.id);
 assert.equal(blockedRoute.translationAdmission.dialectReadiness, 'blocked');
 assert.equal(blockedRoute.translationAdmission.dialectRecordIds.includes('dialect_js_process_env_to_rust'), true);
 assert.equal(queryUniversalConversionPlan(blockedPlan, {
@@ -95,6 +98,7 @@ assert.equal(reviewRoute.missingEvidence.includes('dialect-projection-evidence')
 assert.equal(reviewRoute.review.some((reason) => reason.includes('Dialect projection needs review')), true);
 assert.equal(reviewRoute.representation.constructs.find((entry) => entry.kind === 'dialect-projection').status, 'review');
 assert.equal(queryUniversalConversionPlan(reviewPlan, { dialectDisposition: 'runtime-required' }).bestRoute.id, reviewRoute.id);
+assert.equal(queryUniversalConversionPlan(reviewPlan, { dialectRegistryId: ['missing_registry', reviewRegistry.id], dialectDisposition: ['unsupported', 'runtime-required'] }).bestRoute.id, reviewRoute.id);
 
 function routeProof(id) {
   return {

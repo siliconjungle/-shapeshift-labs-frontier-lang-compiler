@@ -66,7 +66,7 @@ export function representationCoverageMatches(coverage, query = {}) {
   return match(query.constructKind ?? query.construct, coverage?.constructKinds)
     && match(query.runtimeCapability, coverage?.surfaces?.runtime?.requiredCapabilities)
     && match(query.dialectConstructKind, coverage?.surfaces?.dialect?.constructKinds)
-    && (!query.dialectReadiness || coverage?.surfaces?.dialect?.readiness === query.dialectReadiness)
+    && match(query.dialectReadiness, [coverage?.surfaces?.dialect?.readiness])
     && match(query.sourceMapPrecision, coverage?.surfaces?.sourceMaps?.precisions)
     && match(query.transformIdentityHash, coverage?.surfaces?.mergeRefs?.transformIdentityHashes);
 }

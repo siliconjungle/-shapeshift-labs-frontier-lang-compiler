@@ -88,7 +88,7 @@ export interface UniversalRepresentationCoverageQuery {
   readonly construct?: UniversalRepresentationConstructKind | readonly UniversalRepresentationConstructKind[];
   readonly runtimeCapability?: UniversalRuntimeCapabilityKind | readonly UniversalRuntimeCapabilityKind[];
   readonly dialectConstructKind?: string | readonly string[];
-  readonly dialectReadiness?: string;
+  readonly dialectReadiness?: string | readonly string[];
   readonly sourceMapPrecision?: string | readonly string[];
   readonly transformIdentityHash?: string | readonly string[];
 }

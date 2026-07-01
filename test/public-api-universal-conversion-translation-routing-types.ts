@@ -37,6 +37,11 @@ routingArtifacts.admissionRecords[0]?.translationRuntimeProofMissingSignals sati
 routingArtifacts.evidenceReceipts[0]?.translationDialectRecordIds satisfies readonly string[] | undefined;
 
 const routingReceipt: UniversalConversionRouteEvidenceReceipt = createUniversalConversionRouteEvidenceReceipt(routingPlan, {
+  dialectReadiness: ['ready'],
+  dialectRegistryId: ['dialect_registry'],
+  dialectRecordId: ['dialect_record'],
+  dialectConstructKind: ['runtime'],
+  dialectDisposition: ['runtime-required'],
   translationRuntimeProofMissingSignal: ['network-trace-hash'],
   translationDialectReadiness: ['ready']
 });
