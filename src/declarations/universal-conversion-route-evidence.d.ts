@@ -121,6 +121,11 @@ export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly translationDialectRecordId?: string | readonly string[];
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus | readonly UniversalTranslationAdmissionStatus[];
   readonly translationAdmissionAction?: UniversalTranslationAdmissionAction | readonly UniversalTranslationAdmissionAction[];
+  readonly missingTranslationEvidence?: string | readonly string[];
+  readonly translationEvidenceId?: string | readonly string[];
+  readonly translationProofEvidenceId?: string | readonly string[];
+  readonly requiredTranslationConstructKind?: string | readonly string[];
+  readonly representedTranslationConstructKind?: string | readonly string[];
   readonly targetAdapterId?: string | readonly string[];
   readonly evidence?: readonly EvidenceRecord[] | readonly Record<string, unknown>[];
   readonly includeRejectedEvidence?: boolean;

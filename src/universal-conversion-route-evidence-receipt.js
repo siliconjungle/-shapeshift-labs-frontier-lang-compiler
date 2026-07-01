@@ -190,6 +190,7 @@ function selectRoute(routeOrInput, options, context) {
     translationRuntimeReadiness: options.translationRuntimeReadiness, translationRuntimeAdapterRequirementId: options.translationRuntimeAdapterRequirementId, translationRuntimeProofObligationId: options.translationRuntimeProofObligationId, translationRuntimeProofMissingSignal: options.translationRuntimeProofMissingSignal, translationDialectReadiness: options.translationDialectReadiness, translationDialectRecordId: options.translationDialectRecordId,
     translationAdmissionStatus: options.translationAdmissionStatus,
     translationAdmissionAction: options.translationAdmissionAction,
+    missingTranslationEvidence: options.missingTranslationEvidence, translationEvidenceId: options.translationEvidenceId, translationProofEvidenceId: options.translationProofEvidenceId, requiredTranslationConstructKind: options.requiredTranslationConstructKind, representedTranslationConstructKind: options.representedTranslationConstructKind,
     targetAdapterId: options.targetAdapterId
   };
   const queried = queryUniversalConversionPlan(plan, query, context);

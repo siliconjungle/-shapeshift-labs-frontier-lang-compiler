@@ -59,6 +59,9 @@ assert.equal(receipt.summary.rejectedByReason['unscoped-evidence'], 1);
 assert.equal(receipt.summary.rejectedByReason['target-mismatch'], 1);
 assert.equal(receipt.autoMergeClaim, false);
 assert.equal(receipt.semanticEquivalenceClaim, false);
+const translationEvidenceFilteredReceipt = createUniversalConversionRouteEvidenceReceipt(plan, { translationAdmissionStatus: ['needs-evidence', 'blocked'], translationAdmissionAction: ['collect-translation-evidence', 'reject'], missingTranslationEvidence: ['missing-evidence', 'translation-target-adapter'], translationEvidenceId: ['missing-evidence', 'receipt_scoped_translation_proof'], translationProofEvidenceId: ['missing-proof', 'receipt_scoped_translation_proof'], requiredTranslationConstructKind: ['missing-kind', 'proof-evidence'], representedTranslationConstructKind: ['missing-kind', 'proof-evidence'] });
+assert.equal(translationEvidenceFilteredReceipt.routeId, route.id);
+assert.throws(() => createUniversalConversionRouteEvidenceReceipt(plan, { sourceLanguage: 'javascript', target: 'rust', translationProofEvidenceId: 'missing_receipt_proof' }), /No conversion route matched/);
 
 const translationDenominatorRoute = {
   id: 'translation_denominator_route',
@@ -124,7 +127,8 @@ const missingReceipt = createUniversalConversionRouteEvidenceReceipt(createUnive
   targets: ['rust']
 }), {
   sourceLanguage: 'javascript',
-  target: 'rust'
+  target: 'rust',
+  missingTranslationEvidence: ['missing-evidence', 'translation-proof-or-replay']
 });
 assert.equal(missingReceipt.missingEvidence.includes('route-bound-proof-evidence'), true);
 assert.equal(missingReceipt.summary.missingEvidence >= 1, true);

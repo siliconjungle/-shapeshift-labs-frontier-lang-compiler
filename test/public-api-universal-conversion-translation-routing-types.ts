@@ -74,6 +74,11 @@ const routingReceipt: UniversalConversionRouteEvidenceReceipt = createUniversalC
   dialectDisposition: ['runtime-required'],
   translationAdmissionStatus: ['needs-evidence'],
   translationAdmissionAction: ['collect-translation-evidence'],
+  missingTranslationEvidence: ['translation-proof-or-replay'],
+  translationEvidenceId: ['evidence_admittable_translation_proof'],
+  translationProofEvidenceId: ['evidence_admittable_translation_proof'],
+  requiredTranslationConstructKind: ['target-adapter'],
+  representedTranslationConstructKind: ['target-adapter'],
   targetAdapterId: ['fixture-js-rust'],
   translationRuntimeProofMissingSignal: ['network-trace-hash'],
   translationDialectReadiness: ['ready']
