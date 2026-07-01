@@ -1160,7 +1160,7 @@ The projection target matrix separates five runtime/API classes:
 
 `createUniversalConversionRouteEvidenceReceipt` turns one route plus optional raw evidence records into a compact route-evidence receipt. It records route-bound evidence IDs, passed proof IDs, rejected unscoped or mismatched evidence, missing proof/source evidence, sources, ownership keys, conflict keys, blockers, and review reasons. This gives distributed workers a durable answer to "which evidence actually backs this conversion route?" without promoting a passed replay into a broad semantic-equivalence or auto-merge claim.
 
-`createUniversalConversionWorklist` derives queue-ready next work from those routes: add a target adapter, collect translation proof, prove runtime adapters, collect dialect projection evidence, collect source/parser/source-map evidence, collect missing interlingua obligation proof, review a route, or unblock a blocked route. Worklist items are grouped by source language, target, route IDs, evidence keys, missing evidence, blockers, review reasons, interlingua constraint families/obligations, and tasks so coordinators can refill swarms without re-scanning every route. `queryUniversalConversionWorklist` filters those items by kind, priority, route, language, target, readiness, action, evidence key, missing evidence, blocker, review reason, runtime adapter requirement, dialect record, target adapter ID, interlingua constraint family, or interlingua obligation kind/status. The worklist is still conservative route evidence: it keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
+`createUniversalConversionWorklist` derives queue-ready next work from those routes: add a target adapter, collect translation proof, prove runtime adapters, collect dialect projection evidence, collect source/parser/source-map evidence, collect missing interlingua obligation proof, review a route, or unblock a blocked route. Worklist items are grouped by source language, target, route IDs, evidence keys, missing evidence, blockers, review reasons, interlingua constraint families/obligations, and tasks so coordinators can refill swarms without re-scanning every route. `queryUniversalConversionWorklist` filters those items by kind, priority, route, language, target, readiness, action, evidence key, missing evidence, blocker, review reason, runtime adapter requirement, dialect record, target adapter ID, interlingua constraint family/source id, or interlingua obligation kind/status/missing evidence. The worklist is still conservative route evidence: it keeps `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
 Each route also carries `translationAdmission`, an explicit cross-language review contract with status/action pairs: `blocked`/`reject`, `needs-adapter`/`add-target-adapter`, `needs-evidence`/`collect-translation-evidence`, `needs-review`/`review-target-adapter`, or `admittable-for-review`/`materialize-review-record`. It records required and represented construct kinds, missing translation evidence, bound evidence IDs, runtime adapter requirements, dialect records, and the target adapter ID while keeping `autoMergeClaim: false` and `semanticEquivalenceClaim: false`.
 
@@ -1322,8 +1322,9 @@ semantic-equivalence claims.
 
 Route evidence receipts also expose interlingua constraint obligations. A
 receipt can now name the interlingua record, lowering disposition, constraint
-families, missing kinds, missing evidence, obligation kinds, and obligation
-statuses that still need proof. Worklist summaries project the same obligation
+families, actions, source ids, required/represented kinds, missing kinds,
+missing evidence, obligation kinds, and obligation statuses that still need proof.
+Worklist summaries project the same obligation
 fields, so coordinators can route borrow/type/effect/object-model proof tasks
 without treating a receipt as a semantic-equivalence claim.
 Artifact indexes and artifact queries expose the receipt-level fields too, so a

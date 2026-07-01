@@ -46,6 +46,10 @@ export interface UniversalConversionEvidenceReceiptCompactCounts {
   readonly interlinguaConstraintObligations: number;
   readonly interlinguaConstraintByFamily: Readonly<Record<string, number>>;
   readonly interlinguaConstraintByStatus: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintActions: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintSourceIds: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintRequiredKinds: Readonly<Record<string, number>>;
+  readonly interlinguaConstraintRepresentedKinds: Readonly<Record<string, number>>;
   readonly interlinguaConstraintMissingKinds: Readonly<Record<string, number>>;
   readonly interlinguaConstraintMissingEvidence: Readonly<Record<string, number>>;
   readonly interlinguaConstraintObligationKinds: Readonly<Record<string, number>>;

@@ -8,6 +8,7 @@ import type {
   UniversalConversionRouteAction,
   UniversalConversionRouteMode
 } from './universal-conversion-plan.js';
+import type { UniversalInterlinguaConstraintEdgeKind } from './universal-interlingua.js';
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 
 export type UniversalConversionWorkItemKind =
@@ -59,7 +60,7 @@ export interface UniversalConversionWorkItem {
   readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly dialectRecordIds: readonly string[];
   readonly targetAdapterIds: readonly string[];
-  readonly interlinguaConstraintFamilies: readonly string[];
+  readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[];
   readonly interlinguaConstraintSourceIds: readonly string[];
   readonly interlinguaConstraintObligationKinds: readonly string[];
   readonly interlinguaConstraintObligationStatuses: readonly string[];
@@ -129,7 +130,7 @@ export interface UniversalConversionWorklist {
     readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
-    readonly interlinguaConstraintFamilies: readonly string[];
+    readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[];
     readonly interlinguaConstraintSourceIds: readonly string[];
     readonly interlinguaConstraintObligationKinds: readonly string[];
     readonly interlinguaConstraintObligationStatuses: readonly string[];

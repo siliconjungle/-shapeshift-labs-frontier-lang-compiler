@@ -112,6 +112,10 @@ export interface UniversalConversionRouteEvidenceReceipt {
   readonly interlinguaLoweringDisposition?: UniversalInterlinguaLoweringDisposition;
   readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[];
   readonly interlinguaConstraintStatuses: readonly string[];
+  readonly interlinguaConstraintActions: readonly string[];
+  readonly interlinguaConstraintSourceIds: readonly string[];
+  readonly interlinguaConstraintRequiredKinds: readonly string[];
+  readonly interlinguaConstraintRepresentedKinds: readonly string[];
   readonly interlinguaConstraintMissingKinds: readonly string[];
   readonly interlinguaConstraintMissingEvidence: readonly string[];
   readonly interlinguaConstraintObligationKinds: readonly string[];
@@ -144,6 +148,10 @@ export interface UniversalConversionRouteEvidenceReceipt {
     readonly interlinguaConstraintObligations: number;
     readonly interlinguaConstraintByFamily: Readonly<Record<string, number>>;
     readonly interlinguaConstraintByStatus: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintActions: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintSourceIds: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintRequiredKinds: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintRepresentedKinds: Readonly<Record<string, number>>;
     readonly interlinguaConstraintMissingEvidence: Readonly<Record<string, number>>;
     readonly interlinguaConstraintObligationMissingEvidence: Readonly<Record<string, number>>;
     readonly blockers: number;
