@@ -27,6 +27,8 @@ export function artifactIndex(a) {
     adapterKinds: uniqueStrings(a.map((a) => a.adapterKind)),
     routeMissingEvidence: uniqueStrings(a.flatMap((a) => a.missingEvidence ?? [])),
     runtimeAdapterRequirementIds: uniqueStrings(a.flatMap((a) => a.runtimeAdapterRequirementIds ?? [])),
+    runtimeProofObligationIds: uniqueStrings(a.flatMap((a) => a.runtimeProofObligationIds ?? [])),
+    runtimeProofMissingSignals: uniqueStrings(a.flatMap((a) => a.runtimeProofMissingSignals ?? [])),
     blockers: uniqueStrings(a.flatMap((a) => a.blockers ?? [])),
     reviewReasons: uniqueStrings(a.flatMap((a) => a.review ?? [])),
     readinesses: uniqueStrings(a.map((a) => a.readiness)),
@@ -135,6 +137,8 @@ function matchesArtifact(record, query) {
     && match(query.adapterKind, [record.adapterKind])
     && match(query.routeMissingEvidence, record.missingEvidence)
     && match(query.runtimeAdapterRequirementId, record.runtimeAdapterRequirementIds)
+    && match(query.runtimeProofObligationId, record.runtimeProofObligationIds)
+    && match(query.runtimeProofMissingSignal, record.runtimeProofMissingSignals)
     && match(query.blocker, record.blockers)
     && match(query.reviewReason, record.review)
     && match(query.routeAction, [record.routeAction])

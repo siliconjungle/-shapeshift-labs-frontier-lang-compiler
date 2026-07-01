@@ -9,7 +9,7 @@ import type { UniversalRepresentationCoverage as URC, UniversalRepresentationCov
 import type { UniversalInterlinguaQuery, UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalConversionPlanCompactCounts } from './universal-conversion-compact-counts.js';
 import type { UniversalTranslationConstraintFieldName as TCN } from './universal-conversion-constraint-families.js';
-import type { UniversalRuntimeAdapterRequirement as URA, UniversalRuntimeCapabilityKind as URK, UniversalRuntimeCapabilityMatrix as URM, UniversalRuntimeCapabilityRoute as URR, UniversalRuntimeHostProfile as URH, UniversalRuntimeRequirementInput as URI } from './universal-runtime-capabilities.js';
+import type { UniversalRuntimeAdapterRequirement as URA, UniversalRuntimeCapabilityKind as URK, UniversalRuntimeCapabilityMatrix as URM, UniversalRuntimeCapabilityRoute as URR, UniversalRuntimeHostProfile as URH, UniversalRuntimeProofObligation as URO, UniversalRuntimeProofSignalKind as UPS, UniversalRuntimeRequirementInput as URI } from './universal-runtime-capabilities.js';
 import type { UniversalConversionPlanConstraintOptions, UniversalConversionPlanConstraintQuery, UniversalConversionRouteConstraintFields } from './universal-conversion-plan-constraints.js';
 import type {
   UniversalDialectConstructKind,
@@ -78,7 +78,7 @@ export interface UniversalTranslationAdmission extends TCF {
   readonly status: UniversalTranslationAdmissionStatus; readonly action: UniversalTranslationAdmissionAction;
   readonly requiredConstructKinds: RO<string>; readonly representedConstructKinds: RO<string>; readonly missingConstructKinds: RO<string>; readonly missingEvidence: RO<string>;
   readonly blockers: RO<string>; readonly review: RO<string>; readonly evidenceIds: RO<string>; readonly proofEvidenceIds: RO<string>;
-  readonly runtimeReadiness: Rdy; readonly runtimeAdapterRequirementIds: RO<string>; readonly dialectReadiness: Rdy; readonly dialectRecordIds: RO<string>;
+  readonly runtimeReadiness: Rdy; readonly runtimeAdapterRequirementIds: RO<string>; readonly runtimeProofObligationIds: RO<string>; readonly runtimeProofMissingSignals: RO<UPS>; readonly dialectReadiness: Rdy; readonly dialectRecordIds: RO<string>;
   readonly resourceTransfer?: Omit<TCS, 'missingEvidence'> & { readonly losses: RO<string>; readonly ownershipConstraints?: TCS };
   readonly resourceTransferStatus?: string; readonly resourceTransferAction?: string; readonly resourceTransferMissingEvidence: RO<string>;
   readonly targetAdapterId?: string; readonly autoMergeClaim: false; readonly semanticEquivalenceClaim: false;
@@ -91,6 +91,7 @@ export interface UniversalConversionRouteRuntime {
   readonly requiredCapabilities: readonly URK[];
   readonly satisfiedCapabilities: readonly URK[];
   readonly adapterRequirements: readonly URA[];
+  readonly proofObligations: readonly URO[];
   readonly missingCapabilities: readonly URK[];
   readonly readiness: SMR;
   readonly blockers: RO<string>;
@@ -195,6 +196,7 @@ export interface UniversalConversionPlan {
     readonly semanticIndexOnlyRoutes: number;
     readonly missingEvidence: number;
     readonly runtimeAdapterRequirements: number;
+    readonly runtimeProofObligations: number;
     readonly runtimeRoutesWithAdapters: number;
     readonly blockers: number;
     readonly reviewReasons: number;
@@ -254,6 +256,9 @@ export interface UniversalConversionPlanQuery extends URCQ, UniversalInterlingua
   readonly runtimeReadiness?: SMR;
   readonly missingRuntimeCapability?: URK;
   readonly runtimeAdapterRequirementId?: string;
+  readonly runtimeProofObligationId?: string;
+  readonly runtimeProofCapability?: URK;
+  readonly runtimeProofMissingSignal?: UPS;
   readonly dialectReadiness?: SMR;
   readonly dialectRegistryId?: string;
   readonly dialectRecordId?: string;

@@ -17,6 +17,7 @@ export function conversionPlanSummary(routes) {
     semanticIndexOnlyRoutes: 0,
     missingEvidence: 0,
     runtimeAdapterRequirements: 0,
+    runtimeProofObligations: 0,
     runtimeRoutesWithAdapters: 0,
     blockers: 0,
     reviewReasons: 0,
@@ -36,6 +37,7 @@ export function conversionPlanSummary(routes) {
     if (route.mode === 'semantic-index-only') summary.semanticIndexOnlyRoutes += 1;
     summary.missingEvidence += route.missingEvidence.length;
     summary.runtimeAdapterRequirements += route.runtimeAdapterRequirements.length;
+    summary.runtimeProofObligations += route.runtime?.proofObligations?.length ?? 0;
     if (route.runtimeAdapterRequirements.length) summary.runtimeRoutesWithAdapters += 1;
     summary.blockers += route.blockers.length;
     summary.reviewReasons += route.review.length;
@@ -82,6 +84,7 @@ function compactTranslationAdmissionCounts(admissions) {
     missingEvidence: countBy(admissions.flatMap((admission) => admission.missingEvidence ?? [])),
     proofEvidenceIds: countBy(admissions.flatMap((admission) => admission.proofEvidenceIds ?? [])),
     runtimeReadiness: countBy(admissions.map((admission) => admission.runtimeReadiness)),
+    runtimeProofMissingSignals: countBy(admissions.flatMap((admission) => admission.runtimeProofMissingSignals ?? [])),
     dialectReadiness: countBy(admissions.map((admission) => admission.dialectReadiness))
   };
 }

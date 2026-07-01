@@ -1290,6 +1290,16 @@ The runtime capability matrix routes the same boundary at host-profile level:
 can each produce satisfied, adapter-required, or missing capability evidence for
 translation admission. A canvas or GPU route, for example, is runtime evidence
 about host support and adapter obligations; it is not a render-equivalence proof.
+Adapter-required routes now also carry capability-specific runtime proof
+obligations. `runtimeProofSignalsForCapability("canvas")` returns signals such
+as source/output hashes, runtime command, probe id, draw-command trace, bitmap
+hash, deterministic input, telemetry, and adapter binding. Shell, secrets,
+WASM, DOM, storage, filesystem, network, async/threading, and GPU routes get
+their own signal sets. A query for `runtimeProofMissingSignal` with
+`"bitmap-hash"` lets a coordinator find the exact evidence gap instead of
+treating every runtime route as a generic `runtime-adapter-proof`. These proof
+obligations remain admission evidence only; they do not assert runtime,
+rendering, semantic-equivalence, or auto-merge success.
 
 Routes can also carry `concurrencyModelConstraint`, an async/task/thread/actor
 admission record for structured concurrency, async tasks, thread and worker

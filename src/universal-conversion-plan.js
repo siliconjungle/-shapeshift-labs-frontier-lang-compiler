@@ -215,6 +215,7 @@ function conversionRuntime(runtimeRoute) {
     requiredCapabilities: runtimeRoute.requiredCapabilities,
     satisfiedCapabilities: runtimeRoute.satisfiedCapabilities,
     adapterRequirements: runtimeRoute.adapterRequirements,
+    proofObligations: runtimeRoute.proofObligations ?? [],
     missingCapabilities: runtimeRoute.missingCapabilities,
     readiness: runtimeRoute.readiness,
     blockers: runtimeRoute.blockers,
@@ -270,6 +271,7 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...(mode === 'stub-only' ? ['executable-target-semantics'] : []),
     ...((runtime.missingCapabilities ?? []).map((capability) => `runtime-capability:${capability}`)),
     ...((runtime.adapterRequirements ?? []).length ? ['runtime-adapter-proof'] : []),
+    ...((runtime.proofObligations ?? []).flatMap((obligation) => obligation.missingEvidence ?? [])),
     ...(dialect.missingEvidence ?? []),
     ...constraints.flatMap((constraint) => constraint?.missingEvidence ?? []),
     ...(hasPassedRouteEvidence(evidence) ? [] : ['proof-or-replay-evidence'])
@@ -286,6 +288,7 @@ function conversionTasks(language, target, mode, blockers, review, runtime = {},
     ...(mode === 'target-adapter' ? [`run and verify ${language.language} to ${target} target adapter`] : []),
     ...((runtime.missingCapabilities ?? []).map((capability) => `provide runtime capability or adapter evidence for ${capability}`)),
     ...((runtime.adapterRequirements ?? []).length ? [`prove runtime adapter obligations for ${language.language} to ${target}`] : []),
+    ...((runtime.proofObligations ?? []).flatMap((obligation) => (obligation.missingSignals ?? []).map((signal) => `attach ${signal} for ${obligation.capability} runtime proof`))),
     ...(dialect.tasks ?? []),
     ...(blockers.length || review.length ? [`collect proof, replay, or oracle evidence for ${language.language} to ${target}`] : [])
   ]);

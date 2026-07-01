@@ -6,6 +6,7 @@ export const UniversalConversionWorkItemKinds = Object.freeze([
   'add-target-adapter',
   'collect-translation-proof',
   'prove-runtime-adapter',
+  'collect-runtime-proof-signal',
   'collect-dialect-evidence',
   'collect-interlingua-obligation-proof',
   'collect-source-evidence',
@@ -83,6 +84,7 @@ function addInterlinguaObligationItems(items, route) {
 
 function addMissingEvidenceItem(items, route, key) {
   if (/target-adapter|executable-target-semantics/.test(key) || route.mode === 'semantic-index-only') return addWorkItem(items, route, 'add-target-adapter', key, 'high');
+  if (/runtime-proof-signal/.test(key)) return addWorkItem(items, route, 'collect-runtime-proof-signal', key, 'high');
   if (/proof|replay/.test(key)) return addWorkItem(items, route, 'collect-translation-proof', key, 'high');
   if (/runtime-capability|runtime-adapter/.test(key)) return addWorkItem(items, route, 'prove-runtime-adapter', key, route.readiness === 'blocked' ? 'blocker' : 'high');
   if (/dialect/.test(key)) return addWorkItem(items, route, 'collect-dialect-evidence', key, 'high');
@@ -116,6 +118,8 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     review: route.review ?? [],
     tasks: workItemTasks(kind, route, evidenceKey, details),
     runtimeAdapterRequirementIds: (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
+    runtimeProofObligationIds: (route.runtime?.proofObligations ?? []).map((entry) => entry.id).filter(Boolean),
+    runtimeProofMissingSignals: uniqueStrings((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? [])),
     dialectRecordIds: route.dialect?.recordIds ?? [],
     targetAdapterIds: uniqueStrings([route.adapter, route.translationAdmission?.targetAdapterId]),
     interlinguaConstraintFamilies: uniqueStrings(details.constraintFamilies ?? []),
@@ -146,6 +150,8 @@ function mergeWorkItems(left, right) {
     review: uniqueStrings([...left.review, ...right.review]),
     tasks: uniqueStrings([...left.tasks, ...right.tasks]),
     runtimeAdapterRequirementIds: uniqueStrings([...left.runtimeAdapterRequirementIds, ...right.runtimeAdapterRequirementIds]),
+    runtimeProofObligationIds: uniqueStrings([...left.runtimeProofObligationIds, ...right.runtimeProofObligationIds]),
+    runtimeProofMissingSignals: uniqueStrings([...left.runtimeProofMissingSignals, ...right.runtimeProofMissingSignals]),
     dialectRecordIds: uniqueStrings([...left.dialectRecordIds, ...right.dialectRecordIds]),
     targetAdapterIds: uniqueStrings([...left.targetAdapterIds, ...right.targetAdapterIds]),
     interlinguaConstraintFamilies: uniqueStrings([...left.interlinguaConstraintFamilies, ...right.interlinguaConstraintFamilies]),
@@ -164,6 +170,7 @@ function workItemAction(kind) {
   if (kind === 'add-target-adapter') return 'add-target-adapter';
   if (kind === 'collect-translation-proof') return 'collect-translation-evidence';
   if (kind === 'prove-runtime-adapter') return 'collect-runtime-adapter-proof';
+  if (kind === 'collect-runtime-proof-signal') return 'collect-runtime-proof-signals';
   if (kind === 'collect-dialect-evidence') return 'collect-dialect-projection-evidence';
   if (kind === 'collect-interlingua-obligation-proof') return 'collect-interlingua-obligation-evidence';
   if (kind === 'review-route') return 'review-conversion-route';
@@ -195,6 +202,7 @@ function worklistSummary(items) {
     targetAdapterGaps: items.filter((item) => item.kind === 'add-target-adapter').length,
     proofEvidenceGaps: items.filter((item) => item.kind === 'collect-translation-proof').length,
     runtimeAdapterGaps: items.filter((item) => item.kind === 'prove-runtime-adapter').length,
+    runtimeProofSignalGaps: items.filter((item) => item.kind === 'collect-runtime-proof-signal').length,
     dialectEvidenceGaps: items.filter((item) => item.kind === 'collect-dialect-evidence').length,
     interlinguaObligationGaps: items.filter((item) => item.kind === 'collect-interlingua-obligation-proof').length,
     autoMergeClaims: 0,
@@ -227,6 +235,8 @@ function workItemMatchesQuery(item, query) {
     && match(query.routeAction, item.routeActions)
     && match(query.evidenceKey, item.evidenceKeys)
     && match(query.missingEvidence, item.missingEvidence)
+    && match(query.runtimeProofObligationId, item.runtimeProofObligationIds)
+    && match(query.runtimeProofMissingSignal, item.runtimeProofMissingSignals)
     && match(query.blocker, item.blockers)
     && match(query.reviewReason, item.review)
     && match(query.task, item.tasks)

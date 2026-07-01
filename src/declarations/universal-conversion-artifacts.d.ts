@@ -23,6 +23,7 @@ import type {
   UniversalConversionRisk
 } from './universal-conversion-plan.js';
 import type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery } from './universal-conversion-artifact-query.js';
+import type { UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 
 export type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery } from './universal-conversion-artifact-query.js';
 
@@ -198,6 +199,8 @@ export interface UniversalConversionRouteArtifact extends UniversalConversionRou
   readonly adapterKind?: string;
   readonly missingEvidence: readonly string[];
   readonly runtimeAdapterRequirementIds: readonly string[];
+  readonly runtimeProofObligationIds: readonly string[];
+  readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly blockers: readonly string[];
   readonly review: readonly string[];
   readonly admissionAction: UniversalConversionAdmissionAction;

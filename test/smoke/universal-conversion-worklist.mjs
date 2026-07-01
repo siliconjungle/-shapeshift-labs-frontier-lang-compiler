@@ -68,6 +68,15 @@ const runtimeQuery = queryUniversalConversionWorklist(runtimePlan, {
 assert.equal(runtimeQuery.found, true);
 assert.equal(runtimeQuery.bestItem.kind, 'prove-runtime-adapter');
 assert.equal(runtimeQuery.bestItem.routeIds.includes(runtimeRoute.id), true);
+assert.equal(runtimeWorklist.summary.runtimeProofSignalGaps >= 1, true);
+assert.equal(runtimeWorklist.items.some((item) => item.kind === 'collect-runtime-proof-signal'
+  && item.runtimeProofMissingSignals.includes('network-trace-hash')), true);
+const runtimeSignalQuery = queryUniversalConversionWorklist(runtimePlan, {
+  kind: 'collect-runtime-proof-signal',
+  runtimeProofMissingSignal: 'network-trace-hash'
+});
+assert.equal(runtimeSignalQuery.found, true);
+assert.equal(runtimeSignalQuery.bestItem.action, 'collect-runtime-proof-signals');
 const obligationPlan = createUniversalConversionPlan({
   generatedAt: 803,
   universalCapabilityMatrix: readyCapabilityMatrix(),
@@ -98,6 +107,7 @@ assert.equal(missQuery.found, false);
 assert.equal(missQuery.reasons[0].includes('target=python'), true);
 assert.equal(UniversalConversionWorkItemKinds.includes('prove-runtime-adapter'), true);
 assert.equal(UniversalConversionWorkItemKinds.includes('collect-interlingua-obligation-proof'), true);
+assert.equal(UniversalConversionWorkItemKinds.includes('collect-runtime-proof-signal'), true);
 
 function readyCapabilityMatrix() {
   return {

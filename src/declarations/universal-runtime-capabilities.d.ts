@@ -90,6 +90,33 @@ export interface UniversalRuntimeAdapterRequirement {
   readonly evidenceIds: readonly string[];
 }
 
+export type UniversalRuntimeProofSignalKind =
+  | 'source-hash' | 'target-hash' | 'runtime-command' | 'probe-id' | 'telemetry-hash' | 'event-trace-hash' | 'network-trace-hash' | 'storage-snapshot-hash'
+  | 'filesystem-trace-hash' | 'process-trace-hash' | 'environment-snapshot-hash' | 'shell-policy' | 'secret-scope-policy' | 'dom-snapshot-hash'
+  | 'computed-style-hash' | 'layout-snapshot-hash' | 'accessibility-snapshot-hash' | 'focus-trace-hash' | 'bitmap-hash' | 'draw-command-trace-hash'
+  | 'gpu-command-trace-hash' | 'wasm-module-hash' | 'sandbox-policy-hash' | 'worker-message-trace-hash' | 'deterministic-input-hash' | 'adapter-binding-hash'
+  | string;
+
+export interface UniversalRuntimeProofObligation {
+  readonly kind: 'frontier.lang.universalRuntimeProofObligation'; readonly version: 1; readonly schema: 'frontier.lang.universalRuntimeProofObligation.v1';
+  readonly id: string; readonly capability?: UniversalRuntimeCapabilityKind; readonly adapterRequirementId?: string; readonly adapterKind?: string; readonly sourceHost?: string; readonly targetHost?: string;
+  readonly status: 'not-applicable' | 'satisfied' | 'needs-evidence' | 'blocked' | string; readonly action: 'skip' | 'attach-runtime-proof-obligation' | 'collect-runtime-proof-signals' | 'reject' | string;
+  readonly requiredSignals: readonly UniversalRuntimeProofSignalKind[]; readonly providedSignals: readonly UniversalRuntimeProofSignalKind[]; readonly missingSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly missingEvidence: readonly string[]; readonly blockers: readonly string[]; readonly review: readonly string[]; readonly evidenceIds: readonly string[];
+  readonly claims: { readonly runtimeEquivalenceClaim: false; readonly semanticEquivalenceClaim: false; readonly renderEquivalenceClaim: false; readonly autoMergeClaim: false };
+}
+
+export interface UniversalRuntimeProofObligationInput {
+  readonly id?: string; readonly capability?: UniversalRuntimeCapabilityKind; readonly adapterRequirement?: Partial<UniversalRuntimeAdapterRequirement>; readonly adapterKind?: string; readonly sourceHost?: string; readonly targetHost?: string;
+  readonly requiredSignals?: readonly UniversalRuntimeProofSignalKind[]; readonly providedSignals?: readonly UniversalRuntimeProofSignalKind[]; readonly evidence?: readonly Record<string, unknown>[]; readonly routeEvidence?: readonly Record<string, unknown>[];
+  readonly evidenceIds?: readonly string[]; readonly blockers?: readonly string[]; readonly review?: readonly string[];
+}
+
+export interface UniversalRuntimeProofObligationQuery {
+  readonly runtimeProofObligationId?: string; readonly runtimeProofCapability?: UniversalRuntimeCapabilityKind; readonly runtimeProofStatus?: string;
+  readonly runtimeProofMissingSignal?: UniversalRuntimeProofSignalKind; readonly runtimeProofRequiredSignal?: UniversalRuntimeProofSignalKind; readonly runtimeProofProvidedSignal?: UniversalRuntimeProofSignalKind;
+}
+
 export interface UniversalRuntimeCapabilityRoute {
   readonly id: string;
   readonly source: UniversalRuntimeHostSummary;
@@ -97,6 +124,7 @@ export interface UniversalRuntimeCapabilityRoute {
   readonly requiredCapabilities: readonly UniversalRuntimeCapabilityKind[];
   readonly satisfiedCapabilities: readonly UniversalRuntimeCapabilityKind[];
   readonly adapterRequirements: readonly UniversalRuntimeAdapterRequirement[];
+  readonly proofObligations: readonly UniversalRuntimeProofObligation[];
   readonly missingCapabilities: readonly UniversalRuntimeCapabilityKind[];
   readonly readiness: SemanticMergeReadiness;
   readonly blockers: readonly string[];
@@ -114,10 +142,12 @@ export interface UniversalRuntimeCapabilityMatrix {
     readonly routes: number;
     readonly routesWithAdapters: number;
     readonly adapterRequirements: number;
+    readonly proofObligations: number;
     readonly missingCapabilities: number;
     readonly byReadiness: Readonly<Record<SemanticMergeReadiness, number>>;
     readonly byCapability: Readonly<Record<UniversalRuntimeCapabilityKind, number>>;
     readonly byAdapterKind: Readonly<Record<string, number>>;
+    readonly proofSignals: Readonly<Record<UniversalRuntimeProofSignalKind, number>>;
   };
   readonly metadata: {
     readonly capabilityKinds: readonly UniversalRuntimeCapabilityKind[];
@@ -163,6 +193,12 @@ export interface UniversalRuntimeCapabilityMatrixQuery {
   readonly runtime?: string;
   readonly capability?: UniversalRuntimeCapabilityKind;
   readonly requiresAdapter?: boolean;
+  readonly runtimeProofObligationId?: string;
+  readonly runtimeProofCapability?: UniversalRuntimeCapabilityKind;
+  readonly runtimeProofStatus?: string;
+  readonly runtimeProofMissingSignal?: UniversalRuntimeProofSignalKind;
+  readonly runtimeProofRequiredSignal?: UniversalRuntimeProofSignalKind;
+  readonly runtimeProofProvidedSignal?: UniversalRuntimeProofSignalKind;
 }
 
 export interface UniversalRuntimeCapabilityMatrixQueryResult {
@@ -176,6 +212,18 @@ export interface UniversalRuntimeCapabilityMatrixQueryResult {
 
 export declare const UniversalRuntimeCapabilityKinds: readonly UniversalRuntimeCapabilityKind[];
 export declare const UniversalRuntimeHostProfiles: readonly UniversalRuntimeHostProfile[];
+export declare const UniversalRuntimeProofSignalKinds: readonly UniversalRuntimeProofSignalKind[];
+export declare function runtimeProofSignalsForCapability(capability?: UniversalRuntimeCapabilityKind): readonly UniversalRuntimeProofSignalKind[];
+export declare function createUniversalRuntimeProofObligation(input?: UniversalRuntimeProofObligationInput): UniversalRuntimeProofObligation;
+export declare function createUniversalRuntimeProofObligationsForRoute(
+  route?: Partial<UniversalRuntimeCapabilityRoute>,
+  evidence?: readonly Record<string, unknown>[]
+): readonly UniversalRuntimeProofObligation[];
+export declare function runtimeProofObligationMatches(obligation?: Partial<UniversalRuntimeProofObligation>, query?: UniversalRuntimeProofObligationQuery): boolean;
+export declare function summarizeRuntimeProofObligations(obligations?: readonly UniversalRuntimeProofObligation[]): {
+  readonly obligations: number; readonly byStatus: Readonly<Record<string, number>>; readonly byCapability: Readonly<Record<string, number>>;
+  readonly missingSignals: Readonly<Record<UniversalRuntimeProofSignalKind, number>>; readonly providedSignals: Readonly<Record<UniversalRuntimeProofSignalKind, number>>;
+};
 export declare function createUniversalRuntimeCapabilityMatrix(
   options?: UniversalRuntimeCapabilityMatrixOptions
 ): UniversalRuntimeCapabilityMatrix;

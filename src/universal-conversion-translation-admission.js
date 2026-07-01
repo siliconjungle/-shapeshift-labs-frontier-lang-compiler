@@ -69,6 +69,8 @@ export function createUniversalTranslationAdmission(input = {}) {
     proofEvidenceIds,
     runtimeReadiness: input.runtime?.readiness ?? 'ready',
     runtimeAdapterRequirementIds: (input.runtime?.adapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
+    runtimeProofObligationIds: (input.runtime?.proofObligations ?? []).map((entry) => entry.id).filter(Boolean),
+    runtimeProofMissingSignals: uniqueStrings((input.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? [])),
     dialectReadiness: input.dialect?.readiness ?? 'ready',
     dialectRecordIds: input.dialect?.recordIds ?? [],
     resourceTransfer: resourceTransferSummary(input.resourceTransfer),
@@ -131,6 +133,7 @@ function translationMissingEvidence(input, missingConstructKinds) {
     ...(missingConstructKinds.includes('source-map') ? ['translation-source-map'] : []),
     ...(missingConstructKinds.includes('semantic-ownership') ? ['translation-semantic-ownership'] : []),
     ...(runtimeAdapterRequirements.length && !hasPassedRuntimeAdapterProof(input.routeEvidence) ? ['translation-runtime-adapter-proof'] : []),
+    ...((input.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingEvidence ?? [])),
     ...(dialectMissing.includes('dialect-projection-evidence') ? ['translation-dialect-projection-evidence'] : []),
     ...(input.resourceTransfer?.missingEvidence ?? []),
     ...constraintFields.flatMap((field) => input[field]?.missingEvidence ?? [])

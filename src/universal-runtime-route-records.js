@@ -2,6 +2,10 @@ import {
   idFragment,
   uniqueStrings
 } from './native-import-utils.js';
+import {
+  createUniversalRuntimeProofObligationsForRoute,
+  summarizeRuntimeProofObligations
+} from './universal-runtime-proof-obligations.js';
 
 export function runtimeRoute(sourceHost, targetHost, input) {
   const requiredCapabilities = requirementsForRoute(input.requirements, sourceHost, targetHost);
@@ -13,6 +17,11 @@ export function runtimeRoute(sourceHost, targetHost, input) {
     .map((row) => `Source host ${sourceHost.id} does not declare required runtime capability ${row.capability}.`);
   const review = adapterRequirements.map((requirement) => requirement.reason);
   const id = `runtime_${idFragment(sourceHost.id)}_to_${idFragment(targetHost.id)}_${idFragment(targetHost.target)}`;
+  const proofObligations = createUniversalRuntimeProofObligationsForRoute({
+    source: { id: sourceHost.id },
+    target: { id: targetHost.id },
+    adapterRequirements
+  }, input.evidence ?? []);
   return {
     id,
     source: runtimeHostSummary(sourceHost),
@@ -20,10 +29,11 @@ export function runtimeRoute(sourceHost, targetHost, input) {
     requiredCapabilities,
     satisfiedCapabilities,
     adapterRequirements,
+    proofObligations,
     missingCapabilities,
     readiness: blockers.length ? 'blocked' : adapterRequirements.length ? 'needs-review' : 'ready',
     blockers,
-    review: uniqueStrings(review),
+    review: uniqueStrings([...review, ...proofObligations.flatMap((obligation) => obligation.review ?? [])]),
     metadata: {
       generatedAt: input.generatedAt,
       note: 'Runtime adapter requirements describe host API obligations only; parser, syntax, and target-projection evidence remain separate.'
@@ -150,12 +160,15 @@ export function runtimeCapabilityMatrixSummary(routes) {
   const byCapability = {};
   const byAdapterKind = {};
   let adapterRequirements = 0;
+  let proofObligations = 0;
   let routesWithAdapters = 0;
   let missingCapabilities = 0;
+  const proofSummary = summarizeRuntimeProofObligations(routes.flatMap((route) => route.proofObligations ?? []));
   for (const route of routes) {
     byReadiness[route.readiness] = (byReadiness[route.readiness] ?? 0) + 1;
     if (route.adapterRequirements.length) routesWithAdapters += 1;
     adapterRequirements += route.adapterRequirements.length;
+    proofObligations += (route.proofObligations ?? []).length;
     missingCapabilities += route.missingCapabilities.length;
     for (const capability of route.requiredCapabilities) {
       byCapability[capability] = (byCapability[capability] ?? 0) + 1;
@@ -168,9 +181,11 @@ export function runtimeCapabilityMatrixSummary(routes) {
     routes: routes.length,
     routesWithAdapters,
     adapterRequirements,
+    proofObligations,
     missingCapabilities,
     byReadiness,
     byCapability,
-    byAdapterKind
+    byAdapterKind,
+    proofSignals: proofSummary.missingSignals
   };
 }

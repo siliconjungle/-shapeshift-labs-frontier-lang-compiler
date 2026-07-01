@@ -51,7 +51,7 @@ export { createUniversalConversionRouteEvidenceReceipt } from './internal/index-
 export { createUniversalConversionWorklist, queryUniversalConversionWorklist, UniversalConversionWorkItemKinds } from './internal/index-impl/createUniversalConversionWorklist.js';
 export { queryUniversalConversionArtifacts } from './universal-conversion-artifacts.js';
 export { createUniversalConversionPlan } from './internal/index-impl/createUniversalConversionPlan.js';
-export { createUniversalRuntimeCapabilityMatrix, queryUniversalRuntimeCapabilityMatrix, UniversalRuntimeCapabilityKinds, UniversalRuntimeHostProfiles } from './universal-runtime-capabilities.js';
+export { createUniversalRuntimeCapabilityMatrix, createUniversalRuntimeProofObligation, createUniversalRuntimeProofObligationsForRoute, queryUniversalRuntimeCapabilityMatrix, runtimeProofObligationMatches, runtimeProofSignalsForCapability, summarizeRuntimeProofObligations, UniversalRuntimeCapabilityKinds, UniversalRuntimeHostProfiles, UniversalRuntimeProofSignalKinds } from './universal-runtime-capabilities.js';
 export { createUniversalBorrowScopeConstraintEvidence, borrowScopeConstraintMatches, UniversalBorrowScopeConstraintStatuses } from './universal-borrow-scope-constraints.js';
 export { createUniversalBorrowCheckerConstraintEvidence, borrowCheckerConstraintMatches, UniversalBorrowCheckerConstraintStatuses } from './universal-borrow-checker-constraints.js';
 export { createUniversalControlFlowConstraintEvidence, controlFlowConstraintMatches, UniversalControlFlowConstraintStatuses } from './universal-control-flow-constraints.js';

@@ -50,12 +50,10 @@ const runtimeReviewRoute = queryUniversalConversionPlan(conversionPlan({
   evidence: [routeProof('runtime_review', 'conversion-runtime-proof')],
   imports: [sourceImport()],
   runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'fetch' }]
-}), {
-  translationAdmissionStatus: 'needs-review'
-}).bestRoute;
-assert.equal(runtimeReviewRoute.translationAdmission.action, 'review-target-adapter');
+}), { translationAdmissionStatus: 'needs-evidence', runtimeProofMissingSignal: 'network-trace-hash' }).bestRoute;
+assert.equal(runtimeReviewRoute.translationAdmission.action, 'collect-translation-evidence');
 assert.equal(runtimeReviewRoute.translationAdmission.runtimeAdapterRequirementIds.length, 1);
-assert.equal(runtimeReviewRoute.translationAdmission.missingEvidence.includes('translation-runtime-adapter-proof'), false);
+assert.equal(runtimeReviewRoute.translationAdmission.missingEvidence.includes('translation-runtime-adapter-proof'), false); assert.equal(runtimeReviewRoute.translationAdmission.runtimeProofMissingSignals.includes('network-trace-hash'), true);
 
 const blockedRoute = queryUniversalConversionPlan(conversionPlan({
   evidence: [routeProof('runtime_blocked')],

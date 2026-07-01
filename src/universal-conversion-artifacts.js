@@ -164,6 +164,8 @@ function createRouteArtifact(route, options) {
     adapterKind: route.adapterKind,
     missingEvidence: route.missingEvidence ?? [],
     runtimeAdapterRequirementIds: (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
+    runtimeProofObligationIds: (route.runtime?.proofObligations ?? []).map((entry) => entry.id).filter(Boolean),
+    runtimeProofMissingSignals: (route.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? []),
     blockers: route.blockers ?? [],
     review: route.review ?? [],
     admissionAction: route.admissionAction,

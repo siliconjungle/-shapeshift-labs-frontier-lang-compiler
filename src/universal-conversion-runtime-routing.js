@@ -24,6 +24,9 @@ export function conversionRouteMatchesRuntimeQuery(route, query = {}) {
   if (query.runtimeReadiness && route.runtime?.readiness !== query.runtimeReadiness) return false;
   if (query.missingRuntimeCapability && !(route.runtime?.missingCapabilities ?? []).includes(query.missingRuntimeCapability)) return false;
   if (query.runtimeAdapterRequirementId && !(route.runtimeAdapterRequirements ?? []).some((entry) => entry.id === query.runtimeAdapterRequirementId)) return false;
+  if (query.runtimeProofObligationId && !(route.runtime?.proofObligations ?? []).some((entry) => entry.id === query.runtimeProofObligationId)) return false;
+  if (query.runtimeProofMissingSignal && !(route.runtime?.proofObligations ?? []).some((entry) => (entry.missingSignals ?? []).includes(query.runtimeProofMissingSignal))) return false;
+  if (query.runtimeProofCapability && !(route.runtime?.proofObligations ?? []).some((entry) => entry.capability === query.runtimeProofCapability)) return false;
   return true;
 }
 

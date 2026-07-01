@@ -38,6 +38,7 @@ import type { UniversalModuleConstraintQuery } from './universal-module-constrai
 import type { UniversalObjectModelConstraintQuery } from './universal-object-model-constraints.js';
 import type { UniversalProtocolConstraintQuery } from './universal-protocol-constraints.js';
 import type { UniversalTypeConstraintQuery } from './universal-type-constraints.js';
+import type { UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 
 export interface UniversalConversionArtifactIndex {
   readonly routeIds: readonly string[];
@@ -51,10 +52,9 @@ export interface UniversalConversionArtifactIndex {
   readonly lossClasses: readonly string[];
   readonly adapterIds: readonly string[];
   readonly adapterKinds: readonly string[];
-  readonly routeMissingEvidence: readonly string[];
-  readonly runtimeAdapterRequirementIds: readonly string[];
-  readonly blockers: readonly string[];
-  readonly reviewReasons: readonly string[];
+  readonly routeMissingEvidence: readonly string[]; readonly runtimeAdapterRequirementIds: readonly string[];
+  readonly runtimeProofObligationIds: readonly string[]; readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly blockers: readonly string[]; readonly reviewReasons: readonly string[];
   readonly readinesses: readonly string[];
   readonly admissionStatuses: readonly string[];
   readonly admissionBuckets: readonly string[];
@@ -217,8 +217,8 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly lossClass?: string | readonly string[];
   readonly adapterId?: string | readonly string[];
   readonly adapterKind?: string | readonly string[];
-  readonly routeMissingEvidence?: string | readonly string[];
-  readonly runtimeAdapterRequirementId?: string | readonly string[];
+  readonly routeMissingEvidence?: string | readonly string[]; readonly runtimeAdapterRequirementId?: string | readonly string[];
+  readonly runtimeProofObligationId?: string | readonly string[]; readonly runtimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
   readonly blocker?: string | readonly string[];
   readonly reviewReason?: string | readonly string[];
   readonly readiness?: SemanticMergeReadiness | string | readonly string[];

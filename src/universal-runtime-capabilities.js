@@ -26,6 +26,14 @@ export {
   UniversalRuntimeCapabilityKinds,
   UniversalRuntimeHostProfiles
 } from './universal-runtime-profiles.js';
+export {
+  createUniversalRuntimeProofObligation,
+  createUniversalRuntimeProofObligationsForRoute,
+  runtimeProofObligationMatches,
+  runtimeProofSignalsForCapability,
+  summarizeRuntimeProofObligations,
+  UniversalRuntimeProofSignalKinds
+} from './universal-runtime-proof-obligations.js';
 
 export function createUniversalRuntimeCapabilityMatrix(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
@@ -35,7 +43,8 @@ export function createUniversalRuntimeCapabilityMatrix(input = {}, context = {})
   const requirements = normalizeRuntimeRequirements(input, hostProfiles);
   const routes = sourceHosts.flatMap((sourceHost) => targetHosts.map((targetHost) => runtimeRoute(sourceHost, targetHost, {
     generatedAt,
-    requirements
+    requirements,
+    evidence: input.evidence ?? []
   })));
   return {
     kind: 'frontier.lang.universalRuntimeCapabilityMatrix',
@@ -70,6 +79,12 @@ export function queryUniversalRuntimeCapabilityMatrix(matrixOrInput = {}, query 
     if (capability && !route.requiredCapabilities.includes(capability)) return false;
     if (query.requiresAdapter === true && route.adapterRequirements.length === 0) return false;
     if (query.requiresAdapter === false && route.adapterRequirements.length > 0) return false;
+    if (query.runtimeProofObligationId && !(route.proofObligations ?? []).some((entry) => entry.id === query.runtimeProofObligationId)) return false;
+    if (query.runtimeProofCapability && !(route.proofObligations ?? []).some((entry) => entry.capability === query.runtimeProofCapability)) return false;
+    if (query.runtimeProofStatus && !(route.proofObligations ?? []).some((entry) => entry.status === query.runtimeProofStatus)) return false;
+    if (query.runtimeProofMissingSignal && !(route.proofObligations ?? []).some((entry) => (entry.missingSignals ?? []).includes(query.runtimeProofMissingSignal))) return false;
+    if (query.runtimeProofRequiredSignal && !(route.proofObligations ?? []).some((entry) => (entry.requiredSignals ?? []).includes(query.runtimeProofRequiredSignal))) return false;
+    if (query.runtimeProofProvidedSignal && !(route.proofObligations ?? []).some((entry) => (entry.providedSignals ?? []).includes(query.runtimeProofProvidedSignal))) return false;
     return true;
   });
   return {

@@ -13,6 +13,7 @@ export type UniversalConversionWorkItemKind =
   | 'add-target-adapter'
   | 'collect-translation-proof'
   | 'prove-runtime-adapter'
+  | 'collect-runtime-proof-signal'
   | 'collect-dialect-evidence'
   | 'collect-interlingua-obligation-proof'
   | 'collect-source-evidence'
@@ -23,6 +24,7 @@ export type UniversalConversionWorkItemAction =
   | 'add-target-adapter'
   | 'collect-translation-evidence'
   | 'collect-runtime-adapter-proof'
+  | 'collect-runtime-proof-signals'
   | 'collect-dialect-projection-evidence'
   | 'collect-interlingua-obligation-evidence'
   | 'collect-source-evidence'
@@ -48,6 +50,8 @@ export interface UniversalConversionWorkItem {
   readonly review: readonly string[];
   readonly tasks: readonly string[];
   readonly runtimeAdapterRequirementIds: readonly string[];
+  readonly runtimeProofObligationIds: readonly string[];
+  readonly runtimeProofMissingSignals: readonly string[];
   readonly dialectRecordIds: readonly string[];
   readonly targetAdapterIds: readonly string[];
   readonly interlinguaConstraintFamilies: readonly string[];
@@ -85,6 +89,8 @@ export interface UniversalConversionWorklistQuery extends UniversalConversionWor
   readonly reviewReason?: string | readonly string[];
   readonly task?: string | readonly string[];
   readonly runtimeAdapterRequirementId?: string | readonly string[];
+  readonly runtimeProofObligationId?: string | readonly string[];
+  readonly runtimeProofMissingSignal?: string | readonly string[];
   readonly dialectRecordId?: string | readonly string[];
   readonly targetAdapterId?: string | readonly string[];
   readonly interlinguaConstraintFamily?: string | readonly string[];
@@ -114,6 +120,7 @@ export interface UniversalConversionWorklist {
     readonly targetAdapterGaps: number;
     readonly proofEvidenceGaps: number;
     readonly runtimeAdapterGaps: number;
+    readonly runtimeProofSignalGaps: number;
     readonly dialectEvidenceGaps: number;
     readonly interlinguaObligationGaps: number;
     readonly autoMergeClaims: 0;

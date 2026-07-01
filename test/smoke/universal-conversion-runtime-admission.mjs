@@ -1,9 +1,16 @@
 import { assert } from './helpers.mjs';
 import {
   createUniversalConversionPlan,
+  createUniversalConversionArtifacts,
   queryUniversalConversionPlan,
   createUniversalRuntimeCapabilityMatrix,
-  queryUniversalRuntimeCapabilityMatrix
+  createUniversalRuntimeProofObligation,
+  queryUniversalRuntimeCapabilityMatrix,
+  queryUniversalConversionArtifacts,
+  runtimeProofObligationMatches,
+  runtimeProofSignalsForCapability,
+  summarizeRuntimeProofObligations,
+  UniversalRuntimeProofSignalKinds
 } from './compiler-api.mjs';
 
 const missingDomRoute = conversionRouteForRequirement('dom');
@@ -31,6 +38,16 @@ const canvasAdapterRoute = conversionRouteForRequirement('canvas');
 assert.equal(canvasAdapterRoute.runtime.readiness, 'needs-review');
 assert.equal(canvasAdapterRoute.runtime.missingCapabilities.length, 0);
 assert.equal(canvasAdapterRoute.runtime.adapterRequirements[0].capability, 'canvas');
+assert.equal(canvasAdapterRoute.runtime.proofObligations[0].capability, 'canvas');
+assert.equal(canvasAdapterRoute.runtime.proofObligations[0].missingSignals.includes('bitmap-hash'), true);
+assert.equal(canvasAdapterRoute.missingEvidence.includes('runtime-proof-signal:bitmap-hash'), true);
+assert.equal(canvasAdapterRoute.translationAdmission.runtimeProofMissingSignals.includes('bitmap-hash'), true);
+assert.equal(queryUniversalConversionPlan(conversionPlanForRequirement('canvas'), {
+  target: 'rust',
+  runtimeProofMissingSignal: 'bitmap-hash'
+}).bestRoute.runtime.proofObligations[0].capability, 'canvas');
+const canvasArtifacts = createUniversalConversionArtifacts(conversionPlanForRequirement('canvas'), { routeId: canvasAdapterRoute.id });
+assert.equal(queryUniversalConversionArtifacts(canvasArtifacts, { runtimeProofMissingSignal: 'bitmap-hash' })[0].runtimeProofMissingSignals.includes('bitmap-hash'), true);
 assert.equal(canvasAdapterRoute.missingEvidence.includes('runtime-adapter-proof'), true);
 assert.equal(canvasAdapterRoute.review.some((reason) => reason.includes('Runtime adapter evidence is required for canvas.')), true);
 
@@ -50,6 +67,30 @@ const shellRuntimeRoute = queryUniversalRuntimeCapabilityMatrix(shellRuntimeMatr
 assert.equal(shellRuntimeRoute.requiredCapabilities.includes('shell'), true);
 assert.equal(shellRuntimeRoute.missingCapabilities.includes('shell'), true);
 assert.equal(shellRuntimeRoute.adapterRequirements[0].adapterKind, 'node-shell-to-web-shell');
+assert.equal(shellRuntimeRoute.proofObligations[0].missingSignals.includes('shell-policy'), true);
+
+const canvasProofSignals = runtimeProofSignalsForCapability('canvas');
+const satisfiedCanvasProof = createUniversalRuntimeProofObligation({
+  capability: 'canvas',
+  adapterRequirement: canvasAdapterRoute.runtime.adapterRequirements[0],
+  providedSignals: canvasProofSignals
+});
+const unscopedCanvasProof = createUniversalRuntimeProofObligation({
+  capability: 'canvas',
+  adapterRequirement: canvasAdapterRoute.runtime.adapterRequirements[0],
+  evidence: [Object.fromEntries(canvasProofSignals.map((signal) => [signal.replace(/-([a-z])/g, (_, char) => char.toUpperCase()), `${signal}_hash`]))]
+});
+const scopedCanvasProof = createUniversalRuntimeProofObligation({
+  capability: 'canvas',
+  adapterRequirement: canvasAdapterRoute.runtime.adapterRequirements[0],
+  evidence: [{ capability: 'canvas', runtimeProofSignals: canvasProofSignals }]
+});
+assert.equal(UniversalRuntimeProofSignalKinds.includes('bitmap-hash'), true);
+assert.equal(satisfiedCanvasProof.status, 'satisfied');
+assert.equal(unscopedCanvasProof.status, 'needs-evidence');
+assert.equal(scopedCanvasProof.status, 'satisfied');
+assert.equal(runtimeProofObligationMatches(satisfiedCanvasProof, { runtimeProofCapability: 'canvas', runtimeProofProvidedSignal: 'bitmap-hash' }), true);
+assert.equal(summarizeRuntimeProofObligations([satisfiedCanvasProof]).byCapability.canvas, 1);
 
 const hostPlan = createUniversalConversionPlan({
   generatedAt: 791,
@@ -76,17 +117,20 @@ assert.equal(queryUniversalConversionPlan(hostPlan, { runtimeReadiness: 'blocked
 assert.equal(queryUniversalConversionPlan(hostPlan, { runtimeAdapterRequirementId: nodeHostRoute.runtimeAdapterRequirements[0].id }).bestRoute.id, nodeHostRoute.id);
 
 function conversionRouteForRequirement(capability) {
-  const plan = createUniversalConversionPlan({
+  return queryUniversalConversionPlan(conversionPlanForRequirement(capability), {
+    sourceLanguage: 'javascript',
+    target: 'rust'
+  }).bestRoute;
+}
+
+function conversionPlanForRequirement(capability) {
+  return createUniversalConversionPlan({
     generatedAt: 790,
     universalCapabilityMatrix: readyCapabilityMatrix(),
     targets: ['rust'],
     runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability }],
     evidence: [routeProof(capability)]
   });
-  return queryUniversalConversionPlan(plan, {
-    sourceLanguage: 'javascript',
-    target: 'rust'
-  }).bestRoute;
 }
 
 function routeProof(capability) {
