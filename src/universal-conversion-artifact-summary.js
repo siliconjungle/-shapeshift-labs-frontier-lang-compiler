@@ -1,5 +1,7 @@
 import { countBy } from './native-import-utils.js';
 
+const aiKeys = 'Families Statuses Actions SourceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationMissingEvidence'.split(' ');
+
 export function universalConversionArtifactSummary(routeArtifacts, records) {
   const admissionRecords = records.admissionRecords;
   const evidenceReceipts = records.evidenceReceipts ?? routeArtifacts.map((artifact) => artifact.evidenceReceipt).filter(Boolean);
@@ -109,7 +111,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     borrowScopeConstraint: compactConstraintCounts(borrowScopeConstraints),
     borrowCheckerConstraint: compactConstraintCounts(borrowCheckerConstraints),
     dataLayoutConstraint: compactConstraintCounts(dataLayoutConstraints),
-    effectConstraint: compactEffectConstraintCounts(effectConstraints),
+    effectConstraint: compactConstraintCounts(effectConstraints),
     concurrencyModelConstraint: compactConstraintCounts(concurrencyModelConstraints),
     errorModelConstraint: compactConstraintCounts(errorModelConstraints),
     evaluationModelConstraint: compactConstraintCounts(evaluationModelConstraints),
@@ -128,6 +130,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     typeConstraint: compactConstraintCounts(typeConstraints),
     evidenceReceipts: compactEvidenceReceiptCounts(evidenceReceipts),
     interlingua: compactInterlinguaCounts(interlinguaRecords),
+    admissionRecordInterlingua: compactAdmissionRecordInterlinguaCounts(admissionRecords),
     semanticOperationInterlingua: {
       operations: semanticOperations.length,
       operationRecords: semanticOperationInterlinguaRecords.filter((record) => record.id || record.loweringDisposition).length,
@@ -150,10 +153,6 @@ function compactResourceTransferCounts(transfers) {
     ownershipConstraintMissingKinds: countBy(constraints.flatMap((record) => record.missingKinds ?? [])),
     ownershipConstraintMissingEvidence: countBy(constraints.flatMap((record) => record.missingEvidence ?? []))
   };
-}
-
-function compactEffectConstraintCounts(records) {
-  return compactConstraintCounts(records);
 }
 
 function compactConstraintCounts(records) {
@@ -239,6 +238,19 @@ function compactInterlinguaCounts(records) {
     constraintObligationMissingEvidence: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'obligationMissingEvidence'))),
     missingEvidence: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'missingEvidence'))),
     proofEvidenceIds: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'proofEvidenceIds')))
+  };
+}
+
+function compactAdmissionRecordInterlinguaCounts(records) {
+  const counts = Object.fromEntries(aiKeys.map((key) => [
+    `constraint${key}`,
+    countBy(records.flatMap((record) => record[`interlinguaConstraint${key}`] ?? []))
+  ]));
+  return {
+    records: records.filter((record) => record.interlinguaRecordId || record.interlinguaLoweringDisposition).length,
+    recordIds: countBy(records.map((record) => record.interlinguaRecordId)),
+    byLoweringDisposition: countBy(records.map((record) => record.interlinguaLoweringDisposition)),
+    ...counts
   };
 }
 

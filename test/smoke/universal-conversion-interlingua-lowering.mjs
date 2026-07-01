@@ -131,6 +131,10 @@ assert.equal(constraintArtifacts.index.admissionRecordInterlinguaConstraintOblig
 assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintFamilies['borrow-scope'], 1);
 assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintObligationKinds['borrow-across-await'], 1);
 assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintObligationMissingEvidence['translation-borrow-scope:borrow-across-await'], 1);
+assert.equal(constraintArtifacts.summary.compactCounts.admissionRecordInterlingua.records, 1);
+assert.equal(constraintArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintFamilies['borrow-scope'], 1);
+assert.equal(constraintArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintObligationStatuses.missing, 1);
+assert.equal(constraintArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintObligationMissingEvidence['translation-borrow-scope:borrow-across-await'], 1);
 assert.equal(constraintArtifacts.admissionRecords[0].interlinguaConstraintFamilies.includes('borrow-scope'), true);
 assert.equal(constraintArtifacts.admissionRecords[0].interlinguaConstraintObligationKinds.includes('borrow-across-await'), true);
 assert.equal(constraintArtifacts.admissionRecords[0].interlinguaConstraintObligationStatuses.includes('missing'), true);
