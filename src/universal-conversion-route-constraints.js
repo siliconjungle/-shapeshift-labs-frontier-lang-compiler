@@ -12,6 +12,7 @@ import { lifetimeConstraintForConversionRoute, lifetimeConstraintMatches } from 
 import { memoryModelConstraintForConversionRoute, memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
 import { metaprogrammingConstraintForConversionRoute, metaprogrammingConstraintMatches } from './universal-metaprogramming-constraints.js';
 import { moduleConstraintForConversionRoute, moduleConstraintMatches } from './universal-module-constraints.js';
+import { numericSemanticsConstraintForConversionRoute, numericSemanticsConstraintMatches } from './universal-numeric-semantics-constraints.js';
 import { objectModelConstraintForConversionRoute, objectModelConstraintMatches } from './universal-object-model-constraints.js';
 import { protocolConstraintForConversionRoute, protocolConstraintMatches } from './universal-protocol-constraints.js';
 import { resourceTransferForConversionRoute, resourceTransferMatches } from './universal-resource-transfer.js';
@@ -34,6 +35,7 @@ const families = [
   ['metaprogrammingConstraint', 'metaprogrammingConstraints', 'translationMetaprogrammingConstraint'],
   ['scopeBindingConstraint', 'scopeBindingConstraints', 'translationScopeBindingConstraint'],
   ['moduleConstraint', 'moduleConstraints', 'translationModuleConstraint'],
+  ['numericSemanticsConstraint', 'numericSemanticsConstraints', 'translationNumericSemanticsConstraint'],
   ['objectModelConstraint', 'objectModelConstraints', 'translationObjectModelConstraint'],
   ['protocolConstraint', 'protocolConstraints', 'translationProtocolConstraint'],
   ['resourceTransfer', 'resourceTransfers', 'translationResourceTransfer'],
@@ -80,6 +82,7 @@ export function createConversionRouteConstraints(input = {}, route = {}, routeIm
     metaprogrammingConstraint: metaprogrammingConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     scopeBindingConstraint: scopeBindingConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     moduleConstraint: moduleConstraintForConversionRoute(input, route, routeImports, routeEvidence),
+    numericSemanticsConstraint: numericSemanticsConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     objectModelConstraint: objectModelConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     protocolConstraint: protocolConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     typeConstraint: typeConstraintForConversionRoute(input, route, routeImports, routeEvidence)
@@ -103,6 +106,7 @@ export function conversionRouteMatchesConstraintQuery(route = {}, query = {}) {
     && metaprogrammingConstraintMatches(route.metaprogrammingConstraint, query)
     && scopeBindingConstraintMatches(route.scopeBindingConstraint, query)
     && moduleConstraintMatches(route.moduleConstraint, query)
+    && numericSemanticsConstraintMatches(route.numericSemanticsConstraint, query)
     && objectModelConstraintMatches(route.objectModelConstraint, query)
     && protocolConstraintMatches(route.protocolConstraint, query)
     && typeConstraintMatches(route.typeConstraint, query);

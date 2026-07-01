@@ -14,6 +14,7 @@ import { lifetimeConstraintMatches } from './universal-lifetime-constraints.js';
 import { memoryModelConstraintMatches } from './universal-memory-model-constraints.js';
 import { metaprogrammingConstraintMatches } from './universal-metaprogramming-constraints.js';
 import { moduleConstraintMatches } from './universal-module-constraints.js';
+import { numericSemanticsConstraintMatches } from './universal-numeric-semantics-constraints.js';
 import { objectModelConstraintMatches } from './universal-object-model-constraints.js';
 import { protocolConstraintMatches } from './universal-protocol-constraints.js';
 import { scopeBindingConstraintMatches } from './universal-scope-binding-constraints.js';
@@ -42,8 +43,8 @@ export function createUniversalTranslationAdmission(input = {}) {
   const evidenceIds = uniqueStrings([...(input.mergeRefs?.evidenceIds ?? []), ...(input.routeEvidence ?? []).map((record) => record?.id)]);
   const proofEvidenceIds = uniqueStrings([...(input.mergeRefs?.proofIds ?? []), ...proofEvidenceIdsFor(input.routeEvidence)]);
   const missingEvidence = translationMissingEvidence(input, missingConstructKinds);
-  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.lifetimeConstraint?.blockers ?? []), ...(input.controlFlowConstraint?.blockers ?? []), ...(input.adtPatternConstraint?.blockers ?? []), ...(input.borrowScopeConstraint?.blockers ?? []), ...(input.borrowCheckerConstraint?.blockers ?? []), ...(input.dataLayoutConstraint?.blockers ?? []), ...(input.effectConstraint?.blockers ?? []), ...(input.concurrencyModelConstraint?.blockers ?? []), ...(input.errorModelConstraint?.blockers ?? []), ...(input.evaluationModelConstraint?.blockers ?? []), ...(input.hostEnvironmentConstraint?.blockers ?? []), ...(input.memoryModelConstraint?.blockers ?? []), ...(input.metaprogrammingConstraint?.blockers ?? []), ...(input.scopeBindingConstraint?.blockers ?? []), ...(input.moduleConstraint?.blockers ?? []), ...(input.objectModelConstraint?.blockers ?? []), ...(input.protocolConstraint?.blockers ?? []), ...(input.typeConstraint?.blockers ?? [])]);
-  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.lifetimeConstraint?.review ?? []), ...(input.controlFlowConstraint?.review ?? []), ...(input.adtPatternConstraint?.review ?? []), ...(input.borrowScopeConstraint?.review ?? []), ...(input.borrowCheckerConstraint?.review ?? []), ...(input.dataLayoutConstraint?.review ?? []), ...(input.effectConstraint?.review ?? []), ...(input.concurrencyModelConstraint?.review ?? []), ...(input.errorModelConstraint?.review ?? []), ...(input.evaluationModelConstraint?.review ?? []), ...(input.hostEnvironmentConstraint?.review ?? []), ...(input.memoryModelConstraint?.review ?? []), ...(input.metaprogrammingConstraint?.review ?? []), ...(input.scopeBindingConstraint?.review ?? []), ...(input.moduleConstraint?.review ?? []), ...(input.objectModelConstraint?.review ?? []), ...(input.protocolConstraint?.review ?? []), ...(input.typeConstraint?.review ?? [])]);
+  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.lifetimeConstraint?.blockers ?? []), ...(input.controlFlowConstraint?.blockers ?? []), ...(input.adtPatternConstraint?.blockers ?? []), ...(input.borrowScopeConstraint?.blockers ?? []), ...(input.borrowCheckerConstraint?.blockers ?? []), ...(input.dataLayoutConstraint?.blockers ?? []), ...(input.effectConstraint?.blockers ?? []), ...(input.concurrencyModelConstraint?.blockers ?? []), ...(input.errorModelConstraint?.blockers ?? []), ...(input.evaluationModelConstraint?.blockers ?? []), ...(input.hostEnvironmentConstraint?.blockers ?? []), ...(input.memoryModelConstraint?.blockers ?? []), ...(input.metaprogrammingConstraint?.blockers ?? []), ...(input.scopeBindingConstraint?.blockers ?? []), ...(input.moduleConstraint?.blockers ?? []), ...(input.numericSemanticsConstraint?.blockers ?? []), ...(input.objectModelConstraint?.blockers ?? []), ...(input.protocolConstraint?.blockers ?? []), ...(input.typeConstraint?.blockers ?? [])]);
+  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.lifetimeConstraint?.review ?? []), ...(input.controlFlowConstraint?.review ?? []), ...(input.adtPatternConstraint?.review ?? []), ...(input.borrowScopeConstraint?.review ?? []), ...(input.borrowCheckerConstraint?.review ?? []), ...(input.dataLayoutConstraint?.review ?? []), ...(input.effectConstraint?.review ?? []), ...(input.concurrencyModelConstraint?.review ?? []), ...(input.errorModelConstraint?.review ?? []), ...(input.evaluationModelConstraint?.review ?? []), ...(input.hostEnvironmentConstraint?.review ?? []), ...(input.memoryModelConstraint?.review ?? []), ...(input.metaprogrammingConstraint?.review ?? []), ...(input.scopeBindingConstraint?.review ?? []), ...(input.moduleConstraint?.review ?? []), ...(input.numericSemanticsConstraint?.review ?? []), ...(input.objectModelConstraint?.review ?? []), ...(input.protocolConstraint?.review ?? []), ...(input.typeConstraint?.review ?? [])]);
   const status = translationAdmissionStatus(input, missingEvidence, blockers);
   return {
     status,
@@ -124,6 +125,10 @@ export function createUniversalTranslationAdmission(input = {}) {
     moduleConstraintStatus: input.moduleConstraint?.status,
     moduleConstraintAction: input.moduleConstraint?.action,
     moduleConstraintMissingEvidence: input.moduleConstraint?.missingEvidence ?? [],
+    numericSemanticsConstraint: constraintSummary(input.numericSemanticsConstraint),
+    numericSemanticsConstraintStatus: input.numericSemanticsConstraint?.status,
+    numericSemanticsConstraintAction: input.numericSemanticsConstraint?.action,
+    numericSemanticsConstraintMissingEvidence: input.numericSemanticsConstraint?.missingEvidence ?? [],
     objectModelConstraint: constraintSummary(input.objectModelConstraint),
     objectModelConstraintStatus: input.objectModelConstraint?.status,
     objectModelConstraintAction: input.objectModelConstraint?.action,
@@ -165,6 +170,7 @@ export function conversionRouteMatchesTranslationAdmissionQuery(route, query = {
     && metaprogrammingConstraintMatches(route?.metaprogrammingConstraint ?? admission.metaprogrammingConstraint, query)
     && scopeBindingConstraintMatches(route?.scopeBindingConstraint ?? admission.scopeBindingConstraint, query)
     && moduleConstraintMatches(route?.moduleConstraint ?? admission.moduleConstraint, query)
+    && numericSemanticsConstraintMatches(route?.numericSemanticsConstraint ?? admission.numericSemanticsConstraint, query)
     && objectModelConstraintMatches(route?.objectModelConstraint ?? admission.objectModelConstraint, query)
     && protocolConstraintMatches(route?.protocolConstraint ?? admission.protocolConstraint, query)
     && typeConstraintMatches(route?.typeConstraint ?? admission.typeConstraint, query)
@@ -184,6 +190,7 @@ function requiredTranslationConstructKinds(input) {
     'proof-evidence',
     ...((input.runtime?.requiredCapabilities ?? []).length || (input.runtime?.adapterRequirements ?? []).length ? ['runtime-capability'] : []),
     ...((input.adtPatternConstraint?.requiredKinds ?? []).length ? ['adt-pattern-contract'] : []),
+    ...((input.numericSemanticsConstraint?.requiredKinds ?? []).length ? ['numeric-semantics-contract'] : []),
     ...((input.protocolConstraint?.requiredKinds ?? []).length ? ['protocol-contract'] : []),
     ...((input.dialect?.records ?? []).length ? ['dialect-projection'] : [])
   ]);
@@ -221,6 +228,7 @@ function translationMissingEvidence(input, missingConstructKinds) {
     ...(input.metaprogrammingConstraint?.missingEvidence ?? []),
     ...(input.scopeBindingConstraint?.missingEvidence ?? []),
     ...(input.moduleConstraint?.missingEvidence ?? []),
+    ...(input.numericSemanticsConstraint?.missingEvidence ?? []),
     ...(input.objectModelConstraint?.missingEvidence ?? []),
     ...(input.protocolConstraint?.missingEvidence ?? []),
     ...(input.typeConstraint?.missingEvidence ?? [])

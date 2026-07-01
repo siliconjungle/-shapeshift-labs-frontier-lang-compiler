@@ -185,6 +185,7 @@ function createRouteArtifact(route, options) {
     metaprogrammingConstraint: route.metaprogrammingConstraint,
     scopeBindingConstraint: route.scopeBindingConstraint,
     moduleConstraint: route.moduleConstraint,
+    numericSemanticsConstraint: route.numericSemanticsConstraint,
     objectModelConstraint: route.objectModelConstraint,
     protocolConstraint: route.protocolConstraint,
     typeConstraint: route.typeConstraint,
@@ -200,7 +201,7 @@ function createRouteArtifact(route, options) {
     admissionBucket: admissionRecord.admissionBucket,
     autoMergeClaim: false,
     semanticEquivalenceClaim: false,
-    metadata: { ...recordMetadata, materialization, resourceTransfer: route.resourceTransfer, lifetimeConstraint: route.lifetimeConstraint, controlFlowConstraint: route.controlFlowConstraint, adtPatternConstraint: route.adtPatternConstraint, borrowScopeConstraint: route.borrowScopeConstraint, borrowCheckerConstraint: route.borrowCheckerConstraint, dataLayoutConstraint: route.dataLayoutConstraint, effectConstraint: route.effectConstraint, concurrencyModelConstraint: route.concurrencyModelConstraint, errorModelConstraint: route.errorModelConstraint, evaluationModelConstraint: route.evaluationModelConstraint, hostEnvironmentConstraint: route.hostEnvironmentConstraint, memoryModelConstraint: route.memoryModelConstraint, metaprogrammingConstraint: route.metaprogrammingConstraint, scopeBindingConstraint: route.scopeBindingConstraint, moduleConstraint: route.moduleConstraint, objectModelConstraint: route.objectModelConstraint, protocolConstraint: route.protocolConstraint, typeConstraint: route.typeConstraint }
+    metadata: { ...recordMetadata, materialization, resourceTransfer: route.resourceTransfer, lifetimeConstraint: route.lifetimeConstraint, controlFlowConstraint: route.controlFlowConstraint, adtPatternConstraint: route.adtPatternConstraint, borrowScopeConstraint: route.borrowScopeConstraint, borrowCheckerConstraint: route.borrowCheckerConstraint, dataLayoutConstraint: route.dataLayoutConstraint, effectConstraint: route.effectConstraint, concurrencyModelConstraint: route.concurrencyModelConstraint, errorModelConstraint: route.errorModelConstraint, evaluationModelConstraint: route.evaluationModelConstraint, hostEnvironmentConstraint: route.hostEnvironmentConstraint, memoryModelConstraint: route.memoryModelConstraint, metaprogrammingConstraint: route.metaprogrammingConstraint, scopeBindingConstraint: route.scopeBindingConstraint, moduleConstraint: route.moduleConstraint, numericSemanticsConstraint: route.numericSemanticsConstraint, objectModelConstraint: route.objectModelConstraint, protocolConstraint: route.protocolConstraint, typeConstraint: route.typeConstraint }
   };
 }
 

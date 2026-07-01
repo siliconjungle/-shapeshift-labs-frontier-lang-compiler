@@ -68,6 +68,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const metaprogrammingConstraints = routeArtifacts.map((artifact) => artifact.metaprogrammingConstraint ?? artifact.metadata?.metaprogrammingConstraint ?? artifact.admissionRecord?.metadata?.metaprogrammingConstraint ?? {});
   const scopeBindingConstraints = routeArtifacts.map((artifact) => artifact.scopeBindingConstraint ?? artifact.metadata?.scopeBindingConstraint ?? artifact.admissionRecord?.metadata?.scopeBindingConstraint ?? {});
   const moduleConstraints = routeArtifacts.map((artifact) => artifact.moduleConstraint ?? artifact.metadata?.moduleConstraint ?? artifact.admissionRecord?.metadata?.moduleConstraint ?? {});
+  const numericSemanticsConstraints = routeArtifacts.map((artifact) => artifact.numericSemanticsConstraint ?? artifact.metadata?.numericSemanticsConstraint ?? artifact.admissionRecord?.metadata?.numericSemanticsConstraint ?? {});
   const objectModelConstraints = routeArtifacts.map((artifact) => artifact.objectModelConstraint ?? artifact.metadata?.objectModelConstraint ?? artifact.admissionRecord?.metadata?.objectModelConstraint ?? {});
   const protocolConstraints = routeArtifacts.map((artifact) => artifact.protocolConstraint ?? artifact.metadata?.protocolConstraint ?? artifact.admissionRecord?.metadata?.protocolConstraint ?? {});
   const typeConstraints = routeArtifacts.map((artifact) => artifact.typeConstraint ?? artifact.metadata?.typeConstraint ?? artifact.admissionRecord?.metadata?.typeConstraint ?? {});
@@ -110,6 +111,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     metaprogrammingConstraint: compactConstraintCounts(metaprogrammingConstraints),
     scopeBindingConstraint: compactConstraintCounts(scopeBindingConstraints),
     moduleConstraint: compactConstraintCounts(moduleConstraints),
+    numericSemanticsConstraint: compactConstraintCounts(numericSemanticsConstraints),
     objectModelConstraint: compactConstraintCounts(objectModelConstraints),
     protocolConstraint: compactConstraintCounts(protocolConstraints),
     typeConstraint: compactConstraintCounts(typeConstraints),

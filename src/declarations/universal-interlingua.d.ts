@@ -16,6 +16,7 @@ export type UniversalInterlinguaLayerKind =
   | 'dialect-projection'
   | 'semantic-ownership'
   | 'adt-pattern-contract'
+  | 'numeric-semantics-contract'
   | 'protocol-contract'
   | 'proof-evidence'
   | string;
@@ -46,6 +47,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'scope-binding'
   | 'effect'
   | 'module'
+  | 'numeric-semantics'
   | 'object-model'
   | 'protocol'
   | 'type'

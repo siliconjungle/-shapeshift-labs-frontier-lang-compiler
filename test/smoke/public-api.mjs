@@ -167,6 +167,7 @@ for (const requiredExport of [
   'metaprogrammingConstraintMatches',
   'scopeBindingConstraintMatches',
   'moduleConstraintMatches',
+  'numericSemanticsConstraintMatches',
   'objectModelConstraintMatches',
   'protocolConstraintMatches',
   'typeConstraintMatches',

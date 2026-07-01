@@ -48,18 +48,11 @@ type ExpectedPublicRuntimeExport =
   | 'SemanticLineageResolutionStatuses'
   | 'SemanticHistoryOverlapKinds'
   | 'SemanticHistoryReviewerStatuses'
-  | 'UniversalDialectConstructKinds' | 'UniversalDialectProjectionDispositions' | 'UniversalBorrowCheckerConstraintStatuses' | 'UniversalBorrowScopeConstraintStatuses' | 'UniversalControlFlowConstraintStatuses' | 'UniversalAdtPatternConstraintStatuses' | 'UniversalDataLayoutConstraintStatuses' | 'UniversalConcurrencyModelConstraintStatuses' | 'UniversalEffectConstraintStatuses' | 'UniversalErrorModelConstraintStatuses' | 'UniversalEvaluationModelConstraintStatuses' | 'UniversalHostEnvironmentConstraintStatuses' | 'UniversalLifetimeConstraintStatuses' | 'UniversalMemoryModelConstraintStatuses' | 'UniversalMetaprogrammingConstraintStatuses' | 'UniversalScopeBindingConstraintStatuses' | 'UniversalModuleConstraintStatuses' | 'UniversalObjectModelConstraintStatuses' | 'UniversalProtocolConstraintStatuses' | 'UniversalTypeConstraintStatuses'
+  | 'UniversalDialectConstructKinds' | 'UniversalDialectProjectionDispositions' | 'UniversalBorrowCheckerConstraintStatuses' | 'UniversalBorrowScopeConstraintStatuses' | 'UniversalControlFlowConstraintStatuses' | 'UniversalAdtPatternConstraintStatuses' | 'UniversalDataLayoutConstraintStatuses' | 'UniversalConcurrencyModelConstraintStatuses' | 'UniversalEffectConstraintStatuses' | 'UniversalErrorModelConstraintStatuses' | 'UniversalEvaluationModelConstraintStatuses' | 'UniversalHostEnvironmentConstraintStatuses' | 'UniversalLifetimeConstraintStatuses' | 'UniversalMemoryModelConstraintStatuses' | 'UniversalMetaprogrammingConstraintStatuses' | 'UniversalScopeBindingConstraintStatuses' | 'UniversalModuleConstraintStatuses' | 'UniversalNumericSemanticsConstraintStatuses' | 'UniversalObjectModelConstraintStatuses' | 'UniversalProtocolConstraintStatuses' | 'UniversalTypeConstraintStatuses'
   | 'UniversalInterlinguaConstraintEdgeKinds' | 'UniversalInterlinguaLayerKinds' | 'UniversalInterlinguaLoweringDispositions'
   | 'UniversalRepresentationConstructKinds' | 'UniversalOwnershipConstraintStatuses' | 'UniversalResourceTransferStatuses' | 'UniversalRuntimeCapabilityKinds'
   | 'UniversalRuntimeHostProfiles'
-  | 'ExternalSemanticIndexFormats'
-  | 'attachUniversalDialectRegistry'
-  | 'classifyNativeImportReadiness'
-  | 'classifyNativeImportRoundtripReadiness'
-  | 'compileNativeSource'
-  | 'compileFrontierDocument'
-  | 'compileFrontierSource'
-  | 'compactSemanticSidecarExample'
+  | 'ExternalSemanticIndexFormats' | 'attachUniversalDialectRegistry' | 'classifyNativeImportReadiness' | 'classifyNativeImportRoundtripReadiness' | 'compileNativeSource' | 'compileFrontierDocument' | 'compileFrontierSource' | 'compactSemanticSidecarExample'
   | 'createBabelNativeImporterAdapter'
   | 'createBidirectionalTargetChangeRecord'
   | 'createEstreeNativeImporterAdapter'
@@ -82,7 +75,7 @@ type ExpectedPublicRuntimeExport =
   | 'createSemanticPatchBundleRecord' | 'compareSemanticPatchBundleRecords' | 'composeSemanticPatchBundleProjections'
   | 'createSemanticTransformIdentityRecord' | 'deriveSemanticTransformIdentityRecords'
   | 'createUniversalCapabilityMatrix' | 'createUniversalConversionArtifacts' | 'createUniversalConversionPlan' | 'createUniversalConversionRouteEvidenceReceipt' | 'createUniversalConversionWorklist'
-  | 'createUniversalRuntimeCapabilityMatrix' | 'createUniversalBorrowCheckerConstraintEvidence' | 'createUniversalBorrowScopeConstraintEvidence' | 'createUniversalControlFlowConstraintEvidence' | 'createUniversalAdtPatternConstraintEvidence' | 'createUniversalDataLayoutConstraintEvidence' | 'createUniversalConcurrencyModelConstraintEvidence' | 'createUniversalEffectConstraintEvidence' | 'createUniversalErrorModelConstraintEvidence' | 'createUniversalEvaluationModelConstraintEvidence' | 'createUniversalHostEnvironmentConstraintEvidence' | 'createUniversalLifetimeConstraintEvidence' | 'createUniversalMemoryModelConstraintEvidence' | 'createUniversalMetaprogrammingConstraintEvidence' | 'createUniversalScopeBindingConstraintEvidence' | 'createUniversalModuleConstraintEvidence' | 'createUniversalObjectModelConstraintEvidence' | 'createUniversalProtocolConstraintEvidence' | 'createUniversalTypeConstraintEvidence' | 'createUniversalOwnershipConstraintEvidence' | 'createUniversalResourceTransferEvidence'
+  | 'createUniversalRuntimeCapabilityMatrix' | 'createUniversalBorrowCheckerConstraintEvidence' | 'createUniversalBorrowScopeConstraintEvidence' | 'createUniversalControlFlowConstraintEvidence' | 'createUniversalAdtPatternConstraintEvidence' | 'createUniversalDataLayoutConstraintEvidence' | 'createUniversalConcurrencyModelConstraintEvidence' | 'createUniversalEffectConstraintEvidence' | 'createUniversalErrorModelConstraintEvidence' | 'createUniversalEvaluationModelConstraintEvidence' | 'createUniversalHostEnvironmentConstraintEvidence' | 'createUniversalLifetimeConstraintEvidence' | 'createUniversalMemoryModelConstraintEvidence' | 'createUniversalMetaprogrammingConstraintEvidence' | 'createUniversalScopeBindingConstraintEvidence' | 'createUniversalModuleConstraintEvidence' | 'createUniversalNumericSemanticsConstraintEvidence' | 'createUniversalObjectModelConstraintEvidence' | 'createUniversalProtocolConstraintEvidence' | 'createUniversalTypeConstraintEvidence' | 'createUniversalOwnershipConstraintEvidence' | 'createUniversalResourceTransferEvidence'
   | 'createUniversalDialectRecord'
   | 'createUniversalDialectRegistry'
   | 'createUniversalExternRecord' | 'createUniversalInterlinguaRecord'
@@ -142,7 +135,7 @@ type ExpectedPublicRuntimeExport =
   | 'readUniversalAstJson'
   | 'renderTargetAst'
   | 'renderTargetAstWithSourceMap'
-  | 'representationCoverageMatches' | 'resourceTransferMatches' | 'borrowCheckerConstraintMatches' | 'borrowScopeConstraintMatches' | 'controlFlowConstraintMatches' | 'adtPatternConstraintMatches' | 'dataLayoutConstraintMatches' | 'concurrencyModelConstraintMatches' | 'effectConstraintMatches' | 'errorModelConstraintMatches' | 'evaluationModelConstraintMatches' | 'hostEnvironmentConstraintMatches' | 'lifetimeConstraintMatches' | 'memoryModelConstraintMatches' | 'metaprogrammingConstraintMatches' | 'scopeBindingConstraintMatches' | 'moduleConstraintMatches' | 'objectModelConstraintMatches' | 'protocolConstraintMatches' | 'typeConstraintMatches' | 'ownershipConstraintMatches' | 'interlinguaRecordMatches'
+  | 'representationCoverageMatches' | 'resourceTransferMatches' | 'borrowCheckerConstraintMatches' | 'borrowScopeConstraintMatches' | 'controlFlowConstraintMatches' | 'adtPatternConstraintMatches' | 'dataLayoutConstraintMatches' | 'concurrencyModelConstraintMatches' | 'effectConstraintMatches' | 'errorModelConstraintMatches' | 'evaluationModelConstraintMatches' | 'hostEnvironmentConstraintMatches' | 'lifetimeConstraintMatches' | 'memoryModelConstraintMatches' | 'metaprogrammingConstraintMatches' | 'scopeBindingConstraintMatches' | 'moduleConstraintMatches' | 'numericSemanticsConstraintMatches' | 'objectModelConstraintMatches' | 'protocolConstraintMatches' | 'typeConstraintMatches' | 'ownershipConstraintMatches' | 'interlinguaRecordMatches'
   | 'resolveCapabilityAdapters'
   | 'runNativeImporterAdapter'
   | 'runNativeTargetProjectionAdapter'
@@ -178,6 +171,11 @@ void (null as unknown as RoundtripSemanticEquivalenceClaimStaysFalse);
 void (null as unknown as RoundtripRouteSourceMapPrecisionIsTyped);
 type RustBorrowPrimitiveModelFields = Expect<Equal<compilerApi.UniversalOwnershipConstraintModel['hasReborrow'] | compilerApi.UniversalOwnershipConstraintModel['hasTwoPhaseBorrow'] | compilerApi.UniversalOwnershipConstraintModel['hasInteriorMutability'] | compilerApi.UniversalOwnershipConstraintModel['hasPinnedResource'] | compilerApi.UniversalLifetimeConstraintModel['hasNonLexicalLifetime'] | compilerApi.UniversalLifetimeConstraintModel['hasHigherRankedLifetime'] | compilerApi.UniversalBorrowScopeConstraintModel['hasPinProjection'], boolean>>;
 void (null as unknown as RustBorrowPrimitiveModelFields);
+const typedNumericSemantics = compilerApi.createUniversalNumericSemanticsConstraintEvidence({
+  sourceLanguage: 'rust',
+  target: 'typescript',
+  sourceNumericSemanticsRecords: [{ kind: 'integer overflow division', width: 32, signedness: 'unsigned' }]
+}); typedNumericSemantics.status satisfies compilerApi.UniversalNumericSemanticsConstraintStatus; typedNumericSemantics.claims.semanticEquivalenceClaim satisfies false; compilerApi.numericSemanticsConstraintMatches(typedNumericSemantics, { numericSemanticsConstraintMissingKind: 'overflow-behavior' }) satisfies boolean; void typedNumericSemantics;
 const bidirectionalTargetChange = compilerApi.createBidirectionalTargetChangeRecord({
   source: {
     language: 'typescript',
