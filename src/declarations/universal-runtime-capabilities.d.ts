@@ -112,9 +112,10 @@ export interface UniversalRuntimeProofObligationInput {
   readonly evidenceIds?: readonly string[]; readonly blockers?: readonly string[]; readonly review?: readonly string[];
 }
 
+type UniversalRuntimeQueryFilter<T> = T | readonly T[];
 export interface UniversalRuntimeProofObligationQuery {
-  readonly runtimeProofObligationId?: string; readonly runtimeProofCapability?: UniversalRuntimeCapabilityKind; readonly runtimeProofStatus?: string;
-  readonly runtimeProofMissingSignal?: UniversalRuntimeProofSignalKind; readonly runtimeProofRequiredSignal?: UniversalRuntimeProofSignalKind; readonly runtimeProofProvidedSignal?: UniversalRuntimeProofSignalKind;
+  readonly runtimeProofObligationId?: UniversalRuntimeQueryFilter<string>; readonly runtimeProofCapability?: UniversalRuntimeQueryFilter<UniversalRuntimeCapabilityKind>; readonly runtimeProofStatus?: UniversalRuntimeQueryFilter<string>;
+  readonly runtimeProofMissingSignal?: UniversalRuntimeQueryFilter<UniversalRuntimeProofSignalKind>; readonly runtimeProofRequiredSignal?: UniversalRuntimeQueryFilter<UniversalRuntimeProofSignalKind>; readonly runtimeProofProvidedSignal?: UniversalRuntimeQueryFilter<UniversalRuntimeProofSignalKind>;
 }
 
 export interface UniversalRuntimeCapabilityRoute {
@@ -184,7 +185,6 @@ export interface UniversalRuntimeCapabilityMatrixOptions {
     | Readonly<Record<string, readonly UniversalRuntimeCapabilityKind[]>>;
 }
 
-type UniversalRuntimeQueryFilter<T> = T | readonly T[];
 export interface UniversalRuntimeCapabilityMatrixQuery {
   readonly sourceLanguage?: UniversalRuntimeQueryFilter<FrontierSourceLanguage | string>;
   readonly language?: UniversalRuntimeQueryFilter<FrontierSourceLanguage | string>;

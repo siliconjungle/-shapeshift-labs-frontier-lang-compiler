@@ -143,6 +143,7 @@ assert.equal(scopedCanvasProof.status, 'satisfied');
 assert.equal(failedCanvasProof.status, 'needs-evidence');
 assert.equal(failedCanvasProof.evidenceIds.includes('failed_canvas_runtime_signal_bundle'), false);
 assert.equal(runtimeProofObligationMatches(satisfiedCanvasProof, { runtimeProofCapability: 'canvas', runtimeProofProvidedSignal: 'bitmap-hash' }), true);
+assert.equal(runtimeProofObligationMatches(satisfiedCanvasProof, { runtimeProofObligationId: ['missing-proof', satisfiedCanvasProof.id], runtimeProofCapability: ['filesystem', 'canvas'], runtimeProofStatus: ['needs-evidence', 'satisfied'], runtimeProofRequiredSignal: ['missing-signal', 'bitmap-hash'], runtimeProofProvidedSignal: ['missing-signal', 'bitmap-hash'] }), true);
 assert.equal(summarizeRuntimeProofObligations([satisfiedCanvasProof]).byCapability.canvas, 1);
 
 const hostPlan = createUniversalConversionPlan({

@@ -1,5 +1,5 @@
-import { createUniversalConversionArtifacts, createUniversalConversionPlan, createUniversalConversionRouteEvidenceReceipt, createUniversalConversionWorklist, createUniversalRuntimeCapabilityMatrix, queryUniversalConversionArtifacts, queryUniversalConversionPlan, queryUniversalConversionWorklist, queryUniversalRuntimeCapabilityMatrix } from '../src/index.js';
-import type { UniversalConversionArtifacts, UniversalConversionPlan, UniversalConversionRouteEvidenceReceipt, UniversalConversionWorklist, UniversalRuntimeCapabilityMatrix } from '../src/index.js';
+import { createUniversalConversionArtifacts, createUniversalConversionPlan, createUniversalConversionRouteEvidenceReceipt, createUniversalConversionWorklist, createUniversalRuntimeCapabilityMatrix, queryUniversalConversionArtifacts, queryUniversalConversionPlan, queryUniversalConversionWorklist, queryUniversalRuntimeCapabilityMatrix, runtimeProofObligationMatches } from '../src/index.js';
+import type { UniversalConversionArtifacts, UniversalConversionPlan, UniversalConversionRouteEvidenceReceipt, UniversalConversionWorklist, UniversalRuntimeCapabilityMatrix, UniversalRuntimeProofObligationQuery } from '../src/index.js';
 
 const routingPlan: UniversalConversionPlan = createUniversalConversionPlan({
   targets: ['rust'],
@@ -25,6 +25,8 @@ routingRoute?.translationAdmission.runtimeProofMissingSignals satisfies readonly
 routingRoute?.translationAdmission.dialectRecordIds satisfies readonly string[] | undefined;
 const runtimeMatrix: UniversalRuntimeCapabilityMatrix = createUniversalRuntimeCapabilityMatrix({ sourceHosts: ['javascript:web'], targetHosts: ['rust:cli'], runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'fetch' }] });
 queryUniversalRuntimeCapabilityMatrix(runtimeMatrix, { language: ['javascript'], target: ['rust'], sourceRuntime: ['web'], targetRuntime: ['cli'], capability: ['fetch'], runtimeProofObligationId: ['runtime_proof'], runtimeProofCapability: ['fetch'], runtimeProofStatus: ['needs-evidence'], runtimeProofRequiredSignal: ['network-trace-hash'], runtimeProofMissingSignal: ['network-trace-hash'], runtimeProofProvidedSignal: ['telemetry-hash'] }).bestRoute?.proofObligations satisfies readonly unknown[] | undefined;
+const runtimeProofQuery = { runtimeProofObligationId: ['runtime_proof'], runtimeProofCapability: ['fetch'], runtimeProofStatus: ['needs-evidence'], runtimeProofRequiredSignal: ['network-trace-hash'], runtimeProofMissingSignal: ['network-trace-hash'], runtimeProofProvidedSignal: ['telemetry-hash'] } satisfies UniversalRuntimeProofObligationQuery;
+runtimeProofObligationMatches(runtimeMatrix.routes[0]?.proofObligations[0], runtimeProofQuery) satisfies boolean;
 
 const routingArtifacts: UniversalConversionArtifacts = createUniversalConversionArtifacts(routingPlan, { routeId: ['conversion_javascript_to_rust'], sourceLanguage: ['javascript'], target: ['rust'], mode: ['target-adapter'], readiness: ['ready'], admissionAction: ['prioritize'], translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
 queryUniversalConversionArtifacts(routingArtifacts, {
