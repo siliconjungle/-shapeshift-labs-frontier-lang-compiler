@@ -71,6 +71,7 @@ export { createUniversalNumericSemanticsConstraintEvidence, numericSemanticsCons
 export { createUniversalTextSemanticsConstraintEvidence, textSemanticsConstraintMatches, UniversalTextSemanticsConstraintStatuses } from './universal-text-semantics-constraints.js';
 export { createUniversalCollectionSemanticsConstraintEvidence, collectionSemanticsConstraintMatches, UniversalCollectionSemanticsConstraintStatuses } from './universal-collection-semantics-constraints.js';
 export { createUniversalSerializationSemanticsConstraintEvidence, serializationSemanticsConstraintMatches, UniversalSerializationSemanticsConstraintStatuses } from './universal-serialization-semantics-constraints.js';
+export { createUniversalDependencySemanticsConstraintEvidence, dependencySemanticsConstraintMatches, UniversalDependencySemanticsConstraintStatuses } from './universal-dependency-semantics-constraints.js';
 export { createUniversalObjectModelConstraintEvidence, objectModelConstraintMatches, UniversalObjectModelConstraintStatuses } from './universal-object-model-constraints.js';
 export { createUniversalProtocolConstraintEvidence, protocolConstraintMatches, UniversalProtocolConstraintStatuses } from './universal-protocol-constraints.js';
 export { createUniversalTypeConstraintEvidence, typeConstraintMatches, UniversalTypeConstraintStatuses } from './universal-type-constraints.js';

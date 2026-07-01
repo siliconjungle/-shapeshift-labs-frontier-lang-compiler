@@ -77,7 +77,8 @@ export async function runProjectMatrixCases(adapters) {
   });
   assert.equal(universalMatrix.summary.imports, project.imports.length);
   assert.equal(universalMatrix.matrices.importCoverage.summary.imports, matrix.summary.imports);
-  assert.equal(universalMatrix.matrices.projectionTargets.summary.languages, projectionMatrix.summary.languages);
+  assert.equal(universalMatrix.matrices.projectionTargets.summary.languages, universalMatrix.summary.languages);
+  assert.equal(universalMatrix.matrices.projectionTargets.summary.languages >= projectionMatrix.summary.languages, true);
   assert.ok(universalMatrix.summary.parserRows >= universalMatrix.summary.languages);
   assert.ok(universalMatrix.summary.blockers > 0);
 

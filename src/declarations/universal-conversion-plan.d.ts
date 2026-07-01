@@ -10,20 +10,7 @@ import type { UniversalInterlinguaQuery, UniversalInterlinguaRecord } from './un
 import type { UniversalConversionPlanCompactCounts } from './universal-conversion-compact-counts.js';
 import type { UniversalTranslationConstraintFieldName as TCN } from './universal-conversion-constraint-families.js';
 import type { UniversalRuntimeAdapterRequirement as URA, UniversalRuntimeCapabilityKind as URK, UniversalRuntimeCapabilityMatrix as URM, UniversalRuntimeCapabilityRoute as URR, UniversalRuntimeHostProfile as URH, UniversalRuntimeRequirementInput as URI } from './universal-runtime-capabilities.js';
-import type { UniversalBorrowCheckerConstraintEvidence as BcEv, UniversalBorrowCheckerConstraintInput as BcIn, UniversalBorrowCheckerConstraintQuery as BcQ } from './universal-borrow-checker-constraints.js';
-import type { UniversalBorrowScopeConstraintEvidence as BsEv, UniversalBorrowScopeConstraintInput as BsIn, UniversalBorrowScopeConstraintQuery as BsQ } from './universal-borrow-scope-constraints.js';
-import type { UniversalControlFlowConstraintEvidence as CfEv, UniversalControlFlowConstraintInput as CfIn, UniversalControlFlowConstraintQuery as CfQ } from './universal-control-flow-constraints.js';
-import type { UniversalAdtPatternConstraintEvidence as AdtEv, UniversalAdtPatternConstraintInput as AdtIn, UniversalAdtPatternConstraintQuery as AdtQ } from './universal-adt-pattern-constraints.js';
-import type { UniversalEffectConstraintEvidence as EfEv, UniversalEffectConstraintInput as EfIn, UniversalEffectConstraintQuery as EfQ } from './universal-effect-constraints.js'; import type { UniversalConcurrencyModelConstraintEvidence as ConEv, UniversalConcurrencyModelConstraintInput as ConIn, UniversalConcurrencyModelConstraintQuery as ConQ } from './universal-concurrency-model-constraints.js'; import type { UniversalDataLayoutConstraintEvidence as DlEv, UniversalDataLayoutConstraintInput as DlIn, UniversalDataLayoutConstraintQuery as DlQ } from './universal-data-layout-constraints.js'; import type { UniversalErrorModelConstraintEvidence as ErrEv, UniversalErrorModelConstraintInput as ErrIn, UniversalErrorModelConstraintQuery as ErrQ } from './universal-error-model-constraints.js'; import type { UniversalEvaluationModelConstraintEvidence as EvalEv, UniversalEvaluationModelConstraintInput as EvalIn, UniversalEvaluationModelConstraintQuery as EvalQ } from './universal-evaluation-model-constraints.js'; import type { UniversalObjectModelConstraintEvidence as ObjEv, UniversalObjectModelConstraintInput as ObjIn, UniversalObjectModelConstraintQuery as ObjQ } from './universal-object-model-constraints.js';
-import type { UniversalHostEnvironmentConstraintEvidence as HostEv, UniversalHostEnvironmentConstraintInput as HostIn, UniversalHostEnvironmentConstraintQuery as HostQ } from './universal-host-environment-constraints.js';
-import type { UniversalLifetimeConstraintEvidence as LtEv, UniversalLifetimeConstraintInput as LtIn, UniversalLifetimeConstraintQuery as LtQ } from './universal-lifetime-constraints.js'; import type { UniversalMemoryModelConstraintEvidence as MemEv, UniversalMemoryModelConstraintInput as MemIn, UniversalMemoryModelConstraintQuery as MemQ } from './universal-memory-model-constraints.js';
-import type { UniversalMetaprogrammingConstraintEvidence as MetaEv, UniversalMetaprogrammingConstraintInput as MetaIn, UniversalMetaprogrammingConstraintQuery as MetaQ } from './universal-metaprogramming-constraints.js';
-import type { UniversalScopeBindingConstraintEvidence as SbEv, UniversalScopeBindingConstraintInput as SbIn, UniversalScopeBindingConstraintQuery as SbQ } from './universal-scope-binding-constraints.js';
-import type { UniversalModuleConstraintEvidence as ModEv, UniversalModuleConstraintInput as ModIn, UniversalModuleConstraintQuery as ModQ } from './universal-module-constraints.js';
-import type { UniversalNumericSemanticsConstraintEvidence as NumEv, UniversalNumericSemanticsConstraintInput as NumIn, UniversalNumericSemanticsConstraintQuery as NumQ } from './universal-numeric-semantics-constraints.js'; import type { UniversalTextSemanticsConstraintEvidence as TxtEv, UniversalTextSemanticsConstraintInput as TxtIn, UniversalTextSemanticsConstraintQuery as TxtQ } from './universal-text-semantics-constraints.js'; import type { UniversalCollectionSemanticsConstraintEvidence as ColEv, UniversalCollectionSemanticsConstraintInput as ColIn, UniversalCollectionSemanticsConstraintQuery as ColQ } from './universal-collection-semantics-constraints.js'; import type { UniversalSerializationSemanticsConstraintEvidence as SerEv, UniversalSerializationSemanticsConstraintInput as SerIn, UniversalSerializationSemanticsConstraintQuery as SerQ } from './universal-serialization-semantics-constraints.js';
-import type { UniversalTypeConstraintEvidence as TyEv, UniversalTypeConstraintInput as TyIn, UniversalTypeConstraintQuery as TyQ } from './universal-type-constraints.js';
-import type { UniversalProtocolConstraintEvidence as ProtoEv, UniversalProtocolConstraintInput as ProtoIn, UniversalProtocolConstraintQuery as ProtoQ } from './universal-protocol-constraints.js';
-import type { UniversalResourceTransferEvidence as ResEv, UniversalResourceTransferInput as ResIn, UniversalResourceTransferQuery as ResQ } from './universal-resource-transfer.js';
+import type { UniversalConversionPlanConstraintOptions, UniversalConversionPlanConstraintQuery, UniversalConversionRouteConstraintFields } from './universal-conversion-plan-constraints.js';
 import type {
   UniversalDialectConstructKind,
   UniversalDialectProjectionDisposition,
@@ -152,7 +139,7 @@ export interface UniversalConversionRouteMergeRefs {
   readonly metadata: Record<string, unknown>;
 }
 
-export interface UniversalConversionRoute {
+export interface UniversalConversionRoute extends UniversalConversionRouteConstraintFields {
   readonly id: string;
   readonly sourceLanguage: SL | string;
   readonly languageIds: RO<string>;
@@ -176,7 +163,6 @@ export interface UniversalConversionRoute {
   readonly evidence: UniversalConversionRouteEvidence;
   readonly representation: URC;
   readonly interlingua: UniversalInterlinguaRecord;
-  readonly resourceTransfer?: ResEv; readonly lifetimeConstraint?: LtEv; readonly controlFlowConstraint?: CfEv; readonly adtPatternConstraint?: AdtEv; readonly borrowScopeConstraint?: BsEv; readonly borrowCheckerConstraint?: BcEv; readonly dataLayoutConstraint?: DlEv; readonly effectConstraint?: EfEv; readonly concurrencyModelConstraint?: ConEv; readonly errorModelConstraint?: ErrEv; readonly evaluationModelConstraint?: EvalEv; readonly hostEnvironmentConstraint?: HostEv; readonly memoryModelConstraint?: MemEv; readonly metaprogrammingConstraint?: MetaEv; readonly scopeBindingConstraint?: SbEv; readonly moduleConstraint?: ModEv; readonly numericSemanticsConstraint?: NumEv; readonly textSemanticsConstraint?: TxtEv; readonly collectionSemanticsConstraint?: ColEv; readonly serializationSemanticsConstraint?: SerEv; readonly objectModelConstraint?: ObjEv; readonly protocolConstraint?: ProtoEv; readonly typeConstraint?: TyEv;
   readonly missingEvidence: RO<string>;
   readonly translationAdmission: UniversalTranslationAdmission;
   readonly blockers: RO<string>;
@@ -230,7 +216,7 @@ export interface UniversalConversionPlan {
   };
 }
 
-export interface UniversalConversionPlanOptions extends UCO {
+export interface UniversalConversionPlanOptions extends UCO, UniversalConversionPlanConstraintOptions {
   readonly id?: string;
   readonly universalCapabilityMatrix?: UCM;
   readonly universalRuntimeCapabilityMatrix?: URM;
@@ -247,21 +233,12 @@ export interface UniversalConversionPlanOptions extends UCO {
   readonly universalDialectRegistry?: UniversalDialectRegistryInput | UniversalDialectRegistry;
   readonly dialects?: readonly UniversalDialectRecordInput[];
   readonly externs?: readonly UniversalExternRecordInput[];
-  readonly resourceTransfer?: ResIn | ResEv; readonly translationResourceTransfer?: ResIn | ResEv; readonly resourceTransfers?: readonly (ResIn | ResEv)[];
-  readonly lifetimeConstraint?: LtIn | LtEv; readonly translationLifetimeConstraint?: LtIn | LtEv; readonly lifetimeConstraints?: readonly (LtIn | LtEv)[];
-  readonly controlFlowConstraint?: CfIn | CfEv; readonly translationControlFlowConstraint?: CfIn | CfEv; readonly controlFlowConstraints?: readonly (CfIn | CfEv)[];
-  readonly adtPatternConstraint?: AdtIn | AdtEv; readonly translationAdtPatternConstraint?: AdtIn | AdtEv; readonly adtPatternConstraints?: readonly (AdtIn | AdtEv)[];
-  readonly borrowScopeConstraint?: BsIn | BsEv; readonly translationBorrowScopeConstraint?: BsIn | BsEv; readonly borrowScopeConstraints?: readonly (BsIn | BsEv)[];
-  readonly borrowCheckerConstraint?: BcIn | BcEv; readonly translationBorrowCheckerConstraint?: BcIn | BcEv; readonly borrowCheckerConstraints?: readonly (BcIn | BcEv)[];
-  readonly dataLayoutConstraint?: DlIn | DlEv; readonly translationDataLayoutConstraint?: DlIn | DlEv; readonly dataLayoutConstraints?: readonly (DlIn | DlEv)[]; readonly effectConstraint?: EfIn | EfEv; readonly translationEffectConstraint?: EfIn | EfEv; readonly effectConstraints?: readonly (EfIn | EfEv)[]; readonly concurrencyModelConstraint?: ConIn | ConEv; readonly translationConcurrencyModelConstraint?: ConIn | ConEv; readonly concurrencyModelConstraints?: readonly (ConIn | ConEv)[]; readonly errorModelConstraint?: ErrIn | ErrEv; readonly translationErrorModelConstraint?: ErrIn | ErrEv; readonly errorModelConstraints?: readonly (ErrIn | ErrEv)[]; readonly evaluationModelConstraint?: EvalIn | EvalEv; readonly translationEvaluationModelConstraint?: EvalIn | EvalEv; readonly evaluationModelConstraints?: readonly (EvalIn | EvalEv)[]; readonly hostEnvironmentConstraint?: HostIn | HostEv; readonly translationHostEnvironmentConstraint?: HostIn | HostEv; readonly hostEnvironmentConstraints?: readonly (HostIn | HostEv)[]; readonly memoryModelConstraint?: MemIn | MemEv; readonly translationMemoryModelConstraint?: MemIn | MemEv; readonly memoryModelConstraints?: readonly (MemIn | MemEv)[];
-  readonly metaprogrammingConstraint?: MetaIn | MetaEv; readonly translationMetaprogrammingConstraint?: MetaIn | MetaEv; readonly metaprogrammingConstraints?: readonly (MetaIn | MetaEv)[]; readonly scopeBindingConstraint?: SbIn | SbEv; readonly translationScopeBindingConstraint?: SbIn | SbEv; readonly scopeBindingConstraints?: readonly (SbIn | SbEv)[]; readonly moduleConstraint?: ModIn | ModEv; readonly translationModuleConstraint?: ModIn | ModEv; readonly moduleConstraints?: readonly (ModIn | ModEv)[]; readonly numericSemanticsConstraint?: NumIn | NumEv; readonly translationNumericSemanticsConstraint?: NumIn | NumEv; readonly numericSemanticsConstraints?: readonly (NumIn | NumEv)[]; readonly textSemanticsConstraint?: TxtIn | TxtEv; readonly translationTextSemanticsConstraint?: TxtIn | TxtEv; readonly textSemanticsConstraints?: readonly (TxtIn | TxtEv)[]; readonly collectionSemanticsConstraint?: ColIn | ColEv; readonly translationCollectionSemanticsConstraint?: ColIn | ColEv; readonly collectionSemanticsConstraints?: readonly (ColIn | ColEv)[]; readonly serializationSemanticsConstraint?: SerIn | SerEv; readonly translationSerializationSemanticsConstraint?: SerIn | SerEv; readonly serializationSemanticsConstraints?: readonly (SerIn | SerEv)[]; readonly objectModelConstraint?: ObjIn | ObjEv; readonly translationObjectModelConstraint?: ObjIn | ObjEv; readonly objectModelConstraints?: readonly (ObjIn | ObjEv)[]; readonly protocolConstraint?: ProtoIn | ProtoEv; readonly translationProtocolConstraint?: ProtoIn | ProtoEv; readonly protocolConstraints?: readonly (ProtoIn | ProtoEv)[];
-  readonly typeConstraint?: TyIn | TyEv; readonly translationTypeConstraint?: TyIn | TyEv; readonly typeConstraints?: readonly (TyIn | TyEv)[];
   readonly runtimeRequirements?: readonly (URK | URI)[];
   readonly requiredRuntimeCapabilities?: UniversalConversionPlanOptions['runtimeRequirements'];
   readonly effects?: UniversalConversionPlanOptions['runtimeRequirements'];
   readonly evidence?: readonly EvidenceRecord[];
 }
-export interface UniversalConversionPlanQuery extends URCQ, UniversalInterlinguaQuery, ResQ, LtQ, CfQ, AdtQ, BsQ, BcQ, DlQ, EfQ, ConQ, ErrQ, EvalQ, HostQ, MemQ, MetaQ, SbQ, ModQ, NumQ, TxtQ, ColQ, SerQ, ObjQ, ProtoQ, TyQ {
+export interface UniversalConversionPlanQuery extends URCQ, UniversalInterlinguaQuery, UniversalConversionPlanConstraintQuery {
   readonly sourceLanguage?: SL | string;
   readonly language?: SL | string;
   readonly target?: CT | string;

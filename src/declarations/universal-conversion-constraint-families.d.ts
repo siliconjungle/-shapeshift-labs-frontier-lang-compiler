@@ -18,6 +18,7 @@ export type UniversalTranslationConstraintFieldName =
   | 'textSemanticsConstraint'
   | 'collectionSemanticsConstraint'
   | 'serializationSemanticsConstraint'
+  | 'dependencySemanticsConstraint'
   | 'objectModelConstraint'
   | 'protocolConstraint'
   | 'typeConstraint';

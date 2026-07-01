@@ -169,29 +169,7 @@ function createRouteArtifact(route, options) {
     admissionAction: route.admissionAction,
     translationAdmission: route.translationAdmission,
     interlingua: route.interlingua,
-    resourceTransfer: route.resourceTransfer,
-    lifetimeConstraint: route.lifetimeConstraint,
-    controlFlowConstraint: route.controlFlowConstraint,
-    adtPatternConstraint: route.adtPatternConstraint,
-    borrowScopeConstraint: route.borrowScopeConstraint,
-    borrowCheckerConstraint: route.borrowCheckerConstraint,
-    dataLayoutConstraint: route.dataLayoutConstraint,
-    effectConstraint: route.effectConstraint,
-    concurrencyModelConstraint: route.concurrencyModelConstraint,
-    errorModelConstraint: route.errorModelConstraint,
-    evaluationModelConstraint: route.evaluationModelConstraint,
-    hostEnvironmentConstraint: route.hostEnvironmentConstraint,
-    memoryModelConstraint: route.memoryModelConstraint,
-    metaprogrammingConstraint: route.metaprogrammingConstraint,
-    scopeBindingConstraint: route.scopeBindingConstraint,
-    moduleConstraint: route.moduleConstraint,
-    numericSemanticsConstraint: route.numericSemanticsConstraint,
-    textSemanticsConstraint: route.textSemanticsConstraint,
-    collectionSemanticsConstraint: route.collectionSemanticsConstraint,
-    serializationSemanticsConstraint: route.serializationSemanticsConstraint,
-    objectModelConstraint: route.objectModelConstraint,
-    protocolConstraint: route.protocolConstraint,
-    typeConstraint: route.typeConstraint,
+    ...routeConstraintFields(route),
     admissionStatus,
     reviewRequired: true,
     history,
@@ -203,8 +181,12 @@ function createRouteArtifact(route, options) {
     mergeScore: route.mergeScore,
     admissionBucket: admissionRecord.admissionBucket,
     autoMergeClaim: false, semanticEquivalenceClaim: false,
-    metadata: { ...recordMetadata, materialization, resourceTransfer: route.resourceTransfer, lifetimeConstraint: route.lifetimeConstraint, controlFlowConstraint: route.controlFlowConstraint, adtPatternConstraint: route.adtPatternConstraint, borrowScopeConstraint: route.borrowScopeConstraint, borrowCheckerConstraint: route.borrowCheckerConstraint, dataLayoutConstraint: route.dataLayoutConstraint, effectConstraint: route.effectConstraint, concurrencyModelConstraint: route.concurrencyModelConstraint, errorModelConstraint: route.errorModelConstraint, evaluationModelConstraint: route.evaluationModelConstraint, hostEnvironmentConstraint: route.hostEnvironmentConstraint, memoryModelConstraint: route.memoryModelConstraint, metaprogrammingConstraint: route.metaprogrammingConstraint, scopeBindingConstraint: route.scopeBindingConstraint, moduleConstraint: route.moduleConstraint, numericSemanticsConstraint: route.numericSemanticsConstraint, textSemanticsConstraint: route.textSemanticsConstraint, collectionSemanticsConstraint: route.collectionSemanticsConstraint, serializationSemanticsConstraint: route.serializationSemanticsConstraint, objectModelConstraint: route.objectModelConstraint, protocolConstraint: route.protocolConstraint, typeConstraint: route.typeConstraint }
+    metadata: { ...recordMetadata, materialization, ...routeConstraintFields(route) }
   };
+}
+
+function routeConstraintFields(route) {
+  return Object.fromEntries(['resourceTransfer', 'lifetimeConstraint', 'controlFlowConstraint', 'adtPatternConstraint', 'borrowScopeConstraint', 'borrowCheckerConstraint', 'dataLayoutConstraint', 'effectConstraint', 'concurrencyModelConstraint', 'errorModelConstraint', 'evaluationModelConstraint', 'hostEnvironmentConstraint', 'memoryModelConstraint', 'metaprogrammingConstraint', 'scopeBindingConstraint', 'moduleConstraint', 'numericSemanticsConstraint', 'textSemanticsConstraint', 'collectionSemanticsConstraint', 'serializationSemanticsConstraint', 'dependencySemanticsConstraint', 'objectModelConstraint', 'protocolConstraint', 'typeConstraint'].map((key) => [key, route[key]]));
 }
 
 function selectRoutes(routes, options) {

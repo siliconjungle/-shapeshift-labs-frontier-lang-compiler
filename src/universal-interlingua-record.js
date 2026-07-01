@@ -11,7 +11,7 @@ export const UniversalInterlinguaLayerKinds = Object.freeze([
   'runtime-capability',
   'dialect-projection',
   'semantic-ownership', 'adt-pattern-contract',
-  'numeric-semantics-contract', 'text-semantics-contract', 'collection-semantics-contract', 'serialization-semantics-contract',
+  'numeric-semantics-contract', 'text-semantics-contract', 'collection-semantics-contract', 'serialization-semantics-contract', 'dependency-semantics-contract',
   'protocol-contract',
   'proof-evidence'
 ]);
@@ -42,7 +42,7 @@ export const UniversalInterlinguaConstraintEdgeKinds = Object.freeze([
   'scope-binding',
   'effect',
   'module',
-  'numeric-semantics', 'text-semantics', 'collection-semantics', 'serialization-semantics',
+  'numeric-semantics', 'text-semantics', 'collection-semantics', 'serialization-semantics', 'dependency-semantics',
   'object-model',
   'protocol',
   'type'
@@ -185,7 +185,7 @@ export function interlinguaConstraintSummary(route = {}) {
     constraintEdge('metaprogramming', route.metaprogrammingConstraint, 'parser-feature', route),
     constraintEdge('scope-binding', route.scopeBindingConstraint, 'semantic-symbol', route),
     constraintEdge('effect', route.effectConstraint, 'runtime-capability', route),
-    constraintEdge('module', route.moduleConstraint, 'source-import', route), constraintEdge('numeric-semantics', route.numericSemanticsConstraint, 'numeric-semantics-contract', route), constraintEdge('text-semantics', route.textSemanticsConstraint, 'text-semantics-contract', route), constraintEdge('collection-semantics', route.collectionSemanticsConstraint, 'collection-semantics-contract', route), constraintEdge('serialization-semantics', route.serializationSemanticsConstraint, 'serialization-semantics-contract', route),
+    constraintEdge('module', route.moduleConstraint, 'source-import', route), constraintEdge('numeric-semantics', route.numericSemanticsConstraint, 'numeric-semantics-contract', route), constraintEdge('text-semantics', route.textSemanticsConstraint, 'text-semantics-contract', route), constraintEdge('collection-semantics', route.collectionSemanticsConstraint, 'collection-semantics-contract', route), constraintEdge('serialization-semantics', route.serializationSemanticsConstraint, 'serialization-semantics-contract', route), constraintEdge('dependency-semantics', route.dependencySemanticsConstraint, 'dependency-semantics-contract', route),
     constraintEdge('object-model', route.objectModelConstraint, 'semantic-symbol', route),
     constraintEdge('protocol', route.protocolConstraint, 'protocol-contract', route),
     constraintEdge('type', route.typeConstraint, 'semantic-symbol', route)
@@ -268,7 +268,7 @@ function constraintObligations(family, evidence, edgeId) {
 }
 
 function constraintRecords(evidence = {}) {
-  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.adtPatternConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.hostEnvironmentConstraints ?? evidence.memoryModelConstraints ?? evidence.metaprogrammingConstraints ?? evidence.scopeBindingConstraints ?? evidence.moduleConstraints ?? evidence.numericSemanticsConstraints ?? evidence.textSemanticsConstraints ?? evidence.collectionSemanticsConstraints ?? evidence.serializationSemanticsConstraints ?? evidence.objectModelConstraints ?? evidence.protocolConstraints ?? evidence.typeConstraints ?? [];
+  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.adtPatternConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.hostEnvironmentConstraints ?? evidence.memoryModelConstraints ?? evidence.metaprogrammingConstraints ?? evidence.scopeBindingConstraints ?? evidence.moduleConstraints ?? evidence.numericSemanticsConstraints ?? evidence.textSemanticsConstraints ?? evidence.collectionSemanticsConstraints ?? evidence.serializationSemanticsConstraints ?? evidence.dependencySemanticsConstraints ?? evidence.objectModelConstraints ?? evidence.protocolConstraints ?? evidence.typeConstraints ?? [];
 }
 
 function nodeIds(record = {}, prefix) {

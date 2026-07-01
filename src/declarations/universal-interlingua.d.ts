@@ -20,6 +20,7 @@ export type UniversalInterlinguaLayerKind =
   | 'text-semantics-contract'
   | 'collection-semantics-contract'
   | 'serialization-semantics-contract'
+  | 'dependency-semantics-contract'
   | 'protocol-contract'
   | 'proof-evidence'
   | string;
@@ -54,6 +55,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'text-semantics'
   | 'collection-semantics'
   | 'serialization-semantics'
+  | 'dependency-semantics'
   | 'object-model'
   | 'protocol'
   | 'type'

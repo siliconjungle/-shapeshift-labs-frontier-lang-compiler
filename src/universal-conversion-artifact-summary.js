@@ -72,6 +72,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const textSemanticsConstraints = routeArtifacts.map((artifact) => artifact.textSemanticsConstraint ?? artifact.metadata?.textSemanticsConstraint ?? artifact.admissionRecord?.metadata?.textSemanticsConstraint ?? {});
   const collectionSemanticsConstraints = routeArtifacts.map((artifact) => artifact.collectionSemanticsConstraint ?? artifact.metadata?.collectionSemanticsConstraint ?? artifact.admissionRecord?.metadata?.collectionSemanticsConstraint ?? {});
   const serializationSemanticsConstraints = routeArtifacts.map((artifact) => artifact.serializationSemanticsConstraint ?? artifact.metadata?.serializationSemanticsConstraint ?? artifact.admissionRecord?.metadata?.serializationSemanticsConstraint ?? {});
+  const dependencySemanticsConstraints = routeArtifacts.map((artifact) => artifact.dependencySemanticsConstraint ?? artifact.metadata?.dependencySemanticsConstraint ?? artifact.admissionRecord?.metadata?.dependencySemanticsConstraint ?? {});
   const objectModelConstraints = routeArtifacts.map((artifact) => artifact.objectModelConstraint ?? artifact.metadata?.objectModelConstraint ?? artifact.admissionRecord?.metadata?.objectModelConstraint ?? {});
   const protocolConstraints = routeArtifacts.map((artifact) => artifact.protocolConstraint ?? artifact.metadata?.protocolConstraint ?? artifact.admissionRecord?.metadata?.protocolConstraint ?? {});
   const typeConstraints = routeArtifacts.map((artifact) => artifact.typeConstraint ?? artifact.metadata?.typeConstraint ?? artifact.admissionRecord?.metadata?.typeConstraint ?? {});
@@ -118,6 +119,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     textSemanticsConstraint: compactConstraintCounts(textSemanticsConstraints),
     collectionSemanticsConstraint: compactConstraintCounts(collectionSemanticsConstraints),
     serializationSemanticsConstraint: compactConstraintCounts(serializationSemanticsConstraints),
+    dependencySemanticsConstraint: compactConstraintCounts(dependencySemanticsConstraints),
     objectModelConstraint: compactConstraintCounts(objectModelConstraints),
     protocolConstraint: compactConstraintCounts(protocolConstraints),
     typeConstraint: compactConstraintCounts(typeConstraints),
