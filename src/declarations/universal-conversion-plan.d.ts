@@ -80,7 +80,7 @@ export interface UniversalTranslationAdmission extends TCF {
   readonly status: UniversalTranslationAdmissionStatus; readonly action: UniversalTranslationAdmissionAction;
   readonly requiredConstructKinds: RO<string>; readonly representedConstructKinds: RO<string>; readonly missingConstructKinds: RO<string>; readonly missingEvidence: RO<string>;
   readonly blockers: RO<string>; readonly review: RO<string>; readonly evidenceIds: RO<string>; readonly proofEvidenceIds: RO<string>;
-  readonly runtimeReadiness: Rdy; readonly runtimeAdapterRequirementIds: RO<string>; readonly runtimeProofObligationIds: RO<string>; readonly runtimeProofRequiredSignals: RO<UPS>; readonly runtimeProofProvidedSignals: RO<UPS>; readonly runtimeProofMissingSignals: RO<UPS>; readonly dialectReadiness: Rdy; readonly dialectRecordIds: RO<string>;
+  readonly runtimeReadiness: Rdy; readonly runtimeAdapterRequirementIds: RO<string>; readonly runtimeProofObligationIds: RO<string>; readonly runtimeProofCapabilities: RO<URK>; readonly runtimeProofStatuses: RO<string>; readonly runtimeProofRequiredSignals: RO<UPS>; readonly runtimeProofProvidedSignals: RO<UPS>; readonly runtimeProofMissingSignals: RO<UPS>; readonly dialectReadiness: Rdy; readonly dialectRecordIds: RO<string>;
   readonly resourceTransfer?: Omit<TCS, 'missingEvidence'> & { readonly losses: RO<string>; readonly ownershipConstraints?: TCS };
   readonly resourceTransferStatus?: string; readonly resourceTransferAction?: string; readonly resourceTransferMissingEvidence: RO<string>;
   readonly targetAdapterId?: string; readonly autoMergeClaim: false; readonly semanticEquivalenceClaim: false;
@@ -275,6 +275,8 @@ export interface UniversalConversionPlanQuery extends UniversalConversionPlanRep
   readonly translationRuntimeReadiness?: SMR | readonly SMR[];
   readonly translationRuntimeAdapterRequirementId?: string | readonly string[];
   readonly translationRuntimeProofObligationId?: string | readonly string[];
+  readonly translationRuntimeProofCapability?: URK | readonly URK[];
+  readonly translationRuntimeProofStatus?: string | readonly string[];
   readonly translationRuntimeProofRequiredSignal?: UPS | readonly UPS[];
   readonly translationRuntimeProofProvidedSignal?: UPS | readonly UPS[];
   readonly translationRuntimeProofMissingSignal?: UPS | readonly UPS[];

@@ -70,6 +70,8 @@ export function createUniversalTranslationAdmission(input = {}) {
     runtimeReadiness: input.runtime?.readiness ?? 'ready',
     runtimeAdapterRequirementIds: (input.runtime?.adapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
     runtimeProofObligationIds: (input.runtime?.proofObligations ?? []).map((entry) => entry.id).filter(Boolean),
+    runtimeProofCapabilities: uniqueStrings((input.runtime?.proofObligations ?? []).map((entry) => entry.capability)),
+    runtimeProofStatuses: uniqueStrings((input.runtime?.proofObligations ?? []).map((entry) => entry.status)),
     runtimeProofRequiredSignals: uniqueStrings((input.runtime?.proofObligations ?? []).flatMap((entry) => entry.requiredSignals ?? [])),
     runtimeProofProvidedSignals: uniqueStrings((input.runtime?.proofObligations ?? []).flatMap((entry) => entry.providedSignals ?? [])),
     runtimeProofMissingSignals: uniqueStrings((input.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? [])),
@@ -94,6 +96,8 @@ export function conversionRouteMatchesTranslationAdmissionQuery(route, query = {
     && match(query.translationRuntimeReadiness, [admission.runtimeReadiness])
     && match(query.translationRuntimeAdapterRequirementId, admission.runtimeAdapterRequirementIds)
     && match(query.translationRuntimeProofObligationId, admission.runtimeProofObligationIds)
+    && match(query.translationRuntimeProofCapability, admission.runtimeProofCapabilities)
+    && match(query.translationRuntimeProofStatus, admission.runtimeProofStatuses)
     && match(query.translationRuntimeProofRequiredSignal, admission.runtimeProofRequiredSignals)
     && match(query.translationRuntimeProofProvidedSignal, admission.runtimeProofProvidedSignals)
     && match(query.translationRuntimeProofMissingSignal, admission.runtimeProofMissingSignals)
