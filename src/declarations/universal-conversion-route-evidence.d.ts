@@ -85,6 +85,8 @@ export interface UniversalConversionTranslationAdmissionDenominatorFields {
   readonly translationRuntimeReadinesses: readonly string[];
   readonly translationRuntimeAdapterRequirementIds: readonly string[];
   readonly translationRuntimeProofObligationIds: readonly string[];
+  readonly translationRuntimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly translationRuntimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly translationRuntimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly translationDialectReadinesses: readonly string[];
   readonly translationDialectRecordIds: readonly string[];
@@ -124,6 +126,8 @@ export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly translationRuntimeReadiness?: SemanticMergeReadiness | string | readonly (SemanticMergeReadiness | string)[];
   readonly translationRuntimeAdapterRequirementId?: string | readonly string[];
   readonly translationRuntimeProofObligationId?: string | readonly string[];
+  readonly translationRuntimeProofRequiredSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
+  readonly translationRuntimeProofProvidedSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
   readonly translationRuntimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
   readonly translationDialectReadiness?: SemanticMergeReadiness | string | readonly (SemanticMergeReadiness | string)[];
   readonly translationDialectRecordId?: string | readonly string[];

@@ -9,6 +9,8 @@ const keys = [
   'translationRuntimeReadinesses',
   'translationRuntimeAdapterRequirementIds',
   'translationRuntimeProofObligationIds',
+  'translationRuntimeProofRequiredSignals',
+  'translationRuntimeProofProvidedSignals',
   'translationRuntimeProofMissingSignals',
   'translationDialectReadinesses',
   'translationDialectRecordIds',
@@ -27,6 +29,8 @@ export function compactTranslationAdmissionCounts(admissions) {
     runtimeReadiness: countBy(admissions.map((admission) => admission.runtimeReadiness)),
     runtimeAdapterRequirementIds: countBy(admissions.flatMap((admission) => admission.runtimeAdapterRequirementIds ?? [])),
     runtimeProofObligationIds: countBy(admissions.flatMap((admission) => admission.runtimeProofObligationIds ?? [])),
+    runtimeProofRequiredSignals: countBy(admissions.flatMap((admission) => admission.runtimeProofRequiredSignals ?? [])),
+    runtimeProofProvidedSignals: countBy(admissions.flatMap((admission) => admission.runtimeProofProvidedSignals ?? [])),
     runtimeProofMissingSignals: countBy(admissions.flatMap((admission) => admission.runtimeProofMissingSignals ?? [])),
     dialectReadiness: countBy(admissions.map((admission) => admission.dialectReadiness)),
     dialectRecordIds: countBy(admissions.flatMap((admission) => admission.dialectRecordIds ?? [])),
@@ -46,6 +50,8 @@ export function translationAdmissionDenominatorIndex(admissions) {
     translationRuntimeReadinesses: uniqueStrings(admissions.map((admission) => admission.runtimeReadiness)),
     translationRuntimeAdapterRequirementIds: uniqueStrings(admissions.flatMap((admission) => admission.runtimeAdapterRequirementIds ?? [])),
     translationRuntimeProofObligationIds: uniqueStrings(admissions.flatMap((admission) => admission.runtimeProofObligationIds ?? [])),
+    translationRuntimeProofRequiredSignals: uniqueStrings(admissions.flatMap((admission) => admission.runtimeProofRequiredSignals ?? [])),
+    translationRuntimeProofProvidedSignals: uniqueStrings(admissions.flatMap((admission) => admission.runtimeProofProvidedSignals ?? [])),
     translationRuntimeProofMissingSignals: uniqueStrings(admissions.flatMap((admission) => admission.runtimeProofMissingSignals ?? [])),
     translationDialectReadinesses: uniqueStrings(admissions.map((admission) => admission.dialectReadiness)),
     translationDialectRecordIds: uniqueStrings(admissions.flatMap((admission) => admission.dialectRecordIds ?? [])),
@@ -77,6 +83,8 @@ export function translationAdmissionDenominatorMatches(record, query, match) {
     && match(query.translationRuntimeReadiness, record.translationRuntimeReadinesses)
     && match(query.translationRuntimeAdapterRequirementId, record.translationRuntimeAdapterRequirementIds)
     && match(query.translationRuntimeProofObligationId, record.translationRuntimeProofObligationIds)
+    && match(query.translationRuntimeProofRequiredSignal, record.translationRuntimeProofRequiredSignals)
+    && match(query.translationRuntimeProofProvidedSignal, record.translationRuntimeProofProvidedSignals)
     && match(query.translationRuntimeProofMissingSignal, record.translationRuntimeProofMissingSignals)
     && match(query.translationDialectReadiness, record.translationDialectReadinesses)
     && match(query.translationDialectRecordId, record.translationDialectRecordIds)

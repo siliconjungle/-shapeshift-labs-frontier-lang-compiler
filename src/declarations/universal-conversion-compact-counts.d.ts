@@ -59,6 +59,8 @@ export interface UniversalConversionTranslationAdmissionCompactCounts {
   readonly runtimeReadiness: Readonly<Record<string, number>>;
   readonly runtimeAdapterRequirementIds: Readonly<Record<string, number>>;
   readonly runtimeProofObligationIds: Readonly<Record<string, number>>;
+  readonly runtimeProofRequiredSignals: Readonly<Record<string, number>>;
+  readonly runtimeProofProvidedSignals: Readonly<Record<string, number>>;
   readonly runtimeProofMissingSignals: Readonly<Record<string, number>>;
   readonly dialectReadiness: Readonly<Record<string, number>>;
   readonly dialectRecordIds: Readonly<Record<string, number>>;

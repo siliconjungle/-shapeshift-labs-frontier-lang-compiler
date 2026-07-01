@@ -298,7 +298,7 @@ export interface CreateUniversalConversionArtifactsOptions {
   readonly mode?: UniversalConversionRouteMode | readonly UniversalConversionRouteMode[];
   readonly readiness?: SemanticMergeReadiness | string | readonly (SemanticMergeReadiness | string)[];
   readonly admissionAction?: UniversalConversionAdmissionAction | readonly UniversalConversionAdmissionAction[];
-  readonly translationRuntimeReadiness?: string | readonly string[]; readonly translationRuntimeAdapterRequirementId?: string | readonly string[]; readonly translationRuntimeProofObligationId?: string | readonly string[]; readonly translationRuntimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[]; readonly translationDialectReadiness?: string | readonly string[]; readonly translationDialectRecordId?: string | readonly string[];
+  readonly translationRuntimeReadiness?: string | readonly string[]; readonly translationRuntimeAdapterRequirementId?: string | readonly string[]; readonly translationRuntimeProofObligationId?: string | readonly string[]; readonly translationRuntimeProofRequiredSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[]; readonly translationRuntimeProofProvidedSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[]; readonly translationRuntimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[]; readonly translationDialectReadiness?: string | readonly string[]; readonly translationDialectRecordId?: string | readonly string[];
   readonly maxRoutes?: number;
   readonly evidence?: readonly Record<string, unknown>[];
   readonly metadata?: Record<string, unknown>;
