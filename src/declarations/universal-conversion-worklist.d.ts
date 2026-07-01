@@ -149,6 +149,12 @@ export interface UniversalConversionWorklistOptions extends UniversalConversionA
   readonly target?: FrontierCompileTarget | string;
   readonly kind?: UniversalConversionWorkItemKind | readonly UniversalConversionWorkItemKind[];
   readonly includeReviewItems?: boolean;
+  readonly translationRuntimeReadiness?: string | readonly string[];
+  readonly translationRuntimeAdapterRequirementId?: string | readonly string[];
+  readonly translationRuntimeProofObligationId?: string | readonly string[];
+  readonly translationRuntimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
+  readonly translationDialectReadiness?: string | readonly string[];
+  readonly translationDialectRecordId?: string | readonly string[];
 }
 
 export interface UniversalConversionWorklistQuery extends UniversalConversionWorklistOptions {
@@ -174,12 +180,6 @@ export interface UniversalConversionWorklistQuery extends UniversalConversionWor
   readonly runtimeProofProvidedSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
   readonly runtimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
   readonly dialectRecordId?: string | readonly string[];
-  readonly translationRuntimeReadiness?: string | readonly string[];
-  readonly translationRuntimeAdapterRequirementId?: string | readonly string[];
-  readonly translationRuntimeProofObligationId?: string | readonly string[];
-  readonly translationRuntimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
-  readonly translationDialectReadiness?: string | readonly string[];
-  readonly translationDialectRecordId?: string | readonly string[];
   readonly targetAdapterId?: string | readonly string[];
   readonly interlinguaConstraintFamily?: string | readonly string[];
   readonly interlinguaConstraintStatus?: string | readonly string[];

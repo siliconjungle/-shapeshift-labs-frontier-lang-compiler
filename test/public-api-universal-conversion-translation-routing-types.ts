@@ -48,11 +48,14 @@ routingReceipt.translationDialectReadinesses satisfies readonly string[];
 routingReceipt.translationDialectRecordIds satisfies readonly string[];
 routingReceipt.summary.translationAdmission.runtimeProofMissingSignals satisfies Readonly<Record<string, number>>;
 
-const routingWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(routingPlan);
+const routingWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(routingPlan, { translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
 const routingWorklistQuery = queryUniversalConversionWorklist(routingWorklist, {
   translationRuntimeReadiness: 'ready',
+  translationRuntimeAdapterRequirementId: 'runtime_adapter',
+  translationRuntimeProofObligationId: 'runtime_proof',
   translationRuntimeProofMissingSignal: 'network-trace-hash',
-  translationDialectReadiness: 'ready'
+  translationDialectReadiness: 'ready',
+  translationDialectRecordId: 'dialect_record'
 });
 routingWorklist.summary.translationRuntimeReadinesses satisfies readonly string[];
 routingWorklist.summary.translationRuntimeAdapterRequirementIds satisfies readonly string[];

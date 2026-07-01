@@ -254,12 +254,12 @@ function worklistSummary(items) {
   };
 }
 
-function routeMatchesWorklistOptions(route, options) {
-  const source = normalizeNativeLanguageId(options.sourceLanguage ?? options.language);
-  const target = normalizeProjectionMatrixTargets(options.target ? [options.target] : [])[0];
+function routeMatchesWorklistOptions(route,options) {
+  const source=normalizeNativeLanguageId(options.sourceLanguage??options.language);
+  const target=normalizeProjectionMatrixTargets(options.target?[options.target]:[])[0];
   return (!source || route.languageIds.includes(source))
     && (!target || route.target === target)
-    && workItemRuntimeRouteMatches(workItemRuntimeRouteDenominators(route), options) && workItemSourceMapMatches(workItemSourceMapDenominators(route), options) && workItemSemanticEditMatches(workItemSemanticEditDenominators(route), options)
+    && workItemRuntimeRouteMatches(workItemRuntimeRouteDenominators(route), options) && workItemSourceMapMatches(workItemSourceMapDenominators(route), options) && workItemSemanticEditMatches(workItemSemanticEditDenominators(route), options) && tadm(tadfr(route), options, match)
     && match(options.routeId, [route.id]);
 }
 
