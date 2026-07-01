@@ -19,6 +19,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
   const interlingua = route.interlingua ?? {};
   const interlinguaQuery = interlingua.query ?? {};
   const interlinguaObligationRecords = (interlingua.constraints?.obligations ?? []).map(interlinguaObligationRecordSummary);
+  const interlinguaObligationMissingEvidence = interlinguaObligationRecords.flatMap((record) => record.missingEvidence);
   const interlinguaMissingEvidence = uniqueStrings([
     ...(interlinguaQuery.constraintMissingEvidence ?? []),
     ...(interlinguaQuery.constraintObligationMissingEvidence ?? []),
@@ -111,7 +112,8 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       interlinguaConstraintObligations: interlinguaObligationRecords.length,
       interlinguaConstraintByFamily: countBy(interlinguaObligationRecords.map((record) => record.family)),
       interlinguaConstraintByStatus: countBy(interlinguaObligationRecords.map((record) => record.status)),
-      interlinguaConstraintMissingEvidence: countBy(interlinguaObligationRecords.flatMap((record) => record.missingEvidence)),
+      interlinguaConstraintMissingEvidence: countBy([...(interlinguaQuery.constraintMissingEvidence ?? []), ...interlinguaObligationMissingEvidence]),
+      interlinguaConstraintObligationMissingEvidence: countBy(interlinguaObligationMissingEvidence),
       blockers: route.blockers?.length ?? 0,
       reviewReasons: route.review?.length ?? 0,
       byKind: countBy(boundSummaries.map((record) => record.kind)),

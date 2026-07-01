@@ -23,6 +23,11 @@ receipt.summary.boundEvidence satisfies number;
 receipt.id satisfies string;
 receipt.records.rejected[0]?.reason satisfies string | undefined;
 receipt.records.bound[0]?.proof satisfies boolean | undefined;
+receipt.records.interlinguaObligations[0]?.missingEvidence satisfies readonly string[] | undefined;
+receipt.interlinguaRecordId satisfies string | undefined;
+receipt.interlinguaConstraintFamilies satisfies readonly string[];
+receipt.interlinguaConstraintObligationMissingEvidence satisfies readonly string[];
+receipt.summary.interlinguaConstraintObligationMissingEvidence satisfies Readonly<Record<string, number>>;
 receipt.autoMergeClaim satisfies false;
 
 const receiptArtifacts: UniversalConversionArtifacts = createUniversalConversionArtifacts(receiptPlan, {
@@ -32,11 +37,14 @@ const receiptArtifacts: UniversalConversionArtifacts = createUniversalConversion
   ]
 });
 const receiptArtifact: UniversalConversionRouteArtifact | undefined = queryUniversalConversionArtifacts(receiptArtifacts, {
-  evidenceReceiptRejectedReason: 'unscoped-evidence'
+  evidenceReceiptRejectedReason: 'unscoped-evidence',
+  evidenceReceiptInterlinguaConstraintObligationMissingEvidence: 'translation-adt-pattern:exhaustiveness'
 })[0];
 receiptArtifacts.evidenceReceipts[0]?.id satisfies string | undefined;
+receiptArtifacts.index.evidenceReceiptInterlinguaConstraintObligationMissingEvidence satisfies readonly string[];
 receiptArtifacts.summary.evidenceReceipts satisfies number;
 receiptArtifacts.summary.receiptProofEvidence satisfies number;
 receiptArtifacts.summary.compactCounts.evidenceReceipts.missingEvidence satisfies Readonly<Record<string, number>>;
+receiptArtifacts.summary.compactCounts.evidenceReceipts.interlinguaConstraintObligationMissingEvidence satisfies Readonly<Record<string, number>>;
 receiptArtifact?.evidenceReceipt.autoMergeClaim satisfies false | undefined;
 receiptArtifact?.materialization.evidenceReceiptIds satisfies readonly string[] | undefined;

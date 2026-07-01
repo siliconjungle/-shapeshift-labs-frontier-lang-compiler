@@ -120,6 +120,7 @@ assert.equal(interlinguaReceipt.records.interlinguaObligations.some((record) => 
   && record.semanticEquivalenceClaim === false), true);
 assert.equal(interlinguaReceipt.summary.interlinguaConstraintByFamily['adt-pattern'] >= 1, true);
 assert.equal(interlinguaReceipt.summary.interlinguaConstraintByStatus.missing >= 1, true);
+assert.equal(interlinguaReceipt.summary.interlinguaConstraintObligationMissingEvidence['translation-adt-pattern:exhaustiveness'] >= 1, true);
 assert.equal(interlinguaReceipt.metadata.interlinguaConstraintsRequired, true);
 
 const interlinguaArtifacts = createUniversalConversionArtifacts(interlinguaConstraintPlan, {

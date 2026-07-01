@@ -145,6 +145,7 @@ export interface UniversalConversionRouteEvidenceReceipt {
     readonly interlinguaConstraintByFamily: Readonly<Record<string, number>>;
     readonly interlinguaConstraintByStatus: Readonly<Record<string, number>>;
     readonly interlinguaConstraintMissingEvidence: Readonly<Record<string, number>>;
+    readonly interlinguaConstraintObligationMissingEvidence: Readonly<Record<string, number>>;
     readonly blockers: number;
     readonly reviewReasons: number;
     readonly byKind: Readonly<Record<string, number>>;

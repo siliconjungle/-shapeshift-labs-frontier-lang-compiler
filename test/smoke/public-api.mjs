@@ -61,6 +61,8 @@ for (const requiredExport of [
   'UniversalTypeConstraintStatuses',
   'UniversalConversionWorkItemKinds',
   'UniversalInterlinguaConstraintEdgeKinds',
+  'UniversalInterlinguaLayerKinds',
+  'UniversalInterlinguaLoweringDispositions',
   'UniversalRepresentationConstructKinds',
   'UniversalRuntimeProofSignalKinds',
   'UniversalOwnershipConstraintStatuses',
