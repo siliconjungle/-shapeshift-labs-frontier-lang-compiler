@@ -11,6 +11,7 @@ import type {
 import type { UniversalInterlinguaConstraintEdgeKind } from './universal-interlingua.js';
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 import type { UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionWorklistRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
+import type { UniversalConversionArtifactSourceMapQuery, UniversalConversionWorklistSourceMapFields } from './universal-conversion-artifact-source-maps.js';
 
 export type UniversalConversionWorkItemKind =
   | 'add-target-adapter'
@@ -34,7 +35,7 @@ export type UniversalConversionWorkItemAction =
   | 'review-conversion-route'
   | 'resolve-blocker';
 
-export interface UniversalConversionWorkItem extends UniversalConversionWorklistRuntimeRouteFields {
+export interface UniversalConversionWorkItem extends UniversalConversionWorklistRuntimeRouteFields, UniversalConversionWorklistSourceMapFields {
   readonly id: string;
   readonly kind: UniversalConversionWorkItemKind;
   readonly action: UniversalConversionWorkItemAction;
@@ -78,7 +79,7 @@ export interface UniversalConversionWorkItem extends UniversalConversionWorklist
   readonly semanticEquivalenceClaim: false;
 }
 
-export interface UniversalConversionWorklistOptions extends UniversalConversionArtifactRuntimeRouteQuery {
+export interface UniversalConversionWorklistOptions extends UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionArtifactSourceMapQuery {
   readonly generatedAt?: number;
   readonly routeId?: string | readonly string[];
   readonly sourceLanguage?: FrontierSourceLanguage | string;
@@ -151,6 +152,18 @@ export interface UniversalConversionWorklist {
     readonly requiredRuntimeCapabilities: readonly UniversalRuntimeCapabilityKind[];
     readonly satisfiedRuntimeCapabilities: readonly UniversalRuntimeCapabilityKind[];
     readonly missingRuntimeCapabilities: readonly UniversalRuntimeCapabilityKind[];
+    readonly sourceMapIds: readonly string[];
+    readonly sourceMapMappingIds: readonly string[];
+    readonly sourceMapLinkIds: readonly string[];
+    readonly routeSourceMapIds: readonly string[];
+    readonly routeSourceMapMappingIds: readonly string[];
+    readonly routeSourceMapLinkIds: readonly string[];
+    readonly admissionRecordSourceMapIds: readonly string[];
+    readonly admissionRecordSourceMapMappingIds: readonly string[];
+    readonly admissionRecordSourceMapLinkIds: readonly string[];
+    readonly evidenceReceiptSourceMapIds: readonly string[];
+    readonly evidenceReceiptSourceMapMappingIds: readonly string[];
+    readonly evidenceReceiptSourceMapLinkIds: readonly string[];
     readonly runtimeProofCapabilities: readonly UniversalRuntimeCapabilityKind[];
     readonly runtimeProofStatuses: readonly string[];
     readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];

@@ -1,6 +1,11 @@
-import { countBy, uniqueStrings as u } from './native-import-utils.js';
+import { countBy, idFragment, uniqueStrings as u } from './native-import-utils.js';
 
 const keys = ['sourceMapIds', 'sourceMapMappingIds', 'sourceMapLinkIds'];
+const indexKeys = [
+  ...keys, 'routeSourceMapIds', 'routeSourceMapMappingIds', 'routeSourceMapLinkIds',
+  'admissionRecordSourceMapIds', 'admissionRecordSourceMapMappingIds', 'admissionRecordSourceMapLinkIds',
+  'evidenceReceiptSourceMapIds', 'evidenceReceiptSourceMapMappingIds', 'evidenceReceiptSourceMapLinkIds'
+];
 
 export function artifactSourceMapIndex(artifacts) {
   const route = collect(artifacts, (artifact) => artifact.materialization);
@@ -57,8 +62,57 @@ export function artifactSourceMapCounts(artifacts, admissionRecords = []) {
   };
 }
 
+export function workItemSourceMapDenominators(route = {}) {
+  const refs = route.mergeRefs ?? {};
+  const sourceMapIds = u(refs.sourceMapIds ?? []);
+  const sourceMapMappingIds = u(refs.sourceMapMappingIds ?? []);
+  const sourceMapLinkIds = plannedSourceMapLinkIds(route, refs);
+  return {
+    sourceMapIds,
+    sourceMapMappingIds,
+    sourceMapLinkIds,
+    routeSourceMapIds: sourceMapIds,
+    routeSourceMapMappingIds: sourceMapMappingIds,
+    routeSourceMapLinkIds: sourceMapLinkIds,
+    admissionRecordSourceMapIds: sourceMapIds,
+    admissionRecordSourceMapMappingIds: sourceMapMappingIds,
+    admissionRecordSourceMapLinkIds: sourceMapLinkIds,
+    evidenceReceiptSourceMapIds: sourceMapIds,
+    evidenceReceiptSourceMapMappingIds: sourceMapMappingIds,
+    evidenceReceiptSourceMapLinkIds: sourceMapLinkIds
+  };
+}
+
+export function mergeWorkItemSourceMapDenominators(left = {}, right = {}) {
+  return Object.fromEntries(indexKeys.map((key) => [key, u([...(left[key] ?? []), ...(right[key] ?? [])])]));
+}
+
+export function worklistSourceMapSummary(items = []) {
+  return Object.fromEntries(indexKeys.map((key) => [key, u(items.flatMap((item) => item[key] ?? []))]));
+}
+
+export function workItemSourceMapMatches(item = {}, query = {}) {
+  return match(query.sourceMapId ?? query.sourceMapIds, item.sourceMapIds)
+    && match(query.sourceMapMappingId ?? query.sourceMapMappingIds, item.sourceMapMappingIds)
+    && match(query.sourceMapLinkId ?? query.sourceMapLinkIds, item.sourceMapLinkIds)
+    && match(query.routeSourceMapId ?? query.routeSourceMapIds, item.routeSourceMapIds)
+    && match(query.routeSourceMapMappingId ?? query.routeSourceMapMappingIds, item.routeSourceMapMappingIds)
+    && match(query.routeSourceMapLinkId ?? query.routeSourceMapLinkIds, item.routeSourceMapLinkIds)
+    && match(query.admissionRecordSourceMapId ?? query.admissionRecordSourceMapIds, item.admissionRecordSourceMapIds)
+    && match(query.admissionRecordSourceMapMappingId ?? query.admissionRecordSourceMapMappingIds, item.admissionRecordSourceMapMappingIds)
+    && match(query.admissionRecordSourceMapLinkId ?? query.admissionRecordSourceMapLinkIds, item.admissionRecordSourceMapLinkIds)
+    && match(query.evidenceReceiptSourceMapId ?? query.evidenceReceiptSourceMapIds, item.evidenceReceiptSourceMapIds)
+    && match(query.evidenceReceiptSourceMapMappingId ?? query.evidenceReceiptSourceMapMappingIds, item.evidenceReceiptSourceMapMappingIds)
+    && match(query.evidenceReceiptSourceMapLinkId ?? query.evidenceReceiptSourceMapLinkIds, item.evidenceReceiptSourceMapLinkIds);
+}
+
 function collect(artifacts, select) {
   return merge(...(artifacts ?? []).map((artifact) => maps(select(artifact))));
+}
+
+function plannedSourceMapLinkIds(route, refs) {
+  const max = Math.max(refs.sourceMapIds?.length ?? 0, refs.sourceMapMappingIds?.length ?? 0, refs.sourceMapLinkIds?.length ?? 0);
+  return u(Array.from({ length: max }, (_, index) => refs.sourceMapLinkIds?.[index] ?? `route_source_map_link_${idFragment(route.id)}_${index + 1}`));
 }
 
 function operationMaps(artifact) {

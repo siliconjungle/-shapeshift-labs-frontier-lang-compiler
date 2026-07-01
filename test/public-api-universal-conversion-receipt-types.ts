@@ -203,7 +203,20 @@ receiptWorklist.summary.sourceRuntimes satisfies readonly string[];
 receiptWorklist.summary.targetRuntimes satisfies readonly string[];
 receiptWorklist.summary.runtimeReadinesses satisfies readonly string[];
 receiptWorklist.summary.requiredRuntimeCapabilities satisfies readonly string[];
+receiptWorklist.summary.satisfiedRuntimeCapabilities satisfies readonly string[];
 receiptWorklist.summary.missingRuntimeCapabilities satisfies readonly string[];
+receiptWorklist.summary.sourceMapIds satisfies readonly string[];
+receiptWorklist.summary.sourceMapMappingIds satisfies readonly string[];
+receiptWorklist.summary.sourceMapLinkIds satisfies readonly string[];
+receiptWorklist.summary.routeSourceMapIds satisfies readonly string[];
+receiptWorklist.summary.routeSourceMapMappingIds satisfies readonly string[];
+receiptWorklist.summary.routeSourceMapLinkIds satisfies readonly string[];
+receiptWorklist.summary.admissionRecordSourceMapIds satisfies readonly string[];
+receiptWorklist.summary.admissionRecordSourceMapMappingIds satisfies readonly string[];
+receiptWorklist.summary.admissionRecordSourceMapLinkIds satisfies readonly string[];
+receiptWorklist.summary.evidenceReceiptSourceMapIds satisfies readonly string[];
+receiptWorklist.summary.evidenceReceiptSourceMapMappingIds satisfies readonly string[];
+receiptWorklist.summary.evidenceReceiptSourceMapLinkIds satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintFamilies satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintStatuses satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintActions satisfies readonly string[];
@@ -220,12 +233,21 @@ receiptWorklistQuery.bestItem?.autoMergeClaim satisfies false | undefined;
 receiptWorklistQuery.bestItem?.runtimeRouteIds satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.sourceHostIds satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.runtimeReadinesses satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.sourceMapIds satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.routeSourceMapMappingIds satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.evidenceReceiptSourceMapLinkIds satisfies readonly string[] | undefined;
 const receiptWorklistRuntimeQuery = queryUniversalConversionWorklist(receiptWorklist, {
   runtimeRouteId: receiptWorklistQuery.bestItem?.runtimeRouteIds[0],
   sourceRuntime: receiptWorklistQuery.bestItem?.sourceRuntimes[0],
   requiredRuntimeCapability: receiptWorklistQuery.bestItem?.requiredRuntimeCapabilities[0]
 });
 receiptWorklistRuntimeQuery.found satisfies boolean;
+const receiptWorklistSourceMapQuery = queryUniversalConversionWorklist(receiptWorklist, {
+  sourceMapId: receiptWorklistQuery.bestItem?.sourceMapIds[0],
+  routeSourceMapMappingId: receiptWorklistQuery.bestItem?.routeSourceMapMappingIds[0],
+  evidenceReceiptSourceMapLinkId: receiptWorklistQuery.bestItem?.evidenceReceiptSourceMapLinkIds[0]
+});
+receiptWorklistSourceMapQuery.found satisfies boolean;
 receiptWorklistQuery.bestItem?.interlinguaConstraintStatuses satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintActions satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintEvidenceIds satisfies readonly string[] | undefined;

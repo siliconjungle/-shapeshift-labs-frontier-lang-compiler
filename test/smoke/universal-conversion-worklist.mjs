@@ -15,17 +15,31 @@ const adapterGapPlan = createUniversalConversionPlan({
   targets: ['rust']
 });
 const adapterGapWorklist = createUniversalConversionWorklist(adapterGapPlan);
+const adapterGapRoute = queryUniversalConversionPlan(adapterGapPlan, { sourceLanguage: 'javascript', target: 'rust' }).bestRoute;
+const adapterSourceMapId = adapterGapRoute.mergeRefs.sourceMapIds[0];
+const adapterSourceMapMappingId = adapterGapRoute.mergeRefs.sourceMapMappingIds[0];
 assert.equal(adapterGapWorklist.kind, 'frontier.lang.universalConversionWorklist');
 assert.equal(adapterGapWorklist.planId, adapterGapPlan.id);
 assert.equal(adapterGapWorklist.metadata.autoMergeClaim, false);
 assert.equal(adapterGapWorklist.metadata.semanticEquivalenceClaim, false);
 assert.equal(adapterGapWorklist.summary.autoMergeClaims, 0);
 assert.equal(adapterGapWorklist.summary.semanticEquivalenceClaims, 0);
+assert.equal(adapterGapWorklist.summary.sourceMapIds.includes(adapterSourceMapId), true);
+assert.equal(adapterGapWorklist.summary.routeSourceMapMappingIds.includes(adapterSourceMapMappingId), true);
+assert.equal(adapterGapWorklist.summary.evidenceReceiptSourceMapLinkIds.length >= 1, true);
 assert.equal(adapterGapWorklist.summary.targetAdapterGaps >= 1, true);
 assert.equal(adapterGapWorklist.summary.proofEvidenceGaps >= 1, true);
-assert.equal(adapterGapWorklist.items.some((item) => item.kind === 'add-target-adapter' && item.targets.includes('rust')), true);
+assert.equal(adapterGapWorklist.items.some((item) => item.kind === 'add-target-adapter' && item.targets.includes('rust') && item.sourceMapIds.includes(adapterSourceMapId)), true);
 assert.equal(adapterGapWorklist.items.some((item) => item.kind === 'collect-translation-proof'), true);
 assert.equal(adapterGapWorklist.items.every((item) => item.autoMergeClaim === false && item.semanticEquivalenceClaim === false), true);
+const sourceMapQuery = queryUniversalConversionWorklist(adapterGapWorklist, {
+  sourceMapId: adapterSourceMapId,
+  routeSourceMapMappingId: adapterSourceMapMappingId,
+  admissionRecordSourceMapId: adapterSourceMapId,
+  evidenceReceiptSourceMapLinkId: adapterGapWorklist.summary.evidenceReceiptSourceMapLinkIds[0]
+});
+assert.equal(sourceMapQuery.found, true);
+assert.equal(sourceMapQuery.bestItem.sourceMapIds.includes(adapterSourceMapId), true);
 const proofQuery = queryUniversalConversionWorklist(adapterGapWorklist, {
   kind: 'collect-translation-proof',
   evidenceKey: 'translation-proof-or-replay'

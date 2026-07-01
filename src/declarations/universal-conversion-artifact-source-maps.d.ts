@@ -50,3 +50,18 @@ export interface UniversalConversionArtifactSourceMapCompactCounts {
   readonly mappingIds: Readonly<Record<string, number>>;
   readonly linkIds: Readonly<Record<string, number>>;
 }
+
+export interface UniversalConversionWorklistSourceMapFields {
+  readonly sourceMapIds: RS;
+  readonly sourceMapMappingIds: RS;
+  readonly sourceMapLinkIds: RS;
+  readonly routeSourceMapIds: RS;
+  readonly routeSourceMapMappingIds: RS;
+  readonly routeSourceMapLinkIds: RS;
+  readonly admissionRecordSourceMapIds: RS;
+  readonly admissionRecordSourceMapMappingIds: RS;
+  readonly admissionRecordSourceMapLinkIds: RS;
+  readonly evidenceReceiptSourceMapIds: RS;
+  readonly evidenceReceiptSourceMapMappingIds: RS;
+  readonly evidenceReceiptSourceMapLinkIds: RS;
+}
