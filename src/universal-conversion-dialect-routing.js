@@ -38,7 +38,10 @@ export function conversionRouteMatchesDialectQuery(route, query = {}) {
   if (!match(query.dialectRegistryId, route.dialect?.registryIds ?? [])) return false;
   if (!match(query.dialectRecordId, route.dialect?.recordIds ?? [])) return false;
   if (!match(query.dialectConstructKind, route.dialect?.constructKinds ?? [])) return false;
+  if (!match(query.dialectExternKind, route.dialect?.externKinds ?? [])) return false;
   if (!match(query.dialectDisposition, route.dialect?.projectionDispositions ?? [])) return false;
+  if (!match(query.dialectEvidenceId, route.dialect?.evidenceIds ?? [])) return false;
+  if (!match(query.dialectLossId, route.dialect?.lossIds ?? [])) return false;
   return true;
 }
 

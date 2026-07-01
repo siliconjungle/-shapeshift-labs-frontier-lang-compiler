@@ -269,7 +269,10 @@ export interface UniversalConversionPlanQuery extends UniversalConversionPlanRep
   readonly dialectRegistryId?: string | readonly string[];
   readonly dialectRecordId?: string | readonly string[];
   readonly dialectConstructKind?: UniversalDialectConstructKind | readonly UniversalDialectConstructKind[];
+  readonly dialectExternKind?: string | readonly string[];
   readonly dialectDisposition?: UniversalDialectProjectionDisposition | readonly UniversalDialectProjectionDisposition[];
+  readonly dialectEvidenceId?: string | readonly string[];
+  readonly dialectLossId?: string | readonly string[];
   readonly translationAdmissionStatus?: QueryFilter<UniversalTranslationAdmissionStatus>; readonly translationAdmissionAction?: QueryFilter<UniversalTranslationAdmissionAction>;
   readonly missingTranslationEvidence?: QueryFilter<string>; readonly translationEvidenceId?: QueryFilter<string>; readonly translationProofEvidenceId?: QueryFilter<string>;
   readonly translationRuntimeReadiness?: SMR | readonly SMR[];

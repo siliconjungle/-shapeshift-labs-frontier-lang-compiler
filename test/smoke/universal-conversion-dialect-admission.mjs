@@ -19,6 +19,7 @@ const blockedRegistry = createUniversalDialectRegistry({
     dialect: 'node.runtime',
     constructKind: 'runtime',
     name: 'process.env',
+    lossIds: ['loss_node_process_env_projection'],
     projection: { disposition: 'unsupported', targets: ['rust'] }
   }]
 });
@@ -39,9 +40,11 @@ assert.equal(blockedRoute.representation.constructKinds.includes('dialect-projec
 assert.equal(blockedRoute.representation.surfaces.dialect.recordIds.includes('dialect_js_process_env_to_rust'), true);
 assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectReadiness: 'blocked' }).bestRoute.id, blockedRoute.id);
 assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectConstructKind: 'runtime' }).bestRoute.id, blockedRoute.id);
+assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectLossId: 'loss_node_process_env_projection' }).bestRoute.id, blockedRoute.id);
+assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectLossId: 'missing_loss' }).found, false);
 assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectRecordId: 'dialect_js_process_env_to_rust' }).bestRoute.id, blockedRoute.id);
 assert.equal(queryUniversalConversionPlan(blockedPlan, { dialectReadiness: ['ready', 'blocked'], dialectRegistryId: ['missing_registry', blockedRegistry.id], dialectConstructKind: ['extern', 'runtime'], dialectRecordId: ['missing_record', 'dialect_js_process_env_to_rust'] }).bestRoute.id, blockedRoute.id);
-assert.equal(createUniversalConversionRouteEvidenceReceipt(blockedPlan, { dialectReadiness: ['ready', 'blocked'], dialectRecordId: ['missing_record', 'dialect_js_process_env_to_rust'] }).routeId, blockedRoute.id);
+assert.equal(createUniversalConversionRouteEvidenceReceipt(blockedPlan, { dialectReadiness: ['ready', 'blocked'], dialectRecordId: ['missing_record', 'dialect_js_process_env_to_rust'], dialectLossId: 'loss_node_process_env_projection' }).routeId, blockedRoute.id);
 assert.equal(blockedRoute.translationAdmission.dialectReadiness, 'blocked');
 assert.equal(blockedRoute.translationAdmission.dialectRecordIds.includes('dialect_js_process_env_to_rust'), true);
 assert.equal(queryUniversalConversionPlan(blockedPlan, {
@@ -97,8 +100,13 @@ assert.equal(reviewRoute.admissionAction, 'prioritize');
 assert.equal(reviewRoute.missingEvidence.includes('dialect-projection-evidence'), false);
 assert.equal(reviewRoute.review.some((reason) => reason.includes('Dialect projection needs review')), true);
 assert.equal(reviewRoute.representation.constructs.find((entry) => entry.kind === 'dialect-projection').status, 'review');
+assert.equal(reviewRoute.dialect.externKinds.includes('generatorArtifact'), true);
+assert.equal(reviewRoute.dialect.evidenceIds.includes('evidence_vite_routes_manifest'), true);
 assert.equal(queryUniversalConversionPlan(reviewPlan, { dialectDisposition: 'runtime-required' }).bestRoute.id, reviewRoute.id);
-assert.equal(queryUniversalConversionPlan(reviewPlan, { dialectRegistryId: ['missing_registry', reviewRegistry.id], dialectDisposition: ['unsupported', 'runtime-required'] }).bestRoute.id, reviewRoute.id);
+assert.equal(queryUniversalConversionPlan(reviewPlan, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'evidence_vite_routes_manifest' }).bestRoute.id, reviewRoute.id);
+assert.equal(queryUniversalConversionPlan(reviewPlan, { dialectExternKind: 'macroExpansion' }).found, false);
+assert.equal(queryUniversalConversionPlan(reviewPlan, { dialectRegistryId: ['missing_registry', reviewRegistry.id], dialectDisposition: ['unsupported', 'runtime-required'], dialectEvidenceId: ['missing_evidence', 'evidence_vite_routes_manifest'] }).bestRoute.id, reviewRoute.id);
+assert.equal(createUniversalConversionRouteEvidenceReceipt(reviewPlan, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'evidence_vite_routes_manifest' }).routeId, reviewRoute.id);
 
 function routeProof(id) {
   return {
