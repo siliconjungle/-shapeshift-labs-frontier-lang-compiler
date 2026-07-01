@@ -1,7 +1,7 @@
-import { uniqueStrings } from './native-import-utils.js';
+import { countBy, uniqueStrings } from './native-import-utils.js';
 import { semanticEditRecordIndex } from './internal/index-impl/semanticEditBundleIndex.js';
 
-const indexKeys = [
+export const semanticEditIndexKeys = Object.freeze([
   'semanticEditStatuses', 'semanticEditScriptIds', 'semanticEditProjectionIds', 'semanticEditReplayIds',
   'semanticEditReplayStatuses', 'semanticEditReplayActions', 'semanticEditAdmissionStatuses', 'semanticEditAdmissionActions',
   'semanticEditAdmissionReadinesses', 'semanticEditReplayCurrentHashes', 'semanticEditReplayOutputHashes',
@@ -10,7 +10,7 @@ const indexKeys = [
   'transformTargetLanguages', 'transformSourcePaths', 'transformTargetPaths', 'transformCrossLanguages',
   'transformSourceMapIds', 'transformSourceMapLinkIds', 'transformSourceMapMappingIds', 'transformBaseHashes',
   'transformTargetHashes', 'targetPortabilityStatuses', 'targetPortabilityActions', 'targetPortabilityReasonCodes'
-];
+]);
 
 export function artifactSemanticEditIndex(record) {
   const patchIndex = record.patchBundle?.index ?? {};
@@ -18,13 +18,14 @@ export function artifactSemanticEditIndex(record) {
   const projections = semanticEditRecords(record, 'semanticEditProjection', 'semanticEditProjections', 'projection', 'projections');
   const replays = semanticEditRecords(record, 'semanticEditReplay', 'semanticEditReplays', 'replay', 'replays');
   const editIndex = semanticEditRecordIndex(scripts, projections, replays, {
+    ...record,
     index: patchIndex,
     metadata: { semanticEditSummary: record.patchBundle?.metadata?.semanticEditSummary ?? record.metadata?.semanticEditSummary }
   });
   const admissions = semanticEditAdmissions(record);
-  const admissionStatuses = uniqueStrings([...strings(patchIndex.semanticEditAdmissionStatuses), ...admissions.map((admission) => admission.status)]);
-  const admissionActions = uniqueStrings([...strings(patchIndex.semanticEditAdmissionActions), ...admissions.map((admission) => admission.action)]);
-  const admissionReadinesses = uniqueStrings([...strings(patchIndex.semanticEditAdmissionReadinesses), ...admissions.map((admission) => admission.readiness)]);
+  const admissionStatuses = uniqueStrings([...strings(record.semanticEditAdmissionStatuses), ...strings(patchIndex.semanticEditAdmissionStatuses), ...admissions.map((admission) => admission.status)]);
+  const admissionActions = uniqueStrings([...strings(record.semanticEditAdmissionActions), ...strings(patchIndex.semanticEditAdmissionActions), ...admissions.map((admission) => admission.action)]);
+  const admissionReadinesses = uniqueStrings([...strings(record.semanticEditAdmissionReadinesses), ...strings(patchIndex.semanticEditAdmissionReadinesses), ...admissions.map((admission) => admission.readiness)]);
   return {
     semanticEditStatuses: uniqueStrings([
       ...editIndex.semanticEditReplayStatuses,
@@ -59,21 +60,21 @@ export function artifactSemanticEditIndex(record) {
     sourceIdentityHashes: editIndex.sourceIdentityHashes,
     operationContentHashes: editIndex.operationContentHashes,
     editContentHashes: editIndex.editContentHashes,
-    sourceBackprojectionModes: uniqueStrings([...strings(patchIndex.sourceBackprojectionModes), ...editIndex.sourceBackprojectionModes]),
-    semanticTransformReadinesses: strings(patchIndex.semanticTransformReadinesses),
-    transformSourceLanguages: strings(patchIndex.transformSourceLanguages),
-    transformTargetLanguages: strings(patchIndex.transformTargetLanguages),
-    transformSourcePaths: strings(patchIndex.transformSourcePaths),
-    transformTargetPaths: strings(patchIndex.transformTargetPaths),
-    transformCrossLanguages: strings(patchIndex.transformCrossLanguages),
-    transformSourceMapIds: strings(patchIndex.transformSourceMapIds),
-    transformSourceMapLinkIds: strings(patchIndex.transformSourceMapLinkIds),
-    transformSourceMapMappingIds: strings(patchIndex.transformSourceMapMappingIds),
-    transformBaseHashes: strings(patchIndex.transformBaseHashes),
-    transformTargetHashes: strings(patchIndex.transformTargetHashes),
-    targetPortabilityStatuses: strings(patchIndex.targetPortabilityStatuses),
-    targetPortabilityActions: strings(patchIndex.targetPortabilityActions),
-    targetPortabilityReasonCodes: strings(patchIndex.targetPortabilityReasonCodes)
+    sourceBackprojectionModes: uniqueStrings([...strings(record.sourceBackprojectionModes), ...strings(patchIndex.sourceBackprojectionModes), ...editIndex.sourceBackprojectionModes]),
+    semanticTransformReadinesses: uniqueStrings([...strings(record.semanticTransformReadinesses), ...strings(patchIndex.semanticTransformReadinesses)]),
+    transformSourceLanguages: uniqueStrings([...strings(record.transformSourceLanguages), ...strings(patchIndex.transformSourceLanguages)]),
+    transformTargetLanguages: uniqueStrings([...strings(record.transformTargetLanguages), ...strings(patchIndex.transformTargetLanguages)]),
+    transformSourcePaths: uniqueStrings([...strings(record.transformSourcePaths), ...strings(patchIndex.transformSourcePaths)]),
+    transformTargetPaths: uniqueStrings([...strings(record.transformTargetPaths), ...strings(patchIndex.transformTargetPaths)]),
+    transformCrossLanguages: uniqueStrings([...strings(record.transformCrossLanguages), ...strings(patchIndex.transformCrossLanguages)]),
+    transformSourceMapIds: uniqueStrings([...strings(record.transformSourceMapIds), ...strings(patchIndex.transformSourceMapIds)]),
+    transformSourceMapLinkIds: uniqueStrings([...strings(record.transformSourceMapLinkIds), ...strings(patchIndex.transformSourceMapLinkIds)]),
+    transformSourceMapMappingIds: uniqueStrings([...strings(record.transformSourceMapMappingIds), ...strings(patchIndex.transformSourceMapMappingIds)]),
+    transformBaseHashes: uniqueStrings([...strings(record.transformBaseHashes), ...strings(patchIndex.transformBaseHashes)]),
+    transformTargetHashes: uniqueStrings([...strings(record.transformTargetHashes), ...strings(patchIndex.transformTargetHashes)]),
+    targetPortabilityStatuses: uniqueStrings([...strings(record.targetPortabilityStatuses), ...strings(patchIndex.targetPortabilityStatuses)]),
+    targetPortabilityActions: uniqueStrings([...strings(record.targetPortabilityActions), ...strings(patchIndex.targetPortabilityActions)]),
+    targetPortabilityReasonCodes: uniqueStrings([...strings(record.targetPortabilityReasonCodes), ...strings(patchIndex.targetPortabilityReasonCodes)])
   };
 }
 
@@ -82,11 +83,23 @@ export function workItemSemanticEditDenominators(route = {}) {
 }
 
 export function mergeWorkItemSemanticEditDenominators(left = {}, right = {}) {
-  return Object.fromEntries(indexKeys.map((key) => [key, uniqueStrings([...(left[key] ?? []), ...(right[key] ?? [])])]));
+  return mergeSemanticEditIndexes(left, right);
 }
 
 export function worklistSemanticEditSummary(items = []) {
-  return Object.fromEntries(indexKeys.map((key) => [key, uniqueStrings(items.flatMap((item) => item[key] ?? []))]));
+  return mergeSemanticEditIndexes(...items);
+}
+
+export function mergeSemanticEditIndexes(...records) {
+  return Object.fromEntries(semanticEditIndexKeys.map((key) => [key, uniqueStrings(records.flatMap((record) => record[key] ?? []))]));
+}
+
+export function semanticEditIndexCounts(index = {}) {
+  return Object.fromEntries(semanticEditIndexKeys.map((key) => [key, countBy(index[key] ?? [])]));
+}
+
+export function semanticEditRecordsCounts(records = []) {
+  return semanticEditIndexCounts(mergeSemanticEditIndexes(...records.map((record) => artifactSemanticEditIndex(record))));
 }
 
 export function workItemSemanticEditMatches(item = {}, query = {}) {

@@ -2,6 +2,7 @@ import { countBy, normalizeNativeLanguageId, uniqueStrings } from './native-impo
 import { createUniversalConversionPlan, queryUniversalConversionPlan } from './universal-conversion-plan.js';
 import { conversionRouteEvidence } from './universal-conversion-route-evidence.js';
 import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js';
+import { artifactSemanticEditIndex, semanticEditIndexCounts } from './universal-conversion-artifact-semantic-edit.js';
 import { summarizeRuntimeProofObligations } from './universal-runtime-proof-obligations.js';
 
 export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {}, options = {}, context = {}) {
@@ -18,6 +19,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
   const runtimeProofRecords = runtimeProofObligations.map(runtimeProofRecordSummary);
   const runtimeProofEvidenceIds = uniqueStrings(runtimeProofObligations.flatMap((record) => record.evidenceIds ?? []));
   const runtimeProofSummary = summarizeRuntimeProofObligations(runtimeProofObligations);
+  const semanticEdit = artifactSemanticEditIndex(route);
   const interlingua = route.interlingua ?? {};
   const interlinguaQuery = interlingua.query ?? {};
   const interlinguaObligationRecords = (interlingua.constraints?.obligations ?? []).map(interlinguaObligationRecordSummary);
@@ -110,6 +112,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     sourceMapIds,
     sourceMapMappingIds,
     sourceMapLinkIds,
+    ...semanticEdit,
     records: {
       bound: boundSummaries,
       rejected: rejectedSummaries,
@@ -123,6 +126,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       sourceMapIds: countBy(sourceMapIds),
       sourceMapMappingIds: countBy(sourceMapMappingIds),
       sourceMapLinkIds: countBy(sourceMapLinkIds),
+      semanticEdit: semanticEditIndexCounts(semanticEdit),
       missingEvidence: missingEvidence.length,
       runtimeProofObligations: runtimeProofSummary.obligations,
       runtimeProofByStatus: runtimeProofSummary.byStatus,
@@ -154,6 +158,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     metadata: {
       routeEvidenceRequired: true,
       runtimeProofRequired: runtimeProofObligations.length > 0,
+      semanticEditEvidenceRequired: semanticEdit.semanticEditScriptIds.length > 0 || semanticEdit.semanticEditReplayIds.length > 0,
       interlinguaConstraintsRequired: interlinguaObligationRecords.length > 0,
       sourceBound: route.mergeRefs?.sources?.length ? true : false,
       sourceMapped: sourceMapIds.length > 0 || sourceMapMappingIds.length > 0 || sourceMapLinkIds.length > 0,

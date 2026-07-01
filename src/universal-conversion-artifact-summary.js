@@ -1,5 +1,5 @@
 import { countBy } from './native-import-utils.js';
-import { artifactSourceMapCounts as smc } from './universal-conversion-artifact-source-maps.js'; import { artifactRuntimeRouteCounts as rrc } from './universal-conversion-artifact-runtime-routes.js';
+import { artifactSourceMapCounts as smc } from './universal-conversion-artifact-source-maps.js'; import { artifactRuntimeRouteCounts as rrc } from './universal-conversion-artifact-runtime-routes.js'; import { semanticEditRecordsCounts as sec } from './universal-conversion-artifact-semantic-edit.js';
 
 const aiKeys = 'Families Statuses Actions SourceIds EvidenceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationEvidenceIds ObligationMissingEvidence'.split(' ');
 
@@ -102,7 +102,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
       byAction: countBy(admissionRecords.map((record) => record.admissionAction)),
       byRisk: countBy(admissionRecords.map((record) => record.risk))
     },
-    sourceMaps: smc(routeArtifacts, admissionRecords), runtimeRoutes: rrc(routeArtifacts, admissionRecords, evidenceReceipts),
+    sourceMaps: smc(routeArtifacts, admissionRecords), runtimeRoutes: rrc(routeArtifacts, admissionRecords, evidenceReceipts), semanticEdit: sec(routeArtifacts),
     translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
     runtimeProof: compactRuntimeProofCounts(routeArtifacts, evidenceReceipts),
     resourceTransfer: compactResourceTransferCounts(resourceTransfers),
@@ -201,8 +201,8 @@ function compactEvidenceReceiptCounts(receipts) {
     interlinguaConstraintObligationStatuses: countBy([...rFlat('interlinguaConstraintObligationStatuses'), ...oMap('status')]),
     interlinguaConstraintObligationEvidenceIds: countBy([...rFlat('interlinguaConstraintObligationEvidenceIds'), ...oFlat('evidenceIds')]),
     interlinguaConstraintObligationMissingEvidence: countBy([...rFlat('interlinguaConstraintObligationMissingEvidence'), ...oFlat('missingEvidence')]),
-    missingEvidence: countBy(rFlat('missingEvidence')),
-    proofEvidenceIds: countBy(rFlat('proofEvidenceIds')),
+    semanticEdit: sec(receipts),
+    missingEvidence: countBy(rFlat('missingEvidence')), proofEvidenceIds: countBy(rFlat('proofEvidenceIds')),
     rejectedByReason: countBy(receipts.flatMap((r) => (r.records?.rejected ?? []).map((record) => record.reason)))
   };
 }

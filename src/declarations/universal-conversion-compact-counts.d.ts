@@ -1,5 +1,24 @@
 import type { UniversalConversionArtifactSourceMapCompactCounts } from './universal-conversion-artifact-source-maps.js';
 import type { UniversalConversionRuntimeRouteCompactCounts } from './universal-conversion-artifact-runtime-routes.js';
+import type { UniversalConversionArtifactIndex } from './universal-conversion-artifact-query.js';
+
+export type UniversalConversionSemanticEditCompactCountKey = keyof Pick<UniversalConversionArtifactIndex,
+  | 'semanticEditStatuses' | 'semanticEditScriptIds' | 'semanticEditProjectionIds' | 'semanticEditReplayIds'
+  | 'semanticEditReplayStatuses' | 'semanticEditReplayActions' | 'semanticEditAdmissionStatuses'
+  | 'semanticEditAdmissionActions' | 'semanticEditAdmissionReadinesses'
+  | 'semanticEditReplayCurrentHashes' | 'semanticEditReplayOutputHashes'
+  | 'semanticEditKeys' | 'semanticEditHashes' | 'semanticIdentityHashes' | 'sourceIdentityHashes'
+  | 'operationContentHashes' | 'editContentHashes' | 'sourceBackprojectionModes'
+  | 'semanticTransformReadinesses' | 'transformSourceLanguages' | 'transformTargetLanguages'
+  | 'transformSourcePaths' | 'transformTargetPaths' | 'transformCrossLanguages'
+  | 'transformSourceMapIds' | 'transformSourceMapLinkIds' | 'transformSourceMapMappingIds'
+  | 'transformBaseHashes' | 'transformTargetHashes'
+  | 'targetPortabilityStatuses' | 'targetPortabilityActions' | 'targetPortabilityReasonCodes'
+>;
+
+export type UniversalConversionSemanticEditCompactCounts = {
+  readonly [K in UniversalConversionSemanticEditCompactCountKey]: Readonly<Record<string, number>>;
+};
 
 export interface UniversalConversionRepresentationCompactCounts {
   readonly total: number;
@@ -44,6 +63,7 @@ export interface UniversalConversionEvidenceReceiptCompactCounts {
   readonly sourceMapIds: Readonly<Record<string, number>>;
   readonly sourceMapMappingIds: Readonly<Record<string, number>>;
   readonly sourceMapLinkIds: Readonly<Record<string, number>>;
+  readonly semanticEdit: UniversalConversionSemanticEditCompactCounts;
   readonly runtimeProofObligations: number;
   readonly runtimeProofByStatus: Readonly<Record<string, number>>;
   readonly runtimeProofByCapability: Readonly<Record<string, number>>;
@@ -203,6 +223,7 @@ export interface UniversalConversionArtifactCompactCounts {
   };
   readonly sourceMaps: UniversalConversionArtifactSourceMapCompactCounts;
   readonly runtimeRoutes: UniversalConversionRuntimeRouteCompactCounts;
+  readonly semanticEdit: UniversalConversionSemanticEditCompactCounts;
   readonly translationAdmission: UniversalConversionTranslationAdmissionCompactCounts;
   readonly runtimeProof: UniversalConversionRuntimeProofCompactCounts;
   readonly resourceTransfer: UniversalConversionResourceTransferCompactCounts;

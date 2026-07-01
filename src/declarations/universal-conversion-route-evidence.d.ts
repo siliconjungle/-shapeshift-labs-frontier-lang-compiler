@@ -2,6 +2,8 @@ import type { EvidenceRecord, FrontierSourceLanguage, SemanticMergeReadiness } f
 import type { FrontierCompileTarget } from './compile.js';
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 import type { UniversalConversionRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
+import type { UniversalConversionArtifactIndex } from './universal-conversion-artifact-query.js';
+import type { UniversalConversionSemanticEditCompactCounts, UniversalConversionSemanticEditCompactCountKey } from './universal-conversion-compact-counts.js';
 import type { UniversalInterlinguaConstraintEdgeKind, UniversalInterlinguaLoweringDisposition } from './universal-interlingua.js';
 import type {
   UniversalConversionAdmissionAction,
@@ -14,6 +16,7 @@ import type {
 } from './universal-conversion-plan.js';
 
 export type UniversalConversionRouteEvidenceBinding = 'bound' | 'rejected';
+export interface UniversalConversionRouteEvidenceReceiptSemanticEditFields extends Pick<UniversalConversionArtifactIndex, UniversalConversionSemanticEditCompactCountKey> {}
 export type UniversalConversionRouteEvidenceRejectionReason =
   | 'unscoped-evidence'
   | 'route-id-mismatch'
@@ -96,7 +99,7 @@ export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly includeRejectedEvidence?: boolean;
 }
 
-export interface UniversalConversionRouteEvidenceReceipt extends UniversalConversionRuntimeRouteFields {
+export interface UniversalConversionRouteEvidenceReceipt extends UniversalConversionRuntimeRouteFields, UniversalConversionRouteEvidenceReceiptSemanticEditFields {
   readonly kind: 'frontier.lang.universalConversionRouteEvidenceReceipt';
   readonly version: 1;
   readonly schema: 'frontier.lang.universalConversionRouteEvidenceReceipt.v1';
@@ -157,6 +160,7 @@ export interface UniversalConversionRouteEvidenceReceipt extends UniversalConver
     readonly sourceMapIds: Readonly<Record<string, number>>;
     readonly sourceMapMappingIds: Readonly<Record<string, number>>;
     readonly sourceMapLinkIds: Readonly<Record<string, number>>;
+    readonly semanticEdit: UniversalConversionSemanticEditCompactCounts;
     readonly missingEvidence: number;
     readonly runtimeProofObligations: number;
     readonly runtimeProofByStatus: Readonly<Record<string, number>>;
@@ -188,6 +192,7 @@ export interface UniversalConversionRouteEvidenceReceipt extends UniversalConver
   readonly metadata: {
     readonly routeEvidenceRequired: true;
     readonly runtimeProofRequired: boolean;
+    readonly semanticEditEvidenceRequired: boolean;
     readonly interlinguaConstraintsRequired: boolean;
     readonly sourceBound: boolean;
     readonly sourceMapped: boolean;

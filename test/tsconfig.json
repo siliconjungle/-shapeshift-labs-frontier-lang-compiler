@@ -37,6 +37,7 @@
     "./public-api-semantic-resource-graph-types.ts",
     "./public-api-semantic-edit-types.ts",
     "./public-api-transform-types.ts",
-    "./public-api-universal-conversion-receipt-types.ts"
+    "./public-api-universal-conversion-receipt-types.ts",
+    "./public-api-universal-conversion-receipt-semantic-types.ts"
   ]
 }
