@@ -15,6 +15,7 @@ export type UniversalInterlinguaLayerKind =
   | 'runtime-capability'
   | 'dialect-projection'
   | 'semantic-ownership'
+  | 'adt-pattern-contract'
   | 'protocol-contract'
   | 'proof-evidence'
   | string;
@@ -32,6 +33,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'ownership'
   | 'lifetime'
   | 'control-flow'
+  | 'adt-pattern'
   | 'borrow-scope'
   | 'borrow-checker'
   | 'data-layout'

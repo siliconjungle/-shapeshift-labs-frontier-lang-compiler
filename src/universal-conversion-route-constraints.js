@@ -1,5 +1,6 @@
 import { borrowCheckerConstraintForConversionRoute, borrowCheckerConstraintMatches } from './universal-borrow-checker-constraints.js';
 import { borrowScopeConstraintForConversionRoute, borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
+import { adtPatternConstraintForConversionRoute, adtPatternConstraintMatches } from './universal-adt-pattern-constraints.js';
 import { concurrencyModelConstraintForConversionRoute, concurrencyModelConstraintMatches } from './universal-concurrency-model-constraints.js';
 import { controlFlowConstraintForConversionRoute, controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
 import { dataLayoutConstraintForConversionRoute, dataLayoutConstraintMatches } from './universal-data-layout-constraints.js';
@@ -22,6 +23,7 @@ const families = [
   ['borrowScopeConstraint', 'borrowScopeConstraints', 'translationBorrowScopeConstraint'],
   ['concurrencyModelConstraint', 'concurrencyModelConstraints', 'translationConcurrencyModelConstraint'],
   ['controlFlowConstraint', 'controlFlowConstraints', 'translationControlFlowConstraint'],
+  ['adtPatternConstraint', 'adtPatternConstraints', 'translationAdtPatternConstraint'],
   ['dataLayoutConstraint', 'dataLayoutConstraints', 'translationDataLayoutConstraint'],
   ['effectConstraint', 'effectConstraints', 'translationEffectConstraint'],
   ['errorModelConstraint', 'errorModelConstraints', 'translationErrorModelConstraint'],
@@ -65,6 +67,7 @@ export function createConversionRouteConstraints(input = {}, route = {}, routeIm
     resourceTransfer,
     lifetimeConstraint,
     controlFlowConstraint,
+    adtPatternConstraint: adtPatternConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     borrowScopeConstraint,
     borrowCheckerConstraint,
     dataLayoutConstraint: dataLayoutConstraintForConversionRoute(input, route, routeImports, routeEvidence),
@@ -87,6 +90,7 @@ export function conversionRouteMatchesConstraintQuery(route = {}, query = {}) {
   return resourceTransferMatches(route.resourceTransfer, query)
     && lifetimeConstraintMatches(route.lifetimeConstraint, query)
     && controlFlowConstraintMatches(route.controlFlowConstraint, query)
+    && adtPatternConstraintMatches(route.adtPatternConstraint, query)
     && borrowScopeConstraintMatches(route.borrowScopeConstraint, query)
     && borrowCheckerConstraintMatches(route.borrowCheckerConstraint, query)
     && dataLayoutConstraintMatches(route.dataLayoutConstraint, query)

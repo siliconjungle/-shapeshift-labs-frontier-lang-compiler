@@ -1,4 +1,5 @@
 import { uniqueStrings } from './native-import-utils.js';
+import { adtPatternConstraintMatches } from './universal-adt-pattern-constraints.js';
 import { resourceTransferMatches } from './universal-resource-transfer.js';
 import { borrowCheckerConstraintMatches } from './universal-borrow-checker-constraints.js';
 import { borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
@@ -28,6 +29,7 @@ export function artifactConstraintIndex(records = []) {
     ...constraintIndex('ownershipConstraint', records.map(own)),
     ...constraintIndex('lifetimeConstraint', records.map(life)),
     ...constraintIndex('controlFlowConstraint', records.map(ctrl)),
+    ...constraintIndex('adtPatternConstraint', records.map(adt)),
     ...constraintIndex('borrowScopeConstraint', records.map(bscope)),
     ...constraintIndex('borrowCheckerConstraint', records.map(bchecker)),
     ...constraintIndex('dataLayoutConstraint', records.map(layout)),
@@ -50,6 +52,7 @@ export function artifactConstraintsMatch(record, query = {}) {
   return resourceTransferMatches(res(record), query)
     && lifetimeConstraintMatches(life(record), query)
     && controlFlowConstraintMatches(ctrl(record), query)
+    && adtPatternConstraintMatches(adt(record), query)
     && borrowScopeConstraintMatches(bscope(record), query)
     && borrowCheckerConstraintMatches(bchecker(record), query)
     && dataLayoutConstraintMatches(layout(record), query)
@@ -71,6 +74,7 @@ function res(record) { return record.resourceTransfer ?? metaConstraint(record, 
 function own(record) { return res(record).ownershipConstraints ?? {}; }
 function life(record) { return record.lifetimeConstraint ?? metaConstraint(record, 'lifetimeConstraint'); }
 function ctrl(record) { return record.controlFlowConstraint ?? metaConstraint(record, 'controlFlowConstraint'); }
+function adt(record) { return record.adtPatternConstraint ?? metaConstraint(record, 'adtPatternConstraint'); }
 function bscope(record) { return record.borrowScopeConstraint ?? metaConstraint(record, 'borrowScopeConstraint'); }
 function bchecker(record) { return record.borrowCheckerConstraint ?? metaConstraint(record, 'borrowCheckerConstraint'); }
 function layout(record) { return record.dataLayoutConstraint ?? metaConstraint(record, 'dataLayoutConstraint'); }

@@ -258,7 +258,7 @@ function conversionEvidence(language, targetCell) {
     targetLossKinds: targetCell?.lossKinds ?? []
   };
 }
-function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, borrowScopeConstraint, borrowCheckerConstraint, dataLayoutConstraint, effectConstraint, concurrencyModelConstraint, errorModelConstraint, evaluationModelConstraint, hostEnvironmentConstraint, memoryModelConstraint, metaprogrammingConstraint, scopeBindingConstraint, moduleConstraint, objectModelConstraint, protocolConstraint, typeConstraint) {
+function conversionMissingEvidence(language, targetCell, mode, evidence = [], runtime = {}, dialect = {}, resourceTransfer, lifetimeConstraint, controlFlowConstraint, adtPatternConstraint, borrowScopeConstraint, borrowCheckerConstraint, dataLayoutConstraint, effectConstraint, concurrencyModelConstraint, errorModelConstraint, evaluationModelConstraint, hostEnvironmentConstraint, memoryModelConstraint, metaprogrammingConstraint, scopeBindingConstraint, moduleConstraint, objectModelConstraint, protocolConstraint, typeConstraint) {
   return uniqueStrings([
     ...(language.imports.total ? [] : ['source-import']),
     ...(language.imports.symbols ? [] : ['semantic-index']),
@@ -274,6 +274,7 @@ function conversionMissingEvidence(language, targetCell, mode, evidence = [], ru
     ...(resourceTransfer?.missingEvidence ?? []),
     ...(lifetimeConstraint?.missingEvidence ?? []),
     ...(controlFlowConstraint?.missingEvidence ?? []),
+    ...(adtPatternConstraint?.missingEvidence ?? []),
     ...(borrowScopeConstraint?.missingEvidence ?? []),
     ...(borrowCheckerConstraint?.missingEvidence ?? []),
     ...(dataLayoutConstraint?.missingEvidence ?? []),

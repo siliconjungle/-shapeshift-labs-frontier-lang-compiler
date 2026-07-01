@@ -1,4 +1,5 @@
 import { uniqueStrings } from './native-import-utils.js';
+import { adtPatternConstraintMatches } from './universal-adt-pattern-constraints.js';
 import { resourceTransferMatches } from './universal-resource-transfer.js';
 import { borrowCheckerConstraintMatches } from './universal-borrow-checker-constraints.js';
 import { borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
@@ -41,8 +42,8 @@ export function createUniversalTranslationAdmission(input = {}) {
   const evidenceIds = uniqueStrings([...(input.mergeRefs?.evidenceIds ?? []), ...(input.routeEvidence ?? []).map((record) => record?.id)]);
   const proofEvidenceIds = uniqueStrings([...(input.mergeRefs?.proofIds ?? []), ...proofEvidenceIdsFor(input.routeEvidence)]);
   const missingEvidence = translationMissingEvidence(input, missingConstructKinds);
-  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.lifetimeConstraint?.blockers ?? []), ...(input.controlFlowConstraint?.blockers ?? []), ...(input.borrowScopeConstraint?.blockers ?? []), ...(input.borrowCheckerConstraint?.blockers ?? []), ...(input.dataLayoutConstraint?.blockers ?? []), ...(input.effectConstraint?.blockers ?? []), ...(input.concurrencyModelConstraint?.blockers ?? []), ...(input.errorModelConstraint?.blockers ?? []), ...(input.evaluationModelConstraint?.blockers ?? []), ...(input.hostEnvironmentConstraint?.blockers ?? []), ...(input.memoryModelConstraint?.blockers ?? []), ...(input.metaprogrammingConstraint?.blockers ?? []), ...(input.scopeBindingConstraint?.blockers ?? []), ...(input.moduleConstraint?.blockers ?? []), ...(input.objectModelConstraint?.blockers ?? []), ...(input.protocolConstraint?.blockers ?? []), ...(input.typeConstraint?.blockers ?? [])]);
-  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.lifetimeConstraint?.review ?? []), ...(input.controlFlowConstraint?.review ?? []), ...(input.borrowScopeConstraint?.review ?? []), ...(input.borrowCheckerConstraint?.review ?? []), ...(input.dataLayoutConstraint?.review ?? []), ...(input.effectConstraint?.review ?? []), ...(input.concurrencyModelConstraint?.review ?? []), ...(input.errorModelConstraint?.review ?? []), ...(input.evaluationModelConstraint?.review ?? []), ...(input.hostEnvironmentConstraint?.review ?? []), ...(input.memoryModelConstraint?.review ?? []), ...(input.metaprogrammingConstraint?.review ?? []), ...(input.scopeBindingConstraint?.review ?? []), ...(input.moduleConstraint?.review ?? []), ...(input.objectModelConstraint?.review ?? []), ...(input.protocolConstraint?.review ?? []), ...(input.typeConstraint?.review ?? [])]);
+  const blockers = uniqueStrings([...(input.blockers ?? []), ...(input.representation?.blockers ?? []), ...(input.resourceTransfer?.blockers ?? []), ...(input.lifetimeConstraint?.blockers ?? []), ...(input.controlFlowConstraint?.blockers ?? []), ...(input.adtPatternConstraint?.blockers ?? []), ...(input.borrowScopeConstraint?.blockers ?? []), ...(input.borrowCheckerConstraint?.blockers ?? []), ...(input.dataLayoutConstraint?.blockers ?? []), ...(input.effectConstraint?.blockers ?? []), ...(input.concurrencyModelConstraint?.blockers ?? []), ...(input.errorModelConstraint?.blockers ?? []), ...(input.evaluationModelConstraint?.blockers ?? []), ...(input.hostEnvironmentConstraint?.blockers ?? []), ...(input.memoryModelConstraint?.blockers ?? []), ...(input.metaprogrammingConstraint?.blockers ?? []), ...(input.scopeBindingConstraint?.blockers ?? []), ...(input.moduleConstraint?.blockers ?? []), ...(input.objectModelConstraint?.blockers ?? []), ...(input.protocolConstraint?.blockers ?? []), ...(input.typeConstraint?.blockers ?? [])]);
+  const review = uniqueStrings([...(input.review ?? []), ...(input.representation?.review ?? []), ...(input.resourceTransfer?.review ?? []), ...(input.lifetimeConstraint?.review ?? []), ...(input.controlFlowConstraint?.review ?? []), ...(input.adtPatternConstraint?.review ?? []), ...(input.borrowScopeConstraint?.review ?? []), ...(input.borrowCheckerConstraint?.review ?? []), ...(input.dataLayoutConstraint?.review ?? []), ...(input.effectConstraint?.review ?? []), ...(input.concurrencyModelConstraint?.review ?? []), ...(input.errorModelConstraint?.review ?? []), ...(input.evaluationModelConstraint?.review ?? []), ...(input.hostEnvironmentConstraint?.review ?? []), ...(input.memoryModelConstraint?.review ?? []), ...(input.metaprogrammingConstraint?.review ?? []), ...(input.scopeBindingConstraint?.review ?? []), ...(input.moduleConstraint?.review ?? []), ...(input.objectModelConstraint?.review ?? []), ...(input.protocolConstraint?.review ?? []), ...(input.typeConstraint?.review ?? [])]);
   const status = translationAdmissionStatus(input, missingEvidence, blockers);
   return {
     status,
@@ -71,6 +72,10 @@ export function createUniversalTranslationAdmission(input = {}) {
     controlFlowConstraintStatus: input.controlFlowConstraint?.status,
     controlFlowConstraintAction: input.controlFlowConstraint?.action,
     controlFlowConstraintMissingEvidence: input.controlFlowConstraint?.missingEvidence ?? [],
+    adtPatternConstraint: constraintSummary(input.adtPatternConstraint),
+    adtPatternConstraintStatus: input.adtPatternConstraint?.status,
+    adtPatternConstraintAction: input.adtPatternConstraint?.action,
+    adtPatternConstraintMissingEvidence: input.adtPatternConstraint?.missingEvidence ?? [],
     borrowScopeConstraint: constraintSummary(input.borrowScopeConstraint),
     borrowScopeConstraintStatus: input.borrowScopeConstraint?.status,
     borrowScopeConstraintAction: input.borrowScopeConstraint?.action,
@@ -147,6 +152,7 @@ export function conversionRouteMatchesTranslationAdmissionQuery(route, query = {
     && resourceTransferMatches(route?.resourceTransfer ?? admission.resourceTransfer, query)
     && lifetimeConstraintMatches(route?.lifetimeConstraint ?? admission.lifetimeConstraint, query)
     && controlFlowConstraintMatches(route?.controlFlowConstraint ?? admission.controlFlowConstraint, query)
+    && adtPatternConstraintMatches(route?.adtPatternConstraint ?? admission.adtPatternConstraint, query)
     && borrowScopeConstraintMatches(route?.borrowScopeConstraint ?? admission.borrowScopeConstraint, query)
     && borrowCheckerConstraintMatches(route?.borrowCheckerConstraint ?? admission.borrowCheckerConstraint, query)
     && dataLayoutConstraintMatches(route?.dataLayoutConstraint ?? admission.dataLayoutConstraint, query)
@@ -177,6 +183,7 @@ function requiredTranslationConstructKinds(input) {
     'semantic-ownership',
     'proof-evidence',
     ...((input.runtime?.requiredCapabilities ?? []).length || (input.runtime?.adapterRequirements ?? []).length ? ['runtime-capability'] : []),
+    ...((input.adtPatternConstraint?.requiredKinds ?? []).length ? ['adt-pattern-contract'] : []),
     ...((input.protocolConstraint?.requiredKinds ?? []).length ? ['protocol-contract'] : []),
     ...((input.dialect?.records ?? []).length ? ['dialect-projection'] : [])
   ]);
@@ -201,6 +208,7 @@ function translationMissingEvidence(input, missingConstructKinds) {
     ...(input.resourceTransfer?.missingEvidence ?? []),
     ...(input.lifetimeConstraint?.missingEvidence ?? []),
     ...(input.controlFlowConstraint?.missingEvidence ?? []),
+    ...(input.adtPatternConstraint?.missingEvidence ?? []),
     ...(input.borrowScopeConstraint?.missingEvidence ?? []),
     ...(input.borrowCheckerConstraint?.missingEvidence ?? []),
     ...(input.dataLayoutConstraint?.missingEvidence ?? []),

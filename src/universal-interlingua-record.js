@@ -10,7 +10,7 @@ export const UniversalInterlinguaLayerKinds = Object.freeze([
   'target-adapter',
   'runtime-capability',
   'dialect-projection',
-  'semantic-ownership',
+  'semantic-ownership', 'adt-pattern-contract',
   'protocol-contract',
   'proof-evidence'
 ]);
@@ -28,7 +28,7 @@ export const UniversalInterlinguaConstraintEdgeKinds = Object.freeze([
   'resource-transfer',
   'ownership',
   'lifetime',
-  'control-flow',
+  'control-flow', 'adt-pattern',
   'borrow-scope',
   'borrow-checker',
   'data-layout',
@@ -53,8 +53,8 @@ export function createUniversalInterlinguaRecord(input = {}) {
   const mergeRefs = input.mergeRefs ?? route.mergeRefs ?? {};
   const runtime = input.runtime ?? route.runtime ?? {};
   const dialect = input.dialect ?? route.dialect ?? {};
-  const layerSummary = interlinguaLayerSummary(representation);
   const constraints = interlinguaConstraintSummary(route);
+  const layerSummary = interlinguaLayerSummary(representation, { constraints, translationAdmission });
   const disposition = loweringDisposition(route);
   const missingEvidence = uniqueStrings([
     ...(route.missingEvidence ?? []),
@@ -171,6 +171,7 @@ export function interlinguaConstraintSummary(route = {}) {
     constraintEdge('ownership', route.resourceTransfer?.ownershipConstraints, 'semantic-ownership', route),
     constraintEdge('lifetime', route.lifetimeConstraint, 'semantic-ownership', route),
     constraintEdge('control-flow', route.controlFlowConstraint, 'runtime-capability', route),
+    constraintEdge('adt-pattern', route.adtPatternConstraint, 'adt-pattern-contract', route),
     constraintEdge('borrow-scope', route.borrowScopeConstraint, 'semantic-ownership', route),
     constraintEdge('borrow-checker', route.borrowCheckerConstraint, 'semantic-ownership', route),
     constraintEdge('data-layout', route.dataLayoutConstraint, 'runtime-capability', route),
@@ -265,7 +266,7 @@ function constraintObligations(family, evidence, edgeId) {
 }
 
 function constraintRecords(evidence = {}) {
-  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.hostEnvironmentConstraints ?? evidence.memoryModelConstraints ?? evidence.metaprogrammingConstraints ?? evidence.scopeBindingConstraints ?? evidence.moduleConstraints ?? evidence.objectModelConstraints ?? evidence.protocolConstraints ?? evidence.typeConstraints ?? [];
+  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.adtPatternConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.hostEnvironmentConstraints ?? evidence.memoryModelConstraints ?? evidence.metaprogrammingConstraints ?? evidence.scopeBindingConstraints ?? evidence.moduleConstraints ?? evidence.objectModelConstraints ?? evidence.protocolConstraints ?? evidence.typeConstraints ?? [];
 }
 
 function nodeIds(record = {}, prefix) {
@@ -284,21 +285,18 @@ function constraintSeverity(status, missingKinds) {
   return 'info';
 }
 
-export function interlinguaLayerSummary(representation = {}) {
+export function interlinguaLayerSummary(representation = {}, options = {}) {
   const constructs = representation.constructs ?? [];
   const byStatus = (status) => uniqueStrings(constructs.filter((construct) => construct.status === status).map((construct) => construct.kind));
-  return {
-    kinds: uniqueStrings([...(representation.constructKinds ?? []), ...constructs.map((construct) => construct.kind)]),
-    representedKinds: byStatus('represented'),
-    missingKinds: uniqueStrings([...(representation.missing ?? []), ...byStatus('missing')]),
-    reviewKinds: byStatus('review'),
-    blockedKinds: byStatus('blocked'),
-    constructCount: constructs.length,
-    representedCount: representation.summary?.representedConstructs ?? byStatus('represented').length,
-    missingCount: representation.summary?.missing ?? representation.missing?.length ?? 0,
-    reviewCount: representation.summary?.reviewConstructs ?? byStatus('review').length,
-    blockedCount: representation.summary?.blockedConstructs ?? byStatus('blocked').length
-  };
+  const constraints = options.constraints ?? {};
+  const translationAdmission = options.translationAdmission ?? {};
+  const constraintLayerKinds = (predicate) => uniqueStrings((constraints.edges ?? []).filter(predicate).map((edge) => edge.layerKind));
+  const representedKinds = uniqueStrings([...byStatus('represented'), ...(translationAdmission.representedConstructKinds ?? []), ...constraintLayerKinds((edge) => edge.status === 'satisfied' && !(edge.missingKinds ?? []).length && !(edge.missingEvidence ?? []).length)]);
+  const missingKinds = uniqueStrings([...(representation.missing ?? []), ...byStatus('missing'), ...(translationAdmission.missingConstructKinds ?? []), ...constraintLayerKinds((edge) => edge.status === 'needs-evidence' || (edge.missingKinds ?? []).length || (edge.missingEvidence ?? []).length)]);
+  const reviewKinds = uniqueStrings([...byStatus('review'), ...constraintLayerKinds((edge) => edge.status === 'degraded' || (edge.review ?? []).length)]);
+  const blockedKinds = uniqueStrings([...byStatus('blocked'), ...constraintLayerKinds((edge) => edge.status === 'blocked' || (edge.blockers ?? []).length)]);
+  const kinds = uniqueStrings([...(representation.constructKinds ?? []), ...constructs.map((construct) => construct.kind), ...(translationAdmission.requiredConstructKinds ?? []), ...(constraints.edges ?? []).map((edge) => edge.layerKind)]);
+  return { kinds, representedKinds, missingKinds, reviewKinds, blockedKinds, constructCount: constructs.length, representedCount: representedKinds.length, missingCount: missingKinds.length, reviewCount: reviewKinds.length, blockedCount: blockedKinds.length };
 }
 
 function loweringDisposition(route = {}) {

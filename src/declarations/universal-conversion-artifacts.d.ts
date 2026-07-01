@@ -11,7 +11,7 @@ import type { UniversalConversionRouteEvidenceReceipt } from './universal-conver
 import type { UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalResourceTransferEvidence } from './universal-resource-transfer.js';
 import type { UniversalLifetimeConstraintEvidence } from './universal-lifetime-constraints.js';
-import type { UniversalControlFlowConstraintEvidence } from './universal-control-flow-constraints.js';
+import type { UniversalControlFlowConstraintEvidence } from './universal-control-flow-constraints.js'; import type { UniversalAdtPatternConstraintEvidence } from './universal-adt-pattern-constraints.js';
 import type { UniversalBorrowScopeConstraintEvidence } from './universal-borrow-scope-constraints.js';
 import type { UniversalBorrowCheckerConstraintEvidence } from './universal-borrow-checker-constraints.js';
 import type { UniversalDataLayoutConstraintEvidence } from './universal-data-layout-constraints.js'; import type { UniversalEffectConstraintEvidence } from './universal-effect-constraints.js';
@@ -86,8 +86,8 @@ export interface UniversalConversionAdmissionRecord {
   readonly resourceTransferAction?: string;
   readonly lifetimeConstraintStatus?: string;
   readonly lifetimeConstraintAction?: string;
-  readonly controlFlowConstraintStatus?: string;
-  readonly controlFlowConstraintAction?: string;
+  readonly controlFlowConstraintStatus?: string; readonly controlFlowConstraintAction?: string;
+  readonly adtPatternConstraintStatus?: string; readonly adtPatternConstraintAction?: string;
   readonly borrowScopeConstraintStatus?: string;
   readonly borrowScopeConstraintAction?: string;
   readonly borrowCheckerConstraintStatus?: string;
@@ -158,7 +158,7 @@ export interface UniversalConversionAdmissionRecord {
   };
   readonly effectConstraint: UniversalConversionConstraintSummary; readonly concurrencyModelConstraint: UniversalConversionConstraintSummary;
   readonly lifetimeConstraint: UniversalConversionConstraintSummary;
-  readonly controlFlowConstraint: UniversalConversionConstraintSummary;
+  readonly controlFlowConstraint: UniversalConversionConstraintSummary; readonly adtPatternConstraint: UniversalConversionConstraintSummary;
   readonly borrowScopeConstraint: UniversalConversionConstraintSummary;
   readonly borrowCheckerConstraint: UniversalConversionConstraintSummary; readonly dataLayoutConstraint: UniversalConversionConstraintSummary;
   readonly moduleConstraint: UniversalConversionConstraintSummary;
@@ -212,7 +212,7 @@ export interface UniversalConversionRouteArtifact {
   readonly interlingua?: UniversalInterlinguaRecord;
   readonly resourceTransfer?: UniversalResourceTransferEvidence;
   readonly lifetimeConstraint?: UniversalLifetimeConstraintEvidence;
-  readonly controlFlowConstraint?: UniversalControlFlowConstraintEvidence;
+  readonly controlFlowConstraint?: UniversalControlFlowConstraintEvidence; readonly adtPatternConstraint?: UniversalAdtPatternConstraintEvidence;
   readonly borrowScopeConstraint?: UniversalBorrowScopeConstraintEvidence;
   readonly borrowCheckerConstraint?: UniversalBorrowCheckerConstraintEvidence;
   readonly dataLayoutConstraint?: UniversalDataLayoutConstraintEvidence;
