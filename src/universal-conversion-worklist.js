@@ -1,11 +1,9 @@
 import { countBy, idFragment, normalizeNativeLanguageId, uniqueStrings } from './native-import-utils.js';
 import { normalizeProjectionMatrixTargets } from './coverage-matrix-profiles.js';
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
+import { mergeWorkItemRuntimeRouteDenominators, workItemRuntimeRouteDenominators, workItemRuntimeRouteMatches, worklistRuntimeRouteSummary } from './universal-conversion-artifact-runtime-routes.js';
 
-export const UniversalConversionWorkItemKinds = Object.freeze([
-  'add-target-adapter', 'collect-translation-proof', 'prove-runtime-adapter', 'collect-runtime-proof-signal', 'collect-dialect-evidence',
-  'collect-interlingua-obligation-proof', 'collect-source-evidence', 'review-route', 'unblock-route'
-]);
+export const UniversalConversionWorkItemKinds = Object.freeze(['add-target-adapter', 'collect-translation-proof', 'prove-runtime-adapter', 'collect-runtime-proof-signal', 'collect-dialect-evidence', 'collect-interlingua-obligation-proof', 'collect-source-evidence', 'review-route', 'unblock-route']);
 
 export function createUniversalConversionWorklist(planOrInput = {}, options = {}, context = {}) {
   const plan = planOrInput?.kind === 'frontier.lang.universalConversionPlan'
@@ -115,6 +113,7 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     blockers: route.blockers ?? [],
     review: route.review ?? [],
     tasks: workItemTasks(kind, route, evidenceKey, details),
+    ...workItemRuntimeRouteDenominators(route),
     runtimeAdapterRequirementIds: (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
     runtimeProofObligationIds: (route.runtime?.proofObligations ?? []).map((entry) => entry.id).filter(Boolean),
     runtimeProofCapabilities: uniqueStrings((route.runtime?.proofObligations ?? []).map((entry) => entry.capability)),
@@ -158,6 +157,7 @@ function mergeWorkItems(left, right) {
     blockers: uniqueStrings([...left.blockers, ...right.blockers]),
     review: uniqueStrings([...left.review, ...right.review]),
     tasks: uniqueStrings([...left.tasks, ...right.tasks]),
+    ...mergeWorkItemRuntimeRouteDenominators(left, right),
     runtimeAdapterRequirementIds: uniqueStrings([...left.runtimeAdapterRequirementIds, ...right.runtimeAdapterRequirementIds]),
     runtimeProofObligationIds: uniqueStrings([...left.runtimeProofObligationIds, ...right.runtimeProofObligationIds]),
     runtimeProofCapabilities: uniqueStrings([...left.runtimeProofCapabilities, ...right.runtimeProofCapabilities]),
@@ -217,6 +217,7 @@ function worklistSummary(items) {
     targets: uniqueStrings(items.flatMap((item) => item.targets)),
     evidenceKeys: uniqueStrings(items.flatMap((item) => item.evidenceKeys)),
     missingEvidence: uniqueStrings(items.flatMap((item) => item.missingEvidence)),
+    ...worklistRuntimeRouteSummary(items),
     runtimeProofCapabilities: uniqueStrings(items.flatMap((item) => item.runtimeProofCapabilities ?? [])),
     runtimeProofStatuses: uniqueStrings(items.flatMap((item) => item.runtimeProofStatuses ?? [])),
     runtimeProofRequiredSignals: uniqueStrings(items.flatMap((item) => item.runtimeProofRequiredSignals ?? [])),
@@ -252,6 +253,7 @@ function routeMatchesWorklistOptions(route, options) {
   const target = normalizeProjectionMatrixTargets(options.target ? [options.target] : [])[0];
   return (!source || route.languageIds.includes(source))
     && (!target || route.target === target)
+    && workItemRuntimeRouteMatches(workItemRuntimeRouteDenominators(route), options)
     && match(options.routeId, [route.id]);
 }
 
@@ -272,6 +274,7 @@ function workItemMatchesQuery(item, query) {
     && match(query.routeAction, item.routeActions)
     && match(query.evidenceKey, item.evidenceKeys)
     && match(query.missingEvidence, item.missingEvidence)
+    && workItemRuntimeRouteMatches(item, query)
     && match(query.runtimeProofObligationId, item.runtimeProofObligationIds)
     && match(query.runtimeProofCapability, item.runtimeProofCapabilities)
     && match(query.runtimeProofStatus, item.runtimeProofStatuses)
@@ -304,13 +307,9 @@ function sortWorkItems(items) {
     || String(left.id).localeCompare(String(right.id)));
 }
 
-function higherPriority(left, right) {
-  return priorityRank(right) > priorityRank(left) ? right : left;
-}
+function higherPriority(left, right) { return priorityRank(right) > priorityRank(left) ? right : left; }
 
-function priorityRank(priority) {
-  return { low: 0, normal: 1, high: 2, blocker: 3 }[priority] ?? 1;
-}
+function priorityRank(priority) { return { low: 0, normal: 1, high: 2, blocker: 3 }[priority] ?? 1; }
 
 function match(filter, values) {
   const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];

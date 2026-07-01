@@ -196,6 +196,14 @@ const receiptWorklistEdgeQuery = queryUniversalConversionWorklist(receiptWorklis
 receiptWorklist.metadata.semanticEquivalenceClaim satisfies false;
 receiptWorklist.summary.autoMergeClaims satisfies 0;
 receiptWorklist.summary.semanticEquivalenceClaims satisfies 0;
+receiptWorklist.summary.runtimeRouteIds satisfies readonly string[];
+receiptWorklist.summary.sourceHostIds satisfies readonly string[];
+receiptWorklist.summary.targetHostIds satisfies readonly string[];
+receiptWorklist.summary.sourceRuntimes satisfies readonly string[];
+receiptWorklist.summary.targetRuntimes satisfies readonly string[];
+receiptWorklist.summary.runtimeReadinesses satisfies readonly string[];
+receiptWorklist.summary.requiredRuntimeCapabilities satisfies readonly string[];
+receiptWorklist.summary.missingRuntimeCapabilities satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintFamilies satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintStatuses satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintActions satisfies readonly string[];
@@ -209,6 +217,15 @@ receiptWorklist.summary.interlinguaConstraintObligationStatuses satisfies readon
 receiptWorklist.summary.interlinguaConstraintObligationEvidenceIds satisfies readonly string[];
 receiptWorklist.summary.interlinguaConstraintObligationMissingEvidence satisfies readonly string[];
 receiptWorklistQuery.bestItem?.autoMergeClaim satisfies false | undefined;
+receiptWorklistQuery.bestItem?.runtimeRouteIds satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.sourceHostIds satisfies readonly string[] | undefined;
+receiptWorklistQuery.bestItem?.runtimeReadinesses satisfies readonly string[] | undefined;
+const receiptWorklistRuntimeQuery = queryUniversalConversionWorklist(receiptWorklist, {
+  runtimeRouteId: receiptWorklistQuery.bestItem?.runtimeRouteIds[0],
+  sourceRuntime: receiptWorklistQuery.bestItem?.sourceRuntimes[0],
+  requiredRuntimeCapability: receiptWorklistQuery.bestItem?.requiredRuntimeCapabilities[0]
+});
+receiptWorklistRuntimeQuery.found satisfies boolean;
 receiptWorklistQuery.bestItem?.interlinguaConstraintStatuses satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintActions satisfies readonly string[] | undefined;
 receiptWorklistQuery.bestItem?.interlinguaConstraintEvidenceIds satisfies readonly string[] | undefined;

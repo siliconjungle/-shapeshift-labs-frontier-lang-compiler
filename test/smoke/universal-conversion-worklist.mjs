@@ -59,16 +59,35 @@ const runtimePlan = createUniversalConversionPlan({
 });
 const runtimeRoute = queryUniversalConversionPlan(runtimePlan, { sourceLanguage: 'javascript', target: 'rust' }).bestRoute;
 const runtimeWorklist = createUniversalConversionWorklist(runtimePlan, { routeId: runtimeRoute.id });
+assert.equal(runtimeWorklist.summary.runtimeRouteIds.includes(runtimeRoute.runtime.routeId), true);
+assert.equal(runtimeWorklist.summary.sourceHostIds.includes(runtimeRoute.runtime.source.id), true);
+assert.equal(runtimeWorklist.summary.targetHostIds.includes(runtimeRoute.runtime.target.id), true);
+assert.equal(runtimeWorklist.summary.requiredRuntimeCapabilities.includes('fetch'), true);
 assert.equal(runtimeWorklist.summary.runtimeAdapterGaps >= 1, true);
 assert.equal(runtimeWorklist.items.some((item) => item.kind === 'prove-runtime-adapter'
+  && item.runtimeRouteIds.includes(runtimeRoute.runtime.routeId)
+  && item.sourceHostIds.includes(runtimeRoute.runtime.source.id)
+  && item.targetHostIds.includes(runtimeRoute.runtime.target.id)
+  && item.requiredRuntimeCapabilities.includes('fetch')
   && item.runtimeAdapterRequirementIds.includes(runtimeRoute.runtimeAdapterRequirements[0].id)), true);
 const runtimeQuery = queryUniversalConversionWorklist(runtimePlan, {
   kind: 'prove-runtime-adapter',
+  runtimeRouteId: runtimeRoute.runtime.routeId,
+  sourceHostId: runtimeRoute.runtime.source.id,
+  targetHostId: runtimeRoute.runtime.target.id,
+  sourceRuntime: runtimeRoute.runtime.source.runtime,
+  targetRuntime: runtimeRoute.runtime.target.runtime,
+  runtimeReadiness: runtimeRoute.runtime.readiness,
+  requiredRuntimeCapability: 'fetch',
   runtimeAdapterRequirementId: runtimeRoute.runtimeAdapterRequirements[0].id
 });
 assert.equal(runtimeQuery.found, true);
 assert.equal(runtimeQuery.bestItem.kind, 'prove-runtime-adapter');
 assert.equal(runtimeQuery.bestItem.routeIds.includes(runtimeRoute.id), true);
+assert.equal(runtimeQuery.bestItem.runtimeRouteIds.includes(runtimeRoute.runtime.routeId), true);
+const runtimeFilteredWorklist = createUniversalConversionWorklist(runtimePlan, { sourceHostId: runtimeRoute.runtime.source.id, requiredRuntimeCapability: 'fetch' });
+assert.equal(runtimeFilteredWorklist.items.length >= 1, true);
+assert.equal(runtimeFilteredWorklist.summary.sourceHostIds.includes(runtimeRoute.runtime.source.id), true);
 assert.equal(runtimeWorklist.summary.runtimeProofSignalGaps >= 1, true);
 assert.equal(runtimeWorklist.items.some((item) => item.kind === 'collect-runtime-proof-signal'
   && item.runtimeProofMissingSignals.includes('network-trace-hash')), true);

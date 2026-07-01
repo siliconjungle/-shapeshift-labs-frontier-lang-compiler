@@ -2,6 +2,7 @@ import { countBy, uniqueStrings as u } from './native-import-utils.js';
 
 const arrayKeys = ['requiredRuntimeCapabilities', 'satisfiedRuntimeCapabilities', 'missingRuntimeCapabilities'];
 const scalarKeys = ['runtimeRouteId', 'sourceHostId', 'targetHostId', 'sourceRuntime', 'targetRuntime', 'runtimeReadiness'];
+const pluralScalarKeys = ['runtimeRouteIds', 'sourceHostIds', 'targetHostIds', 'sourceRuntimes', 'targetRuntimes', 'runtimeReadinesses'];
 
 export function routeRuntimeDenominators(route = {}) {
   const runtime = route.runtime ?? {};
@@ -63,6 +64,47 @@ export function artifactRuntimeRouteCounts(routeArtifacts, admissionRecords = []
     satisfiedCapabilities: countBy(routeArtifacts.flatMap((artifact) => artifact.satisfiedRuntimeCapabilities ?? [])),
     missingCapabilities: countBy(routeArtifacts.flatMap((artifact) => artifact.missingRuntimeCapabilities ?? []))
   };
+}
+
+export function workItemRuntimeRouteDenominators(route = {}) {
+  const record = routeRuntimeDenominators(route);
+  return {
+    runtimeRouteIds: u([record.runtimeRouteId]),
+    sourceHostIds: u([record.sourceHostId]),
+    targetHostIds: u([record.targetHostId]),
+    sourceRuntimes: u([record.sourceRuntime]),
+    targetRuntimes: u([record.targetRuntime]),
+    runtimeReadinesses: u([record.runtimeReadiness]),
+    requiredRuntimeCapabilities: record.requiredRuntimeCapabilities,
+    satisfiedRuntimeCapabilities: record.satisfiedRuntimeCapabilities,
+    missingRuntimeCapabilities: record.missingRuntimeCapabilities
+  };
+}
+
+export function mergeWorkItemRuntimeRouteDenominators(left = {}, right = {}) {
+  return {
+    ...Object.fromEntries(pluralScalarKeys.map((key) => [key, u([...(left[key] ?? []), ...(right[key] ?? [])])])),
+    ...Object.fromEntries(arrayKeys.map((key) => [key, u([...(left[key] ?? []), ...(right[key] ?? [])])]))
+  };
+}
+
+export function worklistRuntimeRouteSummary(items = []) {
+  return {
+    ...Object.fromEntries(pluralScalarKeys.map((key) => [key, u(items.flatMap((item) => item[key] ?? []))])),
+    ...Object.fromEntries(arrayKeys.map((key) => [key, u(items.flatMap((item) => item[key] ?? []))]))
+  };
+}
+
+export function workItemRuntimeRouteMatches(item = {}, query = {}) {
+  return match(query.runtimeRouteId ?? query.runtimeRouteIds, item.runtimeRouteIds)
+    && match(query.sourceHostId ?? query.sourceHostIds, item.sourceHostIds)
+    && match(query.targetHostId ?? query.targetHostIds, item.targetHostIds)
+    && match(query.sourceRuntime ?? query.sourceRuntimes ?? query.runtime, item.sourceRuntimes)
+    && match(query.targetRuntime ?? query.targetRuntimes, item.targetRuntimes)
+    && match(query.runtimeReadiness ?? query.runtimeReadinesses, item.runtimeReadinesses)
+    && match(query.requiredRuntimeCapability ?? query.requiredRuntimeCapabilities, item.requiredRuntimeCapabilities)
+    && match(query.satisfiedRuntimeCapability ?? query.satisfiedRuntimeCapabilities, item.satisfiedRuntimeCapabilities)
+    && match(query.missingRuntimeCapability ?? query.missingRuntimeCapabilities, item.missingRuntimeCapabilities);
 }
 
 function runtimeFields(record = {}) {

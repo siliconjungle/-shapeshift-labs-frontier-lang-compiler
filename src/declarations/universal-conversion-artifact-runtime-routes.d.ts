@@ -64,3 +64,15 @@ export interface UniversalConversionRuntimeRouteCompactCounts {
   readonly satisfiedCapabilities: Readonly<Record<string, number>>;
   readonly missingCapabilities: Readonly<Record<string, number>>;
 }
+
+export interface UniversalConversionWorklistRuntimeRouteFields {
+  readonly runtimeRouteIds: readonly string[];
+  readonly sourceHostIds: readonly string[];
+  readonly targetHostIds: readonly string[];
+  readonly sourceRuntimes: readonly string[];
+  readonly targetRuntimes: readonly string[];
+  readonly runtimeReadinesses: readonly string[];
+  readonly requiredRuntimeCapabilities: readonly UniversalRuntimeCapabilityKind[];
+  readonly satisfiedRuntimeCapabilities: readonly UniversalRuntimeCapabilityKind[];
+  readonly missingRuntimeCapabilities: readonly UniversalRuntimeCapabilityKind[];
+}

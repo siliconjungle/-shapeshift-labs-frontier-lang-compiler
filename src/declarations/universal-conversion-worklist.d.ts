@@ -10,6 +10,7 @@ import type {
 } from './universal-conversion-plan.js';
 import type { UniversalInterlinguaConstraintEdgeKind } from './universal-interlingua.js';
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
+import type { UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionWorklistRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
 
 export type UniversalConversionWorkItemKind =
   | 'add-target-adapter'
@@ -33,7 +34,7 @@ export type UniversalConversionWorkItemAction =
   | 'review-conversion-route'
   | 'resolve-blocker';
 
-export interface UniversalConversionWorkItem {
+export interface UniversalConversionWorkItem extends UniversalConversionWorklistRuntimeRouteFields {
   readonly id: string;
   readonly kind: UniversalConversionWorkItemKind;
   readonly action: UniversalConversionWorkItemAction;
@@ -77,7 +78,7 @@ export interface UniversalConversionWorkItem {
   readonly semanticEquivalenceClaim: false;
 }
 
-export interface UniversalConversionWorklistOptions {
+export interface UniversalConversionWorklistOptions extends UniversalConversionArtifactRuntimeRouteQuery {
   readonly generatedAt?: number;
   readonly routeId?: string | readonly string[];
   readonly sourceLanguage?: FrontierSourceLanguage | string;
@@ -141,6 +142,15 @@ export interface UniversalConversionWorklist {
     readonly targets: readonly string[];
     readonly evidenceKeys: readonly string[];
     readonly missingEvidence: readonly string[];
+    readonly runtimeRouteIds: readonly string[];
+    readonly sourceHostIds: readonly string[];
+    readonly targetHostIds: readonly string[];
+    readonly sourceRuntimes: readonly string[];
+    readonly targetRuntimes: readonly string[];
+    readonly runtimeReadinesses: readonly string[];
+    readonly requiredRuntimeCapabilities: readonly UniversalRuntimeCapabilityKind[];
+    readonly satisfiedRuntimeCapabilities: readonly UniversalRuntimeCapabilityKind[];
+    readonly missingRuntimeCapabilities: readonly UniversalRuntimeCapabilityKind[];
     readonly runtimeProofCapabilities: readonly UniversalRuntimeCapabilityKind[];
     readonly runtimeProofStatuses: readonly string[];
     readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
