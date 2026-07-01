@@ -66,25 +66,25 @@ export function queryUniversalRuntimeCapabilityMatrix(matrixOrInput = {}, query 
   const matrix = matrixOrInput?.kind === 'frontier.lang.universalRuntimeCapabilityMatrix'
     ? matrixOrInput
     : createUniversalRuntimeCapabilityMatrix(matrixOrInput, context);
-  const sourceLanguage = normalizeNativeLanguageId(query.sourceLanguage ?? query.language);
-  const target = normalizeProjectionMatrixTargets(query.target ? [query.target] : [])[0];
-  const sourceRuntime = normalizeRuntimeId(query.sourceRuntime ?? query.runtime);
-  const targetRuntime = normalizeRuntimeId(query.targetRuntime);
-  const capability = normalizeRuntimeCapabilityKind(query.capability);
+  const sourceLanguages = q(query.sourceLanguage ?? query.language).map(normalizeNativeLanguageId).filter(Boolean);
+  const targets = normalizeProjectionMatrixTargets(q(query.target));
+  const sourceRuntimes = q(query.sourceRuntime ?? query.runtime).map(normalizeRuntimeId).filter(Boolean);
+  const targetRuntimes = q(query.targetRuntime).map(normalizeRuntimeId).filter(Boolean);
+  const capabilities = q(query.capability).map(normalizeRuntimeCapabilityKind).filter(Boolean);
   const routes = (matrix.routes ?? []).filter((route) => {
-    if (sourceLanguage && !route.source.languageIds.includes(sourceLanguage)) return false;
-    if (target && route.target.target !== target) return false;
-    if (sourceRuntime && route.source.runtime !== sourceRuntime && route.source.id !== sourceRuntime) return false;
-    if (targetRuntime && route.target.runtime !== targetRuntime && route.target.id !== targetRuntime) return false;
-    if (capability && !route.requiredCapabilities.includes(capability)) return false;
+    if (sourceLanguages.length && !route.source.languageIds.some((id) => sourceLanguages.includes(id))) return false;
+    if (targets.length && !targets.includes(route.target.target)) return false;
+    if (sourceRuntimes.length && !sourceRuntimes.some((runtime) => route.source.runtime === runtime || route.source.id === runtime)) return false;
+    if (targetRuntimes.length && !targetRuntimes.some((runtime) => route.target.runtime === runtime || route.target.id === runtime)) return false;
+    if (capabilities.length && !capabilities.some((capability) => route.requiredCapabilities.includes(capability))) return false;
     if (query.requiresAdapter === true && route.adapterRequirements.length === 0) return false;
     if (query.requiresAdapter === false && route.adapterRequirements.length > 0) return false;
-    if (query.runtimeProofObligationId && !(route.proofObligations ?? []).some((entry) => entry.id === query.runtimeProofObligationId)) return false;
-    if (query.runtimeProofCapability && !(route.proofObligations ?? []).some((entry) => entry.capability === query.runtimeProofCapability)) return false;
-    if (query.runtimeProofStatus && !(route.proofObligations ?? []).some((entry) => entry.status === query.runtimeProofStatus)) return false;
-    if (query.runtimeProofMissingSignal && !(route.proofObligations ?? []).some((entry) => (entry.missingSignals ?? []).includes(query.runtimeProofMissingSignal))) return false;
-    if (query.runtimeProofRequiredSignal && !(route.proofObligations ?? []).some((entry) => (entry.requiredSignals ?? []).includes(query.runtimeProofRequiredSignal))) return false;
-    if (query.runtimeProofProvidedSignal && !(route.proofObligations ?? []).some((entry) => (entry.providedSignals ?? []).includes(query.runtimeProofProvidedSignal))) return false;
+    if (!match(query.runtimeProofObligationId, (route.proofObligations ?? []).map((entry) => entry.id))) return false;
+    if (!match(query.runtimeProofCapability, (route.proofObligations ?? []).map((entry) => entry.capability))) return false;
+    if (!match(query.runtimeProofStatus, (route.proofObligations ?? []).map((entry) => entry.status))) return false;
+    if (!match(query.runtimeProofMissingSignal, (route.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? []))) return false;
+    if (!match(query.runtimeProofRequiredSignal, (route.proofObligations ?? []).flatMap((entry) => entry.requiredSignals ?? []))) return false;
+    if (!match(query.runtimeProofProvidedSignal, (route.proofObligations ?? []).flatMap((entry) => entry.providedSignals ?? []))) return false;
     return true;
   });
   return {
@@ -95,6 +95,13 @@ export function queryUniversalRuntimeCapabilityMatrix(matrixOrInput = {}, query 
     bestRoute: routes[0],
     reasons: routes.length ? [] : [`No runtime capability route matched source=${query.sourceLanguage ?? query.language ?? '*'} target=${query.target ?? '*'}.`]
   };
+}
+function q(value) { return Array.isArray(value) ? value : value === undefined ? [] : [value]; }
+function match(filter, values) {
+  const filters = q(filter);
+  if (!filters.length) return true;
+  const valueSet = new Set((values ?? []).filter(Boolean).map(String));
+  return filters.some((item) => valueSet.has(String(item)));
 }
 
 export function runtimeRoutesForConversion(runtimeMatrix, language, target) {

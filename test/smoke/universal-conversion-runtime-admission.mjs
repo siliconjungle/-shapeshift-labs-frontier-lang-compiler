@@ -112,6 +112,7 @@ assert.equal(shellRuntimeRoute.requiredCapabilities.includes('shell'), true);
 assert.equal(shellRuntimeRoute.missingCapabilities.includes('shell'), true);
 assert.equal(shellRuntimeRoute.adapterRequirements[0].adapterKind, 'node-shell-to-web-shell');
 assert.equal(shellRuntimeRoute.proofObligations[0].missingSignals.includes('shell-policy'), true);
+assert.equal(queryUniversalRuntimeCapabilityMatrix(shellRuntimeMatrix, { sourceLanguage: ['typescript', 'javascript'], target: ['rust', 'javascript'], sourceRuntime: ['deno', 'node'], targetRuntime: ['worker', 'web'], capability: ['filesystem', 'shell'], runtimeProofObligationId: ['missing-proof', shellRuntimeRoute.proofObligations[0].id], runtimeProofCapability: ['canvas', 'shell'], runtimeProofStatus: ['satisfied', 'needs-evidence'], runtimeProofRequiredSignal: ['missing-signal', 'shell-policy'], runtimeProofMissingSignal: ['missing-signal', 'shell-policy'] }).bestRoute.id, shellRuntimeRoute.id);
 
 const satisfiedCanvasProof = createUniversalRuntimeProofObligation({
   capability: 'canvas',
@@ -128,6 +129,8 @@ const scopedCanvasProof = createUniversalRuntimeProofObligation({
   adapterRequirement: canvasAdapterRoute.runtime.adapterRequirements[0],
   evidence: [{ status: 'passed', capability: 'canvas', runtimeProofSignals: canvasProofSignals }]
 });
+const satisfiedCanvasRuntimeRoute = queryUniversalRuntimeCapabilityMatrix(createUniversalRuntimeCapabilityMatrix({ generatedAt: 793, sourceHosts: ['javascript:web'], targetHosts: ['rust:cli'], runtimeRequirements: [{ sourceHost: 'javascript:web', targetHost: 'rust:cli', capability: 'canvas' }], evidence: [{ status: 'passed', capability: 'canvas', runtimeProofSignals: canvasProofSignals }] }), { runtimeProofCapability: ['filesystem', 'canvas'], runtimeProofStatus: ['needs-evidence', 'satisfied'], runtimeProofProvidedSignal: ['missing-signal', 'bitmap-hash'] }).bestRoute;
+assert.equal(satisfiedCanvasRuntimeRoute.proofObligations[0].status, 'satisfied');
 const failedCanvasProof = createUniversalRuntimeProofObligation({
   capability: 'canvas',
   adapterRequirement: canvasAdapterRoute.runtime.adapterRequirements[0],

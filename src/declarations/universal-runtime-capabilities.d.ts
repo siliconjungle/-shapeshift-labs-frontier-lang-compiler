@@ -184,21 +184,22 @@ export interface UniversalRuntimeCapabilityMatrixOptions {
     | Readonly<Record<string, readonly UniversalRuntimeCapabilityKind[]>>;
 }
 
+type UniversalRuntimeQueryFilter<T> = T | readonly T[];
 export interface UniversalRuntimeCapabilityMatrixQuery {
-  readonly sourceLanguage?: FrontierSourceLanguage | string;
-  readonly language?: FrontierSourceLanguage | string;
-  readonly target?: FrontierCompileTarget | string;
-  readonly sourceRuntime?: string;
-  readonly targetRuntime?: string;
-  readonly runtime?: string;
-  readonly capability?: UniversalRuntimeCapabilityKind;
+  readonly sourceLanguage?: UniversalRuntimeQueryFilter<FrontierSourceLanguage | string>;
+  readonly language?: UniversalRuntimeQueryFilter<FrontierSourceLanguage | string>;
+  readonly target?: UniversalRuntimeQueryFilter<FrontierCompileTarget | string>;
+  readonly sourceRuntime?: UniversalRuntimeQueryFilter<string>;
+  readonly targetRuntime?: UniversalRuntimeQueryFilter<string>;
+  readonly runtime?: UniversalRuntimeQueryFilter<string>;
+  readonly capability?: UniversalRuntimeQueryFilter<UniversalRuntimeCapabilityKind>;
   readonly requiresAdapter?: boolean;
-  readonly runtimeProofObligationId?: string;
-  readonly runtimeProofCapability?: UniversalRuntimeCapabilityKind;
-  readonly runtimeProofStatus?: string;
-  readonly runtimeProofMissingSignal?: UniversalRuntimeProofSignalKind;
-  readonly runtimeProofRequiredSignal?: UniversalRuntimeProofSignalKind;
-  readonly runtimeProofProvidedSignal?: UniversalRuntimeProofSignalKind;
+  readonly runtimeProofObligationId?: UniversalRuntimeQueryFilter<string>;
+  readonly runtimeProofCapability?: UniversalRuntimeQueryFilter<UniversalRuntimeCapabilityKind>;
+  readonly runtimeProofStatus?: UniversalRuntimeQueryFilter<string>;
+  readonly runtimeProofMissingSignal?: UniversalRuntimeQueryFilter<UniversalRuntimeProofSignalKind>;
+  readonly runtimeProofRequiredSignal?: UniversalRuntimeQueryFilter<UniversalRuntimeProofSignalKind>;
+  readonly runtimeProofProvidedSignal?: UniversalRuntimeQueryFilter<UniversalRuntimeProofSignalKind>;
 }
 
 export interface UniversalRuntimeCapabilityMatrixQueryResult {
