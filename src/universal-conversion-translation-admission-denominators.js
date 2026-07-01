@@ -1,12 +1,20 @@
 import { countBy, uniqueStrings } from './native-import-utils.js';
 
 const keys = [
+  'translationAdmissionStatuses',
+  'translationAdmissionActions',
+  'missingTranslationEvidence',
+  'translationEvidenceIds',
+  'translationProofEvidenceIds',
   'translationRuntimeReadinesses',
   'translationRuntimeAdapterRequirementIds',
   'translationRuntimeProofObligationIds',
   'translationRuntimeProofMissingSignals',
   'translationDialectReadinesses',
-  'translationDialectRecordIds'
+  'translationDialectRecordIds',
+  'requiredTranslationConstructKinds',
+  'representedTranslationConstructKinds',
+  'targetAdapterIds'
 ];
 
 export function compactTranslationAdmissionCounts(admissions) {
@@ -26,12 +34,20 @@ export function compactTranslationAdmissionCounts(admissions) {
 
 export function translationAdmissionDenominatorIndex(admissions) {
   return {
+    translationAdmissionStatuses: uniqueStrings(admissions.map((admission) => admission.status)),
+    translationAdmissionActions: uniqueStrings(admissions.map((admission) => admission.action)),
+    missingTranslationEvidence: uniqueStrings(admissions.flatMap((admission) => admission.missingEvidence ?? [])),
+    translationEvidenceIds: uniqueStrings(admissions.flatMap((admission) => admission.evidenceIds ?? [])),
+    translationProofEvidenceIds: uniqueStrings(admissions.flatMap((admission) => admission.proofEvidenceIds ?? [])),
     translationRuntimeReadinesses: uniqueStrings(admissions.map((admission) => admission.runtimeReadiness)),
     translationRuntimeAdapterRequirementIds: uniqueStrings(admissions.flatMap((admission) => admission.runtimeAdapterRequirementIds ?? [])),
     translationRuntimeProofObligationIds: uniqueStrings(admissions.flatMap((admission) => admission.runtimeProofObligationIds ?? [])),
     translationRuntimeProofMissingSignals: uniqueStrings(admissions.flatMap((admission) => admission.runtimeProofMissingSignals ?? [])),
     translationDialectReadinesses: uniqueStrings(admissions.map((admission) => admission.dialectReadiness)),
-    translationDialectRecordIds: uniqueStrings(admissions.flatMap((admission) => admission.dialectRecordIds ?? []))
+    translationDialectRecordIds: uniqueStrings(admissions.flatMap((admission) => admission.dialectRecordIds ?? [])),
+    requiredTranslationConstructKinds: uniqueStrings(admissions.flatMap((admission) => admission.requiredConstructKinds ?? [])),
+    representedTranslationConstructKinds: uniqueStrings(admissions.flatMap((admission) => admission.representedConstructKinds ?? [])),
+    targetAdapterIds: uniqueStrings(admissions.map((admission) => admission.targetAdapterId))
   };
 }
 
@@ -40,7 +56,8 @@ export function translationAdmissionDenominatorSummary(items) {
 }
 
 export function translationAdmissionDenominatorsForRoute(route) {
-  return translationAdmissionDenominatorIndex([route.translationAdmission ?? {}]);
+  const index = translationAdmissionDenominatorIndex([route.translationAdmission ?? {}]);
+  return { ...index, targetAdapterIds: uniqueStrings([...index.targetAdapterIds, route.adapter]) };
 }
 
 export function mergeTranslationAdmissionDenominators(left, right) {
@@ -48,10 +65,18 @@ export function mergeTranslationAdmissionDenominators(left, right) {
 }
 
 export function translationAdmissionDenominatorMatches(record, query, match) {
-  return match(query.translationRuntimeReadiness, record.translationRuntimeReadinesses)
+  return match(query.translationAdmissionStatus, record.translationAdmissionStatuses)
+    && match(query.translationAdmissionAction, record.translationAdmissionActions)
+    && match(query.missingTranslationEvidence, record.missingTranslationEvidence)
+    && match(query.translationEvidenceId, record.translationEvidenceIds)
+    && match(query.translationProofEvidenceId, record.translationProofEvidenceIds)
+    && match(query.translationRuntimeReadiness, record.translationRuntimeReadinesses)
     && match(query.translationRuntimeAdapterRequirementId, record.translationRuntimeAdapterRequirementIds)
     && match(query.translationRuntimeProofObligationId, record.translationRuntimeProofObligationIds)
     && match(query.translationRuntimeProofMissingSignal, record.translationRuntimeProofMissingSignals)
     && match(query.translationDialectReadiness, record.translationDialectReadinesses)
-    && match(query.translationDialectRecordId, record.translationDialectRecordIds);
+    && match(query.translationDialectRecordId, record.translationDialectRecordIds)
+    && match(query.requiredTranslationConstructKind, record.requiredTranslationConstructKinds)
+    && match(query.representedTranslationConstructKind, record.representedTranslationConstructKinds)
+    && match(query.targetAdapterId, record.targetAdapterIds);
 }

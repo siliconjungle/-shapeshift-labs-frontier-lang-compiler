@@ -77,12 +77,20 @@ export interface UniversalConversionRouteInterlinguaObligationReceiptRecord {
 }
 
 export interface UniversalConversionTranslationAdmissionDenominatorFields {
+  readonly translationAdmissionStatuses: readonly string[];
+  readonly translationAdmissionActions: readonly string[];
+  readonly missingTranslationEvidence: readonly string[];
+  readonly translationEvidenceIds: readonly string[];
+  readonly translationProofEvidenceIds: readonly string[];
   readonly translationRuntimeReadinesses: readonly string[];
   readonly translationRuntimeAdapterRequirementIds: readonly string[];
   readonly translationRuntimeProofObligationIds: readonly string[];
   readonly translationRuntimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly translationDialectReadinesses: readonly string[];
   readonly translationDialectRecordIds: readonly string[];
+  readonly requiredTranslationConstructKinds: readonly string[];
+  readonly representedTranslationConstructKinds: readonly string[];
+  readonly targetAdapterIds: readonly string[];
 }
 
 export interface UniversalConversionRouteEvidenceReceiptOptions {

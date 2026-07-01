@@ -91,13 +91,21 @@ routingReceipt.translationDialectReadinesses satisfies readonly string[];
 routingReceipt.translationDialectRecordIds satisfies readonly string[];
 routingReceipt.summary.translationAdmission.runtimeProofMissingSignals satisfies Readonly<Record<string, number>>;
 
-const routingWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(routingPlan, { sourceLanguage: ['javascript'], target: ['rust'], translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
+const routingWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(routingPlan, { sourceLanguage: ['javascript'], target: ['rust'], translationAdmissionStatus: ['needs-evidence'], translationAdmissionAction: ['collect-translation-evidence'], missingTranslationEvidence: ['translation-proof-or-replay'], translationEvidenceId: ['evidence_admittable_translation_proof'], translationProofEvidenceId: ['evidence_admittable_translation_proof'], requiredTranslationConstructKind: ['target-adapter'], representedTranslationConstructKind: ['target-adapter'], targetAdapterId: ['fixture-js-rust'], translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
 const routingWorklistQuery = queryUniversalConversionWorklist(routingWorklist, {
   sourceLanguage: ['javascript'],
   target: ['rust'],
   mode: ['target-adapter'],
   readiness: ['ready'],
   admissionAction: ['prioritize'],
+  translationAdmissionStatus: ['needs-evidence'],
+  translationAdmissionAction: ['collect-translation-evidence'],
+  missingTranslationEvidence: ['translation-proof-or-replay'],
+  translationEvidenceId: ['evidence_admittable_translation_proof'],
+  translationProofEvidenceId: ['evidence_admittable_translation_proof'],
+  requiredTranslationConstructKind: ['target-adapter'],
+  representedTranslationConstructKind: ['target-adapter'],
+  targetAdapterId: ['fixture-js-rust'],
   translationRuntimeReadiness: 'ready',
   translationRuntimeAdapterRequirementId: 'runtime_adapter',
   translationRuntimeProofObligationId: 'runtime_proof',
@@ -105,10 +113,21 @@ const routingWorklistQuery = queryUniversalConversionWorklist(routingWorklist, {
   translationDialectReadiness: 'ready',
   translationDialectRecordId: 'dialect_record'
 });
+routingWorklist.summary.translationAdmissionStatuses satisfies readonly string[];
+routingWorklist.summary.translationAdmissionActions satisfies readonly string[];
+routingWorklist.summary.missingTranslationEvidence satisfies readonly string[];
+routingWorklist.summary.translationEvidenceIds satisfies readonly string[];
+routingWorklist.summary.translationProofEvidenceIds satisfies readonly string[];
 routingWorklist.summary.translationRuntimeReadinesses satisfies readonly string[];
 routingWorklist.summary.translationRuntimeAdapterRequirementIds satisfies readonly string[];
 routingWorklist.summary.translationRuntimeProofObligationIds satisfies readonly string[];
 routingWorklist.summary.translationRuntimeProofMissingSignals satisfies readonly string[];
 routingWorklist.summary.translationDialectReadinesses satisfies readonly string[];
 routingWorklist.summary.translationDialectRecordIds satisfies readonly string[];
+routingWorklist.summary.requiredTranslationConstructKinds satisfies readonly string[];
+routingWorklist.summary.representedTranslationConstructKinds satisfies readonly string[];
+routingWorklist.summary.targetAdapterIds satisfies readonly string[];
+routingWorklistQuery.bestItem?.translationAdmissionStatuses satisfies readonly string[] | undefined;
+routingWorklistQuery.bestItem?.missingTranslationEvidence satisfies readonly string[] | undefined;
+routingWorklistQuery.bestItem?.translationProofEvidenceIds satisfies readonly string[] | undefined;
 routingWorklistQuery.bestItem?.translationRuntimeProofMissingSignals satisfies readonly string[] | undefined;

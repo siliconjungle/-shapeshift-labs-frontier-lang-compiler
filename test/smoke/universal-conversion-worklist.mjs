@@ -48,6 +48,11 @@ assert.equal(proofQuery.kind, 'frontier.lang.universalConversionWorklistQuery');
 assert.equal(proofQuery.found, true);
 assert.equal(proofQuery.bestItem.kind, 'collect-translation-proof');
 assert.equal(proofQuery.summary.proofEvidenceGaps >= 1, true);
+for (const [values, value] of [[adapterGapWorklist.summary.translationAdmissionStatuses, 'blocked'], [adapterGapWorklist.summary.translationAdmissionActions, 'reject'], [adapterGapWorklist.summary.missingTranslationEvidence, 'translation-proof-or-replay'], [adapterGapWorklist.summary.translationEvidenceIds, 'evidence_src_scanned_js_import'], [adapterGapWorklist.summary.requiredTranslationConstructKinds, 'proof-evidence'], [adapterGapWorklist.summary.representedTranslationConstructKinds, 'source-map']]) assert.equal(values.includes(value), true);
+const translationAdmissionFilterQuery = queryUniversalConversionWorklist(adapterGapWorklist, { sourceLanguage: 'javascript', kind: 'add-target-adapter', translationAdmissionStatus: ['needs-evidence', 'blocked'], translationAdmissionAction: ['collect-translation-evidence', 'reject'], missingTranslationEvidence: ['missing-evidence', 'translation-proof-or-replay'], translationEvidenceId: ['missing-evidence', 'evidence_src_scanned_js_import'], requiredTranslationConstructKind: ['missing-kind', 'proof-evidence'], representedTranslationConstructKind: ['missing-kind', 'source-map'] });
+assert.equal(translationAdmissionFilterQuery.found && translationAdmissionFilterQuery.bestItem.missingTranslationEvidence.includes('translation-proof-or-replay'), true);
+assert.equal(createUniversalConversionWorklist(adapterGapPlan, { sourceLanguage: 'javascript', translationAdmissionStatus: 'blocked', translationAdmissionAction: 'reject', missingTranslationEvidence: 'translation-proof-or-replay', translationEvidenceId: 'evidence_src_scanned_js_import', requiredTranslationConstructKind: 'proof-evidence', representedTranslationConstructKind: 'source-map' }).items.length >= 1, true);
+assert.equal(createUniversalConversionWorklist(adapterGapPlan, { translationProofEvidenceId: 'missing-worklist-proof' }).items.length, 0);
 
 const filteredWorklist = createUniversalConversionWorklist(adapterGapPlan, {
   sourceLanguage: ['typescript', 'javascript'],
@@ -152,6 +157,10 @@ const providedSignalQuery = queryUniversalConversionWorklist(satisfiedRuntimePla
 });
 assert.equal(providedSignalQuery.found, true);
 assert.equal(providedSignalQuery.bestItem.runtimeProofProvidedSignals.includes('network-trace-hash'), true);
+const proofEvidenceWorklist = createUniversalConversionWorklist(satisfiedRuntimePlan, { translationProofEvidenceId: 'worklist_runtime_satisfied_proof', targetAdapterId: 'fixture-js-rust' });
+assert.equal(proofEvidenceWorklist.items.length >= 1, true);
+for (const [values, value] of [[proofEvidenceWorklist.summary.translationProofEvidenceIds, 'worklist_runtime_satisfied_proof'], [proofEvidenceWorklist.summary.targetAdapterIds, 'fixture-js-rust']]) assert.equal(values.includes(value), true);
+assert.equal(queryUniversalConversionWorklist(proofEvidenceWorklist, { translationEvidenceId: ['missing-proof', 'worklist_runtime_satisfied_proof'], translationProofEvidenceId: ['missing-proof', 'worklist_runtime_satisfied_proof'], targetAdapterId: ['missing-adapter', 'fixture-js-rust'] }).found, true);
 const obligationPlan = createUniversalConversionPlan({
   generatedAt: 803,
   universalCapabilityMatrix: readyCapabilityMatrix(),

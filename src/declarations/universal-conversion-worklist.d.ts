@@ -6,7 +6,9 @@ import type {
   UniversalConversionPlanOptions,
   UniversalConversionPriority,
   UniversalConversionRouteAction,
-  UniversalConversionRouteMode
+  UniversalConversionRouteMode,
+  UniversalTranslationAdmissionAction,
+  UniversalTranslationAdmissionStatus
 } from './universal-conversion-plan.js';
 import type { UniversalInterlinguaConstraintEdgeKind } from './universal-interlingua.js';
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
@@ -117,12 +119,15 @@ export interface UniversalConversionWorkItem extends UniversalConversionWorklist
   readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly dialectRecordIds: readonly string[];
+  readonly translationAdmissionStatuses: readonly string[]; readonly translationAdmissionActions: readonly string[]; readonly missingTranslationEvidence: readonly string[]; readonly translationEvidenceIds: readonly string[]; readonly translationProofEvidenceIds: readonly string[];
   readonly translationRuntimeReadinesses: readonly string[];
   readonly translationRuntimeAdapterRequirementIds: readonly string[];
   readonly translationRuntimeProofObligationIds: readonly string[];
   readonly translationRuntimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly translationDialectReadinesses: readonly string[];
   readonly translationDialectRecordIds: readonly string[];
+  readonly requiredTranslationConstructKinds: readonly string[];
+  readonly representedTranslationConstructKinds: readonly string[];
   readonly targetAdapterIds: readonly string[];
   readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[];
   readonly interlinguaConstraintStatuses: readonly string[];
@@ -149,12 +154,20 @@ export interface UniversalConversionWorklistOptions extends UniversalConversionA
   readonly target?: FrontierCompileTarget | string | readonly (FrontierCompileTarget | string)[];
   readonly kind?: UniversalConversionWorkItemKind | readonly UniversalConversionWorkItemKind[];
   readonly includeReviewItems?: boolean;
+  readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus | readonly UniversalTranslationAdmissionStatus[];
+  readonly translationAdmissionAction?: UniversalTranslationAdmissionAction | readonly UniversalTranslationAdmissionAction[];
+  readonly missingTranslationEvidence?: string | readonly string[];
+  readonly translationEvidenceId?: string | readonly string[];
+  readonly translationProofEvidenceId?: string | readonly string[];
   readonly translationRuntimeReadiness?: string | readonly string[];
   readonly translationRuntimeAdapterRequirementId?: string | readonly string[];
   readonly translationRuntimeProofObligationId?: string | readonly string[];
   readonly translationRuntimeProofMissingSignal?: UniversalRuntimeProofSignalKind | readonly UniversalRuntimeProofSignalKind[];
   readonly translationDialectReadiness?: string | readonly string[];
   readonly translationDialectRecordId?: string | readonly string[];
+  readonly requiredTranslationConstructKind?: string | readonly string[];
+  readonly representedTranslationConstructKind?: string | readonly string[];
+  readonly targetAdapterId?: string | readonly string[];
 }
 
 export interface UniversalConversionWorklistQuery extends UniversalConversionWorklistOptions {
@@ -237,12 +250,16 @@ export interface UniversalConversionWorklist {
     readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
+    readonly translationAdmissionStatuses: readonly string[]; readonly translationAdmissionActions: readonly string[]; readonly missingTranslationEvidence: readonly string[]; readonly translationEvidenceIds: readonly string[]; readonly translationProofEvidenceIds: readonly string[];
     readonly translationRuntimeReadinesses: readonly string[];
     readonly translationRuntimeAdapterRequirementIds: readonly string[];
     readonly translationRuntimeProofObligationIds: readonly string[];
     readonly translationRuntimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly translationDialectReadinesses: readonly string[];
     readonly translationDialectRecordIds: readonly string[];
+    readonly requiredTranslationConstructKinds: readonly string[];
+    readonly representedTranslationConstructKinds: readonly string[];
+    readonly targetAdapterIds: readonly string[];
     readonly interlinguaConstraintFamilies: readonly UniversalInterlinguaConstraintEdgeKind[];
     readonly interlinguaConstraintStatuses: readonly string[];
     readonly interlinguaConstraintActions: readonly string[];
