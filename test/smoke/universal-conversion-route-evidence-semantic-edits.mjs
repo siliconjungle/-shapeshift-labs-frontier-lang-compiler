@@ -59,6 +59,7 @@ const route = {
     metadata: { sourceBackprojectionMode: 'exact-source' }
   },
   semanticEditAdmission: { status: 'ready', action: 'admit', readiness: 'ready' },
+  semanticTransformIdentity: semanticTransformIdentity('receipt'),
   patchBundle: {
     index: {
       semanticTransformReadinesses: ['ready'],
@@ -92,23 +93,35 @@ assert.equal(receipt.semanticEditAdmissionStatuses.includes('ready'), true);
 assert.equal(receipt.semanticEditReplayOutputHashes.includes('receipt_output_hash'), true);
 assert.equal(receipt.semanticEditKeys.includes('function:receiptRenameUser'), true);
 assert.equal(receipt.sourceBackprojectionModes.includes('exact-source'), true);
+assert.equal(receipt.semanticTransformIds.includes('receipt_semantic_transform'), true);
+assert.equal(receipt.semanticTransformKeys.includes('semantic-transform:javascript->typescript:function:receiptRenameUser'), true);
+assert.equal(receipt.semanticTransformContentHashes.includes('receipt_transform_content_hash'), true);
+assert.equal(receipt.projectionIdentityHashes.includes('receipt_projection_identity_hash'), true);
+assert.equal(receipt.semanticTransformEvidenceIds.includes('receipt_transform_evidence'), true);
 assert.equal(receipt.transformTargetLanguages.includes('typescript'), true);
 assert.equal(receipt.targetPortabilityStatuses.includes('portable'), true);
 assert.equal(receipt.summary.semanticEdit.semanticEditScriptIds.receipt_semantic_edit_script, 1);
 assert.equal(receipt.summary.semanticEdit.semanticEditReplayOutputHashes.receipt_output_hash, 1);
 assert.equal(receipt.summary.semanticEdit.sourceBackprojectionModes['exact-source'], 1);
+assert.equal(receipt.summary.semanticEdit.semanticTransformIds.receipt_semantic_transform, 1);
 assert.equal(receipt.metadata.semanticEditEvidenceRequired, true);
 
 const artifacts = createUniversalConversionArtifacts(route, { generatedAt: 806 });
 assert.equal(artifacts.summary.compactCounts.semanticEdit.semanticEditScriptIds.receipt_semantic_edit_script, 1);
 assert.equal(artifacts.summary.compactCounts.semanticEdit.semanticEditReplayOutputHashes.receipt_output_hash, 1);
+assert.equal(artifacts.summary.compactCounts.semanticEdit.semanticTransformContentHashes.receipt_transform_content_hash, 1);
 assert.equal(artifacts.summary.compactCounts.evidenceReceipts.semanticEdit.semanticEditScriptIds.receipt_semantic_edit_script, 1);
+assert.equal(artifacts.summary.compactCounts.evidenceReceipts.semanticEdit.semanticTransformEvidenceIds.receipt_transform_evidence, 1);
 assert.equal(artifacts.summary.compactCounts.evidenceReceipts.semanticEdit.targetPortabilityStatuses.portable, 1);
 assert.equal(queryUniversalConversionArtifacts(artifacts, {
   semanticEditScriptId: 'receipt_semantic_edit_script',
   semanticEditReplayStatus: 'accepted-clean',
   semanticEditAdmissionStatus: 'ready',
   semanticEditReplayOutputHash: 'receipt_output_hash',
+  semanticTransformId: 'receipt_semantic_transform',
+  semanticTransformContentHash: 'receipt_transform_content_hash',
+  projectionIdentityHash: 'receipt_projection_identity_hash',
+  semanticTransformEvidenceId: 'receipt_transform_evidence',
   sourceBackprojectionMode: 'exact-source'
 })[0].routeId, route.id);
 
@@ -120,5 +133,26 @@ function semanticEdit(editContentHash) {
     operationContentHash: 'receipt_op_hash',
     editContentHash,
     sourcePath: 'src/user.js'
+  };
+}
+
+function semanticTransformIdentity(prefix) {
+  return {
+    id: `${prefix}_semantic_transform`,
+    transformKey: 'semantic-transform:javascript->typescript:function:receiptRenameUser',
+    sourceLanguage: 'javascript',
+    targetLanguage: 'typescript',
+    sourcePath: 'src/user.js',
+    targetPath: 'src/user.ts',
+    semanticIdentityHash: `${prefix}_semantic_hash`,
+    sourceIdentityHash: `${prefix}_source_hash`,
+    transformIdentityHash: `${prefix}_transform_identity_hash`,
+    projectionIdentityHash: `${prefix}_projection_identity_hash`,
+    transformContentHash: `${prefix}_transform_content_hash`,
+    readiness: 'ready',
+    evidenceIds: [`${prefix}_transform_evidence`],
+    sourceMapIds: [`${prefix}_semantic_edit_source_map`],
+    sourceMapLinkIds: [`${prefix}_semantic_edit_link`],
+    sourceMapMappingIds: [`${prefix}_semantic_edit_mapping`]
   };
 }

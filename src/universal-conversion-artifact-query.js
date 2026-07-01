@@ -1,5 +1,5 @@
 import{uniqueStrings as u}from './native-import-utils.js';
-import{artifactSemanticEditIndex as esi}from './universal-conversion-artifact-semantic-edit.js';
+import{artifactSemanticEditIndex as esi,mergeSemanticEditIndexes as mse,workItemSemanticEditMatches as esm}from './universal-conversion-artifact-semantic-edit.js';
 import{artifactSourceMapIndex as smi,artifactSourceMapMatches as smm}from './universal-conversion-artifact-source-maps.js';
 import{rri,rrm}from './universal-conversion-artifact-runtime-routes.js';
 import{artifactConstraintIndex as aci,artifactConstraintsMatch as acm}from './universal-conversion-artifact-constraints.js';
@@ -68,38 +68,7 @@ export function artifactIndex(a) {
     semanticOperationIds: u(opList.map((o) => o.id)),
     semanticOperationKinds: u(opList.map((o) => o.operationKind)),
     ...soiIndex(opList),
-    semanticEditStatuses: eFlat(edits, 'semanticEditStatuses'),
-    semanticEditScriptIds: eFlat(edits, 'semanticEditScriptIds'),
-    semanticEditProjectionIds: eFlat(edits, 'semanticEditProjectionIds'),
-    semanticEditReplayIds: eFlat(edits, 'semanticEditReplayIds'),
-    semanticEditReplayStatuses: eFlat(edits, 'semanticEditReplayStatuses'),
-    semanticEditReplayActions: eFlat(edits, 'semanticEditReplayActions'),
-    semanticEditAdmissionStatuses: eFlat(edits, 'semanticEditAdmissionStatuses'),
-    semanticEditAdmissionActions: eFlat(edits, 'semanticEditAdmissionActions'),
-    semanticEditAdmissionReadinesses: eFlat(edits, 'semanticEditAdmissionReadinesses'),
-    semanticEditReplayCurrentHashes: eFlat(edits, 'semanticEditReplayCurrentHashes'),
-    semanticEditReplayOutputHashes: eFlat(edits, 'semanticEditReplayOutputHashes'),
-    semanticEditKeys: eFlat(edits, 'semanticEditKeys'),
-    semanticEditHashes: eFlat(edits, 'semanticEditHashes'),
-    semanticIdentityHashes: eFlat(edits, 'semanticIdentityHashes'),
-    sourceIdentityHashes: eFlat(edits, 'sourceIdentityHashes'),
-    operationContentHashes: eFlat(edits, 'operationContentHashes'),
-    editContentHashes: eFlat(edits, 'editContentHashes'),
-    sourceBackprojectionModes: eFlat(edits, 'sourceBackprojectionModes'),
-    semanticTransformReadinesses: eFlat(edits, 'semanticTransformReadinesses'),
-    transformSourceLanguages: eFlat(edits, 'transformSourceLanguages'),
-    transformTargetLanguages: eFlat(edits, 'transformTargetLanguages'),
-    transformSourcePaths: eFlat(edits, 'transformSourcePaths'),
-    transformTargetPaths: eFlat(edits, 'transformTargetPaths'),
-    transformCrossLanguages: eFlat(edits, 'transformCrossLanguages'),
-    transformSourceMapIds: eFlat(edits, 'transformSourceMapIds'),
-    transformSourceMapLinkIds: eFlat(edits, 'transformSourceMapLinkIds'),
-    transformSourceMapMappingIds: eFlat(edits, 'transformSourceMapMappingIds'),
-    transformBaseHashes: eFlat(edits, 'transformBaseHashes'),
-    transformTargetHashes: eFlat(edits, 'transformTargetHashes'),
-    targetPortabilityStatuses: eFlat(edits, 'targetPortabilityStatuses'),
-    targetPortabilityActions: eFlat(edits, 'targetPortabilityActions'),
-    targetPortabilityReasonCodes: eFlat(edits, 'targetPortabilityReasonCodes'),
+    ...mse(...edits),
     representationConstructKinds: u(a.flatMap(constructs)),
     runtimeCapabilities: u(a.flatMap(rCaps)),
     sourceMapPrecisions: u(a.flatMap(sMapPrecisions)),
@@ -173,38 +142,7 @@ function matchesArtifact(record, query) {
     && match(query.semanticOperationId, operations.map((o) => o.id))
     && match(query.semanticOperationKind, operations.map((o) => o.operationKind))
     && soiMatches(operations, query)
-    && match(query.semanticEditStatus ?? query.semanticEditStatuses, editIndex.semanticEditStatuses)
-    && match(query.semanticEditScriptId ?? query.semanticEditScriptIds, editIndex.semanticEditScriptIds)
-    && match(query.semanticEditProjectionId ?? query.semanticEditProjectionIds, editIndex.semanticEditProjectionIds)
-    && match(query.semanticEditReplayId ?? query.semanticEditReplayIds, editIndex.semanticEditReplayIds)
-    && match(query.semanticEditReplayStatus ?? query.semanticEditReplayStatuses, editIndex.semanticEditReplayStatuses)
-    && match(query.semanticEditReplayAction ?? query.semanticEditReplayActions, editIndex.semanticEditReplayActions)
-    && match(query.semanticEditAdmission ?? query.semanticEditAdmissionStatus ?? query.semanticEditAdmissionStatuses, editIndex.semanticEditAdmissionStatuses)
-    && match(query.semanticEditAdmissionAction ?? query.semanticEditAdmissionActions, editIndex.semanticEditAdmissionActions)
-    && match(query.semanticEditAdmissionReadiness ?? query.semanticEditAdmissionReadinesses, editIndex.semanticEditAdmissionReadinesses)
-    && match(query.semanticEditReplayCurrentHash ?? query.semanticEditReplayCurrentHashes, editIndex.semanticEditReplayCurrentHashes)
-    && match(query.semanticEditReplayOutputHash ?? query.semanticEditReplayOutputHashes, editIndex.semanticEditReplayOutputHashes)
-    && match(query.semanticEditKey ?? query.semanticEditKeys, editIndex.semanticEditKeys)
-    && match(query.semanticEditHash ?? query.semanticEditHashes, editIndex.semanticEditHashes)
-    && match(query.semanticIdentityHash ?? query.semanticIdentityHashes, editIndex.semanticIdentityHashes)
-    && match(query.sourceIdentityHash ?? query.sourceIdentityHashes, editIndex.sourceIdentityHashes)
-    && match(query.operationContentHash ?? query.operationContentHashes, editIndex.operationContentHashes)
-    && match(query.editContentHash ?? query.editContentHashes, editIndex.editContentHashes)
-    && match(query.sourceBackprojectionMode ?? query.sourceBackprojectionModes, editIndex.sourceBackprojectionModes)
-    && match(query.semanticTransformReadiness ?? query.semanticTransformReadinesses, editIndex.semanticTransformReadinesses)
-    && match(query.transformSourceLanguage ?? query.transformSourceLanguages, editIndex.transformSourceLanguages)
-    && match(query.transformTargetLanguage ?? query.transformTargetLanguages, editIndex.transformTargetLanguages)
-    && match(query.transformSourcePath ?? query.transformSourcePaths, editIndex.transformSourcePaths)
-    && match(query.transformTargetPath ?? query.transformTargetPaths, editIndex.transformTargetPaths)
-    && match(query.transformCrossLanguage ?? query.transformCrossLanguages, editIndex.transformCrossLanguages)
-    && match(query.transformSourceMapId ?? query.transformSourceMapIds, editIndex.transformSourceMapIds)
-    && match(query.transformSourceMapLinkId ?? query.transformSourceMapLinkIds, editIndex.transformSourceMapLinkIds)
-    && match(query.transformSourceMapMappingId ?? query.transformSourceMapMappingIds, editIndex.transformSourceMapMappingIds)
-    && match(query.transformBaseHash ?? query.transformBaseHashes, editIndex.transformBaseHashes)
-    && match(query.transformTargetHash ?? query.transformTargetHashes, editIndex.transformTargetHashes)
-    && match(query.targetPortabilityStatus ?? query.targetPortabilityStatuses, editIndex.targetPortabilityStatuses)
-    && match(query.targetPortabilityAction ?? query.targetPortabilityActions, editIndex.targetPortabilityActions)
-    && match(query.targetPortabilityReasonCode ?? query.targetPortabilityReasonCodes, editIndex.targetPortabilityReasonCodes)
+    && esm(editIndex, query)
     && match(query.constructKind ?? query.representationConstructKind, constructs(record))
     && match(query.runtimeCapability, rCaps(record))
     && match(query.sourceMapPrecision, sMapPrecisions(record))
@@ -218,7 +156,7 @@ function matchesArtifact(record, query) {
     && match(query.targetAdapterId, [tAdm(record).targetAdapterId])
     && acm(record, query)
     && irm(intl(record), query)
-    && match(query.transformIdentityHash, tHashes(record));
+    && match(query.transformIdentityHash ?? query.transformIdentityHashes, tHashes(record));
 }
 function ops(record) { return record.semanticOperations?.operations ?? []; }
 function constructs(record) { return u([...(record.metadata?.representation?.constructKinds ?? []), ...(record.mergeScore?.components?.representationCoverage?.signals?.constructKinds ?? []), ...ops(record).flatMap((o) => o.metadata?.representation?.constructKinds ?? [])]); }
@@ -229,7 +167,6 @@ function tAdm(record) { return record.translationAdmission ?? record.metadata?.t
 function intl(record) { return record.interlingua ?? record.metadata?.interlingua ?? record.admissionRecord?.metadata?.interlingua ?? {}; }
 function aRec(record) { return record.admissionRecord ?? {}; }
 function iReceipt(record) { return record.evidenceReceipt ?? {}; }
-function eFlat(records, key) { return u(records.flatMap((r) => r[key])); }
 function qFlat(records, key) { return u(records.flatMap((r) => r.query?.[key] ?? [])); }
 function rFlat(records, key) { return u(records.flatMap((r) => r[key] ?? [])); }
 function list(value) { return Array.isArray(value) ? value : value == null ? [] : [value]; }

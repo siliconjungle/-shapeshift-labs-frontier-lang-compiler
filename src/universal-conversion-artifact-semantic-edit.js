@@ -1,12 +1,15 @@
 import { countBy, uniqueStrings } from './native-import-utils.js';
 import { semanticEditRecordIndex } from './internal/index-impl/semanticEditBundleIndex.js';
+import { normalizeSemanticTransformIdentityRecords, semanticTransformInputs, semanticTransformRecordIndex } from './internal/index-impl/semanticTransformIdentityRecords.js';
 
 export const semanticEditIndexKeys = Object.freeze([
   'semanticEditStatuses', 'semanticEditScriptIds', 'semanticEditProjectionIds', 'semanticEditReplayIds',
   'semanticEditReplayStatuses', 'semanticEditReplayActions', 'semanticEditAdmissionStatuses', 'semanticEditAdmissionActions',
   'semanticEditAdmissionReadinesses', 'semanticEditReplayCurrentHashes', 'semanticEditReplayOutputHashes',
   'semanticEditKeys', 'semanticEditHashes', 'semanticIdentityHashes', 'sourceIdentityHashes', 'operationContentHashes',
-  'editContentHashes', 'sourceBackprojectionModes', 'semanticTransformReadinesses', 'transformSourceLanguages',
+  'editContentHashes', 'sourceBackprojectionModes', 'semanticTransformIds', 'semanticTransformKeys',
+  'semanticTransformIdentityHashes', 'semanticTransformContentHashes', 'projectionIdentityHashes',
+  'semanticTransformReadinesses', 'semanticTransformEvidenceIds', 'transformSourceLanguages',
   'transformTargetLanguages', 'transformSourcePaths', 'transformTargetPaths', 'transformCrossLanguages',
   'transformSourceMapIds', 'transformSourceMapLinkIds', 'transformSourceMapMappingIds', 'transformBaseHashes',
   'transformTargetHashes', 'targetPortabilityStatuses', 'targetPortabilityActions', 'targetPortabilityReasonCodes'
@@ -17,6 +20,11 @@ export function artifactSemanticEditIndex(record) {
   const scripts = semanticEditRecords(record, 'semanticEditScript', 'semanticEditScripts', 'script', 'scripts');
   const projections = semanticEditRecords(record, 'semanticEditProjection', 'semanticEditProjections', 'projection', 'projections');
   const replays = semanticEditRecords(record, 'semanticEditReplay', 'semanticEditReplays', 'replay', 'replays');
+  const transformSource = { ...record, index: patchIndex, semanticTransformIdentities: semanticTransformRecords(record) };
+  const transformIndex = semanticTransformRecordIndex(
+    normalizeSemanticTransformIdentityRecords(semanticTransformInputs(transformSource, { sourceLanguage: record.sourceLanguage, targetLanguage: record.target ?? record.targetLanguage })),
+    transformSource
+  );
   const editIndex = semanticEditRecordIndex(scripts, projections, replays, {
     ...record,
     index: patchIndex,
@@ -52,6 +60,9 @@ export function artifactSemanticEditIndex(record) {
       ...editIndex.sourceIdentityHashes,
       ...editIndex.operationContentHashes,
       ...editIndex.editContentHashes,
+      ...transformIndex.semanticTransformIdentityHashes,
+      ...transformIndex.semanticTransformContentHashes,
+      ...transformIndex.projectionIdentityHashes,
       ...semanticEditRecordHashes(scripts),
       ...semanticEditRecordHashes(projections),
       ...semanticEditRecordHashes(replays)
@@ -61,17 +72,23 @@ export function artifactSemanticEditIndex(record) {
     operationContentHashes: editIndex.operationContentHashes,
     editContentHashes: editIndex.editContentHashes,
     sourceBackprojectionModes: uniqueStrings([...strings(record.sourceBackprojectionModes), ...strings(patchIndex.sourceBackprojectionModes), ...editIndex.sourceBackprojectionModes]),
-    semanticTransformReadinesses: uniqueStrings([...strings(record.semanticTransformReadinesses), ...strings(patchIndex.semanticTransformReadinesses)]),
-    transformSourceLanguages: uniqueStrings([...strings(record.transformSourceLanguages), ...strings(patchIndex.transformSourceLanguages)]),
-    transformTargetLanguages: uniqueStrings([...strings(record.transformTargetLanguages), ...strings(patchIndex.transformTargetLanguages)]),
-    transformSourcePaths: uniqueStrings([...strings(record.transformSourcePaths), ...strings(patchIndex.transformSourcePaths)]),
-    transformTargetPaths: uniqueStrings([...strings(record.transformTargetPaths), ...strings(patchIndex.transformTargetPaths)]),
-    transformCrossLanguages: uniqueStrings([...strings(record.transformCrossLanguages), ...strings(patchIndex.transformCrossLanguages)]),
-    transformSourceMapIds: uniqueStrings([...strings(record.transformSourceMapIds), ...strings(patchIndex.transformSourceMapIds)]),
-    transformSourceMapLinkIds: uniqueStrings([...strings(record.transformSourceMapLinkIds), ...strings(patchIndex.transformSourceMapLinkIds)]),
-    transformSourceMapMappingIds: uniqueStrings([...strings(record.transformSourceMapMappingIds), ...strings(patchIndex.transformSourceMapMappingIds)]),
-    transformBaseHashes: uniqueStrings([...strings(record.transformBaseHashes), ...strings(patchIndex.transformBaseHashes)]),
-    transformTargetHashes: uniqueStrings([...strings(record.transformTargetHashes), ...strings(patchIndex.transformTargetHashes)]),
+    semanticTransformIds: transformIndex.semanticTransformIds,
+    semanticTransformKeys: transformIndex.semanticTransformKeys,
+    semanticTransformIdentityHashes: transformIndex.semanticTransformIdentityHashes,
+    semanticTransformContentHashes: transformIndex.semanticTransformContentHashes,
+    projectionIdentityHashes: transformIndex.projectionIdentityHashes,
+    semanticTransformReadinesses: transformIndex.semanticTransformReadinesses,
+    semanticTransformEvidenceIds: transformIndex.semanticTransformEvidenceIds,
+    transformSourceLanguages: transformIndex.transformSourceLanguages,
+    transformTargetLanguages: transformIndex.transformTargetLanguages,
+    transformSourcePaths: transformIndex.transformSourcePaths,
+    transformTargetPaths: transformIndex.transformTargetPaths,
+    transformCrossLanguages: transformIndex.transformCrossLanguages,
+    transformSourceMapIds: transformIndex.transformSourceMapIds,
+    transformSourceMapLinkIds: transformIndex.transformSourceMapLinkIds,
+    transformSourceMapMappingIds: transformIndex.transformSourceMapMappingIds,
+    transformBaseHashes: transformIndex.transformBaseHashes,
+    transformTargetHashes: transformIndex.transformTargetHashes,
     targetPortabilityStatuses: uniqueStrings([...strings(record.targetPortabilityStatuses), ...strings(patchIndex.targetPortabilityStatuses)]),
     targetPortabilityActions: uniqueStrings([...strings(record.targetPortabilityActions), ...strings(patchIndex.targetPortabilityActions)]),
     targetPortabilityReasonCodes: uniqueStrings([...strings(record.targetPortabilityReasonCodes), ...strings(patchIndex.targetPortabilityReasonCodes)])
@@ -121,7 +138,13 @@ export function workItemSemanticEditMatches(item = {}, query = {}) {
     && match(query.operationContentHash ?? query.operationContentHashes, item.operationContentHashes)
     && match(query.editContentHash ?? query.editContentHashes, item.editContentHashes)
     && match(query.sourceBackprojectionMode ?? query.sourceBackprojectionModes, item.sourceBackprojectionModes)
+    && match(query.semanticTransformId ?? query.semanticTransformIds, item.semanticTransformIds)
+    && match(query.semanticTransformKey ?? query.semanticTransformKeys, item.semanticTransformKeys)
+    && match(query.semanticTransformIdentityHash ?? query.semanticTransformIdentityHashes, item.semanticTransformIdentityHashes)
+    && match(query.semanticTransformContentHash ?? query.semanticTransformContentHashes, item.semanticTransformContentHashes)
+    && match(query.projectionIdentityHash ?? query.projectionIdentityHashes, item.projectionIdentityHashes)
     && match(query.semanticTransformReadiness ?? query.semanticTransformReadinesses, item.semanticTransformReadinesses)
+    && match(query.semanticTransformEvidenceId ?? query.semanticTransformEvidenceIds, item.semanticTransformEvidenceIds)
     && match(query.transformSourceLanguage ?? query.transformSourceLanguages, item.transformSourceLanguages)
     && match(query.transformTargetLanguage ?? query.transformTargetLanguages, item.transformTargetLanguages)
     && match(query.transformSourcePath ?? query.transformSourcePaths, item.transformSourcePaths)
@@ -159,6 +182,21 @@ function semanticEditRecords(record, singularKey, pluralKey, nestedSingularKey, 
     ...array(record.patchBundle?.[pluralKey] ?? record.patchBundle?.[singularKey]),
     ...array(patchMetadata[pluralKey] ?? patchMetadata[singularKey]),
     ...array(patchSemanticEdit[nestedPluralKey] ?? patchSemanticEdit[nestedSingularKey])
+  ].filter(Boolean);
+}
+
+function semanticTransformRecords(record) {
+  const metadata = record.metadata ?? {};
+  const semanticEdit = metadata.semanticEdit ?? {};
+  const patchMetadata = record.patchBundle?.metadata ?? {};
+  const patchSemanticEdit = patchMetadata.semanticEdit ?? {};
+  return [
+    ...array(record.semanticTransformIdentities ?? record.semanticTransformIdentity ?? record.semanticTransforms),
+    ...array(metadata.semanticTransformIdentities ?? metadata.semanticTransformIdentity ?? metadata.semanticTransforms),
+    ...array(semanticEdit.semanticTransformIdentities ?? semanticEdit.semanticTransformIdentity ?? semanticEdit.semanticTransforms),
+    ...array(record.patchBundle?.semanticTransformIdentities ?? record.patchBundle?.semanticTransformIdentity ?? record.patchBundle?.semanticTransforms),
+    ...array(patchMetadata.semanticTransformIdentities ?? patchMetadata.semanticTransformIdentity ?? patchMetadata.semanticTransforms),
+    ...array(patchSemanticEdit.semanticTransformIdentities ?? patchSemanticEdit.semanticTransformIdentity ?? patchSemanticEdit.semanticTransforms)
   ].filter(Boolean);
 }
 

@@ -1,7 +1,7 @@
 import { idFragment, uniqueStrings } from './native-import-utils.js';
 import { universalConversionArtifactSummary } from './universal-conversion-artifact-summary.js';
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
-import { artifactIndex } from './universal-conversion-artifact-query.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js';
+import { artifactIndex } from './universal-conversion-artifact-query.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js'; import { artifactSemanticEditIndex as esi } from './universal-conversion-artifact-semantic-edit.js';
 import { createUniversalConversionAdmissionRecord } from './universal-conversion-admission-record.js';
 import { createUniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence-receipt.js';
 import {
@@ -125,7 +125,7 @@ function createRouteArtifact(route, options) {
     },
     metadata: recordMetadata
   }, { id: patchBundleId, createdAt: options.generatedAt });
-  const materialization = {
+  const semanticEditDenominators = esi({ ...route, patchBundle }); const materialization = {
     status: 'materialized',
     plannedHistoryIds: refs.historyIds ?? [],
     materializedHistoryIds: [history.id],
@@ -145,7 +145,7 @@ function createRouteArtifact(route, options) {
     reasonCodes,
     history,
     patchBundle,
-    semanticOperations,
+    semanticOperations, ...semanticEditDenominators,
     materialization
   });
   return {

@@ -23,10 +23,10 @@ import type {
   UniversalConversionMergeScore,
   UniversalConversionRisk
 } from './universal-conversion-plan.js';
-import type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery } from './universal-conversion-artifact-query.js';
+import type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery, UniversalConversionSemanticEditIndexKey } from './universal-conversion-artifact-query.js';
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 
-export type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery } from './universal-conversion-artifact-query.js';
+export type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery, UniversalConversionSemanticEditIndexKey } from './universal-conversion-artifact-query.js';
 
 export type UniversalConversionArtifactAdmissionStatus = 'queued' | 'needs-review' | 'blocked' | string;
 export type UniversalConversionArtifactAdmissionBucket =
@@ -194,7 +194,7 @@ export interface UniversalConversionAdmissionRecord extends UniversalConversionR
   readonly metadata: Record<string, unknown>;
 }
 
-export interface UniversalConversionRouteArtifact extends UniversalConversionRouteConstraintFields, UniversalConversionRuntimeRouteFields {
+export interface UniversalConversionRouteArtifact extends UniversalConversionRouteConstraintFields, UniversalConversionRuntimeRouteFields, Pick<UniversalConversionArtifactIndex, UniversalConversionSemanticEditIndexKey> {
   readonly kind: 'frontier.lang.universalConversionRouteArtifact';
   readonly version: 1;
   readonly schema: 'frontier.lang.universalConversionRouteArtifact.v1';

@@ -60,6 +60,7 @@ const semanticEditPlan = {
       metadata: { sourceBackprojectionMode: 'exact-source' }
     },
     semanticEditAdmission: { status: 'ready', action: 'admit', readiness: 'ready' },
+    semanticTransformIdentity: semanticTransformIdentity('worklist'),
     patchBundle: {
       index: {
         semanticTransformReadinesses: ['ready'],
@@ -97,7 +98,13 @@ assert.equal(semanticEditWorklist.summary.semanticEditAdmissionActions.includes(
 assert.equal(semanticEditWorklist.summary.semanticEditReplayOutputHashes.includes('output_hash_worklist'), true);
 assert.equal(semanticEditWorklist.summary.semanticEditKeys.includes('function:renameUser'), true);
 assert.equal(semanticEditWorklist.summary.sourceBackprojectionModes.includes('exact-source'), true);
+assert.equal(semanticEditWorklist.summary.semanticTransformIds.includes('worklist_semantic_transform'), true);
+assert.equal(semanticEditWorklist.summary.semanticTransformKeys.includes('semantic-transform:javascript->typescript:function:renameUser'), true);
+assert.equal(semanticEditWorklist.summary.semanticTransformIdentityHashes.includes('worklist_transform_identity_hash'), true);
+assert.equal(semanticEditWorklist.summary.semanticTransformContentHashes.includes('worklist_transform_content_hash'), true);
+assert.equal(semanticEditWorklist.summary.projectionIdentityHashes.includes('worklist_projection_identity_hash'), true);
 assert.equal(semanticEditWorklist.summary.semanticTransformReadinesses.includes('ready'), true);
+assert.equal(semanticEditWorklist.summary.semanticTransformEvidenceIds.includes('worklist_transform_evidence'), true);
 assert.equal(semanticEditWorklist.summary.transformTargetLanguages.includes('typescript'), true);
 assert.equal(semanticEditWorklist.summary.targetPortabilityStatuses.includes('portable'), true);
 
@@ -111,16 +118,22 @@ const semanticEditQuery = queryUniversalConversionWorklist(semanticEditWorklist,
   semanticEditReplayOutputHash: 'output_hash_worklist',
   semanticEditKey: 'function:renameUser',
   sourceBackprojectionMode: 'exact-source',
+  semanticTransformId: 'worklist_semantic_transform',
+  semanticTransformContentHash: 'worklist_transform_content_hash',
+  projectionIdentityHash: 'worklist_projection_identity_hash',
+  semanticTransformEvidenceId: 'worklist_transform_evidence',
   semanticTransformReadiness: 'ready',
   transformTargetLanguage: 'typescript',
   transformSourceMapId: 'semantic_edit_source_map',
   targetPortabilityStatus: 'portable'
 });
 assert.equal(semanticEditQuery.found, true);
+assert.equal(semanticEditQuery.bestItem.semanticTransformIds.includes('worklist_semantic_transform'), true);
 assert.equal(semanticEditQuery.bestItem.semanticEditReplayOutputHashes.includes('output_hash_worklist'), true);
 
 const filtered = createUniversalConversionWorklist(semanticEditPlan, {
   semanticEditAdmissionStatus: 'ready',
+  semanticTransformKey: 'semantic-transform:javascript->typescript:function:renameUser',
   semanticEditReplayOutputHash: 'output_hash_worklist',
   sourceBackprojectionMode: 'exact-source'
 });
@@ -135,5 +148,26 @@ function semanticEdit(editContentHash) {
     operationContentHash: 'op_hash_worklist',
     editContentHash,
     sourcePath: 'src/user.js'
+  };
+}
+
+function semanticTransformIdentity(prefix) {
+  return {
+    id: `${prefix}_semantic_transform`,
+    transformKey: 'semantic-transform:javascript->typescript:function:renameUser',
+    sourceLanguage: 'javascript',
+    targetLanguage: 'typescript',
+    sourcePath: 'src/user.js',
+    targetPath: 'src/user.ts',
+    semanticIdentityHash: `${prefix}_semantic_hash`,
+    sourceIdentityHash: `${prefix}_source_hash`,
+    transformIdentityHash: `${prefix}_transform_identity_hash`,
+    projectionIdentityHash: `${prefix}_projection_identity_hash`,
+    transformContentHash: `${prefix}_transform_content_hash`,
+    readiness: 'ready',
+    evidenceIds: [`${prefix}_transform_evidence`],
+    sourceMapIds: ['semantic_edit_source_map'],
+    sourceMapLinkIds: ['semantic_edit_link'],
+    sourceMapMappingIds: ['semantic_edit_mapping']
   };
 }
