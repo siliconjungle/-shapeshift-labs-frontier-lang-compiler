@@ -13,6 +13,9 @@ const receiptPlan = createUniversalConversionPlan({
 const receiptRoute = queryUniversalConversionPlan(receiptPlan, { sourceLanguage: 'javascript', target: 'javascript' }).bestRoute;
 const receipt: UniversalConversionRouteEvidenceReceipt = createUniversalConversionRouteEvidenceReceipt(receiptPlan, {
   routeId: receiptRoute?.id,
+  runtimeProofCapability: ['filesystem'],
+  runtimeProofStatus: ['needs-evidence'],
+  runtimeProofMissingSignal: ['filesystem-trace-hash'],
   evidence: [
     { id: 'receipt_type_route_proof', kind: 'conversion-replay-proof', status: 'passed', routeId: receiptRoute?.id, sourceLanguage: 'javascript', target: 'javascript' },
     { id: 'receipt_type_unscoped_proof', kind: 'conversion-replay-proof', status: 'passed' }

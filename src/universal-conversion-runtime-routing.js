@@ -16,26 +16,37 @@ export function conversionRouteIdForRuntime(language, target, runtimeRoute, runt
 }
 
 export function conversionRouteMatchesRuntimeQuery(route, query = {}) {
-  if (query.runtimeRouteId && route.runtime?.routeId !== query.runtimeRouteId) return false;
-  if (query.sourceHostId && route.runtime?.source?.id !== query.sourceHostId) return false;
-  if (query.targetHostId && route.runtime?.target?.id !== query.targetHostId) return false;
+  if (!match(query.runtimeRouteId, [route.runtime?.routeId])) return false;
+  if (!match(query.sourceHostId, [route.runtime?.source?.id])) return false;
+  if (!match(query.targetHostId, [route.runtime?.target?.id])) return false;
   if (!runtimeFilterMatches(query.sourceRuntime ?? query.runtime, route.runtime?.source)) return false;
   if (!runtimeFilterMatches(query.targetRuntime, route.runtime?.target)) return false;
-  if (query.runtimeReadiness && route.runtime?.readiness !== query.runtimeReadiness) return false;
-  if (query.missingRuntimeCapability && !(route.runtime?.missingCapabilities ?? []).includes(query.missingRuntimeCapability)) return false;
-  if (query.runtimeAdapterRequirementId && !(route.runtimeAdapterRequirements ?? []).some((entry) => entry.id === query.runtimeAdapterRequirementId)) return false;
-  if (query.runtimeProofObligationId && !(route.runtime?.proofObligations ?? []).some((entry) => entry.id === query.runtimeProofObligationId)) return false;
-  if (query.runtimeProofCapability && !(route.runtime?.proofObligations ?? []).some((entry) => entry.capability === query.runtimeProofCapability)) return false;
-  if (query.runtimeProofStatus && !(route.runtime?.proofObligations ?? []).some((entry) => entry.status === query.runtimeProofStatus)) return false;
-  if (query.runtimeProofRequiredSignal && !(route.runtime?.proofObligations ?? []).some((entry) => (entry.requiredSignals ?? []).includes(query.runtimeProofRequiredSignal))) return false;
-  if (query.runtimeProofProvidedSignal && !(route.runtime?.proofObligations ?? []).some((entry) => (entry.providedSignals ?? []).includes(query.runtimeProofProvidedSignal))) return false;
-  if (query.runtimeProofMissingSignal && !(route.runtime?.proofObligations ?? []).some((entry) => (entry.missingSignals ?? []).includes(query.runtimeProofMissingSignal))) return false;
+  if (!match(query.runtimeReadiness, [route.runtime?.readiness])) return false;
+  if (!match(query.missingRuntimeCapability, route.runtime?.missingCapabilities ?? [])) return false;
+  if (!match(query.runtimeAdapterRequirementId, (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability))) return false;
+  if (!match(query.runtimeProofObligationId, (route.runtime?.proofObligations ?? []).map((entry) => entry.id))) return false;
+  if (!match(query.runtimeProofCapability, (route.runtime?.proofObligations ?? []).map((entry) => entry.capability))) return false;
+  if (!match(query.runtimeProofStatus, (route.runtime?.proofObligations ?? []).map((entry) => entry.status))) return false;
+  if (!match(query.runtimeProofRequiredSignal, (route.runtime?.proofObligations ?? []).flatMap((entry) => entry.requiredSignals ?? []))) return false;
+  if (!match(query.runtimeProofProvidedSignal, (route.runtime?.proofObligations ?? []).flatMap((entry) => entry.providedSignals ?? []))) return false;
+  if (!match(query.runtimeProofMissingSignal, (route.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? []))) return false;
   return true;
 }
 
 function runtimeFilterMatches(filter, host) {
-  const normalized = normalizeRuntimeId(filter);
-  if (!normalized) return true;
-  if (host?.runtime === normalized || host?.id === normalized) return true;
-  return normalizeNativeLanguageId(host?.language) === normalizeNativeLanguageId(normalized);
+  const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];
+  if (!filters.length) return true;
+  return filters.some((entry) => {
+    const normalized = normalizeRuntimeId(entry);
+    if (!normalized) return true;
+    if (host?.runtime === normalized || host?.id === normalized) return true;
+    return normalizeNativeLanguageId(host?.language) === normalizeNativeLanguageId(normalized);
+  });
+}
+
+function match(filter, values) {
+  const filters = Array.isArray(filter) ? filter : filter === undefined ? [] : [filter];
+  if (!filters.length) return true;
+  const valueSet = new Set((values ?? []).filter(Boolean).map(String));
+  return filters.some((item) => valueSet.has(String(item)));
 }

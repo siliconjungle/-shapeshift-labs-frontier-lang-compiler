@@ -186,6 +186,7 @@ function selectRoute(routeOrInput, options, context) {
     runtimeReadiness: options.runtimeReadiness,
     missingRuntimeCapability: options.missingRuntimeCapability,
     runtimeAdapterRequirementId: options.runtimeAdapterRequirementId,
+    runtimeProofObligationId: options.runtimeProofObligationId, runtimeProofCapability: options.runtimeProofCapability, runtimeProofStatus: options.runtimeProofStatus, runtimeProofRequiredSignal: options.runtimeProofRequiredSignal, runtimeProofProvidedSignal: options.runtimeProofProvidedSignal, runtimeProofMissingSignal: options.runtimeProofMissingSignal,
     translationRuntimeReadiness: options.translationRuntimeReadiness, translationRuntimeAdapterRequirementId: options.translationRuntimeAdapterRequirementId, translationRuntimeProofObligationId: options.translationRuntimeProofObligationId, translationRuntimeProofMissingSignal: options.translationRuntimeProofMissingSignal, translationDialectReadiness: options.translationDialectReadiness, translationDialectRecordId: options.translationDialectRecordId,
     translationAdmissionStatus: options.translationAdmissionStatus,
     translationAdmissionAction: options.translationAdmissionAction,

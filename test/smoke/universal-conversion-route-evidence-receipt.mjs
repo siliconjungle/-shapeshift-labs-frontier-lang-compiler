@@ -80,6 +80,8 @@ assert.equal(translationDenominatorReceipt.translationDialectReadinesses.include
 assert.equal(translationDenominatorReceipt.translationDialectRecordIds.includes('dialect_node_process_env'), true);
 assert.equal(translationDenominatorReceipt.summary.translationAdmission.runtimeProofMissingSignals['network-trace-hash'], 1);
 assert.equal(translationDenominatorReceipt.summary.translationAdmission.dialectRecordIds.dialect_node_process_env, 1);
+const runtimeProofFilteredReceipt = createUniversalConversionRouteEvidenceReceipt(createUniversalConversionPlan({ generatedAt: 805, imports: [scannedJsImport], targets: ['rust'], sourceHosts: ['javascript:node'], targetHosts: ['rust:cli'], runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'filesystem' }], evidence: [scopedEvidence] }), { sourceLanguage: 'javascript', target: 'rust', runtimeProofCapability: ['network', 'filesystem'], runtimeProofStatus: ['satisfied', 'needs-evidence'], runtimeProofMissingSignal: ['missing-runtime-signal', 'filesystem-trace-hash'] });
+assert.equal(runtimeProofFilteredReceipt.runtimeProofCapabilities.includes('filesystem'), true);
 
 const artifactsWithReceipts = createUniversalConversionArtifacts(plan, {
   routeId: route.id,

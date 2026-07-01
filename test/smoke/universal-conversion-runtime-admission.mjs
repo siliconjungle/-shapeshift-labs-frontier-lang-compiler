@@ -59,6 +59,13 @@ assert.equal(queryUniversalConversionPlan(conversionPlanForRequirement('canvas')
   runtimeProofStatus: 'needs-evidence',
   runtimeProofRequiredSignal: 'bitmap-hash'
 }).bestRoute.runtime.proofObligations[0].status, 'needs-evidence');
+assert.equal(queryUniversalConversionPlan(conversionPlanForRequirement('canvas'), {
+  target: 'rust',
+  runtimeProofCapability: ['filesystem', 'canvas'],
+  runtimeProofStatus: ['satisfied', 'needs-evidence'],
+  runtimeProofRequiredSignal: ['missing-signal', 'bitmap-hash'],
+  runtimeProofMissingSignal: ['missing-signal', 'bitmap-hash']
+}).bestRoute.id, canvasAdapterRoute.id);
 const satisfiedCanvasPlan = conversionPlanForRequirement('canvas', [{
   id: 'canvas_runtime_signal_bundle',
   kind: 'conversion-runtime-proof',
