@@ -77,6 +77,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly lifetimeConstraintStatus?: string;
   readonly lifetimeConstraintAction?: string;
   readonly controlFlowConstraintStatus?: string; readonly controlFlowConstraintAction?: string;
+  readonly callableBoundaryConstraintStatus?: string; readonly callableBoundaryConstraintAction?: string;
   readonly adtPatternConstraintStatus?: string; readonly adtPatternConstraintAction?: string;
   readonly borrowScopeConstraintStatus?: string;
   readonly borrowScopeConstraintAction?: string;
@@ -149,6 +150,7 @@ export interface UniversalConversionAdmissionRecord {
   readonly effectConstraint: UniversalConversionConstraintSummary; readonly concurrencyModelConstraint: UniversalConversionConstraintSummary;
   readonly lifetimeConstraint: UniversalConversionConstraintSummary;
   readonly controlFlowConstraint: UniversalConversionConstraintSummary; readonly adtPatternConstraint: UniversalConversionConstraintSummary;
+  readonly callableBoundaryConstraint: UniversalConversionConstraintSummary;
   readonly borrowScopeConstraint: UniversalConversionConstraintSummary;
   readonly borrowCheckerConstraint: UniversalConversionConstraintSummary; readonly dataLayoutConstraint: UniversalConversionConstraintSummary;
   readonly moduleConstraint: UniversalConversionConstraintSummary;

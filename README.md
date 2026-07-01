@@ -807,6 +807,7 @@ import {
   createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
   createUniversalControlFlowConstraintEvidence,
+  createUniversalCallableBoundaryConstraintEvidence,
   createUniversalAdtPatternConstraintEvidence,
   createUniversalDataLayoutConstraintEvidence,
   createUniversalEffectConstraintEvidence,
@@ -922,6 +923,18 @@ const controlFlowConstraints = createUniversalControlFlowConstraintEvidence({
 });
 console.log(controlFlowConstraints.missingKinds); // branch/exit/exception/async ordering obligations still needing target evidence
 console.log(controlFlowConstraints.claims.controlFlowEquivalenceClaim); // false without source-bound control-flow proof
+
+const callableBoundaryConstraints = createUniversalCallableBoundaryConstraintEvidence({
+  sourceLanguage: 'typescript',
+  target: 'rust',
+  sourceCallableBoundaryRecords: [
+    { kind: 'async function callback closure receiver overload exception effect', signatureHash: 'sig_submit' },
+    { kind: 'ffi-boundary calling-convention', callingConvention: 'napi' }
+  ],
+  targetCallableBoundaryRecords: [{ kind: 'function signature arity', signatureHash: 'sig_submit' }]
+});
+console.log(callableBoundaryConstraints.missingKinds); // receiver/callback/FFI/calling-boundary obligations still needing target evidence
+console.log(callableBoundaryConstraints.claims.callableEquivalenceClaim); // false without source-bound callable proof
 
 const adtPatternConstraints = createUniversalAdtPatternConstraintEvidence({
   sourceLanguage: 'rust',
@@ -1203,6 +1216,20 @@ exits." The record remains conservative: control-flow-equivalence,
 exception-equivalence, async-ordering, semantic-equivalence, and auto-merge
 claims stay false unless separate proof is attached.
 
+Routes can also carry `callableBoundaryConstraint`, a call-signature and
+call-adapter admission record for function/method signatures, arity, parameter
+order, required/optional/default/rest/named arguments, receiver/`this`/`self`
+binding, return channels, async and generator call shape, callbacks, closures,
+overload resolution, constructor calls, method dispatch, FFI boundaries, calling
+conventions, exception propagation, and effect boundaries. Callable-boundary
+queries such as `callableBoundaryConstraintMissingKind: "receiver-binding"` or
+`interlinguaConstraintFamily: "callable-boundary"` let a coordinator distinguish
+"target code has a function" from "target lowering preserved how calls enter,
+bind, dispatch, return, throw, suspend, or cross an ABI boundary." The record
+remains conservative: callable-equivalence, signature-equivalence,
+dispatch-equivalence, ABI-equivalence, semantic-equivalence, and auto-merge
+claims stay false unless separate proof is attached.
+
 Routes can also carry `adtPatternConstraint`, an algebraic-data-type and
 pattern-match admission record for enum/sum/union identity, variant identity,
 payload shape, discriminant/tag encoding, constructor shape, destructuring,
@@ -1463,9 +1490,9 @@ is deliberately conservative: type-equivalence, public-API-equivalence,
 semantic-equivalence, and auto-merge claims stay false unless separate proof is
 attached.
 
-Each route also carries `interlingua`, a first-class superset-language route record. It binds the source lift (`sourcePaths`, hashes, source maps, ownership keys, evidence/proof IDs), represented/missing/review/blocked semantic layers, constraint edges for resource transfer, ownership, lifetime, control-flow, adt-pattern, borrow-scope, borrow-checker, data-layout, effect, concurrency-model, error-model, evaluation-model, numeric-semantics, text-semantics, collection-semantics, serialization-semantics, dependency-semantics, memory-model, metaprogramming, scope-binding, module, object-model, protocol, and type obligations, and target lowering disposition: `exact-source`, `target-adapter`, `declaration-stub`, `semantic-index-only`, `lossy-review`, or `blocked`. Constraint edges also carry normalized `obligations` so a missing proof such as `borrow-across-await`, `ownership:shared-borrow`, `variant-identity`, `payload-shape`, `exhaustiveness`, `field-offset`, `cancellation-propagation`, `integer-division`, `overflow-behavior`, `normalization`, `regex-semantics`, `key-equality`, `iterator-invalidation`, `canonicalization`, `unknown-fields`, `lockfile-integrity`, `peer-dependency`, `supply-chain-trust`, `cleanup-boundary`, `atomic-ordering`, `procedural-macro`, `closure-capture`, `virtual-dispatch`, or `associated-type` can be routed directly to a worker without rereading the family-specific evidence payload. The record is queryable through `interlinguaLayerKind`, `interlinguaRepresentedLayerKind`, `interlinguaMissingLayerKind`, `interlinguaConstraintFamily`, `interlinguaConstraintMissingKind`, `interlinguaConstraintMissingEvidence`, `interlinguaConstraintObligationKind`, `interlinguaConstraintObligationStatus`, `interlinguaLoweringDisposition`, `interlinguaMissingEvidence`, `interlinguaProofEvidenceId`, and `interlinguaTargetAdapterId`. It is loss accounting for source -> interlingua -> target lowering, not a target semantic-equivalence proof.
+Each route also carries `interlingua`, a first-class superset-language route record. It binds the source lift (`sourcePaths`, hashes, source maps, ownership keys, evidence/proof IDs), represented/missing/review/blocked semantic layers, constraint edges for resource transfer, ownership, lifetime, control-flow, callable-boundary, adt-pattern, borrow-scope, borrow-checker, data-layout, effect, concurrency-model, error-model, evaluation-model, numeric-semantics, text-semantics, collection-semantics, serialization-semantics, dependency-semantics, memory-model, metaprogramming, scope-binding, module, object-model, protocol, and type obligations, and target lowering disposition: `exact-source`, `target-adapter`, `declaration-stub`, `semantic-index-only`, `lossy-review`, or `blocked`. Constraint edges also carry normalized `obligations` so a missing proof such as `borrow-across-await`, `ownership:shared-borrow`, `receiver-binding`, `calling-convention`, `variant-identity`, `payload-shape`, `exhaustiveness`, `field-offset`, `cancellation-propagation`, `integer-division`, `overflow-behavior`, `normalization`, `regex-semantics`, `key-equality`, `iterator-invalidation`, `canonicalization`, `unknown-fields`, `lockfile-integrity`, `peer-dependency`, `supply-chain-trust`, `cleanup-boundary`, `atomic-ordering`, `procedural-macro`, `closure-capture`, `virtual-dispatch`, or `associated-type` can be routed directly to a worker without rereading the family-specific evidence payload. The record is queryable through `interlinguaLayerKind`, `interlinguaRepresentedLayerKind`, `interlinguaMissingLayerKind`, `interlinguaConstraintFamily`, `interlinguaConstraintMissingKind`, `interlinguaConstraintMissingEvidence`, `interlinguaConstraintObligationKind`, `interlinguaConstraintObligationStatus`, `interlinguaLoweringDisposition`, `interlinguaMissingEvidence`, `interlinguaProofEvidenceId`, and `interlinguaTargetAdapterId`. It is loss accounting for source -> interlingua -> target lowering, not a target semantic-equivalence proof.
 
-`createUniversalConversionArtifacts` materializes those route refs into compact `SemanticHistoryRecord`, `SemanticPatchBundleRecord`, `UniversalConversionRouteEvidenceReceipt`, semantic operation sets, and `UniversalConversionAdmissionRecord` rows that swarm collectors can index by route, history ID, patch-bundle ID, admission-record ID, evidence-receipt ID, admission bucket, risk, operation kind, source path, ownership key, conflict key, evidence, proof, receipt missing evidence, receipt rejected evidence, readiness, admission status, loss class, adapter ID/kind, route missing evidence, runtime adapter requirement IDs, blockers, review reasons, interlingua lowering/constraint fields, and constraint-family statuses/actions/missing evidence including dependency semantics. Semantic operation metadata also carries compact interlingua lift/lowering coordinates so operation-only consumers can see what was represented, missing, adapted, or blocked without treating the route as a broad semantic-equivalence proof. Plan and artifact summaries expose compact translation-admission, evidence-receipt, interlingua lowering, interlingua constraint, and dependency-semantics distributions for queue dashboards and refill policy without forcing consumers to load every route. It is still review evidence, not target-code proof: blocked and semantic-index-only routes stay blocked/needs-review, and every artifact keeps `autoMergeClaim: false` plus `semanticEquivalenceClaim: false`.
+`createUniversalConversionArtifacts` materializes those route refs into compact `SemanticHistoryRecord`, `SemanticPatchBundleRecord`, `UniversalConversionRouteEvidenceReceipt`, semantic operation sets, and `UniversalConversionAdmissionRecord` rows that swarm collectors can index by route, history ID, patch-bundle ID, admission-record ID, evidence-receipt ID, admission bucket, risk, operation kind, source path, ownership key, conflict key, evidence, proof, receipt missing evidence, receipt rejected evidence, readiness, admission status, loss class, adapter ID/kind, route missing evidence, runtime adapter requirement IDs, blockers, review reasons, interlingua lowering/constraint fields, and constraint-family statuses/actions/missing evidence including callable-boundary and dependency semantics. Semantic operation metadata also carries compact interlingua lift/lowering coordinates so operation-only consumers can see what was represented, missing, adapted, or blocked without treating the route as a broad semantic-equivalence proof. Plan and artifact summaries expose compact translation-admission, evidence-receipt, interlingua lowering, interlingua constraint, callable-boundary, and dependency-semantics distributions for queue dashboards and refill policy without forcing consumers to load every route. It is still review evidence, not target-code proof: blocked and semantic-index-only routes stay blocked/needs-review, and every artifact keeps `autoMergeClaim: false` plus `semanticEquivalenceClaim: false`.
 
 Preserve exact native source text, token/trivia hashes, comments, whitespace, and source directives as evidence. This does not claim full semantic understanding; it keeps round-trip material available while exact parser adapters catch up:
 

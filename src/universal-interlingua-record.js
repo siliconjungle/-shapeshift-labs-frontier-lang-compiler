@@ -10,7 +10,7 @@ export const UniversalInterlinguaLayerKinds = Object.freeze([
   'target-adapter',
   'runtime-capability',
   'dialect-projection',
-  'semantic-ownership', 'adt-pattern-contract',
+  'semantic-ownership', 'callable-boundary-contract', 'adt-pattern-contract',
   'numeric-semantics-contract', 'text-semantics-contract', 'collection-semantics-contract', 'serialization-semantics-contract', 'dependency-semantics-contract',
   'protocol-contract',
   'proof-evidence'
@@ -29,7 +29,7 @@ export const UniversalInterlinguaConstraintEdgeKinds = Object.freeze([
   'resource-transfer',
   'ownership',
   'lifetime',
-  'control-flow', 'adt-pattern',
+  'control-flow', 'callable-boundary', 'adt-pattern',
   'borrow-scope',
   'borrow-checker',
   'data-layout',
@@ -173,6 +173,7 @@ export function interlinguaConstraintSummary(route = {}) {
     constraintEdge('ownership', route.resourceTransfer?.ownershipConstraints, 'semantic-ownership', route),
     constraintEdge('lifetime', route.lifetimeConstraint, 'semantic-ownership', route),
     constraintEdge('control-flow', route.controlFlowConstraint, 'runtime-capability', route),
+    constraintEdge('callable-boundary', route.callableBoundaryConstraint, 'callable-boundary-contract', route),
     constraintEdge('adt-pattern', route.adtPatternConstraint, 'adt-pattern-contract', route),
     constraintEdge('borrow-scope', route.borrowScopeConstraint, 'semantic-ownership', route),
     constraintEdge('borrow-checker', route.borrowCheckerConstraint, 'semantic-ownership', route),
@@ -268,7 +269,7 @@ function constraintObligations(family, evidence, edgeId) {
 }
 
 function constraintRecords(evidence = {}) {
-  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.adtPatternConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.hostEnvironmentConstraints ?? evidence.memoryModelConstraints ?? evidence.metaprogrammingConstraints ?? evidence.scopeBindingConstraints ?? evidence.moduleConstraints ?? evidence.numericSemanticsConstraints ?? evidence.textSemanticsConstraints ?? evidence.collectionSemanticsConstraints ?? evidence.serializationSemanticsConstraints ?? evidence.dependencySemanticsConstraints ?? evidence.objectModelConstraints ?? evidence.protocolConstraints ?? evidence.typeConstraints ?? [];
+  return evidence.constraints ?? evidence.controlFlowConstraints ?? evidence.callableBoundaryConstraints ?? evidence.adtPatternConstraints ?? evidence.dataLayoutConstraints ?? evidence.effectConstraints ?? evidence.concurrencyModelConstraints ?? evidence.errorModelConstraints ?? evidence.evaluationModelConstraints ?? evidence.hostEnvironmentConstraints ?? evidence.memoryModelConstraints ?? evidence.metaprogrammingConstraints ?? evidence.scopeBindingConstraints ?? evidence.moduleConstraints ?? evidence.numericSemanticsConstraints ?? evidence.textSemanticsConstraints ?? evidence.collectionSemanticsConstraints ?? evidence.serializationSemanticsConstraints ?? evidence.dependencySemanticsConstraints ?? evidence.objectModelConstraints ?? evidence.protocolConstraints ?? evidence.typeConstraints ?? [];
 }
 
 function nodeIds(record = {}, prefix) {

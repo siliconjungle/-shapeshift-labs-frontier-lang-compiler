@@ -1,6 +1,7 @@
 export type UniversalTranslationConstraintFieldName =
   | 'lifetimeConstraint'
   | 'controlFlowConstraint'
+  | 'callableBoundaryConstraint'
   | 'adtPatternConstraint'
   | 'borrowScopeConstraint'
   | 'borrowCheckerConstraint'

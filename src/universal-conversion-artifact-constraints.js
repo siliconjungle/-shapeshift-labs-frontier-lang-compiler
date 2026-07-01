@@ -3,6 +3,7 @@ import { adtPatternConstraintMatches } from './universal-adt-pattern-constraints
 import { resourceTransferMatches } from './universal-resource-transfer.js';
 import { borrowCheckerConstraintMatches } from './universal-borrow-checker-constraints.js';
 import { borrowScopeConstraintMatches } from './universal-borrow-scope-constraints.js';
+import { callableBoundaryConstraintMatches } from './universal-callable-boundary-constraints.js';
 import { concurrencyModelConstraintMatches } from './universal-concurrency-model-constraints.js';
 import { controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
 import { dataLayoutConstraintMatches } from './universal-data-layout-constraints.js';
@@ -34,6 +35,7 @@ export function artifactConstraintIndex(records = []) {
     ...constraintIndex('ownershipConstraint', records.map(own)),
     ...constraintIndex('lifetimeConstraint', records.map(life)),
     ...constraintIndex('controlFlowConstraint', records.map(ctrl)),
+    ...constraintIndex('callableBoundaryConstraint', records.map(callable)),
     ...constraintIndex('adtPatternConstraint', records.map(adt)),
     ...constraintIndex('borrowScopeConstraint', records.map(bscope)),
     ...constraintIndex('borrowCheckerConstraint', records.map(bchecker)),
@@ -62,6 +64,7 @@ export function artifactConstraintsMatch(record, query = {}) {
   return resourceTransferMatches(res(record), query)
     && lifetimeConstraintMatches(life(record), query)
     && controlFlowConstraintMatches(ctrl(record), query)
+    && callableBoundaryConstraintMatches(callable(record), query)
     && adtPatternConstraintMatches(adt(record), query)
     && borrowScopeConstraintMatches(bscope(record), query)
     && borrowCheckerConstraintMatches(bchecker(record), query)
@@ -89,6 +92,7 @@ function res(record) { return record.resourceTransfer ?? metaConstraint(record, 
 function own(record) { return res(record).ownershipConstraints ?? {}; }
 function life(record) { return record.lifetimeConstraint ?? metaConstraint(record, 'lifetimeConstraint'); }
 function ctrl(record) { return record.controlFlowConstraint ?? metaConstraint(record, 'controlFlowConstraint'); }
+function callable(record) { return record.callableBoundaryConstraint ?? metaConstraint(record, 'callableBoundaryConstraint'); }
 function adt(record) { return record.adtPatternConstraint ?? metaConstraint(record, 'adtPatternConstraint'); }
 function bscope(record) { return record.borrowScopeConstraint ?? metaConstraint(record, 'borrowScopeConstraint'); }
 function bchecker(record) { return record.borrowCheckerConstraint ?? metaConstraint(record, 'borrowCheckerConstraint'); }

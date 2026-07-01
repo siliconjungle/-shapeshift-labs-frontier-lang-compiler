@@ -166,5 +166,6 @@ export * from './declarations/native-project-runtime-yield-delegation.js';
 export * from './declarations/native-project-runtime-executable-effect-evidence.js';
 export * from './declarations/native-project-module-declarations.js';
 export * from './declarations/native-project.js';
+export * from './declarations/universal-callable-boundary-constraints.js';
 export * from './declarations/roundtrip.js';
 export * from './declarations/runtime.js';

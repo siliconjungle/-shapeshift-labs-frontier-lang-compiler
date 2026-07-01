@@ -55,6 +55,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
   const resourceTransfers = routeArtifacts.map((artifact) => artifact.resourceTransfer ?? artifact.metadata?.resourceTransfer ?? artifact.admissionRecord?.metadata?.resourceTransfer ?? {});
   const lifetimeConstraints = routeArtifacts.map((artifact) => artifact.lifetimeConstraint ?? artifact.metadata?.lifetimeConstraint ?? artifact.admissionRecord?.metadata?.lifetimeConstraint ?? {});
   const controlFlowConstraints = routeArtifacts.map((artifact) => artifact.controlFlowConstraint ?? artifact.metadata?.controlFlowConstraint ?? artifact.admissionRecord?.metadata?.controlFlowConstraint ?? {});
+  const callableBoundaryConstraints = routeArtifacts.map((artifact) => artifact.callableBoundaryConstraint ?? artifact.metadata?.callableBoundaryConstraint ?? artifact.admissionRecord?.metadata?.callableBoundaryConstraint ?? {});
   const adtPatternConstraints = routeArtifacts.map((artifact) => artifact.adtPatternConstraint ?? artifact.metadata?.adtPatternConstraint ?? artifact.admissionRecord?.metadata?.adtPatternConstraint ?? {});
   const borrowScopeConstraints = routeArtifacts.map((artifact) => artifact.borrowScopeConstraint ?? artifact.metadata?.borrowScopeConstraint ?? artifact.admissionRecord?.metadata?.borrowScopeConstraint ?? {});
   const borrowCheckerConstraints = routeArtifacts.map((artifact) => artifact.borrowCheckerConstraint ?? artifact.metadata?.borrowCheckerConstraint ?? artifact.admissionRecord?.metadata?.borrowCheckerConstraint ?? {});
@@ -102,6 +103,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     resourceTransfer: compactResourceTransferCounts(resourceTransfers),
     lifetimeConstraint: compactConstraintCounts(lifetimeConstraints),
     controlFlowConstraint: compactConstraintCounts(controlFlowConstraints),
+    callableBoundaryConstraint: compactConstraintCounts(callableBoundaryConstraints),
     adtPatternConstraint: compactConstraintCounts(adtPatternConstraints),
     borrowScopeConstraint: compactConstraintCounts(borrowScopeConstraints),
     borrowCheckerConstraint: compactConstraintCounts(borrowCheckerConstraints),

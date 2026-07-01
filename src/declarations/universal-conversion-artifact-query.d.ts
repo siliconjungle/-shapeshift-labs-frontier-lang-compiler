@@ -21,6 +21,7 @@ import type { UniversalInterlinguaQuery } from './universal-interlingua.js';
 import type { UniversalResourceTransferQuery } from './universal-resource-transfer.js';
 import type { UniversalLifetimeConstraintQuery } from './universal-lifetime-constraints.js';
 import type { UniversalControlFlowConstraintQuery } from './universal-control-flow-constraints.js';
+import type { UniversalCallableBoundaryConstraintQuery } from './universal-callable-boundary-constraints.js';
 import type { UniversalAdtPatternConstraintQuery } from './universal-adt-pattern-constraints.js';
 import type { UniversalBorrowScopeConstraintQuery } from './universal-borrow-scope-constraints.js';
 import type { UniversalBorrowCheckerConstraintQuery } from './universal-borrow-checker-constraints.js';
@@ -148,6 +149,7 @@ export interface UniversalConversionArtifactIndex {
   readonly dataLayoutConstraintActions: readonly string[];
   readonly dataLayoutConstraintMissingEvidence: readonly string[];
   readonly dataLayoutConstraintMissingKinds: readonly string[];
+  readonly callableBoundaryConstraintStatuses: readonly string[]; readonly callableBoundaryConstraintActions: readonly string[]; readonly callableBoundaryConstraintMissingEvidence: readonly string[]; readonly callableBoundaryConstraintMissingKinds: readonly string[];
   readonly effectConstraintStatuses: readonly string[];
   readonly effectConstraintActions: readonly string[];
   readonly effectConstraintMissingEvidence: readonly string[];
@@ -203,7 +205,7 @@ export interface UniversalConversionArtifactIndex {
   readonly transformIdentityHashes: readonly string[];
 }
 
-export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalAdtPatternConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalHostEnvironmentConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalNumericSemanticsConstraintQuery, UniversalTextSemanticsConstraintQuery, UniversalCollectionSemanticsConstraintQuery, UniversalSerializationSemanticsConstraintQuery, UniversalDependencySemanticsConstraintQuery, UniversalObjectModelConstraintQuery, UniversalProtocolConstraintQuery, UniversalTypeConstraintQuery {
+export interface UniversalConversionArtifactQuery extends UniversalRepresentationCoverageQuery, UniversalInterlinguaQuery, UniversalResourceTransferQuery, UniversalLifetimeConstraintQuery, UniversalControlFlowConstraintQuery, UniversalCallableBoundaryConstraintQuery, UniversalAdtPatternConstraintQuery, UniversalBorrowScopeConstraintQuery, UniversalBorrowCheckerConstraintQuery, UniversalDataLayoutConstraintQuery, UniversalEffectConstraintQuery, UniversalConcurrencyModelConstraintQuery, UniversalErrorModelConstraintQuery, UniversalEvaluationModelConstraintQuery, UniversalHostEnvironmentConstraintQuery, UniversalMemoryModelConstraintQuery, UniversalMetaprogrammingConstraintQuery, UniversalScopeBindingConstraintQuery, UniversalModuleConstraintQuery, UniversalNumericSemanticsConstraintQuery, UniversalTextSemanticsConstraintQuery, UniversalCollectionSemanticsConstraintQuery, UniversalSerializationSemanticsConstraintQuery, UniversalDependencySemanticsConstraintQuery, UniversalObjectModelConstraintQuery, UniversalProtocolConstraintQuery, UniversalTypeConstraintQuery {
   readonly routeId?: string | readonly string[];
   readonly historyId?: string | readonly string[];
   readonly patchBundleId?: string | readonly string[];
@@ -251,10 +253,8 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly semanticOperationInterlinguaLoweringDisposition?: string | readonly string[];
   readonly semanticOperationInterlinguaMissingEvidence?: string | readonly string[];
   readonly semanticOperationInterlinguaProofEvidenceId?: string | readonly string[];
-  readonly semanticEditStatus?: string | readonly string[];
-  readonly semanticEditStatuses?: readonly string[];
-  readonly semanticEditScriptId?: string | readonly string[];
-  readonly semanticEditScriptIds?: readonly string[];
+  readonly semanticEditStatus?: string | readonly string[]; readonly semanticEditStatuses?: readonly string[];
+  readonly semanticEditScriptId?: string | readonly string[]; readonly semanticEditScriptIds?: readonly string[];
   readonly semanticEditProjectionId?: string | readonly string[];
   readonly semanticEditProjectionIds?: readonly string[];
   readonly semanticEditReplayId?: string | readonly string[];

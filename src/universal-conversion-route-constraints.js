@@ -3,6 +3,7 @@ import { borrowScopeConstraintForConversionRoute, borrowScopeConstraintMatches }
 import { adtPatternConstraintForConversionRoute, adtPatternConstraintMatches } from './universal-adt-pattern-constraints.js';
 import { concurrencyModelConstraintForConversionRoute, concurrencyModelConstraintMatches } from './universal-concurrency-model-constraints.js';
 import { controlFlowConstraintForConversionRoute, controlFlowConstraintMatches } from './universal-control-flow-constraints.js';
+import { callableBoundaryConstraintForConversionRoute, callableBoundaryConstraintMatches } from './universal-callable-boundary-constraints.js';
 import { dataLayoutConstraintForConversionRoute, dataLayoutConstraintMatches } from './universal-data-layout-constraints.js';
 import { effectConstraintForConversionRoute, effectConstraintMatches } from './universal-effect-constraints.js';
 import { errorModelConstraintForConversionRoute, errorModelConstraintMatches } from './universal-error-model-constraints.js';
@@ -28,6 +29,7 @@ const families = [
   ['borrowScopeConstraint', 'borrowScopeConstraints', 'translationBorrowScopeConstraint'],
   ['concurrencyModelConstraint', 'concurrencyModelConstraints', 'translationConcurrencyModelConstraint'],
   ['controlFlowConstraint', 'controlFlowConstraints', 'translationControlFlowConstraint'],
+  ['callableBoundaryConstraint', 'callableBoundaryConstraints', 'translationCallableBoundaryConstraint'],
   ['adtPatternConstraint', 'adtPatternConstraints', 'translationAdtPatternConstraint'],
   ['dataLayoutConstraint', 'dataLayoutConstraints', 'translationDataLayoutConstraint'],
   ['effectConstraint', 'effectConstraints', 'translationEffectConstraint'],
@@ -77,6 +79,7 @@ export function createConversionRouteConstraints(input = {}, route = {}, routeIm
     resourceTransfer,
     lifetimeConstraint,
     controlFlowConstraint,
+    callableBoundaryConstraint: callableBoundaryConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     adtPatternConstraint: adtPatternConstraintForConversionRoute(input, route, routeImports, routeEvidence),
     borrowScopeConstraint,
     borrowCheckerConstraint,
@@ -105,6 +108,7 @@ export function conversionRouteMatchesConstraintQuery(route = {}, query = {}) {
   return resourceTransferMatches(route.resourceTransfer, query)
     && lifetimeConstraintMatches(route.lifetimeConstraint, query)
     && controlFlowConstraintMatches(route.controlFlowConstraint, query)
+    && callableBoundaryConstraintMatches(route.callableBoundaryConstraint, query)
     && adtPatternConstraintMatches(route.adtPatternConstraint, query)
     && borrowScopeConstraintMatches(route.borrowScopeConstraint, query)
     && borrowCheckerConstraintMatches(route.borrowCheckerConstraint, query)
