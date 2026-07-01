@@ -15,6 +15,7 @@ export function createUniversalConversionAdmissionRecord(input) {
     ...(input.patchBundle?.proofIds ?? []),
     ...(input.materialization?.proofIds ?? [])
   ]);
+  const runtimeProof = runtimeProofIndex(route.runtime?.proofObligations ?? []);
   const score = route.mergeScore ?? {};
   const hasBoundEvidence = evidenceIds.length > 0 || proofIds.length > 0;
   const missingEvidence = uniqueStrings([
@@ -54,6 +55,12 @@ export function createUniversalConversionAdmissionRecord(input) {
     interlinguaLoweringDisposition: route.interlingua?.lowering?.disposition,
     resourceTransferStatus: route.resourceTransfer?.status,
     resourceTransferAction: route.resourceTransfer?.action,
+    runtimeProofObligationIds: runtimeProof.obligationIds,
+    runtimeProofCapabilities: runtimeProof.capabilities,
+    runtimeProofStatuses: runtimeProof.statuses,
+    runtimeProofRequiredSignals: runtimeProof.requiredSignals,
+    runtimeProofProvidedSignals: runtimeProof.providedSignals,
+    runtimeProofMissingSignals: runtimeProof.missingSignals,
     lifetimeConstraintStatus: route.lifetimeConstraint?.status,
     lifetimeConstraintAction: route.lifetimeConstraint?.action,
     controlFlowConstraintStatus: route.controlFlowConstraint?.status,
@@ -117,6 +124,7 @@ export function createUniversalConversionAdmissionRecord(input) {
       patchBundleId: input.patchBundle?.id,
       semanticOperationIds: operations.map((operation) => operation.id),
       sourceMapLinkIds: input.materialization?.sourceMapLinkIds ?? [],
+      runtimeProofObligationIds: runtimeProof.obligationIds,
       evidenceIds,
       proofIds
     },
@@ -193,6 +201,9 @@ export function createUniversalConversionAdmissionRecord(input) {
     evidence: {
       total: evidenceIds.length,
       proofArtifacts: proofIds.length,
+      runtimeProofObligations: runtimeProof.obligationIds.length,
+      runtimeProofMissingSignals: runtimeProof.missingSignals,
+      runtimeProofProvidedSignals: runtimeProof.providedSignals,
       missing: missingEvidence,
       blockers,
       review: route.review ?? []
@@ -261,4 +272,15 @@ function componentStatuses(components = {}) {
 
 function constraintRecord(evidence) {
   return { id: evidence?.id, status: evidence?.status, action: evidence?.action, requiredKinds: evidence?.requiredKinds ?? [], representedKinds: evidence?.representedKinds ?? [], missingKinds: evidence?.missingKinds ?? [], missingEvidence: evidence?.missingEvidence ?? [] };
+}
+
+function runtimeProofIndex(obligations) {
+  return {
+    obligationIds: uniqueStrings(obligations.map((entry) => entry.id)),
+    capabilities: uniqueStrings(obligations.map((entry) => entry.capability)),
+    statuses: uniqueStrings(obligations.map((entry) => entry.status)),
+    requiredSignals: uniqueStrings(obligations.flatMap((entry) => entry.requiredSignals ?? [])),
+    providedSignals: uniqueStrings(obligations.flatMap((entry) => entry.providedSignals ?? [])),
+    missingSignals: uniqueStrings(obligations.flatMap((entry) => entry.missingSignals ?? []))
+  };
 }

@@ -171,6 +171,7 @@ function scopedRuntimeProofEvidence(records, input, capability, adapterRequireme
 }
 
 function runtimeProofEvidenceMatches(record, input, capability, adapterRequirement) {
+  if (!passedRuntimeProofEvidence(record)) return false;
   const adapterId = adapterRequirement?.id;
   const sourceHost = input.sourceHost ?? adapterRequirement?.sourceHost;
   const targetHost = input.targetHost ?? adapterRequirement?.targetHost;
@@ -179,6 +180,10 @@ function runtimeProofEvidenceMatches(record, input, capability, adapterRequireme
   const sourceMatches = !record?.sourceHost || !sourceHost || record.sourceHost === sourceHost;
   const targetMatches = !record?.targetHost || !targetHost || record.targetHost === targetHost;
   return (capabilityMatches || adapterMatches) && sourceMatches && targetMatches;
+}
+
+function passedRuntimeProofEvidence(record) {
+  return record?.status === 'passed' || record?.status === 'ok' || record?.status === 'success';
 }
 
 function runtimeProofAction(status) {

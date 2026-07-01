@@ -38,9 +38,27 @@ export interface UniversalConversionEvidenceReceiptCompactCounts {
   readonly boundEvidence: number;
   readonly rejectedEvidence: number;
   readonly proofEvidence: number;
+  readonly runtimeProofObligations: number;
+  readonly runtimeProofByStatus: Readonly<Record<string, number>>;
+  readonly runtimeProofByCapability: Readonly<Record<string, number>>;
+  readonly runtimeProofMissingSignals: Readonly<Record<string, number>>;
+  readonly runtimeProofProvidedSignals: Readonly<Record<string, number>>;
   readonly missingEvidence: Readonly<Record<string, number>>;
   readonly proofEvidenceIds: Readonly<Record<string, number>>;
   readonly rejectedByReason: Readonly<Record<string, number>>;
+}
+
+export interface UniversalConversionRuntimeProofCompactCounts {
+  readonly routeArtifacts: number;
+  readonly obligations: number;
+  readonly byCapability: Readonly<Record<string, number>>;
+  readonly byStatus: Readonly<Record<string, number>>;
+  readonly requiredSignals: Readonly<Record<string, number>>;
+  readonly providedSignals: Readonly<Record<string, number>>;
+  readonly missingSignals: Readonly<Record<string, number>>;
+  readonly receiptRecords: number;
+  readonly receiptByStatus: Readonly<Record<string, number>>;
+  readonly receiptMissingEvidence: Readonly<Record<string, number>>;
 }
 
 export interface UniversalConversionInterlinguaCompactCounts {
@@ -138,6 +156,7 @@ export interface UniversalConversionArtifactCompactCounts {
     readonly byRisk: Readonly<Record<string, number>>;
   };
   readonly translationAdmission: UniversalConversionTranslationAdmissionCompactCounts;
+  readonly runtimeProof: UniversalConversionRuntimeProofCompactCounts;
   readonly resourceTransfer: UniversalConversionResourceTransferCompactCounts;
   readonly lifetimeConstraint: UniversalConversionLifetimeConstraintCompactCounts;
   readonly controlFlowConstraint: UniversalConversionControlFlowConstraintCompactCounts;

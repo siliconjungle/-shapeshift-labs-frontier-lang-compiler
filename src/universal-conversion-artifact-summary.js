@@ -100,6 +100,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
       byRisk: countBy(admissionRecords.map((record) => record.risk))
     },
     translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
+    runtimeProof: compactRuntimeProofCounts(routeArtifacts, evidenceReceipts),
     resourceTransfer: compactResourceTransferCounts(resourceTransfers),
     lifetimeConstraint: compactConstraintCounts(lifetimeConstraints),
     controlFlowConstraint: compactConstraintCounts(controlFlowConstraints),
@@ -167,14 +168,36 @@ function compactConstraintCounts(records) {
 }
 
 function compactEvidenceReceiptCounts(receipts) {
+  const runtimeProofRecords = receipts.flatMap((receipt) => receipt.records?.runtimeProof ?? []);
   return {
     routeArtifacts: receipts.filter((receipt) => receipt.id).length,
     boundEvidence: receipts.reduce((sum, receipt) => sum + Number(receipt.summary?.boundEvidence ?? 0), 0),
     rejectedEvidence: receipts.reduce((sum, receipt) => sum + Number(receipt.summary?.rejectedEvidence ?? 0), 0),
     proofEvidence: receipts.reduce((sum, receipt) => sum + Number(receipt.summary?.proofEvidence ?? 0), 0),
+    runtimeProofObligations: runtimeProofRecords.length,
+    runtimeProofByStatus: countBy(runtimeProofRecords.map((record) => record.status)),
+    runtimeProofByCapability: countBy(runtimeProofRecords.map((record) => record.capability)),
+    runtimeProofMissingSignals: countBy(runtimeProofRecords.flatMap((record) => record.missingSignals ?? [])),
+    runtimeProofProvidedSignals: countBy(runtimeProofRecords.flatMap((record) => record.providedSignals ?? [])),
     missingEvidence: countBy(receipts.flatMap((receipt) => receipt.missingEvidence ?? [])),
     proofEvidenceIds: countBy(receipts.flatMap((receipt) => receipt.proofEvidenceIds ?? [])),
     rejectedByReason: countBy(receipts.flatMap((receipt) => (receipt.records?.rejected ?? []).map((record) => record.reason)))
+  };
+}
+
+function compactRuntimeProofCounts(routeArtifacts, receipts) {
+  const receiptRecords = receipts.flatMap((receipt) => receipt.records?.runtimeProof ?? []);
+  return {
+    routeArtifacts: routeArtifacts.filter((artifact) => artifact.runtimeProofObligationIds?.length).length,
+    obligations: routeArtifacts.reduce((sum, artifact) => sum + (artifact.runtimeProofObligationIds?.length ?? 0), 0),
+    byCapability: countBy(routeArtifacts.flatMap((artifact) => artifact.runtimeProofCapabilities ?? [])),
+    byStatus: countBy(routeArtifacts.flatMap((artifact) => artifact.runtimeProofStatuses ?? [])),
+    requiredSignals: countBy(routeArtifacts.flatMap((artifact) => artifact.runtimeProofRequiredSignals ?? [])),
+    providedSignals: countBy(routeArtifacts.flatMap((artifact) => artifact.runtimeProofProvidedSignals ?? [])),
+    missingSignals: countBy(routeArtifacts.flatMap((artifact) => artifact.runtimeProofMissingSignals ?? [])),
+    receiptRecords: receiptRecords.length,
+    receiptByStatus: countBy(receiptRecords.map((record) => record.status)),
+    receiptMissingEvidence: countBy(receiptRecords.flatMap((record) => record.missingEvidence ?? []))
   };
 }
 

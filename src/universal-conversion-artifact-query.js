@@ -28,6 +28,10 @@ export function artifactIndex(a) {
     routeMissingEvidence: uniqueStrings(a.flatMap((a) => a.missingEvidence ?? [])),
     runtimeAdapterRequirementIds: uniqueStrings(a.flatMap((a) => a.runtimeAdapterRequirementIds ?? [])),
     runtimeProofObligationIds: uniqueStrings(a.flatMap((a) => a.runtimeProofObligationIds ?? [])),
+    runtimeProofCapabilities: uniqueStrings(a.flatMap((a) => a.runtimeProofCapabilities ?? [])),
+    runtimeProofStatuses: uniqueStrings(a.flatMap((a) => a.runtimeProofStatuses ?? [])),
+    runtimeProofRequiredSignals: uniqueStrings(a.flatMap((a) => a.runtimeProofRequiredSignals ?? [])),
+    runtimeProofProvidedSignals: uniqueStrings(a.flatMap((a) => a.runtimeProofProvidedSignals ?? [])),
     runtimeProofMissingSignals: uniqueStrings(a.flatMap((a) => a.runtimeProofMissingSignals ?? [])),
     blockers: uniqueStrings(a.flatMap((a) => a.blockers ?? [])),
     reviewReasons: uniqueStrings(a.flatMap((a) => a.review ?? [])),
@@ -138,6 +142,10 @@ function matchesArtifact(record, query) {
     && match(query.routeMissingEvidence, record.missingEvidence)
     && match(query.runtimeAdapterRequirementId, record.runtimeAdapterRequirementIds)
     && match(query.runtimeProofObligationId, record.runtimeProofObligationIds)
+    && match(query.runtimeProofCapability, record.runtimeProofCapabilities)
+    && match(query.runtimeProofStatus, record.runtimeProofStatuses)
+    && match(query.runtimeProofRequiredSignal, record.runtimeProofRequiredSignals)
+    && match(query.runtimeProofProvidedSignal, record.runtimeProofProvidedSignals)
     && match(query.runtimeProofMissingSignal, record.runtimeProofMissingSignals)
     && match(query.blocker, record.blockers)
     && match(query.reviewReason, record.review)

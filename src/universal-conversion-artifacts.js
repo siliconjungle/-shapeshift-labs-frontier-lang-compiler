@@ -77,6 +77,7 @@ function createRouteArtifact(route, options) {
   const admissionStatus = routeAdmissionStatus(route);
   const reasonCodes = routeReasonCodes(route);
   const evidenceReceipt = createUniversalConversionRouteEvidenceReceipt(route, { evidence: options.evidence });
+  const runtimeProof = routeRuntimeProofIndex(route);
   const historyId = refs.historyIds?.[0] ?? `history_${route.id}`;
   const patchBundleId = refs.patchBundleIds?.[0] ?? `semantic_patch_bundle_${route.id}`;
   const history = createSemanticHistoryRecord({
@@ -164,8 +165,12 @@ function createRouteArtifact(route, options) {
     adapterKind: route.adapterKind,
     missingEvidence: route.missingEvidence ?? [],
     runtimeAdapterRequirementIds: (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
-    runtimeProofObligationIds: (route.runtime?.proofObligations ?? []).map((entry) => entry.id).filter(Boolean),
-    runtimeProofMissingSignals: (route.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? []),
+    runtimeProofObligationIds: runtimeProof.obligationIds,
+    runtimeProofCapabilities: runtimeProof.capabilities,
+    runtimeProofStatuses: runtimeProof.statuses,
+    runtimeProofRequiredSignals: runtimeProof.requiredSignals,
+    runtimeProofProvidedSignals: runtimeProof.providedSignals,
+    runtimeProofMissingSignals: runtimeProof.missingSignals,
     blockers: route.blockers ?? [],
     review: route.review ?? [],
     admissionAction: route.admissionAction,
@@ -189,6 +194,18 @@ function createRouteArtifact(route, options) {
 
 function routeConstraintFields(route) {
   return Object.fromEntries(['resourceTransfer', 'lifetimeConstraint', 'controlFlowConstraint', 'callableBoundaryConstraint', 'adtPatternConstraint', 'borrowScopeConstraint', 'borrowCheckerConstraint', 'dataLayoutConstraint', 'effectConstraint', 'concurrencyModelConstraint', 'errorModelConstraint', 'evaluationModelConstraint', 'hostEnvironmentConstraint', 'memoryModelConstraint', 'metaprogrammingConstraint', 'scopeBindingConstraint', 'moduleConstraint', 'numericSemanticsConstraint', 'textSemanticsConstraint', 'collectionSemanticsConstraint', 'serializationSemanticsConstraint', 'dependencySemanticsConstraint', 'objectModelConstraint', 'protocolConstraint', 'typeConstraint'].map((key) => [key, route[key]]));
+}
+
+function routeRuntimeProofIndex(route) {
+  const obligations = route.runtime?.proofObligations ?? [];
+  return {
+    obligationIds: uniqueStrings(obligations.map((entry) => entry.id)),
+    capabilities: uniqueStrings(obligations.map((entry) => entry.capability)),
+    statuses: uniqueStrings(obligations.map((entry) => entry.status)),
+    requiredSignals: uniqueStrings(obligations.flatMap((entry) => entry.requiredSignals ?? [])),
+    providedSignals: uniqueStrings(obligations.flatMap((entry) => entry.providedSignals ?? [])),
+    missingSignals: uniqueStrings(obligations.flatMap((entry) => entry.missingSignals ?? []))
+  };
 }
 
 function selectRoutes(routes, options) {

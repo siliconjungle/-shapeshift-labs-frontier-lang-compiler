@@ -1301,6 +1301,15 @@ treating every runtime route as a generic `runtime-adapter-proof`. These proof
 obligations remain admission evidence only; they do not assert runtime,
 rendering, semantic-equivalence, or auto-merge success.
 
+Route evidence receipts and materialized conversion artifacts expose the same
+runtime proof shape. Receipts include runtime adapter requirement ids, proof
+obligation ids, capabilities, statuses, required/provided/missing signals, and a
+non-claiming `runtimeProof` record list. Artifact queries can now ask for
+`runtimeProofCapability`, `runtimeProofStatus`, `runtimeProofRequiredSignal`,
+`runtimeProofProvidedSignal`, or `runtimeProofMissingSignal`. That lets a
+coordinator separate "proof exists for canvas" from "bitmap evidence is still
+missing" without treating either as semantic-equivalence proof.
+
 Routes can also carry `concurrencyModelConstraint`, an async/task/thread/actor
 admission record for structured concurrency, async tasks, thread and worker
 boundaries, event-loop or scheduler semantics, scheduler affinity, actor

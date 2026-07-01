@@ -81,3 +81,47 @@ const missingReceipt = createUniversalConversionRouteEvidenceReceipt(createUnive
 });
 assert.equal(missingReceipt.missingEvidence.includes('route-bound-proof-evidence'), true);
 assert.equal(missingReceipt.summary.missingEvidence >= 1, true);
+
+const runtimeEvidenceRecord = {
+  id: 'canvas_runtime_proof',
+  kind: 'conversion-runtime-proof',
+  status: 'passed',
+  adapterRequirementId: 'runtime_adapter_canvas',
+  capability: 'canvas',
+  runtimeProofSignals: ['bitmap-hash']
+};
+const runtimeReceipt = createUniversalConversionRouteEvidenceReceipt({
+  id: 'conversion_javascript_to_rust',
+  sourceLanguage: 'javascript',
+  languageIds: ['javascript'],
+  target: 'rust',
+  mode: 'target-adapter',
+  readiness: 'needs-review',
+  admissionAction: 'prioritize',
+  mergeRefs: { planId: 'runtime_receipt_plan', evidenceIds: [], proofIds: [], sources: [], semanticOwnershipKeys: [], conflictKeys: [] },
+  runtimeAdapterRequirements: [{ id: 'runtime_adapter_canvas', capability: 'canvas' }],
+  runtime: {
+    proofObligations: [{
+      id: 'runtime_proof_canvas',
+      capability: 'canvas',
+      adapterRequirementId: 'runtime_adapter_canvas',
+      adapterKind: 'web-canvas-to-rust-canvas',
+      status: 'satisfied',
+      action: 'attach-runtime-proof-obligation',
+      requiredSignals: ['bitmap-hash'],
+      providedSignals: ['bitmap-hash'],
+      missingSignals: [],
+      missingEvidence: [],
+      evidenceIds: ['canvas_runtime_proof'],
+      claims: { runtimeEquivalenceClaim: false, renderEquivalenceClaim: false, semanticEquivalenceClaim: false, autoMergeClaim: false }
+    }]
+  }
+}, { evidence: [runtimeEvidenceRecord] });
+assert.equal(runtimeReceipt.runtimeAdapterRequirementIds.includes('runtime_adapter_canvas'), true);
+assert.equal(runtimeReceipt.runtimeProofObligationIds.includes('runtime_proof_canvas'), true);
+assert.equal(runtimeReceipt.runtimeProofCapabilities.includes('canvas'), true);
+assert.equal(runtimeReceipt.runtimeProofProvidedSignals.includes('bitmap-hash'), true);
+assert.equal(runtimeReceipt.proofEvidenceIds.includes('canvas_runtime_proof'), true);
+assert.equal(runtimeReceipt.records.rejected.some((record) => record.id === 'canvas_runtime_proof'), false);
+assert.equal(runtimeReceipt.records.runtimeProof[0].runtimeEquivalenceClaim, false);
+assert.equal(runtimeReceipt.summary.runtimeProofByStatus.satisfied, 1);

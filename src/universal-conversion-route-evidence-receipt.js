@@ -1,6 +1,7 @@
 import { countBy, normalizeNativeLanguageId, uniqueStrings } from './native-import-utils.js';
 import { createUniversalConversionPlan, queryUniversalConversionPlan } from './universal-conversion-plan.js';
 import { conversionRouteEvidence } from './universal-conversion-route-evidence.js';
+import { summarizeRuntimeProofObligations } from './universal-runtime-proof-obligations.js';
 
 export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {}, options = {}, context = {}) {
   const route = selectRoute(routeOrInput, options, context);
@@ -11,22 +12,30 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       : [];
   const boundRecords = suppliedEvidence.length ? conversionRouteEvidence(suppliedEvidence, routeLanguage(route), route.target, route.id) : [];
   const boundRecordIds = uniqueStrings(boundRecords.map((record) => record.id));
+  const runtimeProofObligations = route.runtime?.proofObligations ?? [];
+  const runtimeProofRecords = runtimeProofObligations.map(runtimeProofRecordSummary);
+  const runtimeProofEvidenceIds = uniqueStrings(runtimeProofObligations.flatMap((record) => record.evidenceIds ?? []));
+  const runtimeProofSummary = summarizeRuntimeProofObligations(runtimeProofObligations);
+  const acceptedEvidenceIds = uniqueStrings([...boundRecordIds, ...runtimeProofEvidenceIds]);
   const rejectedRecords = options.includeRejectedEvidence === false
     ? []
-    : rejectedEvidenceRecords(suppliedEvidence, route, boundRecordIds);
+    : rejectedEvidenceRecords(suppliedEvidence, route, acceptedEvidenceIds);
   const evidenceIds = uniqueStrings([
     ...(route.mergeRefs?.evidenceIds ?? []),
     ...(route.translationAdmission?.evidenceIds ?? []),
+    ...runtimeProofEvidenceIds,
     ...boundRecordIds
   ]);
   const proofEvidenceIds = uniqueStrings([
     ...(route.mergeRefs?.proofIds ?? []),
     ...(route.translationAdmission?.proofEvidenceIds ?? []),
+    ...runtimeProofEvidenceIds,
     ...proofIdsForEvidence(boundRecords)
   ]);
   const missingEvidence = uniqueStrings([
     ...(route.missingEvidence ?? []),
     ...(route.translationAdmission?.missingEvidence ?? []),
+    ...runtimeProofObligations.flatMap((record) => record.missingEvidence ?? []),
     ...(evidenceIds.length ? [] : ['route-bound-evidence']),
     ...(proofEvidenceIds.length ? [] : ['route-bound-proof-evidence'])
   ]);
@@ -50,6 +59,13 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     admissionAction: route.admissionAction,
     translationAdmissionStatus: route.translationAdmission?.status,
     translationAdmissionAction: route.translationAdmission?.action,
+    runtimeAdapterRequirementIds: uniqueStrings((route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability)),
+    runtimeProofObligationIds: uniqueStrings(runtimeProofObligations.map((record) => record.id)),
+    runtimeProofCapabilities: uniqueStrings(runtimeProofObligations.map((record) => record.capability)),
+    runtimeProofStatuses: uniqueStrings(runtimeProofObligations.map((record) => record.status)),
+    runtimeProofRequiredSignals: uniqueStrings(runtimeProofObligations.flatMap((record) => record.requiredSignals ?? [])),
+    runtimeProofProvidedSignals: uniqueStrings(runtimeProofObligations.flatMap((record) => record.providedSignals ?? [])),
+    runtimeProofMissingSignals: uniqueStrings(runtimeProofObligations.flatMap((record) => record.missingSignals ?? [])),
     evidenceIds,
     proofEvidenceIds,
     missingEvidence,
@@ -60,13 +76,19 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     conflictKeys: route.mergeRefs?.conflictKeys ?? [],
     records: {
       bound: boundSummaries,
-      rejected: rejectedSummaries
+      rejected: rejectedSummaries,
+      runtimeProof: runtimeProofRecords
     },
     summary: {
       boundEvidence: boundSummaries.length,
       rejectedEvidence: rejectedSummaries.length,
       proofEvidence: proofEvidenceIds.length,
       missingEvidence: missingEvidence.length,
+      runtimeProofObligations: runtimeProofSummary.obligations,
+      runtimeProofByStatus: runtimeProofSummary.byStatus,
+      runtimeProofByCapability: runtimeProofSummary.byCapability,
+      runtimeProofMissingSignals: runtimeProofSummary.missingSignals,
+      runtimeProofProvidedSignals: runtimeProofSummary.providedSignals,
       blockers: route.blockers?.length ?? 0,
       reviewReasons: route.review?.length ?? 0,
       byKind: countBy(boundSummaries.map((record) => record.kind)),
@@ -79,6 +101,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     semanticEquivalenceClaim: false,
     metadata: {
       routeEvidenceRequired: true,
+      runtimeProofRequired: runtimeProofObligations.length > 0,
       sourceBound: route.mergeRefs?.sources?.length ? true : false,
       note: 'Route evidence receipts bind scoped evidence to one conversion route. They are admission receipts, not semantic-equivalence proof.'
     }
@@ -151,6 +174,28 @@ function evidenceRecordSummary(record, binding) {
     proof: isProofEvidence(record),
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
+  };
+}
+
+function runtimeProofRecordSummary(record) {
+  return {
+    id: record.id,
+    capability: record.capability,
+    adapterRequirementId: record.adapterRequirementId,
+    adapterKind: record.adapterKind,
+    sourceHost: record.sourceHost,
+    targetHost: record.targetHost,
+    status: record.status ?? 'unknown',
+    action: record.action,
+    requiredSignals: record.requiredSignals ?? [],
+    providedSignals: record.providedSignals ?? [],
+    missingSignals: record.missingSignals ?? [],
+    missingEvidence: record.missingEvidence ?? [],
+    evidenceIds: record.evidenceIds ?? [],
+    runtimeEquivalenceClaim: false,
+    renderEquivalenceClaim: false,
+    semanticEquivalenceClaim: false,
+    autoMergeClaim: false
   };
 }
 

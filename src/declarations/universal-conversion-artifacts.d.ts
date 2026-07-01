@@ -23,7 +23,7 @@ import type {
   UniversalConversionRisk
 } from './universal-conversion-plan.js';
 import type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery } from './universal-conversion-artifact-query.js';
-import type { UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
+import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 
 export type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery } from './universal-conversion-artifact-query.js';
 
@@ -75,6 +75,12 @@ export interface UniversalConversionAdmissionRecord {
   readonly interlinguaLoweringDisposition?: string;
   readonly resourceTransferStatus?: string;
   readonly resourceTransferAction?: string;
+  readonly runtimeProofObligationIds: readonly string[];
+  readonly runtimeProofCapabilities: readonly UniversalRuntimeCapabilityKind[];
+  readonly runtimeProofStatuses: readonly string[];
+  readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly lifetimeConstraintStatus?: string;
   readonly lifetimeConstraintAction?: string;
   readonly controlFlowConstraintStatus?: string; readonly controlFlowConstraintAction?: string;
@@ -109,6 +115,7 @@ export interface UniversalConversionAdmissionRecord {
     readonly patchBundleId?: string;
     readonly semanticOperationIds: readonly string[];
     readonly sourceMapLinkIds: readonly string[];
+    readonly runtimeProofObligationIds: readonly string[];
     readonly evidenceIds: readonly string[];
     readonly proofIds: readonly string[];
   };
@@ -172,6 +179,9 @@ export interface UniversalConversionAdmissionRecord {
   readonly evidence: {
     readonly total: number;
     readonly proofArtifacts: number;
+    readonly runtimeProofObligations: number;
+    readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
+    readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
     readonly missing: readonly string[];
     readonly blockers: readonly string[];
     readonly review: readonly string[];
@@ -200,6 +210,10 @@ export interface UniversalConversionRouteArtifact extends UniversalConversionRou
   readonly missingEvidence: readonly string[];
   readonly runtimeAdapterRequirementIds: readonly string[];
   readonly runtimeProofObligationIds: readonly string[];
+  readonly runtimeProofCapabilities: readonly UniversalRuntimeCapabilityKind[];
+  readonly runtimeProofStatuses: readonly string[];
+  readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly blockers: readonly string[];
   readonly review: readonly string[];

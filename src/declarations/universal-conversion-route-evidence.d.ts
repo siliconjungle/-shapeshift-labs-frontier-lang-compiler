@@ -1,5 +1,6 @@
 import type { EvidenceRecord, FrontierSourceLanguage, SemanticMergeReadiness } from '@shapeshift-labs/frontier-lang-kernel';
 import type { FrontierCompileTarget } from './compile.js';
+import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 import type {
   UniversalConversionAdmissionAction,
   UniversalConversionPlan,
@@ -29,6 +30,26 @@ export interface UniversalConversionRouteEvidenceReceiptRecord {
   readonly targets: readonly string[];
   readonly proof: boolean;
   readonly reason?: UniversalConversionRouteEvidenceRejectionReason;
+  readonly autoMergeClaim: false;
+  readonly semanticEquivalenceClaim: false;
+}
+
+export interface UniversalConversionRouteRuntimeProofReceiptRecord {
+  readonly id: string;
+  readonly capability?: UniversalRuntimeCapabilityKind;
+  readonly adapterRequirementId?: string;
+  readonly adapterKind?: string;
+  readonly sourceHost?: string;
+  readonly targetHost?: string;
+  readonly status: string;
+  readonly action?: string;
+  readonly requiredSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly providedSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly missingSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly missingEvidence: readonly string[];
+  readonly evidenceIds: readonly string[];
+  readonly runtimeEquivalenceClaim: false;
+  readonly renderEquivalenceClaim: false;
   readonly autoMergeClaim: false;
   readonly semanticEquivalenceClaim: false;
 }
@@ -63,6 +84,13 @@ export interface UniversalConversionRouteEvidenceReceipt {
   readonly admissionAction: UniversalConversionAdmissionAction;
   readonly translationAdmissionStatus?: UniversalTranslationAdmissionStatus;
   readonly translationAdmissionAction?: UniversalTranslationAdmissionAction;
+  readonly runtimeAdapterRequirementIds: readonly string[];
+  readonly runtimeProofObligationIds: readonly string[];
+  readonly runtimeProofCapabilities: readonly UniversalRuntimeCapabilityKind[];
+  readonly runtimeProofStatuses: readonly string[];
+  readonly runtimeProofRequiredSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofProvidedSignals: readonly UniversalRuntimeProofSignalKind[];
+  readonly runtimeProofMissingSignals: readonly UniversalRuntimeProofSignalKind[];
   readonly evidenceIds: readonly string[];
   readonly proofEvidenceIds: readonly string[];
   readonly missingEvidence: readonly string[];
@@ -74,12 +102,18 @@ export interface UniversalConversionRouteEvidenceReceipt {
   readonly records: {
     readonly bound: readonly UniversalConversionRouteEvidenceReceiptRecord[];
     readonly rejected: readonly UniversalConversionRouteEvidenceReceiptRecord[];
+    readonly runtimeProof: readonly UniversalConversionRouteRuntimeProofReceiptRecord[];
   };
   readonly summary: {
     readonly boundEvidence: number;
     readonly rejectedEvidence: number;
     readonly proofEvidence: number;
     readonly missingEvidence: number;
+    readonly runtimeProofObligations: number;
+    readonly runtimeProofByStatus: Readonly<Record<string, number>>;
+    readonly runtimeProofByCapability: Readonly<Record<string, number>>;
+    readonly runtimeProofMissingSignals: Readonly<Record<string, number>>;
+    readonly runtimeProofProvidedSignals: Readonly<Record<string, number>>;
     readonly blockers: number;
     readonly reviewReasons: number;
     readonly byKind: Readonly<Record<string, number>>;
@@ -92,6 +126,7 @@ export interface UniversalConversionRouteEvidenceReceipt {
   readonly semanticEquivalenceClaim: false;
   readonly metadata: {
     readonly routeEvidenceRequired: true;
+    readonly runtimeProofRequired: boolean;
     readonly sourceBound: boolean;
     readonly note: string;
   };
