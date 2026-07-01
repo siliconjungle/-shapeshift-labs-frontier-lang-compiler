@@ -79,6 +79,7 @@ export interface UniversalConversionEvidenceReceiptCompactCounts {
   readonly runtimeProofObligations: number;
   readonly runtimeProofByStatus: Readonly<Record<string, number>>;
   readonly runtimeProofByCapability: Readonly<Record<string, number>>;
+  readonly runtimeProofRequiredSignals: Readonly<Record<string, number>>;
   readonly runtimeProofMissingSignals: Readonly<Record<string, number>>;
   readonly runtimeProofProvidedSignals: Readonly<Record<string, number>>;
   readonly interlinguaConstraintObligations: number;

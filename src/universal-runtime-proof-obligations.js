@@ -125,6 +125,7 @@ export function summarizeRuntimeProofObligations(obligations = []) {
     obligations: obligations.length,
     byStatus: countBy(obligations.map((obligation) => obligation.status)),
     byCapability: countBy(obligations.map((obligation) => obligation.capability)),
+    requiredSignals: countBy(obligations.flatMap((obligation) => obligation.requiredSignals ?? [])),
     missingSignals: countBy(obligations.flatMap((obligation) => obligation.missingSignals ?? [])),
     providedSignals: countBy(obligations.flatMap((obligation) => obligation.providedSignals ?? []))
   };

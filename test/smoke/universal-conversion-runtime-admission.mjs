@@ -92,6 +92,8 @@ assert.equal(canvasArtifacts.routeArtifacts[0].admissionRecord.evidence.runtimeP
 assert.equal(canvasArtifacts.summary.compactCounts.runtimeProof.byCapability.canvas, 1);
 assert.equal(canvasArtifacts.summary.compactCounts.runtimeProof.requiredSignals['bitmap-hash'], 1);
 assert.equal(canvasArtifacts.summary.compactCounts.evidenceReceipts.runtimeProofByStatus['needs-evidence'], 1);
+assert.equal(canvasArtifacts.routeArtifacts[0].evidenceReceipt.summary.runtimeProofRequiredSignals['bitmap-hash'], 1);
+assert.equal(canvasArtifacts.summary.compactCounts.evidenceReceipts.runtimeProofRequiredSignals['bitmap-hash'], 1);
 assert.equal(canvasAdapterRoute.missingEvidence.includes('runtime-adapter-proof'), true);
 assert.equal(canvasAdapterRoute.review.some((reason) => reason.includes('Runtime adapter evidence is required for canvas.')), true);
 
@@ -145,6 +147,7 @@ assert.equal(failedCanvasProof.evidenceIds.includes('failed_canvas_runtime_signa
 assert.equal(runtimeProofObligationMatches(satisfiedCanvasProof, { runtimeProofCapability: 'canvas', runtimeProofProvidedSignal: 'bitmap-hash' }), true);
 assert.equal(runtimeProofObligationMatches(satisfiedCanvasProof, { runtimeProofObligationId: ['missing-proof', satisfiedCanvasProof.id], runtimeProofCapability: ['filesystem', 'canvas'], runtimeProofStatus: ['needs-evidence', 'satisfied'], runtimeProofRequiredSignal: ['missing-signal', 'bitmap-hash'], runtimeProofProvidedSignal: ['missing-signal', 'bitmap-hash'] }), true);
 assert.equal(summarizeRuntimeProofObligations([satisfiedCanvasProof]).byCapability.canvas, 1);
+assert.equal(summarizeRuntimeProofObligations([satisfiedCanvasProof]).requiredSignals['bitmap-hash'], 1);
 
 const hostPlan = createUniversalConversionPlan({
   generatedAt: 791,

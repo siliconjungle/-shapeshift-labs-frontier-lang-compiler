@@ -56,6 +56,7 @@ routingArtifacts.index.translationDialectReadinesses satisfies readonly string[]
 routingArtifacts.index.translationDialectRecordIds satisfies readonly string[];
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeAdapterRequirementIds satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeProofMissingSignals satisfies Readonly<Record<string, number>>;
+routingArtifacts.summary.compactCounts.evidenceReceipts.runtimeProofRequiredSignals satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.dialectRecordIds satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.evidenceIds satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.requiredConstructKinds satisfies Readonly<Record<string, number>>;
@@ -98,6 +99,7 @@ routingReceipt.summary.translationAdmission.evidenceIds satisfies Readonly<Recor
 routingReceipt.summary.translationAdmission.requiredConstructKinds satisfies Readonly<Record<string, number>>;
 routingReceipt.summary.translationAdmission.representedConstructKinds satisfies Readonly<Record<string, number>>;
 routingReceipt.summary.translationAdmission.targetAdapterIds satisfies Readonly<Record<string, number>>;
+routingReceipt.summary.runtimeProofRequiredSignals satisfies Readonly<Record<string, number>>;
 routingReceipt.summary.interlinguaConstraintObligationKinds satisfies Readonly<Record<string, number>>;
 routingReceipt.summary.interlinguaConstraintObligationStatuses satisfies Readonly<Record<string, number>>;
 

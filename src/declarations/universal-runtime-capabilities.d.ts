@@ -223,6 +223,7 @@ export declare function createUniversalRuntimeProofObligationsForRoute(
 export declare function runtimeProofObligationMatches(obligation?: Partial<UniversalRuntimeProofObligation>, query?: UniversalRuntimeProofObligationQuery): boolean;
 export declare function summarizeRuntimeProofObligations(obligations?: readonly UniversalRuntimeProofObligation[]): {
   readonly obligations: number; readonly byStatus: Readonly<Record<string, number>>; readonly byCapability: Readonly<Record<string, number>>;
+  readonly requiredSignals: Readonly<Record<UniversalRuntimeProofSignalKind, number>>;
   readonly missingSignals: Readonly<Record<UniversalRuntimeProofSignalKind, number>>; readonly providedSignals: Readonly<Record<UniversalRuntimeProofSignalKind, number>>;
 };
 export declare function createUniversalRuntimeCapabilityMatrix(

@@ -186,6 +186,7 @@ function compactEvidenceReceiptCounts(receipts) {
     runtimeProofObligations: runtimeProofRecords.length,
     runtimeProofByStatus: countBy(runtimeProofRecords.map((record) => record.status)),
     runtimeProofByCapability: countBy(runtimeProofRecords.map((record) => record.capability)),
+    runtimeProofRequiredSignals: countBy(runtimeProofRecords.flatMap((record) => record.requiredSignals ?? [])),
     runtimeProofMissingSignals: countBy(runtimeProofRecords.flatMap((record) => record.missingSignals ?? [])),
     runtimeProofProvidedSignals: countBy(runtimeProofRecords.flatMap((record) => record.providedSignals ?? [])),
     interlinguaConstraintObligations: interlinguaObligationRecords.length,

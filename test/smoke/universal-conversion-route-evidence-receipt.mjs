@@ -275,11 +275,13 @@ assert.equal(runtimeReceipt.requiredRuntimeCapabilities.includes('canvas'), true
 assert.equal(runtimeReceipt.runtimeAdapterRequirementIds.includes('runtime_adapter_canvas'), true);
 assert.equal(runtimeReceipt.runtimeProofObligationIds.includes('runtime_proof_canvas'), true);
 assert.equal(runtimeReceipt.runtimeProofCapabilities.includes('canvas'), true);
+assert.equal(runtimeReceipt.runtimeProofRequiredSignals.includes('bitmap-hash'), true);
 assert.equal(runtimeReceipt.runtimeProofProvidedSignals.includes('bitmap-hash'), true);
 assert.equal(runtimeReceipt.proofEvidenceIds.includes('canvas_runtime_proof'), true);
 assert.equal(runtimeReceipt.records.rejected.some((record) => record.id === 'canvas_runtime_proof'), false);
 assert.equal(runtimeReceipt.records.runtimeProof[0].runtimeEquivalenceClaim, false);
 assert.equal(runtimeReceipt.summary.runtimeProofByStatus.satisfied, 1);
+assert.equal(runtimeReceipt.summary.runtimeProofRequiredSignals['bitmap-hash'], 1);
 
 const proofFreeRuntimeReceipt = createUniversalConversionRouteEvidenceReceipt({
   id: 'conversion_javascript_to_rust_fetch_runtime',
