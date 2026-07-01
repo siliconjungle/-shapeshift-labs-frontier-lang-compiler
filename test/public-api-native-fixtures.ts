@@ -222,9 +222,9 @@ const conversionArtifactTypes: UniversalConversionRouteArtifact | undefined = qu
 })[0];
 conversionArtifactsTypes.summary.autoMergeClaims satisfies 0;
 conversionPlanTypes.summary.compactCounts.translationAdmission.byStatus satisfies Readonly<Record<string, number>>;
-conversionPlanTypes.summary.compactCounts.interlingua.constraintObligationMissingEvidence satisfies Readonly<Record<string, number>>;
+conversionPlanTypes.summary.compactCounts.interlingua.constraintRequiredKinds satisfies Readonly<Record<string, number>>;
 conversionArtifactsTypes.summary.compactCounts.translationAdmission.byAction satisfies Readonly<Record<string, number>>;
-conversionArtifactsTypes.summary.compactCounts.semanticOperationInterlingua.operationRecords satisfies number;
+conversionArtifactsTypes.summary.compactCounts.semanticOperationInterlingua.constraintActions satisfies Readonly<Record<string, number>>;
 conversionArtifactTypes?.history.kind satisfies 'frontier.lang.semanticHistoryRecord' | undefined;
 conversionArtifactTypes?.materialization.status satisfies string | undefined;
 conversionArtifactTypes?.patchBundle.admission.autoMergeClaim satisfies false | undefined;

@@ -73,6 +73,7 @@ export interface UniversalConversionArtifactIndex {
   readonly evidenceReceiptInterlinguaRecordIds: RS; readonly evidenceReceiptInterlinguaLoweringDispositions: RS; readonly evidenceReceiptInterlinguaConstraintFamilies: RS; readonly evidenceReceiptInterlinguaConstraintStatuses: RS; readonly evidenceReceiptInterlinguaConstraintMissingKinds: RS; readonly evidenceReceiptInterlinguaConstraintMissingEvidence: RS; readonly evidenceReceiptInterlinguaConstraintSourceIds: RS; readonly evidenceReceiptInterlinguaConstraintObligationKinds: RS; readonly evidenceReceiptInterlinguaConstraintObligationStatuses: RS; readonly evidenceReceiptInterlinguaConstraintObligationEvidenceIds: RS; readonly evidenceReceiptInterlinguaConstraintObligationMissingEvidence: RS;
   readonly semanticOperationIds: RS; readonly semanticOperationKinds: RS;
   readonly semanticOperationInterlinguaRecordIds: RS; readonly semanticOperationInterlinguaLoweringDispositions: RS; readonly semanticOperationInterlinguaMissingEvidence: RS; readonly semanticOperationInterlinguaProofEvidenceIds: RS;
+  readonly semanticOperationInterlinguaConstraintActions: RS; readonly semanticOperationInterlinguaConstraintSourceIds: RS; readonly semanticOperationInterlinguaConstraintRequiredKinds: RS; readonly semanticOperationInterlinguaConstraintRepresentedKinds: RS;
   readonly semanticEditStatuses: RS;
   readonly semanticEditScriptIds: RS;
   readonly semanticEditProjectionIds: RS;
@@ -251,6 +252,7 @@ export interface UniversalConversionArtifactQuery extends UniversalRepresentatio
   readonly semanticOperationInterlinguaLoweringDisposition?: string | RS;
   readonly semanticOperationInterlinguaMissingEvidence?: string | RS;
   readonly semanticOperationInterlinguaProofEvidenceId?: string | RS;
+  readonly semanticOperationInterlinguaConstraintAction?: string | RS; readonly semanticOperationInterlinguaConstraintSourceId?: string | RS; readonly semanticOperationInterlinguaConstraintRequiredKind?: string | RS; readonly semanticOperationInterlinguaConstraintRepresentedKind?: string | RS;
   readonly semanticEditStatus?: string | RS; readonly semanticEditStatuses?: RS;
   readonly semanticEditScriptId?: string | RS; readonly semanticEditScriptIds?: RS;
   readonly semanticEditProjectionId?: string | RS;

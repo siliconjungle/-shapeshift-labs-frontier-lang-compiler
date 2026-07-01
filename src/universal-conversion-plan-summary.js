@@ -1,5 +1,7 @@
 import { countBy } from './native-import-utils.js';
 
+const interlinguaCountKeys = 'Families Statuses Actions SourceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationMissingEvidence'.split(' ');
+
 export function conversionPlanSummary(routes) {
   const compactCounts = compactRouteCounts(routes);
   const summary = {
@@ -97,13 +99,7 @@ function compactInterlinguaCounts(records) {
     missingLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'missingLayerKinds'))),
     reviewLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'reviewLayerKinds'))),
     blockedLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'blockedLayerKinds'))),
-    constraintFamilies: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'families'))),
-    constraintStatuses: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'statuses'))),
-    constraintMissingKinds: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'missingKinds'))),
-    constraintMissingEvidence: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'missingEvidence'))),
-    constraintObligationKinds: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'obligationKinds'))),
-    constraintObligationStatuses: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'obligationStatuses'))),
-    constraintObligationMissingEvidence: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'obligationMissingEvidence'))),
+    ...compactInterlinguaConstraintCounts(records),
     missingEvidence: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'missingEvidence'))),
     proofEvidenceIds: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'proofEvidenceIds')))
   };
@@ -119,6 +115,13 @@ function interlinguaQueryList(record, key) {
 
 function interlinguaLoweringList(record, key) {
   return record?.lowering?.[key] ?? record?.query?.[key] ?? [];
+}
+
+function compactInterlinguaConstraintCounts(records) {
+  return Object.fromEntries(interlinguaCountKeys.map((key) => [
+    `constraint${key}`,
+    countBy(records.flatMap((record) => interlinguaConstraintList(record, `${key[0].toLowerCase()}${key.slice(1)}`)))
+  ]));
 }
 
 function interlinguaConstraintList(record, key) {

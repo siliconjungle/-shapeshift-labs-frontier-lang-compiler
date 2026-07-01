@@ -229,13 +229,7 @@ function compactInterlinguaCounts(records) {
     missingLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'missingLayerKinds'))),
     reviewLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'reviewLayerKinds'))),
     blockedLayerKinds: countBy(records.flatMap((record) => interlinguaQueryList(record, 'blockedLayerKinds'))),
-    constraintFamilies: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'families'))),
-    constraintStatuses: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'statuses'))),
-    constraintMissingKinds: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'missingKinds'))),
-    constraintMissingEvidence: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'missingEvidence'))),
-    constraintObligationKinds: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'obligationKinds'))),
-    constraintObligationStatuses: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'obligationStatuses'))),
-    constraintObligationMissingEvidence: countBy(records.flatMap((record) => interlinguaConstraintList(record, 'obligationMissingEvidence'))),
+    ...compactInterlinguaConstraintCounts(records),
     missingEvidence: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'missingEvidence'))),
     proofEvidenceIds: countBy(records.flatMap((record) => interlinguaLoweringList(record, 'proofEvidenceIds')))
   };
@@ -262,15 +256,24 @@ function compactOperationInterlinguaCounts(records) {
     missingLayerKinds: countBy(records.flatMap((record) => record.missingLayerKinds ?? [])),
     reviewLayerKinds: countBy(records.flatMap((record) => record.reviewLayerKinds ?? [])),
     blockedLayerKinds: countBy(records.flatMap((record) => record.blockedLayerKinds ?? [])),
-    constraintFamilies: countBy(records.flatMap((record) => record.constraintFamilies ?? [])),
-    constraintStatuses: countBy(records.flatMap((record) => record.constraintStatuses ?? [])),
-    constraintMissingKinds: countBy(records.flatMap((record) => record.constraintMissingKinds ?? [])),
-    constraintMissingEvidence: countBy(records.flatMap((record) => record.constraintMissingEvidence ?? [])),
-    constraintObligationKinds: countBy(records.flatMap((record) => record.constraintObligationKinds ?? [])),
-    constraintObligationStatuses: countBy(records.flatMap((record) => record.constraintObligationStatuses ?? [])),
+    ...compactOperationInterlinguaConstraintCounts(records),
     missingEvidence: countBy(records.flatMap((record) => record.missingEvidence ?? [])),
     proofEvidenceIds: countBy(records.flatMap((record) => record.proofEvidenceIds ?? []))
   };
+}
+
+function compactInterlinguaConstraintCounts(records) {
+  return Object.fromEntries(aiKeys.map((key) => [
+    `constraint${key}`,
+    countBy(records.flatMap((record) => interlinguaConstraintList(record, lowerFirst(key))))
+  ]));
+}
+
+function compactOperationInterlinguaConstraintCounts(records) {
+  return Object.fromEntries(aiKeys.map((key) => [
+    `constraint${key}`,
+    countBy(records.flatMap((record) => record[`constraint${key}`] ?? []))
+  ]));
 }
 
 function interlinguaLoweringDisposition(record) {
@@ -288,6 +291,10 @@ function interlinguaLoweringList(record, key) {
 function interlinguaConstraintList(record, key) {
   const queryKey = `constraint${key[0].toUpperCase()}${key.slice(1)}`;
   return record?.constraints?.[key] ?? record?.query?.[queryKey] ?? [];
+}
+
+function lowerFirst(value) {
+  return `${value[0].toLowerCase()}${value.slice(1)}`;
 }
 
 function layerSummaryKey(queryKey) {

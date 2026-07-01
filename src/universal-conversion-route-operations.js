@@ -83,6 +83,17 @@ function routeOperationInterlinguaMetadata(route) {
     missingEvidence: lowering.missingEvidence ?? query.missingEvidence ?? [],
     lossIds: lowering.lossIds ?? [],
     proofEvidenceIds: lowering.proofEvidenceIds ?? query.proofEvidenceIds ?? [],
+    constraintFamilies: query.constraintFamilies ?? [],
+    constraintStatuses: query.constraintStatuses ?? [],
+    constraintActions: query.constraintActions ?? [],
+    constraintSourceIds: query.constraintSourceIds ?? [],
+    constraintRequiredKinds: query.constraintRequiredKinds ?? [],
+    constraintRepresentedKinds: query.constraintRepresentedKinds ?? [],
+    constraintMissingKinds: query.constraintMissingKinds ?? [],
+    constraintMissingEvidence: query.constraintMissingEvidence ?? [],
+    constraintObligationKinds: query.constraintObligationKinds ?? [],
+    constraintObligationStatuses: query.constraintObligationStatuses ?? [],
+    constraintObligationMissingEvidence: query.constraintObligationMissingEvidence ?? [],
     autoMergeClaim: false,
     semanticEquivalenceClaim: false
   };

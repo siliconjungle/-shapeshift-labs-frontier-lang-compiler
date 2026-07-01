@@ -1108,6 +1108,7 @@ const loweringGaps = queryUniversalConversionPlan(conversionPlan, {
 });
 console.log(loweringGaps.routes.map((route) => route.interlingua.id));
 console.log(conversionPlan.summary.compactCounts.interlingua.constraintObligationMissingEvidence); // plan-level interlingua proof gaps
+console.log(conversionPlan.summary.compactCounts.interlingua.constraintRequiredKinds); // plan-level required edge semantics
 
 const conversionWorklist = createUniversalConversionWorklist(conversionPlan, {
   target: 'rust'
@@ -1139,6 +1140,7 @@ console.log(conversionArtifacts.index.semanticOperationInterlinguaLoweringDispos
 console.log(conversionArtifacts.index.evidenceReceiptRejectedReasons); // why supplied evidence did not bind to a route
 console.log(conversionArtifacts.index.interlinguaLoweringDispositions); // exact-source/target-adapter/lossy-review/etc.
 console.log(conversionArtifacts.summary.compactCounts.interlingua.byLoweringDisposition); // route lowering counts
+console.log(conversionArtifacts.summary.compactCounts.interlingua.constraintRepresentedKinds); // represented edge semantics
 console.log(conversionArtifacts.summary.compactCounts.admissionRecordInterlingua.constraintObligationMissingEvidence); // admission proof gaps
 console.log(conversionArtifacts.summary.compactCounts.semanticOperationInterlingua.byLoweringDisposition); // operation lowering counts
 console.log(conversionArtifacts.routeArtifacts[0].semanticOperations.summary.conflictKeys);

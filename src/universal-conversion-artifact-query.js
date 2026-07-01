@@ -4,6 +4,7 @@ import { artifactConstraintIndex, artifactConstraintsMatch } from './universal-c
 import { interlinguaRecordMatches } from './universal-interlingua-record.js';
 const u = uniqueStrings;
 const ai = 'admissionRecordInterlingua';
+const soi = 'semanticOperationInterlingua';
 const aiFields = [
   ['ConstraintFamilies', 'ConstraintFamily', 'interlinguaConstraintFamilies'],
   ['ConstraintStatuses', 'ConstraintStatus', 'interlinguaConstraintStatuses'],
@@ -22,6 +23,7 @@ const iFields = [
   ['MissingEvidence', 'missingEvidence'], ['ProofEvidenceIds', 'proofEvidenceIds'], ['ConstraintFamilies', 'constraintFamilies'], ['ConstraintStatuses', 'constraintStatuses'], ['ConstraintActions', 'constraintActions'], ['ConstraintRequiredKinds', 'constraintRequiredKinds'], ['ConstraintRepresentedKinds', 'constraintRepresentedKinds'],
   ['ConstraintMissingKinds', 'constraintMissingKinds'], ['ConstraintMissingEvidence', 'constraintMissingEvidence'], ['ConstraintSourceIds', 'constraintSourceIds'], ['ConstraintObligationKinds', 'constraintObligationKinds'], ['ConstraintObligationStatuses', 'constraintObligationStatuses'], ['ConstraintObligationMissingEvidence', 'constraintObligationMissingEvidence']
 ];
+const soiFields = [['RecordId', 'RecordIds', 'id'], ['LoweringDisposition', 'LoweringDispositions', 'loweringDisposition'], ['MissingEvidence', 'MissingEvidence', 'missingEvidence'], ['ProofEvidenceId', 'ProofEvidenceIds', 'proofEvidenceIds'], ['ConstraintAction', 'ConstraintActions', 'constraintActions'], ['ConstraintSourceId', 'ConstraintSourceIds', 'constraintSourceIds'], ['ConstraintRequiredKind', 'ConstraintRequiredKinds', 'constraintRequiredKinds'], ['ConstraintRepresentedKind', 'ConstraintRepresentedKinds', 'constraintRepresentedKinds']];
 export function queryUniversalConversionArtifacts(records, query = {}) {
   return artifactRecords(records)
     .filter((record) => matchesArtifact(record, query))
@@ -87,10 +89,7 @@ export function artifactIndex(a) {
     evidenceReceiptInterlinguaConstraintObligationMissingEvidence: u([...iRs.flatMap((r) => r.interlinguaConstraintObligationMissingEvidence ?? []), ...iRO.flatMap((r) => r.missingEvidence ?? [])]),
     semanticOperationIds: u(opList.map((o) => o.id)),
     semanticOperationKinds: u(opList.map((o) => o.operationKind)),
-    semanticOperationInterlinguaRecordIds: u(opList.map((o) => o.metadata?.interlingua?.id)),
-    semanticOperationInterlinguaLoweringDispositions: u(opList.map((o) => o.metadata?.interlingua?.loweringDisposition)),
-    semanticOperationInterlinguaMissingEvidence: u(opList.flatMap((o) => o.metadata?.interlingua?.missingEvidence ?? [])),
-    semanticOperationInterlinguaProofEvidenceIds: u(opList.flatMap((o) => o.metadata?.interlingua?.proofEvidenceIds ?? [])),
+    ...soiIndex(opList),
     semanticEditStatuses: eFlat(edits, 'semanticEditStatuses'),
     semanticEditScriptIds: eFlat(edits, 'semanticEditScriptIds'),
     semanticEditProjectionIds: eFlat(edits, 'semanticEditProjectionIds'),
@@ -203,10 +202,7 @@ function matchesArtifact(record, query) {
     && match(query.evidenceReceiptInterlinguaConstraintObligationMissingEvidence, [...(receipt.interlinguaConstraintObligationMissingEvidence ?? []), ...rObs.flatMap((e) => e.missingEvidence ?? [])])
     && match(query.semanticOperationId, operations.map((o) => o.id))
     && match(query.semanticOperationKind, operations.map((o) => o.operationKind))
-    && match(query.semanticOperationInterlinguaRecordId, operations.map((o) => o.metadata?.interlingua?.id))
-    && match(query.semanticOperationInterlinguaLoweringDisposition, operations.map((o) => o.metadata?.interlingua?.loweringDisposition))
-    && match(query.semanticOperationInterlinguaMissingEvidence, operations.flatMap((o) => o.metadata?.interlingua?.missingEvidence ?? []))
-    && match(query.semanticOperationInterlinguaProofEvidenceId, operations.flatMap((o) => o.metadata?.interlingua?.proofEvidenceIds ?? []))
+    && soiMatches(operations, query)
     && match(query.semanticEditStatus ?? query.semanticEditStatuses, editIndex.semanticEditStatuses)
     && match(query.semanticEditScriptId ?? query.semanticEditScriptIds, editIndex.semanticEditScriptIds)
     && match(query.semanticEditProjectionId ?? query.semanticEditProjectionIds, editIndex.semanticEditProjectionIds)
@@ -284,6 +280,14 @@ function admissionRecordInterlinguaMatches(r, q) {
   return match(q[`${ai}RecordId`], [r.interlinguaRecordId])
     && match(q[`${ai}LoweringDisposition`], [r.interlinguaLoweringDisposition])
     && aiFields.every(([, queryKey, recordKey]) => match(q[`${ai}${queryKey}`], r[recordKey]));
+}
+function soiIndex(operations) {
+  const records = operations.map((o) => o.metadata?.interlingua ?? {});
+  return Object.fromEntries(soiFields.map(([, indexKey, recordKey]) => [`${soi}${indexKey}`, u(records.flatMap((r) => r[recordKey] ?? []))]));
+}
+function soiMatches(operations, q) {
+  const records = operations.map((o) => o.metadata?.interlingua ?? {});
+  return soiFields.every(([queryKey,, recordKey]) => match(q[`${soi}${queryKey}`], records.flatMap((r) => r[recordKey] ?? [])));
 }
 function match(f, values) {
   const filters = Array.isArray(f) ? f : f === undefined ? [] : [f];

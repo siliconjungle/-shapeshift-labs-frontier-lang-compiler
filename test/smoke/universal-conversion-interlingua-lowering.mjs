@@ -116,7 +116,13 @@ const borrowAwaitObligation = constraintRoute.interlingua.constraints.obligation
 assert.equal(borrowAwaitObligation.status, 'missing');
 assert.equal(borrowAwaitObligation.family, 'borrow-scope');
 assert.equal(borrowAwaitObligation.missingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
+const constraintAction = constraintRoute.interlingua.query.constraintActions[0];
+const constraintSourceId = constraintRoute.interlingua.query.constraintSourceIds[0];
+const constraintRequiredKind = constraintRoute.interlingua.query.constraintRequiredKinds[0];
+const constraintRepresentedKind = constraintRoute.interlingua.query.constraintRepresentedKinds[0];
+const constraintEdges = [['constraintActions', constraintAction], ['constraintSourceIds', constraintSourceId], ['constraintRequiredKinds', constraintRequiredKind], ['constraintRepresentedKinds', constraintRepresentedKind]];
 assert.equal(constraintPlan.summary.compactCounts.interlingua.constraintFamilies['borrow-scope'], 1);
+for (const [key, value] of constraintEdges) assert.equal(constraintPlan.summary.compactCounts.interlingua[key][value], 1);
 assert.equal(constraintPlan.summary.compactCounts.interlingua.constraintMissingKinds['borrow-across-await'], 1);
 assert.equal(constraintPlan.summary.compactCounts.interlingua.constraintObligationStatuses.missing, 1);
 assert.equal(constraintPlan.summary.compactCounts.interlingua.constraintObligationMissingEvidence['translation-borrow-scope:borrow-across-await'], 1);
@@ -126,13 +132,12 @@ assert.equal(constraintArtifacts.index.interlinguaConstraintMissingKinds.include
 assert.equal(constraintArtifacts.index.interlinguaConstraintObligationKinds.includes('borrow-across-await'), true);
 assert.equal(constraintArtifacts.index.interlinguaConstraintObligationStatuses.includes('missing'), true);
 assert.equal(constraintArtifacts.index.interlinguaConstraintObligationMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
-assert.equal(constraintRoute.interlingua.query.constraintActions.every((action) => constraintArtifacts.index.interlinguaConstraintActions.includes(action)), true);
-assert.equal(constraintRoute.interlingua.query.constraintRequiredKinds.every((kind) => constraintArtifacts.index.interlinguaConstraintRequiredKinds.includes(kind)), true);
-assert.equal(constraintRoute.interlingua.query.constraintRepresentedKinds.every((kind) => constraintArtifacts.index.interlinguaConstraintRepresentedKinds.includes(kind)), true);
+for (const [sourceKey, indexKey] of [['constraintActions', 'interlinguaConstraintActions'], ['constraintSourceIds', 'interlinguaConstraintSourceIds'], ['constraintRequiredKinds', 'interlinguaConstraintRequiredKinds'], ['constraintRepresentedKinds', 'interlinguaConstraintRepresentedKinds']]) assert.equal(constraintRoute.interlingua.query[sourceKey].every((value) => constraintArtifacts.index[indexKey].includes(value)), true);
 assert.equal(constraintArtifacts.index.admissionRecordInterlinguaConstraintFamilies.includes('borrow-scope'), true);
 assert.equal(constraintArtifacts.index.admissionRecordInterlinguaConstraintObligationKinds.includes('borrow-across-await'), true);
 assert.equal(constraintArtifacts.index.admissionRecordInterlinguaConstraintObligationMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintFamilies['borrow-scope'], 1);
+for (const [key, value] of constraintEdges) assert.equal(constraintArtifacts.summary.compactCounts.interlingua[key][value], 1);
 assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintObligationKinds['borrow-across-await'], 1);
 assert.equal(constraintArtifacts.summary.compactCounts.interlingua.constraintObligationMissingEvidence['translation-borrow-scope:borrow-across-await'], 1);
 assert.equal(constraintArtifacts.summary.compactCounts.admissionRecordInterlingua.records, 1);
@@ -144,6 +149,10 @@ assert.equal(constraintArtifacts.admissionRecords[0].interlinguaConstraintObliga
 assert.equal(constraintArtifacts.admissionRecords[0].interlinguaConstraintObligationStatuses.includes('missing'), true);
 assert.equal(constraintArtifacts.admissionRecords[0].interlinguaConstraintObligationMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
 assert.equal(constraintArtifacts.admissionRecords[0].interlingua.constraintMissingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
+const constraintOperationInterlingua = constraintArtifacts.routeArtifacts[0].semanticOperations.operations[0].metadata.interlingua;
+assert.equal(constraintOperationInterlingua.constraintSourceIds.includes(constraintSourceId), true);
+assert.equal(constraintArtifacts.index.semanticOperationInterlinguaConstraintSourceIds.includes(constraintSourceId), true);
+for (const [key, value] of constraintEdges) assert.equal(constraintArtifacts.summary.compactCounts.semanticOperationInterlingua[key][value], 1);
 assert.equal(queryUniversalConversionArtifacts(constraintArtifacts, {
   interlinguaConstraintFamily: 'borrow-scope',
   interlinguaConstraintMissingKind: 'borrow-across-await',
@@ -155,6 +164,7 @@ assert.equal(queryUniversalConversionArtifacts(constraintArtifacts, {
   admissionRecordInterlinguaConstraintObligationMissingEvidence: 'translation-borrow-scope:borrow-across-await',
   interlinguaConstraintObligationMissingEvidence: 'translation-borrow-scope:borrow-across-await'
 })[0].routeId, constraintRoute.id);
+assert.equal(queryUniversalConversionArtifacts(constraintArtifacts, { semanticOperationInterlinguaConstraintAction: constraintAction, semanticOperationInterlinguaConstraintSourceId: constraintSourceId, semanticOperationInterlinguaConstraintRequiredKind: constraintRequiredKind, semanticOperationInterlinguaConstraintRepresentedKind: constraintRepresentedKind })[0].routeId, constraintRoute.id);
 assert.equal(queryUniversalConversionArtifacts(constraintArtifacts, {
   admissionRecordInterlinguaConstraintFamily: 'not-a-family'
 }).length, 0);
