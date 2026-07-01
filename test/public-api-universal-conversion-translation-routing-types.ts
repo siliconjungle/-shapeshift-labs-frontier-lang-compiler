@@ -18,7 +18,7 @@ routingRoute?.translationAdmission.runtimeProofObligationIds satisfies readonly 
 routingRoute?.translationAdmission.runtimeProofMissingSignals satisfies readonly string[] | undefined;
 routingRoute?.translationAdmission.dialectRecordIds satisfies readonly string[] | undefined;
 
-const routingArtifacts: UniversalConversionArtifacts = createUniversalConversionArtifacts(routingPlan);
+const routingArtifacts: UniversalConversionArtifacts = createUniversalConversionArtifacts(routingPlan, { translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
 queryUniversalConversionArtifacts(routingArtifacts, {
   translationRuntimeReadiness: 'ready',
   translationRuntimeProofMissingSignal: 'network-trace-hash',

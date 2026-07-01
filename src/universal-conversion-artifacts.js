@@ -1,7 +1,7 @@
-import { idFragment, uniqueStrings } from './native-import-utils.js';
+import { idFragment, normalizeStringList, uniqueStrings } from './native-import-utils.js';
 import { universalConversionArtifactSummary } from './universal-conversion-artifact-summary.js';
 import { createUniversalConversionPlan } from './universal-conversion-plan.js';
-import { artifactIndex } from './universal-conversion-artifact-query.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js'; import { artifactSemanticEditIndex as esi } from './universal-conversion-artifact-semantic-edit.js';
+import { artifactIndex } from './universal-conversion-artifact-query.js'; import { routeRuntimeDenominators } from './universal-conversion-artifact-runtime-routes.js'; import { artifactSemanticEditIndex as esi } from './universal-conversion-artifact-semantic-edit.js'; import{translationAdmissionDenominatorMatches as tadm,translationAdmissionDenominatorsForRoute as tadfr}from './universal-conversion-translation-admission-denominators.js';
 import { createUniversalConversionAdmissionRecord } from './universal-conversion-admission-record.js';
 import { createUniversalConversionRouteEvidenceReceipt } from './universal-conversion-route-evidence-receipt.js';
 import {
@@ -215,7 +215,7 @@ function selectRoutes(routes, options) {
     if (options.target && route.target !== options.target) return false;
     if (options.mode && route.mode !== options.mode) return false;
     if (options.readiness && route.readiness !== options.readiness) return false;
-    if (options.admissionAction && route.admissionAction !== options.admissionAction) return false;
+    if (options.admissionAction && route.admissionAction !== options.admissionAction) return false; if (!tadm(tadfr(route), options, (f,v)=>{const a=normalizeStringList(f);return!a.length||a.some((x)=>normalizeStringList(v).includes(x));})) return false;
     return true;
   });
   return Number.isFinite(options.maxRoutes) ? selected.slice(0, Math.max(0, Number(options.maxRoutes))) : selected;
