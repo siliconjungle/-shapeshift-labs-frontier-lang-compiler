@@ -54,6 +54,7 @@ export interface UniversalConversionTranslationAdmissionCompactCounts {
   readonly byStatus: Readonly<Record<string, number>>;
   readonly byAction: Readonly<Record<string, number>>;
   readonly missingEvidence: Readonly<Record<string, number>>;
+  readonly evidenceIds: Readonly<Record<string, number>>;
   readonly proofEvidenceIds: Readonly<Record<string, number>>;
   readonly runtimeReadiness: Readonly<Record<string, number>>;
   readonly runtimeAdapterRequirementIds: Readonly<Record<string, number>>;
@@ -61,6 +62,9 @@ export interface UniversalConversionTranslationAdmissionCompactCounts {
   readonly runtimeProofMissingSignals: Readonly<Record<string, number>>;
   readonly dialectReadiness: Readonly<Record<string, number>>;
   readonly dialectRecordIds: Readonly<Record<string, number>>;
+  readonly requiredConstructKinds: Readonly<Record<string, number>>;
+  readonly representedConstructKinds: Readonly<Record<string, number>>;
+  readonly targetAdapterIds: Readonly<Record<string, number>>;
 }
 
 export interface UniversalConversionEvidenceReceiptCompactCounts {

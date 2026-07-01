@@ -57,6 +57,10 @@ routingArtifacts.index.translationDialectRecordIds satisfies readonly string[];
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeAdapterRequirementIds satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeProofMissingSignals satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.dialectRecordIds satisfies Readonly<Record<string, number>>;
+routingArtifacts.summary.compactCounts.translationAdmission.evidenceIds satisfies Readonly<Record<string, number>>;
+routingArtifacts.summary.compactCounts.translationAdmission.requiredConstructKinds satisfies Readonly<Record<string, number>>;
+routingArtifacts.summary.compactCounts.translationAdmission.representedConstructKinds satisfies Readonly<Record<string, number>>;
+routingArtifacts.summary.compactCounts.translationAdmission.targetAdapterIds satisfies Readonly<Record<string, number>>;
 routingArtifacts.admissionRecords[0]?.translationRuntimeProofMissingSignals satisfies readonly string[] | undefined;
 routingArtifacts.evidenceReceipts[0]?.translationDialectRecordIds satisfies readonly string[] | undefined;
 
@@ -90,6 +94,10 @@ routingReceipt.translationRuntimeProofMissingSignals satisfies readonly string[]
 routingReceipt.translationDialectReadinesses satisfies readonly string[];
 routingReceipt.translationDialectRecordIds satisfies readonly string[];
 routingReceipt.summary.translationAdmission.runtimeProofMissingSignals satisfies Readonly<Record<string, number>>;
+routingReceipt.summary.translationAdmission.evidenceIds satisfies Readonly<Record<string, number>>;
+routingReceipt.summary.translationAdmission.requiredConstructKinds satisfies Readonly<Record<string, number>>;
+routingReceipt.summary.translationAdmission.representedConstructKinds satisfies Readonly<Record<string, number>>;
+routingReceipt.summary.translationAdmission.targetAdapterIds satisfies Readonly<Record<string, number>>;
 
 const routingWorklist: UniversalConversionWorklist = createUniversalConversionWorklist(routingPlan, { sourceLanguage: ['javascript'], target: ['rust'], translationAdmissionStatus: ['needs-evidence'], translationAdmissionAction: ['collect-translation-evidence'], missingTranslationEvidence: ['translation-proof-or-replay'], translationEvidenceId: ['evidence_admittable_translation_proof'], translationProofEvidenceId: ['evidence_admittable_translation_proof'], requiredTranslationConstructKind: ['target-adapter'], representedTranslationConstructKind: ['target-adapter'], targetAdapterId: ['fixture-js-rust'], translationRuntimeReadiness: 'ready', translationRuntimeAdapterRequirementId: 'runtime_adapter', translationRuntimeProofObligationId: 'runtime_proof', translationRuntimeProofMissingSignal: 'network-trace-hash', translationDialectReadiness: 'ready', translationDialectRecordId: 'dialect_record' });
 const routingWorklistQuery = queryUniversalConversionWorklist(routingWorklist, {
