@@ -109,6 +109,12 @@ export interface FrontierCompileOptions {
   readonly emitOnError?: boolean;
 }
 
+export interface FrontierDeclaredTargetCompileOptions extends FrontierCompileOptions {
+  readonly targetNodeIds?: readonly string[] | string;
+  readonly targetNames?: readonly string[] | string;
+  readonly targetLanguages?: readonly (FrontierCompileTarget | 'ts' | 'js' | 'rs' | 'py' | 'h' | string)[] | FrontierCompileTarget | 'ts' | 'js' | 'rs' | 'py' | 'h' | string;
+}
+
 export interface FrontierCompileResult {
   readonly ok: boolean;
   readonly target: FrontierCompileTarget;
@@ -119,6 +125,41 @@ export interface FrontierCompileResult {
   readonly ast?: FrontierTargetAst;
   readonly output: string;
   readonly sourceMap?: SourceMapRecord;
+}
+
+export interface FrontierDeclaredTargetArtifact {
+  readonly kind: 'frontier.lang.declaredTargetArtifact';
+  readonly version: 1;
+  readonly targetNodeId: string;
+  readonly targetName: string;
+  readonly target?: FrontierCompileTarget;
+  readonly declaredTarget?: string;
+  readonly packageName?: string;
+  readonly moduleFormat?: string;
+  readonly targetPath?: string;
+  readonly ok: boolean;
+  readonly hash: string;
+  readonly diagnostics: readonly Diagnostic[];
+  readonly ast?: FrontierTargetAst;
+  readonly output: string;
+  readonly sourceMap?: SourceMapRecord;
+  readonly error?: string;
+}
+
+export interface FrontierDeclaredTargetCompilationResult {
+  readonly kind: 'frontier.lang.declaredTargetCompilation';
+  readonly version: 1;
+  readonly ok: boolean;
+  readonly hash: string;
+  readonly document: FrontierLangDocument;
+  readonly diagnostics: readonly Diagnostic[];
+  readonly sourcePath?: string;
+  readonly artifacts: readonly FrontierDeclaredTargetArtifact[];
+  readonly summary: {
+    readonly targets: number;
+    readonly emitted: number;
+    readonly failed: number;
+  };
 }
 
 export interface CapabilityResolution {

@@ -52,7 +52,7 @@ type ExpectedPublicRuntimeExport =
   | 'UniversalInterlinguaConstraintEdgeKinds' | 'UniversalInterlinguaLayerKinds' | 'UniversalInterlinguaLoweringDispositions' | 'UniversalLanguageCoverageReadinessStatuses' | 'UniversalLanguageCoverageStatuses' | 'UniversalLanguageCoverageSurfaceIds'
   | 'UniversalRepresentationConstructKinds' | 'UniversalOwnershipConstraintStatuses' | 'UniversalResourceTransferStatuses' | 'UniversalRuntimeCapabilityKinds'
   | 'UniversalRuntimeHostProfiles' | 'UniversalRuntimeProofSignalKinds'
-  | 'ExternalSemanticIndexFormats' | 'attachUniversalDialectRegistry' | 'classifyNativeImportReadiness' | 'classifyNativeImportRoundtripReadiness' | 'compileNativeSource' | 'compileFrontierDocument' | 'compileFrontierSource' | 'compactSemanticSidecarExample'
+  | 'ExternalSemanticIndexFormats' | 'attachUniversalDialectRegistry' | 'classifyNativeImportReadiness' | 'classifyNativeImportRoundtripReadiness' | 'compileNativeSource'|'compileFrontierDocument'|'compileFrontierDeclaredTargets'|'compileFrontierSource'|'compileFrontierSourceDeclaredTargets'|'compactSemanticSidecarExample'
   | 'createBabelNativeImporterAdapter'
   | 'createBidirectionalTargetChangeRecord'
   | 'createEstreeNativeImporterAdapter'

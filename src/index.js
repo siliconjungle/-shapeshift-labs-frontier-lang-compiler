@@ -1,7 +1,9 @@
 export { classifyNativeImportReadiness } from './internal/index-impl/classifyNativeImportReadiness.js';
 export { classifyNativeImportRoundtripReadiness } from './internal/index-impl/classifyNativeImportRoundtripReadiness.js';
 export { compileFrontierDocument } from './internal/index-impl/compileFrontierDocument.js';
+export { compileFrontierDeclaredTargets } from './internal/index-impl/compileFrontierDeclaredTargets.js';
 export { compileFrontierSource } from './internal/index-impl/compileFrontierSource.js';
+export { compileFrontierSourceDeclaredTargets } from './internal/index-impl/compileFrontierSourceDeclaredTargets.js';
 export { compileNativeSource } from './internal/index-impl/compileNativeSource.js';
 export { createBabelNativeImporterAdapter } from './internal/index-impl/createBabelNativeImporterAdapter.js';
 export { createBidirectionalTargetChangeRecord } from './internal/index-impl/createBidirectionalTargetChangeRecord.js';

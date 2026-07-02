@@ -93,6 +93,13 @@ target typescript @id("target_ts") {
   moduleFormat esm
 }
 
+target rust @id("target_rust") {
+  language rust
+  package example_todo
+  emitPath src/generated/todo.rs
+  moduleFormat crate
+}
+
 nativeSource TodoTypescript @id("native_todo_ts") {
   language typescript
   parser typescript

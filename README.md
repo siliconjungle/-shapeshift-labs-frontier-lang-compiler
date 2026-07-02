@@ -29,6 +29,23 @@ const result = compileFrontierSource(source, { target: 'typescript' });
 if (result.ok) console.log(result.output);
 ```
 
+Compile the target blocks declared inside an authored `.frontier` file when the file itself should name its outputs:
+
+```js
+import { compileFrontierSourceDeclaredTargets } from '@shapeshift-labs/frontier-lang-compiler';
+
+const result = compileFrontierSourceDeclaredTargets(source, {
+  fileName: 'todo.frontier',
+  sourceMap: true
+});
+
+for (const artifact of result.artifacts) {
+  console.log(artifact.target, artifact.targetPath, artifact.output);
+}
+```
+
+Declared-target compilation proves that target declarations were found and matching artifacts were emitted. It is compile evidence for coordinators, not a semantic-equivalence proof for the generated target code.
+
 Build source-bound JSX/SVG/package-manifest evidence through the same facade when a coordinator needs merge records without taking a dependency on the project-level admission engine:
 
 ```js
