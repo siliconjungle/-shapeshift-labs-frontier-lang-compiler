@@ -103,6 +103,7 @@ const publishedPlatformPackages = [
 const plannedPlatformPackages = [
   { packageName: '@shapeshift-labs/frontier-lang-lisp', language: 'lisp', queryLanguage: 'scheme', parserFormat: 'tree-sitter', semanticFormat: 'lsp', supportedLanguage: 'scheme', caveat: 'macro' },
   { packageName: '@shapeshift-labs/frontier-lang-haskell', language: 'haskell', parserFormat: 'ghc-api', semanticFormat: 'lsp', caveat: 'template haskell' },
+  { packageName: '@shapeshift-labs/frontier-lang-unison', language: 'unison', parserFormat: 'unison-parser', semanticFormat: 'lsp', caveat: 'content-addressed' },
   { packageName: '@shapeshift-labs/frontier-lang-erlang', language: 'erlang', parserFormat: 'erl-parse', semanticFormat: 'lsp', caveat: 'parse transforms' },
   { packageName: '@shapeshift-labs/frontier-lang-elixir', language: 'elixir', parserFormat: 'elixir-quoted', semanticFormat: 'lsp', caveat: 'macro expansion' },
   { packageName: '@shapeshift-labs/frontier-lang-ruby', language: 'ruby', parserFormat: 'prism', semanticFormat: 'lsp', caveat: 'metaprogramming' },
@@ -115,6 +116,13 @@ const plannedPlatformPackages = [
   { packageName: '@shapeshift-labs/frontier-lang-scala', language: 'scala', parserFormat: 'scalameta', semanticFormat: 'semanticdb', caveat: 'semanticdb' },
   { packageName: '@shapeshift-labs/frontier-lang-dart', language: 'dart', parserFormat: 'dart-analyzer', semanticFormat: 'lsp', caveat: 'null-safety' },
   { packageName: '@shapeshift-labs/frontier-lang-sql', language: 'sql', queryLanguage: 'postgres', parserFormat: 'sqlparser', semanticFormat: 'lsp', supportedLanguage: 'postgres', caveat: 'dialect selection' },
+  { packageName: '@shapeshift-labs/frontier-lang-graphql', language: 'graphql', parserFormat: 'graphql-js', semanticFormat: 'graphql-schema', caveat: 'schema' },
+  { packageName: '@shapeshift-labs/frontier-lang-cypher', language: 'cypher', parserFormat: 'cypher-parser', semanticFormat: 'graph-schema', caveat: 'graph schema' },
+  { packageName: '@shapeshift-labs/frontier-lang-sparql', language: 'sparql', parserFormat: 'sparqljs', semanticFormat: 'rdf-schema', caveat: 'rdf dataset' },
+  { packageName: '@shapeshift-labs/frontier-lang-datalog', language: 'datalog', parserFormat: 'souffle', semanticFormat: 'logic-schema', caveat: 'fixed-point' },
+  { packageName: '@shapeshift-labs/frontier-lang-jsonpath', language: 'jsonpath', parserFormat: 'jsonpath-parser', semanticFormat: 'json-schema', caveat: 'dialect selection' },
+  { packageName: '@shapeshift-labs/frontier-lang-xpath', language: 'xpath', parserFormat: 'xpath-parser', semanticFormat: 'xml-schema', caveat: 'namespaces' },
+  { packageName: '@shapeshift-labs/frontier-lang-promql', language: 'promql', parserFormat: 'promql-parser', semanticFormat: 'metric-catalog', caveat: 'metric catalogs' },
   { packageName: '@shapeshift-labs/frontier-lang-shader', language: 'shader', queryLanguage: 'glsl', parserFormat: 'tree-sitter', semanticFormat: 'spirv-reflect', supportedLanguage: 'glsl', caveat: 'reflection data' }
 ];
 assert.equal(LanguageAdapterPackageContracts.length >= requiredStaticPackages.length + 6, true);

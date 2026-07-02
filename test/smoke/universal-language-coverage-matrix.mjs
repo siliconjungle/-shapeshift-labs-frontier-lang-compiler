@@ -22,7 +22,71 @@ assert.equal(matrix.summary.missingSurfaceCells > 0, true);
 assert.equal(matrix.summary.remainingWorkItems > 0, true);
 
 const ids = new Set(matrix.languages.map((row) => row.id));
-for (const id of ['javascript', 'typescript', 'html', 'css', 'jsx', 'tsx', 'svg', 'css-modules', 'package-json', 'canvas']) {
+for (const id of [
+  'javascript',
+  'typescript',
+  'html',
+  'css',
+  'jsx',
+  'tsx',
+  'svg',
+  'css-modules',
+  'package-json',
+  'canvas',
+  'unison',
+  'graphql',
+  'cypher',
+  'sparql',
+  'datalog',
+  'jsonpath',
+  'xpath',
+  'promql',
+  'dhall',
+  'cue',
+  'nix',
+  'nickel',
+  'roc',
+  'koka',
+  'elm',
+  'purescript',
+  'gleam',
+  'fsharp',
+  'lean',
+  'coq',
+  'agda',
+  'idris',
+  'prolog',
+  'mercury',
+  'smalltalk',
+  'forth',
+  'factor',
+  'apl',
+  'j',
+  'q',
+  'pony',
+  'make',
+  'starlark',
+  'hcl',
+  'rego',
+  'cel',
+  'solidity',
+  'wasm',
+  'assembly',
+  'x86',
+  'x86-64',
+  'arm64',
+  'riscv',
+  'llvm-ir',
+  'ebpf',
+  'asm-6502',
+  'asm-65816',
+  'snes-asm',
+  'z80',
+  'sm83',
+  'm68k',
+  'verilog',
+  'vhdl'
+]) {
   assert.equal(ids.has(id), true, `expected coverage row for ${id}`);
 }
 
@@ -60,6 +124,38 @@ assert.equal(
 const planned = queryUniversalLanguageCoverageMatrix(matrix, { packageStatus: 'planned-platform' });
 assert.equal(planned.found, true);
 assert.equal(planned.summary.plannedRows > 0, true);
+for (const id of [
+  'unison',
+  'graphql',
+  'cypher',
+  'sparql',
+  'datalog',
+  'jsonpath',
+  'xpath',
+  'promql',
+  'dhall',
+  'cue',
+  'nix',
+  'nickel',
+  'roc',
+  'koka',
+  'lean',
+  'prolog',
+  'smalltalk',
+  'forth',
+  'apl',
+  'make',
+  'hcl',
+  'solidity',
+  'wasm',
+  'assembly',
+  'asm-6502',
+  'verilog'
+]) {
+  const row = queryUniversalLanguageCoverageMatrix(matrix, { id }).bestRow;
+  assert.equal(row.readiness, 'planned', `${id} starts as planned coverage`);
+  assert.equal(row.package.status, 'planned-platform', `${id} is represented by a planned package contract`);
+}
 
 const strictDenominator = createUniversalLanguageCoverageMatrix({
   generatedAt: 100,

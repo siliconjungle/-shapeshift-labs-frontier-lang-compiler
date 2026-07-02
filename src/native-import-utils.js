@@ -61,6 +61,30 @@ export function normalizeNativeLanguageId(value) {
   if (text === 'ex' || text === 'exs') return 'elixir';
   if (text === 'erl' || text === 'hrl') return 'erlang';
   if (text === 'hs' || text === 'lhs') return 'haskell';
+  if (text === 'u') return 'unison';
+  if (text === 'gql') return 'graphql';
+  if (text === 'rq') return 'sparql';
+  if (text === 'dl') return 'datalog';
+  if (text === 'pl') return 'prolog';
+  if (text === 'idr') return 'idris';
+  if (text === 'purs') return 'purescript';
+  if (text === 'st') return 'smalltalk';
+  if (text === 'fs' || text === 'fsx') return 'fsharp';
+  if (text === 'fth') return 'forth';
+  if (text === 'bzl') return 'starlark';
+  if (text === 'tf') return 'hcl';
+  if (text === 'sol') return 'solidity';
+  if (text === 'wat') return 'wasm';
+  if (text === 'v') return 'verilog';
+  if (text === 'asm' || text === 's') return 'assembly';
+  if (text === 'x64' || text === 'x86_64' || text === 'amd64') return 'x86-64';
+  if (text === 'aarch64') return 'arm64';
+  if (text === 'risc-v') return 'riscv';
+  if (text === 'll' || text === 'llvm') return 'llvm-ir';
+  if (text === 'bpf') return 'ebpf';
+  if (text === '6502') return 'asm-6502';
+  if (text === '65816' || text === 'snes') return 'asm-65816';
+  if (text === 'gbz80' || text === 'gameboy') return 'sm83';
   return text;
 }
 
