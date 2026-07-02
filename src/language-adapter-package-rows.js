@@ -1,5 +1,5 @@
 const packageRows = [
-  row('@shapeshift-labs/frontier-lang-typescript', '0.3.12', 'typescript', 'typescript-compiler-api', { target: 'typescript' }),
+  row('@shapeshift-labs/frontier-lang-typescript', '0.3.13', 'typescript', 'typescript-compiler-api', { target: 'typescript' }),
   row('@shapeshift-labs/frontier-lang-javascript', '0.2.12', 'javascript', 'estree', { target: 'javascript', formats: ['estree', 'babel'] }),
   row('@shapeshift-labs/frontier-lang-rust', '0.2.14', 'rust', 'rust-syn', { target: 'rust', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'macroExpansionEvidence'] }),
   row('@shapeshift-labs/frontier-lang-python', '0.2.13', 'python', 'python-ast', { target: 'python', formats: ['python-ast', 'libcst'] }),
