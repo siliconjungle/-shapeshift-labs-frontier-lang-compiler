@@ -11,6 +11,7 @@ import { conversionPlanSummary } from './universal-conversion-plan-summary.js';
 import { createUniversalRepresentationCoverage, representationCoverageMatches } from './universal-representation-coverage.js';
 import { createUniversalTranslationAdmission, conversionRouteMatchesTranslationAdmissionQuery } from './universal-conversion-translation-admission.js';
 import { createUniversalInterlinguaRecord, interlinguaRecordMatches } from './universal-interlingua-record.js';
+import { mergeAuthoredInterlinguaForRoute } from './universal-interlingua-authored.js';
 import { conversionConstraintRouteInput, conversionRouteMatchesConstraintQuery, createConversionRouteConstraints } from './universal-conversion-route-constraints.js';
 export function createUniversalConversionPlan(input = {}, context = {}) {
   const generatedAt = input.generatedAt ?? Date.now();
@@ -19,7 +20,7 @@ export function createUniversalConversionPlan(input = {}, context = {}) {
   const targets = conversionTargets(input, matrix, context);
   const runtimeMatrix = input.universalRuntimeCapabilityMatrix?.kind === 'frontier.lang.universalRuntimeCapabilityMatrix' ? input.universalRuntimeCapabilityMatrix : createUniversalRuntimeCapabilityMatrix({ ...input, generatedAt, sourceLanguages: matrix.languages, targets }, context);
   const evidence = input.evidence ?? [];
-  const routeInput = { ...conversionConstraintRouteInput(input), dialectRegistries: conversionDialectRegistries(input), evidence, generatedAt, imports: input.imports ?? [], matrix, runtimeMatrix };
+  const routeInput = { ...conversionConstraintRouteInput(input), authoredInterlinguaRecords: input.interlinguaRecords ?? input.universalInterlinguaRecords ?? [], dialectRegistries: conversionDialectRegistries(input), evidence, generatedAt, imports: input.imports ?? [], matrix, runtimeMatrix };
   const routes = (matrix.languages ?? []).flatMap((language) => targets.flatMap((target) => {
     const runtimeRoutes = conversionRuntimeRoutes(runtimeMatrix, language, target);
     return runtimeRoutes.map((runtimeRoute) => conversionRoute(language, target, {
@@ -169,7 +170,8 @@ function conversionRoute(language, target, input, planId) {
     semanticEquivalenceClaim: false,
     metadata: { generatedAt: input.generatedAt, note: 'Route readiness is merge-review evidence for a conversion attempt, not proof that emitted target code is semantically equivalent.' }
   };
-  return { ...route, interlingua: createUniversalInterlinguaRecord({ route, representation, translationAdmission, mergeRefs, runtime, dialect }) };
+  const interlingua = createUniversalInterlinguaRecord({ route, representation, translationAdmission, mergeRefs, runtime, dialect });
+  return { ...route, interlingua: mergeAuthoredInterlinguaForRoute(interlingua, route, input.authoredInterlinguaRecords) };
 }
 function conversionPlanId(input, generatedAt) {
   const languages = uniqueStrings((input.imports ?? []).map((imported) => imported?.language ?? imported?.nativeAst?.language));

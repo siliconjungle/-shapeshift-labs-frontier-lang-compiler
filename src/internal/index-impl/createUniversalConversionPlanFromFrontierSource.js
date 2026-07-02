@@ -21,6 +21,7 @@ function sourceMetadata(document, sourcePath) {
   const constraintSpaces = document.metadata?.constraintSpaces;
   const decisionGraph = document.metadata?.decisionGraph;
   const resourceGraphs = document.metadata?.semanticResourceGraphs;
+  const interlingua = document.metadata?.universalInterlingua;
   return {
     documentId: document.id,
     ...(sourcePath ? { sourcePath } : {}),
@@ -69,7 +70,17 @@ function sourceMetadata(document, sourcePath) {
     semanticResourceGraphUnsafeBoundaryIds: resourceGraphs?.unsafeBoundaryIds ?? [],
     semanticResourceGraphConflictIds: resourceGraphs?.conflictIds ?? [],
     semanticResourceGraphProofObligationIds: resourceGraphs?.proofObligationIds ?? [],
-    semanticResourceGraphSummary: resourceGraphs?.summary
+    semanticResourceGraphSummary: resourceGraphs?.summary,
+    universalInterlinguaId: interlingua?.id,
+    universalInterlinguaRecordIds: interlingua?.interlinguaRecordIds ?? [],
+    universalInterlinguaLayerIds: interlingua?.layerIds ?? [],
+    universalInterlinguaConstraintIds: interlingua?.constraintIds ?? [],
+    universalInterlinguaObligationIds: interlingua?.obligationIds ?? [],
+    universalInterlinguaLoweringIds: interlingua?.loweringIds ?? [],
+    universalInterlinguaLiftIds: interlingua?.liftIds ?? [],
+    universalInterlinguaEvidenceIds: interlingua?.evidenceIds ?? [],
+    universalInterlinguaRouteIds: interlingua?.routeIds ?? [],
+    universalInterlinguaSummary: interlingua?.summary
   };
 }
 

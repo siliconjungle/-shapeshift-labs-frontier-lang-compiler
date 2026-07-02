@@ -29,13 +29,21 @@ const CONSTRAINT_ARRAY_FIELDS = [
 export function mergeDocumentConversionPlanInput(input = {}) {
   const authored = input.document?.metadata?.universalConversionPlan;
   const resourceGraphs = authoredResourceGraphs(input.document);
-  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length) return input;
+  const interlinguaRecords = authoredInterlinguaRecords(input.document);
+  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length && !interlinguaRecords.length) return input;
   const merged = authored && typeof authored === 'object' ? { ...authored, ...input } : { ...input };
   if (input.targets === undefined && authored?.targets) merged.targets = authored.targets;
   if (resourceGraphs.length) {
     merged.imports = uniqueRecords([
       ...resourceGraphs.map((graph) => resourceGraphImport(graph, authored)),
       ...(input.imports ?? [])
+    ]);
+  }
+  if (interlinguaRecords.length) {
+    merged.interlinguaRecords = uniqueRecords([
+      ...interlinguaRecords,
+      ...(input.interlinguaRecords ?? []),
+      ...(input.universalInterlinguaRecords ?? [])
     ]);
   }
   for (const field of CONSTRAINT_ARRAY_FIELDS) {
@@ -49,6 +57,11 @@ export function mergeDocumentConversionPlanInput(input = {}) {
 function authoredResourceGraphs(document) {
   const graphs = document?.metadata?.semanticResourceGraphs;
   return [...(graphs?.graphs ?? []), ...(graphs?.resourceGraphs ?? [])].filter(Boolean);
+}
+
+function authoredInterlinguaRecords(document) {
+  const interlingua = document?.metadata?.universalInterlingua;
+  return [...(interlingua?.interlinguaRecords ?? []), ...(interlingua?.records ?? []).filter((record) => record?.kind === 'frontier.lang.universalInterlinguaRecord')].filter(Boolean);
 }
 
 function resourceGraphImport(graph = {}, authored = {}) {
