@@ -1,6 +1,6 @@
 {
   "name": "@shapeshift-labs/frontier-lang-compiler",
-  "version": "0.2.337",
+  "version": "0.2.338",
   "description": "Compiler facade for Frontier Lang source documents and language projection adapters.",
   "type": "module",
   "main": "./dist/index.js",
@@ -66,7 +66,7 @@
     "@shapeshift-labs/frontier-lang-checker": "0.3.8",
     "@shapeshift-labs/frontier-lang-css": "0.1.40",
     "@shapeshift-labs/frontier-lang-dialects": "0.1.1",
-    "@shapeshift-labs/frontier-lang-html": "0.1.29",
+    "@shapeshift-labs/frontier-lang-html": "0.1.30",
     "@shapeshift-labs/frontier-lang-javascript": "0.2.12",
     "@shapeshift-labs/frontier-lang-jsx": "0.1.0",
     "@shapeshift-labs/frontier-lang-kernel": "0.3.13",
