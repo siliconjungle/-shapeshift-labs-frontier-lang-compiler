@@ -244,9 +244,21 @@ export interface UniversalConversionPlanOptions extends UCO, UniversalConversion
   readonly evidence?: readonly EvidenceRecord[];
 }
 export interface FrontierSourceUniversalConversionPlanOptions extends UniversalConversionPlanOptions { readonly fileName?: string; readonly sourcePath?: string; readonly parse?: Record<string, unknown>; }
+export interface AuthoredFrontierSourceConversionMetadata {
+  readonly documentId: string;
+  readonly sourcePath?: string;
+  readonly conversionPlanId?: string;
+  readonly targets: readonly string[];
+  readonly constraintFamilies: readonly string[];
+  readonly sourceRuntimes: Readonly<Record<string, string>>;
+  readonly targetRuntimes: Readonly<Record<string, string>>;
+  readonly runtimeRequirementIds: readonly string[];
+  readonly dialectRecordIds: readonly string[];
+  readonly externRecordIds: readonly string[];
+}
 export interface FrontierSourceUniversalConversionPlan extends UniversalConversionPlan {
   readonly document: FrontierLangDocument; readonly sourcePath?: string;
-  readonly metadata: UniversalConversionPlan['metadata'] & { readonly authoredFrontierSource: { readonly documentId: string; readonly sourcePath?: string; readonly conversionPlanId?: string; readonly targets: readonly string[]; readonly constraintFamilies: readonly string[]; }; };
+  readonly metadata: UniversalConversionPlan['metadata'] & { readonly authoredFrontierSource: AuthoredFrontierSourceConversionMetadata; };
 }
 export interface UniversalConversionPlanQuery extends UniversalConversionPlanRepresentationQuery, UniversalInterlinguaQuery, UniversalConversionPlanConstraintQuery {
   readonly routeId?: QueryFilter<string>;

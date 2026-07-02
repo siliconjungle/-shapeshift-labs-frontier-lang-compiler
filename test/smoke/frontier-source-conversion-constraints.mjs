@@ -16,6 +16,11 @@ module ConversionProbe @id("mod_conversion_probe")
 conversion JsToRust @id("conversion_js_rust") {
   sourceLanguage javascript
   target rust
+  sourceRuntime javascript node
+  targetRuntime rust cli
+  runtimeRequirement fetchRuntime @id("runtime_requirement_fetch") capability fetch sourceRuntime node targetRuntime cli evidence evidence_type_translation_proof
+  dialect nodeProcess @id("dialect_node_process") language javascript dialect node.runtime kind runtime target rust disposition unsupported readiness blocked loss loss_node_process_projection
+  extern viteRoutes @id("extern_vite_routes") language javascript dialect vite.plugin.virtual-module externKind generatorArtifact target rust disposition runtime-required evidence evidence_vite_routes_manifest bindingSymbol virtual:routes
   constraint type publicApi @id("type_constraint_public_api") role source kind property symbol symbol:nickname signatureHash sig_read_user optional evidence evidence_type_translation_proof
   constraint type rustApi @id("type_constraint_rust_api") role target kind public-function symbol symbol:nicknameRust signatureHash sig_read_user evidence evidence_type_translation_proof
   constraint controlFlow saveFlow @id("control_flow_save") role source kind async-flow from action_save to effect_persist evidence evidence_type_translation_proof async
@@ -28,6 +33,11 @@ conversion JsToRust @id("conversion_js_rust") {
 const result = compileFrontierSource(source, { target: 'javascript' });
 assert.equal(result.ok, true);
 assert.equal(result.document.metadata.universalConversionPlan.targets[0], 'rust');
+assert.equal(result.document.metadata.universalConversionPlan.sourceRuntimes.javascript, 'node');
+assert.equal(result.document.metadata.universalConversionPlan.targetRuntimes.rust, 'cli');
+assert.equal(result.document.metadata.universalConversionPlan.runtimeRequirements[0].capability, 'fetch');
+assert.equal(result.document.metadata.universalConversionPlan.dialects[0].id, 'dialect_node_process');
+assert.equal(result.document.metadata.universalConversionPlan.externs[0].binding.symbol, 'virtual:routes');
 assert.equal(result.document.metadata.universalConversionPlan.typeConstraints[0].sourceTypes[0].optional, true);
 assert.equal(result.document.metadata.universalConversionPlan.resourceTransfers[0].sourceGraphs[0].resources[0].id, 'TodoDb.todos');
 assert.equal(result.document.metadata.universalConversionPlan.borrowScopeConstraints[0].sourceBorrowScopes[0].constraintKinds[0], 'shared-borrow-compatible');
@@ -55,6 +65,22 @@ assert.equal(sourcePlan.document.id, 'mod_conversion_probe');
 assert.equal(sourcePlan.sourcePath, 'conversion-probe.frontier');
 assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintFamilies.includes('typeConstraints'), true);
 assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintFamilies.includes('borrowScopeConstraints'), true);
+assert.equal(sourcePlan.metadata.authoredFrontierSource.sourceRuntimes.javascript, 'node');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.targetRuntimes.rust, 'cli');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.runtimeRequirementIds[0], 'runtime_requirement_fetch');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.dialectRecordIds[0], 'dialect_node_process');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.externRecordIds[0], 'extern_vite_routes');
+assert.equal(queryUniversalConversionPlan(sourcePlan, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  sourceRuntime: 'node',
+  targetRuntime: 'cli'
+}).found, true);
+assert.equal(queryUniversalConversionPlan(sourcePlan, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  dialectRecordId: 'dialect_node_process'
+}).found, true);
 assert.equal(queryUniversalConversionPlan(sourcePlan, {
   sourceLanguage: 'javascript',
   target: 'rust',

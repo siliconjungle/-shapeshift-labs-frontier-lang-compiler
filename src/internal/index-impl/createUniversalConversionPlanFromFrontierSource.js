@@ -23,6 +23,15 @@ function sourceMetadata(document, sourcePath) {
     ...(sourcePath ? { sourcePath } : {}),
     conversionPlanId: authored?.id,
     targets: authored?.targets ?? [],
-    constraintFamilies: Object.keys(authored ?? {}).filter((key) => key.endsWith('Constraints') || key === 'resourceTransfers')
+    constraintFamilies: Object.keys(authored ?? {}).filter((key) => key.endsWith('Constraints') || key === 'resourceTransfers'),
+    sourceRuntimes: authored?.sourceRuntimes ?? {},
+    targetRuntimes: authored?.targetRuntimes ?? {},
+    runtimeRequirementIds: ids(authored?.runtimeRequirements),
+    dialectRecordIds: ids(authored?.dialects),
+    externRecordIds: ids(authored?.externs)
   };
+}
+
+function ids(records = []) {
+  return records.map((record) => record?.id).filter(Boolean);
 }

@@ -921,6 +921,11 @@ module Todo @id("mod_todo")
 conversion TodoToRust @id("conversion_todo_rust") {
   sourceLanguage javascript
   target rust
+  sourceRuntime javascript node
+  targetRuntime rust cli
+  runtimeRequirement fetchRuntime @id("runtime_requirement_fetch") capability fetch sourceRuntime node targetRuntime cli evidence evidence_type_translation_proof
+  dialect nodeProcess @id("dialect_node_process") language javascript dialect node.runtime kind runtime target rust disposition unsupported readiness blocked loss loss_node_process_projection
+  extern viteRoutes @id("extern_vite_routes") language javascript dialect vite.plugin.virtual-module externKind generatorArtifact target rust disposition runtime-required evidence evidence_vite_routes_manifest bindingSymbol virtual:routes
   constraint type todoName @id("type_todo_name") role source kind property symbol symbol:todoName optional evidence evidence_type_translation_proof
 }
 `;
@@ -933,6 +938,8 @@ const authoredPlan = createUniversalConversionPlanFromFrontierSource(frontierSou
 });
 console.log(authoredPlan.document.id); // parsed authored Frontier source
 console.log(authoredPlan.metadata.authoredFrontierSource.constraintFamilies); // source-declared conversion constraints
+console.log(authoredPlan.metadata.authoredFrontierSource.runtimeRequirementIds); // runtime obligations from file syntax
+console.log(authoredPlan.metadata.authoredFrontierSource.dialectRecordIds); // dialect records from file syntax
 
 const authoredArtifacts = createUniversalConversionArtifactsFromFrontierSource(frontierSource, {
   fileName: 'todo.frontier',
