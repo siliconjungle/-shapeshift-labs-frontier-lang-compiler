@@ -1,3 +1,5 @@
+import { authoredTargetProjectionSummary, authoredTargetProjections } from './authoredTargetProjections.js';
+
 const CONSTRAINT_ARRAY_FIELDS = [
   'resourceTransfers',
   'lifetimeConstraints',
@@ -32,9 +34,11 @@ export function mergeDocumentConversionPlanInput(input = {}) {
   const interlinguaRecords = authoredInterlinguaRecords(input.document);
   const dialectRegistry = authoredDialectRegistry(input.document);
   const runtimeCapabilities = authoredRuntimeCapabilities(input.document);
-  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length && !interlinguaRecords.length && !dialectRegistry && !runtimeCapabilities) return input;
+  const targetProjections = authoredTargetProjections(input.document);
+  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length && !interlinguaRecords.length && !dialectRegistry && !runtimeCapabilities && !targetProjections.length) return input;
   const merged = authored && typeof authored === 'object' ? { ...authored, ...input } : { ...input };
   if (input.targets === undefined && authored?.targets) merged.targets = authored.targets;
+  if (input.targets === undefined && !authored?.targets?.length && targetProjections.length) merged.targets = uniqueStrings(targetProjections.map((record) => record.target));
   if (dialectRegistry && input.universalDialectRegistry === undefined) merged.universalDialectRegistry = dialectRegistry;
   const authoredDialects = [...(authored?.dialects ?? []), ...(dialectRegistry?.dialects ?? [])];
   const authoredExterns = [...(authored?.externs ?? []), ...(dialectRegistry?.externs ?? [])];
@@ -59,6 +63,11 @@ export function mergeDocumentConversionPlanInput(input = {}) {
   }
   if (runtimeCapabilities) {
     mergeAuthoredRuntimeCapabilities(merged, input, runtimeCapabilities);
+  }
+  if (targetProjections.length || input.authoredTargetProjections?.length || input.targetProjectionContracts?.length) {
+    merged.authoredTargetProjections = uniqueRecords([...(targetProjections ?? []), ...(input.authoredTargetProjections ?? []), ...(input.targetProjectionContracts ?? [])]);
+    merged.targetProjectionContracts = merged.authoredTargetProjections;
+    merged.authoredTargetProjectionSummary = authoredTargetProjectionSummary(merged.authoredTargetProjections);
   }
   for (const field of CONSTRAINT_ARRAY_FIELDS) {
     const authoredValues = aggregateAuthoredRouteConstraints(authored?.[field] ?? []);

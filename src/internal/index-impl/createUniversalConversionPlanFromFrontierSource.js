@@ -1,5 +1,6 @@
 import { parseFrontierFile, parseFrontierSource } from '@shapeshift-labs/frontier-lang-parser';
 import { createUniversalConversionPlan } from './createUniversalConversionPlan.js';
+import { authoredTargetProjectionSummary, authoredTargetProjections } from './authoredTargetProjections.js';
 
 export function createUniversalConversionPlanFromFrontierSource(source, options = {}) {
   const { fileName, parse, sourcePath, ...planOptions } = options;
@@ -27,6 +28,8 @@ function sourceMetadata(document, sourcePath) {
   const canvasSurfaces = document.metadata?.canvasSurfaces;
   const applicationSurfaces = document.metadata?.applicationSurfaces;
   const runtimeCapabilities = document.metadata?.runtimeCapabilities;
+  const targetProjections = authoredTargetProjections(document);
+  const targetProjectionSummary = authoredTargetProjectionSummary(targetProjections);
   return {
     documentId: document.id,
     ...(sourcePath ? { sourcePath } : {}),
@@ -126,7 +129,19 @@ function sourceMetadata(document, sourcePath) {
     runtimeCapabilityRequirementIds: runtimeCapabilities?.runtimeRequirementIds ?? [],
     runtimeCapabilityEvidenceIds: runtimeCapabilities?.evidenceIds ?? [],
     runtimeCapabilityProofGapCodes: runtimeCapabilities?.proofGapCodes ?? [],
-    runtimeCapabilitySummary: runtimeCapabilities?.summary
+    runtimeCapabilitySummary: runtimeCapabilities?.summary,
+    targetProjectionIds: targetProjectionSummary.contractIds,
+    targetProjectionContractIds: targetProjectionSummary.contractIds,
+    targetProjectionLayerIds: targetProjectionSummary.layerIds,
+    targetProjectionAdapterIds: targetProjectionSummary.adapterIds,
+    targetProjectionEvidenceIds: targetProjectionSummary.evidenceIds,
+    targetProjectionProofEvidenceIds: targetProjectionSummary.proofEvidenceIds,
+    targetProjectionLossIds: targetProjectionSummary.lossIds,
+    targetProjectionMissingEvidence: targetProjectionSummary.missingEvidence,
+    targetProjectionRepresentedLayerKinds: targetProjectionSummary.representedLayerKinds,
+    targetProjectionMissingLayerKinds: targetProjectionSummary.missingLayerKinds,
+    targetProjectionReadinesses: targetProjectionSummary.readinesses,
+    targetProjectionSummary
   };
 }
 

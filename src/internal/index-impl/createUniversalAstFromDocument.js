@@ -1,4 +1,4 @@
-import{idFragment}from'../../native-import-utils.js';import{attachInputUniversalDialectRegistry}from'@shapeshift-labs/frontier-lang-dialects';import{createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';import{attachAppContractLayer}from'./createAppContractLayerFromDocument.js';
+import{idFragment}from'../../native-import-utils.js';import{attachInputUniversalDialectRegistry}from'@shapeshift-labs/frontier-lang-dialects';import{createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';import{targetProjectionMetadataFields,authoredTargetProjections}from'./authoredTargetProjections.js';import{attachAppContractLayer}from'./createAppContractLayerFromDocument.js';
 export function createUniversalAstFromDocument(document, input = {}) {
   const authored = document.metadata?.universalAst ?? {};
   const dialectInput = document.metadata?.dialects
@@ -17,10 +17,12 @@ export function createUniversalAstFromDocument(document, input = {}) {
     canvasSurfaces: input.canvasSurfaces ?? authored.canvasSurfaces ?? document.metadata?.canvasSurfaces?.surfaces,
     applicationSurfaces: input.applicationSurfaces ?? authored.applicationSurfaces ?? document.metadata?.applicationSurfaces?.surfaces,
     runtimeCapabilities: input.runtimeCapabilities ?? authored.runtimeCapabilities ?? document.metadata?.runtimeCapabilities?.blocks,
+    targetProjections: input.targetProjections ?? authored.targetProjections ?? document.metadata?.targetProjections,
     packageManifestIds: input.packageManifestIds ?? authored.packageManifestIds ?? document.metadata?.packageManifests?.manifestIds,
     canvasSurfaceIds: input.canvasSurfaceIds ?? authored.canvasSurfaceIds ?? document.metadata?.canvasSurfaces?.surfaceIds,
     applicationSurfaceIds: input.applicationSurfaceIds ?? authored.applicationSurfaceIds ?? document.metadata?.applicationSurfaces?.surfaceIds,
     runtimeCapabilityIds: input.runtimeCapabilityIds ?? authored.runtimeCapabilityIds ?? document.metadata?.runtimeCapabilities?.blockIds,
+    targetProjectionContractIds: input.targetProjectionContractIds ?? authored.targetProjectionContractIds ?? document.metadata?.targetProjections?.projectionContractIds,
     semanticOperations: input.semanticOperations ?? input.universalAstSemanticOperations ?? document.metadata?.semanticOperations,
     proof: input.proof ?? input.universalAstProof ?? document.metadata?.proof,
     paradigmSemantics: input.paradigmSemantics ?? input.universalAstParadigmSemantics ?? document.metadata?.paradigmSemantics,
@@ -31,12 +33,14 @@ export function createUniversalAstFromDocument(document, input = {}) {
 }
 
 function universalAstMetadata(authored, document) {
+  const targetProjectionRecords = authoredTargetProjections(document);
   return {
     ...(authored.metadata ?? {}),
     authoredPackageManifestIds: authored.packageManifestIds ?? document.metadata?.packageManifests?.manifestIds ?? authored.metadata?.authoredPackageManifestIds,
     authoredCanvasSurfaceIds: authored.canvasSurfaceIds ?? document.metadata?.canvasSurfaces?.surfaceIds ?? authored.metadata?.authoredCanvasSurfaceIds,
     authoredApplicationSurfaceIds: authored.applicationSurfaceIds ?? document.metadata?.applicationSurfaces?.surfaceIds ?? authored.metadata?.authoredApplicationSurfaceIds,
     authoredRuntimeCapabilityIds: authored.runtimeCapabilityIds ?? document.metadata?.runtimeCapabilities?.blockIds ?? authored.metadata?.authoredRuntimeCapabilityIds,
+    ...(targetProjectionRecords.length ? targetProjectionMetadataFields(targetProjectionRecords) : {}),
     packageManifestSummary: document.metadata?.packageManifests?.summary,
     canvasSurfaceSummary: document.metadata?.canvasSurfaces?.summary,
     applicationSurfaceSummary: document.metadata?.applicationSurfaces?.summary,

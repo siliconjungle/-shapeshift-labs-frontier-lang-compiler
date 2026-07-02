@@ -940,6 +940,10 @@ console.log(authoredPlan.document.id); // parsed authored Frontier source
 console.log(authoredPlan.metadata.authoredFrontierSource.constraintFamilies); // source-declared conversion constraints
 console.log(authoredPlan.metadata.authoredFrontierSource.runtimeRequirementIds); // runtime obligations from file syntax
 console.log(authoredPlan.metadata.authoredFrontierSource.dialectRecordIds); // dialect records from file syntax
+// Authored target projection/lowering rows are route and worklist evidence:
+// adapter ids, represented/missing layers, proof evidence, losses, readiness,
+// blockers, review, and missing evidence. They are not executable adapters or
+// equivalence/auto-merge proof unless a host supplies stronger evidence.
 
 const frontierSourceWithRegistry = `
 module RuntimeDialectEvidence @id("mod_runtime_dialect_evidence")
