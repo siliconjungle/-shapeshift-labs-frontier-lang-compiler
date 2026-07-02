@@ -40,6 +40,8 @@ assert.equal(compiled.document.metadata.applicationSurfaces.surfaceIds[0], 'app_
 assert.equal(compiled.document.metadata.applicationSurfaces.surfaceIds[1], 'plugin_weather_widget');
 assert.equal(compiled.document.metadata.applicationSurfaces.claims.pluginCompatibilityClaim, false);
 assert.equal(compiled.document.metadata.applicationSurfaces.claims.sandboxSafetyClaim, false);
+assert.equal(compiled.document.metadata.applicationSurfaces.evidenceIds.includes('evidence_preview_probe'), true);
+assert.equal(compiled.document.metadata.applicationSurfaces.evidenceIds.includes('evidence_sandbox_probe'), true);
 assert.equal(compiled.document.metadata.universalAst.applicationSurfaceIds[1], 'plugin_weather_widget');
 
 const documentCompile = compilerApi.compileFrontierDocument(compiled.document, { target: 'javascript', emitOnError: true });
@@ -49,6 +51,8 @@ assert.equal(documentCompile.document.metadata.applicationSurfaces.summary.gateC
 const universalAst = createUniversalAstFromDocument(compiled.document);
 assert.equal(universalAst.applicationSurfaceIds[0], 'app_surface_workbench');
 assert.equal(universalAst.applicationSurfaces[1].claims.runtimeEquivalenceClaim, false);
+assert.equal(universalAst.applicationSurfaces[0].records.find((record) => record.id === 'app_route_dashboard').sourcePath, 'app.frontier');
+assert.equal(universalAst.applicationSurfaces[0].records.find((record) => record.id === 'app_mount_dashboard').sourcePath, 'app.frontier');
 assert.equal(universalAst.applicationSurfaces[1].records.find((record) => record.id === 'plugin_require_fetch').adapterId, 'host_fetch_adapter');
 assert.equal(universalAst.metadata.applicationSurfaceSummary.providedSurfaceCount, 2);
 assert.equal(universalAst.metadata.authoredApplicationSurfaceIds[1], 'plugin_weather_widget');
