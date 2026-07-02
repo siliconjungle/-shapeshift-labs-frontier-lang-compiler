@@ -16,6 +16,10 @@ import type {
   SemanticIndexRecord,
   SemanticNode,
   SemanticPatchBundle,
+  FrontierParadigmSemanticsLayer,
+  FrontierProofSpecLayer,
+  ParadigmSemanticsLayerInput,
+  ProofSpecLayerInput,
   SourceMapMappingRecord,
   SourceMapRecord,
   SourcePreservationLevel,
@@ -125,6 +129,10 @@ export declare function createUniversalAstFromDocument(document: FrontierLangDoc
   readonly losses?: readonly NativeAstLossRecord[];
   readonly evidence?: readonly EvidenceRecord[];
   readonly mergeCandidates?: readonly SemanticMergeCandidateRecord[];
+  readonly proof?: ProofSpecLayerInput | FrontierProofSpecLayer;
+  readonly universalAstProof?: ProofSpecLayerInput | FrontierProofSpecLayer;
+  readonly paradigmSemantics?: ParadigmSemanticsLayerInput | FrontierParadigmSemanticsLayer;
+  readonly universalAstParadigmSemantics?: ParadigmSemanticsLayerInput | FrontierParadigmSemanticsLayer;
   readonly layers?: UniversalAstLayerMap | readonly UniversalAstLayerRecord[];
   readonly universalDialectRegistry?: UniversalDialectRegistryInput | UniversalDialectRegistry;
   readonly dialects?: readonly UniversalDialectRecordInput[];

@@ -10,8 +10,8 @@ export function createUniversalAstFromDocument(document, input = {}) {
     evidence: input.evidence ?? [],
     mergeCandidates: input.mergeCandidates,
     semanticOperations: input.semanticOperations,
-    proof: input.proof ?? input.universalAstProof,
-    paradigmSemantics: input.paradigmSemantics ?? input.universalAstParadigmSemantics,
+    proof: input.proof ?? input.universalAstProof ?? document.metadata?.proof,
+    paradigmSemantics: input.paradigmSemantics ?? input.universalAstParadigmSemantics ?? document.metadata?.paradigmSemantics,
     replayLinks: input.replayLinks,
     layers: input.layers,
     metadata: input.metadata

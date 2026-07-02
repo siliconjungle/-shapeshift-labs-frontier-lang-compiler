@@ -1,6 +1,7 @@
 import { assert } from './helpers.mjs';
 import {
   compileFrontierSource,
+  createUniversalAstFromDocument,
   emitForTarget,
   emitForTargetWithSourceMap,
   importNativeSource,
@@ -87,6 +88,13 @@ nativeSource TodoTypescript @id("native_todo_ts") {
   frontierNodes ent_todo, action_add
   loss unsupportedSyntax "decorator retained in native AST" severity warning
 }
+
+proof TodoProofs @id("proof_todo") {
+  contract todoTitle @id("contract_todo_title") kind invariant subject ent_todo statement "Todo title remains renderable."
+  obligation todoTitleRuntime @id("obligation_todo_title_runtime") kind runtime status open subject ent_todo contract contract_todo_title statement "A runtime probe covers title rendering."
+  artifact todoTitleProbe @id("artifact_todo_title_probe") kind test status passed path reports/todo-title.json obligation obligation_todo_title_runtime command "npm test -- todo-title"
+  assumption hostFetch @id("assumption_host_fetch") scope host subject cap_http description "The host fetch adapter preserves request semantics."
+}
 `;
 
 assert.equal(normalizeCompileTarget('ts'), 'typescript');
@@ -103,6 +111,12 @@ assert.match(result.output, /export const PersistTodoEffect/);
 assert.match(result.output, /export const persistTodoExtern/);
 assert.match(result.output, /export const typescriptTarget/);
 assert.match(result.output, /export const TodoTypescriptNativeSource/);
+assert.equal(result.document.metadata.proof.contracts[0].id, 'contract_todo_title');
+const universalAst = createUniversalAstFromDocument(result.document);
+assert.equal(universalAst.proof.id, 'proof_todo');
+assert.equal(universalAst.proof.contracts[0].subjectId, 'ent_todo');
+assert.equal(universalAst.proof.obligations[0].contractIds[0], 'contract_todo_title');
+assert.equal(universalAst.proof.artifacts[0].command, 'npm test -- todo-title');
 assert.match(emitForTarget(result.document, 'javascript'), /export const TodoSchema/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const TodoDbStateDescriptor/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const addTodoAction/);
