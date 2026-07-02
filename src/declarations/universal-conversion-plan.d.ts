@@ -1,4 +1,4 @@
-import type { EvidenceRecord, FrontierSourceLanguage as SL, SemanticMergeReadiness as SMR } from '@shapeshift-labs/frontier-lang-kernel';
+import type { EvidenceRecord, FrontierLangDocument, FrontierSourceLanguage as SL, SemanticMergeReadiness as SMR } from '@shapeshift-labs/frontier-lang-kernel';
 import type { FrontierCompileTarget as CT } from './compile.js';
 import type { NativeImportKnownLossKind } from './native-import-losses.js';
 import type { NativeParserFeatureCategory } from './native-parser-features.js';
@@ -222,6 +222,7 @@ export interface UniversalConversionPlan {
 
 export interface UniversalConversionPlanOptions extends UCO, UniversalConversionPlanConstraintOptions {
   readonly id?: string;
+  readonly document?: FrontierLangDocument;
   readonly universalCapabilityMatrix?: UCM;
   readonly universalRuntimeCapabilityMatrix?: URM;
   readonly hostProfiles?: readonly URH[];
