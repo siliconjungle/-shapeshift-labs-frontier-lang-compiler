@@ -98,7 +98,8 @@ const publishedPlatformPackages = [
   ['@shapeshift-labs/frontier-lang-swift', '0.1.18', 'swift', 'swift-syntax', 'sourcekit-lsp'],
   ['@shapeshift-labs/frontier-lang-csharp', '0.1.18', 'csharp', 'roslyn-csharp', 'lsp'],
   ['@shapeshift-labs/frontier-lang-go', '0.1.18', 'go', 'go-ast', 'lsp'],
-  ['@shapeshift-labs/frontier-lang-clang', '0.1.18', 'c', 'clang-ast-json', 'lsp']
+  ['@shapeshift-labs/frontier-lang-clang', '0.1.18', 'c', 'clang-ast-json', 'lsp'],
+  ['@shapeshift-labs/frontier-lang-assembly', '0.1.0', 'assembly', 'frontier-assembly-scan', 'assembly-semantic-scan']
 ];
 const plannedPlatformPackages = [
   { packageName: '@shapeshift-labs/frontier-lang-lisp', language: 'lisp', queryLanguage: 'scheme', parserFormat: 'tree-sitter', semanticFormat: 'lsp', supportedLanguage: 'scheme', caveat: 'macro' },

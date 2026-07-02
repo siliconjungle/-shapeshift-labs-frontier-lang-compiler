@@ -148,13 +148,20 @@ for (const id of [
   'hcl',
   'solidity',
   'wasm',
-  'assembly',
-  'asm-6502',
   'verilog'
 ]) {
   const row = queryUniversalLanguageCoverageMatrix(matrix, { id }).bestRow;
   assert.equal(row.readiness, 'planned', `${id} starts as planned coverage`);
   assert.equal(row.package.status, 'planned-platform', `${id} is represented by a planned package contract`);
+}
+
+for (const id of ['assembly', 'x86-64', 'asm-6502', 'snes-asm', 'm68k']) {
+  const row = queryUniversalLanguageCoverageMatrix(matrix, { id }).bestRow;
+  assert.equal(row.readiness, 'partial', `${id} has published low-level coverage with required host evidence`);
+  assert.equal(row.package.status, 'platform-importer', `${id} is represented by the published assembly package`);
+  assert.equal(row.package.packageNames.includes('@shapeshift-labs/frontier-lang-assembly'), true);
+  assert.equal(row.package.requiredEvidenceKeys.includes('assemblyscan'), true);
+  assert.equal(row.package.requiredEvidenceKeys.includes('traceevidence'), true);
 }
 
 const strictDenominator = createUniversalLanguageCoverageMatrix({

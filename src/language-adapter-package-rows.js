@@ -193,15 +193,11 @@ const packageRows = [
     family: 'bytecode-ir',
     parserCaveats: ['WebAssembly contracts require host evidence for WAT/binary mapping, imports/exports, memory/table effects, host bindings, source maps, and binary/source preservation.']
   }),
-  plannedPlatform('@shapeshift-labs/frontier-lang-assembly', 'assembly', 'tree-sitter-asm', ['disassembly', 'debug-symbols'], {
-    supportedLanguages: ['assembly', 'x86', 'x86-64', 'arm64', 'riscv', 'llvm-ir', 'ebpf'],
+  platform('@shapeshift-labs/frontier-lang-assembly', '0.1.0', 'assembly', 'frontier-assembly-scan', ['assembly-semantic-scan', 'debug-symbols', 'trace-evidence'], {
+    supportedLanguages: ['assembly', 'x86', 'x86-64', 'arm64', 'riscv', 'llvm-ir', 'ebpf', 'asm-6502', 'asm-65816', 'snes-asm', 'z80', 'sm83', 'm68k'],
     family: 'low-level-ir',
-    parserCaveats: ['Assembly and IR contracts require host evidence for instruction set, ABI/calling convention, linker symbols, relocation records, debug/source maps, register/flag effects, memory effects, and binary roundtrip preservation.']
-  }),
-  plannedPlatform('@shapeshift-labs/frontier-lang-retro-assembly', 'asm-6502', 'ca65', ['memory-map', 'cycle-model'], {
-    supportedLanguages: ['asm-6502', 'asm-65816', 'snes-asm', 'z80', 'sm83', 'm68k'],
-    family: 'retro-low-level',
-    parserCaveats: ['Retro assembly contracts require host evidence for assembler dialect, labels/macros, memory maps, bank switching, CPU/PPU/APU or platform registers, cycle timing, interrupt behavior, binary/source maps, and emulator/runtime traces.']
+    proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'assemblyScan', 'registerEffects', 'memoryMapEvidence', 'traceEvidence'],
+    parserCaveats: ['Assembly and IR contracts require host evidence for instruction set, ABI/calling convention, linker symbols, relocation records, debug/source maps, register/flag effects, memory effects, memory maps, bank switching, CPU/PPU/APU or platform registers, cycle timing, interrupt behavior, and binary roundtrip preservation.']
   }),
   plannedPlatform('@shapeshift-labs/frontier-lang-hardware', 'verilog', 'verible', ['hdl-elaboration'], {
     supportedLanguages: ['verilog', 'vhdl'],
