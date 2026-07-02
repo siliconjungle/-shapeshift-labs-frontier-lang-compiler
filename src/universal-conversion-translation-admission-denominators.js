@@ -21,6 +21,50 @@ const keys = [
   'targetAdapterIds'
 ];
 
+const flatTranslationAdmissionFieldKeys = [
+  'translationAdmissionStatus',
+  'translationAdmissionStatuses',
+  'translationAdmissionAction',
+  'translationAdmissionActions',
+  'missingTranslationEvidence',
+  'translationEvidenceId',
+  'translationEvidenceIds',
+  'translationProofEvidenceId',
+  'translationProofEvidenceIds',
+  'translationRuntimeReadiness',
+  'translationRuntimeReadinesses',
+  'translationRuntimeAdapterRequirementId',
+  'translationRuntimeAdapterRequirementIds',
+  'translationRuntimeProofObligationId',
+  'translationRuntimeProofObligationIds',
+  'translationRuntimeProofCapability',
+  'translationRuntimeProofCapabilities',
+  'translationRuntimeProofStatus',
+  'translationRuntimeProofStatuses',
+  'translationRuntimeProofRequiredSignal',
+  'translationRuntimeProofRequiredSignals',
+  'translationRuntimeProofProvidedSignal',
+  'translationRuntimeProofProvidedSignals',
+  'translationRuntimeProofMissingSignal',
+  'translationRuntimeProofMissingSignals',
+  'translationDialectReadiness',
+  'translationDialectReadinesses',
+  'translationDialectRecordId',
+  'translationDialectRecordIds',
+  'requiredTranslationConstructKind',
+  'requiredTranslationConstructKinds',
+  'representedTranslationConstructKind',
+  'representedTranslationConstructKinds',
+  'targetAdapterId',
+  'targetAdapterIds',
+  'adapter'
+];
+
+export function translationAdmissionDenominatorRecord(record = {}) {
+  const nested = record.translationAdmission ?? record.metadata?.translationAdmission ?? record.admissionRecord?.metadata?.translationAdmission ?? {};
+  return { ...pickTranslationAdmissionFields(record), ...nested };
+}
+
 export function compactTranslationAdmissionCounts(admissions = []) {
   const rows = admissions.map(translationAdmissionDenominatorFields);
   return {
@@ -182,4 +226,10 @@ function translationAdmissionDenominatorFields(record = {}) {
 function listField(value) {
   if (Array.isArray(value)) return value;
   return value === undefined ? [] : [value];
+}
+
+function pickTranslationAdmissionFields(record = {}) {
+  return Object.fromEntries(flatTranslationAdmissionFieldKeys
+    .filter((key) => Object.prototype.hasOwnProperty.call(record, key))
+    .map((key) => [key, record[key]]));
 }

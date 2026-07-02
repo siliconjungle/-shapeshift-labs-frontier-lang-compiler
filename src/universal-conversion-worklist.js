@@ -52,7 +52,7 @@ function workItemsForRoutes(routes, options) {
   for (const route of routes) {
     if (route.blockers?.length) addWorkItem(items, route, 'unblock-route', 'route-blocker', 'blocker');
     for (const key of route.missingEvidence ?? []) addMissingEvidenceItem(items, route, key);
-    for (const key of route.translationAdmission?.missingEvidence ?? []) addMissingEvidenceItem(items, route, key);
+    for (const key of tadfr(route).missingTranslationEvidence ?? []) addMissingEvidenceItem(items, route, key);
     addInterlinguaObligationItems(items, route);
     if (route.runtimeAdapterRequirements?.length) addWorkItem(items, route, 'prove-runtime-adapter', 'runtime-adapter-proof', 'high');
     if (route.dialect?.missingEvidence?.length) addWorkItem(items, route, 'collect-dialect-evidence', route.dialect.missingEvidence[0], 'high');
@@ -98,6 +98,7 @@ function addWorkItem(items, route, kind, evidenceKey, priority, details = {}) {
 }
 
 function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) {
+  const translationDenominators = tadfr(route);
   return {
     id,
     kind,
@@ -112,7 +113,7 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     admissionActions: [route.admissionAction],
     routeActions: [route.routeAction],
     evidenceKeys: [evidenceKey],
-    missingEvidence: u([...(route.missingEvidence ?? []), ...(route.translationAdmission?.missingEvidence ?? []), ...(details.missingEvidence ?? [])]),
+    missingEvidence: u([...(route.missingEvidence ?? []), ...translationDenominators.missingTranslationEvidence, ...(details.missingEvidence ?? [])]),
     blockers: route.blockers ?? [],
     review: route.review ?? [],
     tasks: workItemTasks(kind, route, evidenceKey, details),
@@ -124,9 +125,8 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     runtimeProofRequiredSignals: u((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.requiredSignals ?? [])),
     runtimeProofProvidedSignals: u((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.providedSignals ?? [])),
     runtimeProofMissingSignals: u((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? [])),
-    ...ddi([route]),
-    ...tadfr(route),
-    targetAdapterIds: u([route.adapter, route.translationAdmission?.targetAdapterId]),
+    ...ddi([route]), ...translationDenominators,
+    targetAdapterIds: u([...translationDenominators.targetAdapterIds, route.adapter]),
     interlinguaConstraintFamilies: u(details.constraintFamilies ?? []),
     interlinguaConstraintStatuses: u(details.constraintStatuses ?? []),
     interlinguaConstraintActions: u(details.constraintActions ?? []),
@@ -145,6 +145,7 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
 }
 
 function mergeWorkItems(left, right) {
+  const translationDenominators = mtad(left, right);
   return {
     ...left,
     priority: higherPriority(left.priority, right.priority),
@@ -170,8 +171,8 @@ function mergeWorkItems(left, right) {
     runtimeProofProvidedSignals: u([...left.runtimeProofProvidedSignals, ...right.runtimeProofProvidedSignals]),
     runtimeProofMissingSignals: u([...left.runtimeProofMissingSignals, ...right.runtimeProofMissingSignals]),
     ...ddi([left, right]),
-    ...mtad(left, right),
-    targetAdapterIds: u([...left.targetAdapterIds, ...right.targetAdapterIds]),
+    ...translationDenominators,
+    targetAdapterIds: u([...translationDenominators.targetAdapterIds, ...(left.targetAdapterIds ?? []), ...(right.targetAdapterIds ?? [])]),
     interlinguaConstraintFamilies: u([...left.interlinguaConstraintFamilies, ...right.interlinguaConstraintFamilies]),
     interlinguaConstraintStatuses: u([...left.interlinguaConstraintStatuses, ...right.interlinguaConstraintStatuses]),
     interlinguaConstraintActions: u([...left.interlinguaConstraintActions, ...right.interlinguaConstraintActions]),
@@ -293,7 +294,6 @@ function workItemMatchesQuery(item, query) {
     && match(query.reviewReason, item.review)
     && match(query.task, item.tasks)
     && match(query.runtimeAdapterRequirementId, item.runtimeAdapterRequirementIds)
-    && match(query.targetAdapterId, item.targetAdapterIds)
     && match(query.interlinguaConstraintFamily, item.interlinguaConstraintFamilies)
     && match(query.interlinguaConstraintStatus, item.interlinguaConstraintStatuses)
     && match(query.interlinguaConstraintAction, item.interlinguaConstraintActions)

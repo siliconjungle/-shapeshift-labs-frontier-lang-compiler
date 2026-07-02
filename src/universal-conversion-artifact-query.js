@@ -3,7 +3,7 @@ import{artifactSemanticEditIndex as esi,mergeSemanticEditIndexes as mse,workItem
 import{artifactSourceMapIndex as smi,artifactSourceMapMatches as smm}from './universal-conversion-artifact-source-maps.js';
 import{rri,rrm}from './universal-conversion-artifact-runtime-routes.js';
 import{artifactConstraintIndex as aci,artifactConstraintsMatch as acm}from './universal-conversion-artifact-constraints.js';
-import{translationAdmissionDenominatorIndex as tadi,translationAdmissionDenominatorMatches as tadm}from './universal-conversion-translation-admission-denominators.js';
+import{translationAdmissionDenominatorIndex as tadi,translationAdmissionDenominatorMatches as tadm,translationAdmissionDenominatorRecord as tadr}from './universal-conversion-translation-admission-denominators.js';
 import{interlinguaRecordMatches as irm}from './universal-interlingua-record.js';
 import{dialectDenominatorIndex as ddi,dialectDenominatorMatches as ddm}from './universal-conversion-dialect-routing.js';
 const ai='admissionRecordInterlingua',eri='evidenceReceiptInterlingua',soi='semanticOperationInterlingua';
@@ -75,15 +75,7 @@ export function artifactIndex(a) {
     representationConstructKinds: u(a.flatMap(constructs)),
     runtimeCapabilities: u(a.flatMap(rCaps)),
     sourceMapPrecisions: u(a.flatMap(sMapPrecisions)),
-    translationAdmissionStatuses: u(tAdmissions.map((r) => r.status)),
-    translationAdmissionActions: u(tAdmissions.map((r) => r.action)),
-    missingTranslationEvidence: u(tAdmissions.flatMap((r) => r.missingEvidence ?? [])),
-    translationEvidenceIds: u(tAdmissions.flatMap((r) => r.evidenceIds ?? [])),
-    translationProofEvidenceIds: u(tAdmissions.flatMap((r) => r.proofEvidenceIds ?? [])),
     ...tadi(tAdmissions),
-    requiredTranslationConstructKinds: u(tAdmissions.flatMap((r) => r.requiredConstructKinds ?? [])),
-    representedTranslationConstructKinds: u(tAdmissions.flatMap((r) => r.representedConstructKinds ?? [])),
-    targetAdapterIds: u(tAdmissions.map((r) => r.targetAdapterId)),
     ...aci(a),
     ...interlinguaIndex(iRecords),
     transformIdentityHashes: u(a.flatMap(tHashes))
@@ -152,15 +144,7 @@ function matchesArtifact(record, query) {
     && match(query.constructKind ?? query.representationConstructKind, constructs(record))
     && match(query.runtimeCapability, rCaps(record))
     && match(query.sourceMapPrecision, sMapPrecisions(record))
-    && match(query.translationAdmissionStatus, [tAdm(record).status])
-    && match(query.translationAdmissionAction, [tAdm(record).action])
-    && match(query.missingTranslationEvidence, tAdm(record).missingEvidence)
-    && match(query.translationEvidenceId, tAdm(record).evidenceIds)
-    && match(query.translationProofEvidenceId, tAdm(record).proofEvidenceIds)
-    && tadm(tadi([tAdm(record)]), query, match)
-    && match(query.requiredTranslationConstructKind, tAdm(record).requiredConstructKinds)
-    && match(query.representedTranslationConstructKind, tAdm(record).representedConstructKinds)
-    && match(query.targetAdapterId, [tAdm(record).targetAdapterId])
+    && tadm(tAdm(record), query, match)
     && acm(record, query)
     && irm(intl(record), query)
     && match(query.transformIdentityHash ?? query.transformIdentityHashes, tHashes(record));
@@ -170,7 +154,7 @@ function constructs(record) { return u([...(record.metadata?.representation?.con
 function rCaps(record) { return u([...(record.metadata?.representation?.runtimeCapabilities ?? []), ...(record.mergeScore?.components?.representationCoverage?.signals?.runtimeCapabilities ?? []), ...ops(record).flatMap((o) => o.metadata?.representation?.runtimeCapabilities ?? [])]); }
 function sMapPrecisions(record) { return u([...(record.metadata?.representation?.sourceMapPrecisions ?? []), ...(record.mergeScore?.components?.representationCoverage?.signals?.sourceMapPrecisions ?? []), ...ops(record).flatMap((o) => o.metadata?.representation?.sourceMapPrecisions ?? [])]); }
 function tHashes(record) { return u([...(record.metadata?.representation?.transformIdentityHashes ?? []), ...(record.patchBundle?.index?.transformIdentityHashes ?? []), ...(record.history?.index?.transformIdentityHashes ?? [])]); }
-function tAdm(record) { return record.translationAdmission ?? record.metadata?.translationAdmission ?? record.admissionRecord?.metadata?.translationAdmission ?? {}; }
+function tAdm(record) { return tadr(record); }
 function intl(record) { return record.interlingua ?? record.metadata?.interlingua ?? record.admissionRecord?.metadata?.interlingua ?? {}; }
 function aRec(record) { return record.admissionRecord ?? {}; }
 function iReceipt(record) { return record.evidenceReceipt ?? {}; }

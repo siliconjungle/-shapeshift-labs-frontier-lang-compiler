@@ -1,6 +1,6 @@
 import { countBy } from './native-import-utils.js';
 import { artifactSourceMapCounts as smc } from './universal-conversion-artifact-source-maps.js'; import { artifactRuntimeRouteCounts as rrc } from './universal-conversion-artifact-runtime-routes.js'; import { semanticEditRecordsCounts as sec } from './universal-conversion-artifact-semantic-edit.js';
-import { compactTranslationAdmissionCounts } from './universal-conversion-translation-admission-denominators.js';
+import { compactTranslationAdmissionCounts, translationAdmissionDenominatorRecord } from './universal-conversion-translation-admission-denominators.js';
 import { compactRouteDialectCounts } from './universal-conversion-dialect-routing.js';
 
 const aiKeys = 'Families Statuses Actions SourceIds EvidenceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationEvidenceIds ObligationMissingEvidence'.split(' ');
@@ -54,7 +54,7 @@ function countAdmissionRisk(records, risk) {
 function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperations, evidenceReceipts = routeArtifacts.map((artifact) => artifact.evidenceReceipt ?? {})) {
   const constructKinds = routeArtifacts.flatMap((artifact) => artifact.metadata?.representation?.constructKinds ?? []);
   const missingConstructs = routeArtifacts.flatMap((artifact) => artifact.metadata?.representation?.missing ?? []);
-  const translationAdmissions = routeArtifacts.map((artifact) => artifact.translationAdmission ?? artifact.metadata?.translationAdmission ?? {});
+  const translationAdmissions = routeArtifacts.map(translationAdmissionDenominatorRecord);
   const interlinguaRecords = routeArtifacts.map((artifact) => artifact.interlingua ?? artifact.metadata?.interlingua ?? artifact.admissionRecord?.metadata?.interlingua ?? {});
   const resourceTransfers = routeArtifacts.map((artifact) => artifact.resourceTransfer ?? artifact.metadata?.resourceTransfer ?? artifact.admissionRecord?.metadata?.resourceTransfer ?? {});
   const lifetimeConstraints = routeArtifacts.map((artifact) => artifact.lifetimeConstraint ?? artifact.metadata?.lifetimeConstraint ?? artifact.admissionRecord?.metadata?.lifetimeConstraint ?? {});
