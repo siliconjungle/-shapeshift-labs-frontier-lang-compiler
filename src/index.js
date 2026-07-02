@@ -52,10 +52,12 @@ export { createUniversalRepresentationCoverage, representationCoverageMatches, U
 export { UniversalLanguageCoverageReadinessStatuses, UniversalLanguageCoverageStatuses, UniversalLanguageCoverageSurfaceIds } from './universal-language-coverage-matrix.js';
 export { createUniversalInterlinguaRecord, interlinguaRecordMatches, UniversalInterlinguaConstraintEdgeKinds, UniversalInterlinguaLayerKinds, UniversalInterlinguaLoweringDispositions } from './universal-interlingua-record.js';
 export { createUniversalConversionArtifacts } from './internal/index-impl/createUniversalConversionArtifacts.js';
+export { createUniversalConversionArtifactsFromFrontierSource } from './internal/index-impl/createUniversalConversionArtifactsFromFrontierSource.js';
 export { createUniversalConversionRouteEvidenceReceipt } from './internal/index-impl/createUniversalConversionRouteEvidenceReceipt.js';
 export { createUniversalConversionWorklist, queryUniversalConversionWorklist, UniversalConversionWorkItemKinds } from './internal/index-impl/createUniversalConversionWorklist.js';
 export { queryUniversalConversionArtifacts } from './universal-conversion-artifacts.js';
 export { createUniversalConversionPlan } from './internal/index-impl/createUniversalConversionPlan.js';
+export { createUniversalConversionPlanFromFrontierSource } from './internal/index-impl/createUniversalConversionPlanFromFrontierSource.js';
 export { createUniversalRuntimeCapabilityMatrix, createUniversalRuntimeProofObligation, createUniversalRuntimeProofObligationsForRoute, queryUniversalRuntimeCapabilityMatrix, runtimeProofObligationMatches, runtimeProofSignalsForCapability, summarizeRuntimeProofObligations, UniversalRuntimeCapabilityKinds, UniversalRuntimeHostProfiles, UniversalRuntimeProofSignalKinds } from './universal-runtime-capabilities.js';
 export { createUniversalBorrowScopeConstraintEvidence, borrowScopeConstraintMatches, UniversalBorrowScopeConstraintStatuses } from './universal-borrow-scope-constraints.js';
 export { createUniversalBorrowCheckerConstraintEvidence, borrowCheckerConstraintMatches, UniversalBorrowCheckerConstraintStatuses } from './universal-borrow-checker-constraints.js';

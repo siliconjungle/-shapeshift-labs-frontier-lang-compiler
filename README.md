@@ -833,7 +833,9 @@ import {
   createUniversalBorrowCheckerConstraintEvidence,
   createUniversalBorrowScopeConstraintEvidence,
   createUniversalConversionArtifacts,
+  createUniversalConversionArtifactsFromFrontierSource,
   createUniversalConversionPlan,
+  createUniversalConversionPlanFromFrontierSource,
   createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
   createUniversalControlFlowConstraintEvidence,
@@ -912,6 +914,33 @@ console.log(pythonToRust.interlingua.constraints.families); // ownership/lifetim
 console.log(pythonToRust.interlingua.lowering.disposition); // "target-adapter", "semantic-index-only", etc.
 console.log(pythonToRust.interlingua.lowering.missingEvidence); // loss/proof gaps for target lowering
 console.log(pythonToRust.mergeScore.value); // sortable merge-review score, not a proof
+
+const frontierSource = `
+module Todo @id("mod_todo")
+
+conversion TodoToRust @id("conversion_todo_rust") {
+  sourceLanguage javascript
+  target rust
+  constraint type todoName @id("type_todo_name") role source kind property symbol symbol:todoName optional evidence evidence_type_translation_proof
+}
+`;
+
+const authoredPlan = createUniversalConversionPlanFromFrontierSource(frontierSource, {
+  fileName: 'todo.frontier',
+  targets: ['rust'],
+  imports: [imported],
+  universalCapabilityMatrix: universalMatrix
+});
+console.log(authoredPlan.document.id); // parsed authored Frontier source
+console.log(authoredPlan.metadata.authoredFrontierSource.constraintFamilies); // source-declared conversion constraints
+
+const authoredArtifacts = createUniversalConversionArtifactsFromFrontierSource(frontierSource, {
+  fileName: 'todo.frontier',
+  targets: ['rust'],
+  imports: [imported],
+  universalCapabilityMatrix: universalMatrix
+});
+console.log(authoredArtifacts.routeArtifacts[0]?.translationAdmission.action); // review/materialization task, not equivalence proof
 
 const resourceTransfer = createUniversalResourceTransferEvidence({
   sourceLanguage: 'rust',

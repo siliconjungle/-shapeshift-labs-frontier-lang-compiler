@@ -6,12 +6,7 @@ import './public-api-transform-types.js';
 import './public-api-universal-conversion-receipt-types.js'; import './public-api-semantic-resource-graph-types.js';
 
 type Expect<T extends true> = T;
-type Equal<A, B> =
-  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2)
-    ? (<T>() => T extends B ? 1 : 2) extends (<T>() => T extends A ? 1 : 2)
-      ? true
-      : false
-    : false;
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? (<T>() => T extends B ? 1 : 2) extends (<T>() => T extends A ? 1 : 2) ? true : false : false;
 
 type ExpectedPublicRuntimeExport =
   | 'FrontierCompileTargets'
@@ -74,25 +69,9 @@ type ExpectedPublicRuntimeExport =
   | 'createSemanticEditScript' | 'createSemanticGraphLayerSummary' | 'createSemanticResourceGraph'
   | 'createSemanticPatchBundleRecord' | 'compareSemanticPatchBundleRecords' | 'composeSemanticPatchBundleProjections'
   | 'createSemanticTransformIdentityRecord' | 'deriveSemanticTransformIdentityRecords'
-  | 'createUniversalCapabilityMatrix' | 'createUniversalLanguageCoverageMatrix' | 'createUniversalConversionArtifacts' | 'createUniversalConversionPlan' | 'createUniversalConversionRouteEvidenceReceipt' | 'createUniversalConversionWorklist'
-  | 'createUniversalRuntimeCapabilityMatrix' | 'createUniversalRuntimeProofObligation' | 'createUniversalRuntimeProofObligationsForRoute' | 'createUniversalBorrowCheckerConstraintEvidence' | 'createUniversalBorrowScopeConstraintEvidence' | 'createUniversalControlFlowConstraintEvidence' | 'createUniversalCallableBoundaryConstraintEvidence' | 'createUniversalAdtPatternConstraintEvidence' | 'createUniversalDataLayoutConstraintEvidence' | 'createUniversalConcurrencyModelConstraintEvidence' | 'createUniversalEffectConstraintEvidence' | 'createUniversalErrorModelConstraintEvidence' | 'createUniversalEvaluationModelConstraintEvidence' | 'createUniversalHostEnvironmentConstraintEvidence' | 'createUniversalLifetimeConstraintEvidence' | 'createUniversalMemoryModelConstraintEvidence' | 'createUniversalMetaprogrammingConstraintEvidence' | 'createUniversalScopeBindingConstraintEvidence' | 'createUniversalModuleConstraintEvidence' | 'createUniversalNumericSemanticsConstraintEvidence' | 'createUniversalTextSemanticsConstraintEvidence' | 'createUniversalCollectionSemanticsConstraintEvidence' | 'createUniversalSerializationSemanticsConstraintEvidence' | 'createUniversalDependencySemanticsConstraintEvidence' | 'createUniversalObjectModelConstraintEvidence' | 'createUniversalProtocolConstraintEvidence' | 'createUniversalTypeConstraintEvidence' | 'createUniversalOwnershipConstraintEvidence' | 'createUniversalResourceTransferEvidence'
-  | 'createUniversalDialectRecord'
-  | 'createUniversalDialectRegistry'
-  | 'createUniversalExternRecord' | 'createUniversalInterlinguaRecord'
-  | 'createUniversalRepresentationCoverage'
-  | 'createNativeSourcePreservation'
-  | 'decorateSemanticMergeCandidateForAdmission'
-  | 'createCSharpRoslynNativeImporterAdapter'
-  | 'createClangAstNativeImporterAdapter'
-  | 'createGoAstNativeImporterAdapter'
-  | 'createJavaAstNativeImporterAdapter'
-  | 'createKotlinPsiNativeImporterAdapter'
-  | 'createPythonAstNativeImporterAdapter'
-  | 'createRustSynNativeImporterAdapter'
-  | 'createSwiftSyntaxNativeImporterAdapter'
-  | 'createJsTsSemanticConflictSidecars'
-  | 'createJsTsSemanticMergeConflictExplanation'
-  | 'createJsTsSemanticMergeGateResult'
+  |'createUniversalCapabilityMatrix'|'createUniversalLanguageCoverageMatrix'|'createUniversalConversionArtifacts'|'createUniversalConversionArtifactsFromFrontierSource'|'createUniversalConversionPlan'|'createUniversalConversionPlanFromFrontierSource'|'createUniversalConversionRouteEvidenceReceipt'|'createUniversalConversionWorklist'
+  |'createUniversalRuntimeCapabilityMatrix'|'createUniversalRuntimeProofObligation'|'createUniversalRuntimeProofObligationsForRoute'|'createUniversalBorrowCheckerConstraintEvidence'|'createUniversalBorrowScopeConstraintEvidence'|'createUniversalControlFlowConstraintEvidence'|'createUniversalCallableBoundaryConstraintEvidence'|'createUniversalAdtPatternConstraintEvidence'|'createUniversalDataLayoutConstraintEvidence'|'createUniversalConcurrencyModelConstraintEvidence'|'createUniversalEffectConstraintEvidence'|'createUniversalErrorModelConstraintEvidence'|'createUniversalEvaluationModelConstraintEvidence'|'createUniversalHostEnvironmentConstraintEvidence'|'createUniversalLifetimeConstraintEvidence'|'createUniversalMemoryModelConstraintEvidence'|'createUniversalMetaprogrammingConstraintEvidence'|'createUniversalScopeBindingConstraintEvidence'|'createUniversalModuleConstraintEvidence'|'createUniversalNumericSemanticsConstraintEvidence'|'createUniversalTextSemanticsConstraintEvidence'|'createUniversalCollectionSemanticsConstraintEvidence'|'createUniversalSerializationSemanticsConstraintEvidence'|'createUniversalDependencySemanticsConstraintEvidence'|'createUniversalObjectModelConstraintEvidence'|'createUniversalProtocolConstraintEvidence'|'createUniversalTypeConstraintEvidence'|'createUniversalOwnershipConstraintEvidence'|'createUniversalResourceTransferEvidence'
+  | 'createUniversalDialectRecord' | 'createUniversalDialectRegistry' | 'createUniversalExternRecord' | 'createUniversalInterlinguaRecord' | 'createUniversalRepresentationCoverage' | 'createNativeSourcePreservation' | 'decorateSemanticMergeCandidateForAdmission' | 'createCSharpRoslynNativeImporterAdapter' | 'createClangAstNativeImporterAdapter' | 'createGoAstNativeImporterAdapter' | 'createJavaAstNativeImporterAdapter' | 'createKotlinPsiNativeImporterAdapter' | 'createPythonAstNativeImporterAdapter' | 'createRustSynNativeImporterAdapter' | 'createSwiftSyntaxNativeImporterAdapter' | 'createJsTsSemanticConflictSidecars' | 'createJsTsSemanticMergeConflictExplanation' | 'createJsTsSemanticMergeGateResult'
   | 'createJsTsProjectMergeDeclarationEmitParityProof' | 'createJsTsProjectMergeDeclarationGate' | 'createJsTsProjectMergeDiagnosticsGate' | 'createJsTsProjectReferenceCompositeProof' | 'createJsxSemanticMergeEvidence' | 'createSvgSemanticMergeEvidence' | 'createPackageManifestSemanticMergeEvidence' | 'createRustSemanticMergeEvidence'
   | 'createSemanticImportSidecar'
   | 'createSemanticSlice'

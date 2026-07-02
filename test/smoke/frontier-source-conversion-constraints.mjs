@@ -2,7 +2,9 @@ import { assert } from './helpers.mjs';
 import {
   compileFrontierSource,
   createUniversalConversionArtifacts,
+  createUniversalConversionArtifactsFromFrontierSource,
   createUniversalConversionPlan,
+  createUniversalConversionPlanFromFrontierSource,
   createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
   queryUniversalConversionPlan
@@ -42,6 +44,23 @@ const rawInput = {
 const plan = createUniversalConversionPlan(rawInput);
 assert.equal(plan.metadata.compileTargets[0], 'rust');
 
+const sourcePlan = createUniversalConversionPlanFromFrontierSource(source, {
+  fileName: 'conversion-probe.frontier',
+  generatedAt: 901,
+  universalCapabilityMatrix: capabilityMatrix('javascript', 'rust'),
+  imports: [sourceImport()],
+  evidence: [routeProof()]
+});
+assert.equal(sourcePlan.document.id, 'mod_conversion_probe');
+assert.equal(sourcePlan.sourcePath, 'conversion-probe.frontier');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintFamilies.includes('typeConstraints'), true);
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintFamilies.includes('borrowScopeConstraints'), true);
+assert.equal(queryUniversalConversionPlan(sourcePlan, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  typeConstraintMissingKind: 'nullability'
+}).bestRoute.typeConstraint.targetTypes[0].symbolId, 'symbol:nicknameRust');
+
 const route = queryUniversalConversionPlan(plan, {
   sourceLanguage: 'javascript',
   target: 'rust',
@@ -71,6 +90,23 @@ const artifacts = createUniversalConversionArtifacts(rawInput, {
 });
 assert.equal(artifacts.routeArtifacts.length, 1);
 assert.equal(artifacts.routeArtifacts[0].typeConstraint.targetTypes[0].symbolId, 'symbol:nicknameRust');
+
+const sourceArtifacts = createUniversalConversionArtifactsFromFrontierSource(source, {
+  fileName: 'conversion-probe.frontier',
+  generatedAt: 901,
+  universalCapabilityMatrix: capabilityMatrix('javascript', 'rust'),
+  imports: [sourceImport()],
+  evidence: [routeProof()]
+}, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  typeConstraintMissingKind: 'nullability'
+});
+assert.equal(sourceArtifacts.document.id, 'mod_conversion_probe');
+assert.equal(sourceArtifacts.sourcePath, 'conversion-probe.frontier');
+assert.equal(sourceArtifacts.routeArtifacts.length, 1);
+assert.equal(sourceArtifacts.routeArtifacts[0].typeConstraint.targetTypes[0].symbolId, 'symbol:nicknameRust');
+assert.equal(sourceArtifacts.metadata.authoredFrontierSource.constraintFamilies.includes('resourceTransfers'), true);
 
 const worklist = createUniversalConversionWorklist(rawInput, {
   sourceLanguage: 'javascript',

@@ -13,6 +13,8 @@ import type { UniversalInterlinguaConstraintEdgeKind, UniversalInterlinguaLayerK
 import type { UniversalConversionRouteConstraintFields } from './universal-conversion-plan-constraints.js';
 import type {
   UniversalConversionAdmissionAction,
+  FrontierSourceUniversalConversionPlan,
+  FrontierSourceUniversalConversionPlanOptions,
   UniversalConversionPlan,
   UniversalConversionPlanOptions,
   UniversalConversionPriority,
@@ -305,16 +307,11 @@ export interface CreateUniversalConversionArtifactsOptions extends UniversalConv
   readonly metadata?: Record<string, unknown>;
 }
 
-export type CreateUniversalConversionArtifactsInput =
-  | UniversalConversionPlan
-  | UniversalConversionRoute
-  | UniversalConversionPlanOptions;
-
-export declare function createUniversalConversionArtifacts(
-  input?: CreateUniversalConversionArtifactsInput,
-  options?: CreateUniversalConversionArtifactsOptions
-): UniversalConversionArtifacts;
-export declare function queryUniversalConversionArtifacts(
-  records: UniversalConversionArtifacts | UniversalConversionRouteArtifact | readonly (UniversalConversionArtifacts | UniversalConversionRouteArtifact)[],
-  query?: UniversalConversionArtifactQuery
-): readonly UniversalConversionRouteArtifact[];
+export type CreateUniversalConversionArtifactsInput = UniversalConversionPlan | UniversalConversionRoute | UniversalConversionPlanOptions;
+export declare function createUniversalConversionArtifacts(input?: CreateUniversalConversionArtifactsInput, options?: CreateUniversalConversionArtifactsOptions): UniversalConversionArtifacts;
+export interface FrontierSourceUniversalConversionArtifacts extends UniversalConversionArtifacts {
+  readonly document: FrontierSourceUniversalConversionPlan['document']; readonly plan: FrontierSourceUniversalConversionPlan; readonly sourcePath?: string;
+  readonly metadata: UniversalConversionArtifacts['metadata'] & { readonly authoredFrontierSource: FrontierSourceUniversalConversionPlan['metadata']['authoredFrontierSource']; };
+}
+export declare function createUniversalConversionArtifactsFromFrontierSource(source: string, options?: FrontierSourceUniversalConversionPlanOptions, artifactOptions?: CreateUniversalConversionArtifactsOptions): FrontierSourceUniversalConversionArtifacts;
+export declare function queryUniversalConversionArtifacts(records: UniversalConversionArtifacts | UniversalConversionRouteArtifact | readonly (UniversalConversionArtifacts | UniversalConversionRouteArtifact)[], query?: UniversalConversionArtifactQuery): readonly UniversalConversionRouteArtifact[];
