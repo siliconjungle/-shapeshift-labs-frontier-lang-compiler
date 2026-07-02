@@ -77,3 +77,10 @@ assert.equal(proofQuery.found, true);
 assert.equal(proofQuery.bestItem.targetProjectionContractIds.includes('target_projection_rust'), true);
 assert.equal(proofQuery.bestItem.autoMergeClaim, false);
 assert.equal(proofQuery.bestItem.semanticEquivalenceClaim, false);
+
+const targetOnlyPlan = createUniversalConversionPlanFromFrontierSource(source.replace('  target rust\\n', ''), { generatedAt: 1202 });
+assert.equal(queryUniversalConversionPlan(targetOnlyPlan, {
+  sourceLanguage: 'typescript',
+  target: 'rust',
+  targetProjectionContractId: 'target_projection_rust'
+}).found, true);

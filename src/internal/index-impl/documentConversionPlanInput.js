@@ -1,4 +1,5 @@
 import { authoredTargetProjectionSummary, authoredTargetProjections } from './authoredTargetProjections.js';
+import { uniqueStrings } from '../../native-import-utils.js';
 
 const CONSTRAINT_ARRAY_FIELDS = [
   'resourceTransfers',
