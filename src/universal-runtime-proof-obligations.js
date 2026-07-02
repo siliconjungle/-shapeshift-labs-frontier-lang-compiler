@@ -65,7 +65,11 @@ export function runtimeProofSignalsForCapability(capability) {
 export function createUniversalRuntimeProofObligation(input = {}) {
   const adapterRequirement = input.adapterRequirement ?? {};
   const capability = input.capability ?? adapterRequirement.capability;
-  const requiredSignals = uniqueStrings(input.requiredSignals ?? runtimeProofSignalsForCapability(capability));
+  const requiredSignals = uniqueStrings(
+    nonEmptyList(input.requiredSignals)
+      ?? nonEmptyList(adapterRequirement.requiredSignals)
+      ?? runtimeProofSignalsForCapability(capability)
+  );
   const evidence = scopedRuntimeProofEvidence(input.evidence ?? input.routeEvidence ?? [], input, capability, adapterRequirement);
   const providedSignals = uniqueStrings(input.providedSignals ?? signalsFromEvidence(evidence));
   const missingSignals = requiredSignals.filter((signal) => !providedSignals.includes(signal));
@@ -92,7 +96,12 @@ export function createUniversalRuntimeProofObligation(input = {}) {
       ...(missingSignals.length ? [`Runtime proof for ${capability} is missing signals: ${missingSignals.join(', ')}.`] : []),
       ...(input.review ?? [])
     ]),
-    evidenceIds: uniqueStrings([...(input.evidenceIds ?? []), ...evidence.map((record) => record?.id).filter(Boolean)]),
+    evidenceIds: uniqueStrings([
+      ...(input.evidenceIds ?? []),
+      ...(adapterRequirement.evidenceIds ?? []),
+      ...(adapterRequirement.proofEvidenceIds ?? []),
+      ...evidence.map((record) => record?.id).filter(Boolean)
+    ]),
     claims: {
       runtimeEquivalenceClaim: false,
       semanticEquivalenceClaim: false,
@@ -100,6 +109,10 @@ export function createUniversalRuntimeProofObligation(input = {}) {
       autoMergeClaim: false
     }
   };
+}
+
+function nonEmptyList(value) {
+  return Array.isArray(value) && value.length ? value : undefined;
 }
 
 export function createUniversalRuntimeProofObligationsForRoute(route = {}, evidence = []) {

@@ -61,6 +61,8 @@ function runtimeCapabilityRequirement(capability, sourceHost, targetHost, input)
   const targetCapability = targetHost.capabilities[capability] ?? unavailableCapability(capability, targetHost.id);
   const compatible = runtimeCapabilityCompatible(sourceHost, targetHost, sourceCapability, targetCapability);
   const reason = runtimeAdapterReason(capability, sourceHost, targetHost, sourceCapability, targetCapability);
+  const routeRequirements = input.requirements
+    .filter((requirement) => requirement.capability === capability && requirementApplies(requirement, sourceHost, targetHost));
   return {
     capability,
     sourceSupport: sourceCapability.support,
@@ -78,9 +80,9 @@ function runtimeCapabilityRequirement(capability, sourceHost, targetHost, input)
       targetBinding: targetCapability.binding,
       required: true,
       reason,
-      evidenceIds: uniqueStrings(input.requirements
-        .filter((requirement) => requirement.capability === capability && requirementApplies(requirement, sourceHost, targetHost))
-        .flatMap((requirement) => requirement.evidenceIds ?? []))
+      requiredSignals: uniqueStrings(routeRequirements.flatMap((requirement) => requirement.requiredSignals ?? [])),
+      proofEvidenceIds: uniqueStrings(routeRequirements.flatMap((requirement) => requirement.proofEvidenceIds ?? [])),
+      evidenceIds: uniqueStrings(routeRequirements.flatMap((requirement) => requirement.evidenceIds ?? []))
     }
   };
 }

@@ -152,6 +152,13 @@ function normalizeRuntimeRequirementRecord(record, hostProfiles) {
   ].map(normalizeRuntimeCapabilityKind).filter(Boolean));
   const sourceHost = resolveHostSelector(record.sourceHost ?? record.sourceRuntimeHost, hostProfiles);
   const targetHost = resolveHostSelector(record.targetHost ?? record.targetRuntimeHost, hostProfiles);
+  const requiredSignals = uniqueStrings([
+    ...(Array.isArray(record.requiredSignals) ? record.requiredSignals : []),
+    ...(Array.isArray(record.proofSignals) ? record.proofSignals : []),
+    record.requiredSignal,
+    record.proofSignal
+  ].filter(Boolean));
+  const proofEvidenceIds = uniqueStrings(record.proofEvidenceIds ?? []);
   return capabilities.map((capability) => ({
     capability,
     sourceLanguage: normalizeNativeLanguageId(record.sourceLanguage ?? record.language ?? sourceHost?.language),
@@ -161,6 +168,8 @@ function normalizeRuntimeRequirementRecord(record, hostProfiles) {
     targetRuntime: normalizeRuntimeId(record.targetRuntime ?? targetHost?.runtime),
     targetHostId: targetHost?.id,
     reason: record.reason,
+    requiredSignals,
+    proofEvidenceIds,
     evidenceIds: uniqueStrings(record.evidenceIds ?? [])
   }));
 }

@@ -18,7 +18,7 @@ conversion JsToRust @id("conversion_js_rust") {
   target rust
   sourceRuntime javascript node
   targetRuntime rust cli
-  runtimeRequirement fetchRuntime @id("runtime_requirement_fetch") capability fetch sourceRuntime node targetRuntime cli evidence evidence_type_translation_proof
+  runtimeRequirement fetchRuntime @id("runtime_requirement_fetch") capability fetch sourceRuntime node targetRuntime cli requiredSignals source-hash|target-hash|runtime-command|probe-id|telemetry-hash|network-trace-hash evidence evidence_type_translation_proof proofEvidence evidence_type_translation_proof
   dialect nodeProcess @id("dialect_node_process") language javascript dialect node.runtime kind runtime target rust disposition unsupported readiness blocked loss loss_node_process_projection
   extern viteRoutes @id("extern_vite_routes") language javascript dialect vite.plugin.virtual-module externKind generatorArtifact target rust disposition runtime-required evidence evidence_vite_routes_manifest bindingSymbol virtual:routes
   constraint type publicApi @id("type_constraint_public_api") role source kind property symbol symbol:nickname signatureHash sig_read_user optional evidence evidence_type_translation_proof
@@ -36,6 +36,8 @@ assert.equal(result.document.metadata.universalConversionPlan.targets[0], 'rust'
 assert.equal(result.document.metadata.universalConversionPlan.sourceRuntimes.javascript, 'node');
 assert.equal(result.document.metadata.universalConversionPlan.targetRuntimes.rust, 'cli');
 assert.equal(result.document.metadata.universalConversionPlan.runtimeRequirements[0].capability, 'fetch');
+assert.equal(result.document.metadata.universalConversionPlan.runtimeRequirements[0].requiredSignals.includes('network-trace-hash'), true);
+assert.equal(result.document.metadata.universalConversionPlan.runtimeRequirements[0].proofEvidenceIds[0], 'evidence_type_translation_proof');
 assert.equal(result.document.metadata.universalConversionPlan.dialects[0].id, 'dialect_node_process');
 assert.equal(result.document.metadata.universalConversionPlan.externs[0].binding.symbol, 'virtual:routes');
 assert.equal(result.document.metadata.universalConversionPlan.typeConstraints[0].sourceTypes[0].optional, true);
@@ -76,6 +78,15 @@ assert.equal(queryUniversalConversionPlan(sourcePlan, {
   sourceRuntime: 'node',
   targetRuntime: 'cli'
 }).found, true);
+const runtimeProofRoute = queryUniversalConversionPlan(sourcePlan, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  runtimeProofRequiredSignal: 'network-trace-hash',
+  runtimeProofMissingSignal: 'network-trace-hash'
+}).bestRoute;
+assert.equal(Boolean(runtimeProofRoute), true);
+assert.equal(runtimeProofRoute.runtime.proofObligations[0].requiredSignals.includes('network-trace-hash'), true);
+assert.equal(runtimeProofRoute.runtime.proofObligations[0].evidenceIds.includes('evidence_type_translation_proof'), true);
 assert.equal(queryUniversalConversionPlan(sourcePlan, {
   sourceLanguage: 'javascript',
   target: 'rust',

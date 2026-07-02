@@ -3,7 +3,14 @@ import type { UniversalConversionArtifacts, UniversalConversionPlan, UniversalCo
 
 const routingPlan: UniversalConversionPlan = createUniversalConversionPlan({
   targets: ['rust'],
-  runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'fetch' }]
+  runtimeRequirements: [{
+    sourceLanguage: 'javascript',
+    target: 'rust',
+    capability: 'fetch',
+    requiredSignal: 'network-trace-hash',
+    requiredSignals: ['source-hash', 'target-hash', 'runtime-command', 'probe-id', 'telemetry-hash', 'network-trace-hash'],
+    proofEvidenceIds: ['runtime_proof_reference']
+  }]
 });
 const routingRoute = queryUniversalConversionPlan(routingPlan, {
   routeId: ['conversion_javascript_to_rust'],
@@ -39,7 +46,7 @@ routingRoute?.translationAdmission.runtimeProofRequiredSignals satisfies readonl
 routingRoute?.translationAdmission.runtimeProofProvidedSignals satisfies readonly string[] | undefined;
 routingRoute?.translationAdmission.runtimeProofMissingSignals satisfies readonly string[] | undefined;
 routingRoute?.translationAdmission.dialectRecordIds satisfies readonly string[] | undefined;
-const runtimeMatrix: UniversalRuntimeCapabilityMatrix = createUniversalRuntimeCapabilityMatrix({ sourceHosts: ['javascript:web'], targetHosts: ['rust:cli'], runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'fetch' }] });
+const runtimeMatrix: UniversalRuntimeCapabilityMatrix = createUniversalRuntimeCapabilityMatrix({ sourceHosts: ['javascript:web'], targetHosts: ['rust:cli'], runtimeRequirements: [{ sourceLanguage: 'javascript', target: 'rust', capability: 'fetch', proofSignal: 'network-trace-hash', proofSignals: ['source-hash', 'network-trace-hash'], proofEvidenceIds: ['runtime_proof_reference'] }] });
 queryUniversalRuntimeCapabilityMatrix(runtimeMatrix, { language: ['javascript'], target: ['rust'], sourceRuntime: ['web'], targetRuntime: ['cli'], capability: ['fetch'], runtimeProofObligationId: ['runtime_proof'], runtimeProofCapability: ['fetch'], runtimeProofStatus: ['needs-evidence'], runtimeProofRequiredSignal: ['network-trace-hash'], runtimeProofMissingSignal: ['network-trace-hash'], runtimeProofProvidedSignal: ['telemetry-hash'] }).bestRoute?.proofObligations satisfies readonly unknown[] | undefined;
 const runtimeProofQuery = { runtimeProofObligationId: ['runtime_proof'], runtimeProofCapability: ['fetch'], runtimeProofStatus: ['needs-evidence'], runtimeProofRequiredSignal: ['network-trace-hash'], runtimeProofMissingSignal: ['network-trace-hash'], runtimeProofProvidedSignal: ['telemetry-hash'] } satisfies UniversalRuntimeProofObligationQuery;
 runtimeProofObligationMatches(runtimeMatrix.routes[0]?.proofObligations[0], runtimeProofQuery) satisfies boolean;

@@ -74,6 +74,11 @@ export interface UniversalRuntimeRequirementInput {
   readonly targetHost?: string | UniversalRuntimeHostProfile;
   readonly targetRuntimeHost?: string | UniversalRuntimeHostProfile;
   readonly reason?: string;
+  readonly requiredSignal?: UniversalRuntimeProofSignalKind;
+  readonly requiredSignals?: readonly UniversalRuntimeProofSignalKind[];
+  readonly proofSignal?: UniversalRuntimeProofSignalKind;
+  readonly proofSignals?: readonly UniversalRuntimeProofSignalKind[];
+  readonly proofEvidenceIds?: readonly string[];
   readonly evidenceIds?: readonly string[];
 }
 
@@ -87,6 +92,8 @@ export interface UniversalRuntimeAdapterRequirement {
   readonly targetBinding: string;
   readonly required: true;
   readonly reason: string;
+  readonly requiredSignals?: readonly UniversalRuntimeProofSignalKind[];
+  readonly proofEvidenceIds?: readonly string[];
   readonly evidenceIds: readonly string[];
 }
 
