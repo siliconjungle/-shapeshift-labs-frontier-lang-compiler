@@ -138,6 +138,8 @@ assert.match(result.output, /disabled: props\.disabled/);
 assert.match(result.output, /press: \{ action: "save" \}/);
 assert.match(result.output, /export const addTodoAction/);
 assert.match(result.output, /export const PersistTodoEffect/);
+assert.match(result.output, /export async function runPersistTodoEffect\(input: TodoInput, env: FrontierEffectEnvironment\): Promise<unknown>/);
+assert.match(result.output, /env\.invoke\("storage\.write", input/);
 assert.match(result.output, /export const persistTodoExtern/);
 assert.match(result.output, /export const typescriptTarget/);
 assert.match(result.output, /export const TodoTypescriptNativeSource/);
@@ -161,6 +163,8 @@ assert.match(emitForTarget(result.document, 'javascript'), /export function rend
 assert.match(emitForTarget(result.document, 'javascript'), /disabled: props\.disabled/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const addTodoAction/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const PersistTodoEffect/);
+assert.match(emitForTarget(result.document, 'javascript'), /export async function runPersistTodoEffect\(input, env\)/);
+assert.match(emitForTarget(result.document, 'javascript'), /env\.invoke\("storage\.write", input/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const persistTodoExtern/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const typescriptTarget/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const TodoTypescriptNativeSource/);
