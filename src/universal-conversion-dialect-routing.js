@@ -101,18 +101,39 @@ export function compactRouteDialectCounts(records = []) {
 }
 
 function dialectFields(record = {}) {
-  if (record.dialectRegistryIds || record.dialectRecordIds || record.dialectReadinesses) return {
-    dialectReadinesses: uniqueStrings([record.dialectReadiness, ...(record.dialectReadinesses ?? [])]),
-    dialectRegistryIds: uniqueStrings(record.dialectRegistryIds ?? []),
-    dialectRecordIds: uniqueStrings(record.dialectRecordIds ?? []),
-    dialectConstructKinds: uniqueStrings(record.dialectConstructKinds ?? []),
-    dialectExternKinds: uniqueStrings(record.dialectExternKinds ?? []),
-    dialectDispositions: uniqueStrings(record.dialectDispositions ?? []),
-    dialectEvidenceIds: uniqueStrings(record.dialectEvidenceIds ?? []),
-    dialectLossIds: uniqueStrings(record.dialectLossIds ?? [])
+  if (hasFlatDialectFields(record)) return {
+    dialectReadinesses: uniqueStrings([record.dialectReadiness, ...listField(record.dialectReadinesses)]),
+    dialectRegistryIds: uniqueStrings(listField(record.dialectRegistryIds)),
+    dialectRecordIds: uniqueStrings(listField(record.dialectRecordIds)),
+    dialectConstructKinds: uniqueStrings(listField(record.dialectConstructKinds)),
+    dialectExternKinds: uniqueStrings(listField(record.dialectExternKinds)),
+    dialectDispositions: uniqueStrings(listField(record.dialectDispositions)),
+    dialectEvidenceIds: uniqueStrings(listField(record.dialectEvidenceIds)),
+    dialectLossIds: uniqueStrings(listField(record.dialectLossIds))
   };
   const row = routeDialectDenominators(record);
   return { ...row, dialectReadinesses: uniqueStrings([row.dialectReadiness]) };
+}
+
+const flatDialectFieldKeys = [
+  'dialectReadiness',
+  'dialectReadinesses',
+  'dialectRegistryIds',
+  'dialectRecordIds',
+  'dialectConstructKinds',
+  'dialectExternKinds',
+  'dialectDispositions',
+  'dialectEvidenceIds',
+  'dialectLossIds'
+];
+
+function hasFlatDialectFields(record) {
+  return flatDialectFieldKeys.some((key) => Object.prototype.hasOwnProperty.call(record, key));
+}
+
+function listField(value) {
+  if (Array.isArray(value)) return value;
+  return value === undefined ? [] : [value];
 }
 
 function hasDialect(record) {
