@@ -31,7 +31,8 @@ export function mergeDocumentConversionPlanInput(input = {}) {
   const resourceGraphs = authoredResourceGraphs(input.document);
   const interlinguaRecords = authoredInterlinguaRecords(input.document);
   const dialectRegistry = authoredDialectRegistry(input.document);
-  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length && !interlinguaRecords.length && !dialectRegistry) return input;
+  const runtimeCapabilities = authoredRuntimeCapabilities(input.document);
+  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length && !interlinguaRecords.length && !dialectRegistry && !runtimeCapabilities) return input;
   const merged = authored && typeof authored === 'object' ? { ...authored, ...input } : { ...input };
   if (input.targets === undefined && authored?.targets) merged.targets = authored.targets;
   if (dialectRegistry && input.universalDialectRegistry === undefined) merged.universalDialectRegistry = dialectRegistry;
@@ -56,6 +57,9 @@ export function mergeDocumentConversionPlanInput(input = {}) {
       ...(input.universalInterlinguaRecords ?? [])
     ]);
   }
+  if (runtimeCapabilities) {
+    mergeAuthoredRuntimeCapabilities(merged, input, runtimeCapabilities);
+  }
   for (const field of CONSTRAINT_ARRAY_FIELDS) {
     const authoredValues = aggregateAuthoredRouteConstraints(authored?.[field] ?? []);
     const inputValues = input[field] ?? [];
@@ -77,6 +81,47 @@ function authoredInterlinguaRecords(document) {
 function authoredDialectRegistry(document) {
   const registry = document?.metadata?.dialects;
   return registry && typeof registry === 'object' ? registry : undefined;
+}
+
+function authoredRuntimeCapabilities(document) {
+  const runtime = document?.metadata?.runtimeCapabilities;
+  return runtime && typeof runtime === 'object' ? runtime : undefined;
+}
+
+function mergeAuthoredRuntimeCapabilities(merged, input, runtime) {
+  if (input.universalRuntimeCapabilityMatrix === undefined && runtime.universalRuntimeCapabilityMatrix?.kind === 'frontier.lang.universalRuntimeCapabilityMatrix') {
+    merged.universalRuntimeCapabilityMatrix = runtime.universalRuntimeCapabilityMatrix;
+  }
+  merged.hostProfiles = uniqueRecords([
+    ...(runtime.hostProfiles ?? []),
+    ...(input.hostProfiles ?? [])
+  ]);
+  merged.sourceHosts = uniqueHostSelectors([
+    ...(runtime.sourceHosts ?? []),
+    ...(input.sourceHosts ?? [])
+  ]);
+  merged.targetHosts = uniqueHostSelectors([
+    ...(runtime.targetHosts ?? []),
+    ...(input.targetHosts ?? [])
+  ]);
+  merged.hostCapabilities = uniqueRecords([
+    ...(runtime.hostCapabilities ?? []),
+    ...(input.hostCapabilities ?? [])
+  ]);
+  merged.hostBindings = uniqueRecords([
+    ...(runtime.hostBindings ?? []),
+    ...(input.hostBindings ?? [])
+  ]);
+  merged.runtimeRequirements = uniqueRecords([
+    ...(merged.runtimeRequirements ?? []),
+    ...(runtime.runtimeRequirements ?? []),
+    ...(input.runtimeRequirements ?? [])
+  ]);
+  merged.evidence = uniqueRecords([
+    ...(runtime.evidence ?? []),
+    ...(input.evidence ?? [])
+  ]);
+  merged.authoredRuntimeCapabilities = runtime;
 }
 
 function resourceGraphImport(graph = {}, authored = {}) {
@@ -122,6 +167,16 @@ function mergeRecordInto(target, record = {}) {
 }
 
 function uniqueRecords(values) {
+  const seen = new Set();
+  return values.filter((value) => {
+    const key = value && typeof value === 'object' ? value.id ?? JSON.stringify(value) : String(value);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function uniqueHostSelectors(values) {
   const seen = new Set();
   return values.filter((value) => {
     const key = value && typeof value === 'object' ? value.id ?? JSON.stringify(value) : String(value);

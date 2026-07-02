@@ -26,6 +26,7 @@ function sourceMetadata(document, sourcePath) {
   const packageManifests = document.metadata?.packageManifests;
   const canvasSurfaces = document.metadata?.canvasSurfaces;
   const applicationSurfaces = document.metadata?.applicationSurfaces;
+  const runtimeCapabilities = document.metadata?.runtimeCapabilities;
   return {
     documentId: document.id,
     ...(sourcePath ? { sourcePath } : {}),
@@ -114,7 +115,18 @@ function sourceMetadata(document, sourcePath) {
     applicationSurfaceGateIds: applicationSurfaces?.gateIds ?? [],
     applicationSurfaceEvidenceIds: applicationSurfaces?.evidenceIds ?? [],
     applicationSurfaceProofGapCodes: applicationSurfaces?.proofGapCodes ?? [],
-    applicationSurfaceSummary: applicationSurfaces?.summary
+    applicationSurfaceSummary: applicationSurfaces?.summary,
+    runtimeCapabilityId: runtimeCapabilities?.id,
+    runtimeCapabilityIds: runtimeCapabilities?.blockIds ?? [],
+    runtimeCapabilityHostProfileIds: runtimeCapabilities?.hostProfileIds ?? [],
+    runtimeCapabilitySourceHostIds: runtimeCapabilities?.sourceHostIds ?? [],
+    runtimeCapabilityTargetHostIds: runtimeCapabilities?.targetHostIds ?? [],
+    runtimeCapabilityHostCapabilityIds: runtimeCapabilities?.hostCapabilityIds ?? [],
+    runtimeCapabilityHostBindingIds: runtimeCapabilities?.hostBindingIds ?? [],
+    runtimeCapabilityRequirementIds: runtimeCapabilities?.runtimeRequirementIds ?? [],
+    runtimeCapabilityEvidenceIds: runtimeCapabilities?.evidenceIds ?? [],
+    runtimeCapabilityProofGapCodes: runtimeCapabilities?.proofGapCodes ?? [],
+    runtimeCapabilitySummary: runtimeCapabilities?.summary
   };
 }
 

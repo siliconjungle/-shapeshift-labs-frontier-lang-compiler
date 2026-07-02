@@ -1450,6 +1450,18 @@ signal, provided signal, or missing signal, then route only the remaining proof
 collection work. These predicates are routing evidence, not auto-merge or
 semantic-equivalence claims.
 
+`.frontier` source files can now carry the runtime capability matrix input
+directly through authored `runtimeCapabilities` / `runtimeCapabilityMatrix`
+blocks. `createUniversalConversionPlanFromFrontierSource` merges those blocks
+into host profiles, source/target host selectors, host capability support rows,
+host binding rows, runtime requirements, and runtime proof evidence before
+building the conversion plan. That means a human-authored Frontier program can
+declare "this source host uses browser fetch, this target host needs a Rust HTTP
+adapter, these proof signals are required, and this probe produced them" without
+passing separate JSON. The resulting matrix and route records still keep
+runtime, render, semantic-equivalence, and auto-merge claims false unless
+stronger proof is attached.
+
 Route evidence receipts also expose interlingua constraint obligations. A
 receipt can now name the interlingua record, lowering disposition, constraint
 families, actions, source ids, required/represented kinds, missing kinds,

@@ -16,9 +16,11 @@ export function createUniversalAstFromDocument(document, input = {}) {
     packageManifests: input.packageManifests ?? authored.packageManifests ?? document.metadata?.packageManifests?.manifests,
     canvasSurfaces: input.canvasSurfaces ?? authored.canvasSurfaces ?? document.metadata?.canvasSurfaces?.surfaces,
     applicationSurfaces: input.applicationSurfaces ?? authored.applicationSurfaces ?? document.metadata?.applicationSurfaces?.surfaces,
+    runtimeCapabilities: input.runtimeCapabilities ?? authored.runtimeCapabilities ?? document.metadata?.runtimeCapabilities?.blocks,
     packageManifestIds: input.packageManifestIds ?? authored.packageManifestIds ?? document.metadata?.packageManifests?.manifestIds,
     canvasSurfaceIds: input.canvasSurfaceIds ?? authored.canvasSurfaceIds ?? document.metadata?.canvasSurfaces?.surfaceIds,
     applicationSurfaceIds: input.applicationSurfaceIds ?? authored.applicationSurfaceIds ?? document.metadata?.applicationSurfaces?.surfaceIds,
+    runtimeCapabilityIds: input.runtimeCapabilityIds ?? authored.runtimeCapabilityIds ?? document.metadata?.runtimeCapabilities?.blockIds,
     semanticOperations: input.semanticOperations ?? input.universalAstSemanticOperations ?? document.metadata?.semanticOperations,
     proof: input.proof ?? input.universalAstProof ?? document.metadata?.proof,
     paradigmSemantics: input.paradigmSemantics ?? input.universalAstParadigmSemantics ?? document.metadata?.paradigmSemantics,
@@ -34,9 +36,11 @@ function universalAstMetadata(authored, document) {
     authoredPackageManifestIds: authored.packageManifestIds ?? document.metadata?.packageManifests?.manifestIds ?? authored.metadata?.authoredPackageManifestIds,
     authoredCanvasSurfaceIds: authored.canvasSurfaceIds ?? document.metadata?.canvasSurfaces?.surfaceIds ?? authored.metadata?.authoredCanvasSurfaceIds,
     authoredApplicationSurfaceIds: authored.applicationSurfaceIds ?? document.metadata?.applicationSurfaces?.surfaceIds ?? authored.metadata?.authoredApplicationSurfaceIds,
+    authoredRuntimeCapabilityIds: authored.runtimeCapabilityIds ?? document.metadata?.runtimeCapabilities?.blockIds ?? authored.metadata?.authoredRuntimeCapabilityIds,
     packageManifestSummary: document.metadata?.packageManifests?.summary,
     canvasSurfaceSummary: document.metadata?.canvasSurfaces?.summary,
-    applicationSurfaceSummary: document.metadata?.applicationSurfaces?.summary
+    applicationSurfaceSummary: document.metadata?.applicationSurfaces?.summary,
+    runtimeCapabilitySummary: document.metadata?.runtimeCapabilities?.summary
   };
 }
 
