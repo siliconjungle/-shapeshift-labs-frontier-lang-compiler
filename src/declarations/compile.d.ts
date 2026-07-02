@@ -79,12 +79,33 @@ export type FrontierTargetDocumentSourceMapResult =
   | EmitPythonWithSourceMapResult
   | EmitCHeaderWithSourceMapResult;
 
+export interface FrontierCompileSourceMapOptions {
+  readonly sourceMapId?: string;
+  readonly sourcePath?: string;
+  readonly sourceHash?: string;
+  readonly target?: CompileTarget;
+  readonly targetPath?: string;
+  readonly targetHash?: string;
+  readonly semanticIndexId?: string;
+  readonly universalAstId?: string;
+  readonly nativeAstId?: string;
+  readonly nativeSourceId?: string;
+  readonly semanticSymbolIdsBySemanticNodeId?: Readonly<Record<string, string>>;
+  readonly semanticOccurrenceIdsBySemanticNodeId?: Readonly<Record<string, string>>;
+  readonly sourceSpansBySemanticNodeId?: Readonly<Record<string, SourceSpan>>;
+  readonly lossIdsBySemanticNodeId?: Readonly<Record<string, readonly string[]>>;
+  readonly evidence?: readonly EvidenceRecord[];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface FrontierCompileOptions {
   readonly target?: FrontierCompileTarget | 'ts' | 'js' | 'rs' | 'py' | 'h';
   readonly fileName?: string;
+  readonly sourcePath?: string;
   readonly parse?: Record<string, unknown>;
   readonly check?: Record<string, unknown>;
   readonly emit?: FrontierCompileEmitOptions;
+  readonly sourceMap?: boolean | FrontierCompileSourceMapOptions;
   readonly emitOnError?: boolean;
 }
 
@@ -94,8 +115,10 @@ export interface FrontierCompileResult {
   readonly hash: string;
   readonly document: FrontierLangDocument;
   readonly diagnostics: readonly Diagnostic[];
+  readonly sourcePath?: string;
   readonly ast?: FrontierTargetAst;
   readonly output: string;
+  readonly sourceMap?: SourceMapRecord;
 }
 
 export interface CapabilityResolution {

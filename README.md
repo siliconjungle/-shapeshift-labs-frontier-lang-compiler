@@ -84,6 +84,19 @@ const { code, sourceMap, ast } = emitForTargetWithSourceMap(document, 'javascrip
 });
 ```
 
+Or request the same provenance directly from the compile facade:
+
+```js
+const result = compileFrontierSource(source, {
+  target: 'javascript',
+  fileName: 'todo.frontier',
+  sourceMap: { targetPath: 'todo.js', semanticIndexId: 'semantic_index_todo' }
+});
+
+console.log(result.sourcePath); // "todo.frontier"
+console.log(result.sourceMap.mappings[0].semanticNodeId);
+```
+
 Resolve target-specific capability bindings without hardcoding one runtime into the source graph:
 
 ```js

@@ -1,5 +1,6 @@
 import { assert } from './helpers.mjs';
 import {
+  compilerApi,
   compileFrontierSource,
   createUniversalAstFromDocument,
   emitForTarget,
@@ -129,6 +130,8 @@ assert.equal(result.ok, true);
 assert.match(result.hash, /^fnv1a32:/);
 assert.equal(result.ast.kind, 'typescript.module');
 assert.equal(renderTargetAst(result.ast, 'typescript'), result.output);
+assert.equal(result.sourcePath, undefined);
+assert.equal(result.sourceMap, undefined);
 assert.match(result.output, /export interface Todo/);
 assert.match(result.output, /export interface TodoDbState/);
 assert.match(result.output, /export const TodoDbStateDescriptor/);
@@ -168,6 +171,30 @@ assert.match(emitForTarget(result.document, 'javascript'), /env\.invoke\("storag
 assert.match(emitForTarget(result.document, 'javascript'), /export const persistTodoExtern/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const typescriptTarget/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const TodoTypescriptNativeSource/);
+const mappedCompile = compileFrontierSource(source, {
+  target: 'javascript',
+  fileName: 'todo.frontier',
+  sourceMap: { targetPath: 'todo.js', semanticIndexId: 'semantic_index_todo' }
+});
+assert.equal(mappedCompile.ok, true);
+assert.equal(mappedCompile.sourcePath, 'todo.frontier');
+assert.match(mappedCompile.output, /export const TodoSchema/);
+assert.equal(mappedCompile.sourceMap.kind, 'frontier.lang.sourceMap');
+assert.equal(mappedCompile.sourceMap.sourcePath, 'todo.frontier');
+assert.equal(mappedCompile.sourceMap.targetPath, 'todo.js');
+assert.equal(mappedCompile.sourceMap.semanticIndexId, 'semantic_index_todo');
+assert.equal(mappedCompile.sourceMap.mappings.some((mapping) => mapping.semanticNodeId === 'ent_todo'), true);
+const documentMappedCompile = compilerApi.compileFrontierDocument(result.document, {
+  target: 'typescript',
+  sourcePath: 'todo-doc.frontier',
+  sourceMap: true
+});
+assert.equal(documentMappedCompile.ok, true);
+assert.equal(documentMappedCompile.sourcePath, 'todo-doc.frontier');
+assert.match(documentMappedCompile.output, /export interface Todo/);
+assert.equal(documentMappedCompile.sourceMap.sourcePath, 'todo-doc.frontier');
+assert.equal(documentMappedCompile.sourceMap.target.language, 'typescript');
+assert.equal(documentMappedCompile.sourceMap.mappings.some((mapping) => mapping.semanticNodeId === 'ent_todo'), true);
 const javascriptMappedOutput = emitForTargetWithSourceMap(result.document, 'javascript', { targetPath: 'todo.js' });
 assert.match(javascriptMappedOutput.code, /export const TodoSchema/);
 assert.equal(javascriptMappedOutput.ast.kind, 'javascript.module');
