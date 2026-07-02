@@ -55,6 +55,38 @@ action addTodo @id("action_add") {
   writes field_tags
   returns Patch
 }
+
+effect PersistTodo @id("effect_persist") {
+  capability storage.write
+  input TodoInput
+  returns Json
+  resources TodoDb.todos
+}
+
+extern persistTodo @id("extern_persist") {
+  language typescript
+  symbol persistTodo
+  input TodoInput
+  returns Json
+  effects storage.write
+}
+
+target typescript @id("target_ts") {
+  language typescript
+  package @example/todo
+  emitPath src/generated/todo.ts
+  moduleFormat esm
+}
+
+nativeSource TodoTypescript @id("native_todo_ts") {
+  language typescript
+  parser typescript
+  sourcePath src/todo.ts
+  sourceHash sha256:todo
+  symbol Todo
+  frontierNodes ent_todo, action_add
+  loss unsupportedSyntax "decorator retained in native AST" severity warning
+}
 `;
 
 assert.equal(normalizeCompileTarget('ts'), 'typescript');
@@ -64,7 +96,20 @@ assert.match(result.hash, /^fnv1a32:/);
 assert.equal(result.ast.kind, 'typescript.module');
 assert.equal(renderTargetAst(result.ast, 'typescript'), result.output);
 assert.match(result.output, /export interface Todo/);
+assert.match(result.output, /export interface TodoDbState/);
+assert.match(result.output, /export const TodoDbStateDescriptor/);
+assert.match(result.output, /export const addTodoAction/);
+assert.match(result.output, /export const PersistTodoEffect/);
+assert.match(result.output, /export const persistTodoExtern/);
+assert.match(result.output, /export const typescriptTarget/);
+assert.match(result.output, /export const TodoTypescriptNativeSource/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const TodoSchema/);
+assert.match(emitForTarget(result.document, 'javascript'), /export const TodoDbStateDescriptor/);
+assert.match(emitForTarget(result.document, 'javascript'), /export const addTodoAction/);
+assert.match(emitForTarget(result.document, 'javascript'), /export const PersistTodoEffect/);
+assert.match(emitForTarget(result.document, 'javascript'), /export const persistTodoExtern/);
+assert.match(emitForTarget(result.document, 'javascript'), /export const typescriptTarget/);
+assert.match(emitForTarget(result.document, 'javascript'), /export const TodoTypescriptNativeSource/);
 const javascriptMappedOutput = emitForTargetWithSourceMap(result.document, 'javascript', { targetPath: 'todo.js' });
 assert.match(javascriptMappedOutput.code, /export const TodoSchema/);
 assert.equal(javascriptMappedOutput.ast.kind, 'javascript.module');

@@ -78,7 +78,7 @@ export { createUniversalProtocolConstraintEvidence, protocolConstraintMatches, U
 export { createUniversalTypeConstraintEvidence, typeConstraintMatches, UniversalTypeConstraintStatuses } from './universal-type-constraints.js';
 export { createUniversalOwnershipConstraintEvidence, ownershipConstraintMatches, UniversalOwnershipConstraintStatuses } from './universal-ownership-constraints.js';
 export { createUniversalResourceTransferEvidence, resourceTransferMatches, UniversalResourceTransferStatuses } from './universal-resource-transfer.js';
-export { attachUniversalDialectRegistry, createUniversalDialectRecord, createUniversalDialectRegistry, createUniversalExternRecord, summarizeUniversalDialectRegistry, UniversalDialectConstructKinds, UniversalDialectProjectionDispositions } from './universal-dialect-registry.js';
+export { attachUniversalDialectRegistry, createUniversalDialectRecord, createUniversalDialectRegistry, createUniversalExternRecord, summarizeUniversalDialectRegistry, UniversalDialectConstructKinds, UniversalDialectProjectionDispositions } from '@shapeshift-labs/frontier-lang-dialects';
 export { diffNativeSourceImports } from './internal/index-impl/diffNativeSourceImports.js';
 export { diffNativeSources } from './internal/index-impl/diffNativeSources.js';
 export { emitForTarget } from './internal/index-impl/emitForTarget.js';

@@ -1,4 +1,4 @@
-import{idFragment}from'../../native-import-utils.js';import{attachInputUniversalDialectRegistry}from'../../universal-dialect-registry.js';import{createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';
+import{idFragment}from'../../native-import-utils.js';import{attachInputUniversalDialectRegistry}from'@shapeshift-labs/frontier-lang-dialects';import{createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';
 export function createUniversalAstFromDocument(document, input = {}) {
   return attachInputUniversalDialectRegistry(createUniversalAstEnvelope({
     id: input.id ?? `universal_ast_${idFragment(document.id)}`,

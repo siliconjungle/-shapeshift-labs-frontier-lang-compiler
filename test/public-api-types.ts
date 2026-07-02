@@ -1,5 +1,5 @@
 import * as compilerApi from '../src/index.js';
-import './public-api-native-fixtures.js';
+import './public-api-dialect-package-fixtures.js'; import './public-api-native-fixtures.js';
 import './public-api-adapter-fixtures.js';
 import './public-api-bundle-types.js';
 import './public-api-transform-types.js';

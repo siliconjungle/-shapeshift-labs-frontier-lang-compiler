@@ -5,11 +5,22 @@ import {
   summarizeUniversalDialectRegistry,
   UniversalDialectConstructKinds
 } from './compiler-api.mjs';
+import {
+  attachUniversalDialectRegistry as attachUniversalDialectRegistryFromPackage,
+  createUniversalDialectRegistry as createUniversalDialectRegistryFromPackage,
+  UniversalDialectConstructKinds as UniversalDialectConstructKindsFromPackage
+} from '@shapeshift-labs/frontier-lang-dialects';
+import {
+  attachUniversalDialectRegistry as attachUniversalDialectRegistryFromCompiler
+} from '../../dist/index.js';
 
 assert.equal(UniversalDialectConstructKinds.includes('macro'), true);
 assert.equal(UniversalDialectConstructKinds.includes('reflection'), true);
 assert.equal(UniversalDialectConstructKinds.includes('generator'), true);
 assert.equal(UniversalDialectConstructKinds.includes('runtime'), true);
+assert.equal(UniversalDialectConstructKinds, UniversalDialectConstructKindsFromPackage);
+assert.equal(createUniversalDialectRegistry, createUniversalDialectRegistryFromPackage);
+assert.equal(attachUniversalDialectRegistryFromCompiler, attachUniversalDialectRegistryFromPackage);
 
 const evidence = [
   {
