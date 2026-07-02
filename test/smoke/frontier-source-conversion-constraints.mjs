@@ -28,6 +28,18 @@ conversion JsToRust @id("conversion_js_rust") {
   constraint borrowScope todoScope @id("borrow_scope_todo") role source kind shared-borrow-compatible resource TodoDb.todos flowKind async lifetimeKind lexical evidence evidence_type_translation_proof
   constraint borrowChecker todoChecker @id("borrow_checker_todo") role source kind borrow-checker-boundary resource TodoDb.todos constraint shared-borrow-compatible|drop-cleanup-order evidence evidence_type_translation_proof
 }
+
+possibilitySpace UserProjectionSpace @id("space_user_projection") {
+  subject symbol:nickname
+  scope mod_conversion_probe
+  target javascript
+  target rust
+  variable surface @id("space_variable_surface") kind projection domain ts|rust|cli default ts preserve identity|type-shape evidence evidence_type_translation_proof
+  hard identity @id("space_constraint_identity") kind semantic-identity family identity subject symbol:nickname variable space_variable_surface requires type|binding failClosed evidence evidence_type_translation_proof
+  preference nativeShape @id("space_preference_native_shape") kind target-idiom target rust weight 0.7 variable space_variable_surface prefer rust-struct reason "prefer idiomatic target surface"
+  collapse rustProjection @id("space_collapse_rust_projection") strategy evidence-first target rust variable space_variable_surface requires identity|type-gate produces symbol:nicknameRust evidence evidence_type_translation_proof admission space_admission_translation
+  admission translation @id("space_admission_translation") kind translation status open target rust requires hardConstraints|typeGate decision review failClosed evidence evidence_type_translation_proof
+}
 `;
 
 const result = compileFrontierSource(source, { target: 'javascript' });
@@ -44,6 +56,12 @@ assert.equal(result.document.metadata.universalConversionPlan.typeConstraints[0]
 assert.equal(result.document.metadata.universalConversionPlan.resourceTransfers[0].sourceGraphs[0].resources[0].id, 'TodoDb.todos');
 assert.equal(result.document.metadata.universalConversionPlan.borrowScopeConstraints[0].sourceBorrowScopes[0].constraintKinds[0], 'shared-borrow-compatible');
 assert.equal(result.document.metadata.universalConversionPlan.borrowCheckerConstraints[0].sourceBorrowScopes[0].resourceId, 'TodoDb.todos');
+assert.equal(result.document.metadata.constraintSpaces.id, 'space_user_projection');
+assert.equal(result.document.metadata.constraintSpaces.summary.variableCount, 1);
+assert.equal(result.document.metadata.constraintSpaces.summary.constraintCount, 1);
+assert.equal(result.document.metadata.constraintSpaces.summary.preferenceCount, 1);
+assert.equal(result.document.metadata.constraintSpaces.summary.collapseStrategyCount, 1);
+assert.equal(result.document.metadata.constraintSpaces.summary.admissionCount, 1);
 
 const rawInput = {
   document: result.document,
@@ -72,6 +90,14 @@ assert.equal(sourcePlan.metadata.authoredFrontierSource.targetRuntimes.rust, 'cl
 assert.equal(sourcePlan.metadata.authoredFrontierSource.runtimeRequirementIds[0], 'runtime_requirement_fetch');
 assert.equal(sourcePlan.metadata.authoredFrontierSource.dialectRecordIds[0], 'dialect_node_process');
 assert.equal(sourcePlan.metadata.authoredFrontierSource.externRecordIds[0], 'extern_vite_routes');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceId, 'space_user_projection');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceIds[0], 'space_user_projection');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceVariableIds[0], 'space_variable_surface');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceConstraintIds[0], 'space_constraint_identity');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpacePreferenceIds[0], 'space_preference_native_shape');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceCollapseStrategyIds[0], 'space_collapse_rust_projection');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceAdmissionIds[0], 'space_admission_translation');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceSummary.spaceCount, 1);
 assert.equal(queryUniversalConversionPlan(sourcePlan, {
   sourceLanguage: 'javascript',
   target: 'rust',

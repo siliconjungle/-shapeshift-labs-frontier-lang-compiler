@@ -245,16 +245,13 @@ export interface UniversalConversionPlanOptions extends UCO, UniversalConversion
 }
 export interface FrontierSourceUniversalConversionPlanOptions extends UniversalConversionPlanOptions { readonly fileName?: string; readonly sourcePath?: string; readonly parse?: Record<string, unknown>; }
 export interface AuthoredFrontierSourceConversionMetadata {
-  readonly documentId: string;
-  readonly sourcePath?: string;
-  readonly conversionPlanId?: string;
-  readonly targets: readonly string[];
-  readonly constraintFamilies: readonly string[];
-  readonly sourceRuntimes: Readonly<Record<string, string>>;
-  readonly targetRuntimes: Readonly<Record<string, string>>;
-  readonly runtimeRequirementIds: readonly string[];
-  readonly dialectRecordIds: readonly string[];
-  readonly externRecordIds: readonly string[];
+  readonly documentId: string; readonly sourcePath?: string; readonly conversionPlanId?: string;
+  readonly targets: readonly string[]; readonly constraintFamilies: readonly string[];
+  readonly constraintSpaceId?: string; readonly constraintSpaceIds: readonly string[]; readonly constraintSpaceVariableIds: readonly string[]; readonly constraintSpaceConstraintIds: readonly string[];
+  readonly constraintSpacePreferenceIds: readonly string[]; readonly constraintSpaceCollapseStrategyIds: readonly string[]; readonly constraintSpaceAdmissionIds: readonly string[];
+  readonly constraintSpaceSummary?: Readonly<Record<string, number>>;
+  readonly sourceRuntimes: Readonly<Record<string, string>>; readonly targetRuntimes: Readonly<Record<string, string>>;
+  readonly runtimeRequirementIds: readonly string[]; readonly dialectRecordIds: readonly string[]; readonly externRecordIds: readonly string[];
 }
 export interface FrontierSourceUniversalConversionPlan extends UniversalConversionPlan {
   readonly document: FrontierLangDocument; readonly sourcePath?: string;
