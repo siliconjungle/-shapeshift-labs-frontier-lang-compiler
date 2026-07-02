@@ -107,6 +107,10 @@ nativeSource TodoTypescript @id("native_todo_ts") {
   sourceHash sha256:todo
   symbol Todo
   frontierNodes ent_todo, action_add
+  evidence todoTitleProbe @id("artifact_todo_title_probe") kind test status passed path reports/todo-title.json summary "Todo title source map is exact."
+  sourceMap todoProjection @id("sourcemap_todo_ts") target typescript targetPath src/generated/todo.ts evidence artifact_todo_title_probe
+  mapping todoTitle @id("map_todo_title") sourceMap sourcemap_todo_ts semanticNode field_title nativeSource native_todo_ts semanticSymbol symbol:Todo.title sourceSpan src/todo.ts:1:1-1:12 generatedSpan src/generated/todo.ts:1:1-1:20 precision exact evidence artifact_todo_title_probe
+  mergeCandidate todoTitle @id("candidate_todo_title") symbol symbol:Todo.title semanticNode field_title conflictKey symbol:Todo.title readiness ready evidence artifact_todo_title_probe sourceMap sourcemap_todo_ts sourceMapMapping map_todo_title reason "exact source map"
   loss unsupportedSyntax "decorator retained in native AST" severity warning
 }
 
@@ -155,6 +159,16 @@ assert.match(result.output, /export const typescriptTarget/);
 assert.match(result.output, /export const TodoTypescriptNativeSource/);
 assert.equal(result.document.metadata.proof.contracts[0].id, 'contract_todo_title');
 const universalAst = createUniversalAstFromDocument(result.document);
+assert.equal(universalAst.nativeSources[0].id, 'native_todo_ts');
+assert.equal(universalAst.sourceMaps[0].id, 'sourcemap_todo_ts');
+assert.equal(universalAst.sourceMaps[0].mappings[0].semanticNodeId, 'field_title');
+assert.equal(universalAst.sourceMaps[0].mappings[0].sourceSpan.startLine, 1);
+assert.equal(universalAst.mergeCandidates[0].id, 'candidate_todo_title');
+assert.equal(universalAst.mergeCandidates[0].readiness, 'ready');
+assert.equal(universalAst.mergeCandidates[0].conflictKeys[0], 'symbol:Todo.title');
+assert.equal(universalAst.evidence[0].id, 'artifact_todo_title_probe');
+assert.equal(universalAst.evidence[0].status, 'passed');
+assert.equal(universalAst.losses[0].kind, 'unsupportedSyntax');
 assert.equal(universalAst.proof.id, 'proof_todo');
 assert.equal(universalAst.proof.contracts[0].subjectId, 'ent_todo');
 assert.equal(universalAst.proof.obligations[0].contractIds[0], 'contract_todo_title');
