@@ -93,7 +93,7 @@ export interface UniversalConversionAdmissionRecord extends UniversalConversionR
   readonly borrowScopeConstraintStatus?: string;
   readonly borrowScopeConstraintAction?: string;
   readonly borrowCheckerConstraintStatus?: string;
-  readonly borrowCheckerConstraintAction?: string; readonly dataLayoutConstraintStatus?: string; readonly dataLayoutConstraintAction?: string;
+  readonly borrowCheckerConstraintAction?: string; readonly dataLayoutConstraintStatus?: string; readonly dataLayoutConstraintAction?: string; readonly layoutStyleConstraintStatus?: string; readonly layoutStyleConstraintAction?: string; readonly layoutStyleConstraintMissingKinds: readonly string[]; readonly layoutStyleConstraintMissingEvidence: readonly string[];
   readonly effectConstraintStatus?: string;
   readonly effectConstraintAction?: string;
   readonly concurrencyModelConstraintStatus?: string; readonly concurrencyModelConstraintAction?: string;
@@ -165,7 +165,7 @@ export interface UniversalConversionAdmissionRecord extends UniversalConversionR
   readonly controlFlowConstraint: UniversalConversionConstraintSummary; readonly adtPatternConstraint: UniversalConversionConstraintSummary;
   readonly callableBoundaryConstraint: UniversalConversionConstraintSummary;
   readonly borrowScopeConstraint: UniversalConversionConstraintSummary;
-  readonly borrowCheckerConstraint: UniversalConversionConstraintSummary; readonly dataLayoutConstraint: UniversalConversionConstraintSummary;
+  readonly borrowCheckerConstraint: UniversalConversionConstraintSummary; readonly dataLayoutConstraint: UniversalConversionConstraintSummary; readonly layoutStyleConstraint: UniversalConversionConstraintSummary;
   readonly moduleConstraint: UniversalConversionConstraintSummary;
   readonly numericSemanticsConstraint: UniversalConversionConstraintSummary; readonly textSemanticsConstraint: UniversalConversionConstraintSummary; readonly collectionSemanticsConstraint: UniversalConversionConstraintSummary; readonly serializationSemanticsConstraint: UniversalConversionConstraintSummary; readonly dependencySemanticsConstraint: UniversalConversionConstraintSummary;
   readonly errorModelConstraint: UniversalConversionConstraintSummary;

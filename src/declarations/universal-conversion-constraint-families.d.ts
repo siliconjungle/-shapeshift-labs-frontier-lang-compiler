@@ -6,6 +6,7 @@ export type UniversalTranslationConstraintFieldName =
   | 'borrowScopeConstraint'
   | 'borrowCheckerConstraint'
   | 'dataLayoutConstraint'
+  | 'layoutStyleConstraint'
   | 'effectConstraint'
   | 'concurrencyModelConstraint'
   | 'errorModelConstraint'

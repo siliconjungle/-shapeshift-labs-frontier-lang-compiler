@@ -65,6 +65,7 @@ export { createUniversalControlFlowConstraintEvidence, controlFlowConstraintMatc
 export { createUniversalCallableBoundaryConstraintEvidence, callableBoundaryConstraintMatches, UniversalCallableBoundaryConstraintStatuses } from './universal-callable-boundary-constraints.js';
 export { createUniversalAdtPatternConstraintEvidence, adtPatternConstraintMatches, UniversalAdtPatternConstraintStatuses } from './universal-adt-pattern-constraints.js';
 export { createUniversalDataLayoutConstraintEvidence, dataLayoutConstraintMatches, UniversalDataLayoutConstraintStatuses } from './universal-data-layout-constraints.js';
+export { createUniversalLayoutStyleConstraintEvidence, layoutStyleConstraintMatches, UniversalLayoutStyleConstraintStatuses } from './universal-layout-style-constraints.js';
 export { createUniversalConcurrencyModelConstraintEvidence, concurrencyModelConstraintMatches, UniversalConcurrencyModelConstraintStatuses } from './universal-concurrency-model-constraints.js';
 export { createUniversalEffectConstraintEvidence, effectConstraintMatches, UniversalEffectConstraintStatuses } from './universal-effect-constraints.js';
 export { createUniversalErrorModelConstraintEvidence, errorModelConstraintMatches, UniversalErrorModelConstraintStatuses } from './universal-error-model-constraints.js';

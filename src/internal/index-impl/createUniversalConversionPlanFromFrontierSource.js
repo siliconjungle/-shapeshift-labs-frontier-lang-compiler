@@ -1,10 +1,11 @@
 import { parseFrontierFile, parseFrontierSource } from '@shapeshift-labs/frontier-lang-parser';
 import { createUniversalConversionPlan } from './createUniversalConversionPlan.js';
 import { authoredTargetProjectionSummary, authoredTargetProjections } from './authoredTargetProjections.js';
+import { normalizeDocumentConversionPlanMetadata } from './documentConversionPlanInput.js';
 
 export function createUniversalConversionPlanFromFrontierSource(source, options = {}) {
   const { fileName, parse, sourcePath, ...planOptions } = options;
-  const document = fileName ? parseFrontierFile(fileName, source) : parseFrontierSource(source, parse);
+  const document = normalizeDocumentConversionPlanMetadata(fileName ? parseFrontierFile(fileName, source) : parseFrontierSource(source, parse));
   const plan = createUniversalConversionPlan({ ...planOptions, document });
   return {
     ...plan,

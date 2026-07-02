@@ -14,6 +14,7 @@ conversion JsToRust @id("conversion_js_rust") {
   constraint callable-boundary saveUserCall @id("callable_boundary_save_user") role source kind method-call callableKind function functionName saveUser signatureHash sig_save_user parameterCount 2 parameterOrder user|options returnKind promise asyncKind async dispatchKind dynamic evidence translationProof
   constraint adt-pattern userResult @id("adt_pattern_user_result") role source kind tagged-union adtKind union typeName UserResult variantNames Ok|Err payloadFieldNames value|error exhaustivenessKinds total evidence translationProof
   constraint data-layout userStruct @id("data_layout_user_struct") role target kind repr-c layoutKind struct typeId type:User sizeBytes 24 alignmentBytes 8 pointerWidth 64 repr c evidence translationProof
+  constraint layout-style buttonStyle @id("layout_style_button") role source kind css-rule selector .button property color value red cascadeLayer components specificity 0-1-0 evidence translationProof
   constraint numeric-semantics userAge @id("numeric_semantics_user_age") role source kind integer numericKind int width 53 overflowMode safe-integer specialValues nan|infinity evidence translationProof
   constraint text-semantics userName @id("text_semantics_user_name") role source kind string encoding utf-16 normalizationForm nfc boundaryKinds grapheme|word evidence translationProof
   constraint collection-semantics userList @id("collection_semantics_user_list") role source kind array collectionKind array elementKind User iterationOrder insertion duplicatePolicy allow indexBase 0 copyOnWrite evidence translationProof
@@ -41,6 +42,8 @@ assert.equal(metadata.callableBoundaryConstraints[0].sourceCallableBoundaryRecor
 assert.deepEqual(metadata.callableBoundaryConstraints[0].sourceCallableBoundaryRecords[0].parameterOrder, ['user', 'options']);
 assert.deepEqual(metadata.adtPatternConstraints[0].sourceAdtPatternRecords[0].variantNames, ['Ok', 'Err']);
 assert.equal(metadata.dataLayoutConstraints[0].targetDataLayoutRecords[0].pointerWidth, 64);
+assert.equal(metadata.layoutStyleConstraints[0].sourceLayoutStyleRecords[0].kind, 'css-rule');
+assert.equal(metadata.layoutStyleConstraints[0].sourceLayoutStyleRecords[0].evidenceIds.includes('translationProof'), true);
 assert.equal(metadata.numericSemanticsConstraints[0].sourceNumericSemanticsRecords[0].width, 53);
 assert.deepEqual(metadata.textSemanticsConstraints[0].sourceTextSemanticsRecords[0].boundaryKinds, ['grapheme', 'word']);
 assert.equal(metadata.collectionSemanticsConstraints[0].sourceCollectionSemanticsRecords[0].copyOnWrite, true);
@@ -57,6 +60,9 @@ const route = queryUniversalConversionPlan(plan, { sourceLanguage: 'javascript',
 assert.equal(route.callableBoundaryConstraint.requiredKinds.includes('callable-signature'), true);
 assert.equal(route.adtPatternConstraint.requiredKinds.includes('exhaustiveness'), true);
 assert.equal(route.dataLayoutConstraint.targetDataLayoutRecords[0].pointerWidth, 64);
+assert.equal(route.layoutStyleConstraint.sourceLayoutStyleRecords[0].kind, 'css-rule');
+assert.equal(route.layoutStyleConstraint.requiredKinds.includes('style-rule'), true);
+assert.equal(queryUniversalConversionPlan(plan, { sourceLanguage: 'javascript', target: 'rust', layoutStyleConstraintRequiredKind: 'style-rule' }).found, true);
 assert.equal(route.numericSemanticsConstraint.requiredKinds.includes('numeric-type'), true);
 assert.equal(route.numericSemanticsConstraint.sourceRecords[0].overflowMode, 'safe-integer');
 assert.equal(route.textSemanticsConstraint.requiredKinds.includes('encoding'), true);

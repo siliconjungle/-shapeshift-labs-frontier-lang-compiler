@@ -14,6 +14,7 @@ import type{UniversalAdtPatternConstraintQuery as UAPQ}from './universal-adt-pat
 import type{UniversalBorrowScopeConstraintQuery as UBSQ}from './universal-borrow-scope-constraints.js';
 import type{UniversalBorrowCheckerConstraintQuery as UBCQ}from './universal-borrow-checker-constraints.js';
 import type{UniversalDataLayoutConstraintQuery as UDLCQ}from './universal-data-layout-constraints.js';
+import type{UniversalLayoutStyleConstraintQuery as ULSCQ}from './universal-layout-style-constraints.js';
 import type{UniversalEffectConstraintQuery as UECQ}from './universal-effect-constraints.js';
 import type{UniversalConcurrencyModelConstraintQuery as UCMCQ}from './universal-concurrency-model-constraints.js';
 import type{UniversalErrorModelConstraintQuery as UEMCQ}from './universal-error-model-constraints.js';
@@ -77,6 +78,10 @@ export interface UniversalConversionArtifactIndex extends USMI, URRI, Readonly<R
   readonly dataLayoutConstraintActions: RS;
   readonly dataLayoutConstraintMissingEvidence: RS;
   readonly dataLayoutConstraintMissingKinds: RS;
+  readonly layoutStyleConstraintStatuses: RS;
+  readonly layoutStyleConstraintActions: RS;
+  readonly layoutStyleConstraintMissingEvidence: RS;
+  readonly layoutStyleConstraintMissingKinds: RS;
   readonly callableBoundaryConstraintStatuses: RS; readonly callableBoundaryConstraintActions: RS; readonly callableBoundaryConstraintMissingEvidence: RS; readonly callableBoundaryConstraintMissingKinds: RS;
   readonly effectConstraintStatuses: RS;
   readonly effectConstraintActions: RS;
@@ -134,7 +139,7 @@ export interface UniversalConversionArtifactIndex extends USMI, URRI, Readonly<R
   readonly transformIdentityHashes: RS;
 }
 
-export interface UniversalConversionArtifactQuery extends USMQ, URRQ, URCQ, UIQ, URTQ, ULCQ, UCFQ, UCBCQ, UAPQ, UBSQ, UBCQ, UDLCQ, UECQ, UCMCQ, UEMCQ, UEVQ, UHEQ, UMMQ, UMPQ, USBQ, UMQ, UNSQ, UTSQ, UCSQ, USSQ, UDSQ, UOMQ, UPQ, UTQ, Readonly<Partial<Record<USEQK, QS|boolean>>>, Readonly<Partial<Record<UTDQK|UDQK, QS>>> {
+export interface UniversalConversionArtifactQuery extends USMQ, URRQ, URCQ, UIQ, URTQ, ULCQ, UCFQ, UCBCQ, UAPQ, UBSQ, UBCQ, UDLCQ, ULSCQ, UECQ, UCMCQ, UEMCQ, UEVQ, UHEQ, UMMQ, UMPQ, USBQ, UMQ, UNSQ, UTSQ, UCSQ, USSQ, UDSQ, UOMQ, UPQ, UTQ, Readonly<Partial<Record<USEQK, QS|boolean>>>, Readonly<Partial<Record<UTDQK|UDQK, QS>>> {
   readonly routeId?: QS;
   readonly historyId?: QS;
   readonly patchBundleId?: QS;

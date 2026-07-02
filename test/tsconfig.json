@@ -40,6 +40,7 @@
     "./public-api-transform-types.ts",
     "./public-api-universal-conversion-translation-routing-types.ts",
     "./public-api-universal-conversion-receipt-types.ts",
-    "./public-api-universal-conversion-receipt-semantic-types.ts"
+    "./public-api-universal-conversion-receipt-semantic-types.ts",
+    "./public-api-universal-constraint-types.ts"
   ]
 }

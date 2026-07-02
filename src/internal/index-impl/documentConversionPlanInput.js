@@ -10,6 +10,7 @@ const CONSTRAINT_ARRAY_FIELDS = [
   'borrowScopeConstraints',
   'borrowCheckerConstraints',
   'dataLayoutConstraints',
+  'layoutStyleConstraints',
   'effectConstraints',
   'concurrencyModelConstraints',
   'errorModelConstraints',
@@ -29,7 +30,26 @@ const CONSTRAINT_ARRAY_FIELDS = [
   'typeConstraints'
 ];
 
+const CONSTRAINT_ARRAY_FIELD_ALIASES = {
+  layoutStyleConstraints: ['layout-styleConstraints', 'layout-style-constraints']
+};
+
+export function normalizeDocumentConversionPlanMetadata(document) {
+  const authored = document?.metadata?.universalConversionPlan;
+  if (!authored || typeof authored !== 'object') return document;
+  for (const field of CONSTRAINT_ARRAY_FIELDS) {
+    const aliases = CONSTRAINT_ARRAY_FIELD_ALIASES[field] ?? [];
+    const records = [
+      ...(authored[field] ?? []),
+      ...aliases.flatMap((alias) => authored[alias] ?? [])
+    ].map((record) => normalizeAuthoredRouteConstraintRecord(field, record));
+    if (records.length) authored[field] = records;
+  }
+  return document;
+}
+
 export function mergeDocumentConversionPlanInput(input = {}) {
+  normalizeDocumentConversionPlanMetadata(input.document);
   const authored = input.document?.metadata?.universalConversionPlan;
   const resourceGraphs = authoredResourceGraphs(input.document);
   const interlinguaRecords = authoredInterlinguaRecords(input.document);
@@ -81,11 +101,33 @@ export function mergeDocumentConversionPlanInput(input = {}) {
     merged.authoredTargetProjectionSummary = authoredTargetProjectionSummary(merged.authoredTargetProjections);
   }
   for (const field of CONSTRAINT_ARRAY_FIELDS) {
-    const authoredValues = aggregateAuthoredRouteConstraints(authored?.[field] ?? []);
-    const inputValues = input[field] ?? [];
+    const aliases = CONSTRAINT_ARRAY_FIELD_ALIASES[field] ?? [];
+    const authoredValues = aggregateAuthoredRouteConstraints([
+      ...(authored?.[field] ?? []),
+      ...aliases.flatMap((alias) => authored?.[alias] ?? [])
+    ].map((record) => normalizeAuthoredRouteConstraintRecord(field, record)));
+    const inputValues = [
+      ...(input[field] ?? []),
+      ...aliases.flatMap((alias) => input[alias] ?? [])
+    ].map((record) => normalizeAuthoredRouteConstraintRecord(field, record));
     if (authoredValues.length || inputValues.length) merged[field] = [...authoredValues, ...inputValues];
   }
   return merged;
+}
+
+function normalizeAuthoredRouteConstraintRecord(field, record = {}) {
+  if (field !== 'layoutStyleConstraints' || !record || typeof record !== 'object') return record;
+  return {
+    ...record,
+    sourceLayoutStyleRecords: [
+      ...(record.sourceLayoutStyleRecords ?? []),
+      ...(record.sourceRecords ?? []).filter((item) => !item?.role || item.role === 'source')
+    ],
+    targetLayoutStyleRecords: [
+      ...(record.targetLayoutStyleRecords ?? []),
+      ...(record.targetRecords ?? []).filter((item) => !item?.role || item.role === 'target')
+    ]
+  };
 }
 
 function authoredResourceGraphs(document) {

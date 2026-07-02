@@ -44,6 +44,7 @@ export type UniversalInterlinguaConstraintEdgeKind =
   | 'borrow-scope'
   | 'borrow-checker'
   | 'data-layout'
+  | 'layout-style'
   | 'concurrency-model'
   | 'error-model'
   | 'evaluation-model'
