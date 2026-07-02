@@ -34,6 +34,8 @@ function compileDeclaredTargetNode(document, node, options, sourcePath) {
       sourcePath,
       sourceMap
     });
+    const projectionContract = declaredTargetProjectionContract(node, { target, declared, compileResult, sourceMap });
+    const sourceMapRecord = projectionContract ? sourceMapWithProjectionContract(compileResult.sourceMap, projectionContract) : compileResult.sourceMap;
     return {
       kind: 'frontier.lang.declaredTargetArtifact',
       version: 1,
@@ -49,7 +51,19 @@ function compileDeclaredTargetNode(document, node, options, sourcePath) {
       diagnostics: compileResult.diagnostics,
       ast: compileResult.ast,
       output: compileResult.output,
-      sourceMap: compileResult.sourceMap
+      sourceMap: sourceMapRecord,
+      ...(projectionContract ? {
+        projectionContract,
+        metadata: {
+          authoredTargetProjection: true,
+          projectionContractId: projectionContract.id,
+          evidenceIds: projectionContract.evidenceIds,
+          proofEvidenceIds: projectionContract.proofEvidenceIds,
+          missingEvidence: projectionContract.missingEvidence,
+          semanticEquivalenceClaim: false,
+          autoMergeClaim: false
+        }
+      } : {})
     };
   } catch (error) {
     const diagnostic = createDiagnostic(
@@ -84,6 +98,65 @@ function compileDeclaredTargetSourceMapOptions(document, node, target, options, 
     sourceMapId: sourceMap.sourceMapId ?? `sourcemap_${document.id}_${node.id}_${target}`,
     sourcePath: sourceMap.sourcePath ?? sourcePath,
     targetPath: node.target?.emitPath ?? sourceMap.targetPath
+  };
+}
+
+function declaredTargetProjectionContract(node, input) {
+  const metadata = node.metadata ?? {};
+  const contracts = list(metadata.projectionContracts);
+  const layers = list(metadata.projectionLayers);
+  if (!contracts.length && !layers.length) return undefined;
+  const represented = uniqueValues([
+    ...contracts.flatMap((contract) => list(contract.representedLayerKinds)),
+    ...layers.filter((layer) => layer.status === 'represented').map((layer) => layer.layerKind)
+  ]);
+  const missing = uniqueValues([
+    ...contracts.flatMap((contract) => list(contract.missingLayerKinds)),
+    ...layers.filter((layer) => layer.status === 'missing').map((layer) => layer.layerKind)
+  ]);
+  const review = uniqueValues([...contracts.flatMap((contract) => list(contract.review)), ...layers.flatMap((layer) => list(layer.review))]);
+  const blockers = uniqueValues([...contracts.flatMap((contract) => list(contract.blockers)), ...layers.flatMap((layer) => list(layer.blockers))]);
+  return {
+    kind: 'frontier.lang.declaredTargetProjectionContract',
+    version: 1,
+    id: `declared_target_projection_contract_${node.id}`,
+    targetNodeId: node.id,
+    targetName: node.name,
+    target: input.target,
+    declaredTarget: input.declared.language ?? node.name,
+    targetPath: input.declared.emitPath ?? sourceMapOptions(input.sourceMap).targetPath,
+    sourceMapId: input.compileResult.sourceMap?.id,
+    disposition: firstValue(contracts, 'disposition') ?? 'generated-target',
+    readiness: firstValue(contracts, 'readiness') ?? (input.compileResult.ok ? 'ready' : 'blocked'),
+    adapterId: firstValue(contracts, 'adapterId'),
+    contracts,
+    layers,
+    representedLayerKinds: represented,
+    missingLayerKinds: missing,
+    requiredLayerKinds: uniqueValues(contracts.flatMap((contract) => list(contract.requiredLayerKinds))),
+    evidenceIds: uniqueValues([...contracts.flatMap((contract) => list(contract.evidenceIds)), ...layers.flatMap((layer) => list(layer.evidenceIds))]),
+    proofEvidenceIds: uniqueValues(contracts.flatMap((contract) => list(contract.proofEvidenceIds))),
+    lossIds: uniqueValues(contracts.flatMap((contract) => list(contract.lossIds))),
+    missingEvidence: uniqueValues([...contracts.flatMap((contract) => list(contract.missingEvidence)), ...layers.flatMap((layer) => list(layer.missingEvidence))]),
+    review,
+    blockers,
+    semanticEquivalenceClaim: false,
+    autoMergeClaim: false
+  };
+}
+
+function sourceMapWithProjectionContract(sourceMap, projectionContract) {
+  if (!sourceMap) return sourceMap;
+  return {
+    ...sourceMap,
+    metadata: {
+      ...(sourceMap.metadata ?? {}),
+      declaredTargetProjectionContractId: projectionContract.id,
+      declaredTargetProjectionReadiness: projectionContract.readiness,
+      declaredTargetProjectionMissingEvidence: projectionContract.missingEvidence,
+      semanticEquivalenceClaim: false,
+      autoMergeClaim: false
+    }
   };
 }
 
@@ -145,4 +218,16 @@ function sourceMapOptions(sourceMap) {
 
 function listOption(value) {
   return Array.isArray(value) ? value.map(String) : value === undefined ? [] : [String(value)];
+}
+
+function list(value) {
+  return Array.isArray(value) ? value.filter(Boolean) : value === undefined ? [] : [value];
+}
+
+function uniqueValues(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function firstValue(records, key) {
+  return records.map((record) => record?.[key]).find((value) => value !== undefined);
 }

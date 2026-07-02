@@ -98,6 +98,8 @@ target rust @id("target_rust") {
   package example_todo
   emitPath src/generated/todo.rs
   moduleFormat crate
+  projection rustProjection @id("target_projection_rust") disposition target-adapter readiness needs-review represented semantic-symbol|source-map missing semantic-ownership evidence artifact_todo_title_probe proof artifact_todo_title_probe loss loss_borrow_scope missingEvidence translation-borrow-scope:borrow-across-await review adapter-review
+  layer ownership @id("target_layer_rust_ownership") kind semantic-ownership status missing missingEvidence translation-borrow-scope:borrow-across-await
 }
 
 nativeSource TodoTypescript @id("native_todo_ts") {
@@ -158,6 +160,8 @@ assert.match(result.output, /export const persistTodoExtern/);
 assert.match(result.output, /export const typescriptTarget/);
 assert.match(result.output, /export const TodoTypescriptNativeSource/);
 assert.equal(result.document.metadata.proof.contracts[0].id, 'contract_todo_title');
+assert.equal(result.document.nodes.target_rust.metadata.projectionContracts[0].id, 'target_projection_rust');
+assert.equal(result.document.nodes.target_rust.metadata.projectionContracts[0].semanticEquivalenceClaim, false);
 const universalAst = createUniversalAstFromDocument(result.document);
 assert.equal(universalAst.nativeSources[0].id, 'native_todo_ts');
 assert.equal(universalAst.sourceMaps[0].id, 'sourcemap_todo_ts');

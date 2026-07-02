@@ -31,3 +31,8 @@ const artifact: FrontierDeclaredTargetArtifact | undefined = fromSource.artifact
 fromDocument.summary.targets satisfies number;
 artifact?.targetPath satisfies string | undefined;
 artifact?.sourceMap?.targetPath satisfies string | undefined;
+artifact?.projectionContract?.evidenceIds satisfies readonly string[] | undefined;
+artifact?.projectionContract?.missingLayerKinds satisfies readonly string[] | undefined;
+artifact?.projectionContract?.semanticEquivalenceClaim satisfies false | undefined;
+artifact?.metadata satisfies Readonly<Record<string, unknown>> | undefined;
+artifact?.sourceMap?.metadata satisfies Readonly<Record<string, unknown>> | undefined;

@@ -127,6 +127,34 @@ export interface FrontierCompileResult {
   readonly sourceMap?: SourceMapRecord;
 }
 
+export interface FrontierDeclaredTargetProjectionContract {
+  readonly kind: 'frontier.lang.declaredTargetProjectionContract';
+  readonly version: 1;
+  readonly id: string;
+  readonly targetNodeId: string;
+  readonly targetName: string;
+  readonly target?: FrontierCompileTarget;
+  readonly declaredTarget?: string;
+  readonly targetPath?: string;
+  readonly sourceMapId?: string;
+  readonly disposition?: string;
+  readonly readiness?: SemanticMergeReadiness | string;
+  readonly adapterId?: string;
+  readonly contracts: readonly Readonly<Record<string, unknown>>[];
+  readonly layers: readonly Readonly<Record<string, unknown>>[];
+  readonly representedLayerKinds: readonly string[];
+  readonly missingLayerKinds: readonly string[];
+  readonly requiredLayerKinds: readonly string[];
+  readonly evidenceIds: readonly string[];
+  readonly proofEvidenceIds: readonly string[];
+  readonly lossIds: readonly string[];
+  readonly missingEvidence: readonly string[];
+  readonly review: readonly string[];
+  readonly blockers: readonly string[];
+  readonly semanticEquivalenceClaim: false;
+  readonly autoMergeClaim: false;
+}
+
 export interface FrontierDeclaredTargetArtifact {
   readonly kind: 'frontier.lang.declaredTargetArtifact';
   readonly version: 1;
@@ -143,6 +171,8 @@ export interface FrontierDeclaredTargetArtifact {
   readonly ast?: FrontierTargetAst;
   readonly output: string;
   readonly sourceMap?: SourceMapRecord;
+  readonly projectionContract?: FrontierDeclaredTargetProjectionContract;
+  readonly metadata?: Readonly<Record<string, unknown>>;
   readonly error?: string;
 }
 

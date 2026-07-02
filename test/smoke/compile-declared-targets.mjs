@@ -33,6 +33,15 @@ assert.equal(rustArtifact.moduleFormat, 'crate');
 assert.equal(rustArtifact.targetPath, 'src/generated/todo.rs');
 assert.match(rustArtifact.output, /pub struct Todo/);
 assert.equal(rustArtifact.sourceMap.targetPath, 'src/generated/todo.rs');
+assert.equal(rustArtifact.projectionContract.id, 'declared_target_projection_contract_target_rust');
+assert.equal(rustArtifact.projectionContract.disposition, 'target-adapter');
+assert.equal(rustArtifact.projectionContract.semanticEquivalenceClaim, false);
+assert.equal(rustArtifact.projectionContract.autoMergeClaim, false);
+assert.equal(rustArtifact.projectionContract.missingLayerKinds.includes('semantic-ownership'), true);
+assert.equal(rustArtifact.projectionContract.missingEvidence.includes('translation-borrow-scope:borrow-across-await'), true);
+assert.equal(rustArtifact.metadata.projectionContractId, rustArtifact.projectionContract.id);
+assert.equal(rustArtifact.sourceMap.metadata.declaredTargetProjectionContractId, rustArtifact.projectionContract.id);
+assert.equal(rustArtifact.sourceMap.metadata.semanticEquivalenceClaim, false);
 
 const declaredSourceCompile = compileFrontierSourceDeclaredTargets(source, {
   fileName: 'todo-source.frontier',
@@ -44,6 +53,7 @@ assert.equal(declaredSourceCompile.sourcePath, 'todo-source.frontier');
 assert.equal(declaredSourceCompile.summary.targets, 1);
 assert.equal(declaredSourceCompile.artifacts[0].targetNodeId, 'target_rust');
 assert.equal(declaredSourceCompile.artifacts[0].sourceMap.sourcePath, 'todo-source.frontier');
+assert.equal(declaredSourceCompile.artifacts[0].projectionContract.id, 'declared_target_projection_contract_target_rust');
 
 const missingTargets = compilerApi.compileFrontierSourceDeclaredTargets('module Empty @id("mod_empty")', {});
 assert.equal(missingTargets.ok, false);
