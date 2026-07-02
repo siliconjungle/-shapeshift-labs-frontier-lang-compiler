@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -11,6 +10,7 @@ const smokeModules = [
   './smoke/external-semantic-index-formats.mjs',
   './smoke/glean-semantic-index.mjs',
   './smoke/universal-dialects.mjs',
+  './smoke/universal-language-coverage-matrix.mjs',
   './smoke/adapter-contract.mjs',
   './smoke/js-ts-adapters.mjs',
   './smoke/js-ts-syntax-parser-trivia-evidence.mjs',

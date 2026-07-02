@@ -43,8 +43,11 @@ export { createTreeSitterNativeImporterAdapter } from './internal/index-impl/cre
 export { createTypeScriptCompilerNativeImporterAdapter } from './internal/index-impl/createTypeScriptCompilerNativeImporterAdapter.js';
 export { createUniversalAstFromDocument } from './internal/index-impl/createUniversalAstFromDocument.js';
 export { createUniversalCapabilityMatrix } from './internal/index-impl/createUniversalCapabilityMatrix.js';
+export { createUniversalLanguageCoverageMatrix } from './internal/index-impl/createUniversalLanguageCoverageMatrix.js';
 export { queryUniversalCapabilityMatrix } from './internal/index-impl/queryUniversalCapabilityMatrix.js';
+export { queryUniversalLanguageCoverageMatrix } from './internal/index-impl/queryUniversalLanguageCoverageMatrix.js';
 export { createUniversalRepresentationCoverage, representationCoverageMatches, UniversalRepresentationConstructKinds } from './universal-representation-coverage.js';
+export { UniversalLanguageCoverageReadinessStatuses, UniversalLanguageCoverageStatuses, UniversalLanguageCoverageSurfaceIds } from './universal-language-coverage-matrix.js';
 export { createUniversalInterlinguaRecord, interlinguaRecordMatches, UniversalInterlinguaConstraintEdgeKinds, UniversalInterlinguaLayerKinds, UniversalInterlinguaLoweringDispositions } from './universal-interlingua-record.js';
 export { createUniversalConversionArtifacts } from './internal/index-impl/createUniversalConversionArtifacts.js';
 export { createUniversalConversionRouteEvidenceReceipt } from './internal/index-impl/createUniversalConversionRouteEvidenceReceipt.js';

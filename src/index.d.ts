@@ -6,6 +6,7 @@ export * from './declarations/native-import-coverage.js';
 export * from './declarations/projection-coverage.js';
 export * from './declarations/projection-readiness.js';
 export * from './declarations/universal-capability.js';
+export * from './declarations/universal-language-coverage.js';
 export * from './declarations/universal-representation-coverage.js';
 export * from './declarations/universal-interlingua.js';
 export * from './declarations/universal-conversion-artifacts.js';
