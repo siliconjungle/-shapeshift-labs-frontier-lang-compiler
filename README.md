@@ -966,6 +966,11 @@ console.log(registryPlan.metadata.authoredFrontierSource.dialectRegistryId); // 
 console.log(registryPlan.metadata.authoredFrontierSource.dialectRegistryRecordIds); // registry dialect rows
 console.log(registryPlan.metadata.authoredFrontierSource.dialectRegistryExternIds); // registry extern rows
 
+const appAst = createUniversalAstFromDocument(authoredPlan.document);
+console.log(appAst.layers.appContracts.summary.byNodeKind.action); // authored action contracts
+console.log(appAst.layers.appContracts.records.find((record) => record.nodeKind === 'view')?.renderIds); // authored view/render contract ids
+console.log(appAst.layers.appContracts.metadata.autoMergeClaim); // false: this is routing evidence, not an equivalence proof
+
 const authoredArtifacts = createUniversalConversionArtifactsFromFrontierSource(frontierSource, {
   fileName: 'todo.frontier',
   targets: ['rust'],
