@@ -30,6 +30,7 @@ import type { EmitJavaScriptOptions, EmitJavaScriptWithSourceMapResult, JavaScri
 import type { EmitRustOptions, EmitRustWithSourceMapResult, RustAstModule, RustSourceMapResult } from '@shapeshift-labs/frontier-lang-rust';
 import type { EmitPythonOptions, EmitPythonWithSourceMapResult, PythonAstModule, PythonSourceMapResult } from '@shapeshift-labs/frontier-lang-python';
 import type { CAstHeader, CSourceMapResult, EmitCHeaderOptions, EmitCHeaderWithSourceMapResult } from '@shapeshift-labs/frontier-lang-c';
+import type { SwiftUiAstModule, SwiftUiProjectionOptions, SwiftUiProjectionResult, SwiftUiSourceMapResult } from '@shapeshift-labs/frontier-lang-swiftui';
 import type { NativeImportTaxonomyKind, NativeImportKnownLossKind, NativeImportRegionTaxonomyKind, NativeImportLossSummaryOptions, NativeImportFeatureEvidenceRisk, NativeImportFeatureEvidencePolicy, NativeImportFeatureEvidenceIssue, NativeImportFeatureEvidenceSummary, NativeImportLossSummary, NativeImportReadinessClassification, NativeImportLanguageProfile } from './native-import-losses.js';
 import type { NativeParserAstFormatKind, NativeParserAstFormatProfile, NativeParserAstFormatCoverage, NativeParserAstFormatMatrix, NativeParserAstFormatMatrixOptions } from './native-parser-formats.js';
 import type { NativeParserFeatureCategory, NativeParserFeatureCoverageStatus, NativeParserFeatureCoverage, NativeParserFeatureCoverageMap, NativeParserFeatureMergeAssessment, NativeParserFeatureParserRow, NativeParserFeatureLanguageSummary, NativeParserFeatureMatrix, NativeParserFeatureMatrixOptions, NativeParserFeatureMatrixQuery, NativeParserFeatureMatrixQueryResult, NativeImporterAdapterCoverageAggregate } from './native-parser-features.js';
@@ -49,35 +50,39 @@ import type { NativeTargetProjectionAdapterCoverageInput, NativeTargetProjection
 import type { NativeProjectSourceInput, ImportNativeProjectOptions, NativeProjectImportResult, NativeSourceProjectionMode, ProjectNativeImportToSourceOptions, NativeSourceProjectionDeclaration, NativeSourceProjectionResult, NativeSourceCompileOutputMode, CompileNativeSourceOptions, NativeSourceCompileResult } from './native-project.js';
 import type { NativeImportRoundtripReadinessStatus, NativeImportRoundtripReadinessOptions, NativeImportRoundtripReadinessClassification } from './roundtrip.js';
 
-export type FrontierCompileTarget = 'typescript' | 'javascript' | 'rust' | 'python' | 'c';
+export type FrontierCompileTarget = 'typescript' | 'javascript' | 'rust' | 'python' | 'c' | 'swiftui';
 
 export type FrontierCompileEmitOptions =
   | EmitTypeScriptOptions
   | EmitJavaScriptOptions
   | EmitRustOptions
   | EmitPythonOptions
-  | EmitCHeaderOptions;
+  | EmitCHeaderOptions
+  | SwiftUiProjectionOptions;
 
 export type FrontierTargetAst =
   | TypeScriptAstModule
   | JavaScriptAstModule
   | RustAstModule
   | PythonAstModule
-  | CAstHeader;
+  | CAstHeader
+  | SwiftUiAstModule;
 
 export type FrontierTargetSourceMapResult =
   | TypeScriptGeneratedSourceMapResult
   | JavaScriptSourceMapResult
   | RustSourceMapResult
   | PythonSourceMapResult
-  | CSourceMapResult;
+  | CSourceMapResult
+  | SwiftUiSourceMapResult;
 
 export type FrontierTargetDocumentSourceMapResult =
   | TypeScriptDocumentSourceMapResult
   | EmitJavaScriptWithSourceMapResult
   | EmitRustWithSourceMapResult
   | EmitPythonWithSourceMapResult
-  | EmitCHeaderWithSourceMapResult;
+  | EmitCHeaderWithSourceMapResult
+  | SwiftUiProjectionResult;
 
 export interface FrontierCompileSourceMapOptions {
   readonly sourceMapId?: string;
@@ -99,7 +104,7 @@ export interface FrontierCompileSourceMapOptions {
 }
 
 export interface FrontierCompileOptions {
-  readonly target?: FrontierCompileTarget | 'ts' | 'js' | 'rs' | 'py' | 'h';
+  readonly target?: FrontierCompileTarget | 'ts' | 'js' | 'rs' | 'py' | 'h' | 'swift';
   readonly fileName?: string;
   readonly sourcePath?: string;
   readonly parse?: Record<string, unknown>;
@@ -112,7 +117,7 @@ export interface FrontierCompileOptions {
 export interface FrontierDeclaredTargetCompileOptions extends FrontierCompileOptions {
   readonly targetNodeIds?: readonly string[] | string;
   readonly targetNames?: readonly string[] | string;
-  readonly targetLanguages?: readonly (FrontierCompileTarget | 'ts' | 'js' | 'rs' | 'py' | 'h' | string)[] | FrontierCompileTarget | 'ts' | 'js' | 'rs' | 'py' | 'h' | string;
+  readonly targetLanguages?: readonly (FrontierCompileTarget | 'ts' | 'js' | 'rs' | 'py' | 'h' | 'swift' | string)[] | FrontierCompileTarget | 'ts' | 'js' | 'rs' | 'py' | 'h' | 'swift' | string;
 }
 
 export interface FrontierCompileResult {

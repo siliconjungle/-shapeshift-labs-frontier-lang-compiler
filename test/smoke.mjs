@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 const smokeModules = [
   './smoke/public-api.mjs',
-  './smoke/compile-core.mjs', './smoke/compile-declared-targets.mjs',
+  './smoke/compile-core.mjs', './smoke/compile-swiftui-target.mjs', './smoke/compile-declared-targets.mjs',
   './smoke/semantic-index.mjs',
   './smoke/semantic-slice-surgical.mjs',
   './smoke/external-semantic-index-formats.mjs',

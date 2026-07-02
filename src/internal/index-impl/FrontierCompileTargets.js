@@ -3,5 +3,6 @@ export const FrontierCompileTargets = Object.freeze([
   'javascript',
   'rust',
   'python',
-  'c'
+  'c',
+  'swiftui'
 ]);

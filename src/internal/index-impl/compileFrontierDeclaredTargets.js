@@ -169,8 +169,8 @@ function targetNodeMatches(node, options) {
   if (ids.length && !ids.includes(node.id)) return false;
   const names = listOption(options.targetNames);
   if (names.length && !names.includes(node.name)) return false;
-  const languages = listOption(options.targetLanguages).map((language) => String(language).toLowerCase());
-  if (languages.length && !languages.includes(String(node.target?.language ?? node.name).toLowerCase())) return false;
+  const languages = listOption(options.targetLanguages).map(normalizeTargetFilterValue);
+  if (languages.length && !languages.includes(normalizeTargetFilterValue(node.target?.language ?? node.name))) return false;
   return true;
 }
 
@@ -218,6 +218,15 @@ function sourceMapOptions(sourceMap) {
 
 function listOption(value) {
   return Array.isArray(value) ? value.map(String) : value === undefined ? [] : [String(value)];
+}
+
+function normalizeTargetFilterValue(value) {
+  const lowered = String(value).toLowerCase();
+  try {
+    return normalizeCompileTarget(lowered);
+  } catch {
+    return lowered;
+  }
 }
 
 function list(value) {

@@ -3,5 +3,6 @@ export const canonicalTargets = Object.freeze({
   js: 'javascript',
   rs: 'rust',
   py: 'python',
-  h: 'c'
+  h: 'c',
+  swift: 'swiftui'
 });

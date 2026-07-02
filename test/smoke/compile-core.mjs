@@ -102,6 +102,13 @@ target rust @id("target_rust") {
   layer ownership @id("target_layer_rust_ownership") kind semantic-ownership status missing missingEvidence translation-borrow-scope:borrow-across-await
 }
 
+target swiftui @id("target_swiftui") {
+  language swiftui
+  package example_todo
+  emitPath src/generated/TodoViews.swift
+  moduleFormat swiftui
+}
+
 nativeSource TodoTypescript @id("native_todo_ts") {
   language typescript
   parser typescript
@@ -138,6 +145,7 @@ operations TodoOperations @id("semantic_ops_todo") {
 `;
 
 assert.equal(normalizeCompileTarget('ts'), 'typescript');
+assert.equal(normalizeCompileTarget('swift'), 'swiftui');
 export const result = compileFrontierSource(source, { target: 'typescript' });
 assert.equal(result.ok, true);
 assert.match(result.hash, /^fnv1a32:/);
@@ -270,6 +278,7 @@ assert.equal(projectFrontierAst(result.document, 'javascript').kind, 'javascript
 assert.equal(projectFrontierAst(result.document, 'rust').kind, 'rust.module');
 assert.equal(projectFrontierAst(result.document, 'python').kind, 'python.module');
 assert.equal(projectFrontierAst(result.document, 'c').kind, 'c.header');
+assert.equal(projectFrontierAst(result.document, 'swiftui').kind, 'frontier.lang.swiftui.module');
 assert.equal(resolveCapabilityAdapters(result.document, 'typescript', { platform: 'node' })[0].status, 'bound');
 assert.equal(resolveCapabilityAdapters(result.document, 'rust', { platform: 'native' })[0].adapters[0].symbol, 'reqwest::Client::execute');
 assert.equal(resolveCapabilityAdapters(result.document, 'c', { platform: 'embedded' })[0].status, 'unsupported');

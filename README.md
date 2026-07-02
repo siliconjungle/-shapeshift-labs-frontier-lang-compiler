@@ -1,6 +1,6 @@
 # @shapeshift-labs/frontier-lang-compiler
 
-Compiler facade for Frontier Lang. It composes the parser, checker, semantic kernel, projection adapters, and runtime-neutral merge-evidence adapters for TypeScript, JavaScript, JSX, TSX, SVG, HTML, CSS, package manifests, Rust, Python, and C.
+Compiler facade for Frontier Lang. It composes the parser, checker, semantic kernel, projection adapters, and runtime-neutral merge-evidence adapters for TypeScript, JavaScript, JSX, TSX, SVG, HTML, CSS, package manifests, Rust, Python, C, and SwiftUI.
 
 ## Benchmarks
 

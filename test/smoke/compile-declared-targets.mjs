@@ -13,8 +13,8 @@ const declaredTargetCompile = compileFrontierDeclaredTargets(result.document, {
 assert.equal(declaredTargetCompile.kind, 'frontier.lang.declaredTargetCompilation');
 assert.equal(declaredTargetCompile.ok, true);
 assert.equal(declaredTargetCompile.sourcePath, 'todo.frontier');
-assert.equal(declaredTargetCompile.summary.targets, 2);
-assert.equal(declaredTargetCompile.summary.emitted, 2);
+assert.equal(declaredTargetCompile.summary.targets, 3);
+assert.equal(declaredTargetCompile.summary.emitted, 3);
 
 const typescriptArtifact = artifactByNode(declaredTargetCompile, 'target_ts');
 assert.equal(typescriptArtifact.target, 'typescript');
@@ -43,6 +43,20 @@ assert.equal(rustArtifact.metadata.projectionContractId, rustArtifact.projection
 assert.equal(rustArtifact.sourceMap.metadata.declaredTargetProjectionContractId, rustArtifact.projectionContract.id);
 assert.equal(rustArtifact.sourceMap.metadata.semanticEquivalenceClaim, false);
 
+const swiftUiArtifact = artifactByNode(declaredTargetCompile, 'target_swiftui');
+assert.equal(swiftUiArtifact.target, 'swiftui');
+assert.equal(swiftUiArtifact.packageName, 'example_todo');
+assert.equal(swiftUiArtifact.moduleFormat, 'swiftui');
+assert.equal(swiftUiArtifact.targetPath, 'src/generated/TodoViews.swift');
+assert.match(swiftUiArtifact.output, /import SwiftUI/);
+assert.match(swiftUiArtifact.output, /struct TodoListView: View/);
+assert.match(swiftUiArtifact.output, /Button\("Save"\) \{ action_add\(\) \}\.disabled\(disabled\)/);
+assert.equal(swiftUiArtifact.sourceMap.target.framework, 'swiftui');
+assert.equal(swiftUiArtifact.sourceMap.targetPath, 'src/generated/TodoViews.swift');
+assert.equal(swiftUiArtifact.sourceMap.sourcePath, 'todo.frontier');
+assert.equal(swiftUiArtifact.sourceMap.metadata.runtimeEquivalenceClaim, false);
+assert.equal(swiftUiArtifact.sourceMap.mappings.some((mapping) => mapping.semanticNodeId === 'view_todo_list'), true);
+
 const declaredSourceCompile = compileFrontierSourceDeclaredTargets(source, {
   fileName: 'todo-source.frontier',
   sourceMap: true,
@@ -54,6 +68,17 @@ assert.equal(declaredSourceCompile.summary.targets, 1);
 assert.equal(declaredSourceCompile.artifacts[0].targetNodeId, 'target_rust');
 assert.equal(declaredSourceCompile.artifacts[0].sourceMap.sourcePath, 'todo-source.frontier');
 assert.equal(declaredSourceCompile.artifacts[0].projectionContract.id, 'declared_target_projection_contract_target_rust');
+
+const declaredSwiftAliasCompile = compileFrontierSourceDeclaredTargets(source, {
+  fileName: 'todo-source.frontier',
+  sourceMap: true,
+  targetLanguages: ['swift']
+});
+assert.equal(declaredSwiftAliasCompile.ok, true);
+assert.equal(declaredSwiftAliasCompile.summary.targets, 1);
+assert.equal(declaredSwiftAliasCompile.artifacts[0].targetNodeId, 'target_swiftui');
+assert.equal(declaredSwiftAliasCompile.artifacts[0].target, 'swiftui');
+assert.equal(declaredSwiftAliasCompile.artifacts[0].sourceMap.target.framework, 'swiftui');
 
 const missingTargets = compilerApi.compileFrontierSourceDeclaredTargets('module Empty @id("mod_empty")', {});
 assert.equal(missingTargets.ok, false);
