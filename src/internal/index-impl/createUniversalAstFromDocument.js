@@ -9,7 +9,7 @@ export function createUniversalAstFromDocument(document, input = {}) {
     losses: input.losses,
     evidence: input.evidence ?? [],
     mergeCandidates: input.mergeCandidates,
-    semanticOperations: input.semanticOperations,
+    semanticOperations: input.semanticOperations ?? input.universalAstSemanticOperations ?? document.metadata?.semanticOperations,
     proof: input.proof ?? input.universalAstProof ?? document.metadata?.proof,
     paradigmSemantics: input.paradigmSemantics ?? input.universalAstParadigmSemantics ?? document.metadata?.paradigmSemantics,
     replayLinks: input.replayLinks,

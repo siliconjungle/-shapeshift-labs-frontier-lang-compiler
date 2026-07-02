@@ -20,6 +20,8 @@ import type {
   FrontierProofSpecLayer,
   ParadigmSemanticsLayerInput,
   ProofSpecLayerInput,
+  SemanticOperationSet,
+  SemanticOperationSetInput,
   SourceMapMappingRecord,
   SourceMapRecord,
   SourcePreservationLevel,
@@ -129,6 +131,8 @@ export declare function createUniversalAstFromDocument(document: FrontierLangDoc
   readonly losses?: readonly NativeAstLossRecord[];
   readonly evidence?: readonly EvidenceRecord[];
   readonly mergeCandidates?: readonly SemanticMergeCandidateRecord[];
+  readonly semanticOperations?: SemanticOperationSetInput | SemanticOperationSet;
+  readonly universalAstSemanticOperations?: SemanticOperationSetInput | SemanticOperationSet;
   readonly proof?: ProofSpecLayerInput | FrontierProofSpecLayer;
   readonly universalAstProof?: ProofSpecLayerInput | FrontierProofSpecLayer;
   readonly paradigmSemantics?: ParadigmSemanticsLayerInput | FrontierParadigmSemanticsLayer;
