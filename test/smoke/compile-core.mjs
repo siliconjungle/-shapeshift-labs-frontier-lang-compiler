@@ -50,6 +50,19 @@ state TodoDb @id("state_todo") {
   todos @id("collection_todos"): Map<TodoId, Todo>
 }
 
+view TodoList @id("view_todo_list") {
+  reads TodoDb.todos
+  dispatches action_add
+  prop disabled @id("view_prop_disabled"): Boolean
+  event save @id("view_event_save") action action_add input TodoInput
+  render Button @id("render_save_button") {
+    identity save
+    text "Save"
+    prop disabled disabled
+    on press save
+  }
+}
+
 action addTodo @id("action_add") {
   input TodoInput
   uses http.request
@@ -119,6 +132,10 @@ assert.equal(renderTargetAst(result.ast, 'typescript'), result.output);
 assert.match(result.output, /export interface Todo/);
 assert.match(result.output, /export interface TodoDbState/);
 assert.match(result.output, /export const TodoDbStateDescriptor/);
+assert.match(result.output, /export const TodoListView/);
+assert.match(result.output, /export function renderTodoListView\(props: \{ readonly disabled: boolean \}\): readonly FrontierRenderNode\[\]/);
+assert.match(result.output, /disabled: props\.disabled/);
+assert.match(result.output, /press: \{ action: "save" \}/);
 assert.match(result.output, /export const addTodoAction/);
 assert.match(result.output, /export const PersistTodoEffect/);
 assert.match(result.output, /export const persistTodoExtern/);
@@ -139,6 +156,9 @@ assert.equal(universalAst.semanticOperations.operations[0].writes[0], 'TodoDb.to
 assert.equal(universalAst.semanticOperations.summary.byOperationKind.effect, 1);
 assert.match(emitForTarget(result.document, 'javascript'), /export const TodoSchema/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const TodoDbStateDescriptor/);
+assert.match(emitForTarget(result.document, 'javascript'), /export const TodoListView/);
+assert.match(emitForTarget(result.document, 'javascript'), /export function renderTodoListView\(props = \{\}\)/);
+assert.match(emitForTarget(result.document, 'javascript'), /disabled: props\.disabled/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const addTodoAction/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const PersistTodoEffect/);
 assert.match(emitForTarget(result.document, 'javascript'), /export const persistTodoExtern/);
