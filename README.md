@@ -941,6 +941,31 @@ console.log(authoredPlan.metadata.authoredFrontierSource.constraintFamilies); //
 console.log(authoredPlan.metadata.authoredFrontierSource.runtimeRequirementIds); // runtime obligations from file syntax
 console.log(authoredPlan.metadata.authoredFrontierSource.dialectRecordIds); // dialect records from file syntax
 
+const frontierSourceWithRegistry = `
+module RuntimeDialectEvidence @id("mod_runtime_dialect_evidence")
+
+conversion JsToRust @id("conversion_js_rust") {
+  sourceLanguage javascript
+  target rust
+}
+
+dialectRegistry RuntimeDialects @id("dialect_registry_runtime") {
+  language javascript
+  sourcePath src/runtime.ts
+  dialect nodeProcess @id("dialect_registry_node_process") dialect node.runtime kind runtime name process.env target rust disposition unsupported readiness blocked loss loss_node_process_projection evidence evidence_node_runtime
+  extern viteRoutes @id("dialect_registry_vite_routes") dialect vite.plugin.virtual-module externKind generatorArtifact target rust disposition runtime-required readiness needs-review evidence evidence_vite_routes_manifest bindingSymbol virtual:routes module vite
+}
+`;
+
+const registryPlan = createUniversalConversionPlanFromFrontierSource(frontierSourceWithRegistry, {
+  fileName: 'runtime.frontier',
+  imports: [imported],
+  universalCapabilityMatrix: universalMatrix
+});
+console.log(registryPlan.metadata.authoredFrontierSource.dialectRegistryId); // reusable registry id
+console.log(registryPlan.metadata.authoredFrontierSource.dialectRegistryRecordIds); // registry dialect rows
+console.log(registryPlan.metadata.authoredFrontierSource.dialectRegistryExternIds); // registry extern rows
+
 const authoredArtifacts = createUniversalConversionArtifactsFromFrontierSource(frontierSource, {
   fileName: 'todo.frontier',
   targets: ['rust'],

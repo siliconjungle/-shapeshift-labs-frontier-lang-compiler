@@ -1,6 +1,9 @@
 import{idFragment}from'../../native-import-utils.js';import{attachInputUniversalDialectRegistry}from'@shapeshift-labs/frontier-lang-dialects';import{createUniversalAstEnvelope}from'@shapeshift-labs/frontier-lang-kernel';
 export function createUniversalAstFromDocument(document, input = {}) {
   const authored = document.metadata?.universalAst ?? {};
+  const dialectInput = document.metadata?.dialects
+    ? { universalDialectRegistry: document.metadata.dialects, ...input }
+    : input;
   return attachInputUniversalDialectRegistry(createUniversalAstEnvelope({
     id: input.id ?? `universal_ast_${idFragment(document.id)}`,
     document,
@@ -16,7 +19,7 @@ export function createUniversalAstFromDocument(document, input = {}) {
     replayLinks: input.replayLinks,
     layers: input.layers,
     metadata: input.metadata ?? authored.metadata
-  }), input);
+  }), dialectInput);
 }
 
 function nativeSourcesFromDocument(document) {

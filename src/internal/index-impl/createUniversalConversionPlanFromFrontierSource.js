@@ -22,6 +22,7 @@ function sourceMetadata(document, sourcePath) {
   const decisionGraph = document.metadata?.decisionGraph;
   const resourceGraphs = document.metadata?.semanticResourceGraphs;
   const interlingua = document.metadata?.universalInterlingua;
+  const dialects = document.metadata?.dialects;
   return {
     documentId: document.id,
     ...(sourcePath ? { sourcePath } : {}),
@@ -41,6 +42,10 @@ function sourceMetadata(document, sourcePath) {
     runtimeRequirementIds: ids(authored?.runtimeRequirements),
     dialectRecordIds: ids(authored?.dialects),
     externRecordIds: ids(authored?.externs),
+    dialectRegistryId: dialects?.id,
+    dialectRegistryRecordIds: ids(dialects?.dialects),
+    dialectRegistryExternIds: ids(dialects?.externs),
+    dialectRegistrySummary: dialects?.summary,
     decisionGraphId: decisionGraph?.id,
     decisionGraphIds: decisionGraph?.graphIds ?? [],
     decisionGraphRecordIds: decisionGraph?.recordIds ?? [],

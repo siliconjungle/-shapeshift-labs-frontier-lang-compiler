@@ -30,9 +30,19 @@ export function mergeDocumentConversionPlanInput(input = {}) {
   const authored = input.document?.metadata?.universalConversionPlan;
   const resourceGraphs = authoredResourceGraphs(input.document);
   const interlinguaRecords = authoredInterlinguaRecords(input.document);
-  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length && !interlinguaRecords.length) return input;
+  const dialectRegistry = authoredDialectRegistry(input.document);
+  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length && !interlinguaRecords.length && !dialectRegistry) return input;
   const merged = authored && typeof authored === 'object' ? { ...authored, ...input } : { ...input };
   if (input.targets === undefined && authored?.targets) merged.targets = authored.targets;
+  if (dialectRegistry && input.universalDialectRegistry === undefined) merged.universalDialectRegistry = dialectRegistry;
+  const authoredDialects = [...(authored?.dialects ?? []), ...(dialectRegistry?.dialects ?? [])];
+  const authoredExterns = [...(authored?.externs ?? []), ...(dialectRegistry?.externs ?? [])];
+  if (authoredDialects.length || input.dialects?.length) {
+    merged.dialects = uniqueRecords([...authoredDialects, ...(input.dialects ?? [])]);
+  }
+  if (authoredExterns.length || input.externs?.length) {
+    merged.externs = uniqueRecords([...authoredExterns, ...(input.externs ?? [])]);
+  }
   if (resourceGraphs.length) {
     merged.imports = uniqueRecords([
       ...resourceGraphs.map((graph) => resourceGraphImport(graph, authored)),
@@ -62,6 +72,11 @@ function authoredResourceGraphs(document) {
 function authoredInterlinguaRecords(document) {
   const interlingua = document?.metadata?.universalInterlingua;
   return [...(interlingua?.interlinguaRecords ?? []), ...(interlingua?.records ?? []).filter((record) => record?.kind === 'frontier.lang.universalInterlinguaRecord')].filter(Boolean);
+}
+
+function authoredDialectRegistry(document) {
+  const registry = document?.metadata?.dialects;
+  return registry && typeof registry === 'object' ? registry : undefined;
 }
 
 function resourceGraphImport(graph = {}, authored = {}) {
