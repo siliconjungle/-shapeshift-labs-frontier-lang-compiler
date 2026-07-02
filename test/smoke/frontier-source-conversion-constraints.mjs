@@ -27,6 +27,11 @@ conversion JsToRust @id("conversion_js_rust") {
   constraint resourceTransfer todoResource @id("resource_transfer_todo") role source kind resource-identity resource TodoDb.todos owner symbol:todoStore constraint owner|shared-borrow|drop-order evidence evidence_type_translation_proof
   constraint borrowScope todoScope @id("borrow_scope_todo") role source kind shared-borrow-compatible resource TodoDb.todos flowKind async lifetimeKind lexical evidence evidence_type_translation_proof
   constraint borrowChecker todoChecker @id("borrow_checker_todo") role source kind borrow-checker-boundary resource TodoDb.todos constraint shared-borrow-compatible|drop-cleanup-order evidence evidence_type_translation_proof
+  constraint module-constraint todoModule @id("module_constraint_todo") role source kind module-boundary specifier ./todo exportedName saveUser packageName @app/todo packageCondition import resolutionKind node16 evidence evidence_type_translation_proof
+  constraint scope-binding todoBinding @id("scope_binding_todo") role source kind lexical-binding bindingId binding:todo referenceId ref:todo scopeId scope:handler resolvedBindingId binding:todo closure evidence evidence_type_translation_proof
+  constraint memory-model todoMemory @id("memory_model_todo") role source kind shared-memory memoryKind shared-memory operationKind atomic-load memoryOrder acquire lockId lock:todo shared atomic evidence evidence_type_translation_proof
+  constraint effect-constraint todoWrite @id("effect_constraint_todo_write") role source kind storage-write effectKind storage-write capability storage.write resource TodoDb.todos effectTarget TodoDb.todos adapterRequired evidence evidence_type_translation_proof
+  constraint host-environment browserFetch @id("host_environment_fetch") role source kind browser-api hostKind browser-api capability fetch apiName fetch globalName window permission network adapterRequired evidence evidence_type_translation_proof
 }
 
 possibilitySpace UserProjectionSpace @id("space_user_projection") {
@@ -65,9 +70,14 @@ assert.equal(result.document.metadata.universalConversionPlan.runtimeRequirement
 assert.equal(result.document.metadata.universalConversionPlan.dialects[0].id, 'dialect_node_process');
 assert.equal(result.document.metadata.universalConversionPlan.externs[0].binding.symbol, 'virtual:routes');
 assert.equal(result.document.metadata.universalConversionPlan.typeConstraints[0].sourceTypes[0].optional, true);
+assert.equal(result.document.metadata.universalConversionPlan.typeConstraints[1].targetTypes[0].target, undefined);
 assert.equal(result.document.metadata.universalConversionPlan.resourceTransfers[0].sourceGraphs[0].resources[0].id, 'TodoDb.todos');
 assert.equal(result.document.metadata.universalConversionPlan.borrowScopeConstraints[0].sourceBorrowScopes[0].constraintKinds[0], 'shared-borrow-compatible');
 assert.equal(result.document.metadata.universalConversionPlan.borrowCheckerConstraints[0].sourceBorrowScopes[0].resourceId, 'TodoDb.todos');
+assert.equal(result.document.metadata.universalConversionPlan.scopeBindingConstraints[0].sourceScopeBindingRecords[0].bindingId, 'binding:todo');
+assert.equal(result.document.metadata.universalConversionPlan.memoryModelConstraints[0].sourceMemoryModelRecords[0].memoryOrder, 'acquire');
+assert.equal(result.document.metadata.universalConversionPlan.effectConstraints[0].sourceEffects[0].capability, 'storage.write');
+assert.equal(result.document.metadata.universalConversionPlan.hostEnvironmentConstraints[0].sourceHostEnvironmentRecords[0].apiName, 'fetch');
 assert.equal(result.document.metadata.constraintSpaces.id, 'space_user_projection');
 assert.equal(result.document.metadata.constraintSpaces.summary.variableCount, 1);
 assert.equal(result.document.metadata.constraintSpaces.summary.constraintCount, 1);
@@ -146,6 +156,16 @@ assert.equal(queryUniversalConversionPlan(sourcePlan, {
   target: 'rust',
   typeConstraintMissingKind: 'nullability'
 }).bestRoute.typeConstraint.targetTypes[0].symbolId, 'symbol:nicknameRust');
+const authoredConstraintRoute = queryUniversalConversionPlan(sourcePlan, {
+  sourceLanguage: 'javascript',
+  target: 'rust'
+}).bestRoute;
+assert.equal(authoredConstraintRoute.moduleConstraint.requiredKinds.includes('package-runtime-condition'), true);
+assert.equal(authoredConstraintRoute.scopeBindingConstraint.requiredKinds.includes('binding-identity'), true);
+assert.equal(authoredConstraintRoute.memoryModelConstraint.requiredKinds.includes('atomic-ordering'), true);
+assert.equal(authoredConstraintRoute.effectConstraint.requiredKinds.includes('storage-io'), true);
+assert.equal(authoredConstraintRoute.hostEnvironmentConstraint.requiredKinds.includes('network'), true);
+assert.equal(authoredConstraintRoute.hostEnvironmentConstraint.sourceHostEnvironmentRecords[0].globalName, 'window');
 
 const route = queryUniversalConversionPlan(plan, {
   sourceLanguage: 'javascript',
