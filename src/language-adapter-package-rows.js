@@ -1,9 +1,9 @@
 const packageRows = [
   row('@shapeshift-labs/frontier-lang-typescript', '0.3.12', 'typescript', 'typescript-compiler-api', { target: 'typescript' }),
   row('@shapeshift-labs/frontier-lang-javascript', '0.2.12', 'javascript', 'estree', { target: 'javascript', formats: ['estree', 'babel'] }),
-  row('@shapeshift-labs/frontier-lang-rust', '0.2.12', 'rust', 'rust-syn', { target: 'rust', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'macroExpansionEvidence'] }),
-  row('@shapeshift-labs/frontier-lang-python', '0.2.11', 'python', 'python-ast', { target: 'python', formats: ['python-ast', 'libcst'] }),
-  row('@shapeshift-labs/frontier-lang-c', '0.2.11', 'c', 'clang-ast-json', { target: 'c', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'compileCommandsHash', 'preprocessorRecordsHash'] }),
+  row('@shapeshift-labs/frontier-lang-rust', '0.2.14', 'rust', 'rust-syn', { target: 'rust', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'macroExpansionEvidence'] }),
+  row('@shapeshift-labs/frontier-lang-python', '0.2.13', 'python', 'python-ast', { target: 'python', formats: ['python-ast', 'libcst'] }),
+  row('@shapeshift-labs/frontier-lang-c', '0.2.13', 'c', 'clang-ast-json', { target: 'c', proofKeys: ['parserAst', 'sourceMap', 'semanticSidecar', 'compileCommandsHash', 'preprocessorRecordsHash'] }),
   platform('@shapeshift-labs/frontier-lang-java', '0.1.18', 'java', 'java-ast', ['semanticdb', 'lsp']),
   platform('@shapeshift-labs/frontier-lang-kotlin', '0.1.18', 'kotlin', 'kotlin-psi', ['semanticdb', 'lsp']),
   platform('@shapeshift-labs/frontier-lang-swift', '0.1.18', 'swift', 'swift-syntax', ['sourcekit-lsp', 'lsp']),
