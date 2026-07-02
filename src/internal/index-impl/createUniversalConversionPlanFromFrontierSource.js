@@ -19,6 +19,7 @@ export function createUniversalConversionPlanFromFrontierSource(source, options 
 function sourceMetadata(document, sourcePath) {
   const authored = document.metadata?.universalConversionPlan;
   const constraintSpaces = document.metadata?.constraintSpaces;
+  const decisionGraph = document.metadata?.decisionGraph;
   return {
     documentId: document.id,
     ...(sourcePath ? { sourcePath } : {}),
@@ -37,7 +38,20 @@ function sourceMetadata(document, sourcePath) {
     targetRuntimes: authored?.targetRuntimes ?? {},
     runtimeRequirementIds: ids(authored?.runtimeRequirements),
     dialectRecordIds: ids(authored?.dialects),
-    externRecordIds: ids(authored?.externs)
+    externRecordIds: ids(authored?.externs),
+    decisionGraphId: decisionGraph?.id,
+    decisionGraphIds: decisionGraph?.graphIds ?? [],
+    decisionGraphRecordIds: decisionGraph?.recordIds ?? [],
+    decisionGraphGateIds: decisionGraph?.gateIds ?? [],
+    decisionGraphEvidenceIds: decisionGraph?.evidenceIds ?? [],
+    decisionGraphSemanticChangeIds: decisionGraph?.semanticChangeIds ?? [],
+    decisionGraphPatchEventIds: decisionGraph?.patchEventIds ?? [],
+    decisionGraphAdmissionDecisionIds: decisionGraph?.admissionDecisionIds ?? [],
+    decisionGraphDecisionIds: decisionGraph?.decisionIds ?? [],
+    decisionGraphReplayRecordIds: decisionGraph?.replayRecordIds ?? [],
+    decisionGraphTournamentRecordIds: decisionGraph?.tournamentRecordIds ?? [],
+    decisionGraphRsiLoopIds: decisionGraph?.rsiLoopIds ?? [],
+    decisionGraphSummary: decisionGraph?.summary
   };
 }
 

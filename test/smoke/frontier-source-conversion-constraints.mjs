@@ -40,6 +40,18 @@ possibilitySpace UserProjectionSpace @id("space_user_projection") {
   collapse rustProjection @id("space_collapse_rust_projection") strategy evidence-first target rust variable space_variable_surface requires identity|type-gate produces symbol:nicknameRust evidence evidence_type_translation_proof admission space_admission_translation
   admission translation @id("space_admission_translation") kind translation status open target rust requires hardConstraints|typeGate decision review failClosed evidence evidence_type_translation_proof
 }
+
+decisionGraph TranslationAdmission @id("decision_graph_translation") {
+  graphKind semantic-merge-admission
+  scope mod_conversion_probe
+  root merge_decision_translation
+  subject symbol:nickname
+  change nickname @id("semantic_change_nickname") kind source-edit language javascript sourcePath src/public-api.js semanticSymbol symbol:nickname evidence evidence_type_translation_proof risk low
+  gate typecheck @id("gate_translation_typecheck") kind typecheck status passed required command "npm run typecheck" semanticChange semantic_change_nickname evidence evidence_type_translation_proof
+  evidence typecheck @id("evidence_translation_typecheck") kind test status passed path reports/typecheck.json gate gate_translation_typecheck semanticChange semantic_change_nickname
+  admission translationSafe @id("admission_translation_safe") candidate candidate_nickname semanticChange semantic_change_nickname classification safe decision merge autoMergeable gate gate_translation_typecheck evidence evidence_translation_typecheck
+  merge translationMerge @id("merge_decision_translation") candidate candidate_nickname semanticChange semantic_change_nickname admissionDecision admission_translation_safe decision merge autoMergeable gate gate_translation_typecheck evidence evidence_translation_typecheck
+}
 `;
 
 const result = compileFrontierSource(source, { target: 'javascript' });
@@ -62,6 +74,9 @@ assert.equal(result.document.metadata.constraintSpaces.summary.constraintCount, 
 assert.equal(result.document.metadata.constraintSpaces.summary.preferenceCount, 1);
 assert.equal(result.document.metadata.constraintSpaces.summary.collapseStrategyCount, 1);
 assert.equal(result.document.metadata.constraintSpaces.summary.admissionCount, 1);
+assert.equal(result.document.metadata.decisionGraph.id, 'decision_graph_translation');
+assert.equal(result.document.metadata.decisionGraph.summary.gateCount, 1);
+assert.equal(result.document.metadata.decisionGraph.summary.admissionDecisionCount, 1);
 
 const rawInput = {
   document: result.document,
@@ -98,6 +113,14 @@ assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpacePreferenc
 assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceCollapseStrategyIds[0], 'space_collapse_rust_projection');
 assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceAdmissionIds[0], 'space_admission_translation');
 assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceSummary.spaceCount, 1);
+assert.equal(sourcePlan.metadata.authoredFrontierSource.decisionGraphId, 'decision_graph_translation');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.decisionGraphIds[0], 'decision_graph_translation');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.decisionGraphSemanticChangeIds[0], 'semantic_change_nickname');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.decisionGraphGateIds[0], 'gate_translation_typecheck');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.decisionGraphEvidenceIds[0], 'evidence_translation_typecheck');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.decisionGraphAdmissionDecisionIds[0], 'admission_translation_safe');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.decisionGraphDecisionIds[0], 'merge_decision_translation');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.decisionGraphSummary.recordCount, 5);
 assert.equal(queryUniversalConversionPlan(sourcePlan, {
   sourceLanguage: 'javascript',
   target: 'rust',
@@ -170,6 +193,7 @@ assert.equal(sourceArtifacts.sourcePath, 'conversion-probe.frontier');
 assert.equal(sourceArtifacts.routeArtifacts.length, 1);
 assert.equal(sourceArtifacts.routeArtifacts[0].typeConstraint.targetTypes[0].symbolId, 'symbol:nicknameRust');
 assert.equal(sourceArtifacts.metadata.authoredFrontierSource.constraintFamilies.includes('resourceTransfers'), true);
+assert.equal(sourceArtifacts.metadata.authoredFrontierSource.decisionGraphGateIds[0], 'gate_translation_typecheck');
 
 const worklist = createUniversalConversionWorklist(rawInput, {
   sourceLanguage: 'javascript',

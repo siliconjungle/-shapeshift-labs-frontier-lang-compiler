@@ -141,7 +141,6 @@ export interface UniversalConversionRouteMergeRefs {
   readonly admissionStatus: UniversalConversionAdmissionAction;
   readonly metadata: Record<string, unknown>;
 }
-
 export interface UniversalConversionRoute extends UniversalConversionRouteConstraintFields {
   readonly id: string;
   readonly sourceLanguage: SL | string;
@@ -219,7 +218,6 @@ export interface UniversalConversionPlan {
     readonly note: string;
   };
 }
-
 export interface UniversalConversionPlanOptions extends UCO, UniversalConversionPlanConstraintOptions {
   readonly id?: string;
   readonly document?: FrontierLangDocument;
@@ -252,6 +250,11 @@ export interface AuthoredFrontierSourceConversionMetadata {
   readonly constraintSpaceSummary?: Readonly<Record<string, number>>;
   readonly sourceRuntimes: Readonly<Record<string, string>>; readonly targetRuntimes: Readonly<Record<string, string>>;
   readonly runtimeRequirementIds: readonly string[]; readonly dialectRecordIds: readonly string[]; readonly externRecordIds: readonly string[];
+  readonly decisionGraphId?: string; readonly decisionGraphIds: readonly string[]; readonly decisionGraphRecordIds: readonly string[];
+  readonly decisionGraphGateIds: readonly string[]; readonly decisionGraphEvidenceIds: readonly string[]; readonly decisionGraphSemanticChangeIds: readonly string[];
+  readonly decisionGraphPatchEventIds: readonly string[]; readonly decisionGraphAdmissionDecisionIds: readonly string[]; readonly decisionGraphDecisionIds: readonly string[];
+  readonly decisionGraphReplayRecordIds: readonly string[]; readonly decisionGraphTournamentRecordIds: readonly string[]; readonly decisionGraphRsiLoopIds: readonly string[];
+  readonly decisionGraphSummary?: Readonly<Record<string, number>>;
 }
 export interface FrontierSourceUniversalConversionPlan extends UniversalConversionPlan {
   readonly document: FrontierLangDocument; readonly sourcePath?: string;
@@ -302,7 +305,6 @@ export interface UniversalConversionPlanQuery extends UniversalConversionPlanRep
   readonly translationDialectRecordId?: string | readonly string[];
   readonly requiredTranslationConstructKind?: QueryFilter<string>; readonly representedTranslationConstructKind?: QueryFilter<string>; readonly targetAdapterId?: QueryFilter<string>;
 }
-
 export interface UniversalConversionPlanQueryResult {
   readonly kind: 'frontier.lang.universalConversionPlanQuery';
   readonly version: 1;
