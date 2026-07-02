@@ -17,6 +17,9 @@ conversion JsToRust @id("conversion_js_rust") {
   constraint type publicApi @id("type_constraint_public_api") role source kind property symbol symbol:nickname signatureHash sig_read_user optional evidence evidence_type_translation_proof
   constraint type rustApi @id("type_constraint_rust_api") role target kind public-function symbol symbol:nicknameRust signatureHash sig_read_user evidence evidence_type_translation_proof
   constraint controlFlow saveFlow @id("control_flow_save") role source kind async-flow from action_save to effect_persist evidence evidence_type_translation_proof async
+  constraint resourceTransfer todoResource @id("resource_transfer_todo") role source kind resource-identity resource TodoDb.todos owner symbol:todoStore constraint owner|shared-borrow|drop-order evidence evidence_type_translation_proof
+  constraint borrowScope todoScope @id("borrow_scope_todo") role source kind shared-borrow-compatible resource TodoDb.todos flowKind async lifetimeKind lexical evidence evidence_type_translation_proof
+  constraint borrowChecker todoChecker @id("borrow_checker_todo") role source kind borrow-checker-boundary resource TodoDb.todos constraint shared-borrow-compatible|drop-cleanup-order evidence evidence_type_translation_proof
 }
 `;
 
@@ -24,6 +27,9 @@ const result = compileFrontierSource(source, { target: 'javascript' });
 assert.equal(result.ok, true);
 assert.equal(result.document.metadata.universalConversionPlan.targets[0], 'rust');
 assert.equal(result.document.metadata.universalConversionPlan.typeConstraints[0].sourceTypes[0].optional, true);
+assert.equal(result.document.metadata.universalConversionPlan.resourceTransfers[0].sourceGraphs[0].resources[0].id, 'TodoDb.todos');
+assert.equal(result.document.metadata.universalConversionPlan.borrowScopeConstraints[0].sourceBorrowScopes[0].constraintKinds[0], 'shared-borrow-compatible');
+assert.equal(result.document.metadata.universalConversionPlan.borrowCheckerConstraints[0].sourceBorrowScopes[0].resourceId, 'TodoDb.todos');
 
 const rawInput = {
   document: result.document,
@@ -46,6 +52,9 @@ assert.equal(route.translationAdmission.typeConstraintStatus, 'degraded');
 assert.equal(route.typeConstraint.missingEvidence.includes('translation-type-constraint:nullability'), true);
 assert.equal(route.typeConstraint.targetTypes[0].symbolId, 'symbol:nicknameRust');
 assert.equal(route.controlFlowConstraint.requiredKinds.includes('async-suspension'), true);
+assert.equal(route.resourceTransfer.requiredKinds.includes('loan'), true);
+assert.equal(route.borrowScopeConstraint.requiredKinds.includes('shared-borrow-compatible'), true);
+assert.equal(route.borrowCheckerConstraint.requiredFamilies.includes('resource-transfer'), true);
 
 const rawQuery = queryUniversalConversionPlan(rawInput, {
   sourceLanguage: 'javascript',
