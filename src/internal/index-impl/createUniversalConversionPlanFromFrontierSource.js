@@ -20,6 +20,7 @@ function sourceMetadata(document, sourcePath) {
   const authored = document.metadata?.universalConversionPlan;
   const constraintSpaces = document.metadata?.constraintSpaces;
   const decisionGraph = document.metadata?.decisionGraph;
+  const resourceGraphs = document.metadata?.semanticResourceGraphs;
   return {
     documentId: document.id,
     ...(sourcePath ? { sourcePath } : {}),
@@ -51,7 +52,24 @@ function sourceMetadata(document, sourcePath) {
     decisionGraphReplayRecordIds: decisionGraph?.replayRecordIds ?? [],
     decisionGraphTournamentRecordIds: decisionGraph?.tournamentRecordIds ?? [],
     decisionGraphRsiLoopIds: decisionGraph?.rsiLoopIds ?? [],
-    decisionGraphSummary: decisionGraph?.summary
+    decisionGraphSummary: decisionGraph?.summary,
+    semanticResourceGraphId: resourceGraphs?.id,
+    semanticResourceGraphIds: resourceGraphs?.graphIds ?? [],
+    semanticResourceGraphRecordIds: resourceGraphs?.recordIds ?? [],
+    semanticResourceGraphResourceIds: resourceGraphs?.resourceIds ?? [],
+    semanticResourceGraphOwnerIds: resourceGraphs?.ownerIds ?? [],
+    semanticResourceGraphLoanIds: resourceGraphs?.loanIds ?? [],
+    semanticResourceGraphAliasIds: resourceGraphs?.aliasIds ?? [],
+    semanticResourceGraphMoveIds: resourceGraphs?.moveIds ?? [],
+    semanticResourceGraphDropIds: resourceGraphs?.dropIds ?? [],
+    semanticResourceGraphEscapeIds: resourceGraphs?.escapeIds ?? [],
+    semanticResourceGraphLifetimeRegionIds: resourceGraphs?.lifetimeRegionIds ?? [],
+    semanticResourceGraphLifetimeRelationIds: resourceGraphs?.lifetimeRelationIds ?? [],
+    semanticResourceGraphBorrowScopeIds: resourceGraphs?.borrowScopeIds ?? [],
+    semanticResourceGraphUnsafeBoundaryIds: resourceGraphs?.unsafeBoundaryIds ?? [],
+    semanticResourceGraphConflictIds: resourceGraphs?.conflictIds ?? [],
+    semanticResourceGraphProofObligationIds: resourceGraphs?.proofObligationIds ?? [],
+    semanticResourceGraphSummary: resourceGraphs?.summary
   };
 }
 

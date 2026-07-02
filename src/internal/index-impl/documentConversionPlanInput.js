@@ -28,15 +28,40 @@ const CONSTRAINT_ARRAY_FIELDS = [
 
 export function mergeDocumentConversionPlanInput(input = {}) {
   const authored = input.document?.metadata?.universalConversionPlan;
-  if (!authored || typeof authored !== 'object') return input;
-  const merged = { ...authored, ...input };
-  if (input.targets === undefined && authored.targets) merged.targets = authored.targets;
+  const resourceGraphs = authoredResourceGraphs(input.document);
+  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length) return input;
+  const merged = authored && typeof authored === 'object' ? { ...authored, ...input } : { ...input };
+  if (input.targets === undefined && authored?.targets) merged.targets = authored.targets;
+  if (resourceGraphs.length) {
+    merged.imports = uniqueRecords([
+      ...resourceGraphs.map((graph) => resourceGraphImport(graph, authored)),
+      ...(input.imports ?? [])
+    ]);
+  }
   for (const field of CONSTRAINT_ARRAY_FIELDS) {
-    const authoredValues = aggregateAuthoredRouteConstraints(authored[field] ?? []);
+    const authoredValues = aggregateAuthoredRouteConstraints(authored?.[field] ?? []);
     const inputValues = input[field] ?? [];
     if (authoredValues.length || inputValues.length) merged[field] = [...authoredValues, ...inputValues];
   }
   return merged;
+}
+
+function authoredResourceGraphs(document) {
+  const graphs = document?.metadata?.semanticResourceGraphs;
+  return [...(graphs?.graphs ?? []), ...(graphs?.resourceGraphs ?? [])].filter(Boolean);
+}
+
+function resourceGraphImport(graph = {}, authored = {}) {
+  return {
+    id: `authored_resource_graph_import_${graph.id ?? graph.sourcePath ?? 'source'}`,
+    language: graph.sourceLanguage ?? authored?.sourceLanguage,
+    sourcePath: graph.sourcePath,
+    sourceHash: graph.sourceHash,
+    resourceGraph: graph,
+    semanticResourceGraph: graph,
+    evidence: (graph.evidenceIds ?? []).map((id) => ({ id, kind: 'resource-graph-evidence', status: 'referenced' })),
+    metadata: { authoredFrontierResourceGraph: true, resourceGraph: graph }
+  };
 }
 
 function aggregateAuthoredRouteConstraints(records = []) {

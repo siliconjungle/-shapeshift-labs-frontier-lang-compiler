@@ -255,6 +255,8 @@ export interface AuthoredFrontierSourceConversionMetadata {
   readonly decisionGraphPatchEventIds: readonly string[]; readonly decisionGraphAdmissionDecisionIds: readonly string[]; readonly decisionGraphDecisionIds: readonly string[];
   readonly decisionGraphReplayRecordIds: readonly string[]; readonly decisionGraphTournamentRecordIds: readonly string[]; readonly decisionGraphRsiLoopIds: readonly string[];
   readonly decisionGraphSummary?: Readonly<Record<string, number>>;
+  readonly semanticResourceGraphId?: string; readonly semanticResourceGraphIds: readonly string[]; readonly semanticResourceGraphRecordIds: readonly string[]; readonly semanticResourceGraphResourceIds: readonly string[]; readonly semanticResourceGraphOwnerIds: readonly string[]; readonly semanticResourceGraphLoanIds: readonly string[]; readonly semanticResourceGraphAliasIds: readonly string[];
+  readonly semanticResourceGraphMoveIds: readonly string[]; readonly semanticResourceGraphDropIds: readonly string[]; readonly semanticResourceGraphEscapeIds: readonly string[]; readonly semanticResourceGraphLifetimeRegionIds: readonly string[]; readonly semanticResourceGraphLifetimeRelationIds: readonly string[]; readonly semanticResourceGraphBorrowScopeIds: readonly string[]; readonly semanticResourceGraphUnsafeBoundaryIds: readonly string[]; readonly semanticResourceGraphConflictIds: readonly string[]; readonly semanticResourceGraphProofObligationIds: readonly string[]; readonly semanticResourceGraphSummary?: Readonly<Record<string, number>>;
 }
 export interface FrontierSourceUniversalConversionPlan extends UniversalConversionPlan {
   readonly document: FrontierLangDocument; readonly sourcePath?: string;
@@ -313,7 +315,6 @@ export interface UniversalConversionPlanQueryResult {
   readonly bestRoute?: UniversalConversionRoute;
   readonly reasons: readonly string[];
 }
-
 export declare function createUniversalConversionPlan(options?: UniversalConversionPlanOptions): UniversalConversionPlan;
 export declare function createUniversalConversionPlanFromFrontierSource(source: string, options?: FrontierSourceUniversalConversionPlanOptions): FrontierSourceUniversalConversionPlan;
 export declare function queryUniversalConversionPlan(planOrOptions?: UniversalConversionPlan | UniversalConversionPlanOptions, query?: UniversalConversionPlanQuery): UniversalConversionPlanQueryResult;
