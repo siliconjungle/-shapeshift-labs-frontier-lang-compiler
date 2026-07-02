@@ -1,7 +1,10 @@
 import { assert } from './helpers.mjs';
 import {
   compileFrontierSource,
+  createUniversalConversionArtifacts,
   createUniversalConversionPlan,
+  createUniversalConversionRouteEvidenceReceipt,
+  createUniversalConversionWorklist,
   queryUniversalConversionPlan
 } from './compiler-api.mjs';
 
@@ -22,13 +25,15 @@ assert.equal(result.ok, true);
 assert.equal(result.document.metadata.universalConversionPlan.targets[0], 'rust');
 assert.equal(result.document.metadata.universalConversionPlan.typeConstraints[0].sourceTypes[0].optional, true);
 
-const plan = createUniversalConversionPlan({
+const rawInput = {
   document: result.document,
   generatedAt: 901,
   universalCapabilityMatrix: capabilityMatrix('javascript', 'rust'),
   imports: [sourceImport()],
   evidence: [routeProof()]
-});
+};
+
+const plan = createUniversalConversionPlan(rawInput);
 assert.equal(plan.metadata.compileTargets[0], 'rust');
 
 const route = queryUniversalConversionPlan(plan, {
@@ -41,6 +46,37 @@ assert.equal(route.translationAdmission.typeConstraintStatus, 'degraded');
 assert.equal(route.typeConstraint.missingEvidence.includes('translation-type-constraint:nullability'), true);
 assert.equal(route.typeConstraint.targetTypes[0].symbolId, 'symbol:nicknameRust');
 assert.equal(route.controlFlowConstraint.requiredKinds.includes('async-suspension'), true);
+
+const rawQuery = queryUniversalConversionPlan(rawInput, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  typeConstraintMissingKind: 'nullability'
+});
+assert.equal(rawQuery.found, true);
+assert.equal(rawQuery.bestRoute.typeConstraint.targetTypes[0].symbolId, 'symbol:nicknameRust');
+
+const artifacts = createUniversalConversionArtifacts(rawInput, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  typeConstraintMissingKind: 'nullability'
+});
+assert.equal(artifacts.routeArtifacts.length, 1);
+assert.equal(artifacts.routeArtifacts[0].typeConstraint.targetTypes[0].symbolId, 'symbol:nicknameRust');
+
+const worklist = createUniversalConversionWorklist(rawInput, {
+  sourceLanguage: 'javascript',
+  target: 'rust'
+});
+assert.equal(worklist.summary.missingEvidence.includes('translation-type-constraint:nullability'), true);
+
+const receipt = createUniversalConversionRouteEvidenceReceipt(rawInput, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
+  typeConstraintMissingKind: 'nullability'
+});
+assert.equal(receipt.missingEvidence.includes('translation-type-constraint:nullability'), true);
+assert.equal(receipt.interlinguaConstraintSourceIds.includes('type_constraint_public_api'), true);
+assert.equal(receipt.interlinguaConstraintEvidenceIds.includes('evidence_type_translation_proof'), true);
 
 function capabilityMatrix(language, target) {
   return {
