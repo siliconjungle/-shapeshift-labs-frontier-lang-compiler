@@ -35,8 +35,10 @@ export function mergeDocumentConversionPlanInput(input = {}) {
   const interlinguaRecords = authoredInterlinguaRecords(input.document);
   const dialectRegistry = authoredDialectRegistry(input.document);
   const runtimeCapabilities = authoredRuntimeCapabilities(input.document);
+  const constraintSpaces = authoredConstraintSpaces(input.document);
+  const inputConstraintSpaces = constraintSpaceArray(input.constraintSpaces);
   const targetProjections = authoredTargetProjections(input.document);
-  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length && !interlinguaRecords.length && !dialectRegistry && !runtimeCapabilities && !targetProjections.length) return input;
+  if ((!authored || typeof authored !== 'object') && !resourceGraphs.length && !interlinguaRecords.length && !dialectRegistry && !runtimeCapabilities && !constraintSpaces.length && !targetProjections.length) return input;
   const merged = authored && typeof authored === 'object' ? { ...authored, ...input } : { ...input };
   if (input.targets === undefined && authored?.targets) merged.targets = authored.targets;
   if (input.targets === undefined && !authored?.targets?.length && targetProjections.length) merged.targets = uniqueStrings(targetProjections.map((record) => record.target));
@@ -64,6 +66,14 @@ export function mergeDocumentConversionPlanInput(input = {}) {
   }
   if (runtimeCapabilities) {
     mergeAuthoredRuntimeCapabilities(merged, input, runtimeCapabilities);
+  }
+  if (constraintSpaces.length || input.authoredConstraintSpaces?.length || inputConstraintSpaces.length) {
+    merged.authoredConstraintSpaces = uniqueRecords([
+      ...constraintSpaces,
+      ...(input.authoredConstraintSpaces ?? []),
+      ...inputConstraintSpaces
+    ]);
+    merged.constraintSpaces = merged.authoredConstraintSpaces;
   }
   if (targetProjections.length || input.authoredTargetProjections?.length || input.targetProjectionContracts?.length) {
     merged.authoredTargetProjections = uniqueRecords([...(targetProjections ?? []), ...(input.authoredTargetProjections ?? []), ...(input.targetProjectionContracts ?? [])]);
@@ -96,6 +106,16 @@ function authoredDialectRegistry(document) {
 function authoredRuntimeCapabilities(document) {
   const runtime = document?.metadata?.runtimeCapabilities;
   return runtime && typeof runtime === 'object' ? runtime : undefined;
+}
+
+function authoredConstraintSpaces(document) {
+  return constraintSpaceArray(document?.metadata?.constraintSpaces);
+}
+
+function constraintSpaceArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value?.spaces && Array.isArray(value.spaces)) return value.spaces;
+  return [];
 }
 
 function mergeAuthoredRuntimeCapabilities(merged, input, runtime) {

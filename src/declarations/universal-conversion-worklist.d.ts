@@ -15,6 +15,7 @@ import type { UniversalRuntimeCapabilityKind as URK, UniversalRuntimeProofSignal
 import type { UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionWorklistRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
 import type { UniversalConversionArtifactSourceMapQuery, UniversalConversionWorklistSourceMapFields } from './universal-conversion-artifact-source-maps.js';
 import type { UniversalConversionArtifactIndex, UniversalConversionArtifactQuery } from './universal-conversion-artifact-query.js';
+import type { UniversalConversionConstraintSpaceFields, UniversalConversionConstraintSpaceQuery } from './universal-conversion-constraint-space.js';
 
 type UniversalConversionWorklistSemanticEditFieldKey =
   | 'semanticEditStatuses' | 'semanticEditScriptIds' | 'semanticEditProjectionIds' | 'semanticEditReplayIds'
@@ -83,6 +84,7 @@ export type UniversalConversionWorkItemKind =
   | 'collect-runtime-proof-signal'
   | 'collect-dialect-evidence'
   | 'collect-interlingua-obligation-proof'
+  | 'review-constraint-space-admission'
   | 'collect-source-evidence'
   | 'review-route'
   | 'unblock-route';
@@ -94,11 +96,12 @@ export type UniversalConversionWorkItemAction =
   | 'collect-runtime-proof-signals'
   | 'collect-dialect-projection-evidence'
   | 'collect-interlingua-obligation-evidence'
+  | 'review-constraint-space-admission'
   | 'collect-source-evidence'
   | 'review-conversion-route'
   | 'resolve-blocker';
 
-export interface UniversalConversionWorkItem extends UniversalConversionWorklistRuntimeRouteFields, UniversalConversionWorklistSourceMapFields, UniversalConversionWorklistSemanticEditFields, UniversalConversionRouteDialectFields {
+export interface UniversalConversionWorkItem extends UniversalConversionWorklistRuntimeRouteFields, UniversalConversionWorklistSourceMapFields, UniversalConversionWorklistSemanticEditFields, UniversalConversionRouteDialectFields, UniversalConversionConstraintSpaceFields {
   readonly id: string;
   readonly kind: UniversalConversionWorkItemKind;
   readonly action: UniversalConversionWorkItemAction;
@@ -148,7 +151,7 @@ export interface UniversalConversionWorkItem extends UniversalConversionWorklist
   readonly semanticEquivalenceClaim: false;
 }
 
-export interface UniversalConversionWorklistOptions extends UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionArtifactSourceMapQuery, UniversalConversionWorklistSemanticEditQuery, UniversalConversionWorklistRouteDialectQuery {
+export interface UniversalConversionWorklistOptions extends UniversalConversionArtifactRuntimeRouteQuery, UniversalConversionArtifactSourceMapQuery, UniversalConversionWorklistSemanticEditQuery, UniversalConversionWorklistRouteDialectQuery, UniversalConversionConstraintSpaceQuery {
   readonly generatedAt?: number;
   readonly routeId?: string | readonly string[];
   readonly sourceLanguage?: FrontierSourceLanguage | string | readonly (FrontierSourceLanguage | string)[];
@@ -217,10 +220,9 @@ export interface UniversalConversionWorklistQuery extends UniversalConversionWor
 export interface UniversalConversionWorklist {
   readonly kind: 'frontier.lang.universalConversionWorklist';
   readonly version: 1;
-  readonly generatedAt: number;
-  readonly planId: string;
+  readonly generatedAt: number; readonly planId: string;
   readonly items: readonly UniversalConversionWorkItem[];
-  readonly summary: UniversalConversionWorklistSemanticEditFields & UniversalConversionRouteDialectFields & {
+  readonly summary: UniversalConversionWorklistSemanticEditFields & UniversalConversionRouteDialectFields & UniversalConversionConstraintSpaceFields & {
     readonly items: number;
     readonly byKind: Readonly<Record<string, number>>;
     readonly byPriority: Readonly<Record<string, number>>;
@@ -284,6 +286,7 @@ export interface UniversalConversionWorklist {
     readonly runtimeProofSignalGaps: number;
     readonly dialectEvidenceGaps: number;
     readonly interlinguaObligationGaps: number;
+    readonly constraintSpaceAdmissionReviews: number;
     readonly autoMergeClaims: 0;
     readonly semanticEquivalenceClaims: 0;
   };

@@ -1,28 +1,27 @@
-import{countBy,idFragment,normalizeNativeLanguageId,uniqueStrings as u}from './native-import-utils.js';import{mergeTargetProjectionWorkItemFields,routeMatchesTargetProjectionQuery,targetProjectionWorkItemFields,targetProjectionWorklistSummary,workItemMatchesTargetProjectionQuery}from'./universal-conversion-target-projection-evidence.js';
-import{normalizeProjectionMatrixTargets}from './coverage-matrix-profiles.js';
-import{createUniversalConversionPlan}from './universal-conversion-plan.js';
-import{mergeWorkItemRuntimeRouteDenominators,workItemRuntimeRouteDenominators,workItemRuntimeRouteMatches,worklistRuntimeRouteSummary}from './universal-conversion-artifact-runtime-routes.js';
-import{mergeWorkItemSourceMapDenominators,workItemSourceMapDenominators,workItemSourceMapMatches,worklistSourceMapSummary}from './universal-conversion-artifact-source-maps.js';
-import{mergeWorkItemSemanticEditDenominators,workItemSemanticEditDenominators,workItemSemanticEditMatches,worklistSemanticEditSummary}from './universal-conversion-artifact-semantic-edit.js';
+import{countBy as cb,idFragment as idf,normalizeNativeLanguageId as nnl,uniqueStrings as u}from'./native-import-utils.js';import{mergeTargetProjectionWorkItemFields as mtpf,routeMatchesTargetProjectionQuery as tpm,targetProjectionWorkItemFields as tpf,targetProjectionWorklistSummary as tps,workItemMatchesTargetProjectionQuery as wtpm}from'./universal-conversion-target-projection-evidence.js';
+import{constraintSpaceWorkItemFields as csf,constraintSpaceWorklistSummary as css,mergeConstraintSpaceWorkItemFields as mcsf,routeMatchesConstraintSpaceQuery as c,workItemMatchesConstraintSpaceQuery as wc}from'./universal-conversion-constraint-space-evidence.js';
+import{normalizeProjectionMatrixTargets as npt}from './coverage-matrix-profiles.js';
+import{createUniversalConversionPlan as cp}from './universal-conversion-plan.js';
+import{mergeWorkItemRuntimeRouteDenominators as mrrd,workItemRuntimeRouteDenominators as wrrd,workItemRuntimeRouteMatches as wrrm,worklistRuntimeRouteSummary as wrrs}from './universal-conversion-artifact-runtime-routes.js';
+import{mergeWorkItemSourceMapDenominators as msmd,workItemSourceMapDenominators as wsmd,workItemSourceMapMatches as wsmm,worklistSourceMapSummary as wsms}from './universal-conversion-artifact-source-maps.js';
+import{mergeWorkItemSemanticEditDenominators as msed,workItemSemanticEditDenominators as wsed,workItemSemanticEditMatches as wsem,worklistSemanticEditSummary as wses}from './universal-conversion-artifact-semantic-edit.js';
 import{mergeTranslationAdmissionDenominators as mtad,translationAdmissionDenominatorMatches as tadm,translationAdmissionDenominatorSummary as tads,translationAdmissionDenominatorsForRoute as tadfr}from './universal-conversion-translation-admission-denominators.js'; import{conversionRouteMatchesDialectQuery as cdq,dialectDenominatorIndex as ddi,dialectDenominatorMatches as ddm}from './universal-conversion-dialect-routing.js';
-
-export const UniversalConversionWorkItemKinds = Object.freeze(['add-target-adapter', 'collect-translation-proof', 'prove-runtime-adapter', 'collect-runtime-proof-signal', 'collect-dialect-evidence', 'collect-interlingua-obligation-proof', 'collect-source-evidence', 'review-route', 'unblock-route']);
-
+export const UniversalConversionWorkItemKinds = Object.freeze(['add-target-adapter', 'collect-translation-proof', 'prove-runtime-adapter', 'collect-runtime-proof-signal', 'collect-dialect-evidence', 'collect-interlingua-obligation-proof', 'review-constraint-space-admission', 'collect-source-evidence', 'review-route', 'unblock-route']);
 export function createUniversalConversionWorklist(planOrInput = {}, options = {}, context = {}) {
   const plan = planOrInput?.kind === 'frontier.lang.universalConversionPlan'
     ? planOrInput
-    : createUniversalConversionPlan(planOrInput, context);
-  const routes = (plan.routes ?? []).filter((route) => routeMatchesWorklistOptions(route, options));
+    : cp(planOrInput, context);
+  const routes = (plan.routes??[]).filter((route) => routeMatchesWorklistOptions(route,options));
   const items = sortWorkItems([...workItemsForRoutes(routes, options).values()])
     .filter((item) => match(options.kind, [item.kind]));
   return {
-    kind: 'frontier.lang.universalConversionWorklist',
-    version: 1,
-    generatedAt: options.generatedAt ?? plan.generatedAt,
-    planId: plan.id,
+    kind:'frontier.lang.universalConversionWorklist',
+    version:1,
+    generatedAt: options.generatedAt??plan.generatedAt,
+    planId:plan.id,
     items,
     summary: worklistSummary(items),
-    metadata: {
+    metadata:{
       routes: routes.length,
       autoMergeClaim: false,
       semanticEquivalenceClaim: false,
@@ -30,7 +29,6 @@ export function createUniversalConversionWorklist(planOrInput = {}, options = {}
     }
   };
 }
-
 export function queryUniversalConversionWorklist(worklistOrInput = {}, query = {}, context = {}) {
   const worklist = worklistOrInput?.kind === 'frontier.lang.universalConversionWorklist'
     ? worklistOrInput
@@ -46,7 +44,6 @@ export function queryUniversalConversionWorklist(worklistOrInput = {}, query = {
     reasons: items.length ? [] : [`No conversion work item matched kind=${query.kind ?? '*'} target=${query.target ?? '*'} evidence=${query.evidenceKey ?? '*'}.`]
   };
 }
-
 function workItemsForRoutes(routes, options) {
   const items = new Map();
   for (const route of routes) {
@@ -56,11 +53,11 @@ function workItemsForRoutes(routes, options) {
     addInterlinguaObligationItems(items, route);
     if (route.runtimeAdapterRequirements?.length) addWorkItem(items, route, 'prove-runtime-adapter', 'runtime-adapter-proof', 'high');
     if (route.dialect?.missingEvidence?.length) addWorkItem(items, route, 'collect-dialect-evidence', route.dialect.missingEvidence[0], 'high');
-    if (options.includeReviewItems !== false && route.review?.length) addWorkItem(items, route, 'review-route', 'route-review', route.priority === 'blocker' ? 'blocker' : 'normal');
+    if (options.includeReviewItems!==false && route.constraintSpace?.review?.length) addWorkItem(items, route, 'review-constraint-space-admission', route.constraintSpace.evidenceIds?.[0] ?? 'constraint-space-review', route.constraintSpace.readiness === 'blocked' ? 'blocker' : 'normal');
+    if (options.includeReviewItems!==false && route.review?.length) addWorkItem(items, route, 'review-route', 'route-review', route.priority === 'blocker' ? 'blocker' : 'normal');
   }
   return items;
 }
-
 function addInterlinguaObligationItems(items, route) {
   const edges = route.interlingua?.constraints?.edges ?? [];
   for (const obligation of route.interlingua?.constraints?.obligations ?? []) {
@@ -80,7 +77,6 @@ function addInterlinguaObligationItems(items, route) {
     });
   }
 }
-
 function addMissingEvidenceItem(items, route, key) {
   if (/target-adapter|executable-target-semantics/.test(key) || route.mode === 'semantic-index-only') return addWorkItem(items, route, 'add-target-adapter', key, 'high');
   if (/runtime-proof-signal/.test(key)) return addWorkItem(items, route, 'collect-runtime-proof-signal', key, 'high');
@@ -89,7 +85,6 @@ function addMissingEvidenceItem(items, route, key) {
   if (/dialect/.test(key)) return addWorkItem(items, route, 'collect-dialect-evidence', key, 'high');
   return addWorkItem(items, route, 'collect-source-evidence', key, route.readiness === 'blocked' ? 'blocker' : 'normal');
 }
-
 function addWorkItem(items, route, kind, evidenceKey, priority, details = {}) {
   const id = workItemId(kind, route, evidenceKey);
   const existing = items.get(id);
@@ -117,7 +112,7 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     blockers: route.blockers ?? [],
     review: route.review ?? [],
     tasks: workItemTasks(kind, route, evidenceKey, details),
-    ...workItemRuntimeRouteDenominators(route), ...workItemSourceMapDenominators(route), ...workItemSemanticEditDenominators(route),
+    ...wrrd(route), ...wsmd(route), ...wsed(route),
     runtimeAdapterRequirementIds: (route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability).filter(Boolean),
     runtimeProofObligationIds: (route.runtime?.proofObligations ?? []).map((entry) => entry.id).filter(Boolean),
     runtimeProofCapabilities: u((route.runtime?.proofObligations ?? []).map((entry) => entry.capability)),
@@ -126,7 +121,7 @@ function workItemForRoute(id, kind, route, evidenceKey, priority, details = {}) 
     runtimeProofProvidedSignals: u((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.providedSignals ?? [])),
     runtimeProofMissingSignals: u((route.runtime?.proofObligations ?? []).flatMap((entry) => entry.missingSignals ?? [])),
     ...ddi([route]), ...translationDenominators,
-    targetAdapterIds: u([...translationDenominators.targetAdapterIds, route.adapter]), ...targetProjectionWorkItemFields(route),
+    targetAdapterIds: u([...translationDenominators.targetAdapterIds, route.adapter]), ...tpf(route), ...csf(route),
     interlinguaConstraintFamilies: u(details.constraintFamilies ?? []),
     interlinguaConstraintStatuses: u(details.constraintStatuses ?? []),
     interlinguaConstraintActions: u(details.constraintActions ?? []),
@@ -162,7 +157,7 @@ function mergeWorkItems(left, right) {
     blockers: u([...left.blockers, ...right.blockers]),
     review: u([...left.review, ...right.review]),
     tasks: u([...left.tasks, ...right.tasks]),
-    ...mergeWorkItemRuntimeRouteDenominators(left, right), ...mergeWorkItemSourceMapDenominators(left, right), ...mergeWorkItemSemanticEditDenominators(left, right),
+    ...mrrd(left, right), ...msmd(left, right), ...msed(left, right),
     runtimeAdapterRequirementIds: u([...left.runtimeAdapterRequirementIds, ...right.runtimeAdapterRequirementIds]),
     runtimeProofObligationIds: u([...left.runtimeProofObligationIds, ...right.runtimeProofObligationIds]),
     runtimeProofCapabilities: u([...left.runtimeProofCapabilities, ...right.runtimeProofCapabilities]),
@@ -172,7 +167,7 @@ function mergeWorkItems(left, right) {
     runtimeProofMissingSignals: u([...left.runtimeProofMissingSignals, ...right.runtimeProofMissingSignals]),
     ...ddi([left, right]),
     ...translationDenominators,
-    targetAdapterIds: u([...translationDenominators.targetAdapterIds, ...(left.targetAdapterIds ?? []), ...(right.targetAdapterIds ?? [])]), ...mergeTargetProjectionWorkItemFields(left, right),
+    targetAdapterIds: u([...translationDenominators.targetAdapterIds, ...(left.targetAdapterIds ?? []), ...(right.targetAdapterIds ?? [])]), ...mtpf(left, right), ...mcsf(left, right),
     interlinguaConstraintFamilies: u([...left.interlinguaConstraintFamilies, ...right.interlinguaConstraintFamilies]),
     interlinguaConstraintStatuses: u([...left.interlinguaConstraintStatuses, ...right.interlinguaConstraintStatuses]),
     interlinguaConstraintActions: u([...left.interlinguaConstraintActions, ...right.interlinguaConstraintActions]),
@@ -189,7 +184,7 @@ function mergeWorkItems(left, right) {
 }
 
 function workItemId(kind, route, evidenceKey) {
-  return `conversion_work_${idFragment(kind)}_${idFragment(route.sourceLanguage)}_to_${idFragment(route.target)}_${idFragment(evidenceKey)}`;
+  return `conversion_work_${idf(kind)}_${idf(route.sourceLanguage)}_to_${idf(route.target)}_${idf(evidenceKey)}`;
 }
 
 function workItemAction(kind) {
@@ -199,6 +194,7 @@ function workItemAction(kind) {
   if (kind === 'collect-runtime-proof-signal') return 'collect-runtime-proof-signals';
   if (kind === 'collect-dialect-evidence') return 'collect-dialect-projection-evidence';
   if (kind === 'collect-interlingua-obligation-proof') return 'collect-interlingua-obligation-evidence';
+  if (kind === 'review-constraint-space-admission') return 'review-constraint-space-admission';
   if (kind === 'review-route') return 'review-conversion-route';
   if (kind === 'unblock-route') return 'resolve-blocker';
   return 'collect-source-evidence';
@@ -216,21 +212,21 @@ function workItemTasks(kind, route, evidenceKey, details = {}) {
 function worklistSummary(items) {
   return {
     items: items.length,
-    byKind: countBy(items.map((item) => item.kind)),
-    byPriority: countBy(items.map((item) => item.priority)),
+    byKind: cb(items.map((item) => item.kind)),
+    byPriority: cb(items.map((item) => item.priority)),
     routeIds: u(items.flatMap((item) => item.routeIds)),
     sourceLanguages: u(items.flatMap((item) => item.sourceLanguages)),
     targets: u(items.flatMap((item) => item.targets)),
     evidenceKeys: u(items.flatMap((item) => item.evidenceKeys)),
     missingEvidence: u(items.flatMap((item) => item.missingEvidence)),
     ...ddi(items),
-    ...worklistRuntimeRouteSummary(items), ...worklistSourceMapSummary(items), ...worklistSemanticEditSummary(items),
+    ...wrrs(items), ...wsms(items), ...wses(items),
     runtimeProofCapabilities: u(items.flatMap((item) => item.runtimeProofCapabilities ?? [])),
     runtimeProofStatuses: u(items.flatMap((item) => item.runtimeProofStatuses ?? [])),
     runtimeProofRequiredSignals: u(items.flatMap((item) => item.runtimeProofRequiredSignals ?? [])),
     runtimeProofProvidedSignals: u(items.flatMap((item) => item.runtimeProofProvidedSignals ?? [])),
     runtimeProofMissingSignals: u(items.flatMap((item) => item.runtimeProofMissingSignals ?? [])),
-    ...tads(items), ...targetProjectionWorklistSummary(items),
+    ...tads(items), ...tps(items), ...css(items),
     interlinguaConstraintFamilies: u(items.flatMap((item) => item.interlinguaConstraintFamilies ?? [])),
     interlinguaConstraintStatuses: u(items.flatMap((item) => item.interlinguaConstraintStatuses ?? [])),
     interlinguaConstraintActions: u(items.flatMap((item) => item.interlinguaConstraintActions ?? [])),
@@ -251,22 +247,23 @@ function worklistSummary(items) {
     runtimeProofSignalGaps: items.filter((item) => item.kind === 'collect-runtime-proof-signal').length,
     dialectEvidenceGaps: items.filter((item) => item.kind === 'collect-dialect-evidence').length,
     interlinguaObligationGaps: items.filter((item) => item.kind === 'collect-interlingua-obligation-proof').length,
+    constraintSpaceAdmissionReviews: items.filter((item) => item.kind === 'review-constraint-space-admission').length,
     autoMergeClaims: 0,
     semanticEquivalenceClaims: 0
   };
 }
 
 function routeMatchesWorklistOptions(route,options) {
-  const ss=q(options.sourceLanguage??options.language).filter(Boolean).map(normalizeNativeLanguageId), ts=normalizeProjectionMatrixTargets(q(options.target));
+  const ss=q(options.sourceLanguage??options.language).filter(Boolean).map(nnl), ts=npt(q(options.target));
   return (!ss.length || route.languageIds.some((id)=>ss.includes(id)))
     && (!ts.length || ts.includes(route.target))
-    && cdq(route,options) && routeMatchesTargetProjectionQuery(route, options, match) && workItemRuntimeRouteMatches(workItemRuntimeRouteDenominators(route), options) && workItemSourceMapMatches(workItemSourceMapDenominators(route), options) && workItemSemanticEditMatches(workItemSemanticEditDenominators(route), options) && tadm(tadfr(route), options, match)
+    && cdq(route,options) && tpm(route, options, match) && c(route, options, match) && wrrm(wrrd(route), options) && wsmm(wsmd(route), options) && wsem(wsed(route), options) && tadm(tadfr(route), options, match)
     && match(options.routeId, [route.id]);
 }
 
 function workItemMatchesQuery(item, query) {
-  const ss = q(query.sourceLanguage ?? query.language).filter(Boolean).map(normalizeNativeLanguageId), ls = [...item.languageIds, ...(item.sourceLanguages ?? []).map(normalizeNativeLanguageId)];
-  const ts = normalizeProjectionMatrixTargets(q(query.target));
+  const ss = q(query.sourceLanguage ?? query.language).filter(Boolean).map(nnl), ls = [...item.languageIds, ...(item.sourceLanguages ?? []).map(nnl)];
+  const ts = npt(q(query.target));
   return match(query.itemId ?? query.id, [item.id])
     && match(query.kind, [item.kind])
     && match(query.action, [item.action])
@@ -281,7 +278,7 @@ function workItemMatchesQuery(item, query) {
     && match(query.routeAction, item.routeActions)
     && match(query.evidenceKey, item.evidenceKeys)
     && match(query.missingEvidence, item.missingEvidence)
-    && workItemRuntimeRouteMatches(item, query) && workItemSourceMapMatches(item, query) && workItemSemanticEditMatches(item, query)
+    && wrrm(item, query) && wsmm(item, query) && wsem(item, query)
     && match(query.runtimeProofObligationId, item.runtimeProofObligationIds)
     && match(query.runtimeProofCapability, item.runtimeProofCapabilities)
     && match(query.runtimeProofStatus, item.runtimeProofStatuses)
@@ -305,7 +302,7 @@ function workItemMatchesQuery(item, query) {
     && match(query.interlinguaConstraintObligationKind, item.interlinguaConstraintObligationKinds)
     && match(query.interlinguaConstraintObligationStatus, item.interlinguaConstraintObligationStatuses)
     && match(query.interlinguaConstraintObligationEvidenceId, item.interlinguaConstraintObligationEvidenceIds)
-    && match(query.interlinguaConstraintObligationMissingEvidence, item.interlinguaConstraintObligationMissingEvidence) && workItemMatchesTargetProjectionQuery(item, query, match);
+    && match(query.interlinguaConstraintObligationMissingEvidence, item.interlinguaConstraintObligationMissingEvidence) && wtpm(item, query, match) && wc(item, query, match);
 }
 
 function sortWorkItems(items) { return items.sort((left, right) => priorityRank(right.priority) - priorityRank(left.priority) || String(left.kind).localeCompare(String(right.kind)) || String(left.id).localeCompare(String(right.id))); }

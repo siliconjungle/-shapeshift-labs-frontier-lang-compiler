@@ -3,10 +3,12 @@ import {
   compileFrontierSource,
   createUniversalConversionArtifacts,
   createUniversalConversionArtifactsFromFrontierSource,
+  createUniversalAstFromDocument,
   createUniversalConversionPlan,
   createUniversalConversionPlanFromFrontierSource,
   createUniversalConversionRouteEvidenceReceipt,
   createUniversalConversionWorklist,
+  queryUniversalConversionWorklist,
   queryUniversalConversionPlan
 } from './compiler-api.mjs';
 
@@ -87,6 +89,10 @@ assert.equal(result.document.metadata.constraintSpaces.summary.admissionCount, 1
 assert.equal(result.document.metadata.decisionGraph.id, 'decision_graph_translation');
 assert.equal(result.document.metadata.decisionGraph.summary.gateCount, 1);
 assert.equal(result.document.metadata.decisionGraph.summary.admissionDecisionCount, 1);
+const ast = createUniversalAstFromDocument(result.document);
+assert.equal(ast.constraintSpaces[0].id, 'space_user_projection');
+assert.equal(ast.constraintSpaceIds[0], 'space_user_projection');
+assert.equal(ast.metadata.constraintSpaceSummary.spaceCount, 1);
 
 const rawInput = {
   document: result.document,
@@ -122,6 +128,9 @@ assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceConstrain
 assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpacePreferenceIds[0], 'space_preference_native_shape');
 assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceCollapseStrategyIds[0], 'space_collapse_rust_projection');
 assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceAdmissionIds[0], 'space_admission_translation');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceTargets.includes('rust'), true);
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceEvidenceIds[0], 'evidence_type_translation_proof');
+assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceFailClosedIds[0], 'space_constraint_identity');
 assert.equal(sourcePlan.metadata.authoredFrontierSource.constraintSpaceSummary.spaceCount, 1);
 assert.equal(sourcePlan.metadata.authoredFrontierSource.decisionGraphId, 'decision_graph_translation');
 assert.equal(sourcePlan.metadata.authoredFrontierSource.decisionGraphIds[0], 'decision_graph_translation');
@@ -154,6 +163,11 @@ assert.equal(queryUniversalConversionPlan(sourcePlan, {
 assert.equal(queryUniversalConversionPlan(sourcePlan, {
   sourceLanguage: 'javascript',
   target: 'rust',
+  constraintSpaceAdmissionId: 'space_admission_translation'
+}).found, true);
+assert.equal(queryUniversalConversionPlan(sourcePlan, {
+  sourceLanguage: 'javascript',
+  target: 'rust',
   typeConstraintMissingKind: 'nullability'
 }).bestRoute.typeConstraint.targetTypes[0].symbolId, 'symbol:nicknameRust');
 const authoredConstraintRoute = queryUniversalConversionPlan(sourcePlan, {
@@ -166,6 +180,14 @@ assert.equal(authoredConstraintRoute.memoryModelConstraint.requiredKinds.include
 assert.equal(authoredConstraintRoute.effectConstraint.requiredKinds.includes('storage-io'), true);
 assert.equal(authoredConstraintRoute.hostEnvironmentConstraint.requiredKinds.includes('network'), true);
 assert.equal(authoredConstraintRoute.hostEnvironmentConstraint.sourceHostEnvironmentRecords[0].globalName, 'window');
+assert.equal(authoredConstraintRoute.constraintSpaceIds[0], 'space_user_projection');
+assert.equal(authoredConstraintRoute.constraintSpaceAdmissionIds[0], 'space_admission_translation');
+assert.equal(authoredConstraintRoute.constraintSpaceCollapseStrategyIds[0], 'space_collapse_rust_projection');
+assert.equal(authoredConstraintRoute.constraintSpaceEvidenceIds[0], 'evidence_type_translation_proof');
+assert.equal(authoredConstraintRoute.constraintSpaceFailClosedIds.includes('space_constraint_identity'), true);
+assert.equal(authoredConstraintRoute.constraintSpaceReadinesses.includes('open'), true);
+assert.equal(authoredConstraintRoute.autoMergeClaim, false);
+assert.equal(authoredConstraintRoute.semanticEquivalenceClaim, false);
 
 const route = queryUniversalConversionPlan(plan, {
   sourceLanguage: 'javascript',
@@ -220,6 +242,12 @@ const worklist = createUniversalConversionWorklist(rawInput, {
   target: 'rust'
 });
 assert.equal(worklist.summary.missingEvidence.includes('translation-type-constraint:nullability'), true);
+assert.equal(worklist.summary.constraintSpaceAdmissionIds.includes('space_admission_translation'), true);
+assert.equal(worklist.summary.constraintSpaceAdmissionReviews, 1);
+assert.equal(queryUniversalConversionWorklist(worklist, {
+  kind: 'review-constraint-space-admission',
+  constraintSpaceAdmissionId: 'space_admission_translation'
+}).found, true);
 
 const receipt = createUniversalConversionRouteEvidenceReceipt(rawInput, {
   sourceLanguage: 'javascript',

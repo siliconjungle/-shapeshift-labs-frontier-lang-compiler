@@ -13,6 +13,7 @@ export * from './declarations/universal-conversion-artifacts.js';
 export * from './declarations/universal-conversion-artifact-runtime-routes.js';
 export * from './declarations/universal-conversion-compact-counts.js';
 export * from './declarations/universal-conversion-constraint-families.js';
+export * from './declarations/universal-conversion-constraint-space.js';
 export * from './declarations/universal-conversion-plan-constraints.js';
 export * from './declarations/universal-conversion-route-evidence.js';
 export * from './declarations/universal-conversion-plan.js';

@@ -18,11 +18,13 @@ export function createUniversalAstFromDocument(document, input = {}) {
     applicationSurfaces: input.applicationSurfaces ?? authored.applicationSurfaces ?? document.metadata?.applicationSurfaces?.surfaces,
     runtimeCapabilities: input.runtimeCapabilities ?? authored.runtimeCapabilities ?? document.metadata?.runtimeCapabilities?.blocks,
     targetProjections: input.targetProjections ?? authored.targetProjections ?? document.metadata?.targetProjections,
+    constraintSpaces: input.constraintSpaces ?? authored.constraintSpaces ?? document.metadata?.constraintSpaces?.spaces,
     packageManifestIds: input.packageManifestIds ?? authored.packageManifestIds ?? document.metadata?.packageManifests?.manifestIds,
     canvasSurfaceIds: input.canvasSurfaceIds ?? authored.canvasSurfaceIds ?? document.metadata?.canvasSurfaces?.surfaceIds,
     applicationSurfaceIds: input.applicationSurfaceIds ?? authored.applicationSurfaceIds ?? document.metadata?.applicationSurfaces?.surfaceIds,
     runtimeCapabilityIds: input.runtimeCapabilityIds ?? authored.runtimeCapabilityIds ?? document.metadata?.runtimeCapabilities?.blockIds,
     targetProjectionContractIds: input.targetProjectionContractIds ?? authored.targetProjectionContractIds ?? document.metadata?.targetProjections?.projectionContractIds,
+    constraintSpaceIds: input.constraintSpaceIds ?? authored.constraintSpaceIds ?? document.metadata?.constraintSpaces?.constraintSpaceIds ?? document.metadata?.constraintSpaces?.spaces?.map((space) => space.id).filter(Boolean),
     semanticOperations: input.semanticOperations ?? input.universalAstSemanticOperations ?? document.metadata?.semanticOperations,
     proof: input.proof ?? input.universalAstProof ?? document.metadata?.proof,
     paradigmSemantics: input.paradigmSemantics ?? input.universalAstParadigmSemantics ?? document.metadata?.paradigmSemantics,
@@ -44,7 +46,8 @@ function universalAstMetadata(authored, document) {
     packageManifestSummary: document.metadata?.packageManifests?.summary,
     canvasSurfaceSummary: document.metadata?.canvasSurfaces?.summary,
     applicationSurfaceSummary: document.metadata?.applicationSurfaces?.summary,
-    runtimeCapabilitySummary: document.metadata?.runtimeCapabilities?.summary
+    runtimeCapabilitySummary: document.metadata?.runtimeCapabilities?.summary,
+    constraintSpaceSummary: document.metadata?.constraintSpaces?.summary
   };
 }
 

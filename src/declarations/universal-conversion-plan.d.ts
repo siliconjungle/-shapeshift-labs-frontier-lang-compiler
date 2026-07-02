@@ -9,6 +9,7 @@ import type { UniversalRepresentationCoverage as URC, UniversalRepresentationCov
 import type { UniversalInterlinguaQuery, UniversalInterlinguaRecord } from './universal-interlingua.js';
 import type { UniversalConversionPlanCompactCounts } from './universal-conversion-compact-counts.js';
 import type { UniversalTranslationConstraintFieldName as TCN } from './universal-conversion-constraint-families.js';
+import type { UniversalConversionConstraintSpaceQuery, UniversalConversionConstraintSpaceRouteFields } from './universal-conversion-constraint-space.js';
 import type { UniversalRuntimeAdapterRequirement as URA, UniversalRuntimeCapabilityKind as URK, UniversalRuntimeCapabilityMatrix as URM, UniversalRuntimeCapabilityRoute as URR, UniversalRuntimeHostProfile as URH, UniversalRuntimeProofObligation as URO, UniversalRuntimeProofSignalKind as UPS, UniversalRuntimeRequirementInput as URI } from './universal-runtime-capabilities.js';
 import type { UniversalConversionPlanConstraintOptions, UniversalConversionPlanConstraintQuery, UniversalConversionRouteConstraintFields } from './universal-conversion-plan-constraints.js';
 import type {
@@ -141,7 +142,7 @@ export interface UniversalConversionRouteMergeRefs {
   readonly admissionStatus: UniversalConversionAdmissionAction;
   readonly metadata: Record<string, unknown>;
 }
-export interface UniversalConversionRoute extends UniversalConversionRouteConstraintFields {
+export interface UniversalConversionRoute extends UniversalConversionRouteConstraintFields, UniversalConversionConstraintSpaceRouteFields {
   readonly id: string;
   readonly sourceLanguage: SL | string;
   readonly languageIds: RO<string>;
@@ -236,6 +237,7 @@ export interface UniversalConversionPlanOptions extends UCO, UniversalConversion
   readonly universalDialectRegistry?: UniversalDialectRegistryInput | UniversalDialectRegistry;
   readonly dialects?: readonly UniversalDialectRecordInput[];
   readonly externs?: readonly UniversalExternRecordInput[];
+  readonly authoredConstraintSpaces?: readonly Readonly<Record<string, unknown>>[]; readonly constraintSpaces?: readonly Readonly<Record<string, unknown>>[] | { readonly spaces?: readonly Readonly<Record<string, unknown>>[] };
   readonly runtimeRequirements?: readonly (URK | URI)[];
   readonly requiredRuntimeCapabilities?: UniversalConversionPlanOptions['runtimeRequirements'];
   readonly effects?: UniversalConversionPlanOptions['runtimeRequirements'];
@@ -247,8 +249,8 @@ export interface AuthoredFrontierSourceConversionMetadata {
   readonly targets: readonly string[]; readonly constraintFamilies: readonly string[];
   readonly constraintSpaceId?: string; readonly constraintSpaceIds: readonly string[]; readonly constraintSpaceVariableIds: readonly string[]; readonly constraintSpaceConstraintIds: readonly string[];
   readonly constraintSpacePreferenceIds: readonly string[]; readonly constraintSpaceCollapseStrategyIds: readonly string[]; readonly constraintSpaceAdmissionIds: readonly string[];
-  readonly constraintSpaceSummary?: Readonly<Record<string, number>>;
-  readonly sourceRuntimes: Readonly<Record<string, string>>; readonly targetRuntimes: Readonly<Record<string, string>>;
+  readonly constraintSpaceTargets: readonly string[]; readonly constraintSpaceEvidenceIds: readonly string[]; readonly constraintSpaceFailClosedIds: readonly string[];
+  readonly constraintSpaceSummary?: Readonly<Record<string, number>>; readonly sourceRuntimes: Readonly<Record<string, string>>; readonly targetRuntimes: Readonly<Record<string, string>>;
   readonly runtimeRequirementIds: readonly string[]; readonly dialectRecordIds: readonly string[]; readonly externRecordIds: readonly string[];
   readonly decisionGraphId?: string; readonly decisionGraphIds: readonly string[]; readonly decisionGraphRecordIds: readonly string[];
   readonly decisionGraphGateIds: readonly string[]; readonly decisionGraphEvidenceIds: readonly string[]; readonly decisionGraphSemanticChangeIds: readonly string[];
@@ -259,10 +261,9 @@ export interface AuthoredFrontierSourceConversionMetadata {
   readonly semanticResourceGraphMoveIds: readonly string[]; readonly semanticResourceGraphDropIds: readonly string[]; readonly semanticResourceGraphEscapeIds: readonly string[]; readonly semanticResourceGraphLifetimeRegionIds: readonly string[]; readonly semanticResourceGraphLifetimeRelationIds: readonly string[]; readonly semanticResourceGraphBorrowScopeIds: readonly string[]; readonly semanticResourceGraphUnsafeBoundaryIds: readonly string[]; readonly semanticResourceGraphConflictIds: readonly string[]; readonly semanticResourceGraphProofObligationIds: readonly string[]; readonly semanticResourceGraphSummary?: Readonly<Record<string, number>>; readonly universalInterlinguaId?: string; readonly universalInterlinguaRecordIds: readonly string[]; readonly universalInterlinguaLayerIds: readonly string[]; readonly universalInterlinguaConstraintIds: readonly string[]; readonly universalInterlinguaObligationIds: readonly string[]; readonly universalInterlinguaLoweringIds: readonly string[]; readonly universalInterlinguaLiftIds: readonly string[]; readonly universalInterlinguaEvidenceIds: readonly string[]; readonly universalInterlinguaRouteIds: readonly string[]; readonly universalInterlinguaSummary?: Readonly<Record<string, number>>;
 }
 export interface FrontierSourceUniversalConversionPlan extends UniversalConversionPlan {
-  readonly document: FrontierLangDocument; readonly sourcePath?: string;
-  readonly metadata: UniversalConversionPlan['metadata'] & { readonly authoredFrontierSource: AuthoredFrontierSourceConversionMetadata; };
+  readonly document: FrontierLangDocument; readonly sourcePath?: string; readonly metadata: UniversalConversionPlan['metadata'] & { readonly authoredFrontierSource: AuthoredFrontierSourceConversionMetadata; };
 }
-export interface UniversalConversionPlanQuery extends UniversalConversionPlanRepresentationQuery, UniversalInterlinguaQuery, UniversalConversionPlanConstraintQuery {
+export interface UniversalConversionPlanQuery extends UniversalConversionPlanRepresentationQuery, UniversalInterlinguaQuery, UniversalConversionPlanConstraintQuery, UniversalConversionConstraintSpaceQuery {
   readonly routeId?: QueryFilter<string>;
   readonly sourceLanguage?: QueryFilter<SL | string>;
   readonly language?: QueryFilter<SL | string>;
@@ -308,8 +309,7 @@ export interface UniversalConversionPlanQuery extends UniversalConversionPlanRep
   readonly requiredTranslationConstructKind?: QueryFilter<string>; readonly representedTranslationConstructKind?: QueryFilter<string>; readonly targetAdapterId?: QueryFilter<string>;
 }
 export interface UniversalConversionPlanQueryResult {
-  readonly kind: 'frontier.lang.universalConversionPlanQuery';
-  readonly version: 1;
+  readonly kind: 'frontier.lang.universalConversionPlanQuery'; readonly version: 1;
   readonly found: boolean;
   readonly routes: readonly UniversalConversionRoute[];
   readonly bestRoute?: UniversalConversionRoute;

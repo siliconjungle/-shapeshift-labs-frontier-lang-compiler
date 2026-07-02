@@ -43,6 +43,9 @@ function sourceMetadata(document, sourcePath) {
     constraintSpacePreferenceIds: constraintSpaces?.preferenceIds ?? [],
     constraintSpaceCollapseStrategyIds: constraintSpaces?.collapseStrategyIds ?? [],
     constraintSpaceAdmissionIds: constraintSpaces?.admissionIds ?? [],
+    constraintSpaceTargets: constraintSpaces?.targets ?? [],
+    constraintSpaceEvidenceIds: uniqueConstraintSpaceEvidenceIds(constraintSpaces),
+    constraintSpaceFailClosedIds: uniqueConstraintSpaceFailClosedIds(constraintSpaces),
     constraintSpaceSummary: constraintSpaces?.summary,
     sourceRuntimes: authored?.sourceRuntimes ?? {},
     targetRuntimes: authored?.targetRuntimes ?? {},
@@ -147,4 +150,21 @@ function sourceMetadata(document, sourcePath) {
 
 function ids(records = []) {
   return records.map((record) => record?.id).filter(Boolean);
+}
+
+function uniqueConstraintSpaceEvidenceIds(constraintSpaces) {
+  return [...new Set((constraintSpaces?.spaces ?? []).flatMap((space) => [
+    ...(space.variables ?? []).flatMap((record) => record.evidenceIds ?? []),
+    ...(space.constraints ?? []).flatMap((record) => record.evidenceIds ?? []),
+    ...(space.preferences ?? []).flatMap((record) => record.evidenceIds ?? []),
+    ...(space.collapseStrategies ?? []).flatMap((record) => record.evidenceIds ?? []),
+    ...(space.admissions ?? []).flatMap((record) => record.evidenceIds ?? [])
+  ]).filter(Boolean))];
+}
+
+function uniqueConstraintSpaceFailClosedIds(constraintSpaces) {
+  return [...new Set((constraintSpaces?.spaces ?? []).flatMap((space) => [
+    ...(space.constraints ?? []),
+    ...(space.admissions ?? [])
+  ]).filter((record) => record.failClosed).map((record) => record.id).filter(Boolean))];
 }
