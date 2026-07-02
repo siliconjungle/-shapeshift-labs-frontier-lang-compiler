@@ -985,6 +985,20 @@ console.log(packageCanvasAst.canvasSurfaceIds); // canvasSurface blocks from .fr
 console.log(packageCanvasAst.metadata.packageManifestSummary); // dependency/script/export counters
 console.log(packageCanvasAst.metadata.canvasSurfaceSummary); // draw/offscreen/GPU/proof-gap counters
 
+// Authored application/plugin surfaces are preserved the same way. They describe
+// host/plugin composition contracts, not runtime, ABI, projection, sandbox, or
+// plugin compatibility proof.
+const pluginPlan = createUniversalConversionPlanFromFrontierSource(`
+module PluginSurface @id("mod_plugin_surface")
+appHost WorkbenchHost @id("app_surface_workbench") { mount dashboard @id("app_mount_dashboard") path /dashboard view view_dashboard }
+plugin WeatherWidget @id("plugin_weather_widget") { host app_surface_workbench requires fetch @id("plugin_require_fetch") capability host.fetch proofGap plugin-capability-grant-boundary }
+`, { fileName: 'plugin-surface.frontier' });
+const pluginAst = createUniversalAstFromDocument(pluginPlan.document);
+console.log(pluginAst.applicationSurfaceIds); // host/plugin surfaces from .frontier source
+console.log(pluginAst.metadata.applicationSurfaceSummary); // mount/provide/require/gate counters
+console.log(pluginAst.applicationSurfaces[1].claims.pluginCompatibilityClaim); // false
+console.log(pluginPlan.metadata.authoredFrontierSource.applicationSurfaceRequiredCapabilityIds); // capability requirements from file syntax
+
 const authoredArtifacts = createUniversalConversionArtifactsFromFrontierSource(frontierSource, {
   fileName: 'todo.frontier',
   targets: ['rust'],

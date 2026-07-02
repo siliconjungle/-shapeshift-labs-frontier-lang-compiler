@@ -25,6 +25,7 @@ function sourceMetadata(document, sourcePath) {
   const dialects = document.metadata?.dialects;
   const packageManifests = document.metadata?.packageManifests;
   const canvasSurfaces = document.metadata?.canvasSurfaces;
+  const applicationSurfaces = document.metadata?.applicationSurfaces;
   return {
     documentId: document.id,
     ...(sourcePath ? { sourcePath } : {}),
@@ -100,7 +101,20 @@ function sourceMetadata(document, sourcePath) {
     canvasSurfaceCommandTraceIds: canvasSurfaces?.commandTraceIds ?? [],
     canvasSurfaceEvidenceIds: canvasSurfaces?.evidenceIds ?? [],
     canvasSurfaceProofGapCodes: canvasSurfaces?.proofGapCodes ?? [],
-    canvasSurfaceSummary: canvasSurfaces?.summary
+    canvasSurfaceSummary: canvasSurfaces?.summary,
+    applicationSurfaceId: applicationSurfaces?.id,
+    applicationSurfaceIds: applicationSurfaces?.surfaceIds ?? [],
+    applicationSurfaceRecordIds: applicationSurfaces?.recordIds ?? [],
+    applicationSurfaceMountIds: applicationSurfaces?.mountIds ?? [],
+    applicationSurfaceProvidedSurfaceIds: applicationSurfaces?.providedSurfaceIds ?? [],
+    applicationSurfaceRequiredCapabilityIds: applicationSurfaces?.requiredCapabilityIds ?? [],
+    applicationSurfaceRouteIds: applicationSurfaces?.routeIds ?? [],
+    applicationSurfaceEventIds: applicationSurfaces?.eventIds ?? [],
+    applicationSurfaceAssetIds: applicationSurfaces?.assetIds ?? [],
+    applicationSurfaceGateIds: applicationSurfaces?.gateIds ?? [],
+    applicationSurfaceEvidenceIds: applicationSurfaces?.evidenceIds ?? [],
+    applicationSurfaceProofGapCodes: applicationSurfaces?.proofGapCodes ?? [],
+    applicationSurfaceSummary: applicationSurfaces?.summary
   };
 }
 
