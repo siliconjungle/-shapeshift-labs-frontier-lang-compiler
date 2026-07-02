@@ -103,13 +103,13 @@ export function compactRouteDialectCounts(records = []) {
 function dialectFields(record = {}) {
   if (hasFlatDialectFields(record)) return {
     dialectReadinesses: uniqueStrings([record.dialectReadiness, ...listField(record.dialectReadinesses)]),
-    dialectRegistryIds: uniqueStrings(listField(record.dialectRegistryIds)),
-    dialectRecordIds: uniqueStrings(listField(record.dialectRecordIds)),
-    dialectConstructKinds: uniqueStrings(listField(record.dialectConstructKinds)),
-    dialectExternKinds: uniqueStrings(listField(record.dialectExternKinds)),
-    dialectDispositions: uniqueStrings(listField(record.dialectDispositions)),
-    dialectEvidenceIds: uniqueStrings(listField(record.dialectEvidenceIds)),
-    dialectLossIds: uniqueStrings(listField(record.dialectLossIds))
+    dialectRegistryIds: uniqueStrings([...listField(record.dialectRegistryId), ...listField(record.dialectRegistryIds)]),
+    dialectRecordIds: uniqueStrings([...listField(record.dialectRecordId), ...listField(record.dialectRecordIds)]),
+    dialectConstructKinds: uniqueStrings([...listField(record.dialectConstructKind), ...listField(record.dialectConstructKinds)]),
+    dialectExternKinds: uniqueStrings([...listField(record.dialectExternKind), ...listField(record.dialectExternKinds)]),
+    dialectDispositions: uniqueStrings([...listField(record.dialectDisposition), ...listField(record.dialectDispositions)]),
+    dialectEvidenceIds: uniqueStrings([...listField(record.dialectEvidenceId), ...listField(record.dialectEvidenceIds)]),
+    dialectLossIds: uniqueStrings([...listField(record.dialectLossId), ...listField(record.dialectLossIds)])
   };
   const row = routeDialectDenominators(record);
   return { ...row, dialectReadinesses: uniqueStrings([row.dialectReadiness]) };
@@ -118,12 +118,19 @@ function dialectFields(record = {}) {
 const flatDialectFieldKeys = [
   'dialectReadiness',
   'dialectReadinesses',
+  'dialectRegistryId',
   'dialectRegistryIds',
+  'dialectRecordId',
   'dialectRecordIds',
+  'dialectConstructKind',
   'dialectConstructKinds',
+  'dialectExternKind',
   'dialectExternKinds',
+  'dialectDisposition',
   'dialectDispositions',
+  'dialectEvidenceId',
   'dialectEvidenceIds',
+  'dialectLossId',
   'dialectLossIds'
 ];
 
