@@ -23,6 +23,8 @@ function sourceMetadata(document, sourcePath) {
   const resourceGraphs = document.metadata?.semanticResourceGraphs;
   const interlingua = document.metadata?.universalInterlingua;
   const dialects = document.metadata?.dialects;
+  const packageManifests = document.metadata?.packageManifests;
+  const canvasSurfaces = document.metadata?.canvasSurfaces;
   return {
     documentId: document.id,
     ...(sourcePath ? { sourcePath } : {}),
@@ -85,7 +87,20 @@ function sourceMetadata(document, sourcePath) {
     universalInterlinguaLiftIds: interlingua?.liftIds ?? [],
     universalInterlinguaEvidenceIds: interlingua?.evidenceIds ?? [],
     universalInterlinguaRouteIds: interlingua?.routeIds ?? [],
-    universalInterlinguaSummary: interlingua?.summary
+    universalInterlinguaSummary: interlingua?.summary,
+    packageManifestId: packageManifests?.id,
+    packageManifestIds: packageManifests?.manifestIds ?? [],
+    packageManifestRecordIds: packageManifests?.recordIds ?? [],
+    packageManifestEvidenceIds: packageManifests?.evidenceIds ?? [],
+    packageManifestProofGapCodes: packageManifests?.proofGapCodes ?? [],
+    packageManifestSummary: packageManifests?.summary,
+    canvasSurfaceId: canvasSurfaces?.id,
+    canvasSurfaceIds: canvasSurfaces?.surfaceIds ?? [],
+    canvasSurfaceRecordIds: canvasSurfaces?.recordIds ?? [],
+    canvasSurfaceCommandTraceIds: canvasSurfaces?.commandTraceIds ?? [],
+    canvasSurfaceEvidenceIds: canvasSurfaces?.evidenceIds ?? [],
+    canvasSurfaceProofGapCodes: canvasSurfaces?.proofGapCodes ?? [],
+    canvasSurfaceSummary: canvasSurfaces?.summary
   };
 }
 

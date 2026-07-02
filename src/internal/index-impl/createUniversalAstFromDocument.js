@@ -13,13 +13,27 @@ export function createUniversalAstFromDocument(document, input = {}) {
     losses: input.losses ?? authored.losses,
     evidence: input.evidence ?? authored.evidence ?? [],
     mergeCandidates: input.mergeCandidates ?? authored.mergeCandidates,
+    packageManifests: input.packageManifests ?? authored.packageManifests ?? document.metadata?.packageManifests?.manifests,
+    canvasSurfaces: input.canvasSurfaces ?? authored.canvasSurfaces ?? document.metadata?.canvasSurfaces?.surfaces,
+    packageManifestIds: input.packageManifestIds ?? authored.packageManifestIds ?? document.metadata?.packageManifests?.manifestIds,
+    canvasSurfaceIds: input.canvasSurfaceIds ?? authored.canvasSurfaceIds ?? document.metadata?.canvasSurfaces?.surfaceIds,
     semanticOperations: input.semanticOperations ?? input.universalAstSemanticOperations ?? document.metadata?.semanticOperations,
     proof: input.proof ?? input.universalAstProof ?? document.metadata?.proof,
     paradigmSemantics: input.paradigmSemantics ?? input.universalAstParadigmSemantics ?? document.metadata?.paradigmSemantics,
     replayLinks: input.replayLinks,
     layers: attachAppContractLayer(input.layers, document, input),
-    metadata: input.metadata ?? authored.metadata
+    metadata: input.metadata ?? universalAstMetadata(authored, document)
   }), dialectInput);
+}
+
+function universalAstMetadata(authored, document) {
+  return {
+    ...(authored.metadata ?? {}),
+    authoredPackageManifestIds: authored.packageManifestIds ?? document.metadata?.packageManifests?.manifestIds ?? authored.metadata?.authoredPackageManifestIds,
+    authoredCanvasSurfaceIds: authored.canvasSurfaceIds ?? document.metadata?.canvasSurfaces?.surfaceIds ?? authored.metadata?.authoredCanvasSurfaceIds,
+    packageManifestSummary: document.metadata?.packageManifests?.summary,
+    canvasSurfaceSummary: document.metadata?.canvasSurfaces?.summary
+  };
 }
 
 function nativeSourcesFromDocument(document) {

@@ -971,6 +971,20 @@ console.log(appAst.layers.appContracts.summary.byNodeKind.action); // authored a
 console.log(appAst.layers.appContracts.records.find((record) => record.nodeKind === 'view')?.renderIds); // authored view/render contract ids
 console.log(appAst.layers.appContracts.metadata.autoMergeClaim); // false: this is routing evidence, not an equivalence proof
 
+// Authored package/canvas surfaces are also preserved as universal AST evidence.
+// They are useful for routing and review, but they do not claim install,
+// runtime, render, visual, auto-merge, or semantic equivalence.
+const packageCanvasPlan = createUniversalConversionPlanFromFrontierSource(`
+module PackageCanvas @id("mod_package_canvas")
+packageManifest AppPackage @id("pkg_manifest_app") { dependency react @id("pkg_dep_react") section dependencies range ^19.0.0 }
+canvasSurface PreviewCanvas @id("canvas_surface_preview") { command fill @id("canvas_command_fill") name fillRect category draw proofGap canvas-stateful-render-order-boundary }
+`, { fileName: 'package-canvas.frontier' });
+const packageCanvasAst = createUniversalAstFromDocument(packageCanvasPlan.document);
+console.log(packageCanvasAst.packageManifestIds); // packageManifest blocks from .frontier source
+console.log(packageCanvasAst.canvasSurfaceIds); // canvasSurface blocks from .frontier source
+console.log(packageCanvasAst.metadata.packageManifestSummary); // dependency/script/export counters
+console.log(packageCanvasAst.metadata.canvasSurfaceSummary); // draw/offscreen/GPU/proof-gap counters
+
 const authoredArtifacts = createUniversalConversionArtifactsFromFrontierSource(frontierSource, {
   fileName: 'todo.frontier',
   targets: ['rust'],
