@@ -3,7 +3,7 @@ import type { FrontierCompileTarget } from './compile.js';
 import type { UniversalRuntimeCapabilityKind, UniversalRuntimeProofSignalKind } from './universal-runtime-capabilities.js';
 import type { UniversalConversionRuntimeRouteFields } from './universal-conversion-artifact-runtime-routes.js';
 import type { UniversalConversionArtifactIndex, UniversalConversionSemanticEditMetricKey } from './universal-conversion-artifact-query.js';
-import type { UniversalConversionSemanticEditCompactCounts, UniversalConversionSemanticEditCompactCountKey, UniversalConversionTranslationAdmissionCompactCounts } from './universal-conversion-compact-counts.js';
+import type { UniversalConversionRouteDialectCompactCounts, UniversalConversionSemanticEditCompactCounts, UniversalConversionSemanticEditCompactCountKey, UniversalConversionTranslationAdmissionCompactCounts } from './universal-conversion-compact-counts.js';
 import type { UniversalDialectConstructKind, UniversalDialectProjectionDisposition } from './universal-dialects.js';
 import type { UniversalInterlinguaConstraintEdgeKind, UniversalInterlinguaLoweringDisposition } from './universal-interlingua.js';
 import type {
@@ -97,6 +97,17 @@ export interface UniversalConversionTranslationAdmissionDenominatorFields {
   readonly targetAdapterIds: readonly string[];
 }
 
+export interface UniversalConversionRouteDialectDenominatorFields {
+  readonly dialectReadiness?: string;
+  readonly dialectRegistryIds: readonly string[];
+  readonly dialectRecordIds: readonly string[];
+  readonly dialectConstructKinds: readonly string[];
+  readonly dialectExternKinds: readonly string[];
+  readonly dialectDispositions: readonly string[];
+  readonly dialectEvidenceIds: readonly string[];
+  readonly dialectLossIds: readonly string[];
+}
+
 export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly routeId?: string | readonly string[];
   readonly sourceLanguage?: FrontierSourceLanguage | string | readonly (FrontierSourceLanguage | string)[];
@@ -150,7 +161,7 @@ export interface UniversalConversionRouteEvidenceReceiptOptions {
   readonly includeRejectedEvidence?: boolean;
 }
 
-export interface UniversalConversionRouteEvidenceReceipt extends UniversalConversionRuntimeRouteFields, UniversalConversionTranslationAdmissionDenominatorFields, UniversalConversionRouteEvidenceReceiptSemanticEditFields {
+export interface UniversalConversionRouteEvidenceReceipt extends UniversalConversionRuntimeRouteFields, UniversalConversionTranslationAdmissionDenominatorFields, UniversalConversionRouteDialectDenominatorFields, UniversalConversionRouteEvidenceReceiptSemanticEditFields {
   readonly kind: 'frontier.lang.universalConversionRouteEvidenceReceipt';
   readonly version: 1;
   readonly schema: 'frontier.lang.universalConversionRouteEvidenceReceipt.v1';
@@ -214,6 +225,7 @@ export interface UniversalConversionRouteEvidenceReceipt extends UniversalConver
     readonly semanticEdit: UniversalConversionSemanticEditCompactCounts;
     readonly missingEvidence: number;
     readonly translationAdmission: UniversalConversionTranslationAdmissionCompactCounts;
+    readonly routeDialect: UniversalConversionRouteDialectCompactCounts;
     readonly runtimeProofObligations: number;
     readonly runtimeProofByStatus: Readonly<Record<string, number>>;
     readonly runtimeProofByCapability: Readonly<Record<string, number>>;

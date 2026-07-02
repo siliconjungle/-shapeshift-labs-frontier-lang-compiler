@@ -1,6 +1,7 @@
 import { countBy } from './native-import-utils.js';
 import { artifactSourceMapCounts as smc } from './universal-conversion-artifact-source-maps.js'; import { artifactRuntimeRouteCounts as rrc } from './universal-conversion-artifact-runtime-routes.js'; import { semanticEditRecordsCounts as sec } from './universal-conversion-artifact-semantic-edit.js';
 import { compactTranslationAdmissionCounts } from './universal-conversion-translation-admission-denominators.js';
+import { compactRouteDialectCounts } from './universal-conversion-dialect-routing.js';
 
 const aiKeys = 'Families Statuses Actions SourceIds EvidenceIds RequiredKinds RepresentedKinds MissingKinds MissingEvidence ObligationKinds ObligationStatuses ObligationEvidenceIds ObligationMissingEvidence'.split(' ');
 
@@ -105,6 +106,7 @@ function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperati
     },
     sourceMaps: smc(routeArtifacts, admissionRecords), runtimeRoutes: rrc(routeArtifacts, admissionRecords, evidenceReceipts), semanticEdit: sec(routeArtifacts),
     translationAdmission: compactTranslationAdmissionCounts(translationAdmissions),
+    routeDialect: compactRouteDialectCounts(routeArtifacts),
     runtimeProof: compactRuntimeProofCounts(routeArtifacts, evidenceReceipts),
     resourceTransfer: compactResourceTransferCounts(resourceTransfers),
     lifetimeConstraint: compactConstraintCounts(lifetimeConstraints),

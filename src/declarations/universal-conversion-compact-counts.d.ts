@@ -71,6 +71,18 @@ export interface UniversalConversionTranslationAdmissionCompactCounts {
   readonly targetAdapterIds: Readonly<Record<string, number>>;
 }
 
+export interface UniversalConversionRouteDialectCompactCounts {
+  readonly routes: number;
+  readonly byReadiness: Readonly<Record<string, number>>;
+  readonly registryIds: Readonly<Record<string, number>>;
+  readonly recordIds: Readonly<Record<string, number>>;
+  readonly constructKinds: Readonly<Record<string, number>>;
+  readonly externKinds: Readonly<Record<string, number>>;
+  readonly dispositions: Readonly<Record<string, number>>;
+  readonly evidenceIds: Readonly<Record<string, number>>;
+  readonly lossIds: Readonly<Record<string, number>>;
+}
+
 export interface UniversalConversionEvidenceReceiptCompactCounts {
   readonly routeArtifacts: number;
   readonly boundEvidence: number;
@@ -242,6 +254,7 @@ export interface UniversalConversionArtifactCompactCounts {
   readonly runtimeRoutes: UniversalConversionRuntimeRouteCompactCounts;
   readonly semanticEdit: UniversalConversionSemanticEditCompactCounts;
   readonly translationAdmission: UniversalConversionTranslationAdmissionCompactCounts;
+  readonly routeDialect: UniversalConversionRouteDialectCompactCounts;
   readonly runtimeProof: UniversalConversionRuntimeProofCompactCounts;
   readonly resourceTransfer: UniversalConversionResourceTransferCompactCounts;
   readonly lifetimeConstraint: UniversalConversionLifetimeConstraintCompactCounts;

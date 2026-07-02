@@ -1,4 +1,4 @@
-import { maxSemanticMergeReadiness, normalizeNativeLanguageId, uniqueStrings } from './native-import-utils.js';
+import { countBy, maxSemanticMergeReadiness, normalizeNativeLanguageId, uniqueStrings } from './native-import-utils.js';
 import { normalizeProjectionMatrixTargets } from './coverage-matrix-profiles.js';
 import { createUniversalDialectRegistry } from './universal-dialect-registry.js';
 
@@ -85,6 +85,21 @@ export function dialectDenominatorMatches(record, query = {}) {
     && match(query.dialectLossId, row.dialectLossIds);
 }
 
+export function compactRouteDialectCounts(records = []) {
+  const rows = records.map(dialectFields);
+  return {
+    routes: rows.filter((record) => hasDialect(record)).length,
+    byReadiness: countBy(rows.flatMap((record) => record.dialectReadinesses ?? [])),
+    registryIds: countBy(rows.flatMap((record) => record.dialectRegistryIds ?? [])),
+    recordIds: countBy(rows.flatMap((record) => record.dialectRecordIds ?? [])),
+    constructKinds: countBy(rows.flatMap((record) => record.dialectConstructKinds ?? [])),
+    externKinds: countBy(rows.flatMap((record) => record.dialectExternKinds ?? [])),
+    dispositions: countBy(rows.flatMap((record) => record.dialectDispositions ?? [])),
+    evidenceIds: countBy(rows.flatMap((record) => record.dialectEvidenceIds ?? [])),
+    lossIds: countBy(rows.flatMap((record) => record.dialectLossIds ?? []))
+  };
+}
+
 function dialectFields(record = {}) {
   if (record.dialectRegistryIds || record.dialectRecordIds || record.dialectReadinesses) return {
     dialectReadinesses: uniqueStrings([record.dialectReadiness, ...(record.dialectReadinesses ?? [])]),
@@ -98,6 +113,11 @@ function dialectFields(record = {}) {
   };
   const row = routeDialectDenominators(record);
   return { ...row, dialectReadinesses: uniqueStrings([row.dialectReadiness]) };
+}
+
+function hasDialect(record) {
+  return Boolean(record.dialectReadinesses?.length || record.dialectRegistryIds?.length || record.dialectRecordIds?.length
+    || record.dialectConstructKinds?.length || record.dialectExternKinds?.length || record.dialectDispositions?.length || record.dialectEvidenceIds?.length || record.dialectLossIds?.length);
 }
 
 function match(filter, values) {

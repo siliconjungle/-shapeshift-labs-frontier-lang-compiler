@@ -1,14 +1,10 @@
 import{countBy,normalizeNativeLanguageId,uniqueStrings}from './native-import-utils.js'; import{createUniversalConversionPlan,queryUniversalConversionPlan}from './universal-conversion-plan.js';
 import{conversionRouteEvidence}from './universal-conversion-route-evidence.js'; import{routeRuntimeDenominators}from './universal-conversion-artifact-runtime-routes.js'; import{artifactSemanticEditIndex,semanticEditIndexCounts}from './universal-conversion-artifact-semantic-edit.js';
-import{compactTranslationAdmissionCounts,translationAdmissionDenominatorsForRoute}from './universal-conversion-translation-admission-denominators.js'; import{summarizeRuntimeProofObligations}from './universal-runtime-proof-obligations.js';
+import{compactTranslationAdmissionCounts,translationAdmissionDenominatorsForRoute}from './universal-conversion-translation-admission-denominators.js'; import{summarizeRuntimeProofObligations}from './universal-runtime-proof-obligations.js'; import{compactRouteDialectCounts,routeDialectDenominators}from './universal-conversion-dialect-routing.js';
 
 export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {}, options = {}, context = {}) {
   const route = selectRoute(routeOrInput, options, context);
-  const suppliedEvidence = Array.isArray(options.evidence)
-    ? options.evidence
-    : Array.isArray(routeOrInput?.evidence)
-      ? routeOrInput.evidence
-      : [];
+  const suppliedEvidence = Array.isArray(options.evidence) ? options.evidence : Array.isArray(routeOrInput?.evidence) ? routeOrInput.evidence : [];
   const boundRecords = suppliedEvidence.length ? conversionRouteEvidence(suppliedEvidence, routeLanguage(route), route.target, route.id) : [];
   const boundRecordIds = uniqueStrings(boundRecords.map((record) => record.id));
   const runtimeProofObligations = route.runtime?.proofObligations ?? [];
@@ -76,6 +72,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
     translationAdmissionStatus: route.translationAdmission?.status,
     translationAdmissionAction: route.translationAdmission?.action,
     ...translationAdmissionDenominatorsForRoute(route),
+    ...routeDialectDenominators(route),
     ...runtimeRoute,
     runtimeAdapterRequirementIds: uniqueStrings((route.runtimeAdapterRequirements ?? []).map((entry) => entry.id ?? entry.capability)),
     runtimeProofObligationIds: uniqueStrings(runtimeProofObligations.map((record) => record.id)),
@@ -127,6 +124,7 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       semanticEdit: semanticEditIndexCounts(semanticEdit),
       missingEvidence: missingEvidence.length,
       translationAdmission: compactTranslationAdmissionCounts([route.translationAdmission ?? {}]),
+      routeDialect: compactRouteDialectCounts([route]),
       runtimeProofObligations: runtimeProofSummary.obligations,
       runtimeProofByStatus: runtimeProofSummary.byStatus,
       runtimeProofByCapability: runtimeProofSummary.byCapability,
@@ -144,7 +142,6 @@ export function createUniversalConversionRouteEvidenceReceipt(routeOrInput = {},
       interlinguaConstraintMissingEvidence: countBy([...(interlinguaQuery.constraintMissingEvidence ?? []), ...interlinguaObligationMissingEvidence]),
       interlinguaConstraintObligationKinds: countBy(interlinguaObligationRecords.map((record) => record.kind)), interlinguaConstraintObligationStatuses: countBy(interlinguaObligationRecords.map((record) => record.status)),
       interlinguaConstraintObligationEvidenceIds: countBy(interlinguaConstraintObligationEvidenceIds),
-      interlinguaConstraintObligationMissingEvidence: countBy(interlinguaObligationMissingEvidence),
       blockers: route.blockers?.length ?? 0,
       reviewReasons: route.review?.length ?? 0,
       byKind: countBy(boundSummaries.map((record) => record.kind)),
