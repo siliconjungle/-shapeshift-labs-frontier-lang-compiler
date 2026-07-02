@@ -93,6 +93,10 @@ routingArtifacts.summary.compactCounts.translationAdmission.runtimeProofStatuses
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeProofRequiredSignals satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeProofProvidedSignals satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.runtimeProofMissingSignals satisfies Readonly<Record<string, number>>;
+routingArtifacts.summary.compactCounts.evidenceReceipts.routeDialect.byReadiness satisfies Readonly<Record<string, number>>;
+routingArtifacts.summary.compactCounts.evidenceReceipts.routeDialect.externKinds satisfies Readonly<Record<string, number>>;
+routingArtifacts.summary.compactCounts.evidenceReceipts.routeDialect.evidenceIds satisfies Readonly<Record<string, number>>;
+routingArtifacts.summary.compactCounts.evidenceReceipts.routeDialect.lossIds satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.evidenceReceipts.runtimeProofRequiredSignals satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.dialectRecordIds satisfies Readonly<Record<string, number>>;
 routingArtifacts.summary.compactCounts.translationAdmission.evidenceIds satisfies Readonly<Record<string, number>>;

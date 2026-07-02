@@ -64,6 +64,7 @@ assert.equal(blockedArtifacts.index.translationDialectReadinesses.includes('bloc
 assert.equal(blockedArtifacts.index.translationDialectRecordIds.includes('dialect_js_process_env_to_rust'), true);
 assert.equal(blockedArtifacts.summary.compactCounts.translationAdmission.dialectRecordIds.dialect_js_process_env_to_rust, 1);
 assert.equal(blockedArtifacts.summary.compactCounts.routeDialect.lossIds.loss_node_process_env_projection, 1);
+assert.equal(blockedArtifacts.summary.compactCounts.evidenceReceipts.routeDialect.lossIds.loss_node_process_env_projection, 1);
 const blockedLossArtifacts = createUniversalConversionArtifacts(blockedPlan, { dialectLossId: 'loss_node_process_env_projection' });
 assert.equal(blockedLossArtifacts.index.dialectLossIds.includes('loss_node_process_env_projection'), true);
 assert.equal(queryUniversalConversionArtifacts(blockedLossArtifacts, { dialectLossId: 'loss_node_process_env_projection' })[0].routeId, blockedRoute.id);
@@ -129,6 +130,8 @@ assert.equal(reviewArtifacts.index.dialectExternKinds.includes('generatorArtifac
 assert.equal(reviewArtifacts.index.dialectEvidenceIds.includes('evidence_vite_routes_manifest'), true);
 assert.equal(reviewArtifacts.summary.compactCounts.routeDialect.externKinds.generatorArtifact, 1);
 assert.equal(reviewArtifacts.summary.compactCounts.routeDialect.evidenceIds.evidence_vite_routes_manifest, 1);
+assert.equal(reviewArtifacts.summary.compactCounts.evidenceReceipts.routeDialect.externKinds.generatorArtifact, 1);
+assert.equal(reviewArtifacts.summary.compactCounts.evidenceReceipts.routeDialect.evidenceIds.evidence_vite_routes_manifest, 1);
 assert.equal(queryUniversalConversionArtifacts(reviewArtifacts, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'evidence_vite_routes_manifest' })[0].routeId, reviewRoute.id);
 assert.equal(createUniversalConversionArtifacts(reviewPlan, { dialectExternKind: 'macroExpansion' }).routeArtifacts.length, 0);
 const reviewWorklist = createUniversalConversionWorklist(reviewPlan, { dialectExternKind: 'generatorArtifact', dialectEvidenceId: 'evidence_vite_routes_manifest' });

@@ -9,7 +9,7 @@ export function universalConversionArtifactSummary(routeArtifacts, records) {
   const admissionRecords = records.admissionRecords;
   const evidenceReceipts = records.evidenceReceipts ?? routeArtifacts.map((artifact) => artifact.evidenceReceipt).filter(Boolean);
   const semanticOperations = routeArtifacts.flatMap((artifact) => artifact.semanticOperations?.operations ?? []);
-  const compactCounts = compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperations);
+  const compactCounts = compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperations, evidenceReceipts);
   return {
     routes: routeArtifacts.length,
     histories: records.historyRecords.length,
@@ -51,11 +51,10 @@ function countAdmissionRisk(records, risk) {
   return records.filter((record) => record.risk === risk).length;
 }
 
-function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperations) {
+function compactArtifactCounts(routeArtifacts, admissionRecords, semanticOperations, evidenceReceipts = routeArtifacts.map((artifact) => artifact.evidenceReceipt ?? {})) {
   const constructKinds = routeArtifacts.flatMap((artifact) => artifact.metadata?.representation?.constructKinds ?? []);
   const missingConstructs = routeArtifacts.flatMap((artifact) => artifact.metadata?.representation?.missing ?? []);
   const translationAdmissions = routeArtifacts.map((artifact) => artifact.translationAdmission ?? artifact.metadata?.translationAdmission ?? {});
-  const evidenceReceipts = routeArtifacts.map((artifact) => artifact.evidenceReceipt ?? {});
   const interlinguaRecords = routeArtifacts.map((artifact) => artifact.interlingua ?? artifact.metadata?.interlingua ?? artifact.admissionRecord?.metadata?.interlingua ?? {});
   const resourceTransfers = routeArtifacts.map((artifact) => artifact.resourceTransfer ?? artifact.metadata?.resourceTransfer ?? artifact.admissionRecord?.metadata?.resourceTransfer ?? {});
   const lifetimeConstraints = routeArtifacts.map((artifact) => artifact.lifetimeConstraint ?? artifact.metadata?.lifetimeConstraint ?? artifact.admissionRecord?.metadata?.lifetimeConstraint ?? {});
@@ -206,6 +205,7 @@ function compactEvidenceReceiptCounts(receipts) {
     interlinguaConstraintObligationEvidenceIds: countBy([...rFlat('interlinguaConstraintObligationEvidenceIds'), ...oFlat('evidenceIds')]),
     interlinguaConstraintObligationMissingEvidence: countBy([...rFlat('interlinguaConstraintObligationMissingEvidence'), ...oFlat('missingEvidence')]),
     semanticEdit: sec(receipts),
+    routeDialect: compactRouteDialectCounts(receipts),
     missingEvidence: countBy(rFlat('missingEvidence')), proofEvidenceIds: countBy(rFlat('proofEvidenceIds')),
     rejectedByReason: countBy(receipts.flatMap((r) => (r.records?.rejected ?? []).map((record) => record.reason)))
   };

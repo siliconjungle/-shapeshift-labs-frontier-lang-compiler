@@ -92,6 +92,7 @@ export interface UniversalConversionEvidenceReceiptCompactCounts {
   readonly sourceMapMappingIds: Readonly<Record<string, number>>;
   readonly sourceMapLinkIds: Readonly<Record<string, number>>;
   readonly semanticEdit: UniversalConversionSemanticEditCompactCounts;
+  readonly routeDialect: UniversalConversionRouteDialectCompactCounts;
   readonly runtimeProofObligations: number;
   readonly runtimeProofByStatus: Readonly<Record<string, number>>;
   readonly runtimeProofByCapability: Readonly<Record<string, number>>;
